@@ -1,0 +1,30 @@
+# Byte-compiled / optimized
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environments
+env/
+venv/
+iqac_env/
+.venv/
+
+# Django stuff
+*.log
+*.sqlite3
+staticfiles/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Mac, Windows junk
+.DS_Store
+Thumbs.db
+*.pyc
+
+*/migrations/

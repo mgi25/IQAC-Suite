@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block head_extra %}
+  <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}" />
+{% endblock head_extra %}
+
+{% block content %}
+
+  <!-- Particle background -->
+  <div id="particles-js" class="particles-canvas"></div>
+
+  <!-- NAVIGATION -->
+  <nav class="navbar">
+    <div class="navbar-brand">Infotech Lab</div>
+    <button class="hamburger" id="hamburger" aria-label="Toggle menu">☰</button>
+    <div class="navbar-user" id="navbarUser">
+      <span id="username-badge">{{ request.user.get_full_name|default:request.user.username }}</span>
+      <a href="{% url 'logout' %}" class="logout-btn">Logout</a>
+    </div>
+  </nav>
+
+  <!-- DASHBOARD -->
+  <section class="dashboard-container">
+    <h1 class="dashboard-title">Welcome to IQAC Suite and Transcript Automater</h1>
+    <h2 id="welcome-message">Hello, {{ request.user.first_name|default:"User" }}!</h2>
+    <p>Select an application to launch:</p>
+
+    <div class="cards">
+      <a href="{% url 'iqac_suite' %}" class="card delay-1">
+        <h2>IQAC Suite</h2>
+        <p>Event proposal and report management.</p>
+        <span class="card-arrow">Launch →</span>
+      </a>
+      <a href="{% url 'graduate_transcript' %}" class="card delay-2">
+        <h2>Graduate Transcript</h2>
+        <p>Graduate characteristics report.</p>
+        <span class="card-arrow">Launch →</span>
+      </a>
+    </div>
+  </section>
+
+{% endblock content %}
+
+{% block scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+  <script src="{% static 'core/js/dashboard.js' %}"></script>
+{% endblock scripts %}

@@ -1,0 +1,233 @@
+/* core/static/core/css/dashboard.css */
+
+/* 1. Global box-sizing reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* 2. Particle background */
+#particles-js {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: -1;
+}
+
+/* 3. Base page styling */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Poppins', sans-serif;
+  color: #1a2b4c;
+  background-color: #f0f4fa;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* 4. Navbar */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: rgba(0, 76, 153, 0.85);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  padding: 15px 30px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.navbar-brand {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.hamburger {
+  display: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: #fff;
+}
+
+.navbar-user {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+#username-badge {
+  padding: 5px 12px;
+  background: #fff;
+  color: #004c99;
+  border-radius: 50px;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.logout-btn {
+  padding: 8px 15px;
+  font-size: 0.9rem;
+  background-color: #fff;
+  color: #004c99;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+}
+
+.logout-btn:hover {
+  background-color: #e6f0ff;
+}
+
+/* 5. Dashboard wrapper */
+.dashboard-container {
+  max-width: 1200px;
+  margin: 80px auto;
+  padding: 40px 20px;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.dashboard-container h1 {
+  font-size: 3rem;
+  color: #003366;
+  margin: 0;
+}
+
+#welcome-message {
+  font-size: 1.7rem;
+  color: #003366;
+  margin: 10px 0 20px;
+}
+
+.dashboard-container p {
+  font-size: 1.2rem;
+  color: #4d648d;
+}
+
+/* 6. Cards grid */
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 40px;
+  margin-top: 50px;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  padding: 35px 40px;
+  width: 300px;
+  text-decoration: none;
+  color: inherit;
+  text-align: left;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  transform: translateY(60px) scale(0.95);
+  opacity: 0;
+  animation: fadeBounceIn 1s ease forwards;
+}
+
+.card h2 {
+  margin: 0 0 12px;
+  font-size: 1.6rem;
+  color: #004c99;
+}
+
+.card p {
+  margin: 0;
+  line-height: 1.4;
+  color: #1a2b4c;
+}
+
+.card span {
+  display: block;
+  margin-top: 18px;
+  font-weight: 600;
+  color: #0077cc;
+  transition: color 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 15px 30px rgba(0, 0, 255, 0.15);
+}
+
+.card:hover span {
+  color: #004c99;
+}
+
+/* 7. Staggered entrance */
+.delay-1 { animation-delay: 0.2s; }
+.delay-2 { animation-delay: 0.4s; }
+
+/* 8. Bounce-in keyframes */
+@keyframes fadeBounceIn {
+  0% {
+    opacity: 0;
+    transform: translateY(60px) scale(0.95);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-10px) scale(1.02);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* 9. Mobile layout */
+@media screen and (max-width: 768px) {
+  .hamburger {
+    display: block;
+  }
+  .navbar-user {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-top: 10px;
+    gap: 8px;
+  }
+  .navbar-user.active {
+    display: flex;
+  }
+  .logout-btn {
+    width: 100%;
+  }
+  .cards {
+    flex-direction: column;
+    align-items: center;
+    gap: 25px;
+  }
+  .card {
+    width: 90%;
+    padding: 25px 20px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .dashboard-container h1 {
+    font-size: 2.2rem;
+  }
+  #welcome-message {
+    font-size: 1.4rem;
+  }
+  .card h2 {
+    font-size: 1.3rem;
+  }
+  .card p {
+    font-size: 1rem;
+  }
+  .card span {
+    font-size: 1rem;
+  }
+}
