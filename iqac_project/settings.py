@@ -121,9 +121,10 @@ SITE_ID = 1  # must match a row in django_site
 
 
 # Redirect URLs
-LOGIN_URL           = 'login'
-LOGIN_REDIRECT_URL  = 'dashboard'
-LOGOUT_REDIRECT_URL = 'login'
+LOGIN_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = 'dashboard'  # or 'home' or your custom view name
+LOGOUT_REDIRECT_URL = '/accounts/login/'
+
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -137,6 +138,8 @@ ACCOUNT_EMAIL_VERIFICATION        = 'none'    # in prod you might set 'optional'
 ACCOUNT_UNIQUE_EMAIL              = True
 SOCIALACCOUNT_AUTO_SIGNUP         = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
+ACCOUNT_LOGOUT_REDIRECT_URL = '/accounts/login/'
+ACCOUNT_LOGOUT_ON_GET = True
 
 
 SOCIALACCOUNT_PROVIDERS = {

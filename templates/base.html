@@ -1,20 +1,26 @@
-{# templates/base.html #}
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
   <title>{% block title %}IQAC Portal{% endblock %}</title>
-
-  {% load static %}
-  <!-- global CSS -->
-  <link href="{% static 'core/css/login.css' %}" rel="stylesheet">
-  <link href="{% static 'core/css/dashboard.css' %}" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  {% block head_extra %}{% endblock %}
 </head>
 <body>
 
-  {# optional navbar could go here #}
-  {% block navbar %}{% endblock %}
+  <!-- ✅ Only one header here -->
+  <header class="site-header">
+    <a href="{% url 'dashboard' %}" class="navbar-brand">
+      <img src="{% static 'core/img/campus-logo.png' %}" alt="Campus Logo" class="navbar-logo">
+      <span>Infotech Lab</span>
+    </a>
+    <div class="navbar-user">
+      <span id="username-badge">{{ request.user.get_full_name|default:request.user.username }}</span>
+      <a href="{% url 'account_logout' %}" class="logout-btn">Logout</a>
+    </div>
+  </header>
 
   <main>
     {% block content %}{% endblock %}

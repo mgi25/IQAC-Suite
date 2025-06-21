@@ -1,0 +1,167 @@
+/* Body Background */
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #f2f8ff;
+}
+
+/* Main Container */
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    padding-top: 100px;
+}
+
+/* Page Content Box */
+.page-content {
+    background: #ffffff;
+    padding: 30px 40px;
+    border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.07);
+    max-width: 600px;
+    margin: auto;
+}
+
+/* Header */
+.header {
+    text-align: center;
+    color: #002b5c;
+    margin-bottom: 40px;
+}
+
+.header h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.header p {
+    font-size: 1rem;
+    color: #555;
+}
+
+/* Section Headings */
+.section h3 {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #003366;
+    margin: 30px 0 10px;
+    border-left: 4px solid #007bff;
+    padding-left: 10px;
+}
+
+/* Form Group */
+.input-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 15px;
+}
+
+.input-group label {
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: #222;
+}
+
+.input-group input,
+.input-group textarea {
+    padding: 10px 12px;
+    font-size: 15px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    transition: border 0.2s ease;
+    background-color: #f9f9f9;
+}
+
+.input-group input:focus,
+.input-group textarea:focus {
+    border-color: #0066cc;
+    background-color: #fff;
+    outline: none;
+}
+
+/* Button */
+.btn {
+    background: #003c8f;
+    color: #fff;
+    border: none;
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.btn:hover {
+    background: #002c6a;
+}
+
+
+
+/* Enhanced Box Look */
+.page-content {
+    background: #ffffff;
+    padding: 40px 50px;
+    border-radius: 18px;
+    box-shadow: 0 15px 40px rgba(0, 48, 135, 0.1);
+    max-width: 600px;
+    margin: auto;
+    position: relative;
+    border-left: 6px solid #004aad; /* Blue stripe bar */
+}
+
+/* Section Headings with divider */
+.section h3 {
+    font-size: 1.15rem;
+    font-weight: bold;
+    color: #004aad;
+    margin-top: 30px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #dce4f0;
+    padding-bottom: 6px;
+}
+
+/* Gradient Title Bar */
+.header {
+    text-align: center;
+    background: linear-gradient(to right, #004aad, #007bff);
+    color: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+}
+
+.header h1 {
+    font-size: 1.75rem;
+    margin-bottom: 6px;
+}
+
+.header p {
+    font-size: 0.95rem;
+    color: #e0e0e0;
+}
+
+/* Font Refinement */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Input Hover Effect */
+.input-group input:hover,
+.input-group textarea:hover {
+    border-color: #0056b3;
+}
+
+/* Button hover glow */
+.btn:hover {
+    background: #003c8f;
+    box-shadow: 0 5px 20px rgba(0, 60, 143, 0.3);
+}
+.expense-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 1rem;
+}

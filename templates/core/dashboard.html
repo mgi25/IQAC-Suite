@@ -1,48 +1,79 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block title %}Dashboard – IQAC Suite{% endblock %}
+
 {% block head_extra %}
-  <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}" />
-{% endblock head_extra %}
+  <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
+  <link href="https://fonts.googleapis.com/css?family=Inter:400,600,700&display=swap" rel="stylesheet">
+{% endblock %}
 
 {% block content %}
 
-  <!-- Particle background -->
-  <div id="particles-js" class="particles-canvas"></div>
+<!-- HEADER (fixed, modern, shadow) -->
+<header class="site-header" role="banner">
+  <a href="#" class="navbar-brand" aria-label="Home">
+  <img src="{% static 'core/img/campus-logo.png' %}" alt="Logo" class="navbar-logo" />
+  <span>Infotech Lab</span>
+</a>
+  <div class="navbar-user">
+    <span id="username-badge">{{ request.user.get_full_name|default:request.user.username }}</span>
+    <a href="{% url 'account_logout' %}?next=/accounts/login/" class="logout-btn" title="Logout">Logout</a>
+  </div>
+</header>
 
-  <!-- NAVIGATION -->
-  <nav class="navbar">
-    <div class="navbar-brand">Infotech Lab</div>
-    <button class="hamburger" id="hamburger" aria-label="Toggle menu">☰</button>
-    <div class="navbar-user" id="navbarUser">
-      <span id="username-badge">{{ request.user.get_full_name|default:request.user.username }}</span>
-      <a href="{% url 'logout' %}" class="logout-btn">Logout</a>
+<!-- MAIN DASHBOARD LAYOUT -->
+<main class="dashboard-container" aria-label="Main dashboard">
+
+  <!-- LEFT: Application cards -->
+  <section class="left-panel" aria-labelledby="dashboard-title">
+    <h1 id="dashboard-title">Welcome to IQAC Suite and Transcript Automater</h1>
+    <div class="dashboard-user">
+      <h2>Welcome, <span class="user-name">{{ request.user.first_name|default:"User" }}</span>!</h2>
+      <p class="dashboard-subtitle">Select an application to launch:</p>
     </div>
-  </nav>
+    <div class="cards" role="group" aria-label="Application Launch Options">
+      <a href="{% url 'emt:submit_proposal' %}" class="card app-card" aria-label="Launch IQAC Suite">
+  <i class="fa-solid fa-file card-icon" style="color:#1064c8; font-size:2.2rem; margin-bottom:0.7rem;"></i>
+  <h3>IQAC Suite</h3>
+  <p>Event proposal and report management.</p>
+  <span class="card-arrow">Launch <span aria-hidden="true">→</span></span>
+</a>
 
-  <!-- DASHBOARD -->
-  <section class="dashboard-container">
-    <h1 class="dashboard-title">Welcome to IQAC Suite and Transcript Automater</h1>
-    <h2 id="welcome-message">Hello, {{ request.user.first_name|default:"User" }}!</h2>
-    <p>Select an application to launch:</p>
-
-    <div class="cards">
-      <a href="{% url 'iqac_suite' %}" class="card delay-1">
-        <h2>IQAC Suite</h2>
-        <p>Event proposal and report management.</p>
-        <span class="card-arrow">Launch →</span>
-      </a>
-      <a href="{% url 'graduate_transcript' %}" class="card delay-2">
-        <h2>Graduate Transcript</h2>
+      <div class="card app-card card-disabled" aria-disabled="true" title="Coming soon">
+        <div class="card-icon icon-transcript"></div>
+        <h3>Graduate Transcript</h3>
         <p>Graduate characteristics report.</p>
-        <span class="card-arrow">Launch →</span>
-      </a>
+        <span class="card-arrow">Coming Soon</span>
+      </div>
     </div>
   </section>
 
-{% endblock content %}
+  <!-- RIGHT: Notifications -->
+  <aside class="right-panel" aria-labelledby="notifications-title">
+    <h2 id="notifications-title">Notifications</h2>
+    <ul class="notification-list">
+      {% for prop in proposals %}
+        <li class="notification-item">
+          <div>
+            <strong>{{ prop.event_title }}</strong>
+            <span class="status status-{{ prop.status|lower }}">
+              {{ prop.get_status_display }}
+            </span>
+          </div>
+          <a href="{% url 'emt:proposal_status' prop.id %}" class="btn-sm btn-status">View Status</a>
+        </li>
+      {% empty %}
+        <li class="notification-item notification-empty">No notifications yet.</li>
+      {% endfor %}
+    </ul>
+  </aside>
+
+</main>
+{% endblock %}
 
 {% block scripts %}
-  <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
-  <script src="{% static 'core/js/dashboard.js' %}"></script>
-{% endblock scripts %}
+  <!-- Particle background, if needed -->
+  <!-- <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+  <script src="{% static 'core/js/dashboard.js' %}"></script> -->
+{% endblock %}

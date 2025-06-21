@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Event Objectives{% endblock %}
+
+{% block head_extra %}
+  <link rel="stylesheet" href="{% static 'emt/styles.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="header">
+    <h1>Event Objectives for "{{ proposal.event_title }}"</h1>
+    <p>Please describe the key objectives of your event</p>
+  </div>
+
+  <div class="page-content">
+    <form method="post">
+      {% csrf_token %}
+      <div class="section">
+        <h3>What are the objectives of this event?</h3>
+        <div class="input-group">
+          {{ form.content.label_tag }}
+          {{ form.content }}
+        </div>
+      </div>
+      <div class="input-group">
+        <button type="submit" class="btn">Save & Continue</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

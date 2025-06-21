@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Submit Event Proposal{% endblock %}
+
+{% block head_extra %}
+  <link rel="stylesheet" href="{% static 'emt/styles.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="header">
+    <h1>Submit Your Event Proposal</h1>
+    <p>Fill out the details below to register your event</p>
+  </div>
+
+  <div class="page-content">
+    <form method="post">
+      {% csrf_token %}
+
+      <!-- Section 1: Basic Info -->
+      <div class="section">
+        <h3>Basic Event Information</h3>
+        {% for field in form %}
+          {% if forloop.counter == 1 %}<hr>{% endif %}
+          {% if field.name == 'event_focus_type' %}
+            <br>
+            <h3>Event Focus & Participants</h3>
+          {% elif field.name == 'fest_fee_participants' %}
+            <br>
+            <h3>Fest Income Details</h3>
+          {% elif field.name == 'conf_fee_participants' %}
+            <br>
+            <h3>Conference Income Details</h3>
+          {% endif %}
+          
+          <div class="input-group">
+            {{ field.label_tag }}
+            {{ field }}
+            {% if field.errors %}
+              <div class="error">{{ field.errors }}</div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="input-group" style="margin-top: 20px;">
+        <button type="submit" class="btn">Submit Proposal</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

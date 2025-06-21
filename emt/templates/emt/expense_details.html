@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Expense Details{% endblock %}
+
+{% block head_extra %}
+  <link rel="stylesheet" href="{% static 'emt/styles.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="header">
+    <h1>Expense Details for "{{ proposal.event_title }}"</h1>
+    <p>Please enter all expenses related to this event</p>
+  </div>
+
+  <div class="page-content">
+    <form method="post">
+      {% csrf_token %}
+      {{ formset.management_form }}
+      
+      <div class="section">
+        <h3>Expense List</h3>
+        <div class="formset-table">
+          {% for form in formset %}
+            <div class="expense-row">
+              <div class="input-group">
+                {{ form.sl_no.label_tag }} {{ form.sl_no }}
+              </div>
+              <div class="input-group">
+                {{ form.particulars.label_tag }} {{ form.particulars }}
+              </div>
+              <div class="input-group">
+                {{ form.amount.label_tag }} {{ form.amount }}
+              </div>
+              <div class="input-group">
+                {{ form.DELETE.label_tag }} {{ form.DELETE }}
+              </div>
+            </div>
+            <hr>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="input-group">
+        <button type="submit" class="btn">Submit</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

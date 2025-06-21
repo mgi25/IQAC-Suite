@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Need Analysis{% endblock %}
+
+{% block head_extra %}
+  <link rel="stylesheet" href="{% static 'emt/styles.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="header">
+    <h1>Need Analysis for "{{ proposal.event_title }}"</h1>
+    <p>Please explain why this event is being proposed</p>
+  </div>
+
+  <div class="page-content">
+    <form method="post">
+      {% csrf_token %}
+      <div class="section">
+        <h3>Why is this event necessary?</h3>
+        <div class="input-group">
+          {{ form.content.label_tag }}
+          {{ form.content }}
+        </div>
+      </div>
+      <div class="input-group">
+        <button type="submit" class="btn">Save & Continue</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
