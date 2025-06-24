@@ -4,6 +4,8 @@ from . import views
 app_name = 'emt'
 
 urlpatterns = [
+    path('suite/', views.iqac_suite_dashboard, name='iqac_suite_dashboard'),  # NEW DASHBOARD ROUTE
+
     path('submit/', views.submit_proposal, name='submit_proposal'),
     path('need-analysis/<int:proposal_id>/', views.submit_need_analysis, name='submit_need_analysis'),
     path('objectives/<int:proposal_id>/', views.submit_objectives, name='submit_objectives'),
@@ -11,11 +13,6 @@ urlpatterns = [
     path('tentative-flow/<int:proposal_id>/', views.submit_tentative_flow, name='submit_tentative_flow'),
     path('speaker-profile/<int:proposal_id>/', views.submit_speaker_profile, name='submit_speaker_profile'),
     path('expense-details/<int:proposal_id>/', views.submit_expense_details, name='submit_expense_details'),
-    path(
-        'proposal-status/<int:proposal_id>/',
-        views.proposal_status,
-        name='proposal_status'
-    ),
-
+    path('proposal-status/<int:proposal_id>/', views.proposal_status, name='proposal_status'),
     # upcoming: path('<int:proposal_id>/attendance/', views.attendance, name='attendance')
 ]

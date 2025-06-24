@@ -1,37 +1,24 @@
-// core/static/core/js/dashboard.js
+document.addEventListener('DOMContentLoaded', function () {
+  const tabs = document.querySelectorAll('.notification-tabs .tab');
+  const contents = document.querySelectorAll('.tab-content');
 
-// Initialize particles.js
-particlesJS("particles-js", {
-  particles: {
-    number: { value: 20, density: { enable: true, value_area: 1000 } },
-    color: { value: "#004c99" },
-    shape: { type: "circle" },
-    opacity: { value: 0.4 },
-    size: { value: 2.5, random: true },
-    line_linked: {
-      enable: true,
-      distance: 130,
-      color: "#004c99",
-      opacity: 0.25,
-      width: 1
-    },
-    move: { enable: true, speed: 0.6 }
-  },
-  interactivity: {
-    detect_on: "canvas",
-    events: {
-      onhover: { enable: true, mode: "grab" },
-      onclick: { enable: true, mode: "push" }
-    },
-    modes: {
-      grab: { distance: 150, line_linked: { opacity: 0.4 } },
-      push: { particles_nb: 2 }
-    }
-  },
-  retina_detect: true
-});
+  tabs.forEach(tab => {
+    tab.addEventListener('click', function () {
+      // Remove active from all tabs
+      tabs.forEach(t => {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+      });
+      // Hide all contents
+      contents.forEach(c => c.style.display = 'none');
 
-// Toggle mobile nav (optional)
-document.getElementById('hamburger').addEventListener('click', () => {
-  document.getElementById('navbarUser').classList.toggle('open');
+      // Activate this tab
+      this.classList.add('active');
+      this.setAttribute('aria-selected', 'true');
+      // Show related content
+      document.getElementById(this.dataset.tab).style.display = 'block';
+    });
+  });
+  // Show first tab by default if page is reloaded
+  document.querySelector('.tab.tab-ongoing').click();
 });

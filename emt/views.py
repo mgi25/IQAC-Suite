@@ -175,7 +175,7 @@ def attendance_view(request, proposal_id):
         'volunteer_form': VolunteerForm(),
     }
     return render(request, 'emt/attendance.html', context)
-@login_required
+
 @login_required
 def submit_objectives(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id)
@@ -192,3 +192,7 @@ def submit_objectives(request, proposal_id):
         form = ObjectivesForm(instance=instance)
 
     return render(request, 'emt/objectives.html', {'form': form, 'proposal': proposal})
+
+def iqac_suite_dashboard(request):
+    """Dashboard page shown after clicking IQAC Suite from home."""
+    return render(request, 'emt/iqac_suite_dashboard.html')
