@@ -1,9 +1,0 @@
-{% extends 'core/base.html' %}
-{% block content %}
-<h2>Propose an Event</h2>
-<form method="post">{% csrf_token %}
-  <input name="title" placeholder="Event Title">
-  <textarea name="description" placeholder="Describe your idea"></textarea>
-  <button type="submit">Submit Proposal</button>
-</form>
-{% endblock %}

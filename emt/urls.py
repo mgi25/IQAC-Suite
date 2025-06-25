@@ -4,9 +4,12 @@ from . import views
 app_name = 'emt'
 
 urlpatterns = [
-    path('suite/', views.iqac_suite_dashboard, name='iqac_suite_dashboard'),  # NEW DASHBOARD ROUTE
+    path('suite/', views.iqac_suite_dashboard, name='iqac_suite_dashboard'),
 
+    # NEW: Allow /submit/ and /submit/<int:pk>/ for new and existing proposals (draft)
     path('submit/', views.submit_proposal, name='submit_proposal'),
+    path('submit/<int:pk>/', views.submit_proposal, name='submit_proposal_with_pk'),  # <---- Add this!
+
     path('need-analysis/<int:proposal_id>/', views.submit_need_analysis, name='submit_need_analysis'),
     path('objectives/<int:proposal_id>/', views.submit_objectives, name='submit_objectives'),
     path('expected-outcomes/<int:proposal_id>/', views.submit_expected_outcomes, name='submit_expected_outcomes'),
@@ -14,5 +17,7 @@ urlpatterns = [
     path('speaker-profile/<int:proposal_id>/', views.submit_speaker_profile, name='submit_speaker_profile'),
     path('expense-details/<int:proposal_id>/', views.submit_expense_details, name='submit_expense_details'),
     path('proposal-status/<int:proposal_id>/', views.proposal_status, name='proposal_status'),
-    # upcoming: path('<int:proposal_id>/attendance/', views.attendance, name='attendance')
+    path('autosave-proposal/', views.autosave_proposal, name='autosave_proposal'),
+    # path('<int:proposal_id>/attendance/', views.attendance, name='attendance'),
+    path('autosave-need-analysis/', views.autosave_need_analysis, name='autosave_need_analysis'),
 ]

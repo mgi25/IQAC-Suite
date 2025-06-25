@@ -1,31 +1,27 @@
 from django.db import models
 from django.contrib.auth.models import User
-
 class EventProposal(models.Model):
     submitted_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="emt_eventproposals")
-    department           = models.CharField(max_length=100)
-    committees           = models.TextField()
-    event_title          = models.CharField(max_length=200)
-    num_activities       = models.PositiveIntegerField()
-    event_datetime       = models.DateTimeField()
-    venue                = models.CharField(max_length=200)
-    academic_year        = models.CharField(max_length=20)
-    target_audience      = models.CharField(max_length=200)
-    faculty_incharges    = models.TextField()
-    student_coordinators = models.TextField()
-    event_focus_type     = models.CharField(max_length=200)
+    department           = models.CharField(max_length=100, blank=True)
+    committees           = models.TextField(blank=True)
+    event_title          = models.CharField(max_length=200, blank=True)
+    num_activities = models.PositiveIntegerField(null=True, blank=True)
+    event_datetime       = models.DateTimeField(null=True, blank=True)
+    venue                = models.CharField(max_length=200, blank=True)
+    academic_year        = models.CharField(max_length=20, blank=True)
+    target_audience      = models.CharField(max_length=200, blank=True)
+    faculty_incharges    = models.TextField(blank=True)
+    student_coordinators = models.TextField(blank=True)
+    event_focus_type     = models.CharField(max_length=200, blank=True)
 
     # Income Section
     fest_fee_participants     = models.PositiveIntegerField(null=True, blank=True)
     fest_fee_rate             = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     fest_fee_amount           = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-
     fest_sponsorship_amount   = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-
     conf_fee_participants     = models.PositiveIntegerField(null=True, blank=True)
     conf_fee_rate             = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     conf_fee_amount           = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-
     conf_sponsorship_amount   = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -33,12 +29,15 @@ class EventProposal(models.Model):
     status     = models.CharField(max_length=20, choices=[
         ('draft', 'Draft'),
         ('submitted', 'Submitted'),
+        ('under_review', 'Under Review'),
         ('approved', 'Approved'),
-        ('rejected', 'Rejected')
+        ('rejected', 'Rejected'),
+        ('returned', 'Returned for Revision'),
     ], default='draft')
 
     def __str__(self):
-        return self.event_title
+        return self.event_title or "Draft Proposal"
+
     
 class EventNeedAnalysis(models.Model):
     proposal = models.OneToOneField(EventProposal, on_delete=models.CASCADE)

@@ -4,22 +4,21 @@
 {% block title %}Expected Outcomes{% endblock %}
 
 {% block head_extra %}
-  <link rel="stylesheet" href="{% static 'emt/styles.css' %}">
+  <link rel="stylesheet" href="{% static 'emt/css/styles.css' %}">
 {% endblock %}
 
 {% block content %}
 <div class="container">
   <div class="header">
     <h1>Expected Outcomes for "{{ proposal.event_title }}"</h1>
-    <p>Explain what this event is expected to accomplish</p>
+    <p>Please mention what outcomes are expected from the event</p>
   </div>
 
   <div class="page-content">
     <form method="post">
       {% csrf_token %}
       <div class="section">
-        <h3>Expected Outcomes</h3>
-        <p>You can list 2–4 realistic outcomes (e.g., awareness raised, participation, engagement...)</p>
+        <h3>Describe the expected outcomes</h3>
         <div class="input-group">
           {{ form.content.label_tag }}
           {{ form.content }}
@@ -31,4 +30,13 @@
     </form>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    window.PROPOSAL_ID = "{{ proposal.id|default:'' }}";
+    window.AUTOSAVE_URL = "{% url 'emt:autosave_proposal' %}";
+    window.AUTOSAVE_CSRF = "{{ csrf_token }}";
+  </script>
+  <script src="{% static 'emt/js/autosave_draft.js' %}"></script>
 {% endblock %}

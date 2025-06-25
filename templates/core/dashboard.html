@@ -75,7 +75,13 @@
               <div class="notif-comment">Returned: {{ prop.return_comment }}</div>
             {% endif %}
             <div class="notif-actions">
-              <a href="{% url 'proposal_status' prop.id %}" class="btn-sm">View Details</a>
+              {% if prop.status == 'draft' %}
+                <!-- Resume Draft -->
+                <a href="{% url 'emt:submit_proposal_with_pk' prop.id %}" class="btn-sm">Resume Draft</a>
+              {% else %}
+                <!-- View Details -->
+                <a href="{% url 'proposal_status' prop.id %}" class="btn-sm">View Details</a>
+              {% endif %}
               {% if prop.status == 'returned' %}
                 <a href="{% url 'emt:edit_proposal' prop.id %}" class="btn-sm btn-outline">Edit</a>
               {% endif %}

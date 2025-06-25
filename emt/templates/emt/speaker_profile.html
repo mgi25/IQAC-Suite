@@ -4,7 +4,7 @@
 {% block title %}Speaker Profiles{% endblock %}
 
 {% block head_extra %}
-  <link rel="stylesheet" href="{% static 'emt/styles.css' %}">
+  <link rel="stylesheet" href="{% static 'emt/css/styles.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -40,4 +40,13 @@
     </form>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    window.PROPOSAL_ID = "{{ proposal.id|default:'' }}";
+    window.AUTOSAVE_URL = "{% url 'emt:autosave_proposal' %}";
+    window.AUTOSAVE_CSRF = "{{ csrf_token }}";
+  </script>
+  <script src="{% static 'emt/js/autosave_draft.js' %}"></script>
 {% endblock %}

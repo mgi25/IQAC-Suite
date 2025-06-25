@@ -4,7 +4,7 @@
 {% block title %}Expense Details{% endblock %}
 
 {% block head_extra %}
-  <link rel="stylesheet" href="{% static 'emt/styles.css' %}">
+  <link rel="stylesheet" href="{% static 'emt/css/styles.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -24,18 +24,10 @@
         <div class="formset-table">
           {% for form in formset %}
             <div class="expense-row">
-              <div class="input-group">
-                {{ form.sl_no.label_tag }} {{ form.sl_no }}
-              </div>
-              <div class="input-group">
-                {{ form.particulars.label_tag }} {{ form.particulars }}
-              </div>
-              <div class="input-group">
-                {{ form.amount.label_tag }} {{ form.amount }}
-              </div>
-              <div class="input-group">
-                {{ form.DELETE.label_tag }} {{ form.DELETE }}
-              </div>
+              <div class="input-group">{{ form.sl_no.label_tag }} {{ form.sl_no }}</div>
+              <div class="input-group">{{ form.particulars.label_tag }} {{ form.particulars }}</div>
+              <div class="input-group">{{ form.amount.label_tag }} {{ form.amount }}</div>
+              <div class="input-group">{{ form.DELETE.label_tag }} {{ form.DELETE }}</div>
             </div>
             <hr>
           {% endfor %}
@@ -48,4 +40,13 @@
     </form>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    window.PROPOSAL_ID = "{{ proposal.id|default:'' }}";
+    window.AUTOSAVE_URL = "{% url 'emt:autosave_proposal' %}"; // Update if you have expense-specific autosave!
+    window.AUTOSAVE_CSRF = "{{ csrf_token }}";
+  </script>
+  <script src="{% static 'emt/js/autosave_draft.js' %}"></script>
 {% endblock %}

@@ -4,7 +4,7 @@
 {% block title %}Submit Event Proposal{% endblock %}
 
 {% block head_extra %}
-  <link rel="stylesheet" href="{% static 'emt/styles.css' %}">
+  <link rel="stylesheet" href="{% static 'emt/css/styles.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -33,7 +33,6 @@
             <br>
             <h3>Conference Income Details</h3>
           {% endif %}
-          
           <div class="input-group">
             {{ field.label_tag }}
             {{ field }}
@@ -45,9 +44,18 @@
       </div>
 
       <div class="input-group" style="margin-top: 20px;">
-        <button type="submit" class="btn">Submit Proposal</button>
+        <button type="submit" name="submit" class="btn btn-primary">Save & Continue</button>
       </div>
     </form>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    window.PROPOSAL_ID = "{{ proposal.id|default:'' }}";
+    window.AUTOSAVE_URL = "{% url 'emt:autosave_proposal' %}";
+    window.AUTOSAVE_CSRF = "{{ csrf_token }}";
+  </script>
+  <script src="{% static 'emt/js/autosave_draft.js' %}"></script>
 {% endblock %}
