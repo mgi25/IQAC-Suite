@@ -3,6 +3,12 @@ __pycache__/
 *.py[cod]
 *.so
 
+# Virtual environments
+env/
+venv/
+iqac_env/
+.venv/
+
 # Django stuff
 *.log
 *.sqlite3
