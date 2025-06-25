@@ -13,6 +13,7 @@ class EventProposal(models.Model):
     faculty_incharges    = models.TextField(blank=True)
     student_coordinators = models.TextField(blank=True)
     event_focus_type     = models.CharField(max_length=200, blank=True)
+    report_generated = models.BooleanField(default=False)
 
     # Income Section
     fest_fee_participants     = models.PositiveIntegerField(null=True, blank=True)

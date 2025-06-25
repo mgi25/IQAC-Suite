@@ -1,0 +1,88 @@
+.iqac-success-bg {
+  min-height: 100vh;
+  background: linear-gradient(120deg, #e0ecff 0%, #f5faff 100%);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 60px;
+}
+.iqac-success-card {
+  max-width: 430px;
+  width: 100%;
+  margin: auto;
+  background: #fff;
+  border-radius: 22px;
+  box-shadow: 0 6px 36px rgba(52,108,255,0.10), 0 1.5px 10px rgba(0,0,0,0.025);
+  padding: 44px 34px 36px 34px;
+  text-align: center;
+  animation: fadeInPop 0.68s;
+}
+.iqac-success-icon {
+  font-size: 2.5em;
+  margin-bottom: 8px;
+  animation: pop 0.5s;
+}
+.iqac-success-title {
+  font-size: 1.47em;
+  font-weight: 800;
+  margin-bottom: 11px;
+  color: #2267b1;
+  letter-spacing: -0.6px;
+}
+.iqac-success-details {
+  color: #5678b8;
+  font-size: 1.12em;
+  margin-bottom: 25px;
+}
+.iqac-success-evt {
+  color: #26477c;
+  font-weight: 700;
+}
+.iqac-success-btnrow {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.iqac-success-btn {
+  padding: 12px 32px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(90deg,#36a1ff 0,#6de0fc 100%);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.08em;
+  text-decoration: none;
+  transition: background 0.17s, box-shadow 0.17s, transform 0.12s;
+  box-shadow: 0 1px 8px rgba(90,180,255,0.10);
+  cursor: pointer;
+  outline: none;
+}
+.iqac-success-btn.alt {
+  background: linear-gradient(90deg,#7e47e9 0,#53b1ff 100%);
+}
+.iqac-success-btn:hover, .iqac-success-btn:focus {
+  background: linear-gradient(90deg,#2948a5 0,#2fc6fa 100%);
+  color: #fff;
+  transform: scale(1.03);
+  text-decoration: none;
+}
+.iqac-success-btn.alt:hover, .iqac-success-btn.alt:focus {
+  background: linear-gradient(90deg,#49159c 0,#1294fc 100%);
+}
+@media (max-width:600px) {
+  .iqac-success-card { padding: 24px 8vw 16px 8vw; }
+  .iqac-success-title { font-size: 1.03em;}
+  .iqac-success-btnrow { flex-direction: column; gap: 12px;}
+}
+@keyframes fadeInPop {
+  0% { opacity: 0; transform: scale(0.89);}
+  60% { opacity: 1; transform: scale(1.05);}
+  100% { opacity: 1; transform: scale(1);}
+}
+@keyframes pop {
+  0% { transform: scale(0.7);}
+  70% { transform: scale(1.3);}
+  100% { transform: scale(1);}
+}

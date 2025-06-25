@@ -20,4 +20,9 @@ urlpatterns = [
     path('autosave-proposal/', views.autosave_proposal, name='autosave_proposal'),
     # path('<int:proposal_id>/attendance/', views.attendance, name='attendance'),
     path('autosave-need-analysis/', views.autosave_need_analysis, name='autosave_need_analysis'),
+    path('pending-reports/', views.pending_reports, name='pending_reports'),
+    path('generate-report/<int:proposal_id>/', views.generate_report, name='generate_report'),
+    path('report-success/<int:proposal_id>/', views.report_success, name='report_success'),
+    path('download/pdf/<int:proposal_id>/', views.download_pdf, name='download_pdf'),
+    path('download/word/<int:proposal_id>/', views.download_word, name='download_word'),
 ]

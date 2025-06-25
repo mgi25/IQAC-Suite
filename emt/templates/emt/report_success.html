@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'emt/css/iqac_report_success.css' %}">
+
+<div class="iqac-success-bg">
+  <div class="iqac-success-card">
+    <div class="iqac-success-icon">📝</div>
+    <div class="iqac-success-title">Report Generated Successfully!</div>
+    <div class="iqac-success-details">
+      Your report for <span class="iqac-success-evt">{{ proposal.event_title }}</span> is ready.<br>
+      Download it in your preferred format below:
+    </div>
+    <div class="iqac-success-btnrow">
+      <a href="{% url 'emt:download_pdf' proposal.id %}" class="iqac-success-btn">Download PDF</a>
+      <a href="{% url 'emt:download_word' proposal.id %}" class="iqac-success-btn alt">Download Word</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

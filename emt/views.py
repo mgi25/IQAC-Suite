@@ -12,6 +12,7 @@ from django.forms import modelformset_factory
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 import json
+from django.http import HttpResponse
 
 # ========== PROPOSAL STEP 1 ==========
 @login_required
@@ -222,3 +223,31 @@ def autosave_need_analysis(request):
         na.save()
         return JsonResponse({'success': True})
     return JsonResponse({'success': False}, status=400)
+def pending_reports(request):
+    proposals = EventProposal.objects.filter(report_generated=False, submitted_by=request.user)
+    return render(request, 'emt/pending_reports.html', {'proposals': proposals})
+
+
+
+def generate_report(request, proposal_id):
+    proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
+
+    # 🚀 Logic to generate report goes here
+    # TODO: Call your PDF/Word report generation logic here
+    # Example: generate_pdf(proposal), generate_docx(proposal), etc.
+
+    proposal.report_generated = True
+    proposal.save()
+    return redirect('emt:report_success', proposal_id=proposal.id)
+
+
+def report_success(request, proposal_id):
+    proposal = get_object_or_404(EventProposal, id=proposal_id)
+    return render(request, 'emt/report_success.html', {'proposal': proposal})
+def download_pdf(request, proposal_id):
+    # TODO: Generate and return actual PDF
+    return HttpResponse(f"PDF download for Proposal {proposal_id}", content_type='application/pdf')
+
+def download_word(request, proposal_id):
+    # TODO: Generate and return actual Word file
+    return HttpResponse(f"Word download for Proposal {proposal_id}", content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'emt/css/iqac_pending_reports.css' %}">
+
+<div class="iqac-dashboard-bg">
+  <div class="iqac-dashboard-flex">
+    <div class="iqac-dashboard-side">
+      <div class="iqac-side-icon-bg">
+        <svg width="92" height="92" fill="none">
+          <circle cx="46" cy="46" r="46" fill="url(#grad1)" opacity="0.13"/>
+          <defs>
+            <linearGradient id="grad1" x1="0" y1="0" x2="92" y2="92" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#3399FF"/>
+              <stop offset="1" stop-color="#1976D2"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span class="iqac-side-emoji">📑</span>
+      </div>
+      <div class="iqac-side-title">IQAC<br>Reports</div>
+    </div>
+    <div class="iqac-dashboard-main">
+      <div class="iqac-section-header">
+        <span class="iqac-section-icon">📝</span>
+        <span class="iqac-section-title">Proposals Pending Report Generation</span>
+      </div>
+      {% if proposals %}
+        <div class="iqac-report-list">
+          {% for proposal in proposals %}
+            <div class="iqac-report-card">
+              <div class="iqac-report-info">
+                <div class="iqac-doc-icon">
+                  <svg width="32" height="40" viewBox="0 0 32 40" fill="none">
+                    <rect width="32" height="40" rx="7" fill="#3388FF" fill-opacity="0.12"/>
+                    <rect x="5" y="8" width="22" height="24" rx="3" fill="#3388FF" />
+                    <rect x="8.5" y="13.5" width="15" height="2" rx="1" fill="#fff"/>
+                    <rect x="8.5" y="18.5" width="11" height="2" rx="1" fill="#fff"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="iqac-report-title">{{ proposal.event_title|default:"(Untitled Event)" }}</div>
+                  <div class="iqac-report-meta">Submitted by you</div>
+                </div>
+              </div>
+              <a href="{% url 'emt:generate_report' proposal.id %}" class="iqac-generate-btn">Generate Report</a>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="iqac-empty-state">
+          <div class="iqac-empty-icon">🎉</div>
+          <div class="iqac-empty-msg">No pending proposals.<br>All your reports are ready!</div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
