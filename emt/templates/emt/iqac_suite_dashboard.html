@@ -16,7 +16,7 @@
               <a href="{% url 'emt:submit_proposal' %}" class="suite-card-btn">Go &rarr;</a>
           </div>
 
-          <!-- IQAC Report Generation Card (Now Enabled) -->
+          <!-- IQAC Report Generation Card -->
           <div class="suite-card">
               <div class="suite-card-icon suite-card-icon-purple">📝</div>
               <div class="suite-card-title">IQAC Report Generation</div>
@@ -24,12 +24,12 @@
               <a href="{% url 'emt:pending_reports' %}" class="suite-card-btn">Go &rarr;</a>
           </div>
 
-          <!-- View Generated Reports (Still Coming Soon) -->
-          <div class="suite-card suite-card-disabled">
+          <!-- View Generated Reports -->
+          <div class="suite-card">
               <div class="suite-card-icon suite-card-icon-green">📑</div>
               <div class="suite-card-title">View Generated Reports</div>
-              <div class="suite-card-desc">See all your generated reports<br>(Coming Soon)</div>
-              <a href="#" class="suite-card-btn suite-card-btn-disabled">Coming Soon</a>
+              <div class="suite-card-desc">See all your generated reports</div>
+              <a href="{% url 'emt:generated_reports' %}" class="suite-card-btn">Go &rarr;</a>
           </div>
 
       </div>

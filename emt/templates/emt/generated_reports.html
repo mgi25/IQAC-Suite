@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'emt/css/iqac_generated_reports.css' %}">
+
+<div class="iqac-dashboard-bg">
+  <div class="iqac-dashboard-flex">
+    <div class="iqac-dashboard-side">
+      <div class="iqac-side-icon-bg">
+        <svg width="92" height="92" fill="none">
+          <circle cx="46" cy="46" r="46" fill="url(#grad1)" opacity="0.13"/>
+          <defs>
+            <linearGradient id="grad1" x1="0" y1="0" x2="92" y2="92" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#33b5ff"/>
+              <stop offset="1" stop-color="#1976D2"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span class="iqac-side-emoji">📄</span>
+      </div>
+      <div class="iqac-side-title">Generated<br>Reports</div>
+    </div>
+    <div class="iqac-dashboard-main">
+      <div class="iqac-section-header">
+        <span class="iqac-section-icon">📑</span>
+        <span class="iqac-section-title">View Generated Reports</span>
+      </div>
+      {% if reports %}
+        <div class="iqac-report-list">
+          {% for report in reports %}
+            <div class="iqac-report-card">
+              <div class="iqac-report-info">
+                <div class="iqac-doc-icon">
+                  <svg width="32" height="40" viewBox="0 0 32 40" fill="none">
+                    <rect width="32" height="40" rx="7" fill="#3388FF" fill-opacity="0.12"/>
+                    <rect x="5" y="8" width="22" height="24" rx="3" fill="#3388FF" />
+                    <rect x="8.5" y="13.5" width="15" height="2" rx="1" fill="#fff"/>
+                    <rect x="8.5" y="18.5" width="11" height="2" rx="1" fill="#fff"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="iqac-report-title">{{ report.event_title|default:"(Untitled Event)" }}</div>
+                  <div class="iqac-report-meta">Generated on {{ report.generated_at|date:"M d, Y" }}</div>
+                </div>
+              </div>
+              <div class="iqac-report-actions">
+                <div class="iqac-btn-row">
+                  <a href="{% url 'emt:view_report' report.id %}" class="iqac-action-btn view-btn" title="View Report">View</a>
+                  <div class="iqac-download-dropdown">
+                    <button class="iqac-action-btn download-btn">Download</button>
+                    <div class="iqac-download-options">
+                      <a href="{% url 'emt:download_pdf' report.id %}">PDF</a>
+                      <a href="{% url 'emt:download_word' report.id %}">Word</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="iqac-empty-state">
+          <div class="iqac-empty-icon">📄</div>
+          <div class="iqac-empty-msg">No reports have been generated yet.</div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<script>
+  // Simple dropdown toggle logic for download options
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.iqac-download-dropdown').forEach(function(drop) {
+      drop.querySelector('.download-btn').onclick = function(e) {
+        e.stopPropagation();
+        drop.querySelector('.iqac-download-options').classList.toggle('show');
+      };
+    });
+    document.body.onclick = function() {
+      document.querySelectorAll('.iqac-download-options').forEach(function(d) {
+        d.classList.remove('show');
+      });
+    };
+  });
+</script>
+{% endblock %}

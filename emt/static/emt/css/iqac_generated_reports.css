@@ -1,0 +1,212 @@
+/* Copy theme from previous premium dashboard pages for consistency */
+.iqac-dashboard-bg {
+  min-height: 100vh;
+  background: linear-gradient(115deg, #e4f2ff 0%, #f6fafd 100%);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 50px;
+  padding-bottom: 32px;
+}
+.iqac-dashboard-flex {
+  display: flex;
+  width: 100%;
+  max-width: 1050px;
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 10px 34px rgba(49,115,255,0.12), 0 1.5px 10px rgba(0,0,0,0.03);
+  overflow: hidden;
+}
+.iqac-dashboard-side {
+  min-width: 180px;
+  max-width: 230px;
+  background: linear-gradient(144deg, #1976d2 0%, #33b5ff 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 44px 18px 32px 18px;
+  position: relative;
+  z-index: 1;
+}
+.iqac-side-icon-bg {
+  position: relative;
+  width: 92px;
+  height: 92px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 15px;
+}
+.iqac-side-emoji {
+  position: absolute;
+  font-size: 2.4rem;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 1.5px 2px #20408020);
+}
+.iqac-side-title {
+  color: #fff;
+  font-weight: 800;
+  font-size: 1.13rem;
+  text-align: center;
+  letter-spacing: 0.01em;
+  margin-top: 18px;
+  line-height: 1.32em;
+  text-shadow: 0 2px 12px #1d355760;
+}
+.iqac-dashboard-main {
+  flex: 1 1 0%;
+  padding: 46px 48px 38px 48px;
+  background: none;
+  min-width: 0;
+}
+.iqac-section-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #294e88;
+  margin-bottom: 34px;
+  letter-spacing: -0.7px;
+}
+.iqac-section-icon {
+  font-size: 1.5em;
+  filter: drop-shadow(0 2px 4px #6a90e340);
+}
+.iqac-report-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.iqac-report-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(90deg,#f7fbff 65%,#e4f2ff 100%);
+  border-radius: 16px;
+  box-shadow: 0 2.5px 18px rgba(67,130,220,0.08);
+  padding: 22px 26px;
+  transition: box-shadow 0.2s, transform 0.2s;
+  border: 1.2px solid #e4f2ff;
+}
+.iqac-report-card:hover {
+  box-shadow: 0 7px 26px rgba(55,100,200,0.17);
+  border: 1.2px solid #3388ff23;
+  transform: translateY(-2px) scale(1.013);
+}
+.iqac-report-info {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+}
+.iqac-doc-icon {
+  width: 38px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.iqac-report-title {
+  font-weight: 700;
+  color: #2b4477;
+  font-size: 1.13rem;
+  margin-bottom: 1.5px;
+  word-break: break-word;
+  letter-spacing: -0.03em;
+}
+.iqac-report-meta {
+  color: #6ea3e9;
+  font-size: 0.98rem;
+  font-weight: 500;
+}
+.iqac-report-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.iqac-btn-row {
+  display: flex;
+  gap: 12px;
+}
+.iqac-action-btn {
+  background: linear-gradient(90deg,#3388ff 0,#63deff 100%);
+  color: #fff;
+  border-radius: 100px;
+  font-weight: 700;
+  font-size: 1.02rem;
+  padding: 10px 24px;
+  box-shadow: 0 2.5px 10px rgba(61,145,255,0.10);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.16s, transform 0.13s;
+  text-decoration: none;
+  outline: none;
+  position: relative;
+}
+.iqac-action-btn.view-btn {
+  background: linear-gradient(90deg,#3cd2ff 0,#3388ff 100%);
+}
+.iqac-action-btn:hover, .iqac-action-btn:focus {
+  background: linear-gradient(90deg,#1976d2 0,#28b0fa 100%);
+  color: #fff;
+  transform: scale(1.05);
+  box-shadow: 0 4px 20px rgba(67,130,220,0.19);
+}
+.iqac-download-dropdown {
+  position: relative;
+  display: inline-block;
+}
+.iqac-download-options {
+  display: none;
+  position: absolute;
+  right: 0;
+  margin-top: 6px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 7px 18px rgba(67,130,220,0.10);
+  padding: 7px 0;
+  min-width: 108px;
+  z-index: 12;
+}
+.iqac-download-options.show {
+  display: block;
+}
+.iqac-download-options a {
+  display: block;
+  padding: 9px 18px;
+  color: #2267b1;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.12s;
+}
+.iqac-download-options a:hover {
+  background: #e3f1ff;
+}
+.iqac-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 48px 0 22px 0;
+}
+.iqac-empty-icon {
+  font-size: 2.6em;
+  margin-bottom: 15px;
+}
+.iqac-empty-msg {
+  color: #4d6fb4;
+  font-size: 1.22rem;
+  font-weight: 600;
+  text-align: center;
+}
+@media (max-width: 980px) {
+  .iqac-dashboard-flex { flex-direction: column; border-radius: 0 0 24px 24px;}
+  .iqac-dashboard-side { flex-direction: row; justify-content: flex-start; min-width: 0; max-width: none; width: 100%; padding: 26px 0 16px 0;}
+  .iqac-side-title { margin-top: 0; margin-left: 18px; font-size: 1.05rem;}
+}
+@media (max-width: 700px) {
+  .iqac-dashboard-main { padding: 30px 7vw 18px 7vw;}
+  .iqac-section-header { font-size: 1.08rem;}
+  .iqac-report-card { flex-direction: column; gap: 14px; align-items: flex-start; padding: 14px 6vw;}
+  .iqac-btn-row { flex-direction: column; gap: 8px;}
+}

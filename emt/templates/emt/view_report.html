@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'emt/css/iqac_view_report.css' %}">
+<div class="iqac-view-bg">
+  <div class="iqac-view-container">
+    <div class="iqac-view-header">
+      <span class="iqac-view-icon">📄</span>
+      <span class="iqac-view-title">{{ report.event_title }}</span>
+    </div>
+    <div class="iqac-view-details">
+      <!-- Example content, replace/expand with your real report fields -->
+      <div class="iqac-view-field"><strong>Date:</strong> {{ report.generated_at|date:"M d, Y" }}</div>
+      <div class="iqac-view-field"><strong>Status:</strong> Generated</div>
+      <div class="iqac-view-field"><strong>Description:</strong> {{ report.description|default:"—" }}</div>
+      <!-- ...more fields as needed -->
+    </div>
+    <div class="iqac-view-actions">
+      <a href="{% url 'emt:download_pdf' report.id %}" class="iqac-action-btn">Download PDF</a>
+      <a href="{% url 'emt:download_word' report.id %}" class="iqac-action-btn">Download Word</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,10 @@
+.iqac-view-bg { min-height: 100vh; background: linear-gradient(115deg, #e4f2ff 0%, #f6fafd 100%); padding-top: 44px;}
+.iqac-view-container { max-width: 620px; background: #fff; margin: auto; border-radius: 20px; box-shadow: 0 6px 32px #3388ff18; padding: 36px 32px 28px 32px;}
+.iqac-view-header { display: flex; align-items: center; gap: 13px; font-size: 1.3rem; font-weight: 800; color: #294e88; margin-bottom: 28px;}
+.iqac-view-icon { font-size: 2rem;}
+.iqac-view-details { margin-bottom: 36px; }
+.iqac-view-field { margin-bottom: 14px; color: #3d4b71; font-size: 1.07rem;}
+.iqac-view-actions { display: flex; gap: 16px;}
+.iqac-action-btn { background: linear-gradient(90deg,#3388ff 0,#63deff 100%); color: #fff; border-radius: 100px; font-weight: 700; font-size: 1.02rem; padding: 10px 28px; text-decoration: none; transition: background 0.14s;}
+.iqac-action-btn:hover { background: linear-gradient(90deg,#1976d2 0,#28b0fa 100%);}
+@media (max-width: 600px) { .iqac-view-container{padding:18px 5vw 12px 5vw;}.iqac-view-header{font-size:1.01rem;}}

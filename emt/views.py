@@ -251,3 +251,13 @@ def download_pdf(request, proposal_id):
 def download_word(request, proposal_id):
     # TODO: Generate and return actual Word file
     return HttpResponse(f"Word download for Proposal {proposal_id}", content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+@login_required
+def generated_reports(request):
+    reports = EventProposal.objects.filter(report_generated=True, submitted_by=request.user).order_by('-id')
+    return render(request, 'emt/generated_reports.html', {'reports': reports})
+
+@login_required
+def view_report(request, report_id):
+    report = get_object_or_404(EventProposal, id=report_id, submitted_by=request.user, report_generated=True)
+    # Gather more details if needed
+    return render(request, 'emt/view_report.html', {'report': report})
