@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'core/css/admin_user_edit.css' %}">
+<div class="container user-edit-container">
+    <h1>Edit User</h1>
+    <form method="post" class="user-edit-form">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="first_name">First Name</label>
+            <input type="text" name="first_name" value="{{ user_obj.first_name }}" required>
+        </div>
+        <div class="form-group">
+            <label for="last_name">Last Name</label>
+            <input type="text" name="last_name" value="{{ user_obj.last_name }}">
+        </div>
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" name="email" value="{{ user_obj.email }}" required>
+        </div>
+        <div class="form-group">
+            <label for="role">Role</label>
+            <select name="role" id="role">
+                <option value="student" {% if profile.role == "student" %}selected{% endif %}>Student</option>
+                <option value="faculty" {% if profile.role == "faculty" %}selected{% endif %}>Faculty</option>
+                <option value="hod" {% if profile.role == "hod" %}selected{% endif %}>HOD</option>
+                <option value="center" {% if profile.role == "center" %}selected{% endif %}>Center</option>
+            </select>
+        </div>
+        <div class="form-btn-group">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="{% url 'admin_user_management' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

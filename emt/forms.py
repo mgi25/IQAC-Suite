@@ -1,5 +1,5 @@
 from django import forms
-from .models import EventProposal,AttendanceRecord, Coordinator, Volunteer   , EventNeedAnalysis,EventObjectives,EventExpectedOutcomes,TentativeFlow,SpeakerProfile,ExpenseDetail
+from .models import EventProposal, EventNeedAnalysis,EventObjectives,EventExpectedOutcomes,TentativeFlow,SpeakerProfile,ExpenseDetail
 
 class EventProposalForm(forms.ModelForm):
     class Meta:
@@ -108,18 +108,3 @@ class ExpenseDetailForm(forms.ModelForm):
         model = ExpenseDetail
         fields = ['sl_no', 'particulars', 'amount']
 
-# forms.py
-class AttendanceForm(forms.ModelForm):
-    class Meta:
-        model = AttendanceRecord
-        fields = ['reg_no', 'name']
-
-class CoordinatorForm(forms.ModelForm):
-    class Meta:
-        model = Coordinator
-        fields = ['name']
-
-class VolunteerForm(forms.ModelForm):
-    class Meta:
-        model = Volunteer
-        fields = ['name']

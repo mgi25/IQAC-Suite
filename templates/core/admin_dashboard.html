@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'core/css/admin_dashboard.css' %}">
+<div class="admin-dashboard-bg">
+  <div class="admin-dashboard-container">
+    <div class="admin-dashboard-header">
+      <span class="admin-dashboard-icon">🛡️</span>
+      <span class="admin-dashboard-title">Admin Dashboard</span>
+    </div>
+    <div class="admin-dashboard-welcome">
+      Welcome, <b>{{ user.get_full_name|default:user.username }}</b>!
+    </div>
+    <div class="admin-dashboard-stats-row">
+      <div class="admin-dashboard-stat">
+        <div class="stat-icon stat-student">👨‍🎓</div>
+        <div class="stat-count">{{ stats.students }}</div>
+        <div class="stat-label">Students</div>
+      </div>
+      <div class="admin-dashboard-stat">
+        <div class="stat-icon stat-faculty">👨‍🏫</div>
+        <div class="stat-count">{{ stats.faculties }}</div>
+        <div class="stat-label">Faculties</div>
+      </div>
+      <div class="admin-dashboard-stat">
+        <div class="stat-icon stat-hod">🏫</div>
+        <div class="stat-count">{{ stats.hods }}</div>
+        <div class="stat-label">HODs</div>
+      </div>
+      <div class="admin-dashboard-stat">
+        <div class="stat-icon stat-center">🏢</div>
+        <div class="stat-count">{{ stats.centers }}</div>
+        <div class="stat-label">Centers</div>
+      </div>
+    </div>
+    <div class="admin-dashboard-navcards">
+      <a class="admin-navcard" href="{% url 'admin_user_panel' %}">
+        <div class="navcard-icon">👥</div>
+        <div class="navcard-title">User Management</div>
+        <div class="navcard-desc">View and manage user roles</div>
+      </a>
+      <a class="admin-navcard" href="#">
+        <div class="navcard-icon">📄</div>
+        <div class="navcard-title">Event Proposals</div>
+        <div class="navcard-desc">View all submitted proposals</div>
+      </a>
+      <a class="admin-navcard" href="#">
+        <div class="navcard-icon">📑</div>
+        <div class="navcard-title">Reports</div>
+        <div class="navcard-desc">Review all generated reports</div>
+      </a>
+      <a class="admin-navcard" href="#">
+        <div class="navcard-icon">⚙️</div>
+        <div class="navcard-title">Settings</div>
+        <div class="navcard-desc">Admin panel settings</div>
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

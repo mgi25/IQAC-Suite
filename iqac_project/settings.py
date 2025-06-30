@@ -1,14 +1,10 @@
 from pathlib import Path
 
-
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-
 
 SECRET_KEY = 'django-insecure-…'  # rotate this before you go to production!
 DEBUG      = True
 ALLOWED_HOSTS = []
-
 
 INSTALLED_APPS = [
     # Django core
@@ -26,13 +22,11 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
 
-    # your app
-    'core',
+    # your apps
+    'core.apps.CoreConfig',   # <--- use this
     'emt',
-    'transcript'
+    'transcript',
 ]
-
-
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -40,22 +34,18 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-
     # add allauth’s account middleware here:
     'allauth.account.middleware.AccountMiddleware',
-
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-
 ROOT_URLCONF = 'iqac_project.urls'
-
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR /'templates'],  # points at core/templates/
+        'DIRS': [BASE_DIR /'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -67,9 +57,7 @@ TEMPLATES = [
     },
 ]
 
-
 WSGI_APPLICATION = 'iqac_project.wsgi.application'
-
 
 DATABASES = {
     'default': {
@@ -78,7 +66,6 @@ DATABASES = {
     }
 }
 
-
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',       # Django default
     'allauth.account.auth_backends.AuthenticationBackend',  # allauth
@@ -86,13 +73,10 @@ AUTHENTICATION_BACKENDS = [
 
 SITE_ID = 1  # must match a row in django_site
 
-
 # Redirect URLs
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = 'dashboard'  # or 'home' or your custom view name
 LOGOUT_REDIRECT_URL = '/accounts/login/'
-
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # django-allauth CONFIGURATION
@@ -108,7 +92,6 @@ SOCIALACCOUNT_LOGIN_ON_GET = True
 ACCOUNT_LOGOUT_REDIRECT_URL = '/accounts/login/'
 ACCOUNT_LOGOUT_ON_GET = True
 
-
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'SCOPE': ['profile', 'email'],
@@ -120,8 +103,6 @@ SOCIALACCOUNT_PROVIDERS = {
 # point allauth to your custom adapter that checks the email domain
 SOCIALACCOUNT_ADAPTER = 'core.adapters.SchoolSocialAccountAdapter'
 
-
-
 # ──────────────────────────────────────────────────────────────────────────────
 # INTERNATIONALIZATION
 # ──────────────────────────────────────────────────────────────────────────────
@@ -130,7 +111,6 @@ LANGUAGE_CODE = 'en-us'
 TIME_ZONE     = 'UTC'
 USE_I18N      = True
 USE_TZ        = True
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # STATIC FILES
@@ -142,4 +122,3 @@ STATICFILES_DIRS = [
 ]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-

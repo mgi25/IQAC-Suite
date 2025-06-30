@@ -1,27 +1,29 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse, HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+
 from .models import (
-    EventProposal, EventNeedAnalysis, EventObjectives, AttendanceRecord, Coordinator, Volunteer,
-    EventExpectedOutcomes, TentativeFlow, ExpenseDetail, SpeakerProfile
+    EventProposal, EventNeedAnalysis, EventObjectives,
+    EventExpectedOutcomes, TentativeFlow,
+    ExpenseDetail, SpeakerProfile
 )
 from .forms import (
-    EventProposalForm, NeedAnalysisForm, ExpectedOutcomesForm, AttendanceForm, CoordinatorForm, VolunteerForm,
-    ObjectivesForm, TentativeFlowForm, SpeakerProfileForm, ExpenseDetailForm
+    EventProposalForm, NeedAnalysisForm, ExpectedOutcomesForm,
+    ObjectivesForm, TentativeFlowForm, SpeakerProfileForm,
+    ExpenseDetailForm
 )
 from django.forms import modelformset_factory
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
-import json
-from django.http import HttpResponse
 
-# ========== PROPOSAL STEP 1 ==========
+# ──────────────────────────────
+# PROPOSAL STEP 1: Proposal Submission
+# ──────────────────────────────
 @login_required
 def submit_proposal(request, pk=None):
     proposal = None
     if pk:
-        # Only load a proposal (draft) if pk given
         proposal = get_object_or_404(EventProposal, pk=pk, submitted_by=request.user)
-
     if request.method == 'POST':
         form = EventProposalForm(request.POST, instance=proposal)
         if form.is_valid():
@@ -39,12 +41,12 @@ def submit_proposal(request, pk=None):
         form = EventProposalForm(instance=proposal)
     return render(request, 'emt/submit_proposal.html', {'form': form, 'proposal': proposal})
 
-
-# ========== AUTOSAVE ENDPOINT ==========
+# ──────────────────────────────
+# AUTOSAVE for Proposal
+# ──────────────────────────────
 @csrf_exempt
 @login_required
 def autosave_proposal(request):
-    """Handles AJAX autosave of draft."""
     if request.method == 'POST':
         data = json.loads(request.body.decode('utf-8'))
         proposal_id = data.get('proposal_id')
@@ -62,7 +64,9 @@ def autosave_proposal(request):
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
-# ========== STEP 2 ==========
+# ──────────────────────────────
+# PROPOSAL STEP 2: Need Analysis
+# ──────────────────────────────
 @login_required
 def submit_need_analysis(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
@@ -78,7 +82,9 @@ def submit_need_analysis(request, proposal_id):
         form = NeedAnalysisForm(instance=instance)
     return render(request, 'emt/need_analysis.html', {'form': form, 'proposal': proposal})
 
-# ========== STEP 3 ==========
+# ──────────────────────────────
+# PROPOSAL STEP 3: Objectives
+# ──────────────────────────────
 @login_required
 def submit_objectives(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
@@ -94,7 +100,9 @@ def submit_objectives(request, proposal_id):
         form = ObjectivesForm(instance=instance)
     return render(request, 'emt/objectives.html', {'form': form, 'proposal': proposal})
 
-# ========== STEP 4 ==========
+# ──────────────────────────────
+# PROPOSAL STEP 4: Expected Outcomes
+# ──────────────────────────────
 @login_required
 def submit_expected_outcomes(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
@@ -110,7 +118,9 @@ def submit_expected_outcomes(request, proposal_id):
         form = ExpectedOutcomesForm(instance=instance)
     return render(request, 'emt/submit_expected_outcomes.html', {'form': form, 'proposal': proposal})
 
-# ========== STEP 5 ==========
+# ──────────────────────────────
+# PROPOSAL STEP 5: Tentative Flow
+# ──────────────────────────────
 @login_required
 def submit_tentative_flow(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
@@ -126,7 +136,9 @@ def submit_tentative_flow(request, proposal_id):
         form = TentativeFlowForm(instance=instance)
     return render(request, 'emt/tentative_flow.html', {'form': form, 'proposal': proposal})
 
-# ========== STEP 6 ==========
+# ──────────────────────────────
+# PROPOSAL STEP 6: Speaker Profile
+# ──────────────────────────────
 @login_required
 def submit_speaker_profile(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
@@ -145,7 +157,9 @@ def submit_speaker_profile(request, proposal_id):
         formset = SpeakerFormSet(queryset=SpeakerProfile.objects.filter(proposal=proposal))
     return render(request, 'emt/speaker_profile.html', {'formset': formset, 'proposal': proposal})
 
-# ========== STEP 7 ==========
+# ──────────────────────────────
+# PROPOSAL STEP 7: Expense Details
+# ──────────────────────────────
 @login_required
 def submit_expense_details(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
@@ -164,52 +178,73 @@ def submit_expense_details(request, proposal_id):
         formset = ExpenseFormSet(queryset=ExpenseDetail.objects.filter(proposal=proposal))
     return render(request, 'emt/expense_details.html', {'proposal': proposal, 'formset': formset})
 
-# ========== STATUS PAGE ==========
+# ──────────────────────────────
+# STATUS PAGE
+# ──────────────────────────────
 @login_required
 def proposal_status(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
     return render(request, 'emt/proposal_status.html', {'proposal': proposal})
 
-# ========== DASHBOARD ==========
+# ──────────────────────────────
+# IQAC Suite Dashboard
+# ──────────────────────────────
 @login_required
 def iqac_suite_dashboard(request):
     return render(request, 'emt/iqac_suite_dashboard.html')
 
-# ========== ATTENDANCE (bonus, unchanged) ==========
+# ──────────────────────────────
+# PENDING REPORTS, GENERATION, SUCCESS
+# ──────────────────────────────
+
 @login_required
-def attendance_view(request, proposal_id):
+def pending_reports(request):
+    proposals = EventProposal.objects.filter(report_generated=False, submitted_by=request.user)
+    return render(request, 'emt/pending_reports.html', {'proposals': proposals})
+
+@login_required
+def generate_report(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
-    if request.method == 'POST':
-        form_type = request.POST.get('form_type')
-        if form_type == 'student':
-            form = AttendanceForm(request.POST)
-            if form.is_valid():
-                obj = form.save(commit=False)
-                obj.proposal = proposal
-                obj.save()
-        elif form_type == 'coordinator':
-            form = CoordinatorForm(request.POST)
-            if form.is_valid():
-                obj = form.save(commit=False)
-                obj.proposal = proposal
-                obj.save()
-        elif form_type == 'volunteer':
-            form = VolunteerForm(request.POST)
-            if form.is_valid():
-                obj = form.save(commit=False)
-                obj.proposal = proposal
-                obj.save()
-        return redirect('emt:attendance', proposal_id=proposal.id)
-    context = {
-        'proposal': proposal,
-        'students': proposal.attendees.all(),
-        'coordinators': proposal.coordinators.all(),
-        'volunteers': proposal.volunteers.all(),
-        'student_form': AttendanceForm(),
-        'coordinator_form': CoordinatorForm(),
-        'volunteer_form': VolunteerForm(),
-    }
-    return render(request, 'emt/attendance.html', context)
+    # TODO: Add your real PDF/Word generation logic here!
+    proposal.report_generated = True
+    proposal.save()
+    return redirect('emt:report_success', proposal_id=proposal.id)
+
+@login_required
+def report_success(request, proposal_id):
+    proposal = get_object_or_404(EventProposal, id=proposal_id)
+    return render(request, 'emt/report_success.html', {'proposal': proposal})
+
+@login_required
+def generated_reports(request):
+    reports = EventProposal.objects.filter(report_generated=True, submitted_by=request.user).order_by('-id')
+    return render(request, 'emt/generated_reports.html', {'reports': reports})
+
+@login_required
+def view_report(request, report_id):
+    report = get_object_or_404(EventProposal, id=report_id, submitted_by=request.user, report_generated=True)
+    return render(request, 'emt/view_report.html', {'report': report})
+
+# ──────────────────────────────
+# FILE DOWNLOAD (PLACEHOLDER)
+# ──────────────────────────────
+
+@login_required
+def download_pdf(request, proposal_id):
+    # TODO: Implement actual PDF generation and return the file
+    return HttpResponse(f"PDF download for Proposal {proposal_id}", content_type='application/pdf')
+
+@login_required
+def download_word(request, proposal_id):
+    # TODO: Implement actual Word generation and return the file
+    return HttpResponse(
+        f"Word download for Proposal {proposal_id}",
+        content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    )
+
+# ──────────────────────────────
+# AUTOSAVE Need Analysis (if you use autosave)
+# ──────────────────────────────
 @csrf_exempt
 @login_required
 def autosave_need_analysis(request):
@@ -223,41 +258,3 @@ def autosave_need_analysis(request):
         na.save()
         return JsonResponse({'success': True})
     return JsonResponse({'success': False}, status=400)
-def pending_reports(request):
-    proposals = EventProposal.objects.filter(report_generated=False, submitted_by=request.user)
-    return render(request, 'emt/pending_reports.html', {'proposals': proposals})
-
-
-
-def generate_report(request, proposal_id):
-    proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
-
-    # 🚀 Logic to generate report goes here
-    # TODO: Call your PDF/Word report generation logic here
-    # Example: generate_pdf(proposal), generate_docx(proposal), etc.
-
-    proposal.report_generated = True
-    proposal.save()
-    return redirect('emt:report_success', proposal_id=proposal.id)
-
-
-def report_success(request, proposal_id):
-    proposal = get_object_or_404(EventProposal, id=proposal_id)
-    return render(request, 'emt/report_success.html', {'proposal': proposal})
-def download_pdf(request, proposal_id):
-    # TODO: Generate and return actual PDF
-    return HttpResponse(f"PDF download for Proposal {proposal_id}", content_type='application/pdf')
-
-def download_word(request, proposal_id):
-    # TODO: Generate and return actual Word file
-    return HttpResponse(f"Word download for Proposal {proposal_id}", content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-@login_required
-def generated_reports(request):
-    reports = EventProposal.objects.filter(report_generated=True, submitted_by=request.user).order_by('-id')
-    return render(request, 'emt/generated_reports.html', {'reports': reports})
-
-@login_required
-def view_report(request, report_id):
-    report = get_object_or_404(EventProposal, id=report_id, submitted_by=request.user, report_generated=True)
-    # Gather more details if needed
-    return render(request, 'emt/view_report.html', {'report': report})

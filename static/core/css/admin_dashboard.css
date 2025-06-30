@@ -1,0 +1,106 @@
+.admin-dashboard-bg {
+  min-height: 100vh;
+  background: linear-gradient(120deg, #e0ecff 0%, #f5faff 100%);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 60px;
+}
+.admin-dashboard-container {
+  width: 100%;
+  max-width: 1000px;
+  background: #fff;
+  border-radius: 22px;
+  box-shadow: 0 6px 38px #3388ff18;
+  padding: 36px 38px 32px 38px;
+}
+.admin-dashboard-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 2rem;
+  font-weight: 800;
+  color: #264487;
+  margin-bottom: 22px;
+}
+.admin-dashboard-icon {
+  font-size: 2.3rem;
+}
+.admin-dashboard-welcome {
+  font-size: 1.18rem;
+  margin-bottom: 18px;
+  color: #2980d0;
+}
+.admin-dashboard-stats-row {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 35px;
+}
+.admin-dashboard-stat {
+  background: linear-gradient(90deg,#e9f6ff 70%,#d9e9ff 100%);
+  border-radius: 14px;
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 0 18px 0;
+  box-shadow: 0 2px 16px #3388ff0a;
+}
+.stat-icon {
+  font-size: 2.3rem;
+  margin-bottom: 8px;
+}
+.stat-count {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #1875e8;
+  margin-bottom: 3px;
+}
+.stat-label {
+  color: #468ad8;
+  font-size: 1.06rem;
+  font-weight: 600;
+}
+.admin-dashboard-navcards {
+  display: flex;
+  gap: 28px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+.admin-navcard {
+  flex: 1 1 220px;
+  background: linear-gradient(99deg,#f3f9ff 60%,#e4f2ff 100%);
+  border-radius: 16px;
+  box-shadow: 0 2.5px 18px rgba(67,130,220,0.07);
+  padding: 32px 24px;
+  text-decoration: none;
+  color: #245b8f;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-bottom: 15px;
+  transition: box-shadow 0.14s, transform 0.13s;
+}
+.admin-navcard:hover {
+  box-shadow: 0 8px 28px rgba(67,130,220,0.19);
+  transform: translateY(-3px) scale(1.032);
+  color: #1976d2;
+}
+.navcard-icon {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+.navcard-title {
+  font-weight: 700;
+  font-size: 1.12rem;
+  margin-bottom: 4px;
+}
+.navcard-desc {
+  font-size: 0.99rem;
+  color: #6ea3e9;
+}
+@media (max-width: 850px) {
+  .admin-dashboard-container { padding: 22px 8vw;}
+  .admin-dashboard-stats-row, .admin-dashboard-navcards { flex-direction: column; gap: 16px;}
+  .admin-navcard { width: 100%; }
+}

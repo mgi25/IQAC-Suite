@@ -93,7 +93,10 @@ body {
     opacity: 0.94;
 }
 
+/* --- BUTTON MAGIC STARTS HERE --- */
 .suite-card-btn {
+    position: relative;
+    overflow: hidden;
     padding: 10px 32px;
     border-radius: 999px;
     border: none;
@@ -104,17 +107,40 @@ body {
     box-shadow: 0 2px 12px 0 rgba(24,99,198,0.09);
     text-decoration: none;
     cursor: pointer;
-    transition: background 0.17s, transform 0.15s;
     outline: none;
     letter-spacing: 0.03em;
     display: inline-block;
+    z-index: 1;
+    /* Only transform animates, bg stays static (handled by ::before) */
+    transition: transform 1.5s;
+}
+
+.suite-card-btn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, #46b7e7 25%, #1863c6 80%);
+    opacity: 0;
+    transition: opacity 1.5s;
+    z-index: 0;
+}
+
+.suite-card-btn:hover::before,
+.suite-card-btn:focus::before {
+    opacity: 1;
+}
+
+.suite-card-btn span,
+.suite-card-btn .btn-text {
+    position: relative;
+    z-index: 1;
 }
 
 .suite-card-btn:hover,
 .suite-card-btn:focus {
-    background: linear-gradient(90deg, #46b7e7 25%, #1863c6 80%);
     transform: translateY(-1.5px) scale(1.04);
 }
+/* --- BUTTON MAGIC ENDS HERE --- */
 
 .suite-card-btn-disabled {
     background: #e0e5ed !important;
