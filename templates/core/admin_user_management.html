@@ -13,7 +13,15 @@
                     <option value="student" {% if request.GET.role == "student" %}selected{% endif %}>Student</option>
                     <option value="faculty" {% if request.GET.role == "faculty" %}selected{% endif %}>Faculty</option>
                     <option value="hod" {% if request.GET.role == "hod" %}selected{% endif %}>HOD</option>
-                    <option value="center" {% if request.GET.role == "center" %}selected{% endif %}>Center</option>
+                    <option value="center_head" {% if request.GET.role == "center_head" %}selected{% endif %}>Center Head</option>
+                    <option value="club_head" {% if request.GET.role == "club_head" %}selected{% endif %}>Club Head</option>
+                    <option value="dean" {% if request.GET.role == "dean" %}selected{% endif %}>Dean</option>
+                    <option value="director" {% if request.GET.role == "director" %}selected{% endif %}>Director</option>
+                    <option value="cdl" {% if request.GET.role == "cdl" %}selected{% endif %}>CDL</option>
+                    <option value="uni_iqac" {% if request.GET.role == "uni_iqac" %}selected{% endif %}>University IQAC</option>
+                    <option value="dept_iqac" {% if request.GET.role == "dept_iqac" %}selected{% endif %}>Dept IQAC</option>
+                    <option value="academic_coordinator" {% if request.GET.role == "academic_coordinator" %}selected{% endif %}>Academic Coordinator</option>
+                    <option value="admin" {% if request.GET.role == "admin" %}selected{% endif %}>Admin</option>
                 </select>
             </div>
             <div class="filter-group">
@@ -30,7 +38,7 @@
                 <th>#</th>
                 <th>Name</th>
                 <th>Email</th>
-                <th>Role</th>
+                <th>Roles</th>
                 <th>Date Joined</th>
                 <th>Action</th>
             </tr>
@@ -42,9 +50,19 @@
                 <td>{{ user.get_full_name|default:user.username }}</td>
                 <td>{{ user.email }}</td>
                 <td>
-                    <span class="role-badge role-{{ user.profile.role|lower }}">
-                        {{ user.profile.role|capfirst }}
-                    </span>
+                    {% if user.role_assignments.exists %}
+                        {% for ra in user.role_assignments.all %}
+                            <span class="role-badge role-{{ ra.role|lower }}">
+                                {{ ra.get_role_display }}
+                                {% if ra.department %}<span class="role-context">({{ ra.department.name }})</span>{% endif %}
+                                {% if ra.club %}<span class="role-context">({{ ra.club.name }})</span>{% endif %}
+                                {% if ra.center %}<span class="role-context">({{ ra.center.name }})</span>{% endif %}
+                            </span>
+                            {% if not forloop.last %}<br>{% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <span class="role-badge role-none">No role</span>
+                    {% endif %}
                 </td>
                 <td>{{ user.date_joined|date:"Y-m-d H:i" }}</td>
                 <td>

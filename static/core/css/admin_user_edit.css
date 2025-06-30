@@ -1,11 +1,12 @@
 .user-edit-container {
     background: #fff;
     border-radius: 22px;
-    max-width: 480px;
+    max-width: 580px;
     margin: 60px auto 0;
-    padding: 36px 40px 24px 40px;
+    padding: 36px 40px 28px 40px;
     box-shadow: 0 4px 32px rgba(44, 91, 150, 0.13);
 }
+
 .user-edit-form .form-group {
     margin-bottom: 18px;
 }
@@ -15,7 +16,8 @@
     margin-bottom: 7px;
     display: block;
 }
-.user-edit-form input, .user-edit-form select {
+.user-edit-form input,
+.user-edit-form select {
     width: 100%;
     padding: 8px 12px;
     border: 1.5px solid #d8e2ef;
@@ -23,12 +25,93 @@
     background: #f4f7fa;
     font-size: 16px;
     margin-top: 4px;
+    box-sizing: border-box;
 }
+
+#roles-list {
+    margin-top: 18px;
+}
+.role-item {
+    background: #f6fafd;
+    border-radius: 12px;
+    padding: 14px 16px 12px 16px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 12px rgba(44, 91, 150, 0.07);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 12px;
+    align-items: center;
+    position: relative;
+}
+.role-item label {
+    margin-bottom: 0;
+    font-weight: 500;
+    color: #516284;
+    font-size: 14px;
+}
+.role-item select,
+.role-item input[type="text"],
+.role-item select:focus,
+.role-item input[type="text"]:focus {
+    min-width: 135px;
+    max-width: 240px;
+    background: #eef3fa;
+    border-radius: 8px;
+    border: 1px solid #cad7e7;
+    margin-top: 0;
+    margin-bottom: 0;
+    box-sizing: border-box;
+}
+
+.remove-role-btn,
+input[type="submit"].remove-role-btn {
+    background: #ffd5d5;
+    color: #ad1b1b;
+    border: none;
+    border-radius: 8px;
+    padding: 5px 18px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: 500;
+    margin-left: 6px;
+    transition: background 0.18s;
+}
+.remove-role-btn:hover {
+    background: #fd9a9a;
+    color: #fff;
+}
+
+#roles-section > label {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #183963;
+    display: block;
+}
+#roles-section button[type="button"] {
+    margin-top: 7px;
+    background: #e2f1fa;
+    color: #226cb6;
+    border: none;
+    border-radius: 9px;
+    font-size: 15px;
+    padding: 7px 22px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.15s;
+}
+#roles-section button[type="button"]:hover {
+    background: #b8e1fa;
+    color: #155b8c;
+}
+
 .form-btn-group {
     display: flex;
-    gap: 12px;
-    margin-top: 24px;
+    gap: 14px;
+    margin-top: 26px;
+    align-items: center;
 }
+
 .btn.btn-primary {
     background: #2574cb;
     color: #fff;
@@ -57,4 +140,20 @@
 }
 .btn.btn-secondary:hover {
     background: #d1dbe6;
+}
+
+@media (max-width: 700px) {
+    .user-edit-container {
+        padding: 22px 7vw;
+    }
+    .role-item {
+        flex-direction: column;
+        gap: 10px 0;
+        padding: 12px 8px 12px 8px;
+    }
+    .form-btn-group {
+        flex-direction: column;
+        gap: 9px;
+        margin-top: 20px;
+    }
 }

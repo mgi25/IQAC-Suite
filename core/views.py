@@ -4,11 +4,13 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpResponseForbidden
 from django.contrib.auth.models import User
 from django.contrib import messages
-# Assuming you have a Profile model with a 'role' field
-from core.models import Profile
-from emt.models import EventProposal
 from django.db.models import Q
-
+from django.forms import modelformset_factory
+from django.forms import inlineformset_factory
+from .models import (
+    Profile, EventProposal, RoleAssignment,
+    Department, Club, Center
+)
 
 def superuser_required(view_func):
     def _wrapped_view(request, *args, **kwargs):
@@ -18,7 +20,6 @@ def superuser_required(view_func):
     return _wrapped_view
 
 def login_view(request):
-    # Allauth login
     return render(request, 'core/login.html')
 
 def login_page(request):
@@ -30,7 +31,7 @@ def logout_view(request):
 
 @login_required
 def dashboard(request):
-    proposals = EventProposal.objects.filter(submitted_by=request.user).exclude(status='completed').order_by('-updated_at')
+    proposals = EventProposal.objects.filter(submitted_by=request.user).exclude(status='completed').order_by('-date_submitted')
     other_notifications = [
         {'type': 'info', 'msg': 'System update scheduled for tonight at 10 PM.', 'time': '2 hours ago'},
         {'type': 'reminder', 'msg': 'Submit your event report before 26 June.', 'time': '1 day ago'},
@@ -44,12 +45,18 @@ def dashboard(request):
 @login_required
 def propose_event(request):
     if request.method == 'POST':
+        department = request.POST.get('department') or ''
         title = request.POST.get('title')
         desc  = request.POST.get('description')
+        # Use main role or summary of roles
+        roles = [ra.get_role_display() for ra in request.user.role_assignments.all()]
+        user_type = ", ".join(roles) or (request.user.profile.main_role if hasattr(request.user, "profile") else "")
         EventProposal.objects.create(
             submitted_by=request.user,
-            event_title=title,
-            # description=desc  # Make sure your model has this field
+            department=department,
+            user_type=user_type,
+            title=title,
+            description=desc
         )
         return redirect('dashboard')
     return render(request, 'core/event_proposal.html')
@@ -73,10 +80,10 @@ def proposal_status(request, pk):
 @user_passes_test(lambda u: u.is_superuser)
 def admin_dashboard(request):
     stats = {
-        "students": User.objects.filter(profile__role="student").count(),
-        "faculties": User.objects.filter(profile__role="faculty").count(),
-        "hods": User.objects.filter(profile__role="hod").count(),
-        "centers": User.objects.filter(profile__role="center").count(),
+        "students": RoleAssignment.objects.filter(role="student").count(),
+        "faculties": RoleAssignment.objects.filter(role="faculty").count(),
+        "hods": RoleAssignment.objects.filter(role="hod").count(),
+        "centers": RoleAssignment.objects.filter(role="center_head").count(),
     }
     return render(request, "core/admin_dashboard.html", {"stats": stats})
 
@@ -85,57 +92,54 @@ def admin_user_panel(request):
     return render(request, "core/admin_user_panel.html")
 
 @user_passes_test(lambda u: u.is_superuser)
-@user_passes_test(lambda u: u.is_superuser)
 def admin_user_management(request):
-    users = User.objects.select_related('profile').all().order_by('-date_joined')
-
+    users = User.objects.all().order_by('-date_joined')
     # --- Filtering Logic ---
     role = request.GET.get('role')
     q = request.GET.get('q', '').strip()
-    
-    # Filter by role if provided
     if role:
-        users = users.filter(profile__role__iexact=role)
-    
-    # Filter by search query (name or email)
+        users = users.filter(role_assignments__role=role).distinct()
     if q:
         users = users.filter(
             Q(email__icontains=q) | 
             Q(first_name__icontains=q) |
             Q(last_name__icontains=q) |
             Q(username__icontains=q)
-        )
-
+        ).distinct()
+    # Pre-fetch roles for performance
+    users = users.prefetch_related('role_assignments', 'role_assignments__department', 'role_assignments__club', 'role_assignments__center')
     return render(request, "core/admin_user_management.html", {"users": users})
 
-
+@login_required
 @user_passes_test(lambda u: u.is_superuser)
 def admin_user_edit(request, user_id):
     user = get_object_or_404(User, id=user_id)
-    # Add form logic for editing if needed
-    return render(request, "core/admin_user_edit.html", {"user": user})
-@user_passes_test(lambda u: u.is_superuser)
-def admin_user_edit(request, user_id):
-    user = get_object_or_404(User, id=user_id)
-    profile = user.profile
 
+    RoleAssignmentFormSet = inlineformset_factory(
+        User,
+        RoleAssignment,
+        fields=('role', 'department', 'club', 'center'),
+        extra=1, can_delete=True
+    )
     if request.method == "POST":
-        # Update user fields
+        formset = RoleAssignmentFormSet(request.POST, instance=user)
+        # Save user fields if editable
         user.first_name = request.POST.get("first_name", "")
         user.last_name = request.POST.get("last_name", "")
         user.email = request.POST.get("email", "")
         user.save()
 
-        # Update role
-        role = request.POST.get("role")
-        if role in ["student", "faculty", "hod", "center"]:
-            profile.role = role
-            profile.save()
-
-        messages.success(request, "User updated successfully.")
-        return redirect('admin_user_management')  # Redirect to user management
+        if formset.is_valid():
+            formset.save()
+            messages.success(request, "User roles updated successfully.")
+            return redirect('admin_user_management')
+    else:
+        formset = RoleAssignmentFormSet(instance=user)
 
     return render(request, "core/admin_user_edit.html", {
         "user_obj": user,
-        "profile": profile,
+        "formset": formset,
+        "departments": Department.objects.all(),
+        "clubs": Club.objects.all(),
+        "centers": Center.objects.all(),
     })
