@@ -46,6 +46,16 @@ class RoleAssignment(models.Model):
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     main_role = models.CharField(max_length=30, blank=True, null=True)
+
+    @property
+    def role(self):
+        return self.main_role
+
+    @role.setter
+    def role(self, value):
+        # store into main_role
+        self.main_role = value
+
     def __str__(self):
         return f"{self.user.username} - {self.main_role or 'No main role'}"
 
