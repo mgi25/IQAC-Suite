@@ -1,0 +1,56 @@
+/* core/css/base.css */
+
+/* 1. RESET & BASE */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: #e6f5fd;
+  color: #172b4d;
+  min-height: 100vh;
+}
+
+/* 2. HEADER */
+.site-header {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 80px;
+  background: #1064c8;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 2rem;
+  box-shadow: 0 4px 18px 0 rgba(16, 100, 200, 0.13);
+  z-index: 100;
+}
+.navbar-brand {
+  display: flex; align-items: center;
+  color: #fff;
+  font-size: 1.6rem;
+  font-weight: 700;
+  text-decoration: none;
+  letter-spacing: 0.03em;
+}
+.navbar-logo {
+  height: 46px; width: 46px; margin-right: 0.8rem;
+  background: #fff; border-radius: 50%; object-fit: cover;
+  border: 3px solid #d3e6fb;
+}
+.navbar-user { display: flex; align-items: center; gap: 1rem; }
+#username-badge {
+  background: #fff; color: #1064c8; padding: 0.5rem 1.2rem;
+  border-radius: 999px; font-weight: 600; font-size: 1rem;
+  letter-spacing: 0.02em;
+}
+.logout-btn {
+  background: #fff; color: #1064c8; border-radius: 999px;
+  font-weight: 600; padding: 0.48rem 1.3rem; text-decoration: none;
+  font-size: 1rem; border: none; transition: background 0.16s;
+}
+.logout-btn:hover { background: #e6f5fd; }
+
+main {
+  padding-top: 100px; /* To prevent content hiding behind fixed header */
+}
+
+/* Responsive Header */
+@media (max-width: 600px) {
+  .site-header { height: 60px; padding: 0 0.7rem; }
+  .navbar-logo { height: 34px; width: 34px; }
+}

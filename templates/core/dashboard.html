@@ -4,114 +4,41 @@
 {% block title %}Dashboard – IQAC Suite{% endblock %}
 
 {% block head_extra %}
+  <!-- dashboard-only stylesheet -->
   <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css?family=Inter:400,600,700&display=swap" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
+<div class="dash-wrap">
 
-<header class="site-header" role="banner">
-  <a href="#" class="navbar-brand" aria-label="Home">
-    <img src="{% static 'core/img/campus-logo.png' %}" alt="Logo" class="navbar-logo" />
-    <span>Infotech Lab</span>
-  </a>
-  <div class="navbar-user">
-    <span id="username-badge">{{ request.user.get_full_name|default:request.user.username }}</span>
-    <a href="{% url 'account_logout' %}?next=/accounts/login/" class="logout-btn" title="Logout">Logout</a>
-  </div>
-</header>
-
-<main class="dashboard-container" aria-label="Main dashboard">
-  <!-- LEFT: Application cards -->
-  <section class="left-panel" aria-labelledby="dashboard-title">
-    <h1 id="dashboard-title">Welcome to IQAC Suite and Transcript Automater</h1>
-    <div class="dashboard-user">
-      <h2>Welcome, <span class="user-name">{{ request.user.first_name|default:"User" }}</span>!</h2>
-      <p class="dashboard-subtitle">Select an application to launch:</p>
-    </div>
-    <div class="cards" role="group" aria-label="Application Launch Options">
-      <!-- IQAC Suite Card -->
-      <a href="{% url 'emt:iqac_suite_dashboard' %}" class="card app-card" aria-label="Launch IQAC Suite">
-        <i class="fa-solid fa-file card-icon"></i>
-        <h3>IQAC Suite</h3>
-        <p>Event proposal and report management.</p>
-        <span class="card-arrow">Launch <span aria-hidden="true">→</span></span>
-      </a>
-
-      <!-- Graduate Transcript Card (Updated!) -->
-      <a href="{% url 'transcript:home' %}" class="card app-card" aria-label="Launch Graduate Transcript">
-        <i class="fa-solid fa-graduation-cap card-icon" style="color:#2e7d32;"></i>
-        <h3>Graduate Transcript</h3>
-        <p>Graduate characteristics report.</p>
-        <span class="card-arrow">Launch <span aria-hidden="true">→</span></span>
-      </a>
-    </div>
+  <!-- HERO -->
+  <section class="dash-hero">
+    <h2 class="dash-sub">Welcome&nbsp;to</h2>
+    <h1 class="dash-head">
+      IQAC Suite <span class="dash-and">&amp;</span> Transcript Automater
+    </h1>
+    <p class="dash-greet">
+      Hi,&nbsp;<strong>{{ request.user.get_full_name|default:request.user.username|upper }}</strong>!&nbsp;
+      Pick an application to get started:
+    </p>
   </section>
 
-  <!-- RIGHT: Notifications -->
-  <aside class="right-panel" aria-labelledby="notifications-title">
-    <h2 id="notifications-title">Notifications</h2>
-    <nav class="notification-tabs" aria-label="Notification Tabs">
-      <button class="tab tab-ongoing active" data-tab="ongoing" type="button" aria-selected="true">Ongoing Proposals</button>
-      <button class="tab tab-others" data-tab="others" type="button" aria-selected="false">Other Notifications</button>
-    </nav>
+  <!-- APP CARDS -->
+  <section class="dash-apps">
+    <a href="{% url 'emt:iqac_suite_dashboard' %}" class="dash-card">
+      <div class="dash-icon dash-blue"><i class="fa-solid fa-file"></i></div>
+      <h3>IQAC Suite</h3>
+      <p>Event proposal and report management.</p>
+      <span class="dash-launch">Launch →</span>
+    </a>
 
-    <section class="tab-content" id="ongoing" aria-labelledby="ongoing-tab">
-      {% if proposals %}
-        {% for prop in proposals %}
-          <div class="notif-card">
-            <div class="notif-row">
-              <div class="notif-title">
-                <i class="fa-solid fa-file"></i>
-                {{ prop.event_title }}
-              </div>
-              <span class="status-pill status-{{ prop.status|lower }}">{{ prop.get_status_display }}</span>
-            </div>
-            <div class="notif-progressbar">
-              <span class="progress-step {% if prop.status in 'draft,submitted,under_review,approved,rejected,returned' %}done{% endif %}">Draft</span>
-              <span class="progress-step {% if prop.status in 'submitted,under_review,approved,rejected,returned' %}done{% endif %}">Submitted</span>
-              <span class="progress-step {% if prop.status in 'under_review,approved,rejected,returned' %}done{% endif %}">Review</span>
-              <span class="progress-step {% if prop.status in 'approved,rejected,returned' %}done{% endif %}">Completed</span>
-            </div>
-            {% if prop.status == 'returned' %}
-              <div class="notif-comment">Returned: {{ prop.return_comment }}</div>
-            {% endif %}
-            <div class="notif-actions">
-              {% if prop.status == 'draft' %}
-                <a href="{% url 'emt:submit_proposal_with_pk' prop.id %}" class="btn-sm">Resume Draft</a>
-              {% else %}
-                <a href="{% url 'proposal_status' prop.id %}" class="btn-sm">View Details</a>
-              {% endif %}
-              {% if prop.status == 'returned' %}
-                <a href="{% url 'emt:edit_proposal' prop.id %}" class="btn-sm btn-outline">Edit</a>
-              {% endif %}
-            </div>
-          </div>
-        {% endfor %}
-      {% else %}
-        <div class="notification-empty">No ongoing proposals.</div>
-      {% endif %}
-    </section>
+    <a href="{% url 'transcript:home' %}" class="dash-card">
+      <div class="dash-icon dash-green"><i class="fa-solid fa-graduation-cap"></i></div>
+      <h3>Graduate Transcript</h3>
+      <p>Graduate characteristics report.</p>
+      <span class="dash-launch">Launch →</span>
+    </a>
+  </section>
 
-    <section class="tab-content" id="others" aria-labelledby="others-tab" style="display:none;">
-      {% if other_notifications %}
-        {% for note in other_notifications %}
-          <div class="notif-card notif-other {{ note.type }}">
-            <i class="fa {% if note.type == 'info' %}fa-info-circle{% elif note.type == 'reminder' %}fa-bell{% else %}fa-exclamation-circle{% endif %}"></i>
-            <span>{{ note.msg }}</span>
-            <span class="notification-time">{{ note.time }}</span>
-          </div>
-        {% endfor %}
-      {% else %}
-        <div class="notification-empty">No other notifications.</div>
-      {% endif %}
-    </section>
-  </aside>
-</main>
-
-{% endblock %}
-
-{% block scripts %}
-  <script src="{% static 'core/js/dashboard.js' %}"></script>
+</div>
 {% endblock %}
