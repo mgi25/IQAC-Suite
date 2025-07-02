@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Transcript PDF</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 9px;
+      color: #111827;
+      max-width: 900px;
+      margin: auto;
+      padding: 20px;
+      background-color: #fff;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .header h1 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .header h2 {
+      font-size: 10px;
+      font-weight: 600;
+      color: #3b73b9;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .student-info {
+      display: flex;
+      justify-content: space-between;
+      background: #f1f5f9;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .info-block {
+      width: 48%;
+    }
+
+    .info-label {
+      font-weight: 600;
+      color: #6b7280;
+      margin-bottom: 2px;
+    }
+
+    .info-value {
+      font-size: 10px;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .main-content {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .responsibilities {
+      width: 38%;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      padding: 10px;
+      border-radius: 6px;
+    }
+
+    .responsibilities h3 {
+      font-size: 10px;
+      font-weight: 600;
+      color: #111827;
+      border-bottom: 1px solid #3b73b9;
+      margin-bottom: 6px;
+      padding-bottom: 2px;
+    }
+
+    .responsibilities ul {
+      list-style: none;
+      padding-left: 8px;
+    }
+
+    .responsibilities li {
+      font-size: 9px;
+      margin-bottom: 4px;
+      position: relative;
+      padding-left: 10px;
+    }
+
+    .responsibilities li::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+      color: #3b73b9;
+    }
+
+    .qr-code {
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .qr-code img {
+      width: 60px;
+      height: 60px;
+      border: 1px solid #3b73b9;
+      border-radius: 4px;
+    }
+
+    .strength-table {
+      width: 60%;
+      border-collapse: collapse;
+      font-size: 9px;
+    }
+
+    .strength-table th {
+      background: #3b73b9;
+      color: white;
+      padding: 5px;
+      font-weight: 600;
+    }
+
+    .strength-table tr:nth-child(even) {
+      background-color: #f9fafb;
+    }
+
+    .strength-table td {
+      padding: 6px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .strength-name {
+      text-align: left;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin: 0 auto;
+    }
+
+    .dot.empty {
+      border: 1px solid #cbd5e0;
+      background: white;
+    }
+
+    .dot.filled {
+      background: #3b73b9;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+    }
+
+    .dot.filled::before {
+      content: '✓';
+    }
+
+    .footer {
+      margin-top: 12px;
+      font-size: 8px;
+      text-align: center;
+      color: #6b7280;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 6px;
+    }
+
+    .footer strong {
+      display: block;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>CHRIST (Deemed to be University), Pune Lavasa - The Hub of Analytics</h1>
+    <h2>Student Character Strength Transcript</h2>
+  </div>
+
+  <div class="student-info">
+    <div class="info-block">
+      <div class="info-label">Student Name</div>
+      <div class="info-value">{{ student.name }}</div>
+    </div>
+    <div class="info-block">
+      <div class="info-label">Registration Number & Programme</div>
+      <div class="info-value">{{ student.roll_no }} {{ student.programme }}</div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="responsibilities">
+      <h3>Key Responsibilities</h3>
+      <ul>
+        {% for event in top_events %}
+        <li>{{ event }}</li>
+        {% endfor %}
+      </ul>
+      {% if qr_code %}
+      <div class="qr-code">
+        <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code">
+      </div>
+      {% endif %}
+    </div>
+
+    <table class="strength-table">
+      <thead>
+        <tr>
+          <th>Strength</th>
+          <th>EMER</th>
+          <th>DEV</th>
+          <th>ESTD</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for strength in strength_data %}
+        <tr>
+          <td class="strength-name">{{ strength.name }}</td>
+          <td><div class="dot {% if strength.category == 'EMER' %}filled{% else %}empty{% endif %}"></div></td>
+          <td><div class="dot {% if strength.category == 'DEV' %}filled{% else %}empty{% endif %}"></div></td>
+          <td><div class="dot {% if strength.category == 'ESTD' %}filled{% else %}empty{% endif %}"></div></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    <p>The Student Character Strength Transcript is awarded to selected students, excelling in University Activities fostering Holistic Development.</p>
+    <p><strong>Date:</strong> {{ today }}</p>
+    <strong>{{ student.roll_no }}</strong>
+    <strong>DEAN & DIRECTOR<br>CHRIST (Deemed to be University)<br>Pune Lavasa Campus</strong>
+  </div>
+</body>
+</html>

@@ -31,18 +31,21 @@
       <p class="dashboard-subtitle">Select an application to launch:</p>
     </div>
     <div class="cards" role="group" aria-label="Application Launch Options">
+      <!-- IQAC Suite Card -->
       <a href="{% url 'emt:iqac_suite_dashboard' %}" class="card app-card" aria-label="Launch IQAC Suite">
         <i class="fa-solid fa-file card-icon"></i>
         <h3>IQAC Suite</h3>
         <p>Event proposal and report management.</p>
         <span class="card-arrow">Launch <span aria-hidden="true">→</span></span>
       </a>
-      <div class="card app-card card-disabled" aria-disabled="true" title="Coming soon">
-        <i class="fa-solid fa-graduation-cap card-icon" style="color:#616161;"></i>
+
+      <!-- Graduate Transcript Card (Updated!) -->
+      <a href="{% url 'transcript:home' %}" class="card app-card" aria-label="Launch Graduate Transcript">
+        <i class="fa-solid fa-graduation-cap card-icon" style="color:#2e7d32;"></i>
         <h3>Graduate Transcript</h3>
         <p>Graduate characteristics report.</p>
-        <span class="card-arrow">Coming Soon</span>
-      </div>
+        <span class="card-arrow">Launch <span aria-hidden="true">→</span></span>
+      </a>
     </div>
   </section>
 
@@ -76,10 +79,8 @@
             {% endif %}
             <div class="notif-actions">
               {% if prop.status == 'draft' %}
-                <!-- Resume Draft -->
                 <a href="{% url 'emt:submit_proposal_with_pk' prop.id %}" class="btn-sm">Resume Draft</a>
               {% else %}
-                <!-- View Details -->
                 <a href="{% url 'proposal_status' prop.id %}" class="btn-sm">View Details</a>
               {% endif %}
               {% if prop.status == 'returned' %}
