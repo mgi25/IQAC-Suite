@@ -1,311 +1,142 @@
+{% extends 'base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transcript Lookup</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+{% block title %}Transcript Lookup{% endblock %}
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #ffffff;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
+{% block head_extra %}
+  <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
+  <style>
+    .transcript-form-card {
+      background: #fff;
+      border-radius: 1.2rem;
+      box-shadow: 0 4px 32px rgba(20, 40, 150, 0.07);
+      padding: 2.4rem 2.2rem;
+      max-width: 480px;
+      margin: 40px auto;
+      width: 100%;
+    }
+    .transcript-form-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #2274CB;
+      text-align: center;
+      margin-bottom: 1.5rem;
+      letter-spacing: 1px;
+    }
+    .transcript-form-label {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+    .transcript-form-input {
+      width: 100%;
+      padding: 0.9rem 1.2rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 0.7rem;
+      font-size: 1rem;
+      font-family: inherit;
+      background: #fafafa;
+      margin-bottom: 0.5rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .transcript-form-input:focus {
+      outline: none;
+      border-color: #2274CB;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(34, 116, 203, 0.08);
+    }
+    .transcript-form-helper {
+      font-size: 0.95rem;
+      color: #6b7280;
+      margin-bottom: 1.2rem;
+    }
+    .transcript-form-btns {
+      display: flex;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    .btn {
+      flex: 1;
+      padding: 0.9rem 1.2rem;
+      border: none;
+      border-radius: 0.7rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    }
+    .btn-secondary {
+      background: #f9fafb;
+      color: #6b7280;
+      border: 2px solid #e5e7eb;
+    }
+    .btn-secondary:hover {
+      background: #f3f4f6;
+      color: #374151;
+    }
+    .btn-primary {
+      background: #2274CB;
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(34, 116, 203, 0.13);
+    }
+    .btn-primary:hover {
+      background: #185a9d;
+    }
+    .transcript-form-header {
+      color: #6b7280;
+      font-size: 0.98rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 1.2rem;
+      text-align: center;
+    }
+  </style>
+{% endblock %}
 
-        .container {
-            width: 100%;
-            max-width: 480px;
-            animation: slideUp 0.6s ease-out;
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .card {
-            background: white;
-            border-radius: 24px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            border: 1px solid #f1f5f9;
-            padding: 40px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: #3b73b9;
-        }
-
-        @keyframes gradientShift {
-
-            0%,
-            100% {
-                background-position: 0% 50%;
-            }
-
-            50% {
-                background-position: 100% 50%;
-            }
-        }
-
-
-
-        .question-number {
-            color: #6b7280;
-            font-size: 14px;
-            font-weight: 600;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            margin-bottom: 16px;
-            text-align: center;
-        }
-
-        .question-title {
-            font-size: 28px;
-            font-weight: 700;
-            color: #111827;
-            line-height: 1.3;
-            margin-bottom: 32px;
-            text-align: center;
-        }
-
-        .input-group {
-            margin-bottom: 32px;
-        }
-
-        .input-label {
-            display: block;
-            font-size: 16px;
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 12px;
-        }
-
-        .input-field {
-            width: 100%;
-            padding: 16px 20px;
-            border: 2px solid #e5e7eb;
-            border-radius: 12px;
-            font-size: 16px;
-            font-family: inherit;
-            transition: all 0.3s ease;
-            background: #fafafa;
-        }
-
-        .input-field:focus {
-            outline: none;
-            border-color: #3b73b9;
-            background: white;
-            box-shadow: 0 0 0 3px rgba(59, 115, 185, 0.1);
-            transform: translateY(-1px);
-        }
-
-        .input-field::placeholder {
-            color: #9ca3af;
-        }
-
-        .button-group {
-            display: flex;
-            gap: 16px;
-            margin-top: 40px;
-        }
-
-        .btn {
-            flex: 1;
-            padding: 16px 24px;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn-secondary {
-            background: #f9fafb;
-            color: #6b7280;
-            border: 2px solid #e5e7eb;
-        }
-
-        .btn-secondary:hover {
-            background: #f3f4f6;
-            color: #374151;
-            transform: translateY(-1px);
-        }
-
-        .btn-primary {
-            background: #3b73b9;
-            color: white;
-            box-shadow: 0 4px 20px rgba(59, 115, 185, 0.3);
-        }
-
-        .btn-primary:hover {
-            background: #325a9b;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(59, 115, 185, 0.4);
-        }
-
-        .btn-primary:active {
-            transform: translateY(0);
-        }
-
-        .btn::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            transition: width 0.3s ease, height 0.3s ease;
-        }
-
-        .btn:active::before {
-            width: 200px;
-            height: 200px;
-        }
-
-
-
-        .helper-text {
-            font-size: 14px;
-            color: #6b7280;
-            margin-top: 8px;
-            line-height: 1.5;
-        }
-
-        @media (max-width: 640px) {
-            .card {
-                padding: 32px 24px;
-                margin: 16px;
-                border-radius: 20px;
-            }
-
-            .question-title {
-                font-size: 24px;
-            }
-
-            .button-group {
-                flex-direction: column;
-            }
-        }
-
-        .loading {
-            opacity: 0.7;
-            pointer-events: none;
-        }
-
-        .loading .btn-primary {
-            background: #9ca3af;
-        }
-
-        @keyframes pulse {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.5;
-            }
-        }
-
-        .loading .input-field {
-            animation: pulse 1.5s ease-in-out infinite;
-        }
-    </style>
-</head>
-
-<body>
-    <div class="container">
-        <div class="card">
-            <div class="question-number">STUDENT CHARACTER STRENGTH TRANSCRIPT</div>
-            <h1 class="question-title">Enter Your Register Number</h1>
-
-            <!-- Form now submits to transcript view -->
-            <form id="transcriptForm">
-    <div class="input-group">
-        <label for="roll_no" class="input-label">Roll Number</label>
-        <input type="text" id="roll_no" name="roll_no" class="input-field"
-            placeholder="Enter your Register number" required autocomplete="off">
-        <div class="helper-text">
-            Enter Register Number to generate transcript
-        </div>
-    </div>
-
-    <div class="button-group">
+{% block content %}
+<div class="dashboard-container" style="justify-content:center;align-items:center;min-height:calc(100vh - 80px);padding-top:120px;">
+  <div class="transcript-form-card">
+    <div class="transcript-form-header">STUDENT CHARACTER STRENGTH TRANSCRIPT</div>
+    <div class="transcript-form-title">Enter Your Register Number</div>
+    <form id="transcriptForm">
+      <label for="roll_no" class="transcript-form-label">Roll Number</label>
+      <input type="text" id="roll_no" name="roll_no" class="transcript-form-input" placeholder="Enter your Register number" required autocomplete="off">
+      <div class="transcript-form-helper">Enter Register Number to generate transcript</div>
+      <div class="transcript-form-btns">
         <a href="/" class="btn btn-secondary">Back</a>
         <button type="submit" class="btn btn-primary">Get Transcript</button>
-    </div>
-</form>
-        </div>
-    </div>
-
-    <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const form = document.getElementById('transcriptForm');
-        const rollInput = document.getElementById('roll_no');
-        const submitBtn = form.querySelector('.btn-primary');
-        const card = document.querySelector('.card');
-
-        setTimeout(() => rollInput.focus(), 300);
-
-        rollInput.addEventListener('input', function () {
-            submitBtn.style.background = this.value.trim() ? '#3b73b9' : '#9ca3af';
-        });
-
-        form.addEventListener('submit', function (e) {
-            e.preventDefault();
-            const rollNo = rollInput.value.trim();
-            if (!rollNo) {
-                rollInput.focus();
-                rollInput.style.borderColor = '#ef4444';
-                setTimeout(() => rollInput.style.borderColor = '#e5e7eb', 2000);
-                return;
-            }
-            card.classList.add('loading');
-            submitBtn.textContent = 'Searching...';
-            // ✅ redirect to URL with roll number
-            window.location.href = `/transcript/view/${rollNo}/`;
-        });
-
-        rollInput.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') form.dispatchEvent(new Event('submit'));
-        });
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('transcriptForm');
+    const rollInput = document.getElementById('roll_no');
+    const submitBtn = form.querySelector('.btn-primary');
+    setTimeout(() => rollInput.focus(), 300);
+    rollInput.addEventListener('input', function () {
+        submitBtn.style.background = this.value.trim() ? '#2274CB' : '#9ca3af';
     });
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        const rollNo = rollInput.value.trim();
+        if (!rollNo) {
+            rollInput.focus();
+            rollInput.style.borderColor = '#ef4444';
+            setTimeout(() => rollInput.style.borderColor = '#e5e7eb', 2000);
+            return;
+        }
+        submitBtn.textContent = 'Searching...';
+        window.location.href = `/transcript/view/${rollNo}/`;
+
+    });
+    rollInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') form.dispatchEvent(new Event('submit'));
+    });
+});
 </script>
-
-</body>
-
-</html>
+{% endblock %}
