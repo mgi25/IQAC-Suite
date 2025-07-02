@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Character Strength Transcript</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #ffffff;
+      min-height: 100vh;
+      padding: 20px;
+      color: #111827;
+    }
+
+    .transcript-container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      border: 1px solid #f1f5f9;
+      overflow: hidden;
+      position: relative;
+      animation: slideUp 0.6s ease-out;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .transcript-container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: linear-gradient(90deg, #3b73b9, #325a9b);
+    }
+
+    .header {
+      text-align: center;
+      padding: 40px 40px 20px;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .university-name {
+      font-size: 24px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+
+    .transcript-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #3b73b9;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 20px;
+    }
+
+    .content-section {
+      padding: 40px;
+    }
+
+    .download-section {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 30px;
+    }
+
+    .download-btn {
+      background: #3b73b9;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(59, 115, 185, 0.3);
+    }
+
+    .download-btn:hover {
+      background: #325a9b;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59, 115, 185, 0.4);
+    }
+
+    .student-info {
+      background: #f8fafc;
+      border-radius: 16px;
+      padding: 30px;
+      margin-bottom: 40px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .info-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .info-value {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 25px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #3b73b9;
+      display: inline-block;
+    }
+
+    .strength-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 40px;
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    }
+
+    .strength-table th {
+      background: linear-gradient(135deg, #3b73b9, #325a9b);
+      color: white;
+      padding: 18px 16px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .strength-table td {
+      padding: 16px;
+      text-align: center;
+      border-bottom: 1px solid #e2e8f0;
+      transition: background-color 0.2s ease;
+    }
+
+    .strength-table tbody tr:hover {
+      background: #f8fafc;
+    }
+
+    .strength-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .strength-name {
+      text-align: left !important;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .dot {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      margin: 0 auto;
+    }
+
+    .dot.empty {
+      border: 2px solid #d1d5db;
+      background: white;
+    }
+
+    .dot.filled {
+      background: #3b73b9;
+      color: white;
+      font-weight: bold;
+    }
+
+    .dot.filled::before {
+      content: '✓';
+      font-size: 12px;
+    }
+
+    .responsibilities {
+      background: #f8fafc;
+      border-radius: 16px;
+      padding: 30px;
+      margin-bottom: 40px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .responsibilities ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .responsibilities li {
+      position: relative;
+      padding: 12px 0 12px 30px;
+      border-bottom: 1px solid #e2e8f0;
+      color: #374151;
+      line-height: 1.6;
+    }
+
+    .responsibilities li:last-child {
+      border-bottom: none;
+    }
+
+    .responsibilities li::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+      color: #3b73b9;
+      font-weight: bold;
+      font-size: 18px;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 40px;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .footer-text {
+      font-size: 14px;
+      color: #6b7280;
+      line-height: 1.6;
+      margin-bottom: 20px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .date {
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 20px;
+    }
+
+    .barcode {
+      font-family: 'Courier New', monospace;
+      font-size: 24px;
+      font-weight: bold;
+      color: #111827;
+      margin: 20px 0;
+      letter-spacing: 2px;
+    }
+
+    .authority {
+      margin-top: 30px;
+    }
+
+    .authority-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 8px;
+    }
+
+    .authority-subtitle {
+      font-size: 14px;
+      color: #6b7280;
+      line-height: 1.4;
+    }
+
+    @media (max-width: 768px) {
+      .transcript-container {
+        margin: 0;
+        border-radius: 0;
+        box-shadow: none;
+        border: none;
+      }
+
+      .content-section {
+        padding: 20px;
+      }
+
+      .header {
+        padding: 30px 20px 15px;
+      }
+
+      .university-name {
+        font-size: 20px;
+      }
+
+      .transcript-title {
+        font-size: 14px;
+      }
+
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .strength-table {
+        font-size: 14px;
+      }
+
+      .strength-table th,
+      .strength-table td {
+        padding: 12px 8px;
+      }
+    }
+
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+      }
+
+      .transcript-container {
+        box-shadow: none;
+        border: none;
+        border-radius: 0;
+      }
+
+      .download-section {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="transcript-container">
+    <div class="header">
+      <h1 class="university-name">CHRIST (Deemed to be University), Pune Lavasa - The Hub of Analytics</h1>
+      <h2 class="transcript-title">Student Character Strength Transcript</h2>
+    </div>
+
+    <div class="content-section">
+      <div class="download-section">
+        <a href="{% url 'transcript:transcript_pdf' student.roll_no %}" class="download-btn">
+          <span>📄</span> Download as PDF
+        </a>
+      </div>
+
+      <div class="student-info">
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-label">Student Name</span>
+            <span class="info-value">{{ student.name }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Registration Number & Programme</span>
+            <span class="info-value">{{ student.roll_no }}; {{ student.programme }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Father's Name</span>
+            <span class="info-value">{{ student.father_name }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Mother's Name</span>
+            <span class="info-value">{{ student.mother_name }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="character-strength-section">
+        <h3 class="section-title">Character Strength Assessment</h3>
+        <table class="strength-table">
+          <thead>
+            <tr>
+              <th>Character Strength</th>
+              <th>EMER</th>
+              <th>DEV</th>
+              <th>ESTD</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for strength in strength_data %}
+            <tr>
+              <td class="strength-name">{{ strength.name }}</td>
+              <td><div class="dot {% if strength.category == 'EMER' %}filled{% else %}empty{% endif %}"></div></td>
+              <td><div class="dot {% if strength.category == 'DEV' %}filled{% else %}empty{% endif %}"></div></td>
+              <td><div class="dot {% if strength.category == 'ESTD' %}filled{% else %}empty{% endif %}"></div></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="responsibilities">
+        <h3 class="section-title">Key Responsibilities</h3>
+        <ul>
+          {% for event in top_events %}
+          <li>{{ event }}</li>
+          {% endfor %}
+        </ul>
+        {% if qr_code %}
+        <div style="text-align:center; margin-top:20px;">
+          <h4>Scan for Full Event List:</h4>
+          <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" style="width:150px;height:150px;border-radius:10px;border:2px solid #3b73b9;">
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="footer">
+      <p class="footer-text">
+        The Student Character Strength Transcript is awarded to selected students, excelling in University Activities fostering Holistic Development.
+      </p>
+      <p class="date"><strong>Date:</strong> {{ today }}</p>
+      <div class="barcode">*{{ student.name }}*</div>
+      <div class="authority">
+        <p class="authority-title">DEAN & DIRECTOR</p>
+        <p class="authority-subtitle">
+          CHRIST (Deemed to be University)<br>
+          Pune Lavasa Campus
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 from django.db.models import Q
 from django.forms import inlineformset_factory
+
 from .models import (
     Profile, EventProposal, RoleAssignment,
     Department, Club, Center
@@ -47,12 +48,18 @@ def dashboard(request):
 @login_required
 def propose_event(request):
     if request.method == 'POST':
-        department = request.POST.get('department') or ''
+        department = request.POST.get('department', '')
         title = request.POST.get('title')
         desc  = request.POST.get('description')
-        # Use main role or summary of roles
+
+        # Get all roles assigned to the user
         roles = [ra.get_role_display() for ra in request.user.role_assignments.all()]
-        user_type = ", ".join(roles) or (request.user.profile.main_role if hasattr(request.user, "profile") else "")
+        user_type = ", ".join(roles)
+
+        # Fallback to profile role if no RoleAssignment
+        if not user_type:
+            user_type = getattr(request.user.profile, 'role', '')
+
         EventProposal.objects.create(
             submitted_by=request.user,
             department=department,
@@ -61,6 +68,7 @@ def propose_event(request):
             description=desc
         )
         return redirect('dashboard')
+    
     return render(request, 'core/event_proposal.html')
 
 @login_required
@@ -96,9 +104,11 @@ def admin_user_panel(request):
 @user_passes_test(lambda u: u.is_superuser)
 def admin_user_management(request):
     users = User.objects.all().order_by('-date_joined')
-    # --- Filtering Logic ---
+
+    # Filtering
     role = request.GET.get('role')
     q = request.GET.get('q', '').strip()
+
     if role:
         users = users.filter(role_assignments__role=role).distinct()
     if q:
@@ -108,8 +118,9 @@ def admin_user_management(request):
             Q(last_name__icontains=q) |
             Q(username__icontains=q)
         ).distinct()
-    # Pre-fetch roles for performance
+
     users = users.prefetch_related('role_assignments', 'role_assignments__department', 'role_assignments__club', 'role_assignments__center')
+
     return render(request, "core/admin_user_management.html", {"users": users})
 
 @login_required

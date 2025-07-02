@@ -4,7 +4,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-…'  # rotate this before you go to production!
 DEBUG      = True
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '2640-103-229-129-85.ngrok-free.app']
+
+
+
 
 INSTALLED_APPS = [
     # Django core
