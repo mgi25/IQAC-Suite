@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'core/css/reports.css' %}">
+
+<div class="reports-main-container">
+  <div class="reports-header-title">Reports</div>
+  <div class="reports-header-desc">
+    Review, approve, and download submitted reports below.
+  </div>
+  <div class="reports-table-wrap">
+    <table class="reports-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Title</th>
+          <th>Type</th>
+          <th>Department</th>
+          <th>Submitted By</th>
+          <th>Date Submitted</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for report in reports %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td>{{ report.title }}</td>
+          <td>{{ report.get_report_type_display }}</td>
+          <td>{{ report.department }}</td>
+          <td>
+            {% if report.submitted_by %}
+              {{ report.submitted_by.get_full_name|default:report.submitted_by.username }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td>{{ report.date_submitted|date:"Y-m-d H:i" }}</td>
+          <td>
+            {% if report.status == "approved" %}
+              <span class="status-approved">Approved</span>
+            {% elif report.status == "submitted" %}
+              <span class="status-pending">Pending</span>
+            {% elif report.status == "rejected" %}
+              <span class="status-rejected">Rejected</span>
+            {% else %}
+              <span>{{ report.get_status_display }}</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if report.file %}
+              <a href="{{ report.file.url }}" class="report-action-btn" download>Download</a>
+            {% endif %}
+            {% if report.status == "submitted" %}
+              <a href="{% url 'admin_reports_approve' report.id %}" class="report-action-btn">Approve</a>
+              <a href="{% url 'admin_reports_reject' report.id %}" class="report-action-btn">Reject</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" style="text-align:center;">No reports found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
