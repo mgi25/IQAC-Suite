@@ -5,7 +5,13 @@
 <div class="admin-dashboard-bg">
   <div class="admin-dashboard-container">
     <div class="admin-dashboard-header">
-      <span class="admin-dashboard-icon">🛡️</span>
+      {# Remove the SVG below if you don't want the shield icon #}
+      <span class="admin-dashboard-icon">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="#2274CB" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="10" fill="#e9f3fa"/>
+          <path d="M12 4C9 6.5 5 7 5 13C5 17.42 12 21 12 21C12 21 19 17.42 19 13C19 7 15 6.5 12 4Z" stroke="#2274CB" stroke-width="1.5" fill="#fff"/>
+        </svg>
+      </span>
       <span class="admin-dashboard-title">Admin Dashboard</span>
     </div>
     <div class="admin-dashboard-welcome">
@@ -13,44 +19,52 @@
     </div>
     <div class="admin-dashboard-stats-row">
       <div class="admin-dashboard-stat">
-        <div class="stat-icon stat-student">👨‍🎓</div>
+        <div class="stat-icon stat-student"></div>
         <div class="stat-count">{{ stats.students }}</div>
         <div class="stat-label">Students</div>
       </div>
       <div class="admin-dashboard-stat">
-        <div class="stat-icon stat-faculty">👨‍🏫</div>
+        <div class="stat-icon stat-faculty"></div>
         <div class="stat-count">{{ stats.faculties }}</div>
         <div class="stat-label">Faculties</div>
       </div>
       <div class="admin-dashboard-stat">
-        <div class="stat-icon stat-hod">🏫</div>
+        <div class="stat-icon stat-hod"></div>
         <div class="stat-count">{{ stats.hods }}</div>
         <div class="stat-label">HODs</div>
       </div>
       <div class="admin-dashboard-stat">
-        <div class="stat-icon stat-center">🏢</div>
+        <div class="stat-icon stat-center"></div>
         <div class="stat-count">{{ stats.centers }}</div>
         <div class="stat-label">Centers</div>
       </div>
     </div>
     <div class="admin-dashboard-navcards">
       <a class="admin-navcard" href="{% url 'admin_user_panel' %}">
-        <div class="navcard-icon">👥</div>
+        <div class="navcard-icon">
+          <i class="fa-solid fa-users"></i>
+        </div>
         <div class="navcard-title">User Management</div>
         <div class="navcard-desc">View and manage user roles</div>
       </a>
-      <a class="admin-navcard" href="#">
-        <div class="navcard-icon">📄</div>
+      <a class="admin-navcard" href="{% url 'admin_event_proposals' %}">
+        <div class="navcard-icon">
+          <i class="fa-solid fa-calendar-check"></i>
+        </div>
         <div class="navcard-title">Event Proposals</div>
         <div class="navcard-desc">View all submitted proposals</div>
       </a>
-      <a class="admin-navcard" href="#">
-        <div class="navcard-icon">📑</div>
+      <a class="admin-navcard" href="#"> {#{% url 'admin_reports' %}#}
+        <div class="navcard-icon">
+          <i class="fa-solid fa-file-lines"></i>
+        </div>
         <div class="navcard-title">Reports</div>
         <div class="navcard-desc">Review all generated reports</div>
       </a>
-      <a class="admin-navcard" href="#">
-        <div class="navcard-icon">⚙️</div>
+      <a class="admin-navcard" href="#"> {#{% url 'admin_settings' %}#}
+        <div class="navcard-icon">
+          <i class="fa-solid fa-gear"></i>
+        </div>
         <div class="navcard-title">Settings</div>
         <div class="navcard-desc">Admin panel settings</div>
       </a>

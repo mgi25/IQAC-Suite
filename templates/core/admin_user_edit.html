@@ -2,74 +2,121 @@
 {% load static %}
 {% block content %}
 <link rel="stylesheet" href="{% static 'core/css/admin_user_edit.css' %}">
+
 <div class="container user-edit-container">
-    <h1>Edit User</h1>
-    <form method="post" class="user-edit-form">
-        {% csrf_token %}
-        <div class="form-group">
-            <label>First Name</label>
-            <input type="text" name="first_name" value="{{ user_obj.first_name }}" required>
+  <h1>Edit User</h1>
+
+  {% if messages %}
+    <ul class="messages">
+      {% for msg in messages %}
+        <li class="message {{ msg.tags }}">{{ msg }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  <form method="post" id="user-edit-form" autocomplete="off">
+    {% csrf_token %}
+    <div class="form-group">
+      <label>First Name</label>
+      <input type="text" name="first_name" value="{{ user_obj.first_name }}" required>
+    </div>
+    <div class="form-group">
+      <label>Last Name</label>
+      <input type="text" name="last_name" value="{{ user_obj.last_name }}">
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" name="email" value="{{ user_obj.email }}" required>
+    </div>
+
+    <hr>
+
+    <div class="roles-section">
+      <h3>User Roles &amp; Assignments</h3>
+
+      <div id="roles-list-container">
+        {% for form in formset.forms %}
+        <div class="role-card" data-form-index="{{ forloop.counter0 }}">
+          {{ form.id }}{{ form.DELETE }}
+          <div class="field-group">
+            {{ form.role }}
+          </div>
+          <div class="field-group dept-group">
+            {{ form.department }}
+            <input type="text"
+                   name="new_department_{{ forloop.counter0 }}"
+                   class="add-dept-input"
+                   placeholder="Add new department…"
+                   style="display:none;">
+          </div>
+          <div class="field-group club-group">
+            {{ form.club }}
+            <input type="text"
+                   name="new_club_{{ forloop.counter0 }}"
+                   class="add-club-input"
+                   placeholder="Add new club…"
+                   style="display:none;">
+          </div>
+          <div class="field-group center-group">
+            {{ form.center }}
+            <input type="text"
+                   name="new_center_{{ forloop.counter0 }}"
+                   class="add-center-input"
+                   placeholder="Add new center…"
+                   style="display:none;">
+          </div>
+          <button type="button" class="remove-role-btn">×</button>
         </div>
-        <div class="form-group">
-            <label>Last Name</label>
-            <input type="text" name="last_name" value="{{ user_obj.last_name }}">
-        </div>
-        <div class="form-group">
-            <label>Email</label>
-            <input type="email" name="email" value="{{ user_obj.email }}" required>
-        </div>
-        <hr>
-        <h3>User Roles & Assignments</h3>
-        {{ formset.management_form }}
-        <div id="roles-list">
-            {% for form in formset.forms %}
-                <div class="role-item" style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e6e6e6;">
-                    <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
-                        <div>
-                            {{ form.role.label_tag }} {{ form.role }}
-                        </div>
-                        <div>
-                            {{ form.department.label_tag }} {{ form.department }}
-                        </div>
-                        <div>
-                            {{ form.club.label_tag }} {{ form.club }}
-                        </div>
-                        <div>
-                            {{ form.center.label_tag }} {{ form.center }}
-                        </div>
-                        {% if form.instance.pk %}
-                            <div style="margin-left:10px;">
-                                {{ form.DELETE }} <span style="color:#b10e0e;font-size:13px;">Delete</span>
-                            </div>
-                        {% endif %}
-                    </div>
-                    {% if form.non_field_errors %}
-                        <div class="error">{{ form.non_field_errors }}</div>
-                    {% endif %}
-                </div>
-            {% endfor %}
-        </div>
-        <button type="button" class="btn btn-secondary" style="margin-bottom: 18px;" onclick="addEmptyRoleRow()">+ Add Another Role</button>
-        <div class="form-btn-group" style="margin-top:20px;">
-            <button type="submit" class="btn btn-primary">Save</button>
-            <a href="{% url 'admin_user_management' %}" class="btn btn-secondary">Cancel</a>
-        </div>
-    </form>
+        {% endfor %}
+      </div>
+
+      {{ formset.management_form }}
+
+      <button type="button" id="add-role-btn" class="btn-add-role">
+        + Add Role
+      </button>
+    </div>
+
+    <div class="form-btn-group">
+      <button type="submit" class="btn-submit">Save</button>
+      <a href="{% url 'admin_user_management' %}" class="btn-cancel">Cancel</a>
+    </div>
+  </form>
 </div>
-<script>
-// Simple JS to add a new empty formset row (works if extra=1 or more)
-// Assumes the empty form template is present as a hidden div (formset's empty_form)
-function addEmptyRoleRow() {
-    const totalForms = document.getElementById('id_roleassignment_set-TOTAL_FORMS');
-    let idx = parseInt(totalForms.value);
-    const emptyForm = `{{ formset.empty_form.as_p|escapejs }}`.replace(/__prefix__/g, idx);
-    const rolesList = document.getElementById('roles-list');
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = emptyForm;
-    tempDiv.className = 'role-item';
-    tempDiv.style.marginBottom = "12px";
-    rolesList.appendChild(tempDiv);
-    totalForms.value = idx + 1;
-}
-</script>
+
+<template id="role-card-template">
+  <div class="role-card" data-form-index="__prefix__">
+    {{ formset.empty_form.id }}{{ formset.empty_form.DELETE }}
+    <div class="field-group">
+      {{ formset.empty_form.role }}
+    </div>
+    <div class="field-group dept-group">
+      {{ formset.empty_form.department }}
+      <input type="text"
+             name="new_department___prefix__"
+             class="add-dept-input"
+             placeholder="Add new department…"
+             style="display:none;">
+    </div>
+    <div class="field-group club-group">
+      {{ formset.empty_form.club }}
+      <input type="text"
+             name="new_club___prefix__"
+             class="add-club-input"
+             placeholder="Add new club…"
+             style="display:none;">
+    </div>
+    <div class="field-group center-group">
+      {{ formset.empty_form.center }}
+      <input type="text"
+             name="new_center___prefix__"
+             class="add-center-input"
+             placeholder="Add new center…"
+             style="display:none;">
+    </div>
+    <button type="button" class="remove-role-btn">×</button>
+  </div>
+</template>
+
+<script src="{% static 'core/js/admin_user_edit.js' %}"></script>
 {% endblock %}

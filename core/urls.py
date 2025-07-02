@@ -12,5 +12,8 @@ urlpatterns = [
     path('users/', views.admin_user_panel, name='admin_user_panel'), 
     path('core-admin/users/', views.admin_user_management, name='admin_user_management'), 
     path('core-admin/users/<int:user_id>/edit/', views.admin_user_edit, name='admin_user_edit'),
+    path('core-admin/event-proposals/', views.admin_event_proposals, name='admin_event_proposals'),
+    path('core-admin/event-proposal/<int:proposal_id>/json/', views.event_proposal_json, name='event_proposal_json'),
+    path('core-admin/event-proposal/<int:proposal_id>/action/', views.event_proposal_action, name='event_proposal_action'),
     #path('admin/users/', views.admin_user_panel, name='admin_user_panel'),
 ]

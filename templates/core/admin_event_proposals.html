@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'core/css/admin_event_proposals.css' %}">
+<div class="container admin-proposals-container">
+    <h1 class="proposals-title">Event Proposals</h1>
+    <form method="get" class="proposals-filter-form">
+        <input type="text" name="q" placeholder="Search by title, user, or department..." value="{{ request.GET.q|default:'' }}">
+        <select name="status">
+            <option value="">All Status</option>
+            <option value="submitted" {% if request.GET.status == "submitted" %}selected{% endif %}>Submitted</option>
+            <option value="under_review" {% if request.GET.status == "under_review" %}selected{% endif %}>Under Review</option>
+            <option value="approved" {% if request.GET.status == "approved" %}selected{% endif %}>Approved</option>
+            <option value="rejected" {% if request.GET.status == "rejected" %}selected{% endif %}>Rejected</option>
+            <option value="returned" {% if request.GET.status == "returned" %}selected{% endif %}>Returned</option>
+        </select>
+        <button type="submit" class="btn btn-primary">Filter</button>
+    </form>
+    <div class="table-responsive">
+        <table class="proposals-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Title</th>
+                    <th>Submitted By</th>
+                    <th>Department</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in proposals %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>
+                        <a href="#" class="proposal-title-link" data-id="{{ p.id }}" onclick="showProposalModal({{ p.id }})">
+                            {{ p.title|truncatechars:30 }}
+                        </a>
+                    </td>
+                    <td>{{ p.submitted_by.get_full_name|default:p.submitted_by.username }}</td>
+                    <td>{{ p.department|default:"-" }}</td>
+                    <td>{{ p.date_submitted|date:"Y-m-d H:i" }}</td>
+                    <td>
+                        <span class="status-badge status-{{ p.status }}">
+                            {{ p.get_status_display }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if p.status in "submitted,under_review,returned" %}
+                        <button class="btn-action btn-approve" onclick="handleAction({{ p.id }}, 'approved')">Approve</button>
+                        <button class="btn-action btn-reject" onclick="handleAction({{ p.id }}, 'rejected')">Reject</button>
+                        <button class="btn-action btn-return" onclick="handleAction({{ p.id }}, 'returned')">Return</button>
+                        {% else %}
+                        <span class="action-done">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" style="text-align:center;">No proposals found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal for Proposal Detail -->
+<div id="proposalModal" class="modal-bg" style="display:none;">
+    <div class="modal-content">
+        <span class="modal-close" onclick="hideProposalModal()">&times;</span>
+        <h2 id="modal-title">Event Title</h2>
+        <div id="modal-details">
+            <!-- JS populates this -->
+        </div>
+    </div>
+</div>
+<script src="{% static 'core/js/admin_event_proposals.js' %}"></script>
+{% endblock %}
