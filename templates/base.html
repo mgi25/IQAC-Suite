@@ -5,27 +5,61 @@
   <meta charset="UTF-8">
   <title>{% block title %}IQAC Portal{% endblock %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- global styles -->
   <link rel="stylesheet" href="{% static 'core/css/base.css' %}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <link href="https://fonts.googleapis.com/css?family=Inter:400,600,700&display=swap" rel="stylesheet">
+
   {% block head_extra %}{% endblock %}
 </head>
 <body>
+
+  <!-- HEADER -->
   <header class="site-header">
     <a href="{% url 'dashboard' %}" class="navbar-brand">
       <img src="{% static 'core/img/campus-logo.png' %}" alt="Campus Logo" class="navbar-logo">
       <span>Infotech Lab</span>
     </a>
+
     <div class="navbar-user">
+      <!-- bell -->
+      <button id="notifBtn" class="notif-btn" aria-label="Notifications">
+        <i class="fa-solid fa-bell"></i>
+        {% if notifications %}<span class="notif-badge"></span>{% endif %}
+      </button>
+
       <span id="username-badge">{{ request.user.get_full_name|default:request.user.username }}</span>
       <a href="{% url 'logout' %}" class="logout-btn">Logout</a>
     </div>
   </header>
 
-  <main>
-    {% block content %}{% endblock %}
-  </main>
+  <!-- POPUP -->
+  <div id="notifPopup" class="notif-popup">
+    <div class="notif-head">
+      <span>Notifications</span>
+      <button id="notifClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="notif-body">
+      {% if notifications %}
+        {% for n in notifications %}
+          <article class="notif-item {{ n.type }}">
+            <i class="fa {% if n.type == 'info' %}fa-info-circle{% elif n.type == 'reminder' %}fa-bell{% else %}fa-exclamation-circle{% endif %}"></i>
+            <span>{{ n.msg }}</span>
+            <time>{{ n.time }}</time>
+          </article>
+        {% endfor %}
+      {% else %}
+        <p class="notif-empty">No notifications.</p>
+      {% endif %}
+    </div>
+  </div>
 
+  <!-- PAGE CONTENT -->
+  <main>{% block content %}{% endblock %}</main>
+
+  <!-- scripts -->
+  <script src="{% static 'core/js/header.js' %}"></script>
   {% block scripts %}{% endblock %}
   <script>window.CSRF_TOKEN = '{{ csrf_token }}';</script>
 </body>

@@ -1,56 +1,64 @@
-/* core/css/base.css */
+/* --- RESET ---------------------------------------------------------------- */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#e6f5fd;color:#172b4d;min-height:100vh}
 
-/* 1. RESET & BASE */
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font-family: 'Inter', sans-serif;
-  background: #e6f5fd;
-  color: #172b4d;
-  min-height: 100vh;
+/* --- HEADER ----------------------------------------------------------------*/
+.site-header{
+  position:fixed;top:0;left:0;right:0;height:78px;
+  background:#1064c8;display:flex;align-items:center;justify-content:space-between;
+  padding:0 2rem;box-shadow:0 4px 18px rgba(16,100,200,.13);z-index:100
 }
+.navbar-brand{display:flex;align-items:center;gap:.8rem;text-decoration:none;color:#fff;font-weight:700;font-size:1.5rem}
+.navbar-logo{width:48px;height:48px;border-radius:50%;object-fit:cover;background:#fff;border:3px solid #d3e6fb}
+.navbar-user{display:flex;align-items:center;gap:1rem}
+#username-badge{background:#fff;color:#1064c8;padding:.48rem 1.2rem;border-radius:999px;font-weight:600}
+.logout-btn{background:#fff;color:#1064c8;padding:.5rem 1.3rem;border-radius:999px;font-weight:600;text-decoration:none;transition:background .15s}
+.logout-btn:hover{background:#dbeeff}
 
-/* 2. HEADER */
-.site-header {
-  position: fixed; top: 0; left: 0; right: 0;
-  height: 80px;
-  background: #1064c8;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 2rem;
-  box-shadow: 0 4px 18px 0 rgba(16, 100, 200, 0.13);
-  z-index: 100;
-}
-.navbar-brand {
-  display: flex; align-items: center;
-  color: #fff;
-  font-size: 1.6rem;
-  font-weight: 700;
-  text-decoration: none;
-  letter-spacing: 0.03em;
-}
-.navbar-logo {
-  height: 46px; width: 46px; margin-right: 0.8rem;
-  background: #fff; border-radius: 50%; object-fit: cover;
-  border: 3px solid #d3e6fb;
-}
-.navbar-user { display: flex; align-items: center; gap: 1rem; }
-#username-badge {
-  background: #fff; color: #1064c8; padding: 0.5rem 1.2rem;
-  border-radius: 999px; font-weight: 600; font-size: 1rem;
-  letter-spacing: 0.02em;
-}
-.logout-btn {
-  background: #fff; color: #1064c8; border-radius: 999px;
-  font-weight: 600; padding: 0.48rem 1.3rem; text-decoration: none;
-  font-size: 1rem; border: none; transition: background 0.16s;
-}
-.logout-btn:hover { background: #e6f5fd; }
-
-main {
-  padding-top: 100px; /* To prevent content hiding behind fixed header */
+/* --- Bell button & badge ---------------------------------------------------*/
+.notif-btn{background:none;border:none;color:#fff;font-size:1.45rem;cursor:pointer;position:relative}
+.notif-btn:hover{color:#dfe8ff}
+.notif-badge{
+  position:absolute;top:3px;right:1px;width:10px;height:10px;background:#ff4545;
+  border:2px solid #1064c8;border-radius:50%
 }
 
-/* Responsive Header */
-@media (max-width: 600px) {
-  .site-header { height: 60px; padding: 0 0.7rem; }
-  .navbar-logo { height: 34px; width: 34px; }
+/* --- Popup (glass style) ---------------------------------------------------*/
+.notif-popup{
+  display:none;                     /* hidden by default */
+  position:fixed;top:90px;right:40px;width:330px;max-height:72vh;
+  background:rgba(255,255,255,.65);
+  -webkit-backdrop-filter:blur(12px);
+  backdrop-filter:blur(12px);
+  border-radius:1.2rem;box-shadow:0 20px 60px rgba(0,0,0,.15);overflow:hidden;z-index:999
 }
+.notif-popup.open{display:flex;flex-direction:column}
+
+.notif-head{
+  padding:1rem 1.3rem;background:rgba(234,242,255,.8);
+  font-weight:700;color:#1064c8;display:flex;justify-content:space-between;align-items:center
+}
+.notif-head button{background:none;border:none;font-size:1.3rem;color:#666;cursor:pointer}
+
+.notif-body{padding:1rem 1.3rem;overflow:auto}
+.notif-item{
+  display:flex;align-items:center;gap:.8rem;margin-bottom:1rem;font-size:.95rem;color:#18375f
+}
+.notif-item i{font-size:1.1rem}
+.notif-item time{margin-left:auto;font-size:.78rem;color:#9aa7bc}
+
+.notif-item.info     i{color:#2a86f7}
+.notif-item.reminder i{color:#e4a91b}
+.notif-item.alert    i{color:#e02d1b}
+
+.notif-empty{text-align:center;color:#9aa7bc;padding:1.2rem 0}
+
+@media(max-width:600px){
+  .site-header{height:60px;padding:0 .7rem}
+  .navbar-logo{width:34px;height:34px}
+  #username-badge,.logout-btn{font-size:.9rem;padding:.35rem .9rem}
+  .notif-popup{right:10px;top:70px;width:92vw}
+}
+
+/* offset main so content isn’t hidden behind fixed header */
+main{padding-top:100px}
