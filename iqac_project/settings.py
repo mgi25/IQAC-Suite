@@ -4,7 +4,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-…'  # rotate this before you go to production!
 DEBUG      = True
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '2640-103-229-129-85.ngrok-free.app']
+ALLOWED_HOSTS = [
+    '127.0.0.1',
+    'localhost',
+    '192.168.0.104',
+    '7c40-103-229-129-85.ngrok-free.app'
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://7c40-103-229-129-85.ngrok-free.app",
+]
 
 
 

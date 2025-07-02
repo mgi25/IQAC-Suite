@@ -254,61 +254,58 @@
             <h1 class="question-title">Enter Your Register Number</h1>
 
             <!-- Form now submits to transcript view -->
-            <form action="{% url 'transcript:transcript' %}" method="get">
-                <div class="input-group">
-                    <label for="roll_no" class="input-label">Roll Number</label>
-                    <input type="text" id="roll_no" name="roll_no" class="input-field"
-                        placeholder="Enter your Register number" required autocomplete="off">
-                    <div class="helper-text">
-                        Enter Register Number to generate transcript
-                    </div>
-                </div>
+            <form id="transcriptForm">
+    <div class="input-group">
+        <label for="roll_no" class="input-label">Roll Number</label>
+        <input type="text" id="roll_no" name="roll_no" class="input-field"
+            placeholder="Enter your Register number" required autocomplete="off">
+        <div class="helper-text">
+            Enter Register Number to generate transcript
+        </div>
+    </div>
 
-                <div class="button-group">
-                    <!-- Back to IQAC-Suite homepage -->
-                    <a href="/" class="btn btn-secondary">
-                        Back
-                    </a>
-                    <button type="submit" class="btn btn-primary">
-                        Get Transcript
-                    </button>
-                </div>
-            </form>
+    <div class="button-group">
+        <a href="/" class="btn btn-secondary">Back</a>
+        <button type="submit" class="btn btn-primary">Get Transcript</button>
+    </div>
+</form>
         </div>
     </div>
 
     <script>
-        // JS remains the same with no changes required
-        // Just cleaning up and improving small logic
-        document.addEventListener('DOMContentLoaded', function () {
-            const form = document.getElementById('transcriptForm');
-            const rollInput = document.getElementById('roll_no');
-            const submitBtn = form.querySelector('.btn-primary');
-            const card = document.querySelector('.card');
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('transcriptForm');
+        const rollInput = document.getElementById('roll_no');
+        const submitBtn = form.querySelector('.btn-primary');
+        const card = document.querySelector('.card');
 
-            setTimeout(() => rollInput.focus(), 300);
+        setTimeout(() => rollInput.focus(), 300);
 
-            rollInput.addEventListener('input', function () {
-                submitBtn.style.background = this.value.trim() ? '#3b73b9' : '#9ca3af';
-            });
-
-            form.addEventListener('submit', function (e) {
-                if (!rollInput.value.trim()) {
-                    e.preventDefault();
-                    rollInput.focus();
-                    rollInput.style.borderColor = '#ef4444';
-                    setTimeout(() => rollInput.style.borderColor = '#e5e7eb', 2000);
-                    return;
-                }
-                card.classList.add('loading');
-                submitBtn.textContent = 'Searching...';
-            });
-
-            rollInput.addEventListener('keypress', function (e) {
-                if (e.key === 'Enter') form.dispatchEvent(new Event('submit'));
-            });
+        rollInput.addEventListener('input', function () {
+            submitBtn.style.background = this.value.trim() ? '#3b73b9' : '#9ca3af';
         });
-    </script>
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const rollNo = rollInput.value.trim();
+            if (!rollNo) {
+                rollInput.focus();
+                rollInput.style.borderColor = '#ef4444';
+                setTimeout(() => rollInput.style.borderColor = '#e5e7eb', 2000);
+                return;
+            }
+            card.classList.add('loading');
+            submitBtn.textContent = 'Searching...';
+            // ✅ redirect to URL with roll number
+            window.location.href = `/transcript/view/${rollNo}/`;
+        });
+
+        rollInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') form.dispatchEvent(new Event('submit'));
+        });
+    });
+</script>
+
 </body>
 
 </html>
