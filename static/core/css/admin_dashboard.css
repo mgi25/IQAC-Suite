@@ -151,3 +151,52 @@
     width: 100%;
   }
 }
+.reports-table-container {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 32px;
+}
+.admin-reports-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 32px 0 rgba(16,100,200,0.08);
+  font-size: 1rem;
+}
+.admin-reports-table th,
+.admin-reports-table td {
+  padding: 16px 12px;
+  text-align: center;
+  border-bottom: 1px solid #f1f1f1;
+}
+.admin-reports-table th {
+  background: #eaf2fd;
+  font-weight: 600;
+}
+.admin-reports-table tr:last-child td {
+  border-bottom: none;
+}
+.status-approved {
+  color: #27ae60;
+  font-weight: 600;
+}
+.status-pending {
+  color: #f2c94c;
+  font-weight: 600;
+}
+.status-rejected {
+  color: #eb5757;
+  font-weight: 600;
+}
+.report-action {
+  margin-right: 8px;
+  color: #1064c8;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+.report-action:hover {
+  color: #1847a6;
+  text-decoration: underline;
+}

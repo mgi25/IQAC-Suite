@@ -9,11 +9,13 @@ from django.forms import inlineformset_factory
 
 from .models import (
     Profile, EventProposal, RoleAssignment,
-    Department, Club, Center
+    Department, Club, Center,Report
 )
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 import json
+from django.urls import reverse
+from django.http import HttpResponseRedirect
 
 def superuser_required(view_func):
     def _wrapped_view(request, *args, **kwargs):
@@ -223,3 +225,27 @@ def event_proposal_action(request, proposal_id):
         p.admin_comment = comment
     p.save()
     return JsonResponse({"success": True})
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+def admin_reports(request):
+    reports = Report.objects.select_related('submitted_by').all().order_by('-date_submitted')
+    return render(request, 'core/admin_reports.html', {
+        'reports': reports,
+    })
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+def admin_reports_approve(request, report_id):
+    report = get_object_or_404(Report, id=report_id)
+    report.status = 'approved'
+    report.save()
+    messages.success(request, f"Report '{report.title}' approved.")
+    return HttpResponseRedirect(reverse('admin_reports'))
+
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+def admin_reports_reject(request, report_id):
+    report = get_object_or_404(Report, id=report_id)
+    report.status = 'rejected'
+    report.save()
+    messages.warning(request, f"Report '{report.title}' rejected.")
+    return HttpResponseRedirect(reverse('admin_reports'))
