@@ -2,14 +2,14 @@
 {% load static %}
 {% block content %}
 <link rel="stylesheet" href="{% static 'core/css/admin_user_management.css' %}">
-<div class="container user-mgmt-container">
+<div class="user-mgmt-container">
     <h1 class="mgmt-title">User Management</h1>
     <div class="user-filter-bar">
         <form method="get" class="filter-form">
             <div class="filter-group">
                 <label for="role">Role:</label>
                 <select name="role" id="role" onchange="this.form.submit()">
-                    <option value="">All</option>
+                    <option value="" {% if not request.GET.role %}selected{% endif %}>All</option>
                     <option value="student" {% if request.GET.role == "student" %}selected{% endif %}>Student</option>
                     <option value="faculty" {% if request.GET.role == "faculty" %}selected{% endif %}>Faculty</option>
                     <option value="hod" {% if request.GET.role == "hod" %}selected{% endif %}>HOD</option>
@@ -25,57 +25,56 @@
                 </select>
             </div>
             <div class="filter-group">
-                <input type="text" name="q" placeholder="Search name or email..." value="{{ request.GET.q|default:'' }}" />
+                <input type="text" name="q" placeholder="Search name or email..." value="{{ request.GET.q|default_if_none:'' }}" />
             </div>
             <button type="submit" class="filter-btn">Filter</button>
         </form>
     </div>
 
     <div class="table-responsive">
-    <table class="admin-users-table">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Roles</th>
-                <th>Date Joined</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for user in users %}
-            <tr>
-                <td>{{ forloop.counter }}</td>
-                <td>{{ user.get_full_name|default:user.username }}</td>
-                <td>{{ user.email }}</td>
-                <td>
-                    {% if user.role_assignments.exists %}
-                        {% for ra in user.role_assignments.all %}
-                            <span class="role-badge role-{{ ra.role|lower }}">
-                                {{ ra.get_role_display }}
-                                {% if ra.department %}<span class="role-context">({{ ra.department.name }})</span>{% endif %}
-                                {% if ra.club %}<span class="role-context">({{ ra.club.name }})</span>{% endif %}
-                                {% if ra.center %}<span class="role-context">({{ ra.center.name }})</span>{% endif %}
-                            </span>
-                            {% if not forloop.last %}<br>{% endif %}
-                        {% endfor %}
-                    {% else %}
-                        <span class="role-badge role-none">No role</span>
-                    {% endif %}
-                </td>
-                <td>{{ user.date_joined|date:"Y-m-d H:i" }}</td>
-                <td>
-                    <a href="{% url 'admin_user_edit' user.id %}" class="edit-btn">Edit</a>
-                </td>
-            </tr>
-        {% empty %}
-            <tr>
-                <td colspan="6" style="text-align:center;">No users found.</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+        <table class="admin-users-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Roles</th>
+                    <th>Date Joined</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ user.get_full_name|default:user.username }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>
+                            {% if user.role_assignments.exists %}
+                                {% for ra in user.role_assignments.all %}
+                                    <span class="role-badge">
+                                        {{ ra.get_role_display }}
+                                        {% if ra.department %}<span class="role-context">({{ ra.department.name }})</span>{% endif %}
+                                        {% if ra.club %}<span class="role-context">({{ ra.club.name }})</span>{% endif %}
+                                        {% if ra.center %}<span class="role-context">({{ ra.center.name }})</span>{% endif %}
+                                    </span>{% if not forloop.last %}<br>{% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <span class="role-badge role-none">No Role</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.date_joined|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            <a href="{% url 'admin_user_edit' user.id %}" class="edit-btn">Edit</a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="6" style="text-align:center;">No users found.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 {% endblock %}

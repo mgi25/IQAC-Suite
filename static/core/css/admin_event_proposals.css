@@ -1,0 +1,158 @@
+body {
+    background: #e8f3fc;
+}
+.admin-proposals-container {
+    background: #fff;
+    border-radius: 24px;
+    max-width: 1100px;
+    margin: 60px auto 0;
+    padding: 40px 40px 32px 40px;
+    box-shadow: 0 4px 36px rgba(34,116,203,0.13);
+}
+.proposals-title {
+    font-size: 2.1rem;
+    font-weight: 800;
+    color: #20508c;
+    margin-bottom: 22px;
+    letter-spacing: -1px;
+}
+.proposals-filter-form {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 26px;
+}
+.proposals-filter-form input,
+.proposals-filter-form select {
+    border: 1.5px solid #e3eefd;
+    border-radius: 10px;
+    padding: 9px 16px;
+    font-size: 1rem;
+    background: #f4f8fc;
+    transition: border 0.2s;
+}
+.proposals-filter-form input:focus,
+.proposals-filter-form select:focus {
+    border-color: #2274cb;
+}
+.btn.btn-primary {
+    background: #2274cb;
+    color: #fff;
+    border: none;
+    border-radius: 9px;
+    padding: 10px 25px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.18s;
+    letter-spacing: 0.7px;
+}
+.btn.btn-primary:hover {
+    background: #18528a;
+}
+
+.table-responsive { width: 100%; overflow-x: auto; }
+.proposals-table {
+    width: 100%;
+    border-radius: 17px;
+    box-shadow: 0 2px 14px 0 rgba(34,116,203,0.07);
+    background: #f8fbfd;
+    overflow: hidden;
+}
+.proposals-table th {
+    background: #2274cb;
+    color: #fff;
+    font-weight: 700;
+    padding: 15px 12px;
+    text-align: left;
+}
+.proposals-table td {
+    background: #f8fbfd;
+    padding: 14px 12px;
+    font-size: 1rem;
+    color: #20508c;
+    vertical-align: middle;
+}
+.proposals-table tr:nth-child(even) td {
+    background: #e6f2fc;
+}
+.proposal-title-link {
+    color: #18528a;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+}
+.status-badge {
+    border-radius: 10px;
+    font-weight: 700;
+    padding: 4px 15px;
+    font-size: 0.99rem;
+    display: inline-block;
+    letter-spacing: 0.02em;
+    background: #d9ecff;
+    color: #2274cb;
+}
+.status-submitted { background: #e6f1ff; color: #2274cb; }
+.status-under_review { background: #fffbe6; color: #9f8300; }
+.status-approved { background: #e9fbe7; color: #249f38; }
+.status-rejected { background: #ffe9e9; color: #be3a34; }
+.status-returned { background: #f5eaff; color: #9b58c3; }
+
+.btn-action {
+    margin-right: 6px;
+    font-size: 0.97rem;
+    padding: 7px 15px;
+    border-radius: 7px;
+    border: none;
+    font-weight: 600;
+    background: #e9f0fa;
+    color: #20508c;
+    cursor: pointer;
+    transition: background 0.16s;
+}
+.btn-approve { background: #e7f3ff; color: #2274cb; }
+.btn-approve:hover { background: #2274cb; color: #fff; }
+.btn-reject { background: #f6eaff; color: #be3a34; }
+.btn-reject:hover { background: #be3a34; color: #fff; }
+.btn-return { background: #f5f7fa; color: #8d53b0; }
+.btn-return:hover { background: #8d53b0; color: #fff; }
+.action-done { color: #b0bacf; font-size: 1.1rem; font-weight: 600; }
+
+.modal-bg {
+    position: fixed; left: 0; top: 0; right:0; bottom:0;
+    background: rgba(36, 94, 154, 0.14);
+    z-index: 1010;
+    display: flex; align-items: center; justify-content: center;
+}
+.modal-content {
+    background: #fff;
+    padding: 34px 38px 22px 38px;
+    border-radius: 18px;
+    max-width: 480px;
+    width: 90vw;
+    box-shadow: 0 8px 48px rgba(34,116,203,0.20);
+    position: relative;
+    animation: modalin .2s;
+}
+@keyframes modalin { from { transform: translateY(50px); opacity: 0;} to { transform: none; opacity: 1;} }
+.modal-close {
+    position: absolute; top: 13px; right: 19px;
+    font-size: 2rem; color: #2c3e70;
+    cursor: pointer;
+    font-weight: 600;
+}
+#modal-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #2274cb;
+    margin-bottom: 13px;
+}
+#modal-details {
+    color: #1e3875;
+    font-size: 1.08rem;
+    margin-top: 7px;
+}
+@media (max-width: 650px) {
+    .admin-proposals-container { padding: 10px 2vw; max-width: 99vw; }
+    .modal-content { padding: 13px 8px 8px 8px; }
+    .proposals-title { font-size: 1.4rem; }
+}
