@@ -1,3 +1,19 @@
+/* RESET */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* BODY */
+body {
+  font-family: 'Inter', sans-serif;
+  background: #eaf6ff;
+  color: #172b4d;
+  min-height: 100vh;
+}
+
+/* DASHBOARD BACKGROUND */
 .iqac-dashboard-bg {
   min-height: 100vh;
   background: linear-gradient(115deg, #e4f2ff 0%, #f6fafd 100%);
@@ -8,6 +24,7 @@
   padding-bottom: 32px;
 }
 
+/* FLEX CONTAINER */
 .iqac-dashboard-flex {
   display: flex;
   width: 100%;
@@ -15,10 +32,11 @@
   background: #fff;
   border-radius: 24px;
   box-shadow: 0 10px 34px rgba(49,115,255,0.12), 0 1.5px 10px rgba(0,0,0,0.03);
-  padding: 0;
   overflow: hidden;
+  animation: fadeIn 0.6s ease;
 }
 
+/* SIDE PANEL */
 .iqac-dashboard-side {
   min-width: 180px;
   max-width: 230px;
@@ -27,8 +45,7 @@
   flex-direction: column;
   align-items: center;
   padding: 44px 18px 32px 18px;
-  position: relative;
-  z-index: 1;
+  color: white;
 }
 
 .iqac-side-icon-bg {
@@ -60,13 +77,14 @@
   text-shadow: 0 2px 12px #1d355760;
 }
 
+/* MAIN CONTENT */
 .iqac-dashboard-main {
-  flex: 1 1 0%;
+  flex: 1;
   padding: 46px 48px 38px 48px;
-  background: none;
   min-width: 0;
 }
 
+/* HEADER */
 .iqac-section-header {
   display: flex;
   align-items: center;
@@ -79,21 +97,23 @@
 }
 
 .iqac-section-icon {
-  font-size: 1.5em;
+  font-size: 1.6rem;
   filter: drop-shadow(0 2px 4px #6a90e340);
 }
 
+/* REPORT LIST */
 .iqac-report-list {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
+/* CARD */
 .iqac-report-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(90deg,#f7fbff 65%,#e4f2ff 100%);
+  background: linear-gradient(90deg, #f7fbff 65%, #e4f2ff 100%);
   border-radius: 16px;
   box-shadow: 0 2.5px 18px rgba(67,130,220,0.08);
   padding: 22px 26px;
@@ -103,10 +123,11 @@
 
 .iqac-report-card:hover {
   box-shadow: 0 7px 26px rgba(55,100,200,0.17);
-  border: 1.2px solid #3388ff23;
+  border-color: #3388ff23;
   transform: translateY(-2px) scale(1.013);
 }
 
+/* CARD LEFT INFO */
 .iqac-report-info {
   display: flex;
   align-items: center;
@@ -121,6 +142,7 @@
   justify-content: center;
 }
 
+/* CARD TITLE AND META */
 .iqac-report-title {
   font-weight: 700;
   color: #2b4477;
@@ -135,6 +157,7 @@
   font-weight: 500;
 }
 
+/* BUTTON */
 .iqac-generate-btn {
   background: linear-gradient(90deg,#3388ff 0,#63deff 100%);
   color: #fff;
@@ -151,16 +174,17 @@
 }
 .iqac-generate-btn:hover, .iqac-generate-btn:focus {
   background: linear-gradient(90deg,#1976d2 0,#28b0fa 100%);
-  color: #fff;
   transform: scale(1.038);
   box-shadow: 0 5px 25px rgba(67,130,220,0.19);
 }
 
+/* EMPTY STATE */
 .iqac-empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   margin: 48px 0 22px 0;
+  animation: fadeIn 0.5s ease-in-out;
 }
 .iqac-empty-icon {
   font-size: 2.6em;
@@ -173,14 +197,48 @@
   text-align: center;
 }
 
-@media (max-width: 980px) {
-  .iqac-dashboard-flex { flex-direction: column; border-radius: 0 0 24px 24px;}
-  .iqac-dashboard-side { flex-direction: row; justify-content: flex-start; min-width: 0; max-width: none; width: 100%; padding: 26px 0 16px 0;}
-  .iqac-side-title { margin-top: 0; margin-left: 18px; font-size: 1.05rem;}
+/* ANIMATIONS */
+@keyframes fadeIn {
+  0% { opacity: 0; transform: translateY(15px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
+
+/* RESPONSIVE */
+@media (max-width: 980px) {
+  .iqac-dashboard-flex {
+    flex-direction: column;
+    border-radius: 0 0 24px 24px;
+  }
+  .iqac-dashboard-side {
+    flex-direction: row;
+    justify-content: flex-start;
+    min-width: 0;
+    max-width: none;
+    width: 100%;
+    padding: 26px 0 16px 0;
+  }
+  .iqac-side-title {
+    margin-top: 0;
+    margin-left: 18px;
+    font-size: 1.05rem;
+  }
+}
+
 @media (max-width: 700px) {
-  .iqac-dashboard-main { padding: 30px 7vw 18px 7vw;}
-  .iqac-section-header { font-size: 1.08rem;}
-  .iqac-report-card { flex-direction: column; gap: 14px; align-items: flex-start; padding: 14px 6vw;}
-  .iqac-generate-btn { width: 100%; }
+  .iqac-dashboard-main {
+    padding: 30px 7vw 18px 7vw;
+  }
+  .iqac-section-header {
+    font-size: 1.08rem;
+  }
+  .iqac-report-card {
+    flex-direction: column;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 14px 6vw;
+  }
+  .iqac-generate-btn {
+    width: 100%;
+    text-align: center;
+  }
 }
