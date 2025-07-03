@@ -1,10 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>Transcript PDF</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -184,6 +189,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="header">
     <h1>CHRIST (Deemed to be University), Pune Lavasa - The Hub of Analytics</h1>
@@ -210,8 +216,12 @@
         {% endfor %}
       </ul>
       {% if qr_code %}
-      <div class="qr-code">
-        <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code">
+      <div class="qr-code" style="margin-top: 12px; padding-top: 6px; border-top: 1px dashed #3b73b9;">
+        <div style="font-size: 8px; font-weight: 600; color: #3b73b9; margin-bottom: 4px;">Scan for Full Event Details
+        </div>
+        <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code"
+          style="width: 70px; height: 70px; border-radius: 6px; border: 2px solid #3b73b9; box-shadow: 1px 1px 4px rgba(0,0,0,0.1);">
+        <div style="font-size: 7px; color: #6b7280; margin-top: 4px;">{{ student.roll_no }}</div>
       </div>
       {% endif %}
     </div>
@@ -229,9 +239,15 @@
         {% for strength in strength_data %}
         <tr>
           <td class="strength-name">{{ strength.name }}</td>
-          <td><div class="dot {% if strength.category == 'EMER' %}filled{% else %}empty{% endif %}"></div></td>
-          <td><div class="dot {% if strength.category == 'DEV' %}filled{% else %}empty{% endif %}"></div></td>
-          <td><div class="dot {% if strength.category == 'ESTD' %}filled{% else %}empty{% endif %}"></div></td>
+          <td>
+            <div class="dot {% if strength.category == 'EMER' %}filled{% else %}empty{% endif %}"></div>
+          </td>
+          <td>
+            <div class="dot {% if strength.category == 'DEV' %}filled{% else %}empty{% endif %}"></div>
+          </td>
+          <td>
+            <div class="dot {% if strength.category == 'ESTD' %}filled{% else %}empty{% endif %}"></div>
+          </td>
         </tr>
         {% endfor %}
       </tbody>
@@ -239,10 +255,12 @@
   </div>
 
   <div class="footer">
-    <p>The Student Character Strength Transcript is awarded to selected students, excelling in University Activities fostering Holistic Development.</p>
+    <p>The Student Character Strength Transcript is awarded to selected students, excelling in University Activities
+      fostering Holistic Development.</p>
     <p><strong>Date:</strong> {{ today }}</p>
     <strong>{{ student.roll_no }}</strong>
     <strong>DEAN & DIRECTOR<br>CHRIST (Deemed to be University)<br>Pune Lavasa Campus</strong>
   </div>
 </body>
+
 </html>
