@@ -165,3 +165,101 @@ body {
   gap: 10px;
   margin-bottom: 1rem;
 }
+.select2-container .select2-selection--single {
+  background: #fff;
+  border: 2px solid #1875f0;
+  border-radius: 30px !important;
+  min-height: 48px;
+  padding: 0 22px;
+  font-size: 1.13rem;
+  display: flex;
+  align-items: center;
+  box-shadow: none !important;
+  transition: border-color 0.2s;
+}
+
+.select2-container--default .select2-selection--single:focus,
+.select2-container--default .select2-selection--single:hover {
+  border-color: #1257ba;
+}
+
+.select2-selection__arrow {
+  display: none !important;
+}
+.select2-selection__rendered {
+  color: #222;
+  font-size: 1.13rem;
+  font-weight: 500;
+  padding-left: 0 !important;
+}
+
+.select2-container .select2-dropdown {
+  margin-top: 2px;
+  border-radius: 18px !important;
+  border: 1.5px solid #1875f0;
+  box-shadow: 0 8px 32px rgba(30,64,175,0.13);
+  background: #fff;
+  padding: 0;
+}
+
+.select2-search--dropdown {
+  padding: 0;
+  margin: 0;
+}
+.select2-search--dropdown input {
+  border-radius: 14px !important;
+  border: 1px solid #e0e5f1 !important;
+  font-size: 1.1rem;
+  padding: 10px 15px;
+}
+.select2-results__option {
+  padding: 13px 24px;
+  font-size: 1.07rem;
+  border-radius: 8px;
+  margin: 2px 6px;
+  cursor: pointer;
+}
+.select2-results__option--highlighted {
+  background-color: #e7f0fe !important;
+  color: #1875f0 !important;
+}
+.select2-results__option[aria-selected="true"] {
+  background: #f3f8ff !important;
+  color: #1257ba !important;
+}
+.select2-container {
+  z-index: 10050 !important;
+}
+.select2-container--default .select2-selection--single {
+    border-radius: 12px;
+    border: 2px solid #2078e2;
+    min-height: 44px;
+    font-size: 1.15rem;
+    padding: 5px 12px;
+    box-shadow: 0 2px 12px 0 #2078e214;
+    background: #fff;
+    transition: box-shadow 0.18s;
+}
+.select2-container--default .select2-selection--single:focus {
+    box-shadow: 0 0 0 2px #2078e24d;
+    border-color: #105ec6;
+}
+.select2-dropdown {
+    border-radius: 12px !important;
+    border: 2px solid #2078e2 !important;
+    box-shadow: 0 8px 32px 0 #2078e230 !important;
+    font-size: 1.07rem !important;
+}
+.select2-results__option--highlighted[aria-selected] {
+    background-color: #2078e2 !important;
+    color: #fff !important;
+}
+.select2-container .select2-selection--single .select2-selection__rendered {
+    color: #222;
+    line-height: 36px;
+    padding-left: 4px;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 44px;
+    right: 10px;
+}

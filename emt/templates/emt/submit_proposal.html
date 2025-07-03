@@ -5,57 +5,63 @@
 
 {% block head_extra %}
   <link rel="stylesheet" href="{% static 'emt/css/styles.css' %}">
+  <!-- Select2 core & Bootstrap4 theme (remove this if not using bootstrap4) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+  <link rel="stylesheet" href="{% static 'emt/css/select2-custom.css' %}">
+  <!-- Optional: Only keep one theme, remove if you don't want Bootstrap look -->
+  <!-- <link href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@1.6.4/dist/select2-bootstrap4.min.css" rel="stylesheet" /> -->
 {% endblock %}
 
 {% block content %}
 <div class="container">
   <div class="header">
     <h1>Submit Your Event Proposal</h1>
-    <p>Fill out the details below to register your event</p>
+    <p>Fill out the details below to register your event.</p>
   </div>
 
   <div class="page-content">
-    <form method="post" enctype="multipart/form-data">
+    <form method="post" enctype="multipart/form-data" class="proposal-form">
       {% csrf_token %}
 
       <div class="section">
         <h3>Basic Event Information</h3>
         {% for field in form.visible_fields %}
           {% if field.name == 'event_focus_type' %}
-            <hr>
-            <h3>Event Focus & Participants</h3>
+            <hr><h3>Event Focus & Participants</h3>
           {% elif field.name == 'fest_fee_participants' %}
-            <hr>
-            <h3>Fest Income Details</h3>
+            <hr><h3>Fest Income Details</h3>
           {% elif field.name == 'conf_fee_participants' %}
-            <hr>
-            <h3>Conference Income Details</h3>
+            <hr><h3>Conference Income Details</h3>
           {% endif %}
-          <div class="input-group {% if field.errors %}has-error{% endif %}">
+
+          <div class="input-group{% if field.errors %} has-error{% endif %}">
             {{ field.label_tag }}
+
+            {# Department field gets a unique class for styling/select2 - handled via Django widget attrs! #}
             {{ field }}
+
             {% if field.help_text %}
-              <small class="form-text text-muted">{{ field.help_text }}</small>
+              <small class="help-text">{{ field.help_text }}</small>
             {% endif %}
             {% for error in field.errors %}
-              <div class="error">{{ error }}</div>
+              <span class="error">{{ error }}</span>
             {% endfor %}
           </div>
         {% endfor %}
       </div>
-
-      <div class="input-group" style="margin-top: 24px;">
-        <button type="submit" name="submit" class="btn btn-primary">Save & Continue</button>
-      </div>
+      <button type="submit" name="submit" class="btn btn-primary" style="margin-top:24px;">Save &amp; Continue</button>
     </form>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <script src="{% static 'emt/js/select2-init.js' %}"></script>
   <script>
-    window.PROPOSAL_ID = "{{ proposal.id|default:'' }}";
-    window.AUTOSAVE_URL = "{% url 'emt:autosave_proposal' %}";
+    window.PROPOSAL_ID   = "{{ proposal.id|default:'' }}";
+    window.AUTOSAVE_URL  = "{% url 'emt:autosave_proposal' %}";
     window.AUTOSAVE_CSRF = "{{ csrf_token }}";
   </script>
   <script src="{% static 'emt/js/autosave_draft.js' %}"></script>

@@ -3,7 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
-
+from django.http import JsonResponse
+from django.db.models import Q
 from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
     EventExpectedOutcomes, TentativeFlow,
@@ -15,7 +16,9 @@ from .forms import (
     ExpenseDetailForm
 )
 from django.forms import modelformset_factory
-
+from .models import Department           # FK model you created
+from django.contrib.auth.models import User
+from core.models import RoleAssignment
 # ──────────────────────────────
 # PROPOSAL STEP 1: Proposal Submission
 # ──────────────────────────────
@@ -24,8 +27,20 @@ def submit_proposal(request, pk=None):
     proposal = None
     if pk:
         proposal = get_object_or_404(EventProposal, pk=pk, submitted_by=request.user)
+
     if request.method == 'POST':
-        form = EventProposalForm(request.POST, instance=proposal)
+        post_data = request.POST.copy()
+
+        # Handle custom department from Select2 "tags" input
+        dept_value = post_data.get('department')
+        if dept_value:
+            # If the value is not a digit, it's a custom entry (text)
+            if not dept_value.isdigit():
+                department, created = Department.objects.get_or_create(name=dept_value)
+                post_data['department'] = department.id  # Set it as ID for the form field
+            # else: user selected from list, so ID is already correct
+
+        form = EventProposalForm(post_data, instance=proposal)
         if form.is_valid():
             proposal = form.save(commit=False)
             proposal.submitted_by = request.user
@@ -258,3 +273,25 @@ def autosave_need_analysis(request):
         na.save()
         return JsonResponse({'success': True})
     return JsonResponse({'success': False}, status=400)
+@login_required
+def api_departments(request):
+    q = request.GET.get("q", "").strip()
+    depts = Department.objects.filter(name__icontains=q).order_by("name")[:20]
+    response = [{"id": d.id, "text": d.name} for d in depts]
+    return JsonResponse(response, safe=False)
+
+@login_required
+def api_faculty(request):
+    q = request.GET.get("q", "").strip()
+    users = (User.objects
+             .filter(role_assignments__role="faculty")
+             .filter(
+                 Q(first_name__icontains=q) |
+                 Q(last_name__icontains=q) |
+                 Q(email__icontains=q))
+             .distinct()
+             .order_by("first_name")[:20])
+    return JsonResponse(
+        [{"id": u.id, "text": f"{u.get_full_name() or u.username} ({u.email})"} for u in users],
+        safe=False
+    )
