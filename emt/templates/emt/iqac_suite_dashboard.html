@@ -34,39 +34,3 @@
     </div>
 </div>
 {% endblock %}
-{% extends "base.html" %}
-{% load static %}
-{% block content %}
-<link rel="stylesheet" href="{% static 'emt/css/iqac_suite_dashboard.css' %}">
-
-<div class="suite-dashboard-outer">
-    <h2 class="suite-dashboard-heading">IQAC Suite Dashboard</h2>
-    <div class="suite-options">
-
-        <!-- Event Proposal Card -->
-        <div class="suite-card">
-            <div class="suite-card-icon suite-card-icon-blue">📄</div>
-            <div class="suite-card-title">Event Proposal</div>
-            <div class="suite-card-desc">Create and manage event proposals</div>
-            <a href="{% url 'emt:submit_proposal' %}" class="suite-card-btn"><span>Go &rarr;</span></a>
-        </div>
-
-        <!-- IQAC Report Generation Card -->
-        <div class="suite-card">
-            <div class="suite-card-icon suite-card-icon-purple">📝</div>
-            <div class="suite-card-title">IQAC Report Generation</div>
-            <div class="suite-card-desc">Generate IQAC reports</div>
-            <a href="{% url 'emt:pending_reports' %}" class="suite-card-btn"><span>Go &rarr;</span></a>
-        </div>
-
-        <!-- View Generated Reports -->
-        <div class="suite-card">
-            <div class="suite-card-icon suite-card-icon-green">📑</div>
-            <div class="suite-card-title">View Generated Reports</div>
-            <div class="suite-card-desc">See all your generated reports</div>
-            <a href="{% url 'emt:generated_reports' %}" class="suite-card-btn"><span>Go &rarr;</span></a>
-        </div>
-
-    </div>
-</div>
-{% endblock %}
