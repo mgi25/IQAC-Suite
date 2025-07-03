@@ -44,8 +44,9 @@ def dashboard(request):
     ]
     return render(request, 'core/dashboard.html', {
         'proposals': proposals,
-        'other_notifications': other_notifications,
+        'notifications': other_notifications,   # <-- renamed key
     })
+
 
 @login_required
 def propose_event(request):
