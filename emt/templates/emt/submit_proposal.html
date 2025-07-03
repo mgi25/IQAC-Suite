@@ -4,17 +4,14 @@
 {% block title %}Submit Event Proposal{% endblock %}
 
 {% block head_extra %}
-  <!-- your existing global styles -->
+  <!-- your global styles -->
   <link rel="stylesheet" href="{% static 'emt/css/styles.css' %}">
 
-  <!-- Typeahead core CSS -->
+  <!-- Tom Select CSS -->
   <link
-    href="https://cdnjs.cloudflare.com/ajax/libs/typeahead.js/0.11.1/typeahead.bundle.min.css"
+    href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css"
     rel="stylesheet"
   />
-
-  <!-- our custom inline-hint styling -->
-  <link rel="stylesheet" href="{% static 'emt/css/typeahead-modern.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -29,29 +26,43 @@
       {% csrf_token %}
 
       <div class="section">
-        {% for field in form.visible_fields %}
 
-          {# ─── Department uses our own Typeahead input ─── #}
-          {% if field.name == 'department' %}
-            <div class="input-group{% if field.errors %} has-error{% endif %}">
-              <label for="department-input">{{ field.label }}</label>
-              <input
-                type="text"
-                id="department-input"
-                name="department"
-                autocomplete="off"
-                placeholder="Type to search…"
-                value="{{ form.instance.department.name|default:'' }}"
-                class="tt-query"
-                data-url="{% url 'emt:api_departments' %}"
-              />
-              {% for error in field.errors %}
-                <span class="error">{{ error }}</span>
+        {# ─── Department (single AJAX) ─── #}
+        <div class="input-group{% if form.department.errors %} has-error{% endif %}">
+          <label for="department-select">{{ form.department.label }}</label>
+          <select id="department-select" name="department" placeholder="Type to search…">
+            {% if form.instance.department %}
+              <option value="{{ form.instance.department.id }}" selected>
+                {{ form.instance.department.name }}
+              </option>
+            {% endif %}
+          </select>
+          {% for err in form.department.errors %}
+            <span class="error">{{ err }}</span>
+          {% endfor %}
+        </div>
+
+        {# ─── Faculty In-charges (multi AJAX) ─── #}
+        <div class="input-group{% if form.faculty_incharges.errors %} has-error{% endif %}">
+          <label for="faculty-select">{{ form.faculty_incharges.label }}</label>
+          <select id="faculty-select" name="faculty_incharges" multiple placeholder="Type a lecturer name…">
+            {# Only pre-populate if this proposal already exists in the DB #}
+            {% if proposal %}
+              {% for u in proposal.faculty_incharges.all %}
+                <option value="{{ u.id }}" selected>
+                  {{ u.get_full_name|default:u.username }} ({{ u.email }})
+                </option>
               {% endfor %}
-            </div>
+            {% endif %}
+          </select>
+          {% for err in form.faculty_incharges.errors %}
+            <span class="error">{{ err }}</span>
+          {% endfor %}
+        </div>
 
-          {# ─── Everything else stays as before ─── #}
-          {% else %}
+        {# ─── All other fields unchanged ─── #}
+        {% for field in form.visible_fields %}
+          {% if field.name != "department" and field.name != "faculty_incharges" %}
             {% if field.name == 'event_focus_type' %}
               <hr><h3>Event Focus & Participants</h3>
             {% elif field.name == 'fest_fee_participants' %}
@@ -60,18 +71,17 @@
               <hr><h3>Conference Income Details</h3>
             {% endif %}
             <div class="input-group{% if field.errors %} has-error{% endif %}">
-              {{ field.label_tag }}
-              {{ field }}
+              {{ field.label_tag }} {{ field }}
               {% if field.help_text %}
                 <small class="help-text">{{ field.help_text }}</small>
               {% endif %}
-              {% for error in field.errors %}
-                <span class="error">{{ error }}</span>
+              {% for e in field.errors %}
+                <span class="error">{{ e }}</span>
               {% endfor %}
             </div>
           {% endif %}
-
         {% endfor %}
+
       </div>
 
       <button type="submit" name="submit" class="btn btn-primary" style="margin-top:24px;">
@@ -84,14 +94,48 @@
 
 {% block scripts %}
   <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-  <script
-    src="https://cdnjs.cloudflare.com/ajax/libs/typeahead.js/0.11.1/typeahead.bundle.min.js">
-  </script>
-  <script src="{% static 'emt/js/typeahead-init.js' %}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+
   <script>
-    window.PROPOSAL_ID   = "{{ proposal.id|default:'' }}";
-    window.AUTOSAVE_URL  = "{% url 'emt:autosave_proposal' %}";
-    window.AUTOSAVE_CSRF = "{{ csrf_token }}";
+    document.addEventListener('DOMContentLoaded', function(){
+      // Department (single)
+      new TomSelect('#department-select', {
+        valueField: 'id',
+        labelField: 'text',
+        searchField: 'text',
+        create: false,
+        placeholder: 'Type to search…',
+        load: function(query, callback) {
+          if (!query.length) return callback();
+          fetch("{% url 'emt:api_departments' %}?q=" + encodeURIComponent(query))
+            .then(r => r.json())
+            .then(json => callback(json))
+            .catch(() => callback());
+        }
+      });
+
+      // Faculty In-charges (multiple)
+      new TomSelect('#faculty-select', {
+        plugins: ['remove_button'],
+        valueField: 'id',
+        labelField: 'text',
+        searchField: 'text',
+        create: false,
+        placeholder: 'Type a lecturer name…',
+        load: function(query, callback) {
+          if (!query.length) return callback();
+          fetch("{% url 'emt:api_faculty' %}?q=" + encodeURIComponent(query))
+            .then(r => r.json())
+            .then(json => callback(json))
+            .catch(() => callback());
+        }
+      });
+
+      // Autosave (unchanged)
+      window.PROPOSAL_ID   = "{{ proposal.id|default:'' }}";
+      window.AUTOSAVE_URL  = "{% url 'emt:autosave_proposal' %}";
+      window.AUTOSAVE_CSRF = "{{ csrf_token }}";
+      $.getScript("{% static 'emt/js/autosave_draft.js' %}");
+    });
   </script>
-  {#<script src="{% static 'emt/js/autosave_draft.js' %}"></script>#}
 {% endblock %}
