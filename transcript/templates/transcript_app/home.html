@@ -4,139 +4,214 @@
 {% block title %}Transcript Lookup{% endblock %}
 
 {% block head_extra %}
-  <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
-  <style>
-    .transcript-form-card {
-      background: #fff;
-      border-radius: 1.2rem;
-      box-shadow: 0 4px 32px rgba(20, 40, 150, 0.07);
-      padding: 2.4rem 2.2rem;
-      max-width: 480px;
-      margin: 40px auto;
-      width: 100%;
+<link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
+<style>
+  .transcript-form-card {
+    background: #fff;
+    border-radius: 1.2rem;
+    box-shadow: 0 4px 32px rgba(20, 40, 150, 0.07);
+    padding: 2.4rem 2.2rem;
+    max-width: 480px;
+    margin: 40px auto;
+    width: 100%;
+  }
+
+  .transcript-form-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #2274CB;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    letter-spacing: 1px;
+  }
+
+  .transcript-form-label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+
+  .transcript-form-input {
+    width: 100%;
+    padding: 0.9rem 1.2rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 0.7rem;
+    font-size: 1rem;
+    font-family: inherit;
+    background: #fafafa;
+    margin-bottom: 0.5rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .transcript-form-input:focus {
+    outline: none;
+    border-color: #2274CB;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(34, 116, 203, 0.08);
+  }
+
+  .transcript-form-helper {
+    font-size: 0.95rem;
+    color: #6b7280;
+    margin-bottom: 1.2rem;
+  }
+
+  .transcript-form-btns {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .btn {
+    flex: 1;
+    padding: 0.9rem 1.2rem;
+    border: none;
+    border-radius: 0.7rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+  }
+
+  .btn-secondary {
+    background: #f3f4f6;
+    color: #374151;
+    border: 2px solid #e5e7eb;
+  }
+
+  .btn-secondary:hover {
+    background: #e5e7eb;
+    transform: scale(1.03);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.06);
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff;
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.2);
+  }
+
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    transform: scale(1.05);
+    box-shadow: 0 10px 24px rgba(59, 130, 246, 0.3);
+  }
+
+  .transcript-form-header {
+    color: #6b7280;
+    font-size: 0.98rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 1.2rem;
+    text-align: center;
+  }
+
+  .popup-error {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #ef4444;
+    color: white;
+    padding: 10px 16px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 9999;
+    animation: fadein 0.3s ease;
+  }
+
+  @keyframes fadein {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
     }
-    .transcript-form-title {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #2274CB;
-      text-align: center;
-      margin-bottom: 1.5rem;
-      letter-spacing: 1px;
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
     }
-    .transcript-form-label {
-      font-size: 1rem;
-      font-weight: 600;
-      color: #374151;
-      margin-bottom: 0.5rem;
-      display: block;
-    }
-    .transcript-form-input {
-      width: 100%;
-      padding: 0.9rem 1.2rem;
-      border: 2px solid #e5e7eb;
-      border-radius: 0.7rem;
-      font-size: 1rem;
-      font-family: inherit;
-      background: #fafafa;
-      margin-bottom: 0.5rem;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .transcript-form-input:focus {
-      outline: none;
-      border-color: #2274CB;
-      background: #fff;
-      box-shadow: 0 0 0 3px rgba(34, 116, 203, 0.08);
-    }
-    .transcript-form-helper {
-      font-size: 0.95rem;
-      color: #6b7280;
-      margin-bottom: 1.2rem;
-    }
-    .transcript-form-btns {
-      display: flex;
-      gap: 1rem;
-      margin-top: 2rem;
-    }
-    .btn {
-      flex: 1;
-      padding: 0.9rem 1.2rem;
-      border: none;
-      border-radius: 0.7rem;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
-    }
-    .btn-secondary {
-      background: #f9fafb;
-      color: #6b7280;
-      border: 2px solid #e5e7eb;
-    }
-    .btn-secondary:hover {
-      background: #f3f4f6;
-      color: #374151;
-    }
-    .btn-primary {
-      background: #2274CB;
-      color: #fff;
-      box-shadow: 0 4px 20px rgba(34, 116, 203, 0.13);
-    }
-    .btn-primary:hover {
-      background: #185a9d;
-    }
-    .transcript-form-header {
-      color: #6b7280;
-      font-size: 0.98rem;
-      font-weight: 600;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      margin-bottom: 1.2rem;
-      text-align: center;
-    }
-  </style>
+  }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-container" style="justify-content:center;align-items:center;min-height:calc(100vh - 80px);padding-top:120px;">
+<div class="dashboard-container"
+  style="justify-content:center;align-items:center;min-height:calc(100vh - 80px);padding-top:120px;">
   <div class="transcript-form-card">
     <div class="transcript-form-header">STUDENT CHARACTER STRENGTH TRANSCRIPT</div>
     <div class="transcript-form-title">Enter Your Register Number</div>
     <form id="transcriptForm">
       <label for="roll_no" class="transcript-form-label">Roll Number</label>
-      <input type="text" id="roll_no" name="roll_no" class="transcript-form-input" placeholder="Enter your Register number" required autocomplete="off">
+      <input type="text" id="roll_no" name="roll_no" class="transcript-form-input"
+        placeholder="Enter your Register number" required autocomplete="off">
       <div class="transcript-form-helper">Enter Register Number to generate transcript</div>
       <div class="transcript-form-btns">
         <a href="/" class="btn btn-secondary">Back</a>
-        <button type="submit" class="btn btn-primary">Get Transcript</button>
+        <button type="submit" class="btn btn-primary">Go →</button>
       </div>
     </form>
   </div>
 </div>
+
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+  document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('transcriptForm');
     const rollInput = document.getElementById('roll_no');
     const submitBtn = form.querySelector('.btn-primary');
+
+    const showError = (msg) => {
+      const existing = document.querySelector('.popup-error');
+      if (existing) existing.remove();
+
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'popup-error';
+      errorDiv.textContent = msg;
+      document.body.appendChild(errorDiv);
+      setTimeout(() => errorDiv.remove(), 3000);
+    };
+
     setTimeout(() => rollInput.focus(), 300);
     rollInput.addEventListener('input', function () {
-        submitBtn.style.background = this.value.trim() ? '#2274CB' : '#9ca3af';
+      submitBtn.style.opacity = this.value.trim() ? '1' : '0.6';
     });
-    form.addEventListener('submit', function (e) {
-        e.preventDefault();
-        const rollNo = rollInput.value.trim();
-        if (!rollNo) {
-            rollInput.focus();
-            rollInput.style.borderColor = '#ef4444';
-            setTimeout(() => rollInput.style.borderColor = '#e5e7eb', 2000);
-            return;
-        }
-        submitBtn.textContent = 'Searching...';
-        window.location.href = `/transcript/view/${rollNo}/`;
 
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const rollNo = rollInput.value.trim();
+      if (!rollNo) {
+        rollInput.focus();
+        rollInput.style.borderColor = '#ef4444';
+        setTimeout(() => rollInput.style.borderColor = '#e5e7eb', 2000);
+        return;
+      }
+
+      submitBtn.textContent = 'Checking...';
+      fetch(`/transcript/validate-roll/?roll_no=${rollNo}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.exists) {
+            window.location.href = `/transcript/view/${rollNo}/`;
+          } else {
+            submitBtn.textContent = 'Go →';
+            showError("Invalid Register Number!");
+          }
+        })
+        .catch(err => {
+          submitBtn.textContent = 'Go →';
+          showError("Something went wrong!");
+        });
     });
+
     rollInput.addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') form.dispatchEvent(new Event('submit'));
+      if (e.key === 'Enter') form.dispatchEvent(new Event('submit'));
     });
-});
+  });
 </script>
+
 {% endblock %}

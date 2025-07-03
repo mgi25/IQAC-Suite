@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404
 from .models import Student, Participation, AttributeStrengthMap, Role, CharacterStrength
 from collections import defaultdict
 from datetime import date
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.template.loader import get_template
 from django.urls import reverse
 import qrcode
@@ -10,12 +10,25 @@ import io
 import weasyprint
 import base64
 
-
+# ─────────────────────────────────────────────────────────────
+# HOME
+# ─────────────────────────────────────────────────────────────
 def home(request):
     return render(request, 'transcript_app/home.html')
 
 
-# 🔁 Helper function to calculate strength data
+# ─────────────────────────────────────────────────────────────
+# CHECK IF ROLL NUMBER EXISTS (AJAX)
+# ─────────────────────────────────────────────────────────────
+def validate_roll_no(request):
+    roll_no = request.GET.get('roll_no')
+    exists = Student.objects.filter(roll_no=roll_no).exists()
+    return JsonResponse({'exists': exists})
+
+
+# ─────────────────────────────────────────────────────────────
+# STRENGTH CALCULATION LOGIC
+# ─────────────────────────────────────────────────────────────
 def calculate_strength_data(student):
     participations = Participation.objects.filter(student=student)
 
@@ -62,6 +75,9 @@ def calculate_strength_data(student):
     return strength_data, participations
 
 
+# ─────────────────────────────────────────────────────────────
+# TRANSCRIPT VIEW
+# ─────────────────────────────────────────────────────────────
 def transcript_view(request, roll_no):
     student = get_object_or_404(Student, roll_no=roll_no)
     strength_data, participations = calculate_strength_data(student)
@@ -71,7 +87,7 @@ def transcript_view(request, roll_no):
 
     qr_b64 = None
     if participations.count() > 5:
-        all_events_url = request.build_absolute_uri(  # ✅ builds dynamic absolute URL (ngrok safe)
+        all_events_url = request.build_absolute_uri(
             reverse('transcript:all_events', kwargs={'roll_no': student.roll_no})
         )
         qr = qrcode.make(all_events_url)
@@ -88,6 +104,9 @@ def transcript_view(request, roll_no):
     })
 
 
+# ─────────────────────────────────────────────────────────────
+# TRANSCRIPT PDF VIEW
+# ─────────────────────────────────────────────────────────────
 def transcript_pdf(request, roll_no):
     student = get_object_or_404(Student, roll_no=roll_no)
     strength_data, participations = calculate_strength_data(student)
@@ -97,7 +116,7 @@ def transcript_pdf(request, roll_no):
 
     qr_b64 = None
     if participations.count() > 5:
-        all_events_url = request.build_absolute_uri(  # ✅ works with ngrok
+        all_events_url = request.build_absolute_uri(
             reverse('transcript:all_events', kwargs={'roll_no': student.roll_no})
         )
         qr = qrcode.make(all_events_url)
@@ -120,6 +139,9 @@ def transcript_pdf(request, roll_no):
     return response
 
 
+# ─────────────────────────────────────────────────────────────
+# SHOW ALL EVENTS
+# ─────────────────────────────────────────────────────────────
 def all_events_view(request, roll_no):
     student = get_object_or_404(Student, roll_no=roll_no)
     participations = Participation.objects.filter(student=student)

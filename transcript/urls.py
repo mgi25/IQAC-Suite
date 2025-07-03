@@ -5,7 +5,11 @@ app_name = "transcript"
 
 urlpatterns = [
     path('', views.home, name='home'),  # form page
-    path('view/<str:roll_no>/', views.transcript_view, name='transcript'),  # ✅ fixed to accept roll_no
-    path('pdf/<str:roll_no>/', views.transcript_pdf, name='transcript_pdf'),
-    path('events/<str:roll_no>/', views.all_events_view, name='all_events'),
+    
+    # ✅ New: AJAX endpoint to validate roll number
+    path('validate-roll/', views.validate_roll_no, name='validate_roll'),
+
+    path('view/<str:roll_no>/', views.transcript_view, name='transcript'),  # view transcript
+    path('pdf/<str:roll_no>/', views.transcript_pdf, name='transcript_pdf'),  # generate PDF
+    path('events/<str:roll_no>/', views.all_events_view, name='all_events'),  # view all events
 ]
