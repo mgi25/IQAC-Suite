@@ -247,15 +247,83 @@
       padding: 1.2rem 0.5rem;
     }
   }
+  .course-students {
+    margin-top: 3rem;
+  }
+
+  .course-student-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    margin-bottom: 0.8rem;
+    transition: all 0.3s ease;
+  }
+
+  .course-student-card:hover {
+    background: #f1f5f9;
+    transform: scale(1.01);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  }
+
+  .course-student-info {
+    display: flex;
+    align-items: center;
+  }
+
+  .course-student-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #2274CB;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1rem;
+    margin-right: 1rem;
+  }
+
+  .course-student-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #374151;
+  }
+
+  .course-student-roll {
+    font-size: 0.9rem;
+    color: #6b7280;
+  }
+
+  .view-btn {
+    background: #3b82f6;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s ease;
+  }
+
+  .view-btn:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="transcript-main-bg">
   <div class="transcript-card">
+    <!-- 🔍 Search Input -->
     <div class="search-input-wrapper">
       <input list="studentOptions" id="studentInput" class="search-select"
-             placeholder="Search by Roll No or Name" onchange="goToStudent()" autocomplete="off">
+             placeholder="Search by Roll No or Name" onchange="goToStudent()" autocomplete="on">
       <datalist id="studentOptions">
         {% for s in student_list %}
           <option value="{{ s.roll_no }} - {{ s.name }}">
@@ -264,6 +332,7 @@
       <div id="searchError" class="search-error">🚫 Invalid Roll No or Name</div>
     </div>
 
+    <!-- 🎓 Main Transcript Header -->
     <div class="transcript-title">Student Character Strength Transcript</div>
     <div class="info-block">
       <div>
@@ -274,6 +343,7 @@
       </div>
     </div>
 
+    <!-- 📊 Strength Table -->
     <div class="transcript-section-title">Character Strength Assessment</div>
     <table class="transcript-table">
       <thead>
@@ -291,6 +361,7 @@
       </tbody>
     </table>
 
+    <!-- 📋 Responsibilities -->
     <div class="transcript-section-title">Key Responsibilities</div>
     <div class="responsibilities">
       <ul>
@@ -308,6 +379,7 @@
       {% endif %}
     </div>
 
+    <!-- 📌 Footer -->
     <div class="barcode">{{ student.name }}</div>
     <div class="authority-title">DEAN & DIRECTOR</div>
     <div class="authority-subtitle">CHRIST (Deemed to be University)<br>Pune Lavasa Campus</div>
@@ -316,12 +388,34 @@
       fostering Holistic Development.<br>
       <span style="display:block;margin-top:0.7rem;"><strong>Date:</strong> {{ today }}</span>
     </div>
+
+    <!-- 👥 Other Students in Course -->
+    <div class="course-students">
+      <div class="transcript-section-title">Other Students from this Course</div>
+      {% for s in student_list %}
+        {% if s.roll_no != student.roll_no %}
+        <div class="course-student-card">
+          <div class="course-student-info">
+            <div class="course-student-avatar">{{ s.name|slice:":1" }}</div>
+            <div>
+              <div class="course-student-name">{{ s.name }}</div>
+              <div class="course-student-roll">{{ s.roll_no }}</div>
+            </div>
+          </div>
+          <a href="{% url 'transcript:transcript' s.roll_no %}" class="view-btn">View</a>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
   </div>
+
+  <!-- 📥 Download Button -->
   <a href="{% url 'transcript:transcript_pdf' student.roll_no %}" class="download-btn-pop" title="Download as PDF">
     <i class="fa-solid fa-file-arrow-down"></i> Download as PDF
   </a>
 </div>
 
+<!-- 🔍 Search Logic -->
 <script>
   const students = [
     {% for s in student_list %}
@@ -332,7 +426,9 @@
   function goToStudent() {
     const input = document.getElementById("studentInput").value.trim().toLowerCase();
     const error = document.getElementById("searchError");
-    const found = students.find(s => input.includes(s.roll_no) || input.includes(s.name) || `${s.roll_no} - ${s.name}` === input);
+    const found = students.find(s =>
+      input.includes(s.roll_no) || input.includes(s.name) || input === `${s.roll_no} - ${s.name}`.toLowerCase()
+    );
 
     if (found) {
       error.style.display = "none";
