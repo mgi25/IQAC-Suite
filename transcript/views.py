@@ -1,34 +1,53 @@
 from django.shortcuts import render, get_object_or_404
-from .models import Student, Participation, AttributeStrengthMap, Role, CharacterStrength
+from .models import Student, Participation, AttributeStrengthMap, Role, CharacterStrength, AcademicYear, School, Course
 from collections import defaultdict
-from datetime import date
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.template.loader import get_template
 from django.urls import reverse
 import qrcode
 import io
 import weasyprint
 import base64
+import json
+from datetime import date
 
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
 # HOME
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
 def home(request):
-    return render(request, 'transcript_app/home.html')
+    years = AcademicYear.objects.all()
+    students = Student.objects.select_related('academic_year', 'course__school').all().order_by('name')
+
+    # Create nested dict: year → school → course → students
+    student_data = {}
+    for student in students:
+        year = str(student.academic_year.year)
+        school = student.course.school.name
+        course = student.course.name
+
+        student_data.setdefault(year, {}).setdefault(school, {}).setdefault(course, []).append({
+            'name': student.name,
+            'roll_no': student.roll_no
+        })
+
+    return render(request, 'transcript_app/home.html', {
+        'years': years,
+        'student_data': json.dumps(student_data)  # ✅ fixed key name
+    })
 
 
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
 # CHECK IF ROLL NUMBER EXISTS (AJAX)
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
 def validate_roll_no(request):
     roll_no = request.GET.get('roll_no')
     exists = Student.objects.filter(roll_no=roll_no).exists()
     return JsonResponse({'exists': exists})
 
 
-# ─────────────────────────────────────────────────────────────
-# STRENGTH CALCULATION LOGIC
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
+# STRENGTH CALCULATION
+# ─────────────────────────────────────────────
 def calculate_strength_data(student):
     participations = Participation.objects.filter(student=student)
 
@@ -75,9 +94,9 @@ def calculate_strength_data(student):
     return strength_data, participations
 
 
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
 # TRANSCRIPT VIEW
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
 def transcript_view(request, roll_no):
     student = get_object_or_404(Student, roll_no=roll_no)
     strength_data, participations = calculate_strength_data(student)
@@ -104,9 +123,9 @@ def transcript_view(request, roll_no):
     })
 
 
-# ─────────────────────────────────────────────────────────────
-# TRANSCRIPT PDF VIEW
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
+# PDF DOWNLOAD VIEW
+# ─────────────────────────────────────────────
 def transcript_pdf(request, roll_no):
     student = get_object_or_404(Student, roll_no=roll_no)
     strength_data, participations = calculate_strength_data(student)
@@ -139,9 +158,9 @@ def transcript_pdf(request, roll_no):
     return response
 
 
-# ─────────────────────────────────────────────────────────────
-# SHOW ALL EVENTS
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
+# ALL EVENTS VIEW
+# ─────────────────────────────────────────────
 def all_events_view(request, roll_no):
     student = get_object_or_404(Student, roll_no=roll_no)
     participations = Participation.objects.filter(student=student)
