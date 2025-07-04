@@ -114,12 +114,16 @@ def transcript_view(request, roll_no):
         qr.save(buf, format='PNG')
         qr_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
 
+    # Filter only students in the same course
+    same_course_students = Student.objects.filter(course=student.course).order_by('name')
+
     return render(request, 'transcript_app/transcript.html', {
         'student': student,
         'strength_data': strength_data,
         'today': date.today(),
         'top_events': top_events,
-        'qr_code': qr_b64
+        'qr_code': qr_b64,
+        'student_list': same_course_students  # ✅ fixed: only students from same course
     })
 
 
