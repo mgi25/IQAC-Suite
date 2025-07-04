@@ -6,7 +6,10 @@ from .models import (
     GraduateAttribute,
     CharacterStrength,
     AttributeStrengthMap,
-    Role  # ✅ Import the new Role model
+    Role,
+    School,           # ✅ Added
+    Course,           # ✅ Added
+    AcademicYear      # ✅ Added
 )
 
 # ✅ Register all models
@@ -16,4 +19,7 @@ admin.site.register(Participation)
 admin.site.register(GraduateAttribute)
 admin.site.register(CharacterStrength)
 admin.site.register(AttributeStrengthMap)
-admin.site.register(Role)  # ✅ Register Role model
+admin.site.register(Role)
+admin.site.register(School)        # ✅ Registered
+admin.site.register(Course)        # ✅ Registered
+admin.site.register(AcademicYear)  # ✅ Registered
