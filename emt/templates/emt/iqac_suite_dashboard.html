@@ -32,7 +32,18 @@
 
         <!-- IQAC Report Generation Card -->
         <div class="suite-card">
-            <div class="suite-card-icon suite-card-icon-purple">📝</div>
+            <div class="suite-card-icon suite-card-icon-purple">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <!-- Clipboard body -->
+                <rect x="5" y="4" width="14" height="18" rx="2" ry="2" />
+                <!-- Clip at the top -->
+                <path d="M9 2h6a1 1 0 0 1 1 1v1H8V3a1 1 0 0 1 1-1z" />
+                <!-- Content lines -->
+                <line x1="9" y1="9" x2="15" y2="9" />
+                <line x1="9" y1="13" x2="15" y2="13" />
+                <line x1="9" y1="17" x2="13" y2="17" />
+                </svg>
+            </div>
             <div class="suite-card-title">IQAC Report Generation</div>
             <div class="suite-card-desc">Generate IQAC reports</div>
             <a href="{% url 'emt:pending_reports' %}" class="suite-card-btn"><span>Go &rarr;</span></a>
@@ -40,11 +51,22 @@
 
         <!-- View Generated Reports -->
         <div class="suite-card">
-            <div class="suite-card-icon suite-card-icon-green">📑</div>
+            <div class="suite-card-icon suite-card-icon-green">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <!-- Document shape -->
+                <path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/>
+                <!-- Tab label corner -->
+                <path d="M15 2v5h5"/>
+                <!-- Divider lines representing content -->
+                <path d="M8 11h8"/>
+                <path d="M8 15h5"/>
+                </svg>
+            </div>
             <div class="suite-card-title">View Generated Reports</div>
             <div class="suite-card-desc">See all your generated reports</div>
             <a href="{% url 'emt:generated_reports' %}" class="suite-card-btn"><span>Go &rarr;</span></a>
         </div>
+
 
         <!-- Approvals Card -->
         {% if user.is_authenticated and show_approvals_card %}
