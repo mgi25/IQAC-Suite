@@ -22,7 +22,7 @@ class Center(models.Model):
     def __str__(self):
         return self.name
 
-# --- User Role Assignment ---
+# --- User Role Assignment ----
 
 class RoleAssignment(models.Model):
     ROLE_CHOICES = [
