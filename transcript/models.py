@@ -68,9 +68,11 @@ class Event(models.Model):
 class Student(models.Model):
     roll_no = models.CharField(max_length=10, unique=True)
     name = models.CharField(max_length=100)
-    school = models.ForeignKey(School, on_delete=models.CASCADE)  # ✅ Added
-    course = models.ForeignKey(Course, on_delete=models.CASCADE)
-    academic_year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE)
+
+    # ✅ These are now nullable so you don’t get migration prompts:
+    school = models.ForeignKey(School, on_delete=models.CASCADE, null=True, blank=True)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, null=True, blank=True)
+    academic_year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE, null=True, blank=True)
 
     def __str__(self):
         return f"{self.roll_no} - {self.name}"
