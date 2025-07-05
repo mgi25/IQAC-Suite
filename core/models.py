@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.db import migrations, models
 
 # --- Department, Club, Center Models ---
 
@@ -125,3 +126,20 @@ class Report(models.Model):
     def __str__(self):
         return f"{self.title} - {self.get_report_type_display()} ({self.get_status_display()})"
 
+class Migration(migrations.Migration):
+    dependencies = [
+        ("core", "____"),          # the last migration in your app
+    ]
+
+    operations = [
+        migrations.RunSQL(
+            sql="""
+                -- SQLite / PostgreSQL syntax – adjust if you use MySQL
+                CREATE UNIQUE INDEX IF NOT EXISTS auth_user_email_uq
+                ON auth_user(LOWER(email));
+            """,
+            reverse_sql="""
+                DROP INDEX IF EXISTS auth_user_email_uq;
+            """,
+        ),
+    ]

@@ -29,4 +29,6 @@ urlpatterns = [
     path('view-report/<int:report_id>/', views.view_report, name='view_report'),
     path("api/departments/", views.api_departments, name="api_departments"),
     path("api/faculty/",     views.api_faculty,     name="api_faculty"),
+    path("suite/my-approvals/", views.my_approvals, name="my_approvals"),
+    path("suite/review-approval/<int:step_id>/", views.review_approval_step, name="review_approval_step"),
 ]

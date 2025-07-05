@@ -31,6 +31,15 @@
             <a href="{% url 'emt:generated_reports' %}" class="suite-card-btn"><span>Go &rarr;</span></a>
         </div>
 
+        <!-- Approvals Card -->
+        {% if user.is_authenticated and show_approvals_card %}
+        <div class="suite-card">
+            <div class="suite-card-icon suite-card-icon-orange">✅</div>
+            <div class="suite-card-title">Event Approvals</div>
+            <div class="suite-card-desc">Review and approve/reject event proposals</div>
+            <a href="{% url 'emt:my_approvals' %}" class="suite-card-btn"><span>Go &rarr;</span></a>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

@@ -28,6 +28,17 @@ class EventProposal(models.Model):
         null=True, blank=True, related_name="proposals"
     )
 
+    # ── NEW APPROVAL FLAGS ──
+    needs_finance_approval = models.BooleanField(
+        default=False,
+        help_text="Check if this event needs finance approval"
+    )
+    is_big_event           = models.BooleanField(
+        default=False,
+        help_text="Check if this is a big event (Dean sign-off needed)"
+    )
+    # ────────────────────────
+
     committees           = models.TextField(blank=True)
     event_title          = models.CharField(max_length=200, blank=True)
     num_activities       = models.PositiveIntegerField(null=True, blank=True)
@@ -115,3 +126,36 @@ class ExpenseDetail(models.Model):
 
     class Meta:
         ordering = ['sl_no']
+
+
+# ────────────────────────────────────────────────────────────────
+#  Approval Steps (unchanged)
+# ────────────────────────────────────────────────────────────────
+class ApprovalStep(models.Model):
+    proposal      = models.ForeignKey(EventProposal, on_delete=models.CASCADE, related_name="approval_steps")
+    step_order    = models.PositiveIntegerField(null=True, blank=True)
+    role_required = models.CharField(
+        max_length=50,
+        help_text="Role needed: e.g., faculty, dept_iqac, hod, director, dean",
+        null=True, blank=True
+    )
+    assigned_to = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="assigned_approvals"
+    )
+    approved_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="completed_approvals"
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    status      = models.CharField(
+        max_length=20,
+        choices=[('pending','Pending'), ('approved','Approved'),
+                 ('rejected','Rejected'), ('skipped','Skipped')],
+        default='pending'
+    )
+    comment = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['step_order']
+
+    def __str__(self):
+        return f"{self.proposal.event_title} • Step {self.step_order} [{self.role_required}] {self.status}"
