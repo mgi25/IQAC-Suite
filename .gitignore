@@ -13,6 +13,8 @@ iqac_env/
 *.log
 *.sqlite3
 staticfiles/
+db.sqlite3
+
 
 # IDE / Editor
 .vscode/
