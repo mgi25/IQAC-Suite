@@ -1,6 +1,14 @@
 from django.urls import path
 from . import views
 
+#Code block for report generation
+from django.urls import path
+from . import views
+urlpatterns = [
+ path("generate-report/", views.report_form, name="report_form"),
+ path("generate-report-pdf/", views.generate_report_pdf, name="generate_report_pdf"),
+]
+
 app_name = 'emt'
 
 urlpatterns = [
