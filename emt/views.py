@@ -22,6 +22,27 @@ from emt.utils import create_approval_steps
 from emt.models import ApprovalStep
 from django.contrib import messages
 from django.utils import timezone
+
+# ──────────────────────────────
+# REPORT GENERATION
+# ──────────────────────────────
+from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import render
+from django.template.loader import render_to_string
+from django.http import HttpResponse
+import pdfkit
+
+def report_form(request):
+ return render(request, "report_generation.html")
+@csrf_exempt
+def generate_report_pdf(request):
+    if request.method == 'POST':
+        html = render_to_string("pdf_template.html", {"data": request.POST})
+        pdf = pdfkit.from_string(html, False)
+        response = HttpResponse(pdf, content_type="application/pdf")
+        response["Content-Disposition"] = 'attachment; filename="Event_Report.pdf"'
+        return response
+
 # ──────────────────────────────
 # PROPOSAL STEP 1: Proposal Submission
 # ──────────────────────────────
