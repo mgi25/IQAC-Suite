@@ -5,6 +5,7 @@
 
 {% block head_extra %}
 <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
   .transcript-main-bg {
     min-height: calc(100vh - 80px);
@@ -247,6 +248,7 @@
       padding: 1.2rem 0.5rem;
     }
   }
+
   .course-students {
     margin-top: 3rem;
   }
@@ -320,19 +322,20 @@
 {% block content %}
 <div class="transcript-main-bg">
   <div class="transcript-card">
+
     <!-- 🔍 Search Input -->
     <div class="search-input-wrapper">
-      <input list="studentOptions" id="studentInput" class="search-select"
-             placeholder="Search by Roll No or Name" onchange="goToStudent()" autocomplete="on">
+      <input list="studentOptions" id="studentInput" class="search-select" placeholder="Search by Roll No or Name"
+        onchange="goToStudent()" autocomplete="off">
       <datalist id="studentOptions">
         {% for s in student_list %}
-          <option value="{{ s.roll_no }} - {{ s.name }}">
-        {% endfor %}
+        <option value="{{ s.roll_no }} - {{ s.name }}">
+          {% endfor %}
       </datalist>
       <div id="searchError" class="search-error">🚫 Invalid Roll No or Name</div>
     </div>
 
-    <!-- 🎓 Main Transcript Header -->
+    <!-- 🎓 Transcript Header -->
     <div class="transcript-title">Student Character Strength Transcript</div>
     <div class="info-block">
       <div>
@@ -343,11 +346,16 @@
       </div>
     </div>
 
-    <!-- 📊 Strength Table -->
+    <!-- 📊 Character Strength Table -->
     <div class="transcript-section-title">Character Strength Assessment</div>
     <table class="transcript-table">
       <thead>
-        <tr><th>Character Strength</th><th>EMER</th><th>DEV</th><th>ESTD</th></tr>
+        <tr>
+          <th>Character Strength</th>
+          <th>EMER</th>
+          <th>DEV</th>
+          <th>ESTD</th>
+        </tr>
       </thead>
       <tbody>
         {% for strength in strength_data %}
@@ -365,15 +373,21 @@
     <div class="transcript-section-title">Key Responsibilities</div>
     <div class="responsibilities">
       <ul>
-        {% for event in top_events %}<li>{{ event }}</li>{% endfor %}
+        {% for event in top_events %}
+        <li>{{ event }}</li>
+        {% endfor %}
       </ul>
 
       {% if qr_code %}
       <div style="display: flex; justify-content: center; margin-bottom: 2.2rem;">
-        <div style="background: #f7fafd; border: 1px solid #e3eaf3; padding: 1.5rem 2rem; border-radius: 1rem; text-align: center;">
-          <div style="font-size: 1.15rem; font-weight: 700; color: #2274CB; margin-bottom: 0.8rem;">Scan to View Full Event List</div>
-          <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" style="width:140px; height:140px; border-radius:10px; border:2px solid #2274CB;">
-          <div style="font-size: 0.95rem; color: #6b7280; margin-top: 0.5rem;">{{ student.roll_no }} | Secure QR Verification</div>
+        <div
+          style="background: #f7fafd; border: 1px solid #e3eaf3; padding: 1.5rem 2rem; border-radius: 1rem; text-align: center;">
+          <div style="font-size: 1.15rem; font-weight: 700; color: #2274CB; margin-bottom: 0.8rem;">Scan to View Full
+            Event List</div>
+          <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code"
+            style="width:140px; height:140px; border-radius:10px; border:2px solid #2274CB;">
+          <div style="font-size: 0.95rem; color: #6b7280; margin-top: 0.5rem;">{{ student.roll_no }} | Secure QR
+            Verification</div>
         </div>
       </div>
       {% endif %}
@@ -389,38 +403,53 @@
       <span style="display:block;margin-top:0.7rem;"><strong>Date:</strong> {{ today }}</span>
     </div>
 
-    <!-- 👥 Other Students in Course -->
+    <!-- 👥 Other Students in Same Course & Academic Year -->
+    {% if student_list %}
     <div class="course-students">
-      <div class="transcript-section-title">Other Students from this Course</div>
+      <div class="transcript-section-title">Other Students from This Course & Academic Year</div>
       {% for s in student_list %}
-        {% if s.roll_no != student.roll_no %}
-        <div class="course-student-card">
-          <div class="course-student-info">
-            <div class="course-student-avatar">{{ s.name|slice:":1" }}</div>
-            <div>
-              <div class="course-student-name">{{ s.name }}</div>
-              <div class="course-student-roll">{{ s.roll_no }}</div>
-            </div>
+      <div class="course-student-card">
+        <div class="course-student-info">
+          <div class="course-student-avatar">{{ s.name|slice:":1" }}</div>
+          <div>
+            <div class="course-student-name">{{ s.name }}</div>
+            <div class="course-student-roll">{{ s.roll_no }}</div>
           </div>
-          <a href="{% url 'transcript:transcript' s.roll_no %}" class="view-btn">View</a>
         </div>
-        {% endif %}
+        <a href="{% url 'transcript:transcript' s.roll_no %}" class="view-btn">View</a>
+      </div>
       {% endfor %}
     </div>
+    {% endif %}
   </div>
 
-  <!-- 📥 Download Button -->
-  <a href="{% url 'transcript:transcript_pdf' student.roll_no %}" class="download-btn-pop" title="Download as PDF">
+  <!-- Topmost button -->
+  <a href="{% url 'transcript:download_course_pdfs' student.roll_no %}" class="download-btn-pop"
+    style="bottom: 164px; background: #f59e0b;">
+    <i class="fa-solid fa-file-pdf"></i> Download All (PDFs)
+  </a>
+
+  <!-- Middle button -->
+  <a href="{% url 'transcript:download_course_individual_pdfs' student.roll_no %}" class="download-btn-pop"
+    style="bottom: 100px; background: #10b981;">
+    <i class="fa-solid fa-file-zipper"></i> Download All (Zip)
+  </a>
+
+  <!-- Bottom button -->
+  <a href="{% url 'transcript:transcript_pdf' student.roll_no %}" class="download-btn-pop" style="bottom: 36px;">
     <i class="fa-solid fa-file-arrow-down"></i> Download as PDF
   </a>
+
+
+
 </div>
 
-<!-- 🔍 Search Logic -->
+<!-- 🔍 Search Script -->
 <script>
   const students = [
     {% for s in student_list %}
-      { roll_no: `{{ s.roll_no|lower }}`, name: `{{ s.name|lower }}` },
-    {% endfor %}
+  { roll_no: `{{ s.roll_no|lower }}`, name: `{{ s.name|lower }}` },
+  {% endfor %}
   ];
 
   function goToStudent() {
