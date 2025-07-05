@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}My Approvals{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1>Pending Approvals</h1>
+  {% if pending_steps %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Event</th>
+          <th>Step</th>
+          <th>Submitted By</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for step in pending_steps %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td>{{ step.proposal.event_title }}</td>
+          <td>{{ step.get_role_required_display }}</td>
+          <td>{{ step.proposal.submitted_by.get_full_name }}</td>
+          <td>
+            <a href="{% url 'emt:review_approval_step' step.id %}" class="btn btn-primary">Review</a>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No pending approvals.</p>
+  {% endif %}
+</div>
+{% endblock %}

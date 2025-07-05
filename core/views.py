@@ -48,18 +48,25 @@ def dashboard(request):
     })
 
 
+# In your propose_event view
 @login_required
 def propose_event(request):
     if request.method == 'POST':
-        department = request.POST.get('department', '')
+        dept_id = request.POST.get('department')
+        department = None
+        if dept_id and dept_id.isdigit():
+            department = Department.objects.get(pk=dept_id)
+        else:
+            department = Department.objects.filter(name=dept_id).first()
+            if not department:
+                department = Department.objects.create(name=dept_id)
+
         title = request.POST.get('title')
         desc  = request.POST.get('description')
 
         # Get all roles assigned to the user
         roles = [ra.get_role_display() for ra in request.user.role_assignments.all()]
         user_type = ", ".join(roles)
-
-        # Fallback to profile role if no RoleAssignment
         if not user_type:
             user_type = getattr(request.user.profile, 'role', '')
 
@@ -71,8 +78,8 @@ def propose_event(request):
             description=desc
         )
         return redirect('dashboard')
-    
     return render(request, 'core/event_proposal.html')
+
 
 @login_required
 def proposal_status(request, pk):
@@ -129,54 +136,77 @@ def admin_user_management(request):
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def admin_user_edit(request, user_id):
+    """
+    • edits basic name / e-mail
+    • manages a RoleAssignment inline-form-set
+    • supports the JS “Other…” inputs for Department / Club / Center
+    """
     user = get_object_or_404(User, id=user_id)
 
-    # extra=0 → we’ll only add rows via JS & the empty_form prototype
     RoleFormSet = inlineformset_factory(
-        User, RoleAssignment,
-        fields=('role', 'department', 'club', 'center'),
-        extra=0, can_delete=True
+        User,
+        RoleAssignment,
+        fields=("role", "department", "club", "center"),
+        extra=0,           # new rows are injected by JS
+        can_delete=True,
     )
 
-    if request.method == 'POST':
+    if request.method == "POST":
         formset = RoleFormSet(request.POST, instance=user)
-        # update basic info
-        user.first_name = request.POST.get('first_name','')
-        user.last_name  = request.POST.get('last_name','')
-        user.email      = request.POST.get('email','')
+
+        # -------------------------------------------------
+        # basic info first
+        # -------------------------------------------------
+        user.first_name = request.POST.get("first_name", "").strip()
+        user.last_name  = request.POST.get("last_name", "").strip()
+        user.email      = request.POST.get("email", "").strip()
         user.save()
 
+        # -------------------------------------------------
+        # inline form-set
+        # -------------------------------------------------
         if formset.is_valid():
-            # handle any “Other…” text inputs
+            # 1) loop through every inline form
             for idx, form in enumerate(formset.forms):
-                nd = request.POST.get(f'new_department_{idx}','').strip()
-                nc = request.POST.get(f'new_club_{idx}','').strip()
-                ne = request.POST.get(f'new_center_{idx}','').strip()
-                if nd:
-                    dept, _ = Department.objects.get_or_create(name=nd)
+                # -- department “Other…”
+                new_dept = request.POST.get(f"new_department_{idx}", "").strip()
+                if new_dept:
+                    dept, _ = Department.objects.get_or_create(name=new_dept)
                     form.instance.department = dept
-                if nc:
-                    club, _ = Club.objects.get_or_create(name=nc)
+
+                # -- club “Other…”
+                new_club = request.POST.get(f"new_club_{idx}", "").strip()
+                if new_club:
+                    club, _ = Club.objects.get_or_create(name=new_club)
                     form.instance.club = club
-                if ne:
-                    cen,  _ = Center.objects.get_or_create(name=ne)
+
+                # -- center “Other…”
+                new_center = request.POST.get(f"new_center_{idx}", "").strip()
+                if new_center:
+                    cen, _ = Center.objects.get_or_create(name=new_center)
                     form.instance.center = cen
 
             formset.save()
             messages.success(request, "User roles updated successfully.")
-            return redirect('admin_user_management')
-        else:
-            messages.error(request, "Please fix the errors below and try again.")
+            return redirect("admin_user_management")
+
+        # ════════ DEBUG – SEE WHY IT FAILED ════════
+        print("ROLE-FORMSET ERRORS:", formset.errors, formset.non_form_errors())
+        messages.error(request, "Please fix the errors below and try again.")
     else:
         formset = RoleFormSet(instance=user)
 
-    return render(request, 'core/admin_user_edit.html', {
-        'user_obj': user,
-        'formset':  formset,
-        'departments': Department.objects.all(),
-        'clubs':      Club.objects.all(),
-        'centers':    Center.objects.all(),
-    })
+    return render(
+        request,
+        "core/admin_user_edit.html",
+        {
+            "user_obj":  user,
+            "formset":   formset,
+            "departments": Department.objects.all(),
+            "clubs":       Club.objects.all(),
+            "centers":     Center.objects.all(),
+        },
+    )
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_event_proposals(request):

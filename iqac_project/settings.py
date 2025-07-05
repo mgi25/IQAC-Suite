@@ -106,8 +106,11 @@ ACCOUNT_LOGOUT_ON_GET = True
 SOCIALACCOUNT_QUERY_EMAIL = True
 SOCIALACCOUNT_EMAIL_REQUIRED = True
 
-ACCOUNT_ADAPTER = 'allauth.account.adapter.DefaultAccountAdapter'
-SOCIALACCOUNT_ADAPTER = 'core.adapters.SchoolSocialAccountAdapter'
+# Leave the ACCOUNT adapter as the default (or omit the setting entirely):
+ACCOUNT_ADAPTER        = "allauth.account.adapter.DefaultAccountAdapter"
+
+# Point the SOCIALACCOUNT adapter to the class you wrote in core/adapters.py
+SOCIALACCOUNT_ADAPTER  = "core.adapters.SchoolSocialAccountAdapter"
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_EMAIL_VERIFICATION = "none"
 ACCOUNT_UNIQUE_EMAIL = True
