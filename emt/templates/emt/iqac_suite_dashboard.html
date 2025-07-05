@@ -9,11 +9,26 @@
 
         <!-- Event Proposal Card -->
         <div class="suite-card">
-            <div class="suite-card-icon suite-card-icon-blue">📄</div>
+        <div class="suite-card-icon suite-card-icon-blue">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <!-- Document Outline -->
+            <path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <!-- Folded Corner -->
+            <path d="M14 2v6h6"/>
+            <!-- Chart Bars -->
+            <path d="M8 16v-2"/>
+            <path d="M12 16v-4"/>
+            <path d="M16 16v-3"/>
+            <!-- Download Arrow -->
+            <path d="M12 12v5"/>
+            <path d="M10.5 15.5L12 17l1.5-1.5"/>
+            </svg>
+        </div>
             <div class="suite-card-title">Event Proposal</div>
             <div class="suite-card-desc">Create and manage event proposals</div>
             <a href="{% url 'emt:submit_proposal' %}" class="suite-card-btn"><span>Go &rarr;</span></a>
         </div>
+
 
         <!-- IQAC Report Generation Card -->
         <div class="suite-card">
