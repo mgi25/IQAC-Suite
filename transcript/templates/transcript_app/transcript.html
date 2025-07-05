@@ -58,6 +58,38 @@
     letter-spacing: 1px;
   }
 
+  .search-input-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .search-select {
+    min-width: 280px;
+    padding: 0.8rem 1rem;
+    border-radius: 0.6rem;
+    border: 2px solid #d1d5db;
+    background: #fff;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: border 0.3s;
+  }
+
+  .search-select:focus {
+    outline: none;
+    border-color: #2274CB;
+    box-shadow: 0 0 0 3px rgba(34, 116, 203, 0.1);
+  }
+
+  .search-error {
+    color: #e53e3e;
+    font-size: 0.95rem;
+    margin-top: 0.4rem;
+    display: none;
+  }
+
   .info-block {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -215,12 +247,92 @@
       padding: 1.2rem 0.5rem;
     }
   }
+  .course-students {
+    margin-top: 3rem;
+  }
+
+  .course-student-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    margin-bottom: 0.8rem;
+    transition: all 0.3s ease;
+  }
+
+  .course-student-card:hover {
+    background: #f1f5f9;
+    transform: scale(1.01);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  }
+
+  .course-student-info {
+    display: flex;
+    align-items: center;
+  }
+
+  .course-student-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #2274CB;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1rem;
+    margin-right: 1rem;
+  }
+
+  .course-student-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #374151;
+  }
+
+  .course-student-roll {
+    font-size: 0.9rem;
+    color: #6b7280;
+  }
+
+  .view-btn {
+    background: #3b82f6;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s ease;
+  }
+
+  .view-btn:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="transcript-main-bg">
   <div class="transcript-card">
+    <!-- 🔍 Search Input -->
+    <div class="search-input-wrapper">
+      <input list="studentOptions" id="studentInput" class="search-select"
+             placeholder="Search by Roll No or Name" onchange="goToStudent()" autocomplete="on">
+      <datalist id="studentOptions">
+        {% for s in student_list %}
+          <option value="{{ s.roll_no }} - {{ s.name }}">
+        {% endfor %}
+      </datalist>
+      <div id="searchError" class="search-error">🚫 Invalid Roll No or Name</div>
+    </div>
+
+    <!-- 🎓 Main Transcript Header -->
     <div class="transcript-title">Student Character Strength Transcript</div>
     <div class="info-block">
       <div>
@@ -229,22 +341,13 @@
         <div class="info-label">Registration Number</div>
         <div class="info-value">{{ student.roll_no }} {{ student.programme }}</div>
       </div>
-      <!-- <div>
-        <div class="info-label">Father's Name</div>
-        <div class="info-value">{{ student.father_name|default_if_none:'' }}</div>
-        <div class="info-label">Mother's Name</div>
-        <div class="info-value">{{ student.mother_name|default_if_none:'' }}</div>
-      </div> -->
     </div>
+
+    <!-- 📊 Strength Table -->
     <div class="transcript-section-title">Character Strength Assessment</div>
     <table class="transcript-table">
       <thead>
-        <tr>
-          <th>Character Strength</th>
-          <th>EMER</th>
-          <th>DEV</th>
-          <th>ESTD</th>
-        </tr>
+        <tr><th>Character Strength</th><th>EMER</th><th>DEV</th><th>ESTD</th></tr>
       </thead>
       <tbody>
         {% for strength in strength_data %}
@@ -257,42 +360,82 @@
         {% endfor %}
       </tbody>
     </table>
+
+    <!-- 📋 Responsibilities -->
     <div class="transcript-section-title">Key Responsibilities</div>
     <div class="responsibilities">
       <ul>
-        {% for event in top_events %}
-        <li>{{ event }}</li>
-        {% endfor %}
+        {% for event in top_events %}<li>{{ event }}</li>{% endfor %}
       </ul>
+
       {% if qr_code %}
       <div style="display: flex; justify-content: center; margin-bottom: 2.2rem;">
-        <div
-          style="background: #f7fafd; border: 1px solid #e3eaf3; padding: 1.5rem 2rem; border-radius: 1rem; text-align: center; box-shadow: 0 2px 12px rgba(34, 116, 203, 0.08);">
-          <div style="font-size: 1.15rem; font-weight: 700; color: #2274CB; margin-bottom: 0.8rem;">
-            Scan to View Full Event List
-          </div>
-          <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code"
-            style="width:140px; height:140px; border-radius:10px; border:2px solid #2274CB; box-shadow: 0 2px 12px rgba(0,0,0,0.05);">
-          <div style="font-size: 0.95rem; color: #6b7280; margin-top: 0.5rem;">
-            {{ student.roll_no }} | Secure QR Verification
-          </div>
+        <div style="background: #f7fafd; border: 1px solid #e3eaf3; padding: 1.5rem 2rem; border-radius: 1rem; text-align: center;">
+          <div style="font-size: 1.15rem; font-weight: 700; color: #2274CB; margin-bottom: 0.8rem;">Scan to View Full Event List</div>
+          <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" style="width:140px; height:140px; border-radius:10px; border:2px solid #2274CB;">
+          <div style="font-size: 0.95rem; color: #6b7280; margin-top: 0.5rem;">{{ student.roll_no }} | Secure QR Verification</div>
         </div>
       </div>
       {% endif %}
     </div>
+
+    <!-- 📌 Footer -->
     <div class="barcode">{{ student.name }}</div>
     <div class="authority-title">DEAN & DIRECTOR</div>
-    <div class="authority-subtitle">
-      CHRIST (Deemed to be University)<br>Pune Lavasa Campus
-    </div>
+    <div class="authority-subtitle">CHRIST (Deemed to be University)<br>Pune Lavasa Campus</div>
     <div class="transcript-footer-note">
       The Student Character Strength Transcript is awarded to selected students, excelling in University Activities
       fostering Holistic Development.<br>
       <span style="display:block;margin-top:0.7rem;"><strong>Date:</strong> {{ today }}</span>
     </div>
+
+    <!-- 👥 Other Students in Course -->
+    <div class="course-students">
+      <div class="transcript-section-title">Other Students from this Course</div>
+      {% for s in student_list %}
+        {% if s.roll_no != student.roll_no %}
+        <div class="course-student-card">
+          <div class="course-student-info">
+            <div class="course-student-avatar">{{ s.name|slice:":1" }}</div>
+            <div>
+              <div class="course-student-name">{{ s.name }}</div>
+              <div class="course-student-roll">{{ s.roll_no }}</div>
+            </div>
+          </div>
+          <a href="{% url 'transcript:transcript' s.roll_no %}" class="view-btn">View</a>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
   </div>
+
+  <!-- 📥 Download Button -->
   <a href="{% url 'transcript:transcript_pdf' student.roll_no %}" class="download-btn-pop" title="Download as PDF">
     <i class="fa-solid fa-file-arrow-down"></i> Download as PDF
   </a>
 </div>
+
+<!-- 🔍 Search Logic -->
+<script>
+  const students = [
+    {% for s in student_list %}
+      { roll_no: `{{ s.roll_no|lower }}`, name: `{{ s.name|lower }}` },
+    {% endfor %}
+  ];
+
+  function goToStudent() {
+    const input = document.getElementById("studentInput").value.trim().toLowerCase();
+    const error = document.getElementById("searchError");
+    const found = students.find(s =>
+      input.includes(s.roll_no) || input.includes(s.name) || input === `${s.roll_no} - ${s.name}`.toLowerCase()
+    );
+
+    if (found) {
+      error.style.display = "none";
+      window.location.href = `/transcript/view/${found.roll_no}/`;
+    } else {
+      error.style.display = "block";
+    }
+  }
+</script>
 {% endblock %}
