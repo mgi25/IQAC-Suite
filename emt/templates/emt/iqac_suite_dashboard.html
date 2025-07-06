@@ -9,39 +9,31 @@
 
         <!-- Event Proposal Card -->
         <div class="suite-card">
-        <div class="suite-card-icon suite-card-icon-blue">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <!-- Document Outline -->
-            <path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <!-- Folded Corner -->
-            <path d="M14 2v6h6"/>
-            <!-- Chart Bars -->
-            <path d="M8 16v-2"/>
-            <path d="M12 16v-4"/>
-            <path d="M16 16v-3"/>
-            <!-- Download Arrow -->
-            <path d="M12 12v5"/>
-            <path d="M10.5 15.5L12 17l1.5-1.5"/>
-            </svg>
-        </div>
+            <div class="suite-card-icon suite-card-icon-blue">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <path d="M14 2v6h6"/>
+                    <path d="M8 16v-2"/>
+                    <path d="M12 16v-4"/>
+                    <path d="M16 16v-3"/>
+                    <path d="M12 12v5"/>
+                    <path d="M10.5 15.5L12 17l1.5-1.5"/>
+                </svg>
+            </div>
             <div class="suite-card-title">Event Proposal</div>
             <div class="suite-card-desc">Create and manage event proposals</div>
             <a href="{% url 'emt:submit_proposal' %}" class="suite-card-btn"><span>Go &rarr;</span></a>
         </div>
 
-
         <!-- IQAC Report Generation Card -->
         <div class="suite-card">
             <div class="suite-card-icon suite-card-icon-purple">
                 <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <!-- Clipboard body -->
-                <rect x="5" y="4" width="14" height="18" rx="2" ry="2" />
-                <!-- Clip at the top -->
-                <path d="M9 2h6a1 1 0 0 1 1 1v1H8V3a1 1 0 0 1 1-1z" />
-                <!-- Content lines -->
-                <line x1="9" y1="9" x2="15" y2="9" />
-                <line x1="9" y1="13" x2="15" y2="13" />
-                <line x1="9" y1="17" x2="13" y2="17" />
+                    <rect x="5" y="4" width="14" height="18" rx="2" ry="2" />
+                    <path d="M9 2h6a1 1 0 0 1 1 1v1H8V3a1 1 0 0 1 1-1z" />
+                    <line x1="9" y1="9" x2="15" y2="9" />
+                    <line x1="9" y1="13" x2="15" y2="13" />
+                    <line x1="9" y1="17" x2="13" y2="17" />
                 </svg>
             </div>
             <div class="suite-card-title">IQAC Report Generation</div>
@@ -53,13 +45,10 @@
         <div class="suite-card">
             <div class="suite-card-icon suite-card-icon-green">
                 <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <!-- Document shape -->
-                <path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/>
-                <!-- Tab label corner -->
-                <path d="M15 2v5h5"/>
-                <!-- Divider lines representing content -->
-                <path d="M8 11h8"/>
-                <path d="M8 15h5"/>
+                    <path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/>
+                    <path d="M15 2v5h5"/>
+                    <path d="M8 11h8"/>
+                    <path d="M8 15h5"/>
                 </svg>
             </div>
             <div class="suite-card-title">View Generated Reports</div>
@@ -67,6 +56,18 @@
             <a href="{% url 'emt:generated_reports' %}" class="suite-card-btn"><span>Go &rarr;</span></a>
         </div>
 
+        <!-- CDL Card -->
+        <div class="suite-card">
+            <div class="suite-card-icon suite-card-icon-orange">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" stroke="#f97316" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                    <circle cx="12" cy="13" r="4"/>
+                </svg>
+            </div>
+            <div class="suite-card-title">CDL</div>
+            <div class="suite-card-desc">Get your media content approved or made</div>
+            <a href="{% url 'emt:cdl_dashboard' %}" class="suite-card-btn"><span>Go &rarr;</span></a>
+        </div>
 
         <!-- Approvals Card -->
         {% if user.is_authenticated and show_approvals_card %}

@@ -70,6 +70,14 @@ body {
     animation-delay: 0.6s;
 }
 
+.suite-card:nth-child(4) {
+    animation-delay: 0.8s;
+}
+
+.suite-card:nth-child(5) {
+    animation-delay: 1s;
+}
+
 .suite-card:hover:not(.suite-card-disabled) {
     transform: translateY(-8px) scale(1.04);
     box-shadow: 0 10px 32px rgba(24, 99, 198, 0.13);
@@ -100,6 +108,10 @@ body {
 
 .suite-card-icon-green {
     background: #e3fff6;
+}
+
+.suite-card-icon-orange {
+    background: #fff4e6;
 }
 
 /* Title */
