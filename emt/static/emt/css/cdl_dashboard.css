@@ -1,0 +1,204 @@
+body {
+    background-color: #f5f9ff;
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+.cdl-dashboard-container {
+    padding: 48px 24px;
+    max-width: 1000px;
+    margin: 0 auto;
+    text-align: center;
+    animation: fadeSlideUp 0.7s ease-out;
+}
+
+.cdl-heading {
+    font-size: 2.4rem;
+    color: #1863c6;
+    font-weight: 700;
+    margin-bottom: 12px;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeSlideUp 0.8s ease forwards;
+}
+
+.cdl-subtext {
+    font-size: 1.1rem;
+    color: #555;
+    margin-bottom: 40px;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeSlideUp 0.8s ease forwards;
+    animation-delay: 0.2s;
+}
+
+.cdl-section {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 32px;
+}
+
+/* Main Action Cards */
+.cdl-card {
+    background: #ffffff;
+    border-radius: 1.25rem;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    padding: 32px 24px;
+    max-width: 360px;
+    flex: 1;
+    text-align: left;
+    animation: fadeSlideUp 0.8s ease forwards;
+    transform: translateY(30px);
+    opacity: 0;
+}
+
+.cdl-card:nth-child(1) {
+    animation-delay: 0.3s;
+}
+
+.cdl-card:nth-child(2) {
+    animation-delay: 0.5s;
+}
+
+.cdl-card h3 {
+    font-size: 1.4rem;
+    color: #1863c6;
+    margin-bottom: 12px;
+}
+
+.cdl-card p {
+    font-size: 1rem;
+    color: #444;
+    margin-bottom: 24px;
+    line-height: 1.5;
+}
+
+.cdl-btn {
+    display: inline-block;
+    background: linear-gradient(90deg, #1863c6 55%, #46b7e7 95%);
+    color: white;
+    padding: 10px 26px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.4s ease-in-out;
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(24, 99, 198, 0.15);
+}
+
+.cdl-btn::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -75%;
+    width: 200%;
+    height: 100%;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.15) 0%, transparent 100%);
+    transition: all 0.4s ease-in-out;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.cdl-btn:hover::before {
+    left: 0;
+}
+
+.cdl-btn:hover {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 8px 22px rgba(24, 99, 198, 0.25);
+}
+
+/* Status Tracking Section */
+.status-section {
+    margin-top: 60px;
+    text-align: center;
+}
+
+.status-section h3 {
+    font-size: 1.7rem;
+    color: #1863c6;
+    margin-bottom: 24px;
+    animation: fadeSlideUp 0.8s ease forwards;
+    opacity: 0;
+    transform: translateY(20px);
+    animation-delay: 0.6s;
+}
+
+.status-cards {
+    display: flex;
+    gap: 28px;
+    justify-content: center;
+    flex-wrap: wrap;
+    animation: fadeSlideUp 0.8s ease forwards;
+    animation-delay: 0.8s;
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+.status-card {
+    background: #fff;
+    border-left: 5px solid #1863c6;
+    padding: 20px 24px;
+    border-radius: 1rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+    max-width: 280px;
+    width: 100%;
+    text-align: left;
+    transition: transform 0.3s ease;
+}
+
+.status-card:hover {
+    transform: translateY(-4px);
+}
+
+.status-title {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #1863c6;
+    margin-bottom: 6px;
+}
+
+.status-text {
+    font-size: 0.95rem;
+    color: #555;
+}
+
+.status-pending {
+    border-color: #f59e0b;
+}
+
+.status-inprogress {
+    border-color: #3b82f6;
+}
+
+.status-completed {
+    border-color: #10b981;
+}
+
+/* Animations */
+@keyframes fadeSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+
+    .cdl-section,
+    .status-cards {
+        flex-direction: column;
+        align-items: center;
+    }
+}
