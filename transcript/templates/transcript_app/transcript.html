@@ -422,25 +422,29 @@
     </div>
     {% endif %}
   </div>
+  <!-- Single Download Button -->
+  <div class="download-dropdown" style="position: fixed; right: 40px; bottom: 36px;">
+    <button class="download-btn-pop" id="download-toggle-btn">
+      <i class="fa-solid fa-download"></i> Download
+    </button>
 
-  <!-- Topmost button -->
-  <a href="{% url 'transcript:download_course_pdfs' student.roll_no %}" class="download-btn-pop"
-    style="bottom: 164px; background: #f59e0b;">
-    <i class="fa-solid fa-file-pdf"></i> Download All (PDFs)
-  </a>
-
-  <!-- Middle button -->
-  <a href="{% url 'transcript:download_course_individual_pdfs' student.roll_no %}" class="download-btn-pop"
-    style="bottom: 100px; background: #10b981;">
-    <i class="fa-solid fa-file-zipper"></i> Download All (Zip)
-  </a>
-
-  <!-- Bottom button -->
-  <a href="{% url 'transcript:transcript_pdf' student.roll_no %}" class="download-btn-pop" style="bottom: 36px;">
-    <i class="fa-solid fa-file-arrow-down"></i> Download as PDF
-  </a>
-
-
+    <!-- Dropdown Options (hidden initially) -->
+    <div id="download-options"
+      style="display: none; position: absolute; bottom: 60px; right: 0; background: white; box-shadow: 0 2px 6px rgba(0,0,0,0.2); border-radius: 8px; overflow: hidden; z-index: 1000;">
+      <a href="{% url 'transcript:download_course_pdfs' student.roll_no %}"
+        style="display: block; padding: 10px 15px; color: #000; text-decoration: none; background-color: #fef3c7;">
+        <i class="fa-solid fa-file-pdf" style="margin-right: 6px; color: #b45309;"></i> Download All (PDFs)
+      </a>
+      <a href="{% url 'transcript:download_course_individual_pdfs' student.roll_no %}"
+        style="display: block; padding: 10px 15px; color: #000; text-decoration: none; background-color: #d1fae5;">
+        <i class="fa-solid fa-file-zipper" style="margin-right: 6px; color: #047857;"></i> Download All (Zip)
+      </a>
+      <a href="{% url 'transcript:transcript_pdf' student.roll_no %}"
+        style="display: block; padding: 10px 15px; color: #000; text-decoration: none; background-color: #e0e7ff;">
+        <i class="fa-solid fa-file-arrow-down" style="margin-right: 6px; color: #1d4ed8;"></i> Download as PDF
+      </a>
+    </div>
+  </div>
 
 </div>
 
@@ -466,5 +470,21 @@
       error.style.display = "block";
     }
   }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const toggleBtn = document.getElementById("download-toggle-btn");
+    const dropdown = document.getElementById("download-options");
+
+    toggleBtn.addEventListener("click", function () {
+      dropdown.style.display = dropdown.style.display === "none" ? "block" : "none";
+    });
+
+    // Optional: Close dropdown if clicked outside
+    document.addEventListener("click", function (e) {
+      if (!toggleBtn.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.style.display = "none";
+      }
+    });
+  });
 </script>
 {% endblock %}
