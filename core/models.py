@@ -74,7 +74,6 @@ class RoleAssignment(models.Model):
         ('cell_head', 'Cell Head'),
         ('association_head', 'Association Head'),
         ('dean', 'Dean'),
-        ('director', 'Director'),
         ('cdl', 'CDL'),
         ('uni_iqac', 'University IQAC Coordinator'),
         ('admin', 'Admin'),

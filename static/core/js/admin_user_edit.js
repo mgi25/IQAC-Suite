@@ -10,16 +10,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const totalInput  = $('input[name$="-TOTAL_FORMS"]');
   const saveBtn     = $("#user-edit-form button[type=submit]");
 
-  // Roles which require each org field
+  const SINGLE_USER_ROLES = ["dean", "academic_coordinator", "director"];
+  const CDL_ROLE = "cdl";
   const ORG_RULES = {
-    department : ["hod", "faculty", "dept_iqac", "student", "dean", "director", "academic_coordinator"],
+    department : ["hod", "faculty", "dept_iqac", "student"],
     club       : ["club_head"],
     center     : ["center_head"],
     cell       : ["cell_head"],
     association:["association_head"]
   };
 
-  // Show/hide logic per role
   function bindCard(card) {
     const roleSel = $("select[name$='-role']", card);
     const groups = {
@@ -29,10 +29,10 @@ document.addEventListener("DOMContentLoaded", () => {
       cell       : $(".cell-group",        card),
       association: $(".association-group", card),
     };
+    const cdlRoleGrp = $(".cdl-role-group", card);
     const delBox = $("input[name$='-DELETE']", card);
     const remBtn = $(".remove-role-btn", card);
 
-    // Always add 'Other…' to selects
     Object.values(groups).forEach(grp => {
       const sel = $("select", grp);
       if (sel && ![...sel.options].some(o => o.value === "other")) {
@@ -40,9 +40,25 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    // Show only the needed org pickers for the role
     function syncPanels() {
       const r = (roleSel.value || "").toLowerCase();
+
+      // Hide all org groups and show CDL select for CDL
+      if (r === CDL_ROLE) {
+        Object.values(groups).forEach(grp => grp.style.display = "none");
+        if (cdlRoleGrp) cdlRoleGrp.style.display = "block";
+        return;
+      }
+
+      // Hide all org groups and CDL select for single-user roles
+      if (SINGLE_USER_ROLES.includes(r)) {
+        Object.values(groups).forEach(grp => grp.style.display = "none");
+        if (cdlRoleGrp) cdlRoleGrp.style.display = "none";
+        return;
+      }
+
+      // Default: Show/hide org pickers per role
+      if (cdlRoleGrp) cdlRoleGrp.style.display = "none";
       Object.entries(groups).forEach(([key, grp]) => {
         grp.style.display = ORG_RULES[key].includes(r) ? "block" : "none";
       });
@@ -74,17 +90,14 @@ document.addEventListener("DOMContentLoaded", () => {
     enableOther(groups.cell, "add-cell-input");
     enableOther(groups.association, "add-association-input");
 
-    // Remove role logic
     remBtn?.addEventListener("click", () => {
       if (delBox) delBox.checked = true;
       card.style.display = "none";
     });
   }
 
-  // Bind all existing role-cards
   $$(".role-card", listBox).forEach(bindCard);
 
-  // Add role-card dynamically
   addBtn.addEventListener("click", () => {
     saveBtn.disabled = true;
     const idx = +totalInput.value;

@@ -45,6 +45,14 @@
 
           <div class="field-group">{{ form.role }}</div>
 
+          <div class="field-group cdl-role-group" style="display:none;">
+            <select name="cdl_role_{{ forloop.counter0 }}" class="cdl-role-select">
+              <option value="">---------</option>
+              <option value="admin">Admin</option>
+              <option value="staff">Staff</option>
+            </select>
+          </div>
+
           <div class="field-group dept-group">
             {{ form.department }}
             <input type="text" name="new_department_{{ forloop.counter0 }}"
@@ -85,7 +93,6 @@
       <button type="button" id="add-role-btn" class="btn-add-role">+ Add Role</button>
     </div>
 
-    <!-- ── Submit / cancel ────────────────────────── -->
     <div class="form-btn-group">
       <button type="submit" class="btn-submit">Save</button>
       <a href="{% url 'admin_user_management' %}" class="btn-cancel">Cancel</a>
@@ -99,6 +106,14 @@
     {{ formset.empty_form.id }}{{ formset.empty_form.DELETE }}
 
     <div class="field-group">{{ formset.empty_form.role }}</div>
+
+    <div class="field-group cdl-role-group" style="display:none;">
+      <select name="cdl_role___prefix__" class="cdl-role-select">
+        <option value="">---------</option>
+        <option value="admin">Admin</option>
+        <option value="staff">Staff</option>
+      </select>
+    </div>
 
     <div class="field-group dept-group">
       {{ formset.empty_form.department }}
