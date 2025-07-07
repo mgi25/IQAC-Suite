@@ -311,3 +311,6 @@ def admin_reports_reject(request, report_id):
     report.save()
     messages.warning(request, f"Report '{report.title}' rejected.")
     return HttpResponseRedirect(reverse('admin_reports'))
+
+def cdl_dashboard(request):
+    return render(request, 'emt/cdl_dashboard.html')
