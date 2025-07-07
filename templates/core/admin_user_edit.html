@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+
 {% block content %}
 <link rel="stylesheet" href="{% static 'core/css/admin_user_edit.css' %}">
 
@@ -14,8 +15,10 @@
     </ul>
   {% endif %}
 
-  <form method="post" id="user-edit-form" autocomplete="off">
+  <form id="user-edit-form" method="post" autocomplete="off">
     {% csrf_token %}
+
+    <!-- ── Basic info ─────────────────────────────── -->
     <div class="form-group">
       <label>First Name</label>
       <input type="text" name="first_name" value="{{ user_obj.first_name }}" required>
@@ -31,6 +34,7 @@
 
     <hr>
 
+    <!-- ── Roles & assignments ────────────────────── -->
     <div class="roles-section">
       <h3>User Roles &amp; Assignments</h3>
 
@@ -38,33 +42,39 @@
         {% for form in formset.forms %}
         <div class="role-card" data-form-index="{{ forloop.counter0 }}">
           {{ form.id }}{{ form.DELETE }}
-          <div class="field-group">
-            {{ form.role }}
-          </div>
+
+          <div class="field-group">{{ form.role }}</div>
+
           <div class="field-group dept-group">
             {{ form.department }}
-            <input type="text"
-                   name="new_department_{{ forloop.counter0 }}"
-                   class="add-dept-input"
-                   placeholder="Add new department…"
-                   style="display:none;">
+            <input type="text" name="new_department_{{ forloop.counter0 }}"
+                   class="add-dept-input" placeholder="Add new department…" style="display:none;">
           </div>
+
           <div class="field-group club-group">
             {{ form.club }}
-            <input type="text"
-                   name="new_club_{{ forloop.counter0 }}"
-                   class="add-club-input"
-                   placeholder="Add new club…"
-                   style="display:none;">
+            <input type="text" name="new_club_{{ forloop.counter0 }}"
+                   class="add-club-input" placeholder="Add new club…" style="display:none;">
           </div>
+
           <div class="field-group center-group">
             {{ form.center }}
-            <input type="text"
-                   name="new_center_{{ forloop.counter0 }}"
-                   class="add-center-input"
-                   placeholder="Add new center…"
-                   style="display:none;">
+            <input type="text" name="new_center_{{ forloop.counter0 }}"
+                   class="add-center-input" placeholder="Add new center…" style="display:none;">
           </div>
+
+          <div class="field-group cell-group">
+            {{ form.cell }}
+            <input type="text" name="new_cell_{{ forloop.counter0 }}"
+                   class="add-cell-input" placeholder="Add new cell…" style="display:none;">
+          </div>
+
+          <div class="field-group association-group">
+            {{ form.association }}
+            <input type="text" name="new_association_{{ forloop.counter0 }}"
+                   class="add-association-input" placeholder="Add new association…" style="display:none;">
+          </div>
+
           <button type="button" class="remove-role-btn">×</button>
         </div>
         {% endfor %}
@@ -72,11 +82,10 @@
 
       {{ formset.management_form }}
 
-      <button type="button" id="add-role-btn" class="btn-add-role">
-        + Add Role
-      </button>
+      <button type="button" id="add-role-btn" class="btn-add-role">+ Add Role</button>
     </div>
 
+    <!-- ── Submit / cancel ────────────────────────── -->
     <div class="form-btn-group">
       <button type="submit" class="btn-submit">Save</button>
       <a href="{% url 'admin_user_management' %}" class="btn-cancel">Cancel</a>
@@ -84,36 +93,43 @@
   </form>
 </div>
 
+<!-- ── Empty-form prototype (hidden) ─────────────── -->
 <template id="role-card-template">
   <div class="role-card" data-form-index="__prefix__">
     {{ formset.empty_form.id }}{{ formset.empty_form.DELETE }}
-    <div class="field-group">
-      {{ formset.empty_form.role }}
-    </div>
+
+    <div class="field-group">{{ formset.empty_form.role }}</div>
+
     <div class="field-group dept-group">
       {{ formset.empty_form.department }}
-      <input type="text"
-             name="new_department___prefix__"
-             class="add-dept-input"
-             placeholder="Add new department…"
-             style="display:none;">
+      <input type="text" name="new_department___prefix__"
+             class="add-dept-input" placeholder="Add new department…" style="display:none;">
     </div>
+
     <div class="field-group club-group">
       {{ formset.empty_form.club }}
-      <input type="text"
-             name="new_club___prefix__"
-             class="add-club-input"
-             placeholder="Add new club…"
-             style="display:none;">
+      <input type="text" name="new_club___prefix__"
+             class="add-club-input" placeholder="Add new club…" style="display:none;">
     </div>
+
     <div class="field-group center-group">
       {{ formset.empty_form.center }}
-      <input type="text"
-             name="new_center___prefix__"
-             class="add-center-input"
-             placeholder="Add new center…"
-             style="display:none;">
+      <input type="text" name="new_center___prefix__"
+             class="add-center-input" placeholder="Add new center…" style="display:none;">
     </div>
+
+    <div class="field-group cell-group">
+      {{ formset.empty_form.cell }}
+      <input type="text" name="new_cell___prefix__"
+             class="add-cell-input" placeholder="Add new cell…" style="display:none;">
+    </div>
+
+    <div class="field-group association-group">
+      {{ formset.empty_form.association }}
+      <input type="text" name="new_association___prefix__"
+             class="add-association-input" placeholder="Add new association…" style="display:none;">
+    </div>
+
     <button type="button" class="remove-role-btn">×</button>
   </div>
 </template>

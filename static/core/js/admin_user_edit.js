@@ -1,91 +1,99 @@
-/* ─────  admin_user_edit.js  v3  ───────────────────────── */
+// static/core/js/admin_user_edit.js
 
 document.addEventListener("DOMContentLoaded", () => {
-  /* short helpers */
   const $  = (sel, ctx = document) => ctx.querySelector(sel);
   const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
 
-  /* DOM handles */
-  const listBox   = $("#roles-list-container");
-  const addBtn    = $("#add-role-btn");
-  const template  = $("#role-card-template").innerHTML;
-  const totalForm = () => $('input[name$="-TOTAL_FORMS"]');
-  const saveBtn   = $("#user-edit-form button[type=submit]");
+  const listBox     = $("#roles-list-container");
+  const addBtn      = $("#add-role-btn");
+  const tplHTML     = $("#role-card-template").innerHTML;
+  const totalInput  = $('input[name$="-TOTAL_FORMS"]');
+  const saveBtn     = $("#user-edit-form button[type=submit]");
 
-  /* =======================================================
-     bind a single “role-card” (existing OR new)
-     ======================================================= */
+  // Roles which require each org field
+  const ORG_RULES = {
+    department : ["hod", "faculty", "dept_iqac", "student", "dean", "director", "academic_coordinator"],
+    club       : ["club_head"],
+    center     : ["center_head"],
+    cell       : ["cell_head"],
+    association:["association_head"]
+  };
+
+  // Show/hide logic per role
   function bindCard(card) {
     const roleSel = $("select[name$='-role']", card);
-    const deptGrp = $(".dept-group",   card);
-    const clubGrp = $(".club-group",   card);
-    const cenGrp  = $(".center-group", card);
-    const delBox  = $("input[name$='-DELETE']", card);
-    const remBtn  = $(".remove-role-btn", card);
+    const groups = {
+      department : $(".dept-group",        card),
+      club       : $(".club-group",        card),
+      center     : $(".center-group",      card),
+      cell       : $(".cell-group",        card),
+      association: $(".association-group", card),
+    };
+    const delBox = $("input[name$='-DELETE']", card);
+    const remBtn = $(".remove-role-btn", card);
 
-    /* make sure each select has an “Other…” option only once */
-    [deptGrp, clubGrp, cenGrp].forEach((grp) => {
+    // Always add 'Other…' to selects
+    Object.values(groups).forEach(grp => {
       const sel = $("select", grp);
-      if (sel && ![...sel.options].some((o) => o.value === "other")) {
+      if (sel && ![...sel.options].some(o => o.value === "other")) {
         sel.add(new Option("Other…", "other"));
       }
     });
 
-    /* toggle the three org-pickers when role changes */
-    function showRelevantGroups() {
-      const v = roleSel.value;
-      deptGrp.style.display = ["hod", "faculty", "dept_iqac"].includes(v) ? "" : "none";
-      clubGrp.style.display = v === "club_head"   ? "" : "none";
-      cenGrp.style.display  = v === "center_head" ? "" : "none";
+    // Show only the needed org pickers for the role
+    function syncPanels() {
+      const r = (roleSel.value || "").toLowerCase();
+      Object.entries(groups).forEach(([key, grp]) => {
+        grp.style.display = ORG_RULES[key].includes(r) ? "block" : "none";
+      });
     }
-    roleSel.addEventListener("change", showRelevantGroups);
-    showRelevantGroups();
+    roleSel.addEventListener("change", syncPanels);
+    syncPanels();
 
-    /* generic “Other…” handler */
-    function enableOther(grp, cls) {
+    // "Other..." field logic
+    function enableOther(grp, txtCls) {
       const sel = $("select", grp);
-      const txt = $("." + cls, grp);
+      const txt = $("." + txtCls, grp);
       if (!sel || !txt) return;
-
       function toggle() {
-        if (sel.value === "other") {
-          txt.style.display = "block";
-          txt.required = true;
-          sel.value = "";            // clear the <option>
+        const custom = sel.value === "other";
+        txt.style.display = custom ? "block" : "none";
+        txt.required = custom;
+        if (custom) {
+          sel.value = "";
         } else {
-          txt.style.display = "none";
-          txt.required = false;
           txt.value = "";
         }
       }
       sel.addEventListener("change", toggle);
       toggle();
     }
-    enableOther(deptGrp, "add-dept-input");
-    enableOther(clubGrp, "add-club-input");
-    enableOther(cenGrp,  "add-center-input");
+    enableOther(groups.department, "add-dept-input");
+    enableOther(groups.club, "add-club-input");
+    enableOther(groups.center, "add-center-input");
+    enableOther(groups.cell, "add-cell-input");
+    enableOther(groups.association, "add-association-input");
 
-    /* remove-button – hide card and tick DELETE */
-    remBtn.addEventListener("click", () => {
+    // Remove role logic
+    remBtn?.addEventListener("click", () => {
       if (delBox) delBox.checked = true;
       card.style.display = "none";
     });
   }
 
-  /* bind every existing card on initial page load */
+  // Bind all existing role-cards
   $$(".role-card", listBox).forEach(bindCard);
 
-  /* “+ Add Role” button */
+  // Add role-card dynamically
   addBtn.addEventListener("click", () => {
-    /* prevent impatient click on Save until we finish */
     saveBtn.disabled = true;
-
-    const idx = Number(totalForm().value);
-    listBox.insertAdjacentHTML("beforeend", template.replace(/__prefix__/g, idx));
-    bindCard($(`.role-card[data-form-index="${idx}"]`, listBox));
-    totalForm().value = idx + 1;
-
-    /* re-enable save after next paint */
+    const idx = +totalInput.value;
+    listBox.insertAdjacentHTML(
+      "beforeend",
+      tplHTML.replace(/__prefix__/g, idx)
+    );
+    bindCard($(`.role-card[data-form-index="${idx}"]`));
+    totalInput.value = idx + 1;
     requestAnimationFrame(() => (saveBtn.disabled = false));
   });
 });
