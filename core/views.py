@@ -1,22 +1,22 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse, HttpResponseRedirect
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.db.models import Q
 from django.forms import inlineformset_factory
-
-from .models import (
-    Profile, EventProposal, RoleAssignment,
-    Department, Club, Center,Report
-)
-from django.http import JsonResponse
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 import json
-from django.urls import reverse
-from django.http import HttpResponseRedirect
+from .models import (
+    Profile, EventProposal, RoleAssignment,
+    Department, Club, Center, Report,Cell, Association
+)
 
+# ─────────────────────────────────────────────────────────────
+#  Helpers
+# ─────────────────────────────────────────────────────────────
 def superuser_required(view_func):
     def _wrapped_view(request, *args, **kwargs):
         if not (request.user.is_authenticated and request.user.is_superuser):
@@ -24,88 +24,113 @@ def superuser_required(view_func):
         return view_func(request, *args, **kwargs)
     return _wrapped_view
 
+# ─────────────────────────────────────────────────────────────
+#  Auth Views
+# ─────────────────────────────────────────────────────────────
 def login_view(request):
-    return render(request, 'core/login.html')
+    return render(request, "core/login.html")
 
 def login_page(request):
-    return render(request, 'login.html')
+    return render(request, "login.html")
 
 def logout_view(request):
     logout(request)
-    return redirect('login')
+    return redirect("login")
 
+# ─────────────────────────────────────────────────────────────
+#  Dashboard
+# ─────────────────────────────────────────────────────────────
 @login_required
 def dashboard(request):
-    proposals = EventProposal.objects.filter(submitted_by=request.user).exclude(status='completed').order_by('-date_submitted')
+    proposals = (
+        EventProposal.objects
+        .filter(submitted_by=request.user)
+        .exclude(status="completed")
+        .order_by("-date_submitted")
+    )
     other_notifications = [
-        {'type': 'info', 'msg': 'System update scheduled for tonight at 10 PM.', 'time': '2 hours ago'},
-        {'type': 'reminder', 'msg': 'Submit your event report before 26 June.', 'time': '1 day ago'},
-        {'type': 'alert', 'msg': 'One of your proposals was returned for revision.', 'time': '5 mins ago'},
+        {"type": "info",     "msg": "System update scheduled for tonight at 10 PM.", "time": "2 hours ago"},
+        {"type": "reminder", "msg": "Submit your event report before 26 June.",      "time": "1 day ago"},
+        {"type": "alert",    "msg": "One of your proposals was returned.",           "time": "5 mins ago"},
     ]
-    return render(request, 'core/dashboard.html', {
-        'proposals': proposals,
-        'notifications': other_notifications,   # <-- renamed key
-    })
+    return render(
+        request,
+        "core/dashboard.html",
+        {"proposals": proposals, "notifications": other_notifications},
+    )
 
 
-# In your propose_event view
 @login_required
 def propose_event(request):
-    if request.method == 'POST':
-        dept_id = request.POST.get('department')
+    """
+    NOTE: This is the *old* quick-and-simple proposal form that lives in the
+    core app. It still relies only on Department (FK) and doesn't collide with
+    the richer EMT workflow you’re building.
+    """
+    if request.method == "POST":
+        dept_input = request.POST.get("department", "").strip()
         department = None
-        if dept_id and dept_id.isdigit():
-            department = Department.objects.get(pk=dept_id)
+        if dept_input.isdigit():
+            department = Department.objects.filter(pk=dept_input).first()
         else:
-            department = Department.objects.filter(name=dept_id).first()
-            if not department:
-                department = Department.objects.create(name=dept_id)
+            department, _ = Department.objects.get_or_create(name=dept_input)
 
-        title = request.POST.get('title')
-        desc  = request.POST.get('description')
+        # capture title & description
+        title = request.POST.get("title", "").strip()
+        desc  = request.POST.get("description", "").strip()
 
-        # Get all roles assigned to the user
+        # collect the user’s role summary for display
         roles = [ra.get_role_display() for ra in request.user.role_assignments.all()]
-        user_type = ", ".join(roles)
-        if not user_type:
-            user_type = getattr(request.user.profile, 'role', '')
+        user_type = ", ".join(roles) or getattr(request.user.profile, "role", "")
 
         EventProposal.objects.create(
             submitted_by=request.user,
             department=department,
             user_type=user_type,
             title=title,
-            description=desc
+            description=desc,
         )
-        return redirect('dashboard')
-    return render(request, 'core/event_proposal.html')
+        return redirect("dashboard")
 
+    return render(request, "core/event_proposal.html")
 
+# ─────────────────────────────────────────────────────────────
+#  Proposal Status
+# ─────────────────────────────────────────────────────────────
 @login_required
 def proposal_status(request, pk):
     proposal = get_object_or_404(EventProposal, pk=pk, submitted_by=request.user)
     steps = [
-        {'key': 'draft', 'label': 'Draft'},
-        {'key': 'submitted', 'label': 'Submitted'},
-        {'key': 'under_review', 'label': 'Under Review'},
-        {'key': 'approved', 'label': 'Approved'},
-        {'key': 'rejected', 'label': 'Rejected'},
-        {'key': 'returned', 'label': 'Returned for Revision'},
+        {"key": "draft",     "label": "Draft"},
+        {"key": "submitted", "label": "Submitted"},
+        {"key": "under_review", "label": "Under Review"},
+        {"key": "approved",  "label": "Approved"},
+        {"key": "rejected",  "label": "Rejected"},
+        {"key": "returned",  "label": "Returned for Revision"},
     ]
-    return render(request, 'core/proposal_status.html', {
-        'proposal': proposal,
-        'steps': steps,
-    })
+    return render(request, "core/proposal_status.html", {"proposal": proposal, "steps": steps})
 
+# ─────────────────────────────────────────────────────────────
+#  Admin Dashboard
+# ─────────────────────────────────────────────────────────────
 @user_passes_test(lambda u: u.is_superuser)
 def admin_dashboard(request):
     stats = {
-        "students": RoleAssignment.objects.filter(role="student").count(),
-        "faculties": RoleAssignment.objects.filter(role="faculty").count(),
-        "hods": RoleAssignment.objects.filter(role="hod").count(),
-        "centers": RoleAssignment.objects.filter(role="center_head").count(),
+        "students":  RoleAssignment.objects.filter(role="student").count(),
+        "faculty":   RoleAssignment.objects.filter(role="faculty").count(),
+        "hods":      RoleAssignment.objects.filter(role="hod").count(),
+        "dept_iqac": RoleAssignment.objects.filter(role="dept_iqac").count(),
+        "assoc_heads": RoleAssignment.objects.filter(role="association_head").count(),
+        "club_heads":  RoleAssignment.objects.filter(role="club_head").count(),
+        "uni_club_heads": RoleAssignment.objects.filter(role="university_club_head").count(),
+        "center_heads":   RoleAssignment.objects.filter(role="center_head").count(),
+        "cell_heads":     RoleAssignment.objects.filter(role="cell_head").count(),
+        "uni_iqac":   RoleAssignment.objects.filter(role="uni_iqac").count(),
+        "deans":      RoleAssignment.objects.filter(role="dean").count(),
+        "directors":  RoleAssignment.objects.filter(role="director").count(),
     }
     return render(request, "core/admin_dashboard.html", {"stats": stats})
+
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_user_panel(request):
@@ -139,60 +164,60 @@ def admin_user_edit(request, user_id):
     """
     • edits basic name / e-mail
     • manages a RoleAssignment inline-form-set
-    • supports the JS “Other…” inputs for Department / Club / Center
+    • supports the JS “Other…” inputs for Department / Club / Center / Cell / Association
     """
     user = get_object_or_404(User, id=user_id)
 
     RoleFormSet = inlineformset_factory(
         User,
         RoleAssignment,
-        fields=("role", "department", "club", "center"),
-        extra=0,           # new rows are injected by JS
-        can_delete=True,
+        fields=('role', 'department', 'club', 'center', 'cell', 'association'),
+        extra=0,
+        can_delete=True
     )
 
     if request.method == "POST":
         formset = RoleFormSet(request.POST, instance=user)
 
-        # -------------------------------------------------
-        # basic info first
-        # -------------------------------------------------
+        # Update basic info
         user.first_name = request.POST.get("first_name", "").strip()
         user.last_name  = request.POST.get("last_name", "").strip()
         user.email      = request.POST.get("email", "").strip()
         user.save()
 
-        # -------------------------------------------------
-        # inline form-set
-        # -------------------------------------------------
         if formset.is_valid():
-            # 1) loop through every inline form
             for idx, form in enumerate(formset.forms):
-                # -- department “Other…”
-                new_dept = request.POST.get(f"new_department_{idx}", "").strip()
+                new_dept   = request.POST.get(f'new_department_{idx}', '').strip()
+                new_club   = request.POST.get(f'new_club_{idx}', '').strip()
+                new_center = request.POST.get(f'new_center_{idx}', '').strip()
+                new_cell   = request.POST.get(f'new_cell_{idx}', '').strip()
+                new_association = request.POST.get(f'new_association_{idx}', '').strip()
+
                 if new_dept:
                     dept, _ = Department.objects.get_or_create(name=new_dept)
                     form.instance.department = dept
 
-                # -- club “Other…”
-                new_club = request.POST.get(f"new_club_{idx}", "").strip()
                 if new_club:
                     club, _ = Club.objects.get_or_create(name=new_club)
                     form.instance.club = club
 
-                # -- center “Other…”
-                new_center = request.POST.get(f"new_center_{idx}", "").strip()
                 if new_center:
                     cen, _ = Center.objects.get_or_create(name=new_center)
                     form.instance.center = cen
 
+                if new_cell:
+                    cell, _ = Cell.objects.get_or_create(name=new_cell)
+                    form.instance.cell = cell
+
+                if new_association:
+                    assoc, _ = Association.objects.get_or_create(name=new_association)
+                    form.instance.association = assoc
+
             formset.save()
             messages.success(request, "User roles updated successfully.")
             return redirect("admin_user_management")
-
-        # ════════ DEBUG – SEE WHY IT FAILED ════════
-        print("ROLE-FORMSET ERRORS:", formset.errors, formset.non_form_errors())
-        messages.error(request, "Please fix the errors below and try again.")
+        else:
+            messages.error(request, "Please fix the errors below and try again.")
     else:
         formset = RoleFormSet(instance=user)
 
@@ -203,10 +228,14 @@ def admin_user_edit(request, user_id):
             "user_obj":  user,
             "formset":   formset,
             "departments": Department.objects.all(),
-            "clubs":       Club.objects.all(),
-            "centers":     Center.objects.all(),
+            "clubs":      Club.objects.all(),
+            "centers":    Center.objects.all(),
+            "cells":      Cell.objects.all(),
+            "associations": Association.objects.all(),
         },
     )
+
+
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_event_proposals(request):
@@ -215,7 +244,9 @@ def admin_event_proposals(request):
     proposals = EventProposal.objects.all().order_by("-date_submitted")
     if q:
         proposals = proposals.filter(
-            Q(title__icontains=q) | Q(submitted_by__username__icontains=q) | Q(department__icontains=q)
+            Q(title__icontains=q) |
+            Q(submitted_by__username__icontains=q) |
+            Q(department__name__icontains=q)
         )
     if status:
         proposals = proposals.filter(status=status)

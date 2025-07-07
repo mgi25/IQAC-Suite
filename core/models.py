@@ -1,29 +1,68 @@
+# core/models.py
 from django.db import models
 from django.contrib.auth.models import User
-from django.db import migrations, models
 
-# --- Department, Club, Center Models ---
-
+# ────────────────────────────────────────────────────────────────
+#  Organisations (master tables)
+# ────────────────────────────────────────────────────────────────
 class Department(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)
 
-    def __str__(self):
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self) -> str:
         return self.name
+
 
 class Club(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
+
 
 class Center(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-# --- User Role Assignment ----
 
+class Cell(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Association(models.Model):
+    """
+    An Association belongs *optionally* to a Department.
+    Setting null=True/blank=True lets us migrate without a
+    one-off default and keeps orphaned associations possible.
+    """
+    name = models.CharField(max_length=100, unique=True)
+    department = models.ForeignKey(
+        Department,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="associations",
+    )
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        if self.department:
+            return f"{self.name} ({self.department})"
+        return self.name
+
+
+# ────────────────────────────────────────────────────────────────
+#  User Role Assignment
+# ────────────────────────────────────────────────────────────────
 class RoleAssignment(models.Model):
     ROLE_CHOICES = [
         ('student', 'Student'),
@@ -32,6 +71,8 @@ class RoleAssignment(models.Model):
         ('dept_iqac', 'Department IQAC Coordinator'),
         ('club_head', 'Club Head'),
         ('center_head', 'Center Head'),
+        ('cell_head', 'Cell Head'),
+        ('association_head', 'Association Head'),
         ('dean', 'Dean'),
         ('director', 'Director'),
         ('cdl', 'CDL'),
@@ -41,105 +82,112 @@ class RoleAssignment(models.Model):
     ]
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='role_assignments')
     role = models.CharField(max_length=30, choices=ROLE_CHOICES)
-    department = models.ForeignKey(Department, null=True, blank=True, on_delete=models.SET_NULL, related_name='role_assignments')
-    club = models.ForeignKey(Club, null=True, blank=True, on_delete=models.SET_NULL, related_name='role_assignments')
-    center = models.ForeignKey(Center, null=True, blank=True, on_delete=models.SET_NULL, related_name='role_assignments')
+    department = models.ForeignKey(Department, null=True, blank=True, on_delete=models.SET_NULL)
+    club = models.ForeignKey(Club, null=True, blank=True, on_delete=models.SET_NULL)
+    center = models.ForeignKey(Center, null=True, blank=True, on_delete=models.SET_NULL)
+    cell = models.ForeignKey(Cell, null=True, blank=True, on_delete=models.SET_NULL)
+    association = models.ForeignKey(Association, null=True, blank=True, on_delete=models.SET_NULL)
 
-    def __str__(self):
-        details = [self.get_role_display()]
-        if self.department:
-            details.append(f"of {self.department}")
-        if self.club:
-            details.append(f"of {self.club}")
-        if self.center:
-            details.append(f"of {self.center}")
-        return f"{self.user.username} - {' '.join(details)}"
 
     class Meta:
-        unique_together = ('user', 'role', 'department', 'club', 'center')
+        unique_together = (
+            "user",
+            "role",
+            "department",
+            "club",
+            "center",
+            "cell",
+            "association",
+        )
 
-# --- User Profile ---
+    def __str__(self) -> str:
+        parts = [self.get_role_display()]
+        if self.department:
+            parts.append(f"of {self.department}")
+        if self.club:
+            parts.append(f"of {self.club}")
+        if self.center:
+            parts.append(f"of {self.center}")
+        if self.cell:
+            parts.append(f"of {self.cell}")
+        if self.association:
+            parts.append(f"of {self.association}")
+        return f"{self.user.username} – {' '.join(parts)}"
 
+
+# ────────────────────────────────────────────────────────────────
+#  User Profile (extension of auth.User, optional)
+# ────────────────────────────────────────────────────────────────
 class Profile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     main_role = models.CharField(max_length=30, blank=True, null=True)
 
-    @property
-    def role(self):
-        return self.main_role
+    def __str__(self) -> str:
+        return f"{self.user.username} – {self.main_role or 'No main role'}"
 
-    @role.setter
-    def role(self, value):
-        self.main_role = value
 
-    def __str__(self):
-        return f"{self.user.username} - {self.main_role or 'No main role'}"
-
-# --- Event Proposals ---
-
+# ────────────────────────────────────────────────────────────────
+#  Event Proposals & Reports (legacy part of core app)
+# ────────────────────────────────────────────────────────────────
 class EventProposal(models.Model):
-    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
+    department = models.ForeignKey(
+        Department, on_delete=models.SET_NULL, null=True, blank=True
+    )
     user_type = models.CharField(max_length=30)  # summary of main role(s)
-    submitted_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='event_proposals')
+    submitted_by = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="event_proposals"
+    )
     title = models.CharField(max_length=200)
     description = models.TextField()
     date_submitted = models.DateTimeField(auto_now_add=True)
+
     STATUS_CHOICES = [
-        ('draft', 'Draft'),
-        ('submitted', 'Submitted'),
-        ('under_review', 'Under Review'),
-        ('approved', 'Approved'),
-        ('rejected', 'Rejected'),
-        ('returned', 'Returned for Revision'),
+        ("draft", "Draft"),
+        ("submitted", "Submitted"),
+        ("under_review", "Under Review"),
+        ("approved", "Approved"),
+        ("rejected", "Rejected"),
+        ("returned", "Returned for Revision"),
     ]
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
     return_comment = models.TextField(blank=True, null=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.title} ({self.get_status_display()})"
 
-# --- Reports ---
 
 class Report(models.Model):
     REPORT_TYPE_CHOICES = [
-        ('annual', 'Annual'),
-        ('event', 'Event'),
-        ('iqac', 'IQAC'),
-        ('custom', 'Custom'),
+        ("annual", "Annual"),
+        ("event", "Event"),
+        ("iqac", "IQAC"),
+        ("custom", "Custom"),
     ]
+
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
-    submitted_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='submitted_reports')
+    department = models.ForeignKey(
+        Department, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    submitted_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="submitted_reports",
+    )
     date_submitted = models.DateTimeField(auto_now_add=True)
-    report_type = models.CharField(max_length=30, choices=REPORT_TYPE_CHOICES, default='custom')
-    file = models.FileField(upload_to='reports/', blank=True, null=True)
+    report_type = models.CharField(max_length=30, choices=REPORT_TYPE_CHOICES)
+    file = models.FileField(upload_to="reports/", blank=True, null=True)
+
     STATUS_CHOICES = [
-        ('draft', 'Draft'),
-        ('submitted', 'Submitted'),
-        ('approved', 'Approved'),
-        ('rejected', 'Rejected'),
+        ("draft", "Draft"),
+        ("submitted", "Submitted"),
+        ("approved", "Approved"),
+        ("rejected", "Rejected"),
     ]
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
     feedback = models.TextField(blank=True, null=True)
 
-    def __str__(self):
-        return f"{self.title} - {self.get_report_type_display()} ({self.get_status_display()})"
-
-class Migration(migrations.Migration):
-    dependencies = [
-        ("core", "____"),          # the last migration in your app
-    ]
-
-    operations = [
-        migrations.RunSQL(
-            sql="""
-                -- SQLite / PostgreSQL syntax – adjust if you use MySQL
-                CREATE UNIQUE INDEX IF NOT EXISTS auth_user_email_uq
-                ON auth_user(LOWER(email));
-            """,
-            reverse_sql="""
-                DROP INDEX IF EXISTS auth_user_email_uq;
-            """,
-        ),
-    ]
+    def __str__(self) -> str:
+        return f"{self.title} – {self.get_report_type_display()} ({self.get_status_display()})"
