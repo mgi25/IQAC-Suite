@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse
+from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 import json
 from django.http import JsonResponse
@@ -22,6 +23,33 @@ from emt.utils import create_approval_steps
 from emt.models import ApprovalStep
 from django.contrib import messages
 from django.utils import timezone
+
+# ──────────────────────────────
+# CDL DASHBOARD
+# ──────────────────────────────
+def cdl_dashboard(request):
+    return render(request, 'emt/cdl_dashboard.html')
+
+# ──────────────────────────────
+# REPORT GENERATION
+# ──────────────────────────────
+from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import render
+from django.template.loader import render_to_string
+from django.http import HttpResponse
+import pdfkit
+
+def report_form(request):
+ return render(request, "report_generation.html")
+@csrf_exempt
+def generate_report_pdf(request):
+    if request.method == 'POST':
+        html = render_to_string("pdf_template.html", {"data": request.POST})
+        pdf = pdfkit.from_string(html, False)
+        response = HttpResponse(pdf, content_type="application/pdf")
+        response["Content-Disposition"] = 'attachment; filename="Event_Report.pdf"'
+        return response
+
 # ──────────────────────────────
 # PROPOSAL STEP 1: Proposal Submission
 # ──────────────────────────────
