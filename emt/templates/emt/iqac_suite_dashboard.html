@@ -4,35 +4,67 @@
 <link rel="stylesheet" href="{% static 'emt/css/iqac_suite_dashboard.css' %}">
 
 <div class="suite-dashboard-outer">
-  <div class="suite-dashboard-container">
-      <h2>IQAC Suite Dashboard</h2>
-      <div class="suite-options">
+    <h2 class="suite-dashboard-heading">IQAC Suite Dashboard</h2>
+    <div class="suite-options">
 
-          <!-- Event Proposal Card -->
-          <div class="suite-card">
-              <div class="suite-card-icon suite-card-icon-blue">📄</div>
-              <div class="suite-card-title">Event Proposal</div>
-              <div class="suite-card-desc">Create and manage event proposals</div>
-              <a href="{% url 'emt:submit_proposal' %}" class="suite-card-btn"><span>Go &rarr;</span></a>
-          </div>
+        <!-- Event Proposal Card -->
+        <div class="suite-card">
+            <div class="suite-card-icon suite-card-icon-blue">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <path d="M14 2v6h6"/>
+                    <path d="M8 16v-2"/>
+                    <path d="M12 16v-4"/>
+                    <path d="M16 16v-3"/>
+                    <path d="M12 12v5"/>
+                    <path d="M10.5 15.5L12 17l1.5-1.5"/>
+                </svg>
+            </div>
+            <div class="suite-card-title">Event Proposal</div>
+            <div class="suite-card-desc">Create and manage event proposals</div>
+            <a href="{% url 'emt:submit_proposal' %}" class="suite-card-btn"><span>Go &rarr;</span></a>
+        </div>
 
-          <!-- IQAC Report Generation Card -->
-          <div class="suite-card">
-              <div class="suite-card-icon suite-card-icon-purple">📝</div>
-              <div class="suite-card-title">IQAC Report Generation</div>
-              <div class="suite-card-desc">Generate IQAC reports</div>
-              <a href="{% url 'emt:pending_reports' %}" class="suite-card-btn"><span>Go &rarr;</span></a>
-          </div>
+        <!-- IQAC Report Generation Card -->
+        <div class="suite-card">
+            <div class="suite-card-icon suite-card-icon-purple">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="5" y="4" width="14" height="18" rx="2" ry="2" />
+                    <path d="M9 2h6a1 1 0 0 1 1 1v1H8V3a1 1 0 0 1 1-1z" />
+                    <line x1="9" y1="9" x2="15" y2="9" />
+                    <line x1="9" y1="13" x2="15" y2="13" />
+                    <line x1="9" y1="17" x2="13" y2="17" />
+                </svg>
+            </div>
+            <div class="suite-card-title">IQAC Report Generation</div>
+            <div class="suite-card-desc">Generate IQAC reports</div>
+            <a href="{% url 'emt:pending_reports' %}" class="suite-card-btn"><span>Go &rarr;</span></a>
+        </div>
 
-          <!-- View Generated Reports -->
-          <div class="suite-card">
-              <div class="suite-card-icon suite-card-icon-green">📑</div>
-              <div class="suite-card-title">View Generated Reports</div>
-              <div class="suite-card-desc">See all your generated reports</div>
-              <a href="{% url 'emt:generated_reports' %}" class="suite-card-btn"><span>Go &rarr;</span></a>
-          </div>
+        <!-- View Generated Reports -->
+        <div class="suite-card">
+            <div class="suite-card-icon suite-card-icon-green">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/>
+                    <path d="M15 2v5h5"/>
+                    <path d="M8 11h8"/>
+                    <path d="M8 15h5"/>
+                </svg>
+            </div>
+            <div class="suite-card-title">View Generated Reports</div>
+            <div class="suite-card-desc">See all your generated reports</div>
+            <a href="{% url 'emt:generated_reports' %}" class="suite-card-btn"><span>Go &rarr;</span></a>
+        </div>
 
-      </div>
-  </div>
+        <!-- Approvals Card -->
+        {% if user.is_authenticated and show_approvals_card %}
+        <div class="suite-card">
+            <div class="suite-card-icon suite-card-icon-orange">✅</div>
+            <div class="suite-card-title">Event Approvals</div>
+            <div class="suite-card-desc">Review and approve/reject event proposals</div>
+            <a href="{% url 'emt:my_approvals' %}" class="suite-card-btn"><span>Go &rarr;</span></a>
+        </div>
+        {% endif %}
+    </div>
 </div>
 {% endblock %}

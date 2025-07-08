@@ -1,74 +1,112 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const container   = document.getElementById('roles-list-container');
-  const addBtn      = document.getElementById('add-role-btn');
-  const template    = document.getElementById('role-card-template').innerHTML;
-  const totalForms  = () => document.querySelector('input[name$="-TOTAL_FORMS"]');
+// static/core/js/admin_user_edit.js
 
-  // Bind existing cards
-  container.querySelectorAll('.role-card').forEach(bindCard);
+document.addEventListener("DOMContentLoaded", () => {
+  const $  = (sel, ctx = document) => ctx.querySelector(sel);
+  const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
 
-  // Add new role card
-  addBtn.addEventListener('click', () => {
-    const idx = parseInt(totalForms().value, 10);
-    const html = template.replace(/__prefix__/g, idx);
-    container.insertAdjacentHTML('beforeend', html);
-    bindCard(container.querySelector(`.role-card[data-form-index="${idx}"]`));
-    totalForms().value = idx + 1;
-  });
+  const listBox     = $("#roles-list-container");
+  const addBtn      = $("#add-role-btn");
+  const tplHTML     = $("#role-card-template").innerHTML;
+  const totalInput  = $('input[name$="-TOTAL_FORMS"]');
+  const saveBtn     = $("#user-edit-form button[type=submit]");
+
+  const SINGLE_USER_ROLES = ["dean", "academic_coordinator", "director"];
+  const CDL_ROLE = "cdl";
+  const ORG_RULES = {
+    department : ["hod", "faculty", "dept_iqac", "student"],
+    club       : ["club_head"],
+    center     : ["center_head"],
+    cell       : ["cell_head"],
+    association:["association_head"]
+  };
 
   function bindCard(card) {
-    const roleSel = card.querySelector('select[name$="-role"]');
-    const deptGrp = card.querySelector('.dept-group');
-    const clubGrp = card.querySelector('.club-group');
-    const cenGrp  = card.querySelector('.center-group');
-    const remBtn  = card.querySelector('.remove-role-btn');
-    const delBox  = card.querySelector('input[type="checkbox"][name$="-DELETE"]');
+    const roleSel = $("select[name$='-role']", card);
+    const groups = {
+      department : $(".dept-group",        card),
+      club       : $(".club-group",        card),
+      center     : $(".center-group",      card),
+      cell       : $(".cell-group",        card),
+      association: $(".association-group", card),
+    };
+    const cdlRoleGrp = $(".cdl-role-group", card);
+    const delBox = $("input[name$='-DELETE']", card);
+    const remBtn = $(".remove-role-btn", card);
 
-    // Make sure "Other…" option exists (only once)
-    [deptGrp, clubGrp, cenGrp].forEach(grp => {
-      const sel = grp.querySelector('select');
-      if (sel && ![...sel.options].some(o => o.value === 'other')) {
-        sel.add(new Option('Other…', 'other'));
+    Object.values(groups).forEach(grp => {
+      const sel = $("select", grp);
+      if (sel && ![...sel.options].some(o => o.value === "other")) {
+        sel.add(new Option("Other…", "other"));
       }
     });
 
-    // On role change, show only the relevant group
-    roleSel.addEventListener('change', () => {
-      const v = roleSel.value;
-      deptGrp.style.display = ['hod','faculty','dept_iqac'].includes(v) ? 'block' : 'none';
-      clubGrp.style.display = (v === 'club_head') ? 'block' : 'none';
-      cenGrp.style.display  = (v === 'center_head') ? 'block' : 'none';
-    });
-    roleSel.dispatchEvent(new Event('change'));
+    function syncPanels() {
+      const r = (roleSel.value || "").toLowerCase();
 
-    // Helper to toggle "Other..." input
-    function setupOther(grp, inputCls) {
-    const sel = grp.querySelector('select');
-    const txt = grp.querySelector(`.${inputCls}`);
-    if (!sel || !txt) return;
-    function toggleInput() {
-      if (sel.value === 'other') {
-        txt.style.display = 'block';
-        txt.required = true;
-        sel.value = '';   // <--- THIS IS THE FIX!
-      } else {
-        txt.style.display = 'none';
-        txt.required = false;
-        txt.value = '';
+      // Hide all org groups and show CDL select for CDL
+      if (r === CDL_ROLE) {
+        Object.values(groups).forEach(grp => grp.style.display = "none");
+        if (cdlRoleGrp) cdlRoleGrp.style.display = "block";
+        return;
       }
+
+      // Hide all org groups and CDL select for single-user roles
+      if (SINGLE_USER_ROLES.includes(r)) {
+        Object.values(groups).forEach(grp => grp.style.display = "none");
+        if (cdlRoleGrp) cdlRoleGrp.style.display = "none";
+        return;
+      }
+
+      // Default: Show/hide org pickers per role
+      if (cdlRoleGrp) cdlRoleGrp.style.display = "none";
+      Object.entries(groups).forEach(([key, grp]) => {
+        grp.style.display = ORG_RULES[key].includes(r) ? "block" : "none";
+      });
     }
-    sel.addEventListener('change', toggleInput);
-    toggleInput();
-  }
+    roleSel.addEventListener("change", syncPanels);
+    syncPanels();
 
-    setupOther(deptGrp, 'add-dept-input');
-    setupOther(clubGrp, 'add-club-input');
-    setupOther(cenGrp, 'add-center-input');
+    // "Other..." field logic
+    function enableOther(grp, txtCls) {
+      const sel = $("select", grp);
+      const txt = $("." + txtCls, grp);
+      if (!sel || !txt) return;
+      function toggle() {
+        const custom = sel.value === "other";
+        txt.style.display = custom ? "block" : "none";
+        txt.required = custom;
+        if (custom) {
+          sel.value = "";
+        } else {
+          txt.value = "";
+        }
+      }
+      sel.addEventListener("change", toggle);
+      toggle();
+    }
+    enableOther(groups.department, "add-dept-input");
+    enableOther(groups.club, "add-club-input");
+    enableOther(groups.center, "add-center-input");
+    enableOther(groups.cell, "add-cell-input");
+    enableOther(groups.association, "add-association-input");
 
-    // Remove: hide & flag DELETE
-    remBtn.addEventListener('click', () => {
+    remBtn?.addEventListener("click", () => {
       if (delBox) delBox.checked = true;
-      card.style.display = 'none';
+      card.style.display = "none";
     });
   }
+
+  $$(".role-card", listBox).forEach(bindCard);
+
+  addBtn.addEventListener("click", () => {
+    saveBtn.disabled = true;
+    const idx = +totalInput.value;
+    listBox.insertAdjacentHTML(
+      "beforeend",
+      tplHTML.replace(/__prefix__/g, idx)
+    );
+    bindCard($(`.role-card[data-form-index="${idx}"]`));
+    totalInput.value = idx + 1;
+    requestAnimationFrame(() => (saveBtn.disabled = false));
+  });
 });

@@ -1,10 +1,12 @@
 {% extends "base.html" %}
 {% load static %}
+
 {% block content %}
 <link rel="stylesheet" href="{% static 'emt/css/iqac_pending_reports.css' %}">
 
 <div class="iqac-dashboard-bg">
   <div class="iqac-dashboard-flex">
+    <!-- Side Panel -->
     <div class="iqac-dashboard-side">
       <div class="iqac-side-icon-bg">
         <svg width="92" height="92" fill="none">
@@ -20,11 +22,14 @@
       </div>
       <div class="iqac-side-title">IQAC<br>Reports</div>
     </div>
+
+    <!-- Main Content Area -->
     <div class="iqac-dashboard-main">
       <div class="iqac-section-header">
         <span class="iqac-section-icon">📝</span>
         <span class="iqac-section-title">Proposals Pending Report Generation</span>
       </div>
+
       {% if proposals %}
         <div class="iqac-report-list">
           {% for proposal in proposals %}
