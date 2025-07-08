@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Review Approval{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1>Review Proposal: {{ step.proposal.event_title }}</h1>
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="form-group">
+      <label>Comment / Feedback:</label>
+      <textarea name="comment" class="form-control" rows="4"></textarea>
+    </div>
+
+    {% if step.role_required == 'hod' %}
+      <div class="form-group">
+        <label><input type="checkbox" name="needs_finance_approval"> Needs Finance Approval</label><br>
+        <label><input type="checkbox" name="is_big_event"> Is Big Event (Dean Approval)</label>
+      </div>
+    {% endif %}
+
+    <button type="submit" name="action" value="approve" class="btn btn-success">Approve</button>
+    <button type="submit" name="action" value="reject" class="btn btn-danger">Reject</button>
+  </form>
+</div>
+{% endblock %}

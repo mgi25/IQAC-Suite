@@ -1,21 +1,52 @@
 from django.shortcuts import render, get_object_or_404
-from .models import Student, Participation, AttributeStrengthMap, Role, CharacterStrength
+from .models import Student, Participation, AttributeStrengthMap, Role, CharacterStrength, AcademicYear, School, Course
 from collections import defaultdict
-from datetime import date
-from django.http import HttpResponse
-from django.template.loader import get_template
+from django.http import JsonResponse, HttpResponse
+from django.template.loader import get_template, render_to_string
 from django.urls import reverse
 import qrcode
 import io
 import weasyprint
 import base64
+import json
+import zipfile
+from datetime import date
 
-
+# ─────────────────────────────────────────────
+# HOME
+# ─────────────────────────────────────────────
 def home(request):
-    return render(request, 'transcript_app/home.html')
+    years = AcademicYear.objects.all()
+    students = Student.objects.select_related('academic_year', 'course__school').all().order_by('name')
 
+    # Create nested dict: year → school → course → students
+    student_data = {}
+    for student in students:
+        year = str(student.academic_year.year)
+        school = student.course.school.name
+        course = student.course.name
 
-# 🔁 Helper function to calculate strength data
+        student_data.setdefault(year, {}).setdefault(school, {}).setdefault(course, []).append({
+            'name': student.name,
+            'roll_no': student.roll_no
+        })
+
+    return render(request, 'transcript_app/home.html', {
+        'years': years,
+        'student_data': json.dumps(student_data)
+    })
+
+# ─────────────────────────────────────────────
+# CHECK IF ROLL NUMBER EXISTS (AJAX)
+# ─────────────────────────────────────────────
+def validate_roll_no(request):
+    roll_no = request.GET.get('roll_no')
+    exists = Student.objects.filter(roll_no=roll_no).exists()
+    return JsonResponse({'exists': exists})
+
+# ─────────────────────────────────────────────
+# STRENGTH CALCULATION
+# ─────────────────────────────────────────────
 def calculate_strength_data(student):
     participations = Participation.objects.filter(student=student)
 
@@ -61,7 +92,9 @@ def calculate_strength_data(student):
     strength_data.sort(key=lambda x: x['name'])
     return strength_data, participations
 
-
+# ─────────────────────────────────────────────
+# TRANSCRIPT VIEW
+# ─────────────────────────────────────────────
 def transcript_view(request, roll_no):
     student = get_object_or_404(Student, roll_no=roll_no)
     strength_data, participations = calculate_strength_data(student)
@@ -69,9 +102,14 @@ def transcript_view(request, roll_no):
     sorted_events = sorted(participations, key=lambda p: len(p.event.attributes.all()), reverse=True)
     top_events = [p.event.name for p in sorted_events[:5]]
 
+    student_list = Student.objects.filter(
+        course=student.course,
+        academic_year=student.academic_year
+    ).exclude(roll_no=student.roll_no).order_by('name')
+
     qr_b64 = None
     if participations.count() > 5:
-        all_events_url = request.build_absolute_uri(  # ✅ builds dynamic absolute URL (ngrok safe)
+        all_events_url = request.build_absolute_uri(
             reverse('transcript:all_events', kwargs={'roll_no': student.roll_no})
         )
         qr = qrcode.make(all_events_url)
@@ -84,10 +122,13 @@ def transcript_view(request, roll_no):
         'strength_data': strength_data,
         'today': date.today(),
         'top_events': top_events,
-        'qr_code': qr_b64
+        'qr_code': qr_b64,
+        'student_list': student_list
     })
 
-
+# ─────────────────────────────────────────────
+# PDF DOWNLOAD VIEW (Single Transcript)
+# ─────────────────────────────────────────────
 def transcript_pdf(request, roll_no):
     student = get_object_or_404(Student, roll_no=roll_no)
     strength_data, participations = calculate_strength_data(student)
@@ -97,7 +138,7 @@ def transcript_pdf(request, roll_no):
 
     qr_b64 = None
     if participations.count() > 5:
-        all_events_url = request.build_absolute_uri(  # ✅ works with ngrok
+        all_events_url = request.build_absolute_uri(
             reverse('transcript:all_events', kwargs={'roll_no': student.roll_no})
         )
         qr = qrcode.make(all_events_url)
@@ -119,7 +160,9 @@ def transcript_pdf(request, roll_no):
     response['Content-Disposition'] = f'filename="transcript_{student.roll_no}.pdf"'
     return response
 
-
+# ─────────────────────────────────────────────
+# ALL EVENTS VIEW
+# ─────────────────────────────────────────────
 def all_events_view(request, roll_no):
     student = get_object_or_404(Student, roll_no=roll_no)
     participations = Participation.objects.filter(student=student)
@@ -128,3 +171,85 @@ def all_events_view(request, roll_no):
         'student': student,
         'all_events': all_event_names
     })
+
+# ─────────────────────────────────────────────
+# BULK DOWNLOAD: Combined PDF of All Course Students
+# ─────────────────────────────────────────────
+def download_course_pdf_combined(request, roll_no):
+    current_student = get_object_or_404(Student, roll_no=roll_no)
+    course_students = Student.objects.filter(course=current_student.course, academic_year=current_student.academic_year).order_by('name')
+
+    combined_html = ""
+    for student in course_students:
+        strength_data, participations = calculate_strength_data(student)
+        sorted_events = sorted(participations, key=lambda p: len(p.event.attributes.all()), reverse=True)
+        top_events = [p.event.name for p in sorted_events[:5]]
+
+        qr_b64 = None
+        if participations.count() > 5:
+            all_events_url = request.build_absolute_uri(
+                reverse('transcript:all_events', kwargs={'roll_no': student.roll_no})
+            )
+            qr = qrcode.make(all_events_url)
+            buf = io.BytesIO()
+            qr.save(buf, format='PNG')
+            qr_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+
+        html = render_to_string('transcript_app/pdf.html', {
+            'student': student,
+            'strength_data': strength_data,
+            'today': date.today(),
+            'top_events': top_events,
+            'qr_code': qr_b64
+        })
+
+        combined_html += f'<div style="page-break-after: always;">{html}</div>'
+
+    pdf_file = weasyprint.HTML(string=combined_html).write_pdf()
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="Course_Transcripts.pdf"'
+    return response
+
+# ─────────────────────────────────────────────
+# BULK DOWNLOAD: ZIP of Individual PDFs
+# ─────────────────────────────────────────────
+def download_course_individual_pdfs(request, roll_no):
+    current_student = get_object_or_404(Student, roll_no=roll_no)
+    course_students = Student.objects.filter(course=current_student.course, academic_year=current_student.academic_year)
+
+    buffer = io.BytesIO()
+    zip_file = zipfile.ZipFile(buffer, 'w')
+
+    for student in course_students:
+        strength_data, participations = calculate_strength_data(student)
+        sorted_events = sorted(participations, key=lambda p: len(p.event.attributes.all()), reverse=True)
+        top_events = [p.event.name for p in sorted_events[:5]]
+
+        qr_b64 = None
+        if participations.count() > 5:
+            all_events_url = request.build_absolute_uri(
+                reverse('transcript:all_events', kwargs={'roll_no': student.roll_no})
+            )
+            qr = qrcode.make(all_events_url)
+            buf = io.BytesIO()
+            qr.save(buf, format='PNG')
+            qr_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+
+        html = render_to_string('transcript_app/pdf.html', {
+            'student': student,
+            'strength_data': strength_data,
+            'today': date.today(),
+            'top_events': top_events,
+            'qr_code': qr_b64
+        })
+
+        pdf_buffer = io.BytesIO()
+        weasyprint.HTML(string=html).write_pdf(target=pdf_buffer)
+        zip_file.writestr(f"{student.roll_no}_{student.name}.pdf", pdf_buffer.getvalue())
+
+    zip_file.close()
+    buffer.seek(0)
+
+    response = HttpResponse(buffer.read(), content_type='application/zip')
+    response['Content-Disposition'] = 'attachment; filename="All_Student_PDFs.zip"'
+    return response

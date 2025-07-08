@@ -1,33 +1,50 @@
 from django import forms
 from django.contrib.auth.models import User
+from django.urls import reverse_lazy
+
 from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
     EventExpectedOutcomes, TentativeFlow, SpeakerProfile,
-    ExpenseDetail, Department                 # <-- import Department model
+    ExpenseDetail, Department
 )
-from django.urls import reverse_lazy
+
 # ──────────────────────────────────────────────────────────────
-#  STEP 1  •  Event Proposal  (smart dept & faculty pickers)
+#  STEP 1 • Event Proposal Form (with new flags)
 # ──────────────────────────────────────────────────────────────
 class EventProposalForm(forms.ModelForm):
     department = forms.ModelChoiceField(
         queryset=Department.objects.all(),
-        widget=forms.Select(attrs={'class': 'select2-ajax', 'data-url': '/suite/api/departments/'}),
+        widget=forms.Select(attrs={
+            'class': 'select2-ajax',
+            'data-url': reverse_lazy("emt:api_departments")
+        }),
         required=True
     )
+
     faculty_incharges = forms.ModelMultipleChoiceField(
         queryset=User.objects.filter(role_assignments__role="faculty").distinct(),
         required=False,
         widget=forms.SelectMultiple(attrs={
-            "class": "select2-ajax",
-            "data-url": reverse_lazy("emt:api_faculty"),        # <<<<<< FIXED (emt:)
-            "placeholder": "Type a lecturer name…",
+            'class': 'select2-ajax',
+            'data-url': reverse_lazy("emt:api_faculty"),
+            'placeholder': "Type a lecturer name…",
         })
     )
 
+    # ── NEW FLAGS ──
+    # needs_finance_approval = forms.BooleanField(
+    #     required=False,
+    #     label="Does this event require finance approval?"
+    # )
+    # is_big_event           = forms.BooleanField(
+    #     required=False,
+    #     label="Is this a big event (Dean approval needed)?"
+    # )
+    # ───────────────
+
     class Meta:
-        model = EventProposal
-        exclude = ['submitted_by', 'created_at', 'updated_at', 'status', 'report_generated']
+        model   = EventProposal
+        exclude = ['submitted_by', 'created_at', 'updated_at', 'status', 'report_generated','needs_finance_approval','is_big_event']
         labels = {
             'department': 'Which department is organizing the event?',
             'committees': 'List the committee(s) and any collaborations involved:',
@@ -40,15 +57,7 @@ class EventProposalForm(forms.ModelForm):
             'student_coordinators': 'Student Coordinators (names & contacts)',
             'target_audience': 'Who is your target audience?',
             'event_focus_type': 'What is the focus / theme of the event?',
-            #  income labels unchanged …
-            'fest_fee_participants': 'Fest: Number of participants (for fee)',
-            'fest_fee_rate':         'Fest: Fee per participant (₹)',
-            'fest_fee_amount':       'Fest: Total expected amount from fees (₹)',
-            'fest_sponsorship_amount': 'Fest: Total sponsorship amount (₹)',
-            'conf_fee_participants': 'Conf.: Number of participants (for fee)',
-            'conf_fee_rate':         'Conf.: Fee per participant (₹)',
-            'conf_fee_amount':       'Conf.: Total expected amount from fees (₹)',
-            'conf_sponsorship_amount': 'Conf.: Total sponsorship amount (₹)',
+            # income labels unchanged…
         }
         widgets = {
             'event_datetime': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
@@ -57,41 +66,61 @@ class EventProposalForm(forms.ModelForm):
             'target_audience':    forms.TextInput(attrs={'placeholder': 'e.g., BSc students'}),
         }
 
+
 # ──────────────────────────────────────────────────────────────
-#  Remaining forms (unchanged except for tidy placeholders)
+#  Remaining forms (unchanged)
 # ──────────────────────────────────────────────────────────────
 class NeedAnalysisForm(forms.ModelForm):
     class Meta:
         model   = EventNeedAnalysis
         fields  = ['content']
         labels  = {'content': 'Explain the need for organizing this event.'}
-        widgets = {'content': forms.Textarea(attrs={'rows': 8, 'placeholder': 'Describe why this event is needed…'})}
+        widgets = {
+            'content': forms.Textarea(
+                attrs={'rows': 8, 'placeholder': 'Describe why this event is needed…'}
+            )
+        }
 
 class ObjectivesForm(forms.ModelForm):
     class Meta:
         model   = EventObjectives
         fields  = ['content']
         labels  = {'content': 'List the objectives of this event.'}
-        widgets = {'content': forms.Textarea(attrs={'rows': 8, 'placeholder': 'e.g., 1. Increase awareness…'})}
+        widgets = {
+            'content': forms.Textarea(
+                attrs={'rows': 8, 'placeholder': 'e.g., 1. Increase awareness…'}
+            )
+        }
 
 class ExpectedOutcomesForm(forms.ModelForm):
     class Meta:
         model   = EventExpectedOutcomes
         fields  = ['content']
         labels  = {'content': 'What outcomes do you expect from this event?'}
-        widgets = {'content': forms.Textarea(attrs={'rows': 7, 'placeholder': 'List expected outcomes clearly…'})}
+        widgets = {
+            'content': forms.Textarea(
+                attrs={'rows': 7, 'placeholder': 'List expected outcomes clearly…'}
+            )
+        }
 
 class TentativeFlowForm(forms.ModelForm):
     class Meta:
         model   = TentativeFlow
         fields  = ['content']
         labels  = {'content': 'Outline the tentative flow of your event'}
-        widgets = {'content': forms.Textarea(attrs={'rows': 8, 'placeholder': '10:00 AM – Welcome\n10:15 AM – Guest Talk…'})}
+        widgets = {
+            'content': forms.Textarea(
+                attrs={'rows': 8, 'placeholder': '10:00 AM – Welcome\n10:15 AM – Guest Talk…'}
+            )
+        }
 
 class SpeakerProfileForm(forms.ModelForm):
     class Meta:
-        model  = SpeakerProfile
-        fields = ['full_name','designation','affiliation','contact_email','contact_number','photo','detailed_profile']
+        model   = SpeakerProfile
+        fields  = [
+            'full_name', 'designation', 'affiliation',
+            'contact_email', 'contact_number', 'photo', 'detailed_profile'
+        ]
         labels = {
             'full_name':       'Full Name',
             'designation':     'Designation / Title',
@@ -101,7 +130,9 @@ class SpeakerProfileForm(forms.ModelForm):
             'photo':           'Speaker Photo',
             'detailed_profile':'Brief Profile / Bio'
         }
-        widgets = {'detailed_profile': forms.Textarea(attrs={'rows': 5})}
+        widgets = {
+            'detailed_profile': forms.Textarea(attrs={'rows': 5})
+        }
 
 class ExpenseDetailForm(forms.ModelForm):
     class Meta:

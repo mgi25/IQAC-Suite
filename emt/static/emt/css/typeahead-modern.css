@@ -1,0 +1,69 @@
+/* ─── inline-hint + dropdown styling ─── */
+.tt-query,
+.tt-hint {
+  font-family: 'Segoe UI', sans-serif;
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 1rem;
+  border: 2px solid #ddd;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.tt-query:hover,
+.tt-hint:hover {
+  border-color: #bbb;
+}
+.tt-hint {
+  color: #ccc;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1; /* behind the real input */
+}
+.tt-input {
+  position: relative;
+  z-index: 2; /* above the hint */
+}
+
+/* Dropdown menu */
+.tt-menu {
+  margin-top: 4px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  width: 100%;
+  z-index: 10;
+}
+.tt-suggestion {
+  padding: 12px 16px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.tt-suggestion.tt-cursor {
+  background: #f1f5ff;
+}
+.tt-suggestion p {
+  margin: 0;
+}
+
+
+/* make the group container a positioning context */
+.input-group {
+  position: relative;
+}
+
+/* dropdown menu */
+.tt-menu {
+  position: absolute;   /* float it */
+  top: 100%;            /* just below the input */
+  left: 0;
+  width: 100%;
+  margin-top: 4px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  z-index: 2000;        /* on top of everything */
+}
