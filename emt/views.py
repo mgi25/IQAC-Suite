@@ -206,7 +206,13 @@ def proposal_status(request, proposal_id):
 # ──────────────────────────────
 @login_required
 def iqac_suite_dashboard(request):
-    return render(request, 'emt/iqac_suite_dashboard.html')
+    user = request.user
+    user_proposals = EventProposal.objects.filter(submitted_by=user).order_by('-created_at')
+
+    return render(request, 'emt/iqac_suite_dashboard.html', {
+        'user_proposals': user_proposals
+    })
+
 
 # ──────────────────────────────
 # PENDING REPORTS, GENERATION, SUCCESS
