@@ -1,80 +1,139 @@
 {% extends "base.html" %}
 {% load static %}
+
 {% block content %}
 <link rel="stylesheet" href="{% static 'core/css/admin_user_management.css' %}">
-<div class="user-mgmt-container">
-    <h1 class="mgmt-title">User Management</h1>
-    <div class="user-filter-bar">
-        <form method="get" class="filter-form">
-            <div class="filter-group">
-                <label for="role">Role:</label>
-                <select name="role" id="role" onchange="this.form.submit()">
-                    <option value="" {% if not request.GET.role %}selected{% endif %}>All</option>
-                    <option value="student" {% if request.GET.role == "student" %}selected{% endif %}>Student</option>
-                    <option value="faculty" {% if request.GET.role == "faculty" %}selected{% endif %}>Faculty</option>
-                    <option value="hod" {% if request.GET.role == "hod" %}selected{% endif %}>HOD</option>
-                    <option value="center_head" {% if request.GET.role == "center_head" %}selected{% endif %}>Center Head</option>
-                    <option value="club_head" {% if request.GET.role == "club_head" %}selected{% endif %}>Club Head</option>
-                    <option value="dean" {% if request.GET.role == "dean" %}selected{% endif %}>Dean</option>
-                    <option value="director" {% if request.GET.role == "director" %}selected{% endif %}>Director</option>
-                    <option value="cdl" {% if request.GET.role == "cdl" %}selected{% endif %}>CDL</option>
-                    <option value="uni_iqac" {% if request.GET.role == "uni_iqac" %}selected{% endif %}>University IQAC</option>
-                    <option value="dept_iqac" {% if request.GET.role == "dept_iqac" %}selected{% endif %}>Dept IQAC</option>
-                    <option value="academic_coordinator" {% if request.GET.role == "academic_coordinator" %}selected{% endif %}>Academic Coordinator</option>
-                    <option value="admin" {% if request.GET.role == "admin" %}selected{% endif %}>Admin</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <input type="text" name="q" placeholder="Search name or email..." value="{{ request.GET.q|default_if_none:'' }}" />
-            </div>
-            <button type="submit" class="filter-btn">Filter</button>
-        </form>
-    </div>
 
-    <div class="table-responsive">
-        <table class="admin-users-table">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Roles</th>
-                    <th>Date Joined</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for user in users %}
-                    <tr>
-                        <td>{{ forloop.counter }}</td>
-                        <td>{{ user.get_full_name|default:user.username }}</td>
-                        <td>{{ user.email }}</td>
-                        <td>
-                            {% if user.role_assignments.exists %}
-                                {% for ra in user.role_assignments.all %}
-                                    <span class="role-badge">
-                                        {{ ra.get_role_display }}
-                                        {% if ra.department %}<span class="role-context">({{ ra.department.name }})</span>{% endif %}
-                                        {% if ra.club %}<span class="role-context">({{ ra.club.name }})</span>{% endif %}
-                                        {% if ra.center %}<span class="role-context">({{ ra.center.name }})</span>{% endif %}
-                                    </span>{% if not forloop.last %}<br>{% endif %}
-                                {% endfor %}
-                            {% else %}
-                                <span class="role-badge role-none">No Role</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ user.date_joined|date:"Y-m-d H:i" }}</td>
-                        <td>
-                            <a href="{% url 'admin_user_edit' user.id %}" class="edit-btn">Edit</a>
-                        </td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="6" style="text-align:center;">No users found.</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+<div class="user-mgmt-container">
+  <h1 class="mgmt-title">User Management</h1>
+
+  <div class="table-responsive">
+    <table id="myTable" class="admin-users-table display nowrap" style="width:100%">
+      <thead>
+        <tr>
+          <th>S. No</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th style="position: relative;">
+            Roles
+            <i class="fa fa-filter role-filter-icon" onclick="toggleRoleDropdown()" title="Filter by role"></i>
+            <div id="roleFilterDropdown" class="role-dropdown hidden">
+              <select id="roleFilterSelect" onchange="filterByRole(this.value)">
+                <option value="">All Roles</option>
+                <option value="Student">Student</option>
+                <option value="Faculty">Faculty</option>
+                <option value="HOD">HOD</option>
+                <option value="Department IQAC Coordinator">Department IQAC Coordinator</option>
+                <option value="Club Head">Club Head</option>
+                <option value="University Club Head">University Club Head</option>
+                <option value="Center Head">Center Head</option>
+                <option value="Cell Head">Cell Head</option>
+                <option value="Association Head">Association Head</option>
+                <option value="Dean">Dean</option>
+                <option value="Director">Director</option>
+                <option value="CDL">CDL</option>
+                <option value="University IQAC Coordinator">University IQAC Coordinator</option>
+                <option value="Admin">Admin</option>
+                <option value="Academic Coordinator">Academic Coordinator</option>
+              </select>
+            </div>
+          </th>
+          <th>Date Joined</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td>{{ user.get_full_name|default:user.username }}</td>
+          <td>{{ user.email }}</td>
+          <td>
+            {% if user.role_assignments.exists %}
+              {% for ra in user.role_assignments.all %}
+                <span class="role-badge">
+                  {{ ra.get_role_display }}
+                  {% if ra.department %}<span class="role-context">({{ ra.department.name }})</span>{% endif %}
+                  {% if ra.club %}<span class="role-context">({{ ra.club.name }})</span>{% endif %}
+                  {% if ra.center %}<span class="role-context">({{ ra.center.name }})</span>{% endif %}
+                </span>{% if not forloop.last %}<br>{% endif %}
+              {% endfor %}
+            {% else %}
+              <span class="role-badge role-none">No Role</span>
+            {% endif %}
+          </td>
+          <td>{{ user.date_joined|date:"Y-m-d H:i" }}</td>
+          <td>
+            <a href="{% url 'admin_user_edit' user.id %}" class="edit-btn">Edit</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="text-align:center;">No users found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  $(document).ready(function () {
+    const table = $('#myTable').DataTable({
+      dom: '<"dt-toolbar d-flex justify-content-between align-items-center flex-wrap mb-3"lBf>rtip',
+      responsive: true,
+      pagingType: 'simple',
+      lengthMenu: [
+        [5, 10, 25, 50, -1],
+        [5, 10, 25, 50, "All"]
+      ],
+      pageLength: 10,
+      columnDefs: [
+        { targets: 3, orderable: false }
+      ],
+      buttons: [
+        {
+          extend: 'colvis',
+          text: '<i class="fa fa-eye"></i> Columns'
+        },
+        {
+          extend: 'copyHtml5',
+          text: '<i class="fa fa-copy"></i> Copy',
+          exportOptions: { columns: ':visible' }
+        },
+        {
+          extend: 'excelHtml5',
+          text: '<i class="fa fa-file-excel"></i> Excel',
+          exportOptions: { columns: ':visible' }
+        },
+        {
+          extend: 'pdfHtml5',
+          text: '<i class="fa fa-file-pdf"></i> PDF',
+          exportOptions: { columns: ':visible' }
+        },
+        {
+          extend: 'print',
+          text: '<i class="fa fa-print"></i> Print',
+          exportOptions: { columns: ':visible' }
+        }
+      ],
+      order: [[0, 'asc']]
+    });
+
+    window.filterByRole = function (value) {
+      table.column(3).search(value || '', true, false).draw();
+      $('#roleFilterDropdown').addClass('hidden');
+    };
+
+    window.toggleRoleDropdown = function () {
+      $('#roleFilterDropdown').toggleClass('hidden');
+    };
+
+    $(document).click(function (e) {
+      if (!$(e.target).closest('.role-dropdown, .role-filter-icon').length) {
+        $('#roleFilterDropdown').addClass('hidden');
+      }
+    });
+  });
+</script>
 {% endblock %}
