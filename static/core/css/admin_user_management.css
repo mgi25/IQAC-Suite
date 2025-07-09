@@ -1,203 +1,195 @@
-:root {
-    --primary: #2176d9;
-    --primary-dark: #154d8b;
-    --header-gradient: linear-gradient(90deg, #2274cb 80%, #185db4 100%);
-    --light-bg: #f6faff;
-    --stripe-bg: #e8f1fb;
-    --white: #fff;
-    --badge-bg: #e3effd;
-    --badge-text: #20508c;
-    --badge-muted: #b9c9e6;
-}
-
-body {
-    background: #e8f3fc;
-}
+/* ───────────────────────────────────────────── */
+/* ✅ Clean, Flat Admin DataTable Styling        */
+/* ───────────────────────────────────────────── */
 
 .user-mgmt-container {
-    margin: 0 auto;
-    margin-top: 40px;
-    padding: 40px 32px 32px 32px;
-    background: var(--white);
-    border-radius: 28px;
-    box-shadow: 0 4px 36px 0 rgba(34,116,203,0.09);
-    max-width: 1250px;
+  padding: 20px 30px;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
 }
 
-.mgmt-title {
-    font-size: 2.4rem;
-    font-weight: 800;
-    color: var(--primary-dark);
-    margin-bottom: 20px;
-    letter-spacing: -1.5px;
+h1.mgmt-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #154d8b;
+  margin-bottom: 10px;
 }
 
-.user-filter-bar {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 22px;
-    background: #eef6fe;
-    padding: 13px 24px 11px 24px;
-    border-radius: 16px;
-    box-shadow: 0 2px 12px 0 rgba(56,137,209,0.04);
-}
-
-.filter-form {
-    display: flex;
-    gap: 1.2rem;
-    align-items: center;
-    width: 100%;
-    max-width: 750px;
-}
-
-.filter-group {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-}
-
-.filter-group label {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--primary-dark);
-    margin-right: 3px;
-}
-
-.filter-group select,
-.filter-group input[type="text"] {
-    padding: 10px 16px;
-    border: 1.7px solid var(--primary);
-    border-radius: 8px;
-    font-size: 1rem;
-    background: #f8fbff;
-    color: var(--primary-dark);
-    outline: none;
-    transition: border 0.18s;
-    min-width: 140px;
-}
-
-.filter-group input[type="text"] {
-    min-width: 200px;
-}
-
-.filter-group select:focus,
-.filter-group input[type="text"]:focus {
-    border-color: var(--primary-dark);
-    background: #eaf2ff;
-}
-
-.filter-btn {
-    padding: 11px 27px;
-    border: none;
-    background: var(--primary);
-    color: #fff;
-    border-radius: 11px;
-    font-weight: 700;
-    font-size: 1rem;
-    cursor: pointer;
-    box-shadow: 0 2px 10px 0 rgba(56,137,209,0.07);
-    letter-spacing: 0.5px;
-    transition: background 0.18s;
-}
-.filter-btn:hover {
-    background: var(--primary-dark);
-}
-
-.table-responsive {
-    width: 100%;
-    overflow-x: auto;
-    margin-top: 14px;
-}
-
-.admin-users-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    font-size: 1.09rem;
-    background: var(--white);
-    border-radius: 22px;
-    overflow: hidden;
-    box-shadow: 0 2px 18px 0 rgba(56,137,209,0.07);
+/* DataTable */
+.admin-users-table.dataTable {
+  width: 100% !important;
+  border-collapse: collapse;
+  border: 1px solid #dbeaff;
+  font-size: 0.95rem;
+  background: #fff;
 }
 
 .admin-users-table thead th {
-    background: var(--header-gradient);
-    color: #fff;
-    font-weight: 700;
-    padding: 18px 16px;
-    border: none;
-    font-size: 1.18rem;
-    letter-spacing: 0.03em;
-    text-align: left;
-    text-transform: uppercase;
-    border-bottom: 0;
+  background: linear-gradient(to right, #2274cb, #185db4);
+  color: white;
+  padding: 12px 14px;
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.admin-users-table thead th.sorting_disabled {
+  cursor: default !important;
 }
 
-.admin-users-table tbody td {
-    padding: 15px 18px;
-    border: none;
-    background: var(--light-bg);
-    color: var(--primary-dark);
-    vertical-align: middle;
+.admin-users-table tbody tr:hover {
+  background: #f3f9ff;
+}
+.admin-users-table td {
+  padding: 12px 14px;
+  vertical-align: middle;
+  color: #183a56;
+}
+.admin-users-table tbody tr:nth-child(even) {
+  background: #f7fbff;
 }
 
-.admin-users-table tbody tr:nth-child(even) td {
-    background: var(--stripe-bg);
-}
-
+/* Action Button */
 .edit-btn {
-    padding: 8px 27px;
-    background: var(--primary);
-    color: #fff;
-    border-radius: 13px;
-    font-weight: 700;
-    font-size: 1rem;
-    border: none;
-    transition: background 0.18s;
-    text-decoration: none;
-    display: inline-block;
-    letter-spacing: 1px;
-    box-shadow: 0 3px 18px 0 rgba(56,137,209,0.07);
+  background: #2274cb;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 500;
 }
 .edit-btn:hover {
-    background: var(--primary-dark);
-    color: #fff;
+  background: #154d8b;
 }
 
-.role-badge {
-    padding: 6px 18px;
-    border-radius: 20px;
-    font-weight: 700;
-    font-size: 0.99rem;
-    display: inline-block;
-    margin-bottom: 5px;
-    margin-right: 3px;
-    background: var(--badge-bg);
-    color: var(--primary);
-    letter-spacing: 0.02em;
-    box-shadow: 0 1px 6px rgba(34,116,203,0.05);
-}
-.role-context {
-    font-size: 0.93em;
-    color: var(--badge-muted);
-    margin-left: 2px;
-    font-weight: 500;
-}
-.role-none {
-    background: #e8eefa !important;
-    color: #b1b7c5 !important;
-    font-weight: 500;
+/* ───────────────────────────────────────────── */
+/* ✅ Toolbar - All aligned LEFT in single row   */
+/* ───────────────────────────────────────────── */
+
+.dataTables_wrapper .dt-toolbar {
+  display: flex;
+  justify-content: flex-start;  /* All elements aligned left */
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 1rem 0;
 }
 
-@media (max-width: 900px) {
-    .user-mgmt-container { padding: 10px; }
-    .admin-users-table thead th, .admin-users-table tbody td { padding: 11px 7px; }
-    .mgmt-title { font-size: 1.5rem; }
+/* Entries Dropdown */
+.dataTables_length {
+  order: 0;
 }
-@media (max-width: 650px) {
-    .user-mgmt-container { padding: 0; border-radius: 0; }
-    .mgmt-title { font-size: 1.13rem; }
-    .filter-form { flex-direction: column; align-items: flex-start; gap: 0.8rem; }
-    .filter-group select, .filter-group input[type="text"] { min-width: 100px; }
-    .admin-users-table thead th, .admin-users-table tbody td { font-size: 0.96rem; }
+.dataTables_length label {
+  font-weight: 500;
+  color: #154d8b;
+}
+.dataTables_length select {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background: #ffffff;
+  font-size: 0.9rem;
+  color: #154d8b;
+}
+
+/* Buttons group */
+.dt-buttons {
+  display: flex;
+  gap: 8px;
+}
+.dt-button {
+  background: #2274cb;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+.dt-button:hover {
+  background: #154d8b;
+}
+
+/* Search bar */
+.dataTables_filter {
+  order: 2;
+}
+.dataTables_filter label {
+  font-weight: 500;
+  color: #154d8b;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.dataTables_filter input {
+  padding: 8px 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  height: 40px;
+  width: 220px;
+  box-sizing: border-box;
+}
+
+/* ───────────────────────────────────────────── */
+/* ✅ Pagination                                 */
+/* ───────────────────────────────────────────── */
+
+.dataTables_paginate {
+  text-align: center;
+  margin-top: 1rem;
+}
+.dataTables_paginate a {
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: #ddefff;
+  color: #154d8b;
+  margin: 0 4px;
+  text-decoration: none;
+}
+.dataTables_paginate a.current {
+  background: #154d8b;
+  color: white;
+}
+.dataTables_paginate a:hover {
+  background: #2274cb;
+  color: white;
+}
+
+/* ───────────────────────────────────────────── */
+/* ✅ Roles Filter Dropdown                      */
+/* ───────────────────────────────────────────── */
+
+.role-filter-icon {
+  margin-left: 6px;
+  cursor: pointer;
+  color: white;
+  font-size: 13px;
+}
+
+.role-dropdown {
+  position: absolute;
+  top: 110%;
+  left: 0;
+  z-index: 999;
+  background: #ffffff;
+  border: 1px solid #c6dcff;
+  border-radius: 8px;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+  padding: 8px;
+  min-width: 200px;
+}
+
+.role-dropdown select {
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #2274cb;
+  background: #eef6ff;
+  color: #154d8b;
+  font-size: 0.9rem;
+}
+
+.hidden {
+  display: none;
 }
