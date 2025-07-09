@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404
 from .models import Student, Participation, AttributeStrengthMap, Role, CharacterStrength, AcademicYear, School, Course
 from collections import defaultdict
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, Http404
 from django.template.loader import get_template, render_to_string
 from django.urls import reverse
 import qrcode
@@ -11,6 +11,7 @@ import base64
 import json
 import zipfile
 from datetime import date
+from urllib.parse import unquote
 
 # ─────────────────────────────────────────────
 # HOME
@@ -19,7 +20,6 @@ def home(request):
     years = AcademicYear.objects.all()
     students = Student.objects.select_related('academic_year', 'course__school').all().order_by('name')
 
-    # Create nested dict: year → school → course → students
     student_data = {}
     for student in students:
         year = str(student.academic_year.year)
@@ -157,7 +157,7 @@ def transcript_pdf(request, roll_no):
 
     pdf_file = weasyprint.HTML(string=html).write_pdf()
     response = HttpResponse(pdf_file, content_type='application/pdf')
-    response['Content-Disposition'] = f'filename="transcript_{student.roll_no}.pdf"'
+    response['Content-Disposition'] = f'attachment; filename="transcript_{student.roll_no}.pdf"'
     return response
 
 # ─────────────────────────────────────────────
@@ -173,83 +173,88 @@ def all_events_view(request, roll_no):
     })
 
 # ─────────────────────────────────────────────
-# BULK DOWNLOAD: Combined PDF of All Course Students
+# BULK DOWNLOAD HANDLER (PDF or ZIP via ?type=pdf|zip)
 # ─────────────────────────────────────────────
-def download_course_pdf_combined(request, roll_no):
-    current_student = get_object_or_404(Student, roll_no=roll_no)
-    course_students = Student.objects.filter(course=current_student.course, academic_year=current_student.academic_year).order_by('name')
+def bulk_download_handler(request):
+    year = request.GET.get('year')
+    school = unquote(request.GET.get('school', ''))
+    course = unquote(request.GET.get('course', ''))
+    download_type = request.GET.get('type', 'pdf')
 
-    combined_html = ""
-    for student in course_students:
-        strength_data, participations = calculate_strength_data(student)
-        sorted_events = sorted(participations, key=lambda p: len(p.event.attributes.all()), reverse=True)
-        top_events = [p.event.name for p in sorted_events[:5]]
+    students = Student.objects.filter(
+        academic_year__year=year,
+        course__name=course,
+        course__school__name=school
+    ).order_by('name')
 
-        qr_b64 = None
-        if participations.count() > 5:
-            all_events_url = request.build_absolute_uri(
-                reverse('transcript:all_events', kwargs={'roll_no': student.roll_no})
-            )
-            qr = qrcode.make(all_events_url)
-            buf = io.BytesIO()
-            qr.save(buf, format='PNG')
-            qr_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+    if not students.exists():
+        raise Http404("No students found")
 
-        html = render_to_string('transcript_app/pdf.html', {
-            'student': student,
-            'strength_data': strength_data,
-            'today': date.today(),
-            'top_events': top_events,
-            'qr_code': qr_b64
-        })
+    if download_type == 'zip':
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, 'w') as zip_file:
+            for student in students:
+                strength_data, participations = calculate_strength_data(student)
+                sorted_events = sorted(participations, key=lambda p: len(p.event.attributes.all()), reverse=True)
+                top_events = [p.event.name for p in sorted_events[:5]]
 
-        combined_html += f'<div style="page-break-after: always;">{html}</div>'
+                qr_b64 = None
+                if participations.count() > 5:
+                    all_events_url = request.build_absolute_uri(
+                        reverse('transcript:all_events', kwargs={'roll_no': student.roll_no})
+                    )
+                    qr = qrcode.make(all_events_url)
+                    buf = io.BytesIO()
+                    qr.save(buf, format='PNG')
+                    qr_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
 
-    pdf_file = weasyprint.HTML(string=combined_html).write_pdf()
-    response = HttpResponse(pdf_file, content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="Course_Transcripts.pdf"'
-    return response
+                html = render_to_string('transcript_app/pdf.html', {
+                    'student': student,
+                    'strength_data': strength_data,
+                    'today': date.today(),
+                    'top_events': top_events,
+                    'qr_code': qr_b64
+                })
 
-# ─────────────────────────────────────────────
-# BULK DOWNLOAD: ZIP of Individual PDFs
-# ─────────────────────────────────────────────
-def download_course_individual_pdfs(request, roll_no):
-    current_student = get_object_or_404(Student, roll_no=roll_no)
-    course_students = Student.objects.filter(course=current_student.course, academic_year=current_student.academic_year)
+                pdf_buffer = io.BytesIO()
+                weasyprint.HTML(string=html).write_pdf(target=pdf_buffer)
+                zip_file.writestr(f"{student.roll_no}_{student.name}.pdf", pdf_buffer.getvalue())
 
-    buffer = io.BytesIO()
-    zip_file = zipfile.ZipFile(buffer, 'w')
+        buffer.seek(0)
+        response = HttpResponse(buffer.read(), content_type='application/zip')
+        response['Content-Disposition'] = 'attachment; filename="All_Student_PDFs.zip"'
 
-    for student in course_students:
-        strength_data, participations = calculate_strength_data(student)
-        sorted_events = sorted(participations, key=lambda p: len(p.event.attributes.all()), reverse=True)
-        top_events = [p.event.name for p in sorted_events[:5]]
+        return response
 
-        qr_b64 = None
-        if participations.count() > 5:
-            all_events_url = request.build_absolute_uri(
-                reverse('transcript:all_events', kwargs={'roll_no': student.roll_no})
-            )
-            qr = qrcode.make(all_events_url)
-            buf = io.BytesIO()
-            qr.save(buf, format='PNG')
-            qr_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+    else:
+        combined_html = ""
+        for student in students:
+            strength_data, participations = calculate_strength_data(student)
+            sorted_events = sorted(participations, key=lambda p: len(p.event.attributes.all()), reverse=True)
+            top_events = [p.event.name for p in sorted_events[:5]]
 
-        html = render_to_string('transcript_app/pdf.html', {
-            'student': student,
-            'strength_data': strength_data,
-            'today': date.today(),
-            'top_events': top_events,
-            'qr_code': qr_b64
-        })
+            qr_b64 = None
+            if participations.count() > 5:
+                all_events_url = request.build_absolute_uri(
+                    reverse('transcript:all_events', kwargs={'roll_no': student.roll_no})
+                )
+                qr = qrcode.make(all_events_url)
+                buf = io.BytesIO()
+                qr.save(buf, format='PNG')
+                qr_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
 
-        pdf_buffer = io.BytesIO()
-        weasyprint.HTML(string=html).write_pdf(target=pdf_buffer)
-        zip_file.writestr(f"{student.roll_no}_{student.name}.pdf", pdf_buffer.getvalue())
+            html = render_to_string('transcript_app/pdf.html', {
+                'student': student,
+                'strength_data': strength_data,
+                'today': date.today(),
+                'top_events': top_events,
+                'qr_code': qr_b64
+            })
 
-    zip_file.close()
-    buffer.seek(0)
+            combined_html += f'<div style="page-break-after: always;">{html}</div>'
 
-    response = HttpResponse(buffer.read(), content_type='application/zip')
-    response['Content-Disposition'] = 'attachment; filename="All_Student_PDFs.zip"'
-    return response
+        pdf_file = weasyprint.HTML(string=combined_html).write_pdf()
+        response = HttpResponse(pdf_file, content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="Course_Transcripts.pdf"'
+
+        return response

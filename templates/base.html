@@ -11,6 +11,14 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <link href="https://fonts.googleapis.com/css?family=Inter:400,600,700&display=swap" rel="stylesheet">
 
+  <!-- ✅ DataTables Core CSS -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/2.3.2/css/dataTables.dataTables.min.css">
+
+  <!-- ✅ DataTables Extensions CSS -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/3.0.1/css/buttons.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/searchbuilder/1.6.0/css/searchBuilder.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/responsive/3.0.0/css/responsive.dataTables.min.css">
+
   {% block head_extra %}{% endblock %}
 </head>
 <body>
@@ -23,7 +31,6 @@
     </a>
 
     <div class="navbar-user">
-      <!-- bell -->
       <button id="notifBtn" class="notif-btn" aria-label="Notifications">
         <i class="fa-solid fa-bell"></i>
         {% if notifications %}<span class="notif-badge"></span>{% endif %}
@@ -58,9 +65,28 @@
   <!-- PAGE CONTENT -->
   <main>{% block content %}{% endblock %}</main>
 
-  <!-- scripts -->
+  <!-- Scripts -->
   <script src="{% static 'core/js/header.js' %}"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+  <!-- ✅ DataTables Core -->
+  <script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
+
+  <!-- ✅ DataTables Extensions JS -->
+  <script src="https://cdn.datatables.net/buttons/3.0.1/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/3.0.1/js/buttons.html5.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/3.0.1/js/buttons.print.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/3.0.1/js/buttons.colVis.min.js"></script>
+  <script src="https://cdn.datatables.net/searchbuilder/1.6.0/js/dataTables.searchBuilder.min.js"></script>
+  <script src="https://cdn.datatables.net/responsive/3.0.0/js/dataTables.responsive.min.js"></script>
+
+  <!-- ✅ Export Dependencies -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
   {% block scripts %}{% endblock %}
+
   <script>window.CSRF_TOKEN = '{{ csrf_token }}';</script>
 </body>
 </html>

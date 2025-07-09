@@ -344,6 +344,10 @@ def proposal_status(request, proposal_id):
 @login_required
 def iqac_suite_dashboard(request):
     user = request.user
+
+    # Fetch user's submitted proposals
+    user_proposals = EventProposal.objects.filter(submitted_by=user).order_by('-created_at')
+
     # DEBUG >>> ------------------------------------------
     ras = list(user.role_assignments.all())
     print("DEBUG – role_assignments for", user.username, ":", ras)
@@ -356,13 +360,15 @@ def iqac_suite_dashboard(request):
         "academic_coordinator", "club_head", "center_head",
     }
     show_approvals_card = bool(roles & approval_roles)
+
     return render(
         request,
-        "emt/iqac_suite_dashboard.html",
-        {"show_approvals_card": show_approvals_card},
+        'emt/iqac_suite_dashboard.html',
+        {
+            'user_proposals': user_proposals,
+            'show_approvals_card': show_approvals_card
+        }
     )
-
-
 # ──────────────────────────────
 # PENDING REPORTS, GENERATION, SUCCESS
 # ──────────────────────────────
