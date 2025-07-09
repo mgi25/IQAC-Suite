@@ -4,6 +4,8 @@
 {% block title %}My Approvals{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'emt/css/approvals.css' %}">
+
 <div class="container">
   <h1>Pending Approvals</h1>
   {% if pending_steps %}

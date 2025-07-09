@@ -1,0 +1,131 @@
+.container {
+  max-width: 900px;
+  margin: 40px auto 0 auto;
+  padding: 32px 24px 24px 24px;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 6px 30px rgba(0,0,0,0.11);
+}
+
+h1 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin-bottom: 24px;
+  color: #234;
+  letter-spacing: 1px;
+  text-align: left;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fafbfc;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.03);
+}
+
+.table thead {
+  background: #eef3fa;
+}
+
+.table th, .table td {
+  padding: 14px 12px;
+  text-align: left;
+  border-bottom: 1px solid #e3e9f3;
+}
+
+.table th {
+  font-size: 1.07rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #26345d;
+}
+
+.table tbody tr:hover {
+  background: #f0f5fa;
+  transition: background 0.2s;
+}
+
+.table td {
+  color: #34405a;
+  font-size: 1rem;
+  vertical-align: middle;
+}
+
+.btn.btn-primary {
+  display: inline-block;
+  padding: 7px 22px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(90deg, #3775f8 0%, #2b53be 100%);
+  border: none;
+  border-radius: 6px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(55,117,248,0.09);
+}
+
+.btn.btn-primary:hover {
+  background: linear-gradient(90deg, #2959bc 0%, #3762f8 100%);
+  color: #fff;
+}
+
+p {
+  font-size: 1.09rem;
+  color: #687385;
+  padding: 32px 0 12px 0;
+  text-align: center;
+}
+
+@media (max-width: 700px) {
+  .container {
+    padding: 16px 5px;
+  }
+  .table th, .table td {
+    padding: 10px 6px;
+    font-size: 0.98rem;
+  }
+  h1 {
+    font-size: 1.4rem;
+    text-align: center;
+  }
+}
+
+@media (max-width: 500px) {
+  .container {
+    padding: 7px 1px;
+  }
+  .table, .table thead, .table tbody, .table th, .table td, .table tr {
+    display: block;
+    width: 100%;
+  }
+  .table thead {
+    display: none;
+  }
+  .table tr {
+    margin-bottom: 10px;
+    border-radius: 12px;
+    box-shadow: 0 2px 9px rgba(80,110,200,0.08);
+  }
+  .table td {
+    text-align: right;
+    padding-left: 45%;
+    position: relative;
+    font-size: 0.97rem;
+  }
+  .table td:before {
+    content: attr(data-label);
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    color: #44507a;
+    font-weight: 600;
+    font-size: 0.98rem;
+    text-align: left;
+    width: 45%;
+    white-space: nowrap;
+  }
+}
