@@ -235,7 +235,7 @@
     flex-direction: column;
     gap: 0.8rem;
     transition: box-shadow 0.2s, transform 0.2s;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
     position: relative;
     min-height: 120px;
   }
@@ -286,7 +286,8 @@
     margin-top: auto;
   }
 
-  .btn-view, .btn-download {
+  .btn-view,
+  .btn-download {
     flex: 1;
     text-align: center;
     padding: 0.7rem 1.2rem;
@@ -344,8 +345,13 @@
   }
 
   @keyframes skeleton-loading {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+      background-position: 200% 0;
+    }
+
+    100% {
+      background-position: -200% 0;
+    }
   }
 
   @media (max-width: 1200px) {
@@ -373,9 +379,11 @@
 {% block content %}
 <div class="dashboard-container">
   <div class="transcript-form-card">
-    <div class="transcript-form-header"><i class="fa-solid fa-file-lines"></i> Student Character Strength Transcript</div>
+    <div class="transcript-form-header"><i class="fa-solid fa-file-lines"></i> Student Character Strength Transcript
+    </div>
     <div class="transcript-form-title"><i class="fa-solid fa-graduation-cap"></i> Select Academic Info</div>
     <div class="transcript-form-subtitle">View and manage student character strength transcripts</div>
+
     <form id="transcriptForm">
       <div class="form-inline">
         <select id="academicYearSelect" required>
@@ -413,22 +421,25 @@
 
       <div class="search-bar-wrapper">
         <i class="fa-solid fa-magnifying-glass"></i>
-        <input type="text" id="studentSearchInput" placeholder="Search students by name or roll no..." oninput="filterStudentList()">
+        <input type="text" id="studentSearchInput" placeholder="Search students by name or roll no..."
+          oninput="filterStudentList()">
       </div>
 
       <div class="student-list" id="studentList"></div>
-      <div class="empty-state" id="emptyState" style="display:none;"><i class="fa-solid fa-user-slash"></i> No students found for this filter.</div>
+      <div class="empty-state" id="emptyState" style="display:none;"><i class="fa-solid fa-user-slash"></i> No students
+        found for this filter.</div>
     </div>
   </div>
 </div>
 
 <!-- Spinner Overlay -->
-<div id="downloadSpinner" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 9999; justify-content: center; align-items: center;">
+<div id="downloadSpinner"
+  style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 9999; justify-content: center; align-items: center;">
   <div class="loader"></div>
 </div>
 
 <!-- Hidden iframe for background download -->
-<iframe id="downloadIframe" style="display: none;" onload="hideSpinner()"></iframe>
+<iframe id="downloadIframe" style="display: none;"></iframe>
 {% endblock %}
 
 {% block scripts %}
@@ -445,10 +456,13 @@
   const downloadAllZIPBtn = document.getElementById('downloadAllZIPBtn');
   const emptyState = document.getElementById('emptyState');
   const studentSearchInput = document.getElementById('studentSearchInput');
+  const iframe = document.getElementById('downloadIframe');
 
   const studentRawData = JSON.parse(`{{ student_data|escapejs }}`);
   const studentData = studentRawData;
+  let originalStudentList = [];
   let currentStudents = [];
+
 
   const resetDropdown = (dropdown, placeholder) => {
     dropdown.innerHTML = `<option value="">${placeholder}</option>`;
@@ -466,7 +480,7 @@
     });
   };
 
-  const createStudentItem = (student, index) => {
+  const createStudentItem = (student) => {
     const item = document.createElement('div');
     item.className = 'student-item';
     item.innerHTML = `
@@ -487,8 +501,8 @@
       emptyState.style.display = '';
     } else {
       emptyState.style.display = 'none';
-      students.forEach((student, index) => {
-        const studentItem = createStudentItem(student, index);
+      students.forEach(student => {
+        const studentItem = createStudentItem(student);
         studentList.appendChild(studentItem);
       });
     }
@@ -497,13 +511,25 @@
   };
 
   function filterStudentList() {
-    const input = studentSearchInput.value.toLowerCase();
-    const filtered = currentStudents.filter(student =>
+    const input = studentSearchInput.value.toLowerCase().trim();
+
+    if (input === "") {
+      // Restore full list
+      displayStudents(originalStudentList);
+      currentStudents = originalStudentList;
+      return;
+    }
+
+    const filtered = originalStudentList.filter(student =>
       student.name.toLowerCase().includes(input) ||
       student.roll_no.toLowerCase().includes(input)
     );
+
     displayStudents(filtered);
+    currentStudents = filtered;
   }
+
+
 
   function downloadAll(type = 'pdf') {
     const year = academicYearSelect.value;
@@ -516,17 +542,13 @@
     }
 
     const downloadUrl = `/transcript/pdf/all/?year=${encodeURIComponent(year)}&school=${encodeURIComponent(school)}&course=${encodeURIComponent(course)}&type=${type}`;
-
-    // Show spinner
     document.getElementById('downloadSpinner').style.display = 'flex';
-
-    // Set download target in iframe
-    const iframe = document.getElementById('downloadIframe');
     iframe.src = downloadUrl;
-  }
 
-  function hideSpinner() {
-    document.getElementById('downloadSpinner').style.display = 'none';
+    // Fallback timeout in case download fails and iframe doesn't trigger load
+    setTimeout(() => {
+      document.getElementById('downloadSpinner').style.display = 'none';
+    }, 15000);
   }
 
   academicYearSelect.addEventListener('change', function () {
@@ -573,13 +595,19 @@
     showStudentsBtn.innerHTML = '<span class="skeleton" style="width:80px;height:20px;"></span>';
     showStudentsBtn.disabled = true;
 
+    const students = studentData[year][school][course];
+
+    // Store original full list
+    originalStudentList = students;
+    currentStudents = students;
+
     setTimeout(() => {
-      const students = studentData[year][school][course];
       displayStudents(students);
       showStudentsBtn.innerHTML = '<i class="fa-solid fa-users"></i> Show Students';
       showStudentsBtn.disabled = false;
     }, 500);
   });
+
 
   downloadAllPDFBtn.addEventListener("click", function (e) {
     e.preventDefault();
