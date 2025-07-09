@@ -8,31 +8,36 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
   .transcript-main-bg {
-    min-height: calc(100vh - 80px);
+    min-height: 100vh;
     background: linear-gradient(120deg, #f6fafd 0%, #e6f5fd 100%);
     display: flex;
     justify-content: center;
-    align-items: flex-start;
-    padding: 100px 20px 40px;
+    align-items: center;
+    padding: 48px 0 48px 0;
     position: relative;
   }
 
   .transcript-container {
     display: flex;
-    gap: 2rem;
+    gap: 2.5rem;
     max-width: 1400px;
     width: 100%;
     align-items: flex-start;
+    justify-content: center;
     position: relative;
     z-index: 1;
+    padding: 32px;
+    background: #f3f7fa;
+    border-radius: 32px;
+    box-shadow: 0 8px 32px rgba(34, 116, 203, 0.08);
   }
 
   .sidebar {
-    width: 280px;
-    background: #fff;
+    width: 320px;
+    background: #f9fbfd;
     border-radius: 20px;
-    padding: 2rem 1.5rem;
-    box-shadow: 0 6px 36px rgba(34, 116, 203, 0.09);
+    padding: 2.5rem 2rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     border: 1px solid #e3eaf3;
     position: sticky;
     top: 120px;
@@ -41,121 +46,144 @@
     transition: all 0.3s ease;
   }
 
-  .sidebar::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  .sidebar::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: 10px;
-  }
-
-  .sidebar::-webkit-scrollbar-thumb {
-    background: #2274CB;
-    border-radius: 10px;
-  }
-
   .sidebar-title {
-    font-size: 1.3rem;
-    font-weight: 700;
+    font-size: 1.5rem;
+    font-weight: 800;
     color: #2274CB;
     margin-bottom: 1.5rem;
     text-align: center;
     padding-bottom: 1rem;
     border-bottom: 2px solid #2274CB;
     position: relative;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
   }
 
-  .sidebar-title::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 50px;
-    height: 2px;
+  .sidebar-title i {
+    font-size: 1.2rem;
+    color: #2274CB;
+    margin-right: 0.5rem;
+  }
+
+  .course-student-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 1.2rem;
+    background: #fff;
+    border: 1px solid #e3eaf3;
+    border-radius: 18px;
+    margin-bottom: 1.2rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+    transition: box-shadow 0.2s, transform 0.2s;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .course-student-card:hover {
+    box-shadow: 0 8px 24px rgba(34, 116, 203, 0.13);
+    transform: translateY(-2px) scale(1.01);
+    border-color: #b6d4f7;
+  }
+
+  .course-student-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .course-student-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
     background: #2274CB;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.3rem;
+    margin-right: 1rem;
+    box-shadow: 0 2px 8px rgba(34, 116, 203, 0.18);
+  }
+
+  .course-student-name {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #1a2a3a;
+    margin-bottom: 0.1rem;
+  }
+
+  .course-student-roll {
+    font-size: 0.95rem;
+    color: #8ca0b3;
+    font-weight: 500;
+  }
+
+  .view-btn {
+    background: #3b82f6;
+    color: white;
+    padding: 0.7rem 0.9rem;
+    border-radius: 50%;
+    font-size: 1.15rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.13);
+    border: none;
+    outline: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    width: 44px;
+    height: 44px;
+    margin-left: auto;
+  }
+
+  .view-btn i {
+    margin: 0;
+    font-size: 1.15rem;
+  }
+
+  .course-student-card .view-btn {
+    margin-left: auto;
   }
 
   .transcript-card {
     background: #fff;
     border-radius: 25px;
-    box-shadow: 0 6px 36px rgba(34, 116, 203, 0.09);
+    box-shadow: 0 8px 32px rgba(34, 116, 203, 0.10);
     padding: 3rem 3.5rem;
     flex: 1;
     max-width: 950px;
-    animation: slideUp 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 320px;
+    min-height: 600px;
     border: 1px solid #e3eaf3;
     position: relative;
     overflow: hidden;
-  }
-
-  .transcript-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: #2274CB;
-  }
-
-  @keyframes slideUp {
-    from {
-      opacity: 0;
-      transform: translateY(50px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
   }
 
   .transcript-title {
     font-size: 2.5rem;
-    font-weight: 800;
-    color: #2274CB;
+    font-weight: 900;
+    color: #185a9d;
     text-align: center;
     margin-bottom: 2.5rem;
     letter-spacing: 1px;
     position: relative;
-  }
-
-  .search-input-wrapper {
     display: flex;
-    justify-content: center;
-    margin-bottom: 2rem;
-    flex-direction: column;
     align-items: center;
-  }
-
-  .search-select {
-    min-width: 350px;
-    padding: 1rem 1.5rem;
-    border-radius: 50px;
-    border: 2px solid #d1d5db;
-    background: #fff;
-    font-size: 1rem;
-    font-family: inherit;
-    transition: all 0.3s ease;
-  }
-
-  .search-select:focus {
-    outline: none;
-    border-color: #2274CB;
-    box-shadow: 0 0 0 3px rgba(34, 116, 203, 0.1);
-    transform: translateY(-2px);
-  }
-
-  .search-error {
-    color: #e74c3c;
-    font-size: 0.9rem;
-    margin-top: 0.5rem;
-    display: none;
-    background: rgba(231, 76, 60, 0.1);
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    backdrop-filter: blur(10px);
+    justify-content: center;
+    gap: 0.7rem;
   }
 
   .info-block {
@@ -196,17 +224,6 @@
     position: relative;
   }
 
-  .transcript-section-title::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 80px;
-    height: 2px;
-    background: #2274CB;
-  }
-
   .transcript-table {
     width: 100%;
     border-radius: 15px;
@@ -242,6 +259,69 @@
     text-align: left;
     font-weight: 600;
     color: #374151;
+  }
+
+  .download-btn-pop {
+    background: #2274CB;
+    color: #fff;
+    border: none;
+    border-radius: 50px;
+    padding: 1.2rem 2.5rem;
+    font-weight: 700;
+    font-size: 1.1rem;
+    box-shadow: 0 8px 32px rgba(34, 116, 203, 0.18);
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.8rem;
+    text-decoration: none;
+    margin-top: 1.5rem;
+    justify-content: center;
+  }
+
+  .download-btn-pop:hover {
+    background: #185a9d;
+    transform: translateY(-3px) scale(1.04);
+    box-shadow: 0 12px 40px rgba(34, 116, 203, 0.22);
+  }
+
+  .search-input-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .search-select {
+    min-width: 350px;
+    padding: 1rem 1.5rem;
+    border-radius: 50px;
+    border: 2px solid #d1d5db;
+    background: #fff;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: all 0.3s ease;
+  }
+
+  .search-select:focus {
+    outline: none;
+    border-color: #2274CB;
+    box-shadow: 0 0 0 3px rgba(34, 116, 203, 0.1);
+    transform: translateY(-2px);
+  }
+
+  .search-error {
+    color: #e74c3c;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    display: none;
+    background: rgba(231, 76, 60, 0.1);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
   }
 
   .responsibilities {
@@ -361,111 +441,13 @@
     border: 1px solid #e3eaf3;
   }
 
-  .download-btn-pop {
-    background: #2274CB;
-    color: #fff;
-    border: none;
-    border-radius: 50px;
-    padding: 1.2rem 2.5rem;
-    font-weight: 700;
-    font-size: 1.1rem;
-    box-shadow: 0 8px 32px rgba(34, 116, 203, 0.18);
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.8rem;
-    text-decoration: none;
-    margin-top: 1.5rem;
-  }
-
-  .download-btn-pop:hover {
-    background: #185a9d;
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 12px 40px rgba(34, 116, 203, 0.22);
-  }
-
-  .course-student-card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1.2rem;
-    background: #f8fafc;
-    border: 1px solid #e5e7eb;
-    border-radius: 15px;
-    margin-bottom: 1rem;
-    transition: all 0.3s ease;
-  }
-
-  .course-student-card:hover {
-    background: #f1f5f9;
-    transform: translateX(5px);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
-  }
-
-  .course-student-info {
-    display: flex;
-    align-items: center;
-  }
-
-  .course-student-avatar {
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    background: #2274CB;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 1.1rem;
-    margin-right: 1rem;
-    box-shadow: 0 4px 12px rgba(34, 116, 203, 0.3);
-  }
-
-  .course-student-name {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #374151;
-    margin-bottom: 0.2rem;
-  }
-
-  .course-student-roll {
-    font-size: 0.9rem;
-    color: #6b7280;
-  }
-
-  .view-btn {
-    background: #3b82f6;
-    color: white;
-    padding: 0.6rem 1.2rem;
-    border-radius: 25px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    text-decoration: none;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
-  }
-
-  .view-btn:hover {
-    background: #2563eb;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
-  }px rgba(102, 126, 234, 0.2);
-  }
-
-  .view-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
-  }
-
-  /* Responsive Design */
   @media (max-width: 1200px) {
     .transcript-container {
       flex-direction: column;
       align-items: center;
+      justify-content: flex-start;
+      padding: 16px;
     }
-
     .sidebar {
       width: 100%;
       max-width: 950px;
@@ -473,51 +455,39 @@
       margin-bottom: 2rem;
       max-height: none;
     }
-
     .transcript-card {
       max-width: 100%;
+      min-height: 400px;
     }
   }
 
   @media (max-width: 768px) {
     .transcript-main-bg {
-      padding: 80px 10px 40px;
+      padding: 16px 0 16px 0;
+      align-items: flex-start;
     }
-
+    .transcript-container {
+      padding: 8px;
+    }
+    .sidebar {
+      padding: 1.5rem 1rem;
+    }
     .transcript-card {
       padding: 2rem 1.5rem;
-    }
-
-    .transcript-title {
-      font-size: 2rem;
-    }
-
-    .search-select {
-      min-width: 280px;
-    }
-
-    .info-block {
-      grid-template-columns: 1fr;
-      gap: 1rem;
-    }
-
-    .download-btn-pop {
-      width: 100%;
-      justify-content: center;
+      min-height: 300px;
     }
   }
 
   @media (max-width: 480px) {
+    .transcript-container {
+      padding: 2px;
+    }
+    .sidebar {
+      padding: 1rem 0.5rem;
+    }
     .transcript-card {
       padding: 1.5rem 1rem;
-    }
-
-    .transcript-title {
-      font-size: 1.8rem;
-    }
-
-    .search-select {
-      min-width: 100%;
+      min-height: 200px;
     }
   }
 </style>
@@ -526,11 +496,9 @@
 {% block content %}
 <div class="transcript-main-bg">
   <div class="transcript-container">
-    
-    <!-- 👥 Sidebar: Other Students in Course -->
     {% if student_list %}
     <div class="sidebar">
-      <div class="sidebar-title">Other Students</div>
+      <div class="sidebar-title"><i class="fa-solid fa-users"></i> Other Students</div>
       {% for s in student_list %}
       <div class="course-student-card">
         <div class="course-student-info">
@@ -540,29 +508,13 @@
             <div class="course-student-roll">{{ s.roll_no }}</div>
           </div>
         </div>
-        <a href="{% url 'transcript:transcript' s.roll_no %}" class="view-btn">View</a>
+        <a href="{% url 'transcript:transcript' s.roll_no %}" class="view-btn"><i class="fa-solid fa-eye"></i></a>
       </div>
       {% endfor %}
     </div>
     {% endif %}
-
-    <!-- 📄 Main Transcript Card -->
     <div class="transcript-card">
-
-      <!-- 🔍 Search Input -->
-      <div class="search-input-wrapper">
-        <input list="studentOptions" id="studentInput" class="search-select" placeholder="Search by Roll No or Name"
-          onchange="goToStudent()" autocomplete="off">
-        <datalist id="studentOptions">
-          {% for s in student_list %}
-          <option value="{{ s.roll_no }} - {{ s.name }}">
-          {% endfor %}
-        </datalist>
-        <div id="searchError" class="search-error">🚫 Invalid Roll No or Name</div>
-      </div>
-
-      <!-- 🎓 Transcript Header -->
-      <div class="transcript-title">Student Character Strength Transcript</div>
+      <div class="transcript-title"><i class="fa-solid fa-file-lines"></i> Student Character Strength Transcript</div>
       <div class="info-block">
         <div>
           <div class="info-label">Student Name</div>
@@ -573,8 +525,6 @@
           <div class="info-value">{{ student.roll_no }} {{ student.programme }}</div>
         </div>
       </div>
-
-      <!-- 📊 Character Strength Table -->
       <div class="transcript-section-title">Character Strength Assessment</div>
       <table class="transcript-table">
         <thead>
@@ -596,8 +546,6 @@
           {% endfor %}
         </tbody>
       </table>
-
-      <!-- 📋 Responsibilities -->
       <div class="transcript-section-title">Key Responsibilities</div>
       <div class="responsibilities">
         <ul>
@@ -606,8 +554,6 @@
           {% endfor %}
         </ul>
       </div>
-
-      <!-- QR Code Section -->
       {% if qr_code %}
       <div class="qr-container">
         <div class="qr-card">
@@ -617,8 +563,6 @@
         </div>
       </div>
       {% endif %}
-
-      <!-- 📌 Footer -->
       <div class="transcript-footer">
         <div class="barcode">{{ student.name }}</div>
         <div class="authority-title">DEAN & DIRECTOR</div>
@@ -628,8 +572,6 @@
           fostering Holistic Development.<br>
           <span style="display:block;margin-top:1rem;font-weight:600;"><strong>Date:</strong> {{ today }}</span>
         </div>
-
-        <!-- 📥 Download Button -->
         <div style="text-align: center;">
           <a href="{% url 'transcript:transcript_pdf' student.roll_no %}" class="download-btn-pop">
             <i class="fa-solid fa-download"></i> Download Transcript PDF
@@ -640,7 +582,7 @@
   </div>
 </div>
 
-<!-- 🔍 Search Script -->
+<!-- 🔍 Search Script (kept for future extensibility) -->
 <script>
   const students = [
     {% for s in student_list %}

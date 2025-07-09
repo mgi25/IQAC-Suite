@@ -5,40 +5,65 @@
 
 {% block head_extra %}
 <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
   .dashboard-container {
-    padding: 80px 20px;
+    padding: 48px 0 48px 0;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
-    background: #f3f4f6;
+    background: #f3f7fa;
   }
 
   .transcript-form-card {
     width: 100%;
     max-width: 1200px;
     background: white;
-    border-radius: 1rem;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    padding: 2rem;
+    border-radius: 2rem;
+    box-shadow: 0 8px 32px rgba(34, 116, 203, 0.10);
+    padding: 2.5rem 2.5rem 2rem 2.5rem;
     margin: 0 auto;
+    position: relative;
   }
 
   .transcript-form-header {
     text-align: center;
     font-size: 1.2rem;
     text-transform: uppercase;
-    font-weight: 600;
-    color: #6b7280;
-    margin-bottom: 1.2rem;
+    font-weight: 700;
+    color: #2274CB;
+    margin-bottom: 0.5rem;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.7rem;
+  }
+
+  .transcript-form-header i {
+    font-size: 1.3rem;
+    color: #2274CB;
   }
 
   .transcript-form-title {
-    font-size: 2rem;
+    font-size: 2.2rem;
     text-align: center;
-    font-weight: bold;
-    color: #1f2937;
+    font-weight: 900;
+    color: #185a9d;
+    margin-bottom: 0.5rem;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.7rem;
+  }
+
+  .transcript-form-subtitle {
+    text-align: center;
+    font-size: 1.1rem;
+    color: #4b5c6b;
+    font-weight: 500;
     margin-bottom: 2rem;
   }
 
@@ -53,27 +78,41 @@
 
   .form-inline select {
     min-width: 200px;
-    padding: 0.8rem 1rem;
-    border-radius: 0.5rem;
-    border: 1px solid #d1d5db;
+    padding: 0.9rem 1.2rem;
+    border-radius: 1rem;
+    border: 1px solid #e3eaf3;
     background-color: #f9fafb;
     font-size: 1rem;
+    transition: border 0.2s, box-shadow 0.2s;
+    box-shadow: 0 1px 4px rgba(34, 116, 203, 0.04);
+  }
+
+  .form-inline select:focus {
+    border-color: #2274CB;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(34, 116, 203, 0.10);
   }
 
   .form-inline button {
-    padding: 0.9rem 1.5rem;
+    padding: 1rem 2rem;
     background-color: #3b82f6;
     color: white;
     border: none;
-    border-radius: 0.6rem;
-    font-size: 1rem;
+    border-radius: 1rem;
+    font-size: 1.1rem;
     cursor: pointer;
-    font-weight: 600;
-    transition: 0.3s ease;
+    font-weight: 700;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.13);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   .form-inline button:hover {
     background-color: #2563eb;
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.18);
   }
 
   .student-list-container {
@@ -100,9 +139,12 @@
   }
 
   .student-list-title {
-    font-size: 1.4rem;
-    font-weight: 700;
+    font-size: 1.5rem;
+    font-weight: 800;
     color: #1f2937;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   .student-header-right {
@@ -123,56 +165,119 @@
   .btn-download-all {
     background: #f59e0b;
     color: white;
-    padding: 0.6rem 1.2rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-    border-radius: 0.5rem;
+    padding: 0.7rem 1.4rem;
+    font-size: 1rem;
+    font-weight: 700;
+    border-radius: 0.7rem;
     text-decoration: none;
-    transition: all 0.2s ease;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
     border: none;
     cursor: pointer;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.13);
   }
 
   .btn-download-all:hover {
     background: #d97706;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px) scale(1.03);
+    box-shadow: 0 8px 20px rgba(245, 158, 11, 0.18);
+  }
+
+  .search-bar-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    background: #fff;
+    border-radius: 30px;
+    border: 1px solid #e3eaf3;
+    padding: 0.5rem 1rem;
+    box-shadow: 0 1px 4px rgba(34, 116, 203, 0.04);
+    max-width: 400px;
+    margin-left: auto;
+  }
+
+  .search-bar-wrapper input {
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 1rem;
+    flex: 1;
+    padding: 0.5rem 0.5rem;
+  }
+
+  .search-bar-wrapper i {
+    color: #2274CB;
+    font-size: 1.1rem;
+  }
+
+  .student-list-meta {
+    font-size: 0.95rem;
+    color: #8ca0b3;
+    margin-bottom: 1rem;
+    text-align: right;
   }
 
   .student-list {
     display: grid;
-    grid-template-columns: repeat(3, 1fr); /* 3 cards per row */
+    grid-template-columns: repeat(3, 1fr);
     gap: 1.2rem;
   }
 
   .student-item {
     background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.75rem;
-    padding: 1.2rem;
+    border: 1px solid #e3eaf3;
+    border-radius: 1.2rem;
+    padding: 1.5rem 1.2rem;
     display: flex;
     flex-direction: column;
     gap: 0.8rem;
-    transition: 0.3s;
+    transition: box-shadow 0.2s, transform 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+    position: relative;
+    min-height: 120px;
   }
 
   .student-item:hover {
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(34, 116, 203, 0.13);
+    transform: translateY(-4px) scale(1.01);
+    border-color: #b6d4f7;
   }
 
   .student-name {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #111827;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #1a2a3a;
+    margin-bottom: 0.1rem;
   }
 
   .student-register {
     font-size: 0.95rem;
-    color: #6b7280;
+    color: #8ca0b3;
+    font-weight: 500;
+  }
+
+  .student-meta {
+    font-size: 0.92rem;
+    color: #b0b8c1;
+    margin-top: 0.2rem;
+  }
+
+  .student-status {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #2ecc71;
+    margin-left: 0.5rem;
+  }
+
+  .student-status.inactive {
+    color: #e67e22;
+  }
+
+  .student-status.notready {
+    color: #e74c3c;
   }
 
   .student-actions {
@@ -181,16 +286,21 @@
     margin-top: auto;
   }
 
-  .btn-view,
-  .btn-download {
+  .btn-view, .btn-download {
     flex: 1;
     text-align: center;
-    padding: 0.6rem 1rem;
-    font-size: 0.95rem;
-    font-weight: 600;
-    border-radius: 0.5rem;
+    padding: 0.7rem 1.2rem;
+    font-size: 1rem;
+    font-weight: 700;
+    border-radius: 0.7rem;
     text-decoration: none;
-    transition: all 0.2s ease-in-out;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: none;
+    outline: none;
+    justify-content: center;
   }
 
   .btn-view {
@@ -200,6 +310,8 @@
 
   .btn-view:hover {
     background: #2563eb;
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.18);
   }
 
   .btn-download {
@@ -209,20 +321,51 @@
 
   .btn-download:hover {
     background: #059669;
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.18);
   }
 
-  .loader {
-    border: 6px solid #f3f3f3;
-    border-top: 6px solid #3b82f6;
-    border-radius: 50%;
-    width: 60px;
-    height: 60px;
-    animation: spin 0.8s linear infinite;
+  .empty-state {
+    text-align: center;
+    color: #b0b8c1;
+    font-size: 1.1rem;
+    margin-top: 2rem;
+    padding: 2rem 0;
   }
 
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+  .skeleton {
+    background: linear-gradient(90deg, #f3f7fa 25%, #e3eaf3 50%, #f3f7fa 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.2s infinite linear;
+    border-radius: 8px;
+    min-height: 24px;
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+
+  @keyframes skeleton-loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  @media (max-width: 1200px) {
+    .student-list {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .dashboard-container {
+      padding: 16px 0 16px 0;
+    }
+
+    .transcript-form-card {
+      padding: 1.2rem 0.5rem 1rem 0.5rem;
+    }
+
+    .student-list {
+      grid-template-columns: 1fr;
+    }
   }
 </style>
 {% endblock %}
@@ -230,8 +373,9 @@
 {% block content %}
 <div class="dashboard-container">
   <div class="transcript-form-card">
-    <div class="transcript-form-header">Student Character Strength Transcript</div>
-    <div class="transcript-form-title">Select Academic Info</div>
+    <div class="transcript-form-header"><i class="fa-solid fa-file-lines"></i> Student Character Strength Transcript</div>
+    <div class="transcript-form-title"><i class="fa-solid fa-graduation-cap"></i> Select Academic Info</div>
+    <div class="transcript-form-subtitle">View and manage student character strength transcripts</div>
     <form id="transcriptForm">
       <div class="form-inline">
         <select id="academicYearSelect" required>
@@ -249,13 +393,13 @@
           <option value="">Select Course</option>
         </select>
 
-        <button type="submit" id="showStudentsBtn" disabled>Show Students</button>
+        <button type="submit" id="showStudentsBtn" disabled><i class="fa-solid fa-users"></i> Show Students</button>
       </div>
     </form>
 
     <div class="student-list-container" id="studentListContainer">
       <div class="student-list-header">
-        <div class="student-list-title">Students</div>
+        <div class="student-list-title"><i class="fa-solid fa-users"></i> Students</div>
         <div class="student-header-right">
           <div class="student-count" id="studentCount">0 students</div>
           <button id="downloadAllPDFBtn" class="btn-download-all">
@@ -266,24 +410,20 @@
           </button>
         </div>
       </div>
+
+      <div class="search-bar-wrapper">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" id="studentSearchInput" placeholder="Search students by name or roll no..." oninput="filterStudentList()">
+      </div>
+
       <div class="student-list" id="studentList"></div>
+      <div class="empty-state" id="emptyState" style="display:none;"><i class="fa-solid fa-user-slash"></i> No students found for this filter.</div>
     </div>
   </div>
 </div>
 
 <!-- Spinner Overlay -->
-<div id="downloadSpinner" style="
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0,0,0,0.4);
-  z-index: 9999;
-  justify-content: center;
-  align-items: center;
-">
+<div id="downloadSpinner" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 9999; justify-content: center; align-items: center;">
   <div class="loader"></div>
 </div>
 
@@ -303,9 +443,12 @@
   const studentCount = document.getElementById('studentCount');
   const downloadAllPDFBtn = document.getElementById('downloadAllPDFBtn');
   const downloadAllZIPBtn = document.getElementById('downloadAllZIPBtn');
+  const emptyState = document.getElementById('emptyState');
+  const studentSearchInput = document.getElementById('studentSearchInput');
 
   const studentRawData = JSON.parse(`{{ student_data|escapejs }}`);
   const studentData = studentRawData;
+  let currentStudents = [];
 
   const resetDropdown = (dropdown, placeholder) => {
     dropdown.innerHTML = `<option value="">${placeholder}</option>`;
@@ -329,9 +472,10 @@
     item.innerHTML = `
       <div class="student-name">${student.name}</div>
       <div class="student-register">${student.roll_no}</div>
+      <div class="student-meta">Year: ${student.year || '-'} | Status: <span class="student-status ${student.active === false ? 'inactive' : ''}">${student.active === false ? 'Inactive' : 'Active'}</span></div>
       <div class="student-actions">
-        <a href="/transcript/${student.roll_no}/" class="btn-view">View</a>
-        <a href="/transcript/${student.roll_no}/pdf/" class="btn-download">Download</a>
+        <a href="/transcript/${student.roll_no}/" class="btn-view"><i class="fa-solid fa-eye"></i> View</a>
+        <a href="/transcript/${student.roll_no}/pdf/" class="btn-download"><i class="fa-solid fa-download"></i> Download</a>
       </div>`;
     return item;
   };
@@ -339,12 +483,27 @@
   const displayStudents = (students) => {
     studentList.innerHTML = '';
     studentCount.textContent = `${students.length} students`;
-    students.forEach((student, index) => {
-      const studentItem = createStudentItem(student, index);
-      studentList.appendChild(studentItem);
-    });
+    if (students.length === 0) {
+      emptyState.style.display = '';
+    } else {
+      emptyState.style.display = 'none';
+      students.forEach((student, index) => {
+        const studentItem = createStudentItem(student, index);
+        studentList.appendChild(studentItem);
+      });
+    }
     studentListContainer.classList.add('show');
+    currentStudents = students;
   };
+
+  function filterStudentList() {
+    const input = studentSearchInput.value.toLowerCase();
+    const filtered = currentStudents.filter(student =>
+      student.name.toLowerCase().includes(input) ||
+      student.roll_no.toLowerCase().includes(input)
+    );
+    displayStudents(filtered);
+  }
 
   function downloadAll(type = 'pdf') {
     const year = academicYearSelect.value;
@@ -411,13 +570,13 @@
 
     if (!year || !school || !course) return;
 
-    showStudentsBtn.innerHTML = 'Loading...';
+    showStudentsBtn.innerHTML = '<span class="skeleton" style="width:80px;height:20px;"></span>';
     showStudentsBtn.disabled = true;
 
     setTimeout(() => {
       const students = studentData[year][school][course];
       displayStudents(students);
-      showStudentsBtn.innerHTML = 'Show Students';
+      showStudentsBtn.innerHTML = '<i class="fa-solid fa-users"></i> Show Students';
       showStudentsBtn.disabled = false;
     }, 500);
   });
