@@ -10,6 +10,7 @@
                 <label for="role">Role:</label>
                 <select name="role" id="role" onchange="this.form.submit()">
                     <option value="" {% if not request.GET.role %}selected{% endif %}>All</option>
+                    <!-- (your other options) -->
                     <option value="student" {% if request.GET.role == "student" %}selected{% endif %}>Student</option>
                     <option value="faculty" {% if request.GET.role == "faculty" %}selected{% endif %}>Faculty</option>
                     <option value="hod" {% if request.GET.role == "hod" %}selected{% endif %}>HOD</option>
@@ -57,6 +58,8 @@
                                         {% if ra.department %}<span class="role-context">({{ ra.department.name }})</span>{% endif %}
                                         {% if ra.club %}<span class="role-context">({{ ra.club.name }})</span>{% endif %}
                                         {% if ra.center %}<span class="role-context">({{ ra.center.name }})</span>{% endif %}
+                                        {% if ra.cell %}<span class="role-context">({{ ra.cell.name }})</span>{% endif %}
+                                        {% if ra.association %}<span class="role-context">({{ ra.association.name }})</span>{% endif %}
                                     </span>{% if not forloop.last %}<br>{% endif %}
                                 {% endfor %}
                             {% else %}

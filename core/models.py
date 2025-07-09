@@ -1,6 +1,6 @@
-# core/models.py
 from django.db import models
 from django.contrib.auth.models import User
+from django.conf import settings
 
 # ────────────────────────────────────────────────────────────────
 #  Organisations (master tables)
@@ -11,36 +11,39 @@ class Department(models.Model):
     class Meta:
         ordering = ["name"]
 
-    def __str__(self) -> str:
+    def __str__(self):
         return self.name
-
 
 class Club(models.Model):
     name = models.CharField(max_length=100, unique=True)
 
-    def __str__(self) -> str:
-        return self.name
+    class Meta:
+        ordering = ["name"]
 
+    def __str__(self):
+        return self.name
 
 class Center(models.Model):
     name = models.CharField(max_length=100, unique=True)
 
-    def __str__(self) -> str:
-        return self.name
+    class Meta:
+        ordering = ["name"]
 
+    def __str__(self):
+        return self.name
 
 class Cell(models.Model):
     name = models.CharField(max_length=100, unique=True)
 
-    def __str__(self) -> str:
-        return self.name
+    class Meta:
+        ordering = ["name"]
 
+    def __str__(self):
+        return self.name
 
 class Association(models.Model):
     """
     An Association belongs *optionally* to a Department.
-    Setting null=True/blank=True lets us migrate without a
-    one-off default and keeps orphaned associations possible.
     """
     name = models.CharField(max_length=100, unique=True)
     department = models.ForeignKey(
@@ -54,11 +57,10 @@ class Association(models.Model):
     class Meta:
         ordering = ["name"]
 
-    def __str__(self) -> str:
+    def __str__(self):
         if self.department:
             return f"{self.name} ({self.department})"
         return self.name
-
 
 # ────────────────────────────────────────────────────────────────
 #  User Role Assignment
@@ -87,7 +89,6 @@ class RoleAssignment(models.Model):
     cell = models.ForeignKey(Cell, null=True, blank=True, on_delete=models.SET_NULL)
     association = models.ForeignKey(Association, null=True, blank=True, on_delete=models.SET_NULL)
 
-
     class Meta:
         unique_together = (
             "user",
@@ -99,7 +100,7 @@ class RoleAssignment(models.Model):
             "association",
         )
 
-    def __str__(self) -> str:
+    def __str__(self):
         parts = [self.get_role_display()]
         if self.department:
             parts.append(f"of {self.department}")
@@ -113,17 +114,25 @@ class RoleAssignment(models.Model):
             parts.append(f"of {self.association}")
         return f"{self.user.username} – {' '.join(parts)}"
 
-
 # ────────────────────────────────────────────────────────────────
 #  User Profile (extension of auth.User, optional)
 # ────────────────────────────────────────────────────────────────
 class Profile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
-    main_role = models.CharField(max_length=30, blank=True, null=True)
+    ROLE_CHOICES = [
+        ("student", "Student"),
+        ("faculty", "Faculty"),
+        ("hod", "HOD"),
+        ("admin", "Admin"),
+        ("club_convenor", "Club Convenor"),
+        ("event_coordinator", "Event Coordinator"),
+        ("committee_member", "Committee Member"),
+        ("iqac_member", "IQAC Member"),
+    ]
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    role = models.CharField(max_length=32, choices=ROLE_CHOICES, default="student")
 
-    def __str__(self) -> str:
-        return f"{self.user.username} – {self.main_role or 'No main role'}"
-
+    def __str__(self):
+        return f"{self.user.username} ({self.role})"
 
 # ────────────────────────────────────────────────────────────────
 #  Event Proposals & Reports (legacy part of core app)
@@ -151,9 +160,8 @@ class EventProposal(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
     return_comment = models.TextField(blank=True, null=True)
 
-    def __str__(self) -> str:
+    def __str__(self):
         return f"{self.title} ({self.get_status_display()})"
-
 
 class Report(models.Model):
     REPORT_TYPE_CHOICES = [
@@ -188,5 +196,5 @@ class Report(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
     feedback = models.TextField(blank=True, null=True)
 
-    def __str__(self) -> str:
+    def __str__(self):
         return f"{self.title} – {self.get_report_type_display()} ({self.get_status_display()})"

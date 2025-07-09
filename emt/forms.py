@@ -1,28 +1,57 @@
 from django import forms
 from django.contrib.auth.models import User
 from django.urls import reverse_lazy
-
 from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
     EventExpectedOutcomes, TentativeFlow, SpeakerProfile,
-    ExpenseDetail, Department
+    ExpenseDetail
 )
+from core.models import Department, Association, Club, Center, Cell
 
-# ──────────────────────────────────────────────────────────────
-#  STEP 1 • Event Proposal Form (with new flags)
-# ──────────────────────────────────────────────────────────────
+ORG_TYPE_CHOICES = [
+    ('department', 'Department'),
+    ('association', 'Association'),
+    ('club', 'Club'),
+    ('center', 'Center'),
+    ('cell', 'Cell'),
+]
 class EventProposalForm(forms.ModelForm):
+    org_type = forms.ChoiceField(
+        required=True,
+        label="Type of Organisation",
+        choices=ORG_TYPE_CHOICES,
+        widget=forms.Select(attrs={
+            'class': 'tomselect-orgtype',
+        }),
+    )
     department = forms.ModelChoiceField(
         queryset=Department.objects.all(),
-        widget=forms.Select(attrs={
-            'class': 'select2-ajax',
-            'data-url': reverse_lazy("emt:api_departments")
-        }),
-        required=True
+        required=False,
+        widget=forms.Select(attrs={'class': 'org-box department-box'})
+    )
+    association = forms.ModelChoiceField(
+        queryset=Association.objects.all(),
+        required=False,
+        widget=forms.Select(attrs={'class': 'org-box association-box'})
+    )
+    club = forms.ModelChoiceField(
+        queryset=Club.objects.all(),
+        required=False,
+        widget=forms.Select(attrs={'class': 'org-box club-box'})
+    )
+    center = forms.ModelChoiceField(
+        queryset=Center.objects.all(),
+        required=False,
+        widget=forms.Select(attrs={'class': 'org-box center-box'})
+    )
+    cell = forms.ModelChoiceField(
+        queryset=Cell.objects.all(),
+        required=False,
+        widget=forms.Select(attrs={'class': 'org-box cell-box'})
     )
 
     faculty_incharges = forms.ModelMultipleChoiceField(
-        queryset=User.objects.filter(role_assignments__role="faculty").distinct(),
+        queryset=User.objects.none(),  # No initial users, loaded via JS!
         required=False,
         widget=forms.SelectMultiple(attrs={
             'class': 'select2-ajax',
@@ -31,33 +60,26 @@ class EventProposalForm(forms.ModelForm):
         })
     )
 
-    # ── NEW FLAGS ──
-    # needs_finance_approval = forms.BooleanField(
-    #     required=False,
-    #     label="Does this event require finance approval?"
-    # )
-    # is_big_event           = forms.BooleanField(
-    #     required=False,
-    #     label="Is this a big event (Dean approval needed)?"
-    # )
-    # ───────────────
-
     class Meta:
-        model   = EventProposal
-        exclude = ['submitted_by', 'created_at', 'updated_at', 'status', 'report_generated','needs_finance_approval','is_big_event']
+        model = EventProposal
+        fields = [
+            'org_type', 'department', 'association', 'club', 'center', 'cell',
+            'faculty_incharges', 'event_title', 'event_datetime', 'venue',
+            'committees', 'num_activities', 'academic_year', 'student_coordinators',
+            'target_audience', 'event_focus_type', 'fest_fee_participants',
+            'fest_fee_rate', 'fest_fee_amount', 'fest_sponsorship_amount',
+            'conf_fee_participants', 'conf_fee_rate', 'conf_fee_amount', 'conf_sponsorship_amount',
+        ]
+        exclude = ['submitted_by', 'created_at', 'updated_at', 'status', 'report_generated', 'needs_finance_approval', 'is_big_event']
+
         labels = {
-            'department': 'Which department is organizing the event?',
-            'committees': 'List the committee(s) and any collaborations involved:',
-            'event_title': 'What is the title of your event?',
-            'num_activities': 'How many activities will take place?',
-            'event_datetime': 'When will the event happen?',
-            'venue': 'Where is the event venue?',
-            'academic_year': 'Which academic year does this fall under?',
-            'faculty_incharges': 'Faculty In-charges (select one or more)',
-            'student_coordinators': 'Student Coordinators (names & contacts)',
-            'target_audience': 'Who is your target audience?',
-            'event_focus_type': 'What is the focus / theme of the event?',
-            # income labels unchanged…
+            'org_type': 'Type of Organisation',
+            'department': 'Department',
+            'association': 'Association',
+            'club': 'Club',
+            'center': 'Center',
+            'cell': 'Cell',
+            # ...rest as before...
         }
         widgets = {
             'event_datetime': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
@@ -65,6 +87,41 @@ class EventProposalForm(forms.ModelForm):
             'student_coordinators': forms.Textarea(attrs={'rows': 2}),
             'target_audience':    forms.TextInput(attrs={'placeholder': 'e.g., BSc students'}),
         }
+
+    def clean(self):
+        data = super().clean()
+        org_type = data.get('org_type', '').lower()
+        model_map = {
+            'department': Department,
+            'association': Association,
+            'club': Club,
+            'center': Center,
+            'cell': Cell,
+        }
+        found = False
+        for org_field, model in model_map.items():
+            if org_type == org_field:
+                val = data.get(org_field)
+                # If not found by id, check by posted string (for new names)
+                if not val:
+                    posted_val = self.data.get(org_field)
+                    if posted_val:
+                        if posted_val.isdigit():
+                            val = model.objects.filter(id=int(posted_val)).first()
+                        else:
+                            val = model.objects.filter(name=posted_val).first()
+                            if not val:
+                                val = model.objects.create(name=posted_val)
+                if val:
+                    data[org_field] = val
+                    found = True
+                else:
+                    self.add_error(org_field, f'Please select or enter a valid {org_field.title()} name.')
+            else:
+                data[org_field] = None
+        if not found:
+            self.add_error('org_type', 'Please select an organization and its name.')
+        return data
 
 
 # ──────────────────────────────────────────────────────────────
