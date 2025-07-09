@@ -139,24 +139,20 @@ def admin_user_panel(request):
 @user_passes_test(lambda u: u.is_superuser)
 def admin_user_management(request):
     users = User.objects.all().order_by('-date_joined')
-
-    # Filtering
     role = request.GET.get('role')
     q = request.GET.get('q', '').strip()
-
     if role:
-        users = users.filter(role_assignments__role=role).distinct()
+        users = users.filter(role_assignments__role=role)
     if q:
         users = users.filter(
             Q(email__icontains=q) | 
             Q(first_name__icontains=q) |
             Q(last_name__icontains=q) |
             Q(username__icontains=q)
-        ).distinct()
-
-    users = users.prefetch_related('role_assignments', 'role_assignments__department', 'role_assignments__club', 'role_assignments__center')
-
+        )
+    users = users.distinct().prefetch_related('role_assignments', 'role_assignments__department', 'role_assignments__club', 'role_assignments__center')
     return render(request, "core/admin_user_management.html", {"users": users})
+
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
