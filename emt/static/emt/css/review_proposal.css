@@ -1,0 +1,179 @@
+.container {
+  max-width: 800px;
+  margin: 44px auto 0 auto;
+  padding: 36px 24px 30px 24px;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 6px 28px rgba(0,0,0,0.10);
+}
+
+h1, h3, h4 {
+  color: #22447a;
+  letter-spacing: 0.5px;
+  margin-top: 0;
+}
+
+h1 {
+  font-size: 2rem;
+  margin-bottom: 24px;
+  font-weight: 700;
+}
+
+h3 {
+  font-size: 1.3rem;
+  margin-bottom: 10px;
+}
+
+h4 {
+  font-size: 1.09rem;
+  margin-top: 22px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.proposal-info {
+  background: #f7fafd;
+  border-radius: 12px;
+  padding: 18px 16px;
+  margin-bottom: 26px;
+  border: 1px solid #e3eaf7;
+  box-shadow: 0 1px 8px rgba(34,68,122,0.05);
+}
+
+.proposal-info p {
+  margin-bottom: 7px;
+  color: #375;
+  font-size: 1.06rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 5px 16px;
+  border-radius: 6px;
+  font-size: 0.97rem;
+  font-weight: 600;
+  color: #fff;
+  background: #f6c343;
+  letter-spacing: 0.5px;
+  margin-left: 4px;
+  margin-top: 7px;
+}
+
+.badge-warning {
+  background: linear-gradient(90deg, #f6c343 60%, #e47b15 100%);
+  color: #222;
+}
+
+.approval-history {
+  background: #f3f6fb;
+  border-radius: 10px;
+  padding: 13px 17px 10px 17px;
+  border: 1px solid #e4ebf4;
+  box-shadow: 0 1px 8px rgba(34,68,122,0.04);
+  margin-bottom: 25px;
+}
+
+.approval-history ul {
+  padding-left: 18px;
+  margin-bottom: 0;
+}
+
+.approval-history li {
+  margin-bottom: 7px;
+  font-size: 1rem;
+  color: #2d395a;
+}
+
+.text-muted {
+  color: #8892b3 !important;
+  font-size: 0.95rem;
+  margin-left: 2px;
+}
+
+.approved { color: #15803d; font-weight: 600; }
+.rejected { color: #be252b; font-weight: 600; }
+.pending { color: #996800; font-weight: 600; }
+
+.review-form {
+  margin-top: 18px;
+  background: #f7fafd;
+  padding: 20px 16px 12px 16px;
+  border-radius: 10px;
+  border: 1px solid #e3eaf7;
+  box-shadow: 0 1px 7px rgba(34,68,122,0.03);
+}
+
+.form-group {
+  margin-bottom: 18px;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #223d63;
+  font-size: 1.01rem;
+}
+
+.form-control {
+  width: 100%;
+  min-height: 70px;
+  padding: 10px 12px;
+  border-radius: 7px;
+  border: 1px solid #c7d0e6;
+  font-size: 1.05rem;
+  background: #f8fafc;
+  color: #234;
+  resize: vertical;
+}
+
+.btn {
+  display: inline-block;
+  padding: 8px 26px;
+  font-size: 1.07rem;
+  border: none;
+  border-radius: 7px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-right: 7px;
+  margin-top: 7px;
+  transition: background 0.16s, box-shadow 0.16s;
+  box-shadow: 0 1px 5px rgba(60,120,250,0.04);
+}
+
+.btn-success {
+  background: linear-gradient(90deg, #23b847 70%, #178b3d 100%);
+  color: #fff;
+}
+
+.btn-success:hover {
+  background: linear-gradient(90deg, #178b3d 80%, #23b847 100%);
+}
+
+.btn-danger {
+  background: linear-gradient(90deg, #f13c3c 70%, #bc2538 100%);
+  color: #fff;
+}
+
+.btn-danger:hover {
+  background: linear-gradient(90deg, #bc2538 60%, #f13c3c 100%);
+}
+
+em {
+  color: #88849e;
+  font-size: 0.98rem;
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: 12px 3px 9px 3px;
+  }
+  .proposal-info, .approval-history, .review-form {
+    padding: 12px 7px;
+  }
+  h1 {
+    font-size: 1.18rem;
+    text-align: center;
+  }
+  h3 {
+    font-size: 1.01rem;
+  }
+}
