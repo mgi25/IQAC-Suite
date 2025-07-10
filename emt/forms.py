@@ -4,7 +4,7 @@ from django.urls import reverse_lazy
 from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
     EventExpectedOutcomes, TentativeFlow, SpeakerProfile,
-    ExpenseDetail
+    ExpenseDetail,EventReport, EventReportAttachment
 )
 from core.models import Department, Association, Club, Center, Cell
 
@@ -195,3 +195,35 @@ class ExpenseDetailForm(forms.ModelForm):
     class Meta:
         model  = ExpenseDetail
         fields = ['sl_no', 'particulars', 'amount']
+class EventReportForm(forms.ModelForm):
+    class Meta:
+        model = EventReport
+        fields = [
+            'location', 'blog_link', 'num_student_volunteers', 'num_participants', 'external_contact_details',
+            'summary', 'outcomes', 'impact_on_stakeholders', 'innovations_best_practices',
+            'pos_pso_mapping', 'needs_grad_attr_mapping', 'contemporary_requirements', 'sdg_value_systems_mapping',
+            'iqac_feedback', 'report_signed_date', 'beneficiaries_details'
+        ]
+        widgets = {
+            'location': forms.TextInput(attrs={'class': 'ultra-input'}),
+            'blog_link': forms.TextInput(attrs={'class': 'ultra-input'}),
+            'num_student_volunteers': forms.NumberInput(attrs={'class': 'ultra-input'}),
+            'num_participants': forms.NumberInput(attrs={'class': 'ultra-input'}),
+            'external_contact_details': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 3}),
+            'summary': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 3}),
+            'outcomes': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 3}),
+            'impact_on_stakeholders': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 3}),
+            'innovations_best_practices': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 3}),
+            'pos_pso_mapping': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 2}),
+            'needs_grad_attr_mapping': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 2}),
+            'contemporary_requirements': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 2}),
+            'sdg_value_systems_mapping': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 2}),
+            'iqac_feedback': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 2}),
+            'report_signed_date': forms.DateInput(attrs={'class': 'ultra-input', 'type': 'date'}),
+            'beneficiaries_details': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 2}),
+        }
+
+class EventReportAttachmentForm(forms.ModelForm):
+    class Meta:
+        model = EventReportAttachment
+        fields = ['file', 'caption']

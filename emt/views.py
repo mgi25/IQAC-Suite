@@ -10,12 +10,12 @@ from django.db.models import Q
 from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
     EventExpectedOutcomes, TentativeFlow,
-    ExpenseDetail, SpeakerProfile
+    ExpenseDetail, SpeakerProfile,EventReport, EventReportAttachment
 )
 from .forms import (
     EventProposalForm, NeedAnalysisForm, ExpectedOutcomesForm,
     ObjectivesForm, TentativeFlowForm, SpeakerProfileForm,
-    ExpenseDetailForm
+    ExpenseDetailForm,EventReportForm, EventReportAttachmentForm
 )
 from django.forms import modelformset_factory
 from core.models import Department,Association, Club, Center, Cell      # FK model you created
@@ -26,7 +26,6 @@ from django.contrib import messages
 from django.utils import timezone
 from django.db import models
 from .models import MediaRequest
-
 # ──────────────────────────────
 # CDL DASHBOARD
 # ──────────────────────────────
@@ -658,4 +657,42 @@ def review_approval_step(request, step_id):
         'expenses': expenses,
     })
 
+@login_required
+def submit_event_report(request, proposal_id):
+    proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
+
+    # Only allow if no report exists yet
+    report, created = EventReport.objects.get_or_create(proposal=proposal)
+    AttachmentFormSet = modelformset_factory(EventReportAttachment, form=EventReportAttachmentForm, extra=2, can_delete=True)
+
+    if request.method == "POST":
+        form = EventReportForm(request.POST, instance=report)
+        formset = AttachmentFormSet(request.POST, request.FILES, queryset=report.attachments.all())
+        if form.is_valid() and formset.is_valid():
+            report = form.save(commit=False)
+            report.proposal = proposal
+            report.save()
+            form.save_m2m()
+
+            # Save attachments
+            instances = formset.save(commit=False)
+            for obj in instances:
+                obj.report = report
+                obj.save()
+            for obj in formset.deleted_objects:
+                obj.delete()
+            messages.success(request, "Report submitted successfully!")
+            # Redirect as needed (PDF preview/download, dashboard, etc.)
+            return redirect('pending_reports')  # or wherever you want
+    else:
+        form = EventReportForm(instance=report)
+        formset = AttachmentFormSet(queryset=report.attachments.all())
+
+    # Pre-fill context with proposal info for readonly/preview display
+    context = {
+        "proposal": proposal,
+        "form": form,
+        "formset": formset,
+    }
+    return render(request, "emt/submit_event_report.html", context)
 
