@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 from core.models import Department, Association, Club, Center, Cell
 
 # ────────────────────────────────────────────────────────────────
@@ -170,3 +171,32 @@ class MediaRequest(models.Model):
 
     def __str__(self):
         return f"{self.media_type} request by {self.user.username}"
+class EventReport(models.Model):
+    proposal = models.OneToOneField(EventProposal, on_delete=models.CASCADE, related_name='event_report')
+
+    # Post-event fields
+    location = models.CharField(max_length=200, blank=True)
+    blog_link = models.URLField(blank=True)
+    num_student_volunteers = models.PositiveIntegerField(null=True, blank=True)
+    num_participants = models.PositiveIntegerField(null=True, blank=True)
+    external_contact_details = models.TextField(blank=True)
+
+    summary = models.TextField(blank=True)
+    outcomes = models.TextField(blank=True)
+    impact_on_stakeholders = models.TextField(blank=True)
+    innovations_best_practices = models.TextField(blank=True)
+    pos_pso_mapping = models.TextField(blank=True)
+    needs_grad_attr_mapping = models.TextField(blank=True)
+    contemporary_requirements = models.TextField(blank=True)
+    sdg_value_systems_mapping = models.TextField(blank=True)
+    iqac_feedback = models.TextField(blank=True)
+    report_signed_date = models.DateField(default=timezone.now)
+    beneficiaries_details = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+class EventReportAttachment(models.Model):
+    report = models.ForeignKey(EventReport, on_delete=models.CASCADE, related_name='attachments')
+    file = models.FileField(upload_to='report_attachments/')
+    caption = models.CharField(max_length=255, blank=True)
