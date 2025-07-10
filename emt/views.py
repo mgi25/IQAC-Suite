@@ -527,7 +527,13 @@ def review_approval_step(request, step_id):
     step = get_object_or_404(ApprovalStep, id=step_id, assigned_to=request.user)
     proposal = step.proposal
 
-    # Define "gatekeeper" roles (can escalate to AC/Dean)
+    need_analysis = getattr(proposal, "eventneedanalysis", None)
+    objectives = getattr(proposal, "eventobjectives", None)
+    outcomes = getattr(proposal, "eventexpectedoutcomes", None)
+    flow = getattr(proposal, "tentativeflow", None)
+    speakers = SpeakerProfile.objects.filter(proposal=proposal)
+    expenses = ExpenseDetail.objects.filter(proposal=proposal)
+
     GATEKEEPER_ROLES = [
         "hod", "uni_iqac", "university_club_head", "center_head", "cell_head"
     ]
@@ -639,6 +645,12 @@ def review_approval_step(request, step_id):
     return render(request, 'emt/review_approval_step.html', {
         'step': step,
         'GATEKEEPER_ROLES': GATEKEEPER_ROLES,
+        'need_analysis': need_analysis,
+        'objectives': objectives,
+        'outcomes': outcomes,
+        'flow': flow,
+        'speakers': speakers,
+        'expenses': expenses,
     })
 
 
