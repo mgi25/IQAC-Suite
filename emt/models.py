@@ -143,3 +143,30 @@ class ApprovalStep(models.Model):
 
     def __str__(self):
         return f"{self.proposal.event_title} • Step {self.step_order} [{self.role_required}] {self.status}"
+
+# ────────────────────────────────────────────────────────────────
+#  Approval Steps (unchanged)
+# ────────────────────────────────────────────────────────────────
+class MediaRequest(models.Model):
+    MEDIA_TYPE_CHOICES = [
+        ('Poster', 'Poster'),
+        ('Video', 'Video'),
+    ]
+
+    STATUS_CHOICES = [
+        ('Pending', 'Pending'),
+        ('Completed', 'Completed'),
+        ('Rejected', 'Rejected'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    media_type = models.CharField(max_length=20, choices=MEDIA_TYPE_CHOICES)
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    event_date = models.DateField()
+    media_file = models.FileField(upload_to='media_requests/', null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.media_type} request by {self.user.username}"
