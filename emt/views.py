@@ -405,8 +405,13 @@ def iqac_suite_dashboard(request):
 
 @login_required
 def pending_reports(request):
-    proposals = EventProposal.objects.filter(report_generated=False, submitted_by=request.user)
+    proposals = EventProposal.objects.filter(
+        submitted_by=request.user,
+        status__in=['approved', 'finalized'],
+        report_generated=False
+    )
     return render(request, 'emt/pending_reports.html', {'proposals': proposals})
+
 
 @login_required
 def generate_report(request, proposal_id):
