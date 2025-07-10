@@ -6,74 +6,225 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'emt/css/review_proposal.css' %}">
 
-<div class="container">
-  <h1>Review Proposal</h1>
+<div class="ultra-proposal-root">
 
-  <div class="proposal-info mb-4">
-    <h3>{{ step.proposal.event_title }}</h3>
-    <p><strong>Submitted by:</strong> {{ step.proposal.submitted_by.get_full_name }}</p>
-    <p><strong>Type:</strong> {{ step.proposal.get_org_type_display }}</p>
-    <p><strong>Description:</strong> {{ step.proposal.description|linebreaks }}</p>
-    {% if step.proposal.finance_required %}
-      <span class="badge badge-warning">Finance Required</span>
-    {% endif %}
-  </div>
+  <!-- LEFT COLUMN: Event Info Card -->
+  <aside class="ultra-side-info">
+    <div class="info-card glass">
+      <h2>Event Information</h2>
+      <table>
+        <tr><th>Department</th><td>{{ step.proposal.department.name|default:"—" }}</td></tr>
+        <tr><th>Committee(s)</th><td>{{ step.proposal.committees|default:"—" }}</td></tr>
+        <tr><th>Event Title</th><td>{{ step.proposal.event_title }}</td></tr>
+        <tr><th>No. of Activities</th><td>{{ step.proposal.num_activities|default:"—" }}</td></tr>
+        <tr><th>Date & Time</th><td>{{ step.proposal.event_datetime|date:"d M Y, H:i" }}</td></tr>
+        <tr><th>Venue</th><td>{{ step.proposal.venue|default:"—" }}</td></tr>
+        <tr><th>Academic Year</th><td>{{ step.proposal.academic_year|default:"—" }}</td></tr>
+        <tr><th>Target Audience</th><td>{{ step.proposal.target_audience|default:"—" }}</td></tr>
+        <tr>
+          <th>Faculty Incharges</th>
+          <td>
+            {% for fac in step.proposal.faculty_incharges.all %}
+              {{ fac.get_full_name }}{% if not forloop.last %}, {% endif %}
+            {% empty %} — {% endfor %}
+          </td>
+        </tr>
+        <tr><th>Student Coordinators</th><td>{{ step.proposal.student_coordinators|default:"—" }}</td></tr>
+        <tr><th>Type (Focus)</th><td>{{ step.proposal.event_focus_type|default:"—" }}</td></tr>
+      </table>
+    </div>
+  </aside>
 
-  <div class="approval-history mb-4">
-    <h4>Approval History</h4>
-    <ul>
-      {% for hist in step.proposal.approval_steps.all|dictsort:"step_order" %}
-        <li>
-          <strong>{{ hist.get_role_required_display }}</strong> -
-          {{ hist.assigned_to.get_full_name }}:
-          <span class="{{ hist.status }}">
-            {{ hist.get_status_display }}
-          </span>
-          {% if hist.comment %}
-            <em>({{ hist.comment }})</em>
-          {% endif %}
-          {% if hist.updated_at %}
-            <span class="text-muted">[{{ hist.updated_at|date:"d M Y, H:i" }}]</span>
-          {% endif %}
-        </li>
-      {% endfor %}
-    </ul>
-  </div>
+  <!-- RIGHT COLUMN: All Proposal Details -->
+  <main class="ultra-main-content">
+    <div class="fadein-card ultra-header">
+      <h1>
+        <span class="glow-text">Event Proposal Review</span>
+      </h1>
+      <span class="meta">{{ step.proposal.event_title }} &middot; Submitted by {{ step.proposal.submitted_by.get_full_name }}</span>
+    </div>
 
-  {% if step.status == 'pending' %}
-    <form method="post" class="review-form">
-      {% csrf_token %}
-      <div class="form-group">
-        <label>Comment:</label>
-        <textarea name="comment" class="form-control"></textarea>
+    <div class="fadein-card section-glass">
+      <h3>Need Analysis</h3>
+      <div class="detail-block">{{ need_analysis.content|linebreaksbr|default:"—" }}</div>
+    </div>
+
+    <div class="fadein-card section-glass">
+      <h3>Objectives</h3>
+      <div class="detail-block">{{ objectives.content|linebreaksbr|default:"—" }}</div>
+    </div>
+
+    <div class="fadein-card section-glass">
+      <h3>Expected Outcomes</h3>
+      <div class="detail-block">{{ outcomes.content|linebreaksbr|default:"—" }}</div>
+    </div>
+
+    <div class="fadein-card section-glass">
+      <h3>Tentative Flow</h3>
+      <div class="detail-block">{{ flow.content|linebreaksbr|default:"—" }}</div>
+    </div>
+
+    <div class="fadein-card section-glass">
+      <h3>Speaker Profile</h3>
+      {% if speakers %}
+        {% for sp in speakers %}
+          <div class="speaker-profile-block">
+            <div>
+              <b>{{ sp.full_name }}</b> <span class="profile-aff">{{ sp.designation }}, {{ sp.affiliation }}</span>
+              {% if sp.photo %}
+                <img src="{{ sp.photo.url }}" class="speaker-photo" alt="Speaker Photo">
+              {% endif %}
+              <div class="profile-meta">
+                <span>{{ sp.contact_email }}</span> &bull; <span>{{ sp.contact_number }}</span>
+              </div>
+              <div class="profile-desc">{{ sp.detailed_profile|default:"—" }}</div>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="detail-block">—</div>
+      {% endif %}
+    </div>
+
+    <!-- INCOME & EXPENSES SIDE BY SIDE -->
+    <div class="fadein-card section-glass">
+      <div class="fin-row">
+        <div class="fin-half">
+          <h3>Income</h3>
+          <table class="finance-table">
+            <thead>
+              <tr>
+                <th>Sl.No</th>
+                <th>Particulars</th>
+                <th>No. Participants</th>
+                <th>Rate</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if step.proposal.fest_fee_participants or step.proposal.fest_fee_rate or step.proposal.fest_fee_amount %}
+                <tr>
+                  <td>1</td>
+                  <td>Participation Fee [Fest]</td>
+                  <td>{{ step.proposal.fest_fee_participants|default:"—" }}</td>
+                  <td>{{ step.proposal.fest_fee_rate|default:"—" }}</td>
+                  <td>{{ step.proposal.fest_fee_amount|default:"—" }}</td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td>Sponsorship [Fest]</td>
+                  <td>—</td><td>—</td>
+                  <td>{{ step.proposal.fest_sponsorship_amount|default:"—" }}</td>
+                </tr>
+              {% endif %}
+              {% if step.proposal.conf_fee_participants or step.proposal.conf_fee_rate or step.proposal.conf_fee_amount %}
+                <tr>
+                  <td>3</td>
+                  <td>Participation Fee [Conference]</td>
+                  <td>{{ step.proposal.conf_fee_participants|default:"—" }}</td>
+                  <td>{{ step.proposal.conf_fee_rate|default:"—" }}</td>
+                  <td>{{ step.proposal.conf_fee_amount|default:"—" }}</td>
+                </tr>
+                <tr>
+                  <td>4</td>
+                  <td>Sponsorship [Conference]</td>
+                  <td>—</td><td>—</td>
+                  <td>{{ step.proposal.conf_sponsorship_amount|default:"—" }}</td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+        <div class="fin-half">
+          <h3>Expenses</h3>
+          <table class="finance-table">
+            <thead>
+              <tr>
+                <th>Sl.No</th>
+                <th>Particulars</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for exp in expenses %}
+                <tr>
+                  <td>{{ exp.sl_no }}</td>
+                  <td>{{ exp.particulars }}</td>
+                  <td>{{ exp.amount }}</td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="3">—</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
+    </div>
 
-      {# Gatekeeper logic: HOD, uni_iqac, university_club_head, center_head, cell_head #}
-      {% if step.role_required in GATEKEEPER_ROLES %}
-        <div class="form-group">
-          <label>
-            <input type="checkbox" name="needs_academic_coord_approval"> Escalate to Academic Coordinator
-          </label><br>
-          <label>
-            <input type="checkbox" name="needs_dean_approval"> Escalate to Dean
-          </label>
+    <!-- APPROVAL HISTORY SECTION -->
+    <div class="fadein-card section-glass approval-card">
+      <h3>Approval History</h3>
+      <div class="approval-history-ul">
+        <ul>
+          {% for hist in step.proposal.approval_steps.all|dictsort:"step_order" %}
+            <li>
+              <span class="history-role">{{ hist.get_role_required_display }}</span>
+              <span class="history-person">{{ hist.assigned_to.get_full_name }}</span>
+              <span class="history-status {{ hist.status }}">
+                {{ hist.get_status_display }}
+              </span>
+              {% if hist.comment %}
+                <span class="history-comment">({{ hist.comment }})</span>
+              {% endif %}
+              {% if hist.updated_at %}
+                <span class="history-date">[{{ hist.updated_at|date:"d M Y, H:i" }}]</span>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <!-- COMMENT & ACTION FORM (always at the bottom, glassy card) -->
+    <div class="fadein-card section-glass review-form-card">
+      {% if step.status == 'pending' %}
+        <form method="post" class="review-form-ultra">
+          {% csrf_token %}
+          <div class="form-group">
+            <label>Comment / Remarks:</label>
+            <textarea name="comment" class="form-control"></textarea>
+          </div>
+          {% if step.role_required in GATEKEEPER_ROLES %}
+            <div class="form-group gatekeeper">
+              <label>
+                <input type="checkbox" name="needs_academic_coord_approval"> Escalate to Academic Coordinator
+              </label>
+              <label>
+                <input type="checkbox" name="needs_dean_approval"> Escalate to Dean
+              </label>
+            </div>
+          {% endif %}
+          {% if step.role_required == "academic_coordinator" %}
+            <div class="form-group gatekeeper">
+              <label>
+                <input type="checkbox" name="needs_dean_approval"> Escalate to Dean
+              </label>
+            </div>
+          {% endif %}
+          <div class="review-actions">
+            <button type="submit" name="action" value="approve" class="btn-ultra btn-success-ultra">Approve</button>
+            <button type="submit" name="action" value="reject" class="btn-ultra btn-danger-ultra">Reject</button>
+          </div>
+        </form>
+      {% else %}
+        <div class="info-glass status-complete">
+          This step is <strong>{{ step.get_status_display }}</strong>.
         </div>
       {% endif %}
+    </div>
 
-      {# Academic Coordinator logic #}
-      {% if step.role_required == "academic_coordinator" %}
-        <div class="form-group">
-          <label>
-            <input type="checkbox" name="needs_dean_approval"> Escalate to Dean
-          </label>
-        </div>
-      {% endif %}
-
-      <button type="submit" name="action" value="approve" class="btn btn-success">Approve</button>
-      <button type="submit" name="action" value="reject" class="btn btn-danger">Reject</button>
-    </form>
-  {% else %}
-    <p>This step is <strong>{{ step.get_status_display }}</strong>.</p>
-  {% endif %}
+  </main>
 </div>
 {% endblock %}
