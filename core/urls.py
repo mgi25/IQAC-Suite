@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from core.views import custom_logout
 
 urlpatterns = [
     # Authentication
@@ -27,6 +28,8 @@ urlpatterns = [
     path('core-admin/reports/', views.admin_reports, name='admin_reports'),
     path('core-admin/reports/<int:report_id>/approve/', views.admin_reports_approve, name='admin_reports_approve'),
     path('core-admin/reports/<int:report_id>/reject/', views.admin_reports_reject, name='admin_reports_reject'),
+    path('core-admin/dashboard/', views.admin_dashboard, name='core_admin_dashboard'),
 
     # path('admin/users/', views.admin_user_panel, name='admin_user_panel'),
+    path('accounts/logout/', custom_logout, name='account_logout'),
 ]

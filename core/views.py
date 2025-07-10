@@ -37,6 +37,13 @@ def logout_view(request):
     logout(request)
     return redirect("login")
 
+def custom_logout(request):
+    logout(request)
+    # Google logout endpoint (will log out of Google in this browser session)
+    google_logout_url = "https://accounts.google.com/Logout"
+    # After Google logout, redirect back to your login page
+    return redirect(f"{google_logout_url}?continue=https://appengine.google.com/_ah/logout?continue=http://127.0.0.1:8000/accounts/login/")
+
 # ─────────────────────────────────────────────────────────────
 #  Dashboard
 # ─────────────────────────────────────────────────────────────
@@ -310,3 +317,20 @@ def admin_reports_reject(request, report_id):
 
 def cdl_dashboard(request):
     return render(request, 'emt/cdl_dashboard.html')
+
+STATUSES = ['submitted', 'under_review', 'approved', 'rejected']
+
+def iqac_suite_dashboard(request):
+    user_proposals = (
+        EventProposal.objects
+        .filter(submitted_by=request.user)
+        .order_by("-date_submitted")
+    )
+    for proposal in user_proposals:
+        proposal.status_index = STATUSES.index(proposal.status) if proposal.status in STATUSES else -1
+
+    context = {
+        "user_proposals": user_proposals,
+        "statuses": STATUSES,
+    }
+    return render(request, "emt/iqac_suite_dashboard.html", context)
