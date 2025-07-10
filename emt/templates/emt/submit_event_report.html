@@ -63,11 +63,9 @@
           {% endfor %}
         </div>
       </div>
-
-      <div style="text-align: right;">
-        <button type="submit" class="btn-ultra btn-success-ultra">Submit Report</button>
-      </div>
-    </form>
+  <div style="margin-top:24px; text-align:right;">
+    <a href="{% url 'emt:generate_report' proposal.id %}" class="btn-ultra btn-success-ultra">Generate Report</a>
   </div>
 </div>
+
 {% endblock %}
