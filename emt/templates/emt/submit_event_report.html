@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'emt/css/submit_event_report.css' %}">
+
+<div class="ultra-proposal-root">
+
+  <!-- Side Info Card -->
+  <div class="ultra-side-info">
+    <div class="info-card glass-card">
+      <h2>EVENT INFORMATION</h2>
+      <table>
+        <tr><th>Department</th><td>{{ proposal.department }}</td></tr>
+        <tr><th>Title</th><td>{{ proposal.event_title }}</td></tr>
+        <tr><th>Date & Time</th><td>{{ proposal.event_datetime|date:"d M Y, H:i" }}</td></tr>
+        <tr><th>Venue</th><td>{{ proposal.venue }}</td></tr>
+        <tr><th>Academic Year</th><td>{{ proposal.academic_year }}</td></tr>
+        <tr><th>Focus</th><td>{{ proposal.event_focus_type }}</td></tr>
+        <tr><th>Target Audience</th><td>{{ proposal.target_audience }}</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Main Content: Ultra Report Form -->
+  <div class="ultra-main-content">
+    <div class="ultra-header">
+      <h1 class="glow-text">Generate Event Report</h1>
+      <span class="meta">Fill the required fields, let AI help, and upload any supporting documents.</span>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="review-form-ultra glass-card">
+      {% csrf_token %}
+      <div class="section-glass">
+        <h3>Report Details</h3>
+        {{ form.non_field_errors }}
+        <div class="form-flex">
+          {% for field in form %}
+            <div class="form-field-block">
+              <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+              {{ field }}
+              {% if field.help_text %}
+                <small style="color: #8399bb">{{ field.help_text }}</small>
+              {% endif %}
+              {{ field.errors }}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="section-glass">
+        <h3>Upload Attachments</h3>
+        {{ formset.management_form }}
+        <div class="attachment-row">
+          {% for f in formset %}
+            <div class="attachment-block">
+              {{ f.file.label_tag }} {{ f.file }}
+              {{ f.caption.label_tag }} {{ f.caption }}
+              {% if f.instance.pk %}
+                <label>Delete:</label> {{ f.DELETE }}
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+  <div style="margin-top:24px; text-align:right;">
+    <a href="{% url 'emt:generate_report' proposal.id %}" class="btn-ultra btn-success-ultra">Generate Report</a>
+  </div>
+</div>
+
+{% endblock %}

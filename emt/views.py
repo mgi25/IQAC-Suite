@@ -10,12 +10,12 @@ from django.db.models import Q
 from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
     EventExpectedOutcomes, TentativeFlow,
-    ExpenseDetail, SpeakerProfile
+    ExpenseDetail, SpeakerProfile,EventReport, EventReportAttachment
 )
 from .forms import (
     EventProposalForm, NeedAnalysisForm, ExpectedOutcomesForm,
     ObjectivesForm, TentativeFlowForm, SpeakerProfileForm,
-    ExpenseDetailForm
+    ExpenseDetailForm,EventReportForm, EventReportAttachmentForm
 )
 from django.forms import modelformset_factory
 from core.models import Department,Association, Club, Center, Cell      # FK model you created
@@ -26,7 +26,6 @@ from django.contrib import messages
 from django.utils import timezone
 from django.db import models
 from .models import MediaRequest
-
 # ──────────────────────────────
 # CDL DASHBOARD
 # ──────────────────────────────
@@ -405,8 +404,13 @@ def iqac_suite_dashboard(request):
 
 @login_required
 def pending_reports(request):
-    proposals = EventProposal.objects.filter(report_generated=False, submitted_by=request.user)
+    proposals = EventProposal.objects.filter(
+        submitted_by=request.user,
+        status__in=['approved', 'finalized'],
+        report_generated=False
+    )
     return render(request, 'emt/pending_reports.html', {'proposals': proposals})
+
 
 @login_required
 def generate_report(request, proposal_id):
@@ -527,7 +531,13 @@ def review_approval_step(request, step_id):
     step = get_object_or_404(ApprovalStep, id=step_id, assigned_to=request.user)
     proposal = step.proposal
 
-    # Define "gatekeeper" roles (can escalate to AC/Dean)
+    need_analysis = getattr(proposal, "eventneedanalysis", None)
+    objectives = getattr(proposal, "eventobjectives", None)
+    outcomes = getattr(proposal, "eventexpectedoutcomes", None)
+    flow = getattr(proposal, "tentativeflow", None)
+    speakers = SpeakerProfile.objects.filter(proposal=proposal)
+    expenses = ExpenseDetail.objects.filter(proposal=proposal)
+
     GATEKEEPER_ROLES = [
         "hod", "uni_iqac", "university_club_head", "center_head", "cell_head"
     ]
@@ -639,6 +649,50 @@ def review_approval_step(request, step_id):
     return render(request, 'emt/review_approval_step.html', {
         'step': step,
         'GATEKEEPER_ROLES': GATEKEEPER_ROLES,
+        'need_analysis': need_analysis,
+        'objectives': objectives,
+        'outcomes': outcomes,
+        'flow': flow,
+        'speakers': speakers,
+        'expenses': expenses,
     })
 
+@login_required
+def submit_event_report(request, proposal_id):
+    proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
+
+    # Only allow if no report exists yet
+    report, created = EventReport.objects.get_or_create(proposal=proposal)
+    AttachmentFormSet = modelformset_factory(EventReportAttachment, form=EventReportAttachmentForm, extra=2, can_delete=True)
+
+    if request.method == "POST":
+        form = EventReportForm(request.POST, instance=report)
+        formset = AttachmentFormSet(request.POST, request.FILES, queryset=report.attachments.all())
+        if form.is_valid() and formset.is_valid():
+            report = form.save(commit=False)
+            report.proposal = proposal
+            report.save()
+            form.save_m2m()
+
+            # Save attachments
+            instances = formset.save(commit=False)
+            for obj in instances:
+                obj.report = report
+                obj.save()
+            for obj in formset.deleted_objects:
+                obj.delete()
+            messages.success(request, "Report submitted successfully!")
+            # Redirect as needed (PDF preview/download, dashboard, etc.)
+            return redirect('pending_reports')  # or wherever you want
+    else:
+        form = EventReportForm(instance=report)
+        formset = AttachmentFormSet(queryset=report.attachments.all())
+
+    # Pre-fill context with proposal info for readonly/preview display
+    context = {
+        "proposal": proposal,
+        "form": form,
+        "formset": formset,
+    }
+    return render(request, "emt/submit_event_report.html", context)
 

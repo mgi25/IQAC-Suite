@@ -1,14 +1,6 @@
 from django.urls import path
 from . import views
 
-#Code block for report generation
-from django.urls import path
-from . import views
-urlpatterns = [
- path("generate-report/", views.report_form, name="report_form"),
- path("generate-report-pdf/", views.generate_report_pdf, name="generate_report_pdf"),
-]
-
 app_name = 'emt'
 
 urlpatterns = [
@@ -44,4 +36,5 @@ urlpatterns = [
     path("suite/my-approvals/", views.my_approvals, name="my_approvals"),
     path("suite/review-approval/<int:step_id>/", views.review_approval_step, name="review_approval_step"),
     path('cdl/my-requests/', views.my_requests_view, name='cdl_my_requests'),
+    path('report/submit/<int:proposal_id>/', views.submit_event_report, name='submit_event_report'),
 ]
