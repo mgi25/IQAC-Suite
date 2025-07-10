@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'cdl/css/submit_request.css' %}">
+
+<div class="submit-container">
+  <h2 class="submit-heading">Submit Media Request</h2>
+  <form method="POST" enctype="multipart/form-data" class="submit-form">
+    {% csrf_token %}
+    <label for="media_type">Media Type</label>
+    <select name="media_type" id="media_type" required>
+      <option value="">-- Select Type --</option>
+      <option value="Poster">Poster</option>
+      <option value="Video">Video</option>
+    </select>
+
+    <label for="title">Title</label>
+    <input type="text" name="title" id="title" required>
+
+    <label for="description">Description</label>
+    <textarea name="description" id="description" rows="5" required></textarea>
+
+    <label for="event_date">Event Date</label>
+    <input type="date" name="event_date" id="event_date" required>
+
+    <label for="media_file">Upload File (optional)</label>
+    <input type="file" name="media_file" id="media_file" accept="image/*,video/*">
+
+    <button type="submit" class="submit-btn"><span>Submit Request</span></button>
+  </form>
+</div>
+{% endblock %}

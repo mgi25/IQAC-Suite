@@ -1,0 +1,114 @@
+.my-requests-container {
+  max-width: 1100px;
+  margin: 60px auto;
+  padding: 20px;
+}
+
+.my-requests-heading {
+  text-align: center;
+  color: #1863c6;
+  font-size: 2rem;
+  margin-bottom: 40px;
+  animation: fadeInDown 0.5s ease;
+}
+
+.request-cards-grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  animation: fadeIn 1s ease;
+}
+
+.request-card {
+  background: #ffffff;
+  border-left: 5px solid #1863c6;
+  padding: 20px 22px;
+  border-radius: 1rem;
+  box-shadow: 0 5px 18px rgba(0,0,0,0.06);
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.request-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.08);
+}
+
+.request-card-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.media-type {
+  background: #e6f0ff;
+  padding: 4px 10px;
+  border-radius: 20px;
+  color: #1863c6;
+}
+
+.status {
+  padding: 4px 10px;
+  border-radius: 20px;
+  text-transform: capitalize;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.status.pending { background: #fff3cd; color: #856404; }
+.status.completed { background: #d4edda; color: #155724; }
+.status.rejected { background: #f8d7da; color: #721c24; }
+
+.request-desc {
+  margin: 10px 0;
+  font-size: 0.94rem;
+  color: #333;
+  line-height: 1.4;
+}
+
+.file-link {
+  display: inline-block;
+  margin-top: 6px;
+  color: #1863c6;
+  font-weight: 500;
+  text-decoration: underline;
+}
+
+.timestamp {
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 12px;
+  text-align: right;
+}
+
+.no-requests {
+  text-align: center;
+  color: #666;
+  font-size: 1.1rem;
+  padding: 40px;
+}
+
+/* Animations */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 import json
 from django.http import JsonResponse
@@ -24,11 +25,40 @@ from emt.models import ApprovalStep
 from django.contrib import messages
 from django.utils import timezone
 from django.db import models
+from .models import MediaRequest
+
 # ──────────────────────────────
 # CDL DASHBOARD
 # ──────────────────────────────
 def cdl_dashboard(request):
     return render(request, 'emt/cdl_dashboard.html')
+
+@login_required
+def submit_request_view(request):
+    if request.method == 'POST':
+        media_type = request.POST.get('media_type')
+        title = request.POST.get('title')
+        description = request.POST.get('description')
+        event_date = request.POST.get('event_date')
+        media_file = request.FILES.get('media_file')
+
+        MediaRequest.objects.create(
+            user=request.user,
+            media_type=media_type,
+            title=title,
+            description=description,
+            event_date=event_date,
+            media_file=media_file
+        )
+        messages.success(request, 'Your media request has been submitted.')
+        return redirect('cdl_dashboard')
+
+    return render(request, 'cdl/cdl_submit_request.html')
+
+@login_required
+def my_requests_view(request):
+    requests = MediaRequest.objects.filter(user=request.user).order_by('-created_at')
+    return render(request, 'cdl/cdl_my_requests.html', {'requests': requests})
 
 # ──────────────────────────────
 # REPORT GENERATION

@@ -17,7 +17,7 @@ urlpatterns = [
     # NEW: Allow /submit/ and /submit/<int:pk>/ for new and existing proposals (draft)
     path('submit/', views.submit_proposal, name='submit_proposal'),
     path('submit/<int:pk>/', views.submit_proposal, name='submit_proposal_with_pk'),  # <---- Add this!
-
+    path('cdl/submit/', views.submit_request_view, name='cdl_submit'),
     path('need-analysis/<int:proposal_id>/', views.submit_need_analysis, name='submit_need_analysis'),
     path('objectives/<int:proposal_id>/', views.submit_objectives, name='submit_objectives'),
     path('expected-outcomes/<int:proposal_id>/', views.submit_expected_outcomes, name='submit_expected_outcomes'),
@@ -43,4 +43,5 @@ urlpatterns = [
     path("api/faculty/", views.api_faculty, name="api_faculty"),
     path("suite/my-approvals/", views.my_approvals, name="my_approvals"),
     path("suite/review-approval/<int:step_id>/", views.review_approval_step, name="review_approval_step"),
+    path('cdl/my-requests/', views.my_requests_view, name='cdl_my_requests'),
 ]
