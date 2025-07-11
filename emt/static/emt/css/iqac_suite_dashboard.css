@@ -367,3 +367,25 @@
   margin-bottom: 2px;
   letter-spacing: 0.2px;
 }
+.notif-meta-badge {
+  margin: 6px 0;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.notif-date-pill, .notif-age-pill {
+  background-color: #f1f5f9;
+  border-radius: 999px;
+  padding: 4px 10px;
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.notif-date-pill svg {
+  color: #64748b;
+}

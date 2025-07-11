@@ -26,6 +26,7 @@ from django.contrib import messages
 from django.utils import timezone
 from django.db import models
 from .models import MediaRequest
+from datetime import timedelta
 # ──────────────────────────────
 # CDL DASHBOARD
 # ──────────────────────────────
@@ -376,10 +377,19 @@ def iqac_suite_dashboard(request):
 
     # User's proposals, sorted by update time (for notifications)
     statuses_to_notify = ['submitted', 'under_review', 'rejected', 'returned']
+    now = timezone.now()
+    cutoff = now - timedelta(days=2)
+
+    statuses_show_always = ['submitted', 'under_review']
+    statuses_show_temporarily = ['returned', 'rejected', 'finalized']
+
     user_proposals = EventProposal.objects.filter(
-        submitted_by=user,
-        status__in=statuses_to_notify
+        submitted_by=user
+    ).filter(
+        Q(status__in=statuses_show_always) |
+        Q(status__in=statuses_show_temporarily, updated_at__gte=cutoff)
     ).order_by('-updated_at')
+
 
     # Role assignments for access to 4th card
     ras = list(user.role_assignments.all())
