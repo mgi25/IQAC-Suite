@@ -28,6 +28,7 @@ from django.db import models
 from .models import MediaRequest
 from datetime import timedelta
 from django.utils.timezone import now
+from django.db.models import Sum
 # ──────────────────────────────
 # CDL DASHBOARD
 # ──────────────────────────────
@@ -365,49 +366,67 @@ def submit_expense_details(request, proposal_id):
 # STATUS PAGE
 # ──────────────────────────────
 @login_required
-def proposal_status(request, proposal_id):
-    proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
-    return render(request, 'emt/proposal_status.html', {'proposal': proposal})
+def proposal_status_detail(request, proposal_id):
+    # load the proposal
+    proposal = get_object_or_404(
+        EventProposal,
+        id=proposal_id,
+        submitted_by=request.user
+    )
+
+    # load its approval steps
+    approval_steps = ApprovalStep.objects.filter(
+        proposal=proposal
+    ).order_by('step_order')
+
+    # compute total budget
+    budget_total = (
+        proposal.expensedetail_set
+                .aggregate(total=Sum('amount'))['total']
+        or 0
+    )
+
+    return render(request, 'emt/proposal_status_detail.html', {
+        'proposal': proposal,
+        'approval_steps': approval_steps,
+        'statuses': ['draft', 'submitted', 'under_review', 'returned', 'rejected', 'finalized'],
+        'budget_total': budget_total,
+    })
+
+
+
 
 # ──────────────────────────────
 # IQAC Suite Dashboard
 # ──────────────────────────────
 @login_required
-def iqac_suite_dashboard(request):
-    user = request.user
+def proposal_status_detail(request, proposal_id):
+    # 1) fetch the proposal
+    proposal = get_object_or_404(
+        EventProposal,
+        id=proposal_id,
+        submitted_by=request.user
+    )
 
-    # User's proposals, sorted by update time (for notifications)
-    statuses_to_notify = ['submitted', 'under_review', 'rejected', 'returned']
-    now = timezone.now()
-    cutoff = now - timedelta(days=2)
+    # 2) get all approval steps in order
+    approval_steps = ApprovalStep.objects.filter(
+        proposal=proposal
+    ).order_by('step_order')
 
-    statuses_show_always = ['submitted', 'under_review']
-    statuses_show_temporarily = ['returned', 'rejected', 'finalized']
+    # 3) compute the total budget by querying ExpenseDetail directly
+    #    (instead of proposal.expensedetail_set)
+    budget_agg = ExpenseDetail.objects.filter(
+        proposal=proposal
+    ).aggregate(total=Sum('amount'))
+    budget_total = budget_agg['total'] or 0
 
-    user_proposals = EventProposal.objects.filter(
-        submitted_by=user
-    ).filter(
-        Q(status__in=statuses_show_always) |
-        Q(status__in=statuses_show_temporarily, updated_at__gte=cutoff)
-    ).order_by('-updated_at')
-
-
-    # Role assignments for access to 4th card
-    ras = list(user.role_assignments.all())
-    roles = {ra.role for ra in ras}
-    approval_roles = {
-        "faculty", "dept_iqac", "hod", "dean",
-        "academic_coordinator", "club_head", "center_head",
-    }
-    show_approvals_card = bool(roles & approval_roles)
-
-    context = {
-        'user_proposals': user_proposals,
-        'show_approvals_card': show_approvals_card,
-        'statuses': ['draft', 'submitted', 'under_review', 'returned', 'rejected', 'finalized']
-    }
-
-    return render(request, 'emt/iqac_suite_dashboard.html', context)
+    # 4) render
+    return render(request, 'emt/proposal_status_detail.html', {
+        'proposal':       proposal,
+        'approval_steps': approval_steps,
+        'budget_total':   budget_total,
+        'statuses':       ['draft', 'submitted', 'under_review', 'returned', 'rejected', 'finalized'],
+    })
 # ──────────────────────────────
 # PENDING REPORTS, GENERATION, SUCCESS
 # ──────────────────────────────
