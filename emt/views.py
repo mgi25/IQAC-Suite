@@ -27,6 +27,7 @@ from django.utils import timezone
 from django.db import models
 from .models import MediaRequest
 from datetime import timedelta
+from django.utils.timezone import now
 # ──────────────────────────────
 # CDL DASHBOARD
 # ──────────────────────────────
@@ -707,7 +708,12 @@ def submit_event_report(request, proposal_id):
 
 @login_required
 def suite_dashboard(request):
-    user_proposals = EventProposal.objects.filter(submitted_by=request.user)
+    user_proposals = EventProposal.objects.filter(
+        submitted_by=request.user
+    ).exclude(
+        status='finalized',
+        updated_at__lt=now() - timedelta(days=2)
+    ).order_by('-updated_at')
     # The workflow. These must match your DB exactly!
     statuses = ['draft', 'submitted', 'under_review', 'returned', 'rejected', 'finalized']
 
