@@ -211,3 +211,159 @@
     align-items: flex-start;
   }
 }
+/* ---- DOT STEP PROGRESS ---- */
+.status-bar {
+  display: flex;
+  align-items: center;
+  margin-top: 12px;
+  padding: 0 12px;
+}
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #cbd5e1; /* light gray */
+  transition: background-color 0.3s ease;
+}
+.status-dot-past {
+  background-color: #22c55e; /* green */
+}
+.status-dot-current {
+  background-color: #3b82f6; /* blue */
+  box-shadow: 0 0 4px #60a5fa;
+}
+.status-dot-future {
+  background-color: #e5e7eb; /* gray */
+}
+.status-bar-line {
+  flex: 1;
+  height: 2px;
+  background-color: #cbd5e1;
+  margin: 0 8px;
+}
+
+/* ---- FILLED HORIZONTAL BAR ---- */
+.progress-bar-container {
+  width: 90%;
+  background: #e5e7eb;
+  border-radius: 8px;
+  height: 10px;
+  margin: 10px 0 4px 0;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(60,90,130,0.04);
+}
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg,#22c55e,#3b82f6);
+  border-radius: 8px;
+  transition: width 0.4s cubic-bezier(.4,2,.3,1);
+}
+.progress-bar-label {
+  display: block;
+  text-align: right;
+  font-size: 12px;
+  color: #64748b;
+  margin-top: -4px;
+  margin-bottom: 6px;
+}
+/* --- Modern Workflow Chart --- */
+
+.workflow-progress {
+  margin: 18px 0 10px 0;
+}
+
+.progress-steps {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  position: relative;
+  margin-bottom: 20px;
+  margin-left: 10px;
+  margin-right: 10px;
+}
+
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1 1 0;
+  position: relative;
+}
+
+.progress-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 5px;
+  z-index: 1;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.10);
+}
+
+.progress-dot-past {
+  background: #e0ffe9;
+}
+
+.progress-dot-current {
+  background: #dbeafe;
+  border: 2px solid #3b82f6;
+}
+
+.progress-dot-future {
+  background: #f4f4f5;
+  opacity: 0.8;
+}
+
+.progress-step-line {
+  position: absolute;
+  left: 50%;
+  top: 10px;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, #22c55e, #3b82f6 80%);
+  z-index: 0;
+  transform: translateX(11px);
+}
+
+.progress-step-label {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #64748b;
+  text-align: center;
+  min-width: 65px;
+  white-space: nowrap;
+}
+
+/* Hide last line */
+.progress-step:last-child .progress-step-line {
+  display: none;
+}
+
+/* Progress Bar */
+.progress-bar-container {
+  width: 100%;
+  background: #e5e7eb;
+  border-radius: 8px;
+  height: 8px;
+  margin: 14px 0 2px 0;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(60,90,130,0.05);
+}
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg,#22c55e,#3b82f6);
+  border-radius: 8px;
+  transition: width 0.4s cubic-bezier(.4,2,.3,1);
+}
+.progress-bar-label {
+  display: block;
+  text-align: right;
+  font-size: 12px;
+  color: #64748b;
+  margin-top: -2px;
+  margin-bottom: 2px;
+  letter-spacing: 0.2px;
+}
