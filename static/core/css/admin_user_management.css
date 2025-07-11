@@ -75,6 +75,21 @@ h1.mgmt-title {
   margin: 1rem 0;
 }
 
+/* --- Responsive action row for buttons + search --- */
+.dt-toolbar {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.dt-toolbar .dataTables_filter {
+  margin-left: auto;
+}
+.dt-toolbar .dataTables_filter input[type="search"] {
+  max-width: 220px;
+}
+
 /* Entries Dropdown */
 .dataTables_length {
   order: 0;
@@ -129,6 +144,40 @@ h1.mgmt-title {
   height: 40px;
   width: 220px;
   box-sizing: border-box;
+}
+
+/* --- Table header filter controls --- */
+.admin-users-table th > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#roleFilterSelect {
+  min-width: 110px;
+  font-size: 0.95rem;
+  padding: 2px 8px;
+}
+#roleFilterBtn {
+  font-size: 0.95rem;
+  padding: 2px 12px;
+}
+
+@media (max-width: 850px) {
+  .dt-toolbar {
+    flex-direction: column !important;
+    gap: 12px;
+    align-items: stretch;
+  }
+  .dt-toolbar .dataTables_filter {
+    margin-left: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+  .admin-users-table th > div {
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+  }
 }
 
 /* ───────────────────────────────────────────── */
