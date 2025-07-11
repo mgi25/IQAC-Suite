@@ -95,7 +95,8 @@ AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
-SITE_ID = 1  # Must match ID in django_site table
+SITE_ID = 1 # Must match ID in django_site table
+
 
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = 'dashboard'  # This should be a URL name, not a path
