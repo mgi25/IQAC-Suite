@@ -374,15 +374,15 @@ def proposal_status(request, proposal_id):
 def iqac_suite_dashboard(request):
     user = request.user
 
-    # Fetch user's submitted proposals
-    user_proposals = EventProposal.objects.filter(submitted_by=user).order_by('-created_at')
+    # User's proposals, sorted by update time (for notifications)
+    statuses_to_notify = ['submitted', 'under_review', 'rejected', 'returned']
+    user_proposals = EventProposal.objects.filter(
+        submitted_by=user,
+        status__in=statuses_to_notify
+    ).order_by('-updated_at')
 
-    # DEBUG >>> ------------------------------------------
+    # Role assignments for access to 4th card
     ras = list(user.role_assignments.all())
-    print("DEBUG – role_assignments for", user.username, ":", ras)
-    print("DEBUG – raw roles:", [ra.role for ra in ras])
-    # <<< -----------------------------------------------
-
     roles = {ra.role for ra in ras}
     approval_roles = {
         "faculty", "dept_iqac", "hod", "dean",
@@ -390,14 +390,13 @@ def iqac_suite_dashboard(request):
     }
     show_approvals_card = bool(roles & approval_roles)
 
-    return render(
-        request,
-        'emt/iqac_suite_dashboard.html',
-        {
-            'user_proposals': user_proposals,
-            'show_approvals_card': show_approvals_card
-        }
-    )
+    context = {
+        'user_proposals': user_proposals,
+        'show_approvals_card': show_approvals_card,
+        'statuses': ['draft', 'submitted', 'under_review', 'returned', 'rejected', 'finalized']
+    }
+
+    return render(request, 'emt/iqac_suite_dashboard.html', context)
 # ──────────────────────────────
 # PENDING REPORTS, GENERATION, SUCCESS
 # ──────────────────────────────
