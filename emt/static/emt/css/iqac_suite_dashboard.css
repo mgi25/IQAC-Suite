@@ -389,3 +389,17 @@
 .notif-date-pill svg {
   color: #64748b;
 }
+.notif-view-btn {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: #2563eb;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.notif-view-btn:hover {
+  color: #1e40af;
+  text-decoration: underline;
+}

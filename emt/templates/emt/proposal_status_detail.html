@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'emt/css/proposal_status_detail.css' %}">
+
+<div class="detail-container">
+
+  <!-- — Overview Card — -->
+  <div class="overview-card">
+    <h2>{{ proposal.event_title }}</h2>
+    <div class="overview-fields">
+      <div><span class="label">Submitted by:</span> {{ proposal.submitted_by.get_full_name }} ({{ proposal.submitted_by.email }})</div>
+      <div><span class="label">Submitted on:</span> {{ proposal.created_at|date:"M d, Y H:i" }}</div>
+      <div><span class="label">Event Date:</span> {{ proposal.event_date|date:"M d, Y" }}</div>
+      <div><span class="label">Department:</span> {{ proposal.department.name }}</div>
+      <div><span class="label">Association:</span> {{ proposal.association.name }}</div>
+      <div><span class="label">Speakers:</span> {{ proposal.speakerprofile_set.count }}</div>
+      <div><span class="label">Total Budget:</span> ₹{{ budget_total }}
+      </div>
+      <div>
+    <span class="label">Total Budget:</span>
+    ₹{{ budget_total }}
+  </div>
+  <div>
+    <span class="label">Current Status:</span>
+    <span class="status-badge status-{{ proposal.status }}">
+      {{ proposal.status|capfirst }}
+    </span>
+  </div>
+</div>
+  <!-- — Horizontal Stepper — -->
+  <div class="status-graph">
+    {% for status in statuses %}
+      <div class="node {% if forloop.counter0 <= proposal.status_index %}active{% endif %}">
+        <div class="node-circle"></div>
+        <div class="node-label">{{ status|capfirst }}</div>
+      </div>
+      {% if not forloop.last %}
+        <div class="connector {% if forloop.counter0 < proposal.status_index %}active{% endif %}"></div>
+      {% endif %}
+    {% endfor %}
+  </div>
+
+  <!-- — Vertical Timeline — -->
+  <div class="approval-timeline">
+    <ul class="timeline-list">
+      {% for step in approval_steps %}
+        <li class="timeline-item {{ step.status }}">
+          <div class="timeline-dot"></div>
+          <div class="timeline-card">
+            <h4>{{ step.role_required|capfirst }}</h4>
+            <p><strong>Assigned to:</strong> {{ step.assigned_to.get_full_name }}</p>
+            <p>
+              <strong>Status:</strong>
+              <span class="status-badge status-{{ step.status }}">
+                {{ step.status|capfirst }}
+              </span>
+            </p>
+            <p>
+              <strong>
+            
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <a href="{% url 'emt:iqac_suite_dashboard' %}" class="back-btn">
+    ← Back to Dashboard
+  </a>
+</div>
+{% endblock %}
