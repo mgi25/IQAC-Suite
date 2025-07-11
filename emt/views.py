@@ -695,3 +695,25 @@ def submit_event_report(request, proposal_id):
     }
     return render(request, "emt/submit_event_report.html", context)
 
+@login_required
+def suite_dashboard(request):
+    user_proposals = EventProposal.objects.filter(submitted_by=request.user)
+    # The workflow. These must match your DB exactly!
+    statuses = ['draft', 'submitted', 'under_review', 'returned', 'rejected', 'finalized']
+
+    for p in user_proposals:
+        db_status = (p.status or '').strip().lower()
+        if db_status in statuses:
+            p.status_index = statuses.index(db_status)
+        else:
+            p.status_index = 0
+        p.progress_percent = int((p.status_index + 1) * 100 / len(statuses))
+        p.current_label = statuses[p.status_index].replace('_', ' ').capitalize()
+
+
+    return render(request, 'emt/iqac_suite_dashboard.html', {
+        'user_proposals': user_proposals,
+        'statuses': statuses,
+        'show_approvals_card': request.user.has_perm('emt.can_approve_proposal'),
+    })
+

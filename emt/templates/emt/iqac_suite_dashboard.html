@@ -5,21 +5,14 @@
 
 <div class="suite-dashboard-container">
   <h1 class="suite-dashboard-title">IQAC Suite Dashboard</h1>
-
   <div class="suite-dashboard-body">
-    
+
     <!-- LEFT: CARDS -->
     <div class="suite-left-section">
       <!-- Event Proposal -->
       <div class="suite-card suite-card-hover suite-glass">
         <div class="suite-card-icon suite-card-icon-blue">
-          <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <path d="M14 2v6h6"/>
-            <path d="M8 16v-2"/>
-            <path d="M12 16v-4"/>
-            <path d="M16 16v-3"/>
-          </svg>
+          <!-- SVG ICON HERE -->
         </div>
         <div class="suite-card-title">Event Proposal</div>
         <div class="suite-card-desc">Create and manage event proposals</div>
@@ -29,13 +22,7 @@
       <!-- IQAC Report Generation -->
       <div class="suite-card suite-card-hover suite-glass">
         <div class="suite-card-icon suite-card-icon-purple">
-          <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="none" stroke="#8b5cf6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="5" y="4" width="14" height="18" rx="2" ry="2"/>
-            <path d="M9 2h6a1 1 0 0 1 1 1v1H8V3a1 1 0 0 1 1-1z"/>
-            <line x1="9" y1="9" x2="15" y2="9"/>
-            <line x1="9" y1="13" x2="15" y2="13"/>
-            <line x1="9" y1="17" x2="13" y2="17"/>
-          </svg>
+          <!-- SVG ICON HERE -->
         </div>
         <div class="suite-card-title">IQAC Report Generation</div>
         <div class="suite-card-desc">Generate IQAC reports</div>
@@ -45,12 +32,7 @@
       <!-- View Generated Reports -->
       <div class="suite-card suite-card-hover suite-glass">
         <div class="suite-card-icon suite-card-icon-green">
-          <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="none" stroke="#22c55e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/>
-            <path d="M15 2v5h5"/>
-            <path d="M8 11h8"/>
-            <path d="M8 15h5"/>
-          </svg>
+          <!-- SVG ICON HERE -->
         </div>
         <div class="suite-card-title">View Generated Reports</div>
         <div class="suite-card-desc">See all your generated reports</div>
@@ -61,10 +43,7 @@
       {% if user.is_authenticated and show_approvals_card %}
       <div class="suite-card suite-card-hover suite-glass">
         <div class="suite-card-icon suite-card-icon-orange">
-          <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M9 12l2 2 4-4"/>
-          </svg>
+          <!-- SVG ICON HERE -->
         </div>
         <div class="suite-card-title">Event Approvals</div>
         <div class="suite-card-desc">Review and approve event proposals</div>
@@ -96,22 +75,44 @@
                 {% if proposal.return_comment %}
                   <div class="notif-feedback"><b>Feedback:</b> {{ proposal.return_comment }}</div>
                 {% endif %}
-                <div class="status-bar mt-2">
-                  {% for status in statuses %}
-                    <span class="status-dot
-                      {% if forloop.counter0 == proposal.status_index %}
-                        status-dot-current
-                      {% elif forloop.counter0 < proposal.status_index %}
-                        status-dot-past
-                      {% else %}
-                        status-dot-future
-                      {% endif %}
-                    " title="{{ status|capfirst }}"></span>
-                    {% if not forloop.last %}
-                      <span class="status-bar-line"></span>
-                    {% endif %}
-                  {% endfor %}
+
+                <!-- MODERN PROGRESS CHART -->
+                <div class="workflow-progress">
+                  <div class="progress-steps">
+                    {% for status in statuses %}
+                      <div class="progress-step">
+                        <div class="progress-dot
+                          {% if forloop.counter0 < proposal.status_index %}progress-dot-past{% endif %}
+                          {% if forloop.counter0 == proposal.status_index %}progress-dot-current{% endif %}
+                          {% if forloop.counter0 > proposal.status_index %}progress-dot-future{% endif %}
+                        ">
+                          {% if forloop.counter0 < proposal.status_index %}
+                            <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="#22c55e"/><polyline points="4,6 6,8 9,4" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                          {% elif forloop.counter0 == proposal.status_index %}
+                            <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="#3b82f6"/></svg>
+                          {% else %}
+                            <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="#cbd5e1"/></svg>
+                          {% endif %}
+                        </div>
+                        {% if not forloop.last %}
+                          <div class="progress-step-line"></div>
+                        {% endif %}
+                        <div class="progress-step-label">
+                          {{ status|capfirst }}
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                  <div class="progress-bar-container">
+                    <div class="progress-bar-fill"
+                      style="width: {{ proposal.progress_percent }}%;">
+                    </div>
+                  </div>
+                  <span class="progress-bar-label">
+                    {{ proposal.progress_percent }}% complete ({{ proposal.current_label }})
+                  </span>
                 </div>
+                <!-- END CHART -->
               </li>
             {% endfor %}
           </ul>
@@ -122,7 +123,6 @@
         {% endif %}
       </div>
     </div>
-
   </div>
 </div>
 {% endblock %}

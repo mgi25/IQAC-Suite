@@ -4,7 +4,7 @@ from . import views
 app_name = 'emt'
 
 urlpatterns = [
-    path('suite/', views.iqac_suite_dashboard, name='iqac_suite_dashboard'),
+    path('suite/', views.suite_dashboard, name='iqac_suite_dashboard'),
 
     # NEW: Allow /submit/ and /submit/<int:pk>/ for new and existing proposals (draft)
     path('submit/', views.submit_proposal, name='submit_proposal'),
