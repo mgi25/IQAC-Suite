@@ -5,7 +5,6 @@
 <div class="admin-dashboard-bg">
   <div class="admin-dashboard-container">
     <div class="admin-dashboard-header">
-      {# Remove the SVG below if you don't want the shield icon #}
       <span class="admin-dashboard-icon">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="#2274CB" xmlns="http://www.w3.org/2000/svg">
           <circle cx="12" cy="12" r="10" fill="#e9f3fa"/>
@@ -38,6 +37,7 @@
         <div class="stat-count">{{ stats.centers }}</div>
         <div class="stat-label">Centers</div>
       </div>
+      <!-- Add more role stats if you want, or keep it at just these 4 -->
     </div>
     <div class="admin-dashboard-navcards">
       <a class="admin-navcard" href="{% url 'admin_user_panel' %}">
@@ -54,7 +54,7 @@
         <div class="navcard-title">Event Proposals</div>
         <div class="navcard-desc">View all submitted proposals</div>
       </a>
-      <a class="admin-navcard" href="{% url 'admin_reports' %}"> {#{% url 'admin_reports' %}#}
+      <a class="admin-navcard" href="{% url 'admin_reports' %}">
         <div class="navcard-icon">
           <i class="fa-solid fa-file-lines"></i>
         </div>
@@ -62,13 +62,12 @@
         <div class="navcard-desc">Review all generated reports</div>
       </a>
       <a class="admin-navcard" href="{% url 'admin_settings' %}">
-  <div class="navcard-icon">
-    <i class="fa-solid fa-gear"></i>
-  </div>
-  <div class="navcard-title">Settings</div>
-  <div class="navcard-desc">Admin panel settings</div>
-</a>
-
+        <div class="navcard-icon">
+          <i class="fa-solid fa-gear"></i>
+        </div>
+        <div class="navcard-title">Settings</div>
+        <div class="navcard-desc">Admin panel settings</div>
+      </a>
     </div>
   </div>
 </div>

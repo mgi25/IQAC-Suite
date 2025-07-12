@@ -5,7 +5,7 @@
 <div class="container admin-proposals-container">
     <h1 class="proposals-title">Event Proposals</h1>
     <form method="get" class="proposals-filter-form">
-        <input type="text" name="q" placeholder="Search by title, user, or department..." value="{{ request.GET.q|default:'' }}">
+        <input type="text" name="q" placeholder="Search by title, user, or organization..." value="{{ request.GET.q|default:'' }}">
         <select name="status">
             <option value="">All Status</option>
             <option value="submitted" {% if request.GET.status == "submitted" %}selected{% endif %}>Submitted</option>
@@ -13,6 +13,7 @@
             <option value="approved" {% if request.GET.status == "approved" %}selected{% endif %}>Approved</option>
             <option value="rejected" {% if request.GET.status == "rejected" %}selected{% endif %}>Rejected</option>
             <option value="returned" {% if request.GET.status == "returned" %}selected{% endif %}>Returned</option>
+            <option value="finalized" {% if request.GET.status == "finalized" %}selected{% endif %}>Finalized</option>
         </select>
         <button type="submit" class="btn btn-primary">Filter</button>
     </form>
@@ -23,7 +24,7 @@
                     <th>#</th>
                     <th>Title</th>
                     <th>Submitted By</th>
-                    <th>Department</th>
+                    <th>Organization</th>
                     <th>Date</th>
                     <th>Status</th>
                     <th>Action</th>
@@ -35,26 +36,29 @@
                     <td>{{ forloop.counter }}</td>
                     <td>
                         <a href="#" class="proposal-title-link" data-id="{{ p.id }}" onclick="showProposalModal({{ p.id }})">
-                            {{ p.title|truncatechars:30 }}
+                            {{ p.event_title|truncatechars:30 }}
                         </a>
                     </td>
                     <td>{{ p.submitted_by.get_full_name|default:p.submitted_by.username }}</td>
-                    <td>{{ p.department|default:"-" }}</td>
-                    <td>{{ p.date_submitted|date:"Y-m-d H:i" }}</td>
+                    <td>
+                        {# Show the relevant organization for the proposal #}
+                        {% if p.department %}Dept: {{ p.department.name }}{% endif %}
+                        {% if p.association %}Assoc: {{ p.association.name }}{% endif %}
+                        {% if p.club %}Club: {{ p.club.name }}{% endif %}
+                        {% if p.center %}Center: {{ p.center.name }}{% endif %}
+                        {% if p.cell %}Cell: {{ p.cell.name }}{% endif %}
+                        {% if not p.department and not p.association and not p.club and not p.center and not p.cell %}—{% endif %}
+                    </td>
+                    <td>{{ p.created_at|date:"Y-m-d H:i" }}</td>
                     <td>
                         <span class="status-badge status-{{ p.status }}">
                             {{ p.get_status_display }}
                         </span>
                     </td>
                     <td>
-                        {% if p.status in "submitted,under_review,returned" %}
-                        <button class="btn-action btn-approve" onclick="handleAction({{ p.id }}, 'approved')">Approve</button>
-                        <button class="btn-action btn-reject" onclick="handleAction({{ p.id }}, 'rejected')">Reject</button>
-                        <button class="btn-action btn-return" onclick="handleAction({{ p.id }}, 'returned')">Return</button>
-                        {% else %}
-                        <span class="action-done">—</span>
-                        {% endif %}
+                        <a href="{% url 'admin_proposal_detail' p.id %}" class="btn-action btn-view">View</a>
                     </td>
+
                 </tr>
                 {% empty %}
                 <tr>

@@ -10,10 +10,17 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 import json
 from .models import (
-    Profile, EventProposal, RoleAssignment,
+    Profile, RoleAssignment,
     Department, Club, Center, Report,Cell, Association
 )
 from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Count
+from emt.models import EventProposal
+from emt.models import (
+    EventProposal, EventNeedAnalysis, EventObjectives, EventExpectedOutcomes, TentativeFlow,
+    ExpenseDetail, SpeakerProfile, ApprovalStep
+)
+from django.db.models import Sum
 # ─────────────────────────────────────────────────────────────
 #  Helpers
 # ─────────────────────────────────────────────────────────────
@@ -53,7 +60,8 @@ def dashboard(request):
         EventProposal.objects
         .filter(submitted_by=request.user)
         .exclude(status="completed")
-        .order_by("-date_submitted")
+        .order_by("-created_at")
+
     )
     other_notifications = [
         {"type": "info",     "msg": "System update scheduled for tonight at 10 PM.", "time": "2 hours ago"},
@@ -124,19 +132,30 @@ def proposal_status(request, pk):
 def admin_dashboard(request):
     stats = {
         "students":  RoleAssignment.objects.filter(role="student").count(),
-        "faculty":   RoleAssignment.objects.filter(role="faculty").count(),
+        "faculties": RoleAssignment.objects.filter(role="faculty").count(),
         "hods":      RoleAssignment.objects.filter(role="hod").count(),
-        "dept_iqac": RoleAssignment.objects.filter(role="dept_iqac").count(),
-        "assoc_heads": RoleAssignment.objects.filter(role="association_head").count(),
-        "club_heads":  RoleAssignment.objects.filter(role="club_head").count(),
-        "uni_club_heads": RoleAssignment.objects.filter(role="university_club_head").count(),
-        "center_heads":   RoleAssignment.objects.filter(role="center_head").count(),
-        "cell_heads":     RoleAssignment.objects.filter(role="cell_head").count(),
-        "uni_iqac":   RoleAssignment.objects.filter(role="uni_iqac").count(),
-        "deans":      RoleAssignment.objects.filter(role="dean").count(),
-        "directors":  RoleAssignment.objects.filter(role="director").count(),
+        "centers":   Center.objects.count(),
+        "departments": Department.objects.count(),
+        "clubs": Club.objects.count(),
+        "cells": Cell.objects.count(),
+        "associations": Association.objects.count(),
     }
-    return render(request, "core/admin_dashboard.html", {"stats": stats})
+
+    departments = Department.objects.annotate(num_users=Count('roleassignment'))
+    clubs = Club.objects.annotate(num_users=Count('roleassignment'))
+    centers = Center.objects.annotate(num_users=Count('roleassignment'))
+    cells = Cell.objects.annotate(num_users=Count('roleassignment'))
+    associations = Association.objects.annotate(num_users=Count('roleassignment'))
+
+    return render(request, "core/admin_dashboard.html", {
+        "stats": stats,
+        "departments": departments,
+        "clubs": clubs,
+        "centers": centers,
+        "cells": cells,
+        "associations": associations,
+    })
+
 
 
 @user_passes_test(lambda u: u.is_superuser)
@@ -242,20 +261,25 @@ def admin_user_edit(request, user_id):
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_event_proposals(request):
-    q = request.GET.get("q", "")
-    status = request.GET.get("status", "")
-    proposals = EventProposal.objects.all().order_by("-date_submitted")
+    proposals = EventProposal.objects.all().order_by("-created_at")
+    q = request.GET.get("q", "").strip()
+    status = request.GET.get("status", "").strip()
+
     if q:
         proposals = proposals.filter(
-            Q(title__icontains=q) |
+            Q(event_title__icontains=q) |
             Q(submitted_by__username__icontains=q) |
-            Q(department__name__icontains=q)
+            Q(department__name__icontains=q) |
+            Q(association__name__icontains=q) |
+            Q(club__name__icontains=q) |
+            Q(center__name__icontains=q) |
+            Q(cell__name__icontains=q)
         )
     if status:
         proposals = proposals.filter(status=status)
-    return render(request, "core/admin_event_proposals.html", {
-        "proposals": proposals
-    })
+    return render(request, "core/admin_event_proposals.html", {"proposals": proposals})
+
+
 
 @user_passes_test(lambda u: u.is_superuser)
 def event_proposal_json(request, proposal_id):
@@ -324,7 +348,8 @@ def iqac_suite_dashboard(request):
     user_proposals = (
         EventProposal.objects
         .filter(submitted_by=request.user)
-        .order_by("-date_submitted")
+        .order_by("-created_at")
+
     )
     for proposal in user_proposals:
         proposal.status_index = STATUSES.index(proposal.status) if proposal.status in STATUSES else -1
@@ -412,3 +437,28 @@ def admin_settings_delete(request, model_name, pk):
         obj.delete()
         return JsonResponse({"success": True})
     return JsonResponse({"success": False, "error": "Invalid request"})
+@user_passes_test(lambda u: u.is_superuser)
+def admin_proposal_detail(request, proposal_id):
+    proposal = get_object_or_404(EventProposal, id=proposal_id)
+    need_analysis = EventNeedAnalysis.objects.filter(proposal=proposal).first()
+    objectives = EventObjectives.objects.filter(proposal=proposal).first()
+    outcomes = EventExpectedOutcomes.objects.filter(proposal=proposal).first()
+    flow = TentativeFlow.objects.filter(proposal=proposal).first()
+    speakers = SpeakerProfile.objects.filter(proposal=proposal)
+    expenses = ExpenseDetail.objects.filter(proposal=proposal)
+    approval_steps = ApprovalStep.objects.filter(proposal=proposal).order_by('step_order')
+
+    budget_total = expenses.aggregate(total=Sum('amount'))['total'] or 0
+
+    context = {
+        "proposal": proposal,
+        "need_analysis": need_analysis,
+        "objectives": objectives,
+        "outcomes": outcomes,
+        "flow": flow,
+        "speakers": speakers,
+        "expenses": expenses,
+        "approval_steps": approval_steps,
+        "budget_total": budget_total,
+    }
+    return render(request, "core/admin_proposal_detail.html", context)

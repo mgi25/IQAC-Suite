@@ -39,5 +39,7 @@ urlpatterns = [
     path('core-admin/settings/<str:model_name>/add/', views.admin_settings_add, name='admin_settings_add'),
     path('core-admin/settings/<str:model_name>/<int:pk>/edit/', views.admin_settings_edit, name='admin_settings_edit'),
     path('core-admin/settings/<str:model_name>/<int:pk>/delete/', views.admin_settings_delete, name='admin_settings_delete'),
+    path('core-admin/proposal/<int:proposal_id>/detail/', views.admin_proposal_detail, name='admin_proposal_detail'),
+
 
 ]
