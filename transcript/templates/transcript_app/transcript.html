@@ -7,6 +7,19 @@
 <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
+  /* HIDE SIDEBAR SCROLLBAR */
+  .sidebar {
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE 10+ */
+  }
+
+  .sidebar::-webkit-scrollbar {
+    display: none;
+    /* Chrome, Safari, Opera */
+  }
+
   .transcript-main-bg {
     min-height: 100vh;
     background: linear-gradient(120deg, #f6fafd 0%, #e6f5fd 100%);
@@ -37,7 +50,7 @@
     background: #f9fbfd;
     border-radius: 20px;
     padding: 2.5rem 2rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     border: 1px solid #e3eaf3;
     position: sticky;
     top: 120px;
@@ -77,7 +90,7 @@
     border: 1px solid #e3eaf3;
     border-radius: 18px;
     margin-bottom: 1.2rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
     transition: box-shadow 0.2s, transform 0.2s;
     cursor: pointer;
     position: relative;
@@ -448,6 +461,7 @@
       justify-content: flex-start;
       padding: 16px;
     }
+
     .sidebar {
       width: 100%;
       max-width: 950px;
@@ -455,6 +469,7 @@
       margin-bottom: 2rem;
       max-height: none;
     }
+
     .transcript-card {
       max-width: 100%;
       min-height: 400px;
@@ -466,12 +481,15 @@
       padding: 16px 0 16px 0;
       align-items: flex-start;
     }
+
     .transcript-container {
       padding: 8px;
     }
+
     .sidebar {
       padding: 1.5rem 1rem;
     }
+
     .transcript-card {
       padding: 2rem 1.5rem;
       min-height: 300px;
@@ -482,13 +500,64 @@
     .transcript-container {
       padding: 2px;
     }
+
     .sidebar {
       padding: 1rem 0.5rem;
     }
+
     .transcript-card {
       padding: 1.5rem 1rem;
       min-height: 200px;
     }
+  }
+
+  .graduate-attributes-sidebar {
+    margin-top: 2rem;
+    background: #f7fafd;
+    padding: 1.5rem 1rem;
+    border-radius: 18px;
+    border: 1px solid #e3eaf3;
+  }
+
+  .graduate-attributes-sidebar .ga-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #2274CB;
+    margin-bottom: 1rem;
+    text-align: center;
+    border-bottom: 1px solid #d1d5db;
+    padding-bottom: 0.5rem;
+  }
+
+  .graduate-attributes-sidebar .ga-bar {
+    margin-bottom: 1rem;
+  }
+
+  .graduate-attributes-sidebar .ga-label {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0.3rem;
+    color: #374151;
+  }
+
+  .graduate-attributes-sidebar .ga-bar-bg {
+    width: 100%;
+    height: 10px;
+    background: #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .graduate-attributes-sidebar .ga-bar-fill {
+    height: 100%;
+    background: #3b82f6;
+    transition: width 0.5s ease;
+  }
+
+  .graduate-attributes-sidebar .ga-percentage {
+    font-size: 0.8rem;
+    color: #4b5563;
+    text-align: right;
   }
 </style>
 {% endblock %}
@@ -502,7 +571,7 @@
       {% for s in student_list %}
       <div class="course-student-card">
         <div class="course-student-info">
-          <div class="course-student-avatar">{{ s.name|slice:":1" }}</div>
+          <div class="course-student-avatar">{{ s.name|slice:"0:1" }}</div>
           <div>
             <div class="course-student-name">{{ s.name }}</div>
             <div class="course-student-roll">{{ s.roll_no }}</div>
@@ -511,10 +580,29 @@
         <a href="{% url 'transcript:transcript' s.roll_no %}" class="view-btn"><i class="fa-solid fa-eye"></i></a>
       </div>
       {% endfor %}
+
+      <!-- ✅ Graduate Attributes Sidebar Box -->
+      <div class="transcript-section-title">Top 5 Character Strengths of  <br><br>{{ student.name }}</div>
+      <div class="graduate-attributes-sidebar">
+        {% for s in top_5_strengths %}
+        <div class="ga-bar">
+          <div class="ga-label">{{ s.name }}</div>
+          <div class="ga-bar-bg">
+            <div class="ga-bar-fill" style="width: {{ s.score }}%; background: #3b82f6;"></div>
+          </div>
+          <div class="ga-percentage">{{ s.score }}%</div>
+        </div>
+        {% empty %}
+        <div style="text-align:center; color:#6b7280;">No character strengths found.</div>
+        {% endfor %}
+      </div>
+      <!-- ✅ End Graduate Attributes Sidebar -->
     </div>
     {% endif %}
+
     <div class="transcript-card">
       <div class="transcript-title"><i class="fa-solid fa-file-lines"></i> Student Character Strength Transcript</div>
+
       <div class="info-block">
         <div>
           <div class="info-label">Student Name</div>
@@ -525,6 +613,7 @@
           <div class="info-value">{{ student.roll_no }} {{ student.programme }}</div>
         </div>
       </div>
+
       <div class="transcript-section-title">Character Strength Assessment</div>
       <table class="transcript-table">
         <thead>
@@ -546,6 +635,7 @@
           {% endfor %}
         </tbody>
       </table>
+
       <div class="transcript-section-title">Key Responsibilities</div>
       <div class="responsibilities">
         <ul>
@@ -554,6 +644,7 @@
           {% endfor %}
         </ul>
       </div>
+
       {% if qr_code %}
       <div class="qr-container">
         <div class="qr-card">
@@ -563,8 +654,9 @@
         </div>
       </div>
       {% endif %}
+
       <div class="transcript-footer">
-        <div class="barcode">{{ student.name }}</div>
+        <div class="barcode">Fr. Justine</div>
         <div class="authority-title">DEAN & DIRECTOR</div>
         <div class="authority-subtitle">CHRIST (Deemed to be University)<br>Pune Lavasa Campus</div>
         <div class="transcript-footer-note">
@@ -582,12 +674,11 @@
   </div>
 </div>
 
-<!-- 🔍 Search Script (kept for future extensibility) -->
 <script>
   const students = [
     {% for s in student_list %}
-    { roll_no: `{{ s.roll_no|lower }}`, name: `{{ s.name|lower }}` },
-    {% endfor %}
+  { roll_no: `{{ s.roll_no|lower }}`, name: `{{ s.name|lower }}` },
+  {% endfor %}
   ];
 
   function goToStudent() {

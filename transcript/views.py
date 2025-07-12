@@ -99,6 +99,23 @@ def transcript_view(request, roll_no):
     student = get_object_or_404(Student, roll_no=roll_no)
     strength_data, participations = calculate_strength_data(student)
 
+    # Prepare top 5 strengths based on average score for sidebar (non-destructive)
+    strength_scores_for_sidebar = []
+    for s in strength_data:
+        if s['average'] > 0:
+            strength_scores_for_sidebar.append({
+                'name': s['name'],
+                'score': s['average']
+            })
+
+    # Sort by score descending and pick top 5
+    top_5_strengths = sorted(strength_scores_for_sidebar, key=lambda x: x['score'], reverse=True)[:5]
+
+    # Normalize scores to percentage (optional, you can skip if score is already percentage)
+    max_score = max([s['score'] for s in top_5_strengths], default=1)
+    for s in top_5_strengths:
+        s['score'] = round((s['score'] / max_score) * 100, 2) if max_score > 0 else 0
+
     sorted_events = sorted(participations, key=lambda p: len(p.event.attributes.all()), reverse=True)
     top_events = [p.event.name for p in sorted_events[:5]]
 
@@ -119,7 +136,8 @@ def transcript_view(request, roll_no):
 
     return render(request, 'transcript_app/transcript.html', {
         'student': student,
-        'strength_data': strength_data,
+        'strength_data': strength_data,  # 👈 untouched
+        'top_5_strengths': top_5_strengths,  # 👈 added
         'today': date.today(),
         'top_events': top_events,
         'qr_code': qr_b64,
