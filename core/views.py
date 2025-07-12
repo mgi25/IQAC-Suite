@@ -13,7 +13,7 @@ from .models import (
     Profile, EventProposal, RoleAssignment,
     Department, Club, Center, Report,Cell, Association
 )
-
+from django.views.decorators.csrf import csrf_exempt
 # ─────────────────────────────────────────────────────────────
 #  Helpers
 # ─────────────────────────────────────────────────────────────
@@ -334,3 +334,81 @@ def iqac_suite_dashboard(request):
         "statuses": STATUSES,
     }
     return render(request, "emt/iqac_suite_dashboard.html", context)
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def admin_settings(request):
+    departments = Department.objects.all()
+    clubs = Club.objects.all()
+    centers = Center.objects.all()
+    cells = Cell.objects.all()
+    associations = Association.objects.select_related("department").all()
+    return render(request, "core/admin_settings.html", {
+        "departments": departments,
+        "clubs": clubs,
+        "centers": centers,
+        "cells": cells,
+        "associations": associations,
+    })
+
+# The following can be made more DRY, but let's keep simple for now:
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+@csrf_exempt
+def admin_settings_add(request, model_name):
+    MODEL_MAP = {
+        "department": Department,
+        "club": Club,
+        "center": Center,
+        "cell": Cell,
+        "association": Association,
+    }
+    Model = MODEL_MAP.get(model_name)
+    if request.method == "POST" and Model:
+        name = request.POST.get("name", "").strip()
+        obj, created = Model.objects.get_or_create(name=name)
+        return JsonResponse({"success": True, "id": obj.id, "name": obj.name})
+    return JsonResponse({"success": False, "error": "Invalid request"})
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+@csrf_exempt
+def admin_settings_edit(request, model_name, pk):
+    MODEL_MAP = {
+        "department": Department,
+        "club": Club,
+        "center": Center,
+        "cell": Cell,
+        "association": Association,
+    }
+    Model = MODEL_MAP.get(model_name)
+    if request.method == "POST" and Model:
+        obj = get_object_or_404(Model, pk=pk)
+        name = request.POST.get("name", "").strip()
+        obj.name = name
+        if model_name == "association":
+            # Handle department field for Association
+            dept_id = request.POST.get("department")
+            if dept_id:
+                obj.department_id = dept_id
+        obj.save()
+        return JsonResponse({"success": True})
+    return JsonResponse({"success": False, "error": "Invalid request"})
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+@csrf_exempt
+def admin_settings_delete(request, model_name, pk):
+    MODEL_MAP = {
+        "department": Department,
+        "club": Club,
+        "center": Center,
+        "cell": Cell,
+        "association": Association,
+    }
+    Model = MODEL_MAP.get(model_name)
+    if request.method == "POST" and Model:
+        obj = get_object_or_404(Model, pk=pk)
+        obj.delete()
+        return JsonResponse({"success": True})
+    return JsonResponse({"success": False, "error": "Invalid request"})

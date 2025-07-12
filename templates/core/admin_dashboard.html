@@ -61,13 +61,14 @@
         <div class="navcard-title">Reports</div>
         <div class="navcard-desc">Review all generated reports</div>
       </a>
-      <a class="admin-navcard" href="#"> {#{% url 'admin_settings' %}#}
-        <div class="navcard-icon">
-          <i class="fa-solid fa-gear"></i>
-        </div>
-        <div class="navcard-title">Settings</div>
-        <div class="navcard-desc">Admin panel settings</div>
-      </a>
+      <a class="admin-navcard" href="{% url 'admin_settings' %}">
+  <div class="navcard-icon">
+    <i class="fa-solid fa-gear"></i>
+  </div>
+  <div class="navcard-title">Settings</div>
+  <div class="navcard-desc">Admin panel settings</div>
+</a>
+
     </div>
   </div>
 </div>
