@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'core/css/admin_proposal_detail.css' %}">
+
+<div class="ultra-proposal-root">
+  <!-- LEFT COLUMN: Event Info Card -->
+  <aside class="ultra-side-info">
+    <div class="info-card glass">
+      <h2>Event Information</h2>
+      <table>
+        <tr><th>Department</th><td>{{ proposal.department.name|default:"—" }}</td></tr>
+        <tr><th>Committee(s)</th><td>{{ proposal.committees|default:"—" }}</td></tr>
+        <tr><th>Event Title</th><td>{{ proposal.event_title }}</td></tr>
+        <tr><th>No. of Activities</th><td>{{ proposal.num_activities|default:"—" }}</td></tr>
+        <tr><th>Date & Time</th><td>{{ proposal.event_datetime|date:"d M Y, H:i" }}</td></tr>
+        <tr><th>Venue</th><td>{{ proposal.venue|default:"—" }}</td></tr>
+        <tr><th>Academic Year</th><td>{{ proposal.academic_year|default:"—" }}</td></tr>
+        <tr><th>Target Audience</th><td>{{ proposal.target_audience|default:"—" }}</td></tr>
+        <tr>
+          <th>Faculty Incharges</th>
+          <td>
+            {% for fac in proposal.faculty_incharges.all %}
+              {{ fac.get_full_name }}{% if not forloop.last %}, {% endif %}
+            {% empty %} — {% endfor %}
+          </td>
+        </tr>
+        <tr><th>Student Coordinators</th><td>{{ proposal.student_coordinators|default:"—" }}</td></tr>
+        <tr><th>Type (Focus)</th><td>{{ proposal.event_focus_type|default:"—" }}</td></tr>
+      </table>
+    </div>
+  </aside>
+
+  <!-- RIGHT COLUMN: All Proposal Details -->
+  <main class="ultra-main-content">
+    <div class="fadein-card ultra-header">
+      <h1>
+        <span class="glow-text">Event Proposal</span>
+      </h1>
+      <span class="meta">{{ proposal.event_title }} &middot; Submitted by {{ proposal.submitted_by.get_full_name }}</span>
+    </div>
+
+    <div class="fadein-card section-glass">
+      <h3>Need Analysis</h3>
+      <div class="detail-block">{{ need_analysis.content|linebreaksbr|default:"—" }}</div>
+    </div>
+
+    <div class="fadein-card section-glass">
+      <h3>Objectives</h3>
+      <div class="detail-block">{{ objectives.content|linebreaksbr|default:"—" }}</div>
+    </div>
+
+    <div class="fadein-card section-glass">
+      <h3>Expected Outcomes</h3>
+      <div class="detail-block">{{ outcomes.content|linebreaksbr|default:"—" }}</div>
+    </div>
+
+    <div class="fadein-card section-glass">
+      <h3>Tentative Flow</h3>
+      <div class="detail-block">{{ flow.content|linebreaksbr|default:"—" }}</div>
+    </div>
+
+    <div class="fadein-card section-glass">
+      <h3>Speaker Profile</h3>
+      {% if speakers %}
+        {% for sp in speakers %}
+          <div class="speaker-profile-block">
+            <div>
+              <b>{{ sp.full_name }}</b> <span class="profile-aff">{{ sp.designation }}, {{ sp.affiliation }}</span>
+              {% if sp.photo %}
+                <img src="{{ sp.photo.url }}" class="speaker-photo" alt="Speaker Photo">
+              {% endif %}
+              <div class="profile-meta">
+                <span>{{ sp.contact_email }}</span> &bull; <span>{{ sp.contact_number }}</span>
+              </div>
+              <div class="profile-desc">{{ sp.detailed_profile|default:"—" }}</div>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="detail-block">—</div>
+      {% endif %}
+    </div>
+
+    <!-- INCOME & EXPENSES SIDE BY SIDE -->
+    <div class="fadein-card section-glass">
+      <div class="fin-row">
+        <div class="fin-half">
+          <h3>Income</h3>
+          <table class="finance-table">
+            <thead>
+              <tr>
+                <th>Sl.No</th>
+                <th>Particulars</th>
+                <th>No. Participants</th>
+                <th>Rate</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if proposal.fest_fee_participants or proposal.fest_fee_rate or proposal.fest_fee_amount %}
+                <tr>
+                  <td>1</td>
+                  <td>Participation Fee [Fest]</td>
+                  <td>{{ proposal.fest_fee_participants|default:"—" }}</td>
+                  <td>{{ proposal.fest_fee_rate|default:"—" }}</td>
+                  <td>{{ proposal.fest_fee_amount|default:"—" }}</td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td>Sponsorship [Fest]</td>
+                  <td>—</td><td>—</td>
+                  <td>{{ proposal.fest_sponsorship_amount|default:"—" }}</td>
+                </tr>
+              {% endif %}
+              {% if proposal.conf_fee_participants or proposal.conf_fee_rate or proposal.conf_fee_amount %}
+                <tr>
+                  <td>3</td>
+                  <td>Participation Fee [Conference]</td>
+                  <td>{{ proposal.conf_fee_participants|default:"—" }}</td>
+                  <td>{{ proposal.conf_fee_rate|default:"—" }}</td>
+                  <td>{{ proposal.conf_fee_amount|default:"—" }}</td>
+                </tr>
+                <tr>
+                  <td>4</td>
+                  <td>Sponsorship [Conference]</td>
+                  <td>—</td><td>—</td>
+                  <td>{{ proposal.conf_sponsorship_amount|default:"—" }}</td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+        <div class="fin-half">
+          <h3>Expenses</h3>
+          <table class="finance-table">
+            <thead>
+              <tr>
+                <th>Sl.No</th>
+                <th>Particulars</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for exp in expenses %}
+                <tr>
+                  <td>{{ exp.sl_no }}</td>
+                  <td>{{ exp.particulars }}</td>
+                  <td>{{ exp.amount }}</td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="3">—</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- APPROVAL HISTORY SECTION -->
+    <div class="fadein-card section-glass approval-card">
+      <h3>Approval History</h3>
+      <div class="approval-history-ul">
+        <ul>
+          {% for hist in approval_steps %}
+            <li>
+              <span class="history-role">{{ hist.role_required|capfirst }}</span>
+              <span class="history-person">
+                {% if hist.assigned_to %}{{ hist.assigned_to.get_full_name }}{% else %}—{% endif %}
+              </span>
+              <span class="history-status {{ hist.status }}">
+                {{ hist.get_status_display }}
+              </span>
+              {% if hist.comment %}
+                <span class="history-comment">({{ hist.comment }})</span>
+              {% endif %}
+              {% if hist.approved_at %}
+                <span class="history-date">[{{ hist.approved_at|date:"d M Y, H:i" }}]</span>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}
