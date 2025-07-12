@@ -33,13 +33,15 @@ urlpatterns = [
     # path('admin/users/', views.admin_user_panel, name='admin_user_panel'),
     path('accounts/logout/', custom_logout, name='account_logout'),
     # urls.py
-    path('core-admin/settings/', views.admin_settings, name='admin_settings'),
+    path('core-admin/settings/', views.admin_settings_dashboard, name='admin_settings'),      # Dashboard (cards)
+    path('core-admin/master-data/', views.admin_master_data, name='admin_master_data'),
 
     # For AJAX or form post requests (optional for delete/update with JS):
-    path('core-admin/settings/<str:model_name>/add/', views.admin_settings_add, name='admin_settings_add'),
-    path('core-admin/settings/<str:model_name>/<int:pk>/edit/', views.admin_settings_edit, name='admin_settings_edit'),
-    path('core-admin/settings/<str:model_name>/<int:pk>/delete/', views.admin_settings_delete, name='admin_settings_delete'),
+    path('core-admin/settings/<str:model_name>/add/', views.admin_master_data_add, name='admin_settings_add'),
+    path('core-admin/settings/<str:model_name>/<int:pk>/edit/', views.admin_master_data_edit, name='admin_settings_edit'),
+    path('core-admin/settings/<str:model_name>/<int:pk>/delete/', views.admin_master_data_delete, name='admin_settings_delete'),
     path('core-admin/proposal/<int:proposal_id>/detail/', views.admin_proposal_detail, name='admin_proposal_detail'),
+    path('core-admin/approval-flow/', views.admin_approval_flow, name='admin_approval_flow'),
 
 
 ]

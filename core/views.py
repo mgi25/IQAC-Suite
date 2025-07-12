@@ -361,13 +361,13 @@ def iqac_suite_dashboard(request):
     return render(request, "emt/iqac_suite_dashboard.html", context)
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
-def admin_settings(request):
+def admin_master_data(request):
     departments = Department.objects.all()
     clubs = Club.objects.all()
     centers = Center.objects.all()
     cells = Cell.objects.all()
     associations = Association.objects.select_related("department").all()
-    return render(request, "core/admin_settings.html", {
+    return render(request, "core/admin_master_data.html", {
         "departments": departments,
         "clubs": clubs,
         "centers": centers,
@@ -380,7 +380,7 @@ def admin_settings(request):
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 @csrf_exempt
-def admin_settings_add(request, model_name):
+def admin_master_data_add(request, model_name):
     MODEL_MAP = {
         "department": Department,
         "club": Club,
@@ -398,7 +398,7 @@ def admin_settings_add(request, model_name):
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 @csrf_exempt
-def admin_settings_edit(request, model_name, pk):
+def admin_master_data_edit(request, model_name, pk):
     MODEL_MAP = {
         "department": Department,
         "club": Club,
@@ -423,7 +423,7 @@ def admin_settings_edit(request, model_name, pk):
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 @csrf_exempt
-def admin_settings_delete(request, model_name, pk):
+def admin_master_data_delete(request, model_name, pk):
     MODEL_MAP = {
         "department": Department,
         "club": Club,
@@ -462,3 +462,10 @@ def admin_proposal_detail(request, proposal_id):
         "budget_total": budget_total,
     }
     return render(request, "core/admin_proposal_detail.html", context)
+@user_passes_test(lambda u: u.is_superuser)
+def admin_settings_dashboard(request):
+    # Renders the new dashboard with cards for each settings app
+    return render(request, "core/admin_settings.html")
+@user_passes_test(lambda u: u.is_superuser)
+def admin_approval_flow(request):
+    return render(request, "core/admin_approval_flow.html")

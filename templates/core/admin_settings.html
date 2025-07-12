@@ -2,188 +2,34 @@
 {% load static %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'core/css/admin_settings.css' %}">
-<!-- DataTables (optional, can be used for search/sort) -->
-<link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.min.css">
+<link rel="stylesheet" href="{% static 'core/css/admin_settings_dashboard.css' %}">
 
-<div class="admin-settings-container">
-  <h1>Settings: Master Data Management</h1>
-  <div class="settings-grid">
-
-    <!-- Departments -->
-    <div class="settings-card">
-      <h3>Departments</h3>
-      <div class="table-responsive">
-        <table class="settings-table datatable" id="departments-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th style="width:140px">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for dept in departments %}
-              <tr>
-                <td>{{ dept.name }}</td>
-                <td>
-                  <button class="edit-btn" data-id="{{ dept.id }}" data-model="department">Edit</button>
-                  <button class="delete-btn" data-id="{{ dept.id }}" data-model="department">Delete</button>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      <div class="table-add-row">
-        <input type="text" id="new-department-name" placeholder="Add Department">
-        <button class="add-btn" data-model="department">Add</button>
-      </div>
+<div class="admin-settings-dashboard-bg">
+  <div class="admin-settings-dashboard-container">
+    <h1>Admin Settings</h1>
+    <div class="admin-settings-cards">
+      <!-- Application 1: User Settings / Master Data -->
+      <a href="{% url 'admin_master_data' %}" class="admin-settings-card">
+        <div class="admin-settings-card-icon">
+          <i class="fa-solid fa-database"></i>
+        </div>
+        <div>
+          <div class="admin-settings-card-title">User Settings</div>
+          <div class="admin-settings-card-desc">Manage master data, users, departments, etc.</div>
+        </div>
+      </a>
+      <!-- Application 2: Approval Flow Management -->
+      <a href="{% url 'admin_approval_flow' %}" class="admin-settings-card">
+        <div class="admin-settings-card-icon">
+          <i class="fa-solid fa-diagram-project"></i>
+        </div>
+        <div>
+          <div class="admin-settings-card-title">Approval Flow Management</div>
+          <div class="admin-settings-card-desc">Configure event proposal approval chains</div>
+        </div>
+      </a>
+      <!-- Add more applications as needed -->
     </div>
-
-    <!-- Clubs -->
-    <div class="settings-card">
-      <h3>Clubs</h3>
-      <div class="table-responsive">
-        <table class="settings-table datatable" id="clubs-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th style="width:140px">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for club in clubs %}
-              <tr>
-                <td>{{ club.name }}</td>
-                <td>
-                  <button class="edit-btn" data-id="{{ club.id }}" data-model="club">Edit</button>
-                  <button class="delete-btn" data-id="{{ club.id }}" data-model="club">Delete</button>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      <div class="table-add-row">
-        <input type="text" id="new-club-name" placeholder="Add Club">
-        <button class="add-btn" data-model="club">Add</button>
-      </div>
-    </div>
-
-    <!-- Centers -->
-    <div class="settings-card">
-      <h3>Centers</h3>
-      <div class="table-responsive">
-        <table class="settings-table datatable" id="centers-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th style="width:140px">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for center in centers %}
-              <tr>
-                <td>{{ center.name }}</td>
-                <td>
-                  <button class="edit-btn" data-id="{{ center.id }}" data-model="center">Edit</button>
-                  <button class="delete-btn" data-id="{{ center.id }}" data-model="center">Delete</button>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      <div class="table-add-row">
-        <input type="text" id="new-center-name" placeholder="Add Center">
-        <button class="add-btn" data-model="center">Add</button>
-      </div>
-    </div>
-
-    <!-- Cells -->
-    <div class="settings-card">
-      <h3>Cells</h3>
-      <div class="table-responsive">
-        <table class="settings-table datatable" id="cells-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th style="width:140px">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for cell in cells %}
-              <tr>
-                <td>{{ cell.name }}</td>
-                <td>
-                  <button class="edit-btn" data-id="{{ cell.id }}" data-model="cell">Edit</button>
-                  <button class="delete-btn" data-id="{{ cell.id }}" data-model="cell">Delete</button>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      <div class="table-add-row">
-        <input type="text" id="new-cell-name" placeholder="Add Cell">
-        <button class="add-btn" data-model="cell">Add</button>
-      </div>
-    </div>
-
-    <!-- Associations -->
-    <div class="settings-card">
-      <h3>Associations</h3>
-      <div class="table-responsive">
-        <table class="settings-table datatable" id="associations-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Department</th>
-              <th style="width:140px">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for assoc in associations %}
-              <tr>
-                <td>{{ assoc.name }}</td>
-                <td>{% if assoc.department %}{{ assoc.department.name }}{% else %}-{% endif %}</td>
-                <td>
-                  <button class="edit-btn" data-id="{{ assoc.id }}" data-model="association">Edit</button>
-                  <button class="delete-btn" data-id="{{ assoc.id }}" data-model="association">Delete</button>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      <div class="table-add-row">
-        <input type="text" id="new-association-name" placeholder="Add Association">
-        <select id="new-association-dept">
-          <option value="">No Department</option>
-          {% for dept in departments %}
-            <option value="{{ dept.id }}">{{ dept.name }}</option>
-          {% endfor %}
-        </select>
-        <button class="add-btn" data-model="association">Add</button>
-      </div>
-    </div>
-
   </div>
 </div>
-
-<script src="{% static 'core/js/admin_settings.js' %}"></script>
-<script src="https://cdn.datatables.net/2.0.8/js/dataTables.min.js"></script>
-<script>
-  // Activate DataTables (optional)
-  document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.datatable').forEach(table => {
-      new DataTable(table, {
-        paging: false,
-        info: false,
-        searching: true,  // or false if you don't want search
-        language: { search: "🔍 " }
-      });
-    });
-  });
-</script>
 {% endblock %}
