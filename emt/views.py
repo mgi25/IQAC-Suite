@@ -727,28 +727,56 @@ def submit_event_report(request, proposal_id):
 
 @login_required
 def suite_dashboard(request):
-    user_proposals = EventProposal.objects.filter(
-        submitted_by=request.user
-    ).exclude(
-        status='finalized',
-        updated_at__lt=now() - timedelta(days=2)
-    ).order_by('-updated_at')
-    # The workflow. These must match your DB exactly!
+    """
+    Show all of the current user's proposals that are:
+      - Not finalized older than 2 days
+      - Sorted newest-first
+    Also compute per-proposal progress and whether to show the "Event Approvals" card.
+    """
+    # 1) Grab the proposals, excluding any finalized ones last updated more than 2 days ago
+    user_proposals = (
+        EventProposal.objects
+        .filter(submitted_by=request.user)
+        .exclude(
+            status='finalized',
+            updated_at__lt=now() - timedelta(days=2)
+        )
+        .order_by('-updated_at')
+    )
+
+    # 2) Define your workflow statuses in order
     statuses = ['draft', 'submitted', 'under_review', 'returned', 'rejected', 'finalized']
 
+    # 3) Annotate each proposal with a numeric index, % progress, and label
+    total_steps = len(statuses)
     for p in user_proposals:
         db_status = (p.status or '').strip().lower()
-        if db_status in statuses:
-            p.status_index = statuses.index(db_status)
-        else:
-            p.status_index = 0
-        p.progress_percent = int((p.status_index + 1) * 100 / len(statuses))
+        # Status index in [0 ... total_steps-1]
+        p.status_index = statuses.index(db_status) if db_status in statuses else 0
+        # Percent done: ((index+1)/total_steps)*100
+        p.progress_percent = int((p.status_index + 1) * 100 / total_steps)
+        # Human label
         p.current_label = statuses[p.status_index].replace('_', ' ').capitalize()
 
+    # 4A) Option A: show approvals card based on the user's assigned roles
+    ras = request.user.role_assignments.all()
+    user_roles = { ra.role for ra in ras }
+    approval_roles = {
+        "faculty", "dept_iqac", "hod", "dean",
+        "academic_coordinator", "club_head", "center_head",
+        "association_head",
+    }
+    show_approvals_card = bool(user_roles & approval_roles)
 
+    # 4B) (Optional) Or, gate by whether they actually have any pending steps:
+    # show_approvals_card = ApprovalStep.objects.filter(
+    #     assigned_to=request.user,
+    #     status='pending'
+    # ).exists()
+
+    # 5) Render
     return render(request, 'emt/iqac_suite_dashboard.html', {
         'user_proposals': user_proposals,
         'statuses': statuses,
-        'show_approvals_card': request.user.has_perm('emt.can_approve_proposal'),
+        'show_approvals_card': show_approvals_card,
     })
-
