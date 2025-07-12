@@ -1,0 +1,219 @@
+/* ----------------------------------------
+   1) PAGE WRAPPER
+---------------------------------------- */
+.detail-container {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+/* ----------------------------------------
+   2) OVERVIEW CARD
+---------------------------------------- */
+.overview-card {
+  background: #fff;
+  border-radius: 1.5rem;
+  box-shadow: 0 4px 24px rgba(33,118,210,0.08);
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.overview-card h2 {
+  margin: 0 0 1rem;
+  color: #1a365d;
+  font-size: 2rem;
+}
+
+.overview-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(200px,1fr));
+  gap: 0.75rem 1.5rem;
+}
+
+.overview-fields .label {
+  font-weight: 600;
+  color: #334155;
+}
+
+/* Status badge */
+.status-badge {
+  display: inline-block;
+  padding: 0.3em 0.8em;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.status-badge.status-draft        { background:#f1f5f9; color:#64748b; }
+.status-badge.status-submitted    { background:#e3edff; color:#2176d2; }
+.status-badge.status-under_review { background:#eaf1fa; color:#2176d2; }
+.status-badge.status-returned     { background:#fff4e6; color:#d97706; }
+.status-badge.status-rejected     { background:#ffeaea; color:#b91c1c; }
+.status-badge.status-finalized    { background:#d1fae5; color:#059669; }
+
+/* ----------------------------------------
+   3) HORIZONTAL STEPPER (GRAPH)
+---------------------------------------- */
+.status-graph {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  position: relative;
+  padding: 0 1rem;
+}
+
+.status-graph .node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  text-align: center;
+}
+
+.status-graph .node-circle {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  margin-bottom: 0.5rem;
+  transition: background 0.3s;
+}
+
+.status-graph .node.active .node-circle {
+  background: #3b82f6;
+}
+
+.status-graph .node-label {
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.status-graph .node.active .node-label {
+  color: #1e3a8a;
+  font-weight: 600;
+}
+
+.status-graph .connector {
+  height: 4px;
+  background: #cbd5e1;
+  flex: 1;
+  margin: 0 0.5rem;
+  transition: background 0.3s;
+}
+
+.status-graph .connector.active {
+  background: #3b82f6;
+}
+
+/* ----------------------------------------
+   4) VERTICAL TIMELINE
+---------------------------------------- */
+.approval-timeline {
+  position: relative;
+  margin-left: 1rem;
+}
+
+.timeline-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  position: relative;
+}
+
+.timeline-list::before {
+  content: '';
+  position: absolute;
+  top: 1.5rem;
+  bottom: 0;
+  left: 24px;
+  width: 2px;
+  background: #cbd5e1;
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 2rem;
+  padding-left: 3rem;
+}
+
+.timeline-item:last-child {
+  margin-bottom: 1rem;
+}
+
+.timeline-dot {
+  position: absolute;
+  top: 0.5rem;
+  left: 16px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  transition: background 0.3s;
+  z-index: 2;
+}
+
+.timeline-item.approved .timeline-dot { background: #22c55e; }
+.timeline-item.pending  .timeline-dot { background: #facc15; }
+.timeline-item.rejected .timeline-dot { background: #ef4444; }
+
+.timeline-card {
+  background: #fff;
+  border-radius: 1rem;
+  box-shadow: 0 2px 8px rgba(33,118,210,0.08);
+  padding: 1.5rem;
+}
+
+.timeline-card h4 {
+  margin: 0 0 0.5rem;
+  color: #1a365d;
+  font-size: 1.1rem;
+}
+
+.timeline-card p {
+  margin: 0.4rem 0;
+  color: #475569;
+  font-size: 0.95rem;
+}
+
+/* ----------------------------------------
+   5) BACK BUTTON
+---------------------------------------- */
+.back-btn {
+  display: inline-block;
+  margin: 2rem auto;
+  background: linear-gradient(90deg,#2176d2,#3ec6ff);
+  color: #fff;
+  padding: 0.8rem 2rem;
+  border-radius: 2rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.back-btn:hover {
+  background: linear-gradient(90deg,#1a365d,#2176d2);
+}
+
+/* ----------------------------------------
+   6) RESPONSIVE
+---------------------------------------- */
+@media (max-width: 768px) {
+  .overview-fields {
+    grid-template-columns: 1fr;
+  }
+  .status-graph {
+    flex-wrap: wrap;
+    padding: 0;
+  }
+  .status-graph .connector {
+    flex-basis: 100%;
+    margin: 8px 0;
+  }
+  .timeline-list::before {
+    left: 16px;
+  }
+  .timeline-dot {
+    left: 10px;
+  }
+}
