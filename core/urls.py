@@ -32,4 +32,12 @@ urlpatterns = [
 
     # path('admin/users/', views.admin_user_panel, name='admin_user_panel'),
     path('accounts/logout/', custom_logout, name='account_logout'),
+    # urls.py
+    path('core-admin/settings/', views.admin_settings, name='admin_settings'),
+
+    # For AJAX or form post requests (optional for delete/update with JS):
+    path('core-admin/settings/<str:model_name>/add/', views.admin_settings_add, name='admin_settings_add'),
+    path('core-admin/settings/<str:model_name>/<int:pk>/edit/', views.admin_settings_edit, name='admin_settings_edit'),
+    path('core-admin/settings/<str:model_name>/<int:pk>/delete/', views.admin_settings_delete, name='admin_settings_delete'),
+
 ]

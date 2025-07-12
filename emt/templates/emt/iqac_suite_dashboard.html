@@ -4,26 +4,20 @@
 <link rel="stylesheet" href="{% static 'emt/css/iqac_suite_dashboard.css' %}">
 
 <div class="suite-dashboard-container">
-  <!-- Dashboard Title (Optional) -->
   <h1 class="suite-dashboard-title">IQAC Suite Dashboard</h1>
-
-  <!-- Body Split: Left = Cards, Right = Notifications -->
   <div class="suite-dashboard-body">
 
-    <!-- Left Section (4 Cards in 2x2 Grid) -->
+    <!-- LEFT: CARDS -->
     <div class="suite-left-section">
-      <!-- Event Proposal Card -->
-      <div class="suite-card">
+      <!-- Event Proposal -->
+      <div class="suite-card suite-card-hover suite-glass">
         <div class="suite-card-icon suite-card-icon-blue">
-          <!-- SVG ICON -->
-          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <path d="M14 2v6h6"/>
-            <path d="M8 16v-2"/>
-            <path d="M12 16v-4"/>
-            <path d="M16 16v-3"/>
-            <path d="M12 12v5"/>
-            <path d="M10.5 15.5L12 17l1.5-1.5"/>
+          <!-- Proposal Icon -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M9 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <path d="M9 2v5h6"/>
+            <path d="M9 13h6"/>
+            <path d="M9 17h6"/>
           </svg>
         </div>
         <div class="suite-card-title">Event Proposal</div>
@@ -31,15 +25,13 @@
         <a href="{% url 'emt:submit_proposal' %}" class="suite-card-btn">Go &rarr;</a>
       </div>
 
-      <!-- IQAC Report Generation Card -->
-      <div class="suite-card">
+      <!-- IQAC Report Generation -->
+      <div class="suite-card suite-card-hover suite-glass">
         <div class="suite-card-icon suite-card-icon-purple">
-          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="5" y="4" width="14" height="18" rx="2" ry="2" />
-            <path d="M9 2h6a1 1 0 0 1 1 1v1H8V3a1 1 0 0 1 1-1z" />
-            <line x1="9" y1="9" x2="15" y2="9" />
-            <line x1="9" y1="13" x2="15" y2="13" />
-            <line x1="9" y1="17" x2="13" y2="17" />
+          <!-- Report Icon -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="3" y="4" width="18" height="16" rx="2" ry="2"/>
+            <path d="M3 10h18M9 16h6"/>
           </svg>
         </div>
         <div class="suite-card-title">IQAC Report Generation</div>
@@ -47,14 +39,12 @@
         <a href="{% url 'emt:pending_reports' %}" class="suite-card-btn">Go &rarr;</a>
       </div>
 
-      <!-- View Generated Reports Card -->
-      <div class="suite-card">
+      <!-- View Generated Reports -->
+      <div class="suite-card suite-card-hover suite-glass">
         <div class="suite-card-icon suite-card-icon-green">
-          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/>
-            <path d="M15 2v5h5"/>
-            <path d="M8 11h8"/>
-            <path d="M8 15h5"/>
+          <!-- View Reports Icon -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M5 12h14M5 6h14M5 18h14"/>
           </svg>
         </div>
         <div class="suite-card-title">View Generated Reports</div>
@@ -62,10 +52,15 @@
         <a href="{% url 'emt:generated_reports' %}" class="suite-card-btn">Go &rarr;</a>
       </div>
 
-      <!-- Event Approvals Card -->
+      <!-- Event Approvals -->
       {% if user.is_authenticated and show_approvals_card %}
-      <div class="suite-card">
-        <div class="suite-card-icon suite-card-icon-orange">✅</div>
+      <div class="suite-card suite-card-hover suite-glass">
+        <div class="suite-card-icon suite-card-icon-orange">
+          <!-- Approvals Icon -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
         <div class="suite-card-title">Event Approvals</div>
         <div class="suite-card-desc">Review and approve event proposals</div>
         <a href="{% url 'emt:my_approvals' %}" class="suite-card-btn">Go &rarr;</a>
@@ -73,45 +68,96 @@
       {% endif %}
     </div>
 
-    <!-- Right Section (Notification Panel) -->
-    <div class="suite-right-section">
+    <!-- RIGHT: NOTIFICATIONS -->
+    <div class="suite-right-section suite-glass">
       <div class="notif-heading">Notifications</div>
       <div class="notif-box">
-        {% if not user_proposals %}
-          <p>No events have been proposed or conducted.</p>
-          <a href="{% url 'emt:submit_proposal' %}" class="status-cta">Submit a Proposal &rarr;</a>
-        {% else %}
-          <ul class="notif-list">
-            {% for proposal in user_proposals %}
-              <li class="notif-item">
-                <div class="notif-row">
-                  <span class="notif-event-title">
-                    {{ proposal.event_title }}
-                  </span>
-                </div>
-                <div class="status-bar mt-2">
-                  {% for status in statuses %}
-                    <span class="status-dot
-                      {% if forloop.counter0 == proposal.status_index %}
-                        status-dot-current
-                      {% elif forloop.counter0 < proposal.status_index %}
-                        status-dot-past
-                      {% else %}
-                        status-dot-future
-                      {% endif %}
-                    " title="{{ status|capfirst }}"></span>
-                    {% if not forloop.last %}
-                      <span class="status-bar-line"></span>
+        {% if user_proposals %}
+        <ul class="notif-list">
+          {% for proposal in user_proposals %}
+          <li class="notif-item animate-fade-in">
+            <div class="notif-row">
+              <span class="notif-event-title">{{ proposal.event_title }}</span>
+              {% if proposal.status == 'submitted' %}
+              <span class="notif-status notif-status-pending">Submitted</span>
+              {% elif proposal.status == 'under_review' %}
+              <span class="notif-status notif-status-review">Under Review</span>
+              {% elif proposal.status == 'rejected' %}
+              <span class="notif-status notif-status-rejected">Rejected</span>
+              {% elif proposal.status == 'returned' %}
+              <span class="notif-status notif-status-feedback">Returned</span>
+              {% elif proposal.status == 'finalized' %}
+              <span class="notif-status notif-status-success">Finalized</span>
+              {% endif %}
+            </div>
+
+            <div class="notif-meta-badge">
+              <span class="notif-date-pill">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10m-13 6h14M4 21h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                Updated: {{ proposal.updated_at|date:"M d, Y H:i" }}
+              </span>
+              <span class="notif-age-pill">{{ proposal.updated_at|timesince }} ago</span>
+            </div>
+
+            {% if proposal.return_comment %}
+            <div class="notif-feedback"><b>Feedback:</b> {{ proposal.return_comment }}</div>
+            {% endif %}
+
+            <!-- MODERN PROGRESS CHART -->
+            <div class="workflow-progress">
+              <div class="progress-steps">
+                {% for status in statuses %}
+                <div class="progress-step">
+                  <div class="progress-dot
+                    {% if forloop.counter0 < proposal.status_index %}progress-dot-past{% endif %}
+                    {% if forloop.counter0 == proposal.status_index %}progress-dot-current{% endif %}
+                    {% if forloop.counter0 > proposal.status_index %}progress-dot-future{% endif %}
+                  ">
+                    {% if forloop.counter0 < proposal.status_index %}
+                    <svg width="12" height="12" viewBox="0 0 12 12">
+                      <circle cx="6" cy="6" r="5" fill="#22c55e"/>
+                      <polyline points="4,6 6,8 9,4" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    {% elif forloop.counter0 == proposal.status_index %}
+                    <svg width="12" height="12" viewBox="0 0 12 12">
+                      <circle cx="6" cy="6" r="5" fill="#3b82f6"/>
+                    </svg>
+                    {% else %}
+                    <svg width="12" height="12" viewBox="0 0 12 12">
+                      <circle cx="6" cy="6" r="5" fill="#cbd5e1"/>
+                    </svg>
                     {% endif %}
-                  {% endfor %}
+                  </div>
+                  {% if not forloop.last %}
+                  <div class="progress-step-line"></div>
+                  {% endif %}
+                  <div class="progress-step-label">{{ status|capfirst }}</div>
                 </div>
-              </li>
-            {% endfor %}
-          </ul>
+                {% endfor %}
+              </div>
+
+              <div class="progress-bar-container">
+                <div class="progress-bar-fill" style="width: {{ proposal.progress_percent }}%;"></div>
+              </div>
+              <span class="progress-bar-label">
+                {{ proposal.progress_percent }}% complete ({{ proposal.current_label }})
+              </span>
+            </div>
+            <!-- END CHART -->
+             <a href="{% url 'emt:proposal_status_detail' proposal.id %}" class="notif-view-btn">View More Details →</a>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="notif-empty">
+          <span>🎉 All clear! No proposals need your attention right now.</span>
+        </div>
         {% endif %}
       </div>
     </div>
-    
-  </div> <!-- End of .suite-dashboard-body -->
+  </div>
 </div>
+
 {% endblock %}
