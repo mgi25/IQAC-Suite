@@ -42,5 +42,7 @@ urlpatterns = [
     path('suite/ai-report-progress/<int:proposal_id>/', views.ai_report_progress, name='ai_report_progress'),
     path('suite/ai-report-partial/<int:proposal_id>/', views.ai_report_partial, name='ai_report_partial'),
     path('generate-ai-report-stream/<int:proposal_id>/', views.generate_ai_report_stream, name='generate_ai_report_stream'),
+    path('suite/ai-report-edit/<int:proposal_id>/', views.ai_report_edit, name='ai_report_edit'),
+    path('suite/ai-report-submit/<int:proposal_id>/', views.ai_report_submit, name='ai_report_submit'),
 
 ]

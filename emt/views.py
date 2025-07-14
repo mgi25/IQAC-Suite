@@ -917,3 +917,49 @@ def admin_dashboard(request):
     """
     return render(request, 'core/admin_dashboard.html')
 
+@login_required
+def ai_report_edit(request, proposal_id):
+    proposal = get_object_or_404(EventProposal, id=proposal_id)
+    last_instructions = ""
+    last_fields = ""
+    if request.method == "POST":
+        # Collect user changes/prompts
+        instructions = request.POST.get("instructions", "").strip()
+        manual_fields = request.POST.get("manual_fields", "").strip()
+        # You may want to store these temporarily for next reload
+        last_instructions = instructions
+        last_fields = manual_fields
+
+        # Construct a new prompt for the AI
+        ai_prompt = f"""
+        Please regenerate the IQAC Event Report as before, but follow these special user instructions: 
+        ---
+        {instructions}
+        ---
+        {manual_fields}
+        ---
+        Use the same field structure as before.
+        """
+
+        # Call Gemini here or set a session variable with prompt and redirect to progress
+        request.session['ai_custom_prompt'] = ai_prompt
+        return redirect('emt:ai_report_progress', proposal_id=proposal.id)
+
+    # Pre-fill manual_fields with last generated report fields if you want
+    return render(request, "emt/ai_report_edit.html", {
+        "proposal": proposal,
+        "last_instructions": last_instructions,
+        "last_fields": last_fields,
+    })
+@login_required
+def ai_report_submit(request, proposal_id):
+    proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
+    # Mark the report as generated/submitted
+    proposal.report_generated = True
+    proposal.status = "finalized"   # Or "submitted", depending on your workflow
+    proposal.save()
+    # Optionally, add a success message here
+    from django.contrib import messages
+    messages.success(request, "Event report submitted successfully!")
+    return redirect('emt:report_success', proposal_id=proposal.id)
+
