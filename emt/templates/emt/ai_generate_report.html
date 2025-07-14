@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'emt/css/submit_event_report.css' %}">
+
+<div class="ultra-proposal-root">
+
+  <!-- Left Event Info -->
+  <div class="ultra-side-info">
+    <div class="info-card glass-card">
+      <h2>EVENT INFORMATION</h2>
+      <table>
+        <tr><th>Department</th><td>{{ proposal.department }}</td></tr>
+        <tr><th>Title</th><td>{{ proposal.event_title }}</td></tr>
+        <tr><th>Date & Time</th><td>{{ proposal.event_datetime|date:"d M Y, H:i" }}</td></tr>
+        <tr><th>Venue</th><td>{{ proposal.venue }}</td></tr>
+        <tr><th>Academic Year</th><td>{{ proposal.academic_year }}</td></tr>
+        <tr><th>Focus</th><td>{{ proposal.event_focus_type }}</td></tr>
+        <tr><th>Target Audience</th><td>{{ proposal.target_audience }}</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- AI Generation Area -->
+  <div class="ultra-main-content">
+    <div class="ultra-header">
+      <h1 class="glow-text">AI Report Generator</h1>
+      <span class="meta">Review event data, then generate your report with AI. You can edit the result before submitting.</span>
+    </div>
+
+    <!-- Event Report Data - Pretty Glass Card -->
+    <div class="section-glass" style="margin-bottom:32px;">
+      <h3>Event Report Data</h3>
+      <div class="report-data-grid">
+        <div><b>Summary:</b> {{ report.summary|default:"<span class='placeholder'>(not provided)</span>"|safe }}</div>
+        <div><b>Outcomes:</b> {{ report.outcomes|default:"<span class='placeholder'>(not provided)</span>"|safe }}</div>
+        <div><b>Impact on Stakeholders:</b> {{ report.impact_on_stakeholders|default:"<span class='placeholder'>(not provided)</span>"|safe }}</div>
+        <div><b>Innovations/Best Practices:</b> {{ report.innovations_best_practices|default:"<span class='placeholder'>(not provided)</span>"|safe }}</div>
+        <div><b>Graduate Attributes:</b> {{ report.pos_pso_mapping|default:"<span class='placeholder'>(not provided)</span>"|safe }}</div>
+        <div><b>Graduate Attribute Needs:</b> {{ report.needs_grad_attr_mapping|default:"<span class='placeholder'>(not provided)</span>"|safe }}</div>
+        <div><b>SDG/Value Systems:</b> {{ report.sdg_value_systems_mapping|default:"<span class='placeholder'>(not provided)</span>"|safe }}</div>
+        <div><b>IQAC Feedback:</b> {{ report.iqac_feedback|default:"<span class='placeholder'>(not provided)</span>"|safe }}</div>
+        <div><b>Beneficiaries:</b> {{ report.beneficiaries_details|default:"<span class='placeholder'>(not provided)</span>"|safe }}</div>
+      </div>
+      <style>
+        .report-data-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px 32px;
+          margin-top: 18px;
+          margin-bottom: 6px;
+        }
+        .report-data-grid div { font-size: 1.07rem; color: #253660; }
+        .placeholder { color: #aaa; font-style: italic; }
+        @media (max-width: 900px) {
+          .report-data-grid { grid-template-columns: 1fr; }
+        }
+      </style>
+    </div>
+
+    <!-- AI Generate Button & Preview -->
+    <div style="margin-bottom:28px;">
+      <button id="generate-ai-btn" class="btn-ultra btn-success-ultra">Generate with AI</button>
+      <span id="aiLoading" style="display:none; color:#38a7ff; margin-left:18px;">AI is generating your report...</span>
+    </div>
+  </div>
+</div>
+
+<script>
+const reportData = {
+  event_title: "{{ proposal.event_title|escapejs }}",
+  event_datetime: "{{ proposal.event_datetime|date:'d M Y, H:i'|escapejs }}",
+  venue: "{{ proposal.venue|escapejs }}",
+  academic_year: "{{ proposal.academic_year|escapejs }}",
+  event_focus_type: "{{ proposal.event_focus_type|escapejs }}",
+  target_audience: "{{ proposal.target_audience|escapejs }}",
+  summary: "{{ report.summary|default:''|escapejs }}",
+  outcomes: "{{ report.outcomes|default:''|escapejs }}",
+  impact_on_stakeholders: "{{ report.impact_on_stakeholders|default:''|escapejs }}",
+  innovations_best_practices: "{{ report.innovations_best_practices|default:''|escapejs }}",
+  pos_pso_mapping: "{{ report.pos_pso_mapping|default:''|escapejs }}",
+  needs_grad_attr_mapping: "{{ report.needs_grad_attr_mapping|default:''|escapejs }}",
+  sdg_value_systems_mapping: "{{ report.sdg_value_systems_mapping|default:''|escapejs }}",
+  iqac_feedback: "{{ report.iqac_feedback|default:''|escapejs }}",
+  beneficiaries_details: "{{ report.beneficiaries_details|default:''|escapejs }}"
+};
+
+function aiRequest() {
+  document.getElementById('aiLoading').style.display = 'inline';
+  document.getElementById('generate-ai-btn').disabled = true;
+  fetch("{% url 'emt:generate_ai_report' %}", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(reportData)
+  })
+
+  .then(r => r.json())
+  .then(res => {
+    document.getElementById('aiLoading').style.display = 'none';
+    document.getElementById('generate-ai-btn').disabled = false;
+    if (res.report_text) {
+      document.getElementById('aiPreviewBlock').style.display = 'block';
+      document.getElementById('aiReportEditor').value = res.report_text;
+    } else {
+      alert(res.error || "AI failed, try again.");
+    }
+  })
+  .catch(e => {
+    document.getElementById('aiLoading').style.display = 'none';
+    document.getElementById('generate-ai-btn').disabled = false;
+    alert("Network or server error.");
+  });
+}
+
+document.getElementById('generate-ai-btn').onclick = function() {
+    window.location.href = "{% url 'emt:ai_report_progress' proposal.id %}";
+};
+
+document.getElementById('regenerate-btn').onclick = aiRequest;
+document.getElementById('accept-save-btn').onclick = function() {
+  alert('Report accepted! (TODO: save in backend)');
+  // Implement AJAX POST to save aiReportEditor.value if needed
+};
+</script>
+{% endblock %}

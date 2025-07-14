@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<style>
+    .ai-form-section { background: #fff; border-radius: 22px; box-shadow: 0 6px 28px #c6d7ef66; padding: 48px 48px 28px 48px; margin: 42px auto 36px auto; max-width: 840px; }
+    .ai-form-title { display: flex; gap: 20px; align-items: center; margin-bottom: 10px; }
+    .ai-form-title img { width: 54px; border-radius: 14px; box-shadow: 0 2px 8px #0001; }
+    .ai-form-title h1 { font-size: 2.25rem; font-weight: 700; color: #24407b; margin: 0; }
+    .ai-sub { color: #68a2ee; margin-bottom: 22px; }
+    .ai-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
+    .ai-table th, .ai-table td { background: #f7f9fc; padding: 13px 22px; font-size: 1.12rem; }
+    .ai-table th { text-align: left; font-weight: 600; width: 265px; color: #24407b; background: #e8f1ff; border-radius: 9px 0 0 9px; }
+    .ai-table td { color: #192846; border-radius: 0 9px 9px 0; font-weight: 500;}
+    .ai-section-label { font-size: 1.23rem; color: #25428c; font-weight: 700; margin: 38px 0 11px 0; border-bottom: 1.5px solid #e0e8f8; padding-bottom: 3px;}
+    .ai-fill-anim { animation: aiFadeIn 1s; }
+    @keyframes aiFadeIn { from { background: #e5f4fc; color: transparent; } to { background: transparent; color: inherit; } }
+    .ai-field-blank { color: #ccc; font-style: italic;}
+    .ai-footer-bar { margin-top: 32px; display: flex; justify-content: space-between; align-items: end; }
+    .ai-btn { font-size: 1.12rem; border-radius: 28px; padding: 10px 36px; border: none; background: linear-gradient(92deg,#4894f5 60%,#8ae7ff 100%); color: #fff; font-weight: 700; transition: 0.13s; box-shadow: 0 4px 20px #8ae7ff22;}
+    .ai-btn:hover { background: linear-gradient(94deg,#225cc4 40%,#5db6e3 100%); color: #e9f6ff; }
+    .ai-ready { color: #15b016; font-weight: 600; }
+    .ai-cursor { color: #90cdf4; font-weight: bold; }
+</style>
+<div class="ai-form-section">
+  <div class="ai-form-title">
+    <img src="{% static 'emt/img/iqac_logo.png' %}" alt="IQAC Logo" onerror="this.style.display='none'">
+    <div>
+      <h1>Internal Quality Assurance Cell (IQAC)<br>Event Report</h1>
+      <div class="ai-sub">AI is generating your report in real time...</div>
+    </div>
+  </div>
+
+  <div class="ai-section-label">1. Event Information</div>
+  <table class="ai-table">
+    <tr><th>Event Title</th><td id="f_event_title" class="ai-field-blank">...</td></tr>
+    <tr><th>Date &amp; Time</th><td id="f_date_time" class="ai-field-blank">...</td></tr>
+    <tr><th>Venue</th><td id="f_venue" class="ai-field-blank">...</td></tr>
+    <tr><th>Academic Year</th><td id="f_academic_year" class="ai-field-blank">...</td></tr>
+    <tr><th>Focus / Objective</th><td id="f_focus_objective" class="ai-field-blank">...</td></tr>
+    <tr><th>Target Audience</th><td id="f_target_audience" class="ai-field-blank">...</td></tr>
+    <tr><th>Organizing Department</th><td id="f_organizing_dept" class="ai-field-blank">...</td></tr>
+    <tr><th>No. of Participants</th><td id="f_no_participants" class="ai-field-blank">...</td></tr>
+  </table>
+
+  <div class="ai-section-label">2. Event Summary</div>
+  <div id="f_summary" class="ai-field-blank" style="margin-bottom:12px;">...</div>
+
+  <div class="ai-section-label">3. Outcomes</div>
+  <div id="f_outcomes" class="ai-field-blank" style="margin-bottom:12px;">...</div>
+
+  <div class="ai-section-label">4. Feedback &amp; Suggestions</div>
+  <div id="f_feedback" class="ai-field-blank" style="margin-bottom:12px;">...</div>
+
+  <div class="ai-section-label">5. Recommendations</div>
+  <div id="f_recommendations" class="ai-field-blank" style="margin-bottom:12px;">...</div>
+
+  <div class="ai-section-label">6. Attachments</div>
+  <div id="f_attachments" class="ai-field-blank" style="margin-bottom:12px;">...</div>
+
+  <div class="ai-footer-bar">
+    <div>
+      <div>Prepared by:<span style="margin-left:8px;" id="f_prepared_by" class="ai-field-blank">AI is filling...</span></div>
+      <div>Date of Submission:<span style="margin-left:8px;" id="f_date_sub" class="ai-field-blank">...</span></div>
+      <div>Approved by:<span style="margin-left:8px;" id="f_approved_by" class="ai-field-blank">...</span></div>
+      <div id="ai_status" style="margin-top:12px;" class="ai-ready" hidden>AI has filled your report!</div>
+    </div>
+    <button id="editBtn" style="display:none;" class="ai-btn">
+      Edit &amp; Submit
+    </button>
+  </div>
+</div>
+
+<script>
+// 1. Field mapping (AI label to DOM element ID, lowercased)
+const aiFieldMap = {
+  'event title': 'f_event_title',
+  'date & time': 'f_date_time',
+  'venue': 'f_venue',
+  'academic year': 'f_academic_year',
+  'focus/objective': 'f_focus_objective',
+  'focus / objective': 'f_focus_objective',
+  'target audience': 'f_target_audience',
+  'organizing department': 'f_organizing_dept',
+  'organizing department/committee': 'f_organizing_dept',
+  'no. of participants': 'f_no_participants',
+  'number of participants': 'f_no_participants',
+  'event summary': 'f_summary',
+  'summary': 'f_summary',
+  'outcomes': 'f_outcomes',
+  'feedback': 'f_feedback',
+  'feedback & suggestions': 'f_feedback',
+  'recommendations': 'f_recommendations',
+  'attachments': 'f_attachments',
+  'prepared by': 'f_prepared_by',
+  'date of submission': 'f_date_sub',
+  'approved by': 'f_approved_by',
+};
+
+// 2. Typing animation for a field
+function animateFieldFill(id, text) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('ai-field-blank');
+  el.classList.add('ai-fill-anim');
+  // Typing effect
+  let i = 0;
+  function type() {
+    if (i <= text.length) {
+      el.innerHTML = text.slice(0, i) + '<span class="ai-cursor">|</span>';
+      i++;
+      setTimeout(type, 9 + Math.random() * 22);
+    } else {
+      el.innerHTML = text;
+      el.classList.remove('ai-fill-anim');
+    }
+  }
+  type();
+}
+
+// 3. Parse "Field: Value" lines (robust, trims, ignores case, ignores blank lines)
+function parseReportFields(reportText) {
+    // Remove markdown stars, underscores, etc. and trim
+    let txt = reportText.replace(/[*_]+/g, '').replace(/\r/g, '');
+    // For debug: see raw AI
+    console.log("RAW AI:\n" + txt);
+    let fields = {};
+    let lines = txt.split('\n');
+    for (let i = 0; i < lines.length; ++i) {
+      let line = lines[i].trim();
+      if (!line) continue;
+      let idx = line.indexOf(':');
+      if (idx > 0) {
+        let key = line.slice(0, idx).trim().toLowerCase();
+        let val = line.slice(idx + 1).trim();
+        if (key && val !== undefined) fields[key] = val;
+      }
+    }
+    return fields;
+}
+
+// 4. Streaming fetch logic (Gemini or simulate for dev)
+fetch("{% url 'emt:generate_ai_report_stream' proposal.id %}", { method: "GET" })
+  .then(response => {
+    const reader = response.body.getReader();
+    let buffer = '';
+    function pump() {
+      return reader.read().then(({ value, done }) => {
+        if (done) {
+          // Final fill for any remaining blanks
+          const fields = parseReportFields(buffer);
+          Object.entries(aiFieldMap).forEach(([k, v]) => {
+            if (fields[k] && document.getElementById(v).textContent === '...') {
+              animateFieldFill(v, fields[k]);
+            }
+          });
+          document.getElementById('ai_status').hidden = false;
+          document.getElementById('editBtn').style.display = "inline-block";
+          return;
+        }
+        buffer += new TextDecoder("utf-8").decode(value);
+        // Live update
+        const fields = parseReportFields(buffer);
+        Object.entries(aiFieldMap).forEach(([k, v]) => {
+          if (fields[k] && (document.getElementById(v).textContent === '...' || document.getElementById(v).classList.contains('ai-field-blank'))) {
+            animateFieldFill(v, fields[k]);
+          }
+        });
+        return pump();
+      });
+    }
+    return pump();
+  })
+  .catch(err => {
+    // If Gemini/stream fails, show an error
+    alert("AI report generation failed! Please try again.\n" + (err && err.message ? err.message : ""));
+  });
+
+document.getElementById('editBtn').onclick = function() {
+  window.location.href = "{% url 'emt:ai_generate_report' proposal.id %}";
+};
+</script>
+{% endblock %}
