@@ -561,28 +561,14 @@
   }
 </style>
 {% endblock %}
-
 {% block content %}
 <div class="transcript-main-bg">
   <div class="transcript-container">
-    {% if student_list %}
-    <div class="sidebar">
-      <div class="sidebar-title"><i class="fa-solid fa-users"></i> Other Students</div>
-      {% for s in student_list %}
-      <div class="course-student-card">
-        <div class="course-student-info">
-          <div class="course-student-avatar">{{ s.name|slice:"0:1" }}</div>
-          <div>
-            <div class="course-student-name">{{ s.name }}</div>
-            <div class="course-student-roll">{{ s.roll_no }}</div>
-          </div>
-        </div>
-        <a href="{% url 'transcript:transcript' s.roll_no %}" class="view-btn"><i class="fa-solid fa-eye"></i></a>
-      </div>
-      {% endfor %}
 
-      <!-- ✅ Graduate Attributes Sidebar Box -->
-      <div class="transcript-section-title">Top 5 Character Strengths of  <br><br>{{ student.name }}</div>
+    <div class="sidebar">
+
+      {% if top_5_strengths %}
+      <div class="transcript-section-title">Top 5 Character Strengths of <br>{{ student.name }}</div>
       <div class="graduate-attributes-sidebar">
         {% for s in top_5_strengths %}
         <div class="ga-bar">
@@ -596,9 +582,26 @@
         <div style="text-align:center; color:#6b7280;">No character strengths found.</div>
         {% endfor %}
       </div>
-      <!-- ✅ End Graduate Attributes Sidebar -->
+      {% endif %}
+      <br><br><br>
+      {% if student_list %}
+      <div class="sidebar-title"><i class="fa-solid fa-users"></i> Other Students</div>
+      {% for s in student_list %}
+      <div class="course-student-card">
+        <div class="course-student-info">
+          <div class="course-student-avatar">{{ s.name|slice:"0:1" }}</div>
+          <div>
+            <div class="course-student-name">{{ s.name }}</div>
+            <div class="course-student-roll">{{ s.roll_no }}</div>
+          </div>
+        </div>
+        <a href="{% url 'transcript:transcript' s.roll_no %}" class="view-btn"><i class="fa-solid fa-eye"></i></a>
+      </div>
+      {% endfor %}
+      {% endif %}
+
     </div>
-    {% endif %}
+
 
     <div class="transcript-card">
       <div class="transcript-title"><i class="fa-solid fa-file-lines"></i> Student Character Strength Transcript</div>
@@ -607,12 +610,17 @@
         <div>
           <div class="info-label">Student Name</div>
           <div class="info-value">{{ student.name }}</div>
+
+          <div class="info-label">Programme</div>
+          <div class="info-value">{{ student.course }}</div>
         </div>
+
         <div>
           <div class="info-label">Registration Number</div>
-          <div class="info-value">{{ student.roll_no }} {{ student.programme }}</div>
+          <div class="info-value">{{ student.roll_no }}</div>
         </div>
       </div>
+
 
       <div class="transcript-section-title">Character Strength Assessment</div>
       <table class="transcript-table">
@@ -670,6 +678,7 @@
           </a>
         </div>
       </div>
+
     </div>
   </div>
 </div>
