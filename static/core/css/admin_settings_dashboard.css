@@ -1,3 +1,252 @@
+/* admin_settings_dashboard.css - moved from admin_settings.html */
+.admin-settings-dashboard-bg {
+  min-height: 100vh;
+  background: transparent;
+  padding: 2rem 0;
+}
+
+.admin-settings-dashboard-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.admin-settings-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 3rem;
+  padding: 2rem 0;
+}
+
+.admin-settings-icon {
+  width: 60px;
+  height: 60px;
+  background: #1f4788;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 24px;
+  box-shadow: 0 4px 15px rgba(31, 71, 136, 0.4);
+}
+
+.admin-settings-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1f4788;
+  margin: 0;
+}
+
+/* Keep original class name but update styles */
+.admin-settings-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.admin-settings-card {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+
+.admin-settings-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(31, 71, 136, 0.05);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.admin-settings-card:hover::before {
+  opacity: 1;
+}
+
+.admin-settings-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  border-color: rgba(31, 71, 136, 0.2);
+}
+
+.admin-settings-card-content {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+.admin-settings-card-icon {
+  width: 64px;
+  height: 64px;
+  background: #1f4788;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 24px;
+  box-shadow: 0 4px 15px rgba(31, 71, 136, 0.4);
+  transition: all 0.3s ease;
+}
+
+.admin-settings-card:hover .admin-settings-card-icon {
+  transform: scale(1.1);
+  box-shadow: 0 8px 25px rgba(31, 71, 136, 0.5);
+}
+
+.admin-settings-card-info {
+  flex: 1;
+}
+
+.admin-settings-card-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 0.5rem;
+  transition: color 0.3s ease;
+}
+
+.admin-settings-card:hover .admin-settings-card-title {
+  color: #1f4788;
+}
+
+.admin-settings-card-desc {
+  font-size: 1rem;
+  color: #718096;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.admin-settings-card-arrow {
+  color: #cbd5e0;
+  font-size: 1.2rem;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.admin-settings-card:hover .admin-settings-card-arrow {
+  color: #1f4788;
+  transform: translateX(4px);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .admin-settings-dashboard-container {
+    padding: 0 1rem;
+  }
+  
+  .admin-settings-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  
+  .admin-settings-title {
+    font-size: 2rem;
+  }
+  
+  .admin-settings-cards {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .admin-settings-card {
+    padding: 1.5rem;
+  }
+  
+  .admin-settings-card-content {
+    gap: 1rem;
+  }
+  
+  .admin-settings-card-icon {
+    width: 56px;
+    height: 56px;
+    font-size: 20px;
+  }
+  
+  .admin-settings-card-title {
+    font-size: 1.25rem;
+  }
+  
+  .admin-settings-card-desc {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-settings-dashboard-bg {
+    padding: 1rem 0;
+  }
+  
+  .admin-settings-card {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: center;
+  }
+  
+  .admin-settings-card-content {
+    flex-direction: column;
+    width: 100%;
+    text-align: center;
+  }
+  
+  .admin-settings-card-arrow {
+    align-self: center;
+    margin-top: 1rem;
+  }
+}
+
+/* Animation for page load */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.admin-settings-header {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.admin-settings-card {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.admin-settings-card:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.admin-settings-card:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.admin-settings-card:nth-child(3) {
+  animation-delay: 0.3s;
+}
 .admin-settings-dashboard {
     max-width: 820px;
     margin: 0 auto;
@@ -45,6 +294,12 @@
     font-size: 2.3rem;
     margin-bottom: 0.7rem;
     color: #2274cb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.admin-settings-card-icon i {
+    color: #fff !important;
 }
 
 .admin-settings-card-title {
