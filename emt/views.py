@@ -365,39 +365,6 @@ def submit_expense_details(request, proposal_id):
                   {"proposal": proposal, "formset": formset})
 
 
-# ──────────────────────────────
-# STATUS PAGE
-# ──────────────────────────────
-@login_required
-def proposal_status_detail(request, proposal_id):
-    # load the proposal
-    proposal = get_object_or_404(
-        EventProposal,
-        id=proposal_id,
-        submitted_by=request.user
-    )
-
-    # load its approval steps
-    approval_steps = ApprovalStep.objects.filter(
-        proposal=proposal
-    ).order_by('step_order')
-
-    # compute total budget
-    budget_total = (
-        proposal.expensedetail_set
-                .aggregate(total=Sum('amount'))['total']
-        or 0
-    )
-
-    return render(request, 'emt/proposal_status_detail.html', {
-        'proposal': proposal,
-        'approval_steps': approval_steps,
-        'statuses': ['draft', 'submitted', 'under_review', 'returned', 'rejected', 'finalized'],
-        'budget_total': budget_total,
-    })
-
-
-
 
 # ──────────────────────────────
 # IQAC Suite Dashboard
@@ -783,6 +750,7 @@ def suite_dashboard(request):
         'statuses': statuses,
         'show_approvals_card': show_approvals_card,
     })
+
 @login_required
 def ai_generate_report(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id)
@@ -941,3 +909,11 @@ Repeat: Output each field as FIELD: VALUE (colon required), one per line, nothin
                 time.sleep(0.03)
 
     return StreamingHttpResponse(generate(), content_type='text/plain')
+
+@login_required
+def admin_dashboard(request):
+    """
+    Render the static admin dashboard template.
+    """
+    return render(request, 'core/admin_dashboard.html')
+

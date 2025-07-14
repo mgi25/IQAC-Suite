@@ -76,14 +76,17 @@
     margin-bottom: 2rem;
   }
 
-  .form-inline select {
+  .form-inline select,
+  .form-inline button {
     min-width: 200px;
     padding: 0.9rem 1.2rem;
     border-radius: 1rem;
+    font-size: 1rem;
+  }
+
+  .form-inline select {
     border: 1px solid #e3eaf3;
     background-color: #f9fafb;
-    font-size: 1rem;
-    transition: border 0.2s, box-shadow 0.2s;
     box-shadow: 0 1px 4px rgba(34, 116, 203, 0.04);
   }
 
@@ -94,16 +97,13 @@
   }
 
   .form-inline button {
-    padding: 1rem 2rem;
     background-color: #3b82f6;
     color: white;
-    border: none;
-    border-radius: 1rem;
-    font-size: 1.1rem;
-    cursor: pointer;
     font-weight: 700;
-    transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+    border: none;
+    cursor: pointer;
     box-shadow: 0 2px 8px rgba(59, 130, 246, 0.13);
+    transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -170,13 +170,13 @@
     font-weight: 700;
     border-radius: 0.7rem;
     text-decoration: none;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.13);
     transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    border: none;
-    cursor: pointer;
-    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.13);
   }
 
   .btn-download-all:hover {
@@ -213,117 +213,87 @@
     font-size: 1.1rem;
   }
 
-  .student-list-meta {
+  .student-table-wrapper {
+    overflow-x: auto;
+    margin-top: 1rem;
+  }
+
+  .student-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border-radius: 1rem;
+    overflow: hidden;
     font-size: 0.95rem;
-    color: #8ca0b3;
-    margin-bottom: 1rem;
-    text-align: right;
   }
 
-  .student-list {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.2rem;
+  .student-table thead {
+    background-color: #3b82f6;
+    color: white;
+    pointer-events: none;
   }
 
-  .student-item {
-    background: #f9fafb;
-    border: 1px solid #e3eaf3;
-    border-radius: 1.2rem;
-    padding: 1.5rem 1.2rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.8rem;
-    transition: box-shadow 0.2s, transform 0.2s;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
-    position: relative;
-    min-height: 120px;
+  .student-table th,
+  .student-table td {
+    padding: 1rem 1.2rem;
+    text-align: left;
+    border-bottom: 1px solid #f0f0f0;
   }
 
-  .student-item:hover {
-    box-shadow: 0 8px 24px rgba(34, 116, 203, 0.13);
-    transform: translateY(-4px) scale(1.01);
-    border-color: #b6d4f7;
+  .student-table td:last-child {
+    white-space: nowrap;
   }
 
-  .student-name {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: #1a2a3a;
-    margin-bottom: 0.1rem;
+  .student-table tr:hover {
+    background-color: #f9fafb;
   }
 
-  .student-register {
-    font-size: 0.95rem;
-    color: #8ca0b3;
-    font-weight: 500;
-  }
-
-  .student-meta {
-    font-size: 0.92rem;
-    color: #b0b8c1;
-    margin-top: 0.2rem;
-  }
-
-  .student-status {
-    font-size: 0.9rem;
+  .status-badge {
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
     font-weight: 600;
-    color: #2ecc71;
-    margin-left: 0.5rem;
+    font-size: 0.85rem;
   }
 
-  .student-status.inactive {
-    color: #e67e22;
+  .status-active {
+    background-color: #dcfce7;
+    color: #16a34a;
   }
 
-  .student-status.notready {
-    color: #e74c3c;
+  .status-inactive {
+    background-color: #fef3c7;
+    color: #b45309;
   }
 
-  .student-actions {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: auto;
-  }
-
-  .btn-view,
-  .btn-download {
-    flex: 1;
-    text-align: center;
-    padding: 0.7rem 1.2rem;
-    font-size: 1rem;
-    font-weight: 700;
-    border-radius: 0.7rem;
-    text-decoration: none;
-    transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+  .action-btn {
+    padding: 0.5rem 0.9rem;
+    font-size: 0.9rem;
+    border-radius: 0.5rem;
     border: none;
-    outline: none;
-    justify-content: center;
+    cursor: pointer;
+    margin-right: 0.4rem;
+    font-weight: 600;
+    transition: 0.2s ease;
+    text-decoration: none;
   }
 
   .btn-view {
-    background: #3b82f6;
+    background-color: #3b82f6;
+    color: white;
+  }
+
+  .btn-download {
+    background-color: #10b981;
     color: white;
   }
 
   .btn-view:hover {
-    background: #2563eb;
-    transform: translateY(-2px) scale(1.03);
-    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.18);
-  }
-
-  .btn-download {
-    background: #10b981;
-    color: white;
+    background-color: #2563eb;
   }
 
   .btn-download:hover {
-    background: #059669;
-    transform: translateY(-2px) scale(1.03);
-    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.18);
+    background-color: #059669;
   }
 
   .empty-state {
@@ -332,46 +302,6 @@
     font-size: 1.1rem;
     margin-top: 2rem;
     padding: 2rem 0;
-  }
-
-  .skeleton {
-    background: linear-gradient(90deg, #f3f7fa 25%, #e3eaf3 50%, #f3f7fa 75%);
-    background-size: 200% 100%;
-    animation: skeleton-loading 1.2s infinite linear;
-    border-radius: 8px;
-    min-height: 24px;
-    width: 100%;
-    margin-bottom: 1rem;
-  }
-
-  @keyframes skeleton-loading {
-    0% {
-      background-position: 200% 0;
-    }
-
-    100% {
-      background-position: -200% 0;
-    }
-  }
-
-  @media (max-width: 1200px) {
-    .student-list {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-
-  @media (max-width: 768px) {
-    .dashboard-container {
-      padding: 16px 0 16px 0;
-    }
-
-    .transcript-form-card {
-      padding: 1.2rem 0.5rem 1rem 0.5rem;
-    }
-
-    .student-list {
-      grid-template-columns: 1fr;
-    }
   }
 </style>
 {% endblock %}
@@ -410,12 +340,10 @@
         <div class="student-list-title"><i class="fa-solid fa-users"></i> Students</div>
         <div class="student-header-right">
           <div class="student-count" id="studentCount">0 students</div>
-          <button id="downloadAllPDFBtn" class="btn-download-all">
-            <i class="fa-solid fa-download"></i> Download Combined PDF
-          </button>
-          <button id="downloadAllZIPBtn" class="btn-download-all">
-            <i class="fa-solid fa-file-zipper"></i> Download All (ZIP)
-          </button>
+          <button id="downloadAllPDFBtn" class="btn-download-all"><i class="fa-solid fa-download"></i> Download Combined
+            PDF</button>
+          <button id="downloadAllZIPBtn" class="btn-download-all"><i class="fa-solid fa-file-zipper"></i> Download All
+            (ZIP)</button>
         </div>
       </div>
 
@@ -425,7 +353,21 @@
           oninput="filterStudentList()">
       </div>
 
-      <div class="student-list" id="studentList"></div>
+      <div class="student-table-wrapper">
+        <table class="student-table" id="studentListTable">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Roll No</th>
+              <th>Academic Year</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="studentListTableBody"></tbody>
+        </table>
+      </div>
+
       <div class="empty-state" id="emptyState" style="display:none;"><i class="fa-solid fa-user-slash"></i> No students
         found for this filter.</div>
     </div>
@@ -438,7 +380,6 @@
   <div class="loader"></div>
 </div>
 
-<!-- Hidden iframe for background download -->
 <iframe id="downloadIframe" style="display: none;"></iframe>
 {% endblock %}
 
@@ -448,21 +389,16 @@
   const schoolSelect = document.getElementById('schoolSelect');
   const courseSelect = document.getElementById('courseSelect');
   const showStudentsBtn = document.getElementById('showStudentsBtn');
-  const transcriptForm = document.getElementById('transcriptForm');
   const studentListContainer = document.getElementById('studentListContainer');
-  const studentList = document.getElementById('studentList');
   const studentCount = document.getElementById('studentCount');
   const downloadAllPDFBtn = document.getElementById('downloadAllPDFBtn');
   const downloadAllZIPBtn = document.getElementById('downloadAllZIPBtn');
-  const emptyState = document.getElementById('emptyState');
   const studentSearchInput = document.getElementById('studentSearchInput');
   const iframe = document.getElementById('downloadIframe');
-
   const studentRawData = JSON.parse(`{{ student_data|escapejs }}`);
   const studentData = studentRawData;
   let originalStudentList = [];
   let currentStudents = [];
-
 
   const resetDropdown = (dropdown, placeholder) => {
     dropdown.innerHTML = `<option value="">${placeholder}</option>`;
@@ -480,72 +416,63 @@
     });
   };
 
-  const createStudentItem = (student) => {
-    const item = document.createElement('div');
-    item.className = 'student-item';
-    item.innerHTML = `
-      <div class="student-name">${student.name}</div>
-      <div class="student-register">${student.roll_no}</div>
-      <div class="student-meta">Year: ${student.year || '-'} | Status: <span class="student-status ${student.active === false ? 'inactive' : ''}">${student.active === false ? 'Inactive' : 'Active'}</span></div>
-      <div class="student-actions">
-        <a href="/transcript/${student.roll_no}/" class="btn-view"><i class="fa-solid fa-eye"></i> View</a>
-        <a href="/transcript/${student.roll_no}/pdf/" class="btn-download"><i class="fa-solid fa-download"></i> Download</a>
-      </div>`;
-    return item;
-  };
-
   const displayStudents = (students) => {
-    studentList.innerHTML = '';
+    const tbody = document.getElementById("studentListTableBody");
+    tbody.innerHTML = "";
     studentCount.textContent = `${students.length} students`;
+
     if (students.length === 0) {
       emptyState.style.display = '';
-    } else {
-      emptyState.style.display = 'none';
-      students.forEach(student => {
-        const studentItem = createStudentItem(student);
-        studentList.appendChild(studentItem);
-      });
+      studentListContainer.classList.add('show');
+      return;
     }
+
+    emptyState.style.display = 'none';
+
+    students.forEach(student => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${student.name}</td>
+        <td>${student.roll_no}</td>
+        <td>${student.year || '-'}</td>
+        <td>
+          <span class="status-badge ${student.active === false ? 'status-inactive' : 'status-active'}">
+            ${student.active === false ? 'Inactive' : 'Active'}
+          </span>
+        </td>
+        <td>
+          <a href="/transcript/${student.roll_no}/" class="action-btn btn-view"><i class="fa-solid fa-eye"></i> View</a>
+          <a href="/transcript/${student.roll_no}/pdf/" class="action-btn btn-download"><i class="fa-solid fa-download"></i> PDF</a>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
     studentListContainer.classList.add('show');
     currentStudents = students;
   };
 
   function filterStudentList() {
     const input = studentSearchInput.value.toLowerCase().trim();
-
-    if (input === "") {
-      // Restore full list
-      displayStudents(originalStudentList);
-      currentStudents = originalStudentList;
-      return;
-    }
-
+    if (input === "") return displayStudents(originalStudentList);
     const filtered = originalStudentList.filter(student =>
       student.name.toLowerCase().includes(input) ||
       student.roll_no.toLowerCase().includes(input)
     );
-
     displayStudents(filtered);
-    currentStudents = filtered;
   }
-
-
 
   function downloadAll(type = 'pdf') {
     const year = academicYearSelect.value;
     const school = schoolSelect.value;
     const course = courseSelect.value;
-
     if (!year || !school || !course) {
       alert("Please select year, school, and course first.");
       return;
     }
-
     const downloadUrl = `/transcript/pdf/all/?year=${encodeURIComponent(year)}&school=${encodeURIComponent(school)}&course=${encodeURIComponent(course)}&type=${type}`;
     document.getElementById('downloadSpinner').style.display = 'flex';
     iframe.src = downloadUrl;
-
-    // Fallback timeout in case download fails and iframe doesn't trigger load
     setTimeout(() => {
       document.getElementById('downloadSpinner').style.display = 'none';
     }, 15000);
@@ -557,7 +484,6 @@
     resetDropdown(courseSelect, 'Select Course');
     studentListContainer.classList.remove('show');
     showStudentsBtn.disabled = true;
-
     if (selectedYear && studentData[selectedYear]) {
       const schools = Object.keys(studentData[selectedYear]);
       populateDropdown(schoolSelect, schools);
@@ -571,7 +497,6 @@
     resetDropdown(courseSelect, 'Select Course');
     studentListContainer.classList.remove('show');
     showStudentsBtn.disabled = true;
-
     if (selectedYear && selectedSchool && studentData[selectedYear][selectedSchool]) {
       const courses = Object.keys(studentData[selectedYear][selectedSchool]);
       populateDropdown(courseSelect, courses);
@@ -589,25 +514,18 @@
     const year = academicYearSelect.value;
     const school = schoolSelect.value;
     const course = courseSelect.value;
-
     if (!year || !school || !course) return;
-
     showStudentsBtn.innerHTML = '<span class="skeleton" style="width:80px;height:20px;"></span>';
     showStudentsBtn.disabled = true;
-
     const students = studentData[year][school][course];
-
-    // Store original full list
     originalStudentList = students;
     currentStudents = students;
-
     setTimeout(() => {
       displayStudents(students);
       showStudentsBtn.innerHTML = '<i class="fa-solid fa-users"></i> Show Students';
       showStudentsBtn.disabled = false;
     }, 500);
   });
-
 
   downloadAllPDFBtn.addEventListener("click", function (e) {
     e.preventDefault();
