@@ -1,300 +1,74 @@
+{% extends "base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>{% block title %}CHRIST University - Character Strength Transcript{% endblock %}</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-  
-  <!-- Styles -->
-  <link rel="stylesheet" href="{% static 'core/css/base.css' %}">
-  
-  {% block head_extra %}{% endblock %}
-</head>
-<body>
-  <!-- HEADER -->
-  <div class="header-container">
-    <!-- Layer 1: Top Utility Bar with User Controls -->
-    <div class="header-layer-1">
-      <div class="announcement-text">
-        IQAC Suite & Transcript Automater
+{% block content %}
+<link rel="stylesheet" href="{% static 'core/css/admin_dashboard.css' %}">
+<div class="admin-dashboard-bg">
+  <div class="admin-dashboard-container">
+    <div class="admin-dashboard-header">
+      <span class="admin-dashboard-icon">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="#2274CB" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="10" fill="#e9f3fa"/>
+          <path d="M12 4C9 6.5 5 7 5 13C5 17.42 12 21 12 21C12 21 19 17.42 19 13C19 7 15 6.5 12 4Z" stroke="#2274CB" stroke-width="1.5" fill="#fff"/>
+        </svg>
+      </span>
+      <span class="admin-dashboard-title">Admin Dashboard</span>
+    </div>
+    <div class="admin-dashboard-welcome">
+      Welcome, <b>{{ user.get_full_name|default:user.username }}</b>!
+    </div>
+    <div class="admin-dashboard-stats-row">
+      <div class="admin-dashboard-stat">
+        <div class="stat-icon stat-student"></div>
+        <div class="stat-count">{{ stats.students }}</div>
+        <div class="stat-label">Students</div>
       </div>
-      <div class="user-controls">
-        <!-- Dashboard Icon -->
-        <a href="{% url 'core_admin_dashboard' %}" class="dashboard-btn" aria-label="Dashboard">
-          <i class="fa-solid fa-chart-line"></i>
-        </a>
-        
-        <!-- Notification Bell -->
-        <button id="notifBtn" class="notif-btn" aria-label="Notifications">
-          <i class="fa-solid fa-bell"></i>
-          {% if notifications %}<span class="notif-badge"></span>{% endif %}
-        </button>
-        
-        <!-- Profile Dropdown -->
-        <div class="profile-dropdown">
-          <button id="profileBtn" class="profile-btn" aria-label="Profile">
-            <i class="fa-solid fa-user"></i>
-          </button>
-          <div id="profileMenu" class="profile-dropdown-menu">
-            <div class="dropdown-item" style="border-bottom: 1px solid var(--gray-200); font-weight: 600; color: var(--christ-blue-primary);">
-              <i class="fa-solid fa-user"></i>
-              {{ request.user.get_full_name|default:request.user.username }}
-            </div>
-            <a href="{% url 'logout' %}" class="dropdown-item">
-              <i class="fa-solid fa-sign-out-alt"></i>
-              Logout
-            </a>
-          </div>
+      <div class="admin-dashboard-stat">
+        <div class="stat-icon stat-faculty"></div>
+        <div class="stat-count">{{ stats.faculties }}</div>
+        <div class="stat-label">Faculties</div>
+      </div>
+      <div class="admin-dashboard-stat">
+        <div class="stat-icon stat-hod"></div>
+        <div class="stat-count">{{ stats.hods }}</div>
+        <div class="stat-label">HODs</div>
+      </div>
+      <div class="admin-dashboard-stat">
+        <div class="stat-icon stat-center"></div>
+        <div class="stat-count">{{ stats.centers }}</div>
+        <div class="stat-label">Centers</div>
+      </div>
+      <!-- Add more role stats if you want, or keep it at just these 4 -->
+    </div>
+    <div class="admin-dashboard-navcards">
+      <a class="admin-navcard" href="{% url 'admin_user_panel' %}">
+        <div class="navcard-icon">
+          <i class="fa-solid fa-users"></i>
         </div>
-      </div>
-    </div>
-    
-    <!-- Layer 2: Main Navigation & Logo -->
-    <div class="header-layer-2">
-      <div class="brand-section">
-        <img src="{% static 'core/img/campus-logo.png' %}" alt="CHRIST University Logo" class="navbar-logo">
-        <div class="brand-text">
-          <div class="brand-title">CHRIST (Deemed to be University)</div>
-          <div class="brand-subtitle">Pune Lavasa - The Hub of Analytics</div>
+        <div class="navcard-title">User Management</div>
+        <div class="navcard-desc">View and manage user roles</div>
+      </a>
+      <a class="admin-navcard" href="{% url 'admin_event_proposals' %}">
+        <div class="navcard-icon">
+          <i class="fa-solid fa-calendar-check"></i>
         </div>
-      </div>
-      
-      <!-- Desktop Navigation - Hidden on Dashboard -->
-      {% if request.resolver_match.url_name != 'dashboard' %}
-      <nav class="main-nav">
-        <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-          <i class="fa-solid fa-home"></i> Home
-        </a>
-        {% comment %} Show all navigation items with proper URLs {% endcomment %}
-        <a href="/suite/suite/" class="nav-link {% if 'suite' in request.resolver_match.url_name or 'iqac' in request.resolver_match.url_name %}active{% endif %}">
-          <i class="fa-solid fa-clipboard-list"></i> IQAC
-        </a>
-        <a href="/transcript/" class="nav-link {% if 'transcript' in request.resolver_match.url_name %}active{% endif %}">
-          <i class="fa-solid fa-graduation-cap"></i> Transcript
-        </a>
-        <a href="/core-admin/cdl/" class="nav-link {% if 'cdl' in request.resolver_match.url_name %}active{% endif %}">
-          <i class="fa-solid fa-photo-video"></i> CDL
-        </a>
-      </nav>
-      {% endif %}
-      
-      <!-- Mobile Menu Button - Hidden on Dashboard -->
-      {% if request.resolver_match.url_name != 'dashboard' %}
-      <button id="mobileMenuBtn" class="mobile-menu-btn">
-        <i class="fa-solid fa-bars"></i>
-      </button>
-      {% endif %}
-    </div>
-    
-    <!-- Mobile Navigation -->
-    <div id="mobileNav" class="mobile-nav">
-      <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-        <i class="fa-solid fa-home"></i> Home
+        <div class="navcard-title">Event Proposals</div>
+        <div class="navcard-desc">View all submitted proposals</div>
       </a>
-      {% comment %} Role-based navigation with proper URLs {% endcomment %}
-      {% if request.session.role != 'student' or user.is_superuser %}
-      <a href="/suite/suite/" class="nav-link {% if 'suite' in request.resolver_match.url_name or 'iqac' in request.resolver_match.url_name %}active{% endif %}">
-        <i class="fa-solid fa-clipboard-list"></i> IQAC
+      <a class="admin-navcard" href="{% url 'admin_reports' %}">
+        <div class="navcard-icon">
+          <i class="fa-solid fa-file-lines"></i>
+        </div>
+        <div class="navcard-title">Reports</div>
+        <div class="navcard-desc">Review all generated reports</div>
       </a>
-      {% endif %}
-      {% if request.session.role == 'student' or user.is_superuser %}
-      <a href="/transcript/" class="nav-link {% if 'transcript' in request.resolver_match.url_name %}active{% endif %}">
-        <i class="fa-solid fa-graduation-cap"></i> Transcript
+      <a class="admin-navcard" href="{% url 'admin_settings' %}">
+        <div class="navcard-icon">
+          <i class="fa-solid fa-gear"></i>
+        </div>
+        <div class="navcard-title">Settings</div>
+        <div class="navcard-desc">Admin panel settings</div>
       </a>
-      {% endif %}
-      {% if request.session.role in 'cdl_admin,super_admin' or user.is_superuser %}
-      <a href="/core-admin/cdl/" class="nav-link {% if 'cdl' in request.resolver_match.url_name %}active{% endif %}">
-        <i class="fa-solid fa-photo-video"></i> CDL
-      </a>
-      {% endif %}
-    </div>
-    
-    <!-- Layer 3: Separator -->
-    <div class="header-layer-3"></div>
-    
-    <!-- Layer 4: Page Info/Breadcrumb -->
-    <div class="header-layer-4">
-      <div class="page-info">
-        <i class="fa-solid fa-location-dot"></i>
-        <span>{% block page_title %}Dashboard{% endblock %}</span>
-      </div>
-      <div class="breadcrumb" style="margin-left: auto;">
-        {% block breadcrumb %}
-        <a href="{% url 'dashboard' %}">Home</a>
-        <i class="fa-solid fa-chevron-right" style="font-size: 0.75rem;"></i>
-        <span>{% block current_page %}Dashboard{% endblock %}</span>
-        {% endblock %}
-      </div>
     </div>
   </div>
-  
-  <!-- NOTIFICATION POPUP -->
-  <div id="notifPopup" class="notif-popup">
-    <div class="notif-head">
-      <span>Notifications</span>
-      <button id="notifClose" aria-label="Close">&times;</button>
-    </div>
-    <div class="notif-body">
-      {% if notifications %}
-        {% for n in notifications %}
-          <article class="notif-item {{ n.type }}">
-            <i class="fa {% if n.type == 'info' %}fa-info-circle{% elif n.type == 'reminder' %}fa-bell{% else %}fa-exclamation-circle{% endif %}"></i>
-            <div>
-              <span>{{ n.msg }}</span>
-              <time>{{ n.time }}</time>
-            </div>
-          </article>
-        {% endfor %}
-      {% else %}
-        <p class="notif-empty">No notifications.</p>
-      {% endif %}
-    </div>
-  </div>
-  
-  <!-- PAGE CONTENT -->
-  <main>
-    <!-- Dashboard Content Block -->
-    {% block content %}
-    <div class="dashboard-wrapper">
-      <!-- Welcome Section -->
-      <section class="welcome-section">
-        <h2 class="welcome-subtitle">Welcome to</h2>
-        <h1 class="welcome-title">
-          IQAC Suite <span class="welcome-ampersand">&amp;</span> Transcript Automater
-        </h1>
-        <p class="welcome-message">
-          Hi, <strong>{{ request.user.get_full_name|default:request.user.username|upper }}</strong>! Pick an application to get started:
-        </p>
-      </section>
-
-      <!-- Application Cards -->
-      <section class="application-grid">
-        <!-- IQAC Suite Card -->
-        {% if request.session.role != 'student' or user.is_superuser %}
-        <a href="/suite/suite/" class="app-card app-card-blue">
-          <div class="app-icon">
-            <i class="fa-solid fa-file-lines"></i>
-          </div>
-          <h3 class="app-title">IQAC Suite</h3>
-          <p class="app-description">Submit event proposals, track approvals, and generate reports.</p>
-          <div class="app-launch">
-            <span>Launch</span>
-            <i class="fa-solid fa-arrow-right"></i>
-          </div>
-        </a>
-        {% endif %}
-
-        <!-- Graduate Transcript Card -->
-        {% if request.session.role == 'student' or user.is_superuser %}
-        <a href="/transcript/" class="app-card app-card-green">
-          <div class="app-icon">
-            <i class="fa-solid fa-graduation-cap"></i>
-          </div>
-          <h3 class="app-title">Graduate Transcript</h3>
-          <p class="app-description">Generate character strength transcript reports. For students.</p>
-          <div class="app-launch">
-            <span>Launch</span>
-            <i class="fa-solid fa-arrow-right"></i>
-          </div>
-        </a>
-        {% endif %}
-
-        <!-- CDL Card -->
-        {% if request.session.role in 'cdl_admin,super_admin' or user.is_superuser %}
-        <a href="/core-admin/cdl/" class="app-card app-card-orange">
-          <div class="app-icon">
-            <i class="fa-solid fa-camera"></i>
-          </div>
-          <h3 class="app-title">CDL</h3>
-          <p class="app-description">Request media content creation and approval. For marketing and communications.</p>
-          <div class="app-launch">
-            <span>Launch</span>
-            <i class="fa-solid fa-arrow-right"></i>
-          </div>
-        </a>
-        {% endif %}
-      </section>
-    </div>
-    {% endblock %}
-  </main>
-  
-  <!-- Scripts -->
-  <script>
-    // DOM Content Loaded
-    document.addEventListener('DOMContentLoaded', function() {
-      // Notification popup functionality
-      const notifBtn = document.getElementById('notifBtn');
-      const notifPopup = document.getElementById('notifPopup');
-      const notifClose = document.getElementById('notifClose');
-      
-      if (notifBtn && notifPopup) {
-        notifBtn.addEventListener('click', function(e) {
-          e.stopPropagation();
-          notifPopup.style.display = notifPopup.style.display === 'block' ? 'none' : 'block';
-          // Close profile menu if open
-          const profileMenu = document.getElementById('profileMenu');
-          if (profileMenu) profileMenu.classList.remove('show');
-        });
-        
-        if (notifClose) {
-          notifClose.addEventListener('click', function() {
-            notifPopup.style.display = 'none';
-          });
-        }
-      }
-      
-      // Profile dropdown functionality
-      const profileBtn = document.getElementById('profileBtn');
-      const profileMenu = document.getElementById('profileMenu');
-      
-      if (profileBtn && profileMenu) {
-        profileBtn.addEventListener('click', function(e) {
-          e.stopPropagation();
-          profileMenu.classList.toggle('show');
-          // Close notification popup if open
-          if (notifPopup) notifPopup.style.display = 'none';
-        });
-      }
-      
-      // Mobile menu functionality
-      const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-      const mobileNav = document.getElementById('mobileNav');
-      
-      if (mobileMenuBtn && mobileNav) {
-        mobileMenuBtn.addEventListener('click', function(e) {
-          e.stopPropagation();
-          mobileNav.classList.toggle('show');
-        });
-      }
-      
-      // Close all dropdowns when clicking outside
-      document.addEventListener('click', function(e) {
-        // Close notification popup
-        if (notifPopup && !notifPopup.contains(e.target) && !notifBtn.contains(e.target)) {
-          notifPopup.style.display = 'none';
-        }
-        
-        // Close profile dropdown
-        if (profileMenu && !profileMenu.contains(e.target) && !profileBtn.contains(e.target)) {
-          profileMenu.classList.remove('show');
-        }
-        
-        // Close mobile menu
-        if (mobileNav && !mobileNav.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
-          mobileNav.classList.remove('show');
-        }
-      });
-    });
-    
-    // CSRF Token for forms
-    window.CSRF_TOKEN = '{{ csrf_token }}';
-  </script>
-  
-  {% block scripts %}{% endblock %}
-</body>
-</html>
+</div>
+{% endblock %}
