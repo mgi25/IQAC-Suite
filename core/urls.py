@@ -43,5 +43,4 @@ urlpatterns = [
     path('core-admin/proposal/<int:proposal_id>/detail/', views.admin_proposal_detail, name='admin_proposal_detail'),
     path('core-admin/approval-flow/', views.admin_approval_flow, name='admin_approval_flow'),
 
-
 ]

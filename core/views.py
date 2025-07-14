@@ -128,33 +128,11 @@ def proposal_status(request, pk):
 # ─────────────────────────────────────────────────────────────
 #  Admin Dashboard
 # ─────────────────────────────────────────────────────────────
-@user_passes_test(lambda u: u.is_superuser)
 def admin_dashboard(request):
-    stats = {
-        "students":  RoleAssignment.objects.filter(role="student").count(),
-        "faculties": RoleAssignment.objects.filter(role="faculty").count(),
-        "hods":      RoleAssignment.objects.filter(role="hod").count(),
-        "centers":   Center.objects.count(),
-        "departments": Department.objects.count(),
-        "clubs": Club.objects.count(),
-        "cells": Cell.objects.count(),
-        "associations": Association.objects.count(),
-    }
-
-    departments = Department.objects.annotate(num_users=Count('roleassignment'))
-    clubs = Club.objects.annotate(num_users=Count('roleassignment'))
-    centers = Center.objects.annotate(num_users=Count('roleassignment'))
-    cells = Cell.objects.annotate(num_users=Count('roleassignment'))
-    associations = Association.objects.annotate(num_users=Count('roleassignment'))
-
-    return render(request, "core/admin_dashboard.html", {
-        "stats": stats,
-        "departments": departments,
-        "clubs": clubs,
-        "centers": centers,
-        "cells": cells,
-        "associations": associations,
-    })
+    """
+    Just render the admin_dashboard.html template, without data.
+    """
+    return render(request, "core/admin_dashboard.html")
 
 
 

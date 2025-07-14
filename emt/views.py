@@ -780,3 +780,10 @@ def suite_dashboard(request):
         'statuses': statuses,
         'show_approvals_card': show_approvals_card,
     })
+
+@login_required
+def admin_dashboard(request):
+    """
+    Render the static admin dashboard template.
+    """
+    return render(request, 'core/admin_dashboard.html')
