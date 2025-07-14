@@ -23,54 +23,28 @@
     </p>
   </section>
 
-  <!-- APP CARDS - Material List Tiles Style (All Blue Theme) -->
+  <!-- APP CARDS -->
   <section class="dash-apps">
-    <!-- Card 1: IQAC Suite - Blue Theme -->
-    <a href="{% url 'emt:iqac_suite_dashboard' %}" class="material-list-tile blue-theme">
-      <div class="material-list-leading">
-        <div class="material-list-icon">
-          <i class="fa-solid fa-file-lines"></i>
-        </div>
-      </div>
-      <div class="material-list-content">
-        <div class="material-list-primary">IQAC Suite</div>
-        <div class="material-list-secondary">Submit event proposals, track approvals, and generate reports.</div>
-      </div>
-      <div class="material-list-trailing">
-        <i class="fa-solid fa-arrow-right material-list-arrow"></i>
-      </div>
+    <a href="{% url 'emt:iqac_suite_dashboard' %}" class="dash-card">
+      <div class="dash-icon dash-blue"><i class="fa-solid fa-file"></i></div>
+      <h3>IQAC Suite</h3>
+      <p>Event proposal and report management.</p>
+      <span class="dash-launch">Launch →</span>
     </a>
 
-    <!-- Card 2: Graduate Transcript - Blue Theme -->
-    <a href="{% url 'transcript:home' %}" class="material-list-tile blue-theme">
-      <div class="material-list-leading">
-        <div class="material-list-icon">
-          <i class="fa-solid fa-graduation-cap"></i>
-        </div>
-      </div>
-      <div class="material-list-content">
-        <div class="material-list-primary">Graduate Transcript</div>
-        <div class="material-list-secondary">Generate character strength transcript reports. For students.</div>
-      </div>
-      <div class="material-list-trailing">
-        <i class="fa-solid fa-arrow-right material-list-arrow"></i>
-      </div>
+    <a href="{% url 'transcript:home' %}" class="dash-card">
+      <div class="dash-icon dash-green"><i class="fa-solid fa-graduation-cap"></i></div>
+      <h3>Graduate Transcript</h3>
+      <p>Graduate characteristics report.</p>
+      <span class="dash-launch">Launch →</span>
     </a>
 
-    <!-- Card 3: CDL - Blue Theme -->
-    <a href="{% url 'cdl_dashboard' %}" class="material-list-tile blue-theme">
-      <div class="material-list-leading">
-        <div class="material-list-icon">
-          <i class="fa-solid fa-camera"></i>
-        </div>
-      </div>
-      <div class="material-list-content">
-        <div class="material-list-primary">CDL</div>
-        <div class="material-list-secondary">Request media content creation and approval. For marketing and communications.</div>
-      </div>
-      <div class="material-list-trailing">
-        <i class="fa-solid fa-arrow-right material-list-arrow"></i>
-      </div>
+    <!-- CDL Card -->
+    <a href="{% url 'cdl_dashboard' %}" class="dash-card">
+      <div class="dash-icon dash-orange"><i class="fa-solid fa-camera"></i></div>
+      <h3>CDL</h3>
+      <p>Get your media content approved or made.</p>
+      <span class="dash-launch">Launch →</span>
     </a>
   </section>
 
