@@ -185,9 +185,26 @@ def all_events_view(request, roll_no):
     student = get_object_or_404(Student, roll_no=roll_no)
     participations = Participation.objects.filter(student=student)
     all_event_names = [f"{p.event.name} - {p.event.date}" for p in participations]
+
+    # 💡 Add strength calculations (same as transcript)
+    strength_data, _ = calculate_strength_data(student)
+
+    # Top 5 strengths for sidebar
+    top_5_strengths = []
+    for s in strength_data:
+        if s['average'] > 0:
+            top_5_strengths.append({'name': s['name'], 'score': s['average']})
+    top_5_strengths = sorted(top_5_strengths, key=lambda x: x['score'], reverse=True)[:5]
+
+    max_score = max([s['score'] for s in top_5_strengths], default=1)
+    for s in top_5_strengths:
+        s['score'] = round((s['score'] / max_score) * 100, 2) if max_score > 0 else 0
+
     return render(request, 'transcript_app/student_events.html', {
         'student': student,
-        'all_events': all_event_names
+        'all_events': all_event_names,
+        'strength_data': strength_data,
+        'top_5_strengths': top_5_strengths
     })
 
 # ─────────────────────────────────────────────

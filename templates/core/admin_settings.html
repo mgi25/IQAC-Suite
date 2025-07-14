@@ -6,30 +6,51 @@
 
 <div class="admin-settings-dashboard-bg">
   <div class="admin-settings-dashboard-container">
-    <h1>Admin Settings</h1>
+    <!-- Header Section -->
+    <div class="admin-settings-header">
+      <div class="admin-settings-icon">
+        <i class="fa-solid fa-gear"></i>
+      </div>
+      <h1 class="admin-settings-title">Admin Settings</h1>
+    </div>
+    
+    <!-- Keep original class name for functionality -->
     <div class="admin-settings-cards">
       <!-- Application 1: User Settings / Master Data -->
       <a href="{% url 'admin_master_data' %}" class="admin-settings-card">
-        <div class="admin-settings-card-icon">
-          <i class="fa-solid fa-database"></i>
+        <div class="admin-settings-card-content">
+          <div class="admin-settings-card-icon">
+            <i class="fa-solid fa-database"></i>
+          </div>
+          <div class="admin-settings-card-info">
+            <div class="admin-settings-card-title">User Settings</div>
+            <div class="admin-settings-card-desc">Manage master data, users, departments, etc.</div>
+          </div>
         </div>
-        <div>
-          <div class="admin-settings-card-title">User Settings</div>
-          <div class="admin-settings-card-desc">Manage master data, users, departments, etc.</div>
+        <div class="admin-settings-card-arrow">
+          <i class="fa-solid fa-chevron-right"></i>
         </div>
       </a>
+      
       <!-- Application 2: Approval Flow Management -->
       <a href="{% url 'admin_approval_flow' %}" class="admin-settings-card">
-        <div class="admin-settings-card-icon">
-          <i class="fa-solid fa-diagram-project"></i>
+        <div class="admin-settings-card-content">
+          <div class="admin-settings-card-icon">
+            <i class="fa-solid fa-diagram-project"></i>
+          </div>
+          <div class="admin-settings-card-info">
+            <div class="admin-settings-card-title">Approval Flow Management</div>
+            <div class="admin-settings-card-desc">Configure event proposal approval chains</div>
+          </div>
         </div>
-        <div>
-          <div class="admin-settings-card-title">Approval Flow Management</div>
-          <div class="admin-settings-card-desc">Configure event proposal approval chains</div>
+        <div class="admin-settings-card-arrow">
+          <i class="fa-solid fa-chevron-right"></i>
         </div>
       </a>
+      
       <!-- Add more applications as needed -->
     </div>
   </div>
 </div>
+
 {% endblock %}
