@@ -65,9 +65,15 @@
       <div>Approved by:<span style="margin-left:8px;" id="f_approved_by" class="ai-field-blank">...</span></div>
       <div id="ai_status" style="margin-top:12px;" class="ai-ready" hidden>AI has filled your report!</div>
     </div>
-    <button id="editBtn" style="display:none;" class="ai-btn">
-      Edit &amp; Submit
-    </button>
+    <button id="editBtn" class="ai-btn" onclick="window.location.href='{% url 'emt:ai_report_edit' proposal.id %}'">
+  Edit Report
+</button>
+<button id="submitBtn" class="ai-btn" style="margin-left: 18px;" 
+  onclick="window.location.href='{% url 'emt:ai_report_submit' proposal.id %}'">
+  Submit
+</button>
+
+
   </div>
 </div>
 
@@ -177,7 +183,7 @@ fetch("{% url 'emt:generate_ai_report_stream' proposal.id %}", { method: "GET" }
   });
 
 document.getElementById('editBtn').onclick = function() {
-  window.location.href = "{% url 'emt:ai_generate_report' proposal.id %}";
+  window.location.href = "{% url 'emt:ai_report_edit' proposal.id %}";
 };
 </script>
 {% endblock %}
