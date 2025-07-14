@@ -37,4 +37,10 @@ urlpatterns = [
     path("suite/review-approval/<int:step_id>/", views.review_approval_step, name="review_approval_step"),
     path('cdl/my-requests/', views.my_requests_view, name='cdl_my_requests'),
     path('report/submit/<int:proposal_id>/', views.submit_event_report, name='submit_event_report'),
+    path('ai-generate-report/<int:proposal_id>/', views.ai_generate_report, name='ai_generate_report'),
+    path('generate-ai-report/', views.generate_ai_report, name='generate_ai_report'),
+    path('suite/ai-report-progress/<int:proposal_id>/', views.ai_report_progress, name='ai_report_progress'),
+    path('suite/ai-report-partial/<int:proposal_id>/', views.ai_report_partial, name='ai_report_partial'),
+    path('generate-ai-report-stream/<int:proposal_id>/', views.generate_ai_report_stream, name='generate_ai_report_stream'),
+
 ]
