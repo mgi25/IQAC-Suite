@@ -172,7 +172,12 @@
             </div>
 
             <div class="student-profile">
-                <img src="{% static 'student_pics/sakura.png' %}" alt="Student Photo">
+                {% if student.photo %}
+                <img src="{{ student.photo.url }}" alt="{{ student.name }}">
+                {% else %}
+                <img src="{% static 'student_pics/default.png' %}" alt="Default Photo">
+                {% endif %}
+
                 <div class="student-details">
                     <h3>{{ student.name }}</h3>
                     <p><strong>Course:</strong> {{ student.course|default:"N/A" }}</p>

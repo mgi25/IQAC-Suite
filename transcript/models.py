@@ -68,6 +68,7 @@ class Event(models.Model):
 class Student(models.Model):
     roll_no = models.CharField(max_length=10, unique=True)
     name = models.CharField(max_length=100)
+    photo = models.ImageField(upload_to='student_pics/', null=True, blank=True)  # 👈 Add this line
 
     # ✅ These are now nullable so you don’t get migration prompts:
     school = models.ForeignKey(School, on_delete=models.CASCADE, null=True, blank=True)
