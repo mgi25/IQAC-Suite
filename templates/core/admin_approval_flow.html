@@ -1,7 +1,1745 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Admin Approval Flow - CHRIST University{% endblock %}
+
+{% block page_title %}Admin Approval Flow{% endblock %}
+
+{% block current_page %}Admin Approval Flow{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'dashboard' %}">Home</a>
+<i class="fa-solid fa-chevron-right" style="font-size: 0.75rem;"></i>
+<a href="/core-admin/dashboard/">Admin Dashboard</a>
+<i class="fa-solid fa-chevron-right" style="font-size: 0.75rem;"></i>
+<span>Approval Flow Management</span>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+/* Admin Approval Flow Specific Styles */
+.admin-approval-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+    background: #f8fafc;
+    min-height: calc(100vh - 200px);
+}
+
+.page-header {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid #3b82f6;
+}
+
+.page-header h1 {
+    color: #1e40af;
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.page-header p {
+    color: #64748b;
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+/* Dashboard Stats */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+}
+
+.stat-icon.pending { background: #f59e0b; }
+.stat-icon.approved { background: #10b981; }
+.stat-icon.rejected { background: #ef4444; }
+.stat-icon.escalated { background: #8b5cf6; }
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+}
+
+.stat-label {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.stat-change {
+    font-size: 0.8rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.stat-change.positive { color: #10b981; }
+.stat-change.negative { color: #ef4444; }
+
+/* Main Content Grid */
+.main-content-grid {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+/* Event Overview Panel */
+.event-overview-panel {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.panel-header {
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: between;
+}
+
+.panel-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.panel-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-left: auto;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.btn-primary {
+    background: #3b82f6;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2563eb;
+}
+
+.btn-secondary {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+
+.btn-secondary:hover {
+    background: #e2e8f0;
+}
+
+.btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8rem;
+}
+
+/* Filter Panel */
+.filter-panel {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.filter-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 200px auto;
+    gap: 1rem;
+    align-items: end;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.filter-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #374151;
+}
+
+.filter-input, .filter-select {
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    transition: border-color 0.2s ease;
+}
+
+.filter-input:focus, .filter-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Event List */
+.event-list {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.event-card {
+    border-bottom: 1px solid #e2e8f0;
+    padding: 1.5rem;
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+}
+
+.event-card:hover {
+    background: #f8fafc;
+}
+
+.event-card:last-child {
+    border-bottom: none;
+}
+
+.event-card-header {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.event-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 0.25rem 0;
+}
+
+.event-meta {
+    font-size: 0.85rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.event-status {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-approved {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-rejected {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status-in-review {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.status-escalated {
+    background: #ede9fe;
+    color: #6b21a8;
+}
+
+.event-description {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    line-height: 1.5;
+}
+
+.event-progress {
+    margin-bottom: 1rem;
+}
+
+.progress-label {
+    font-size: 0.8rem;
+    color: #374151;
+    margin-bottom: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: #3b82f6;
+    transition: width 0.3s ease;
+}
+
+.event-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* Sidebar */
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.sidebar-panel {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+/* Quick Actions */
+.quick-actions {
+    padding: 1.5rem;
+}
+
+.quick-actions-grid {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.quick-action-btn {
+    padding: 1rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.quick-action-btn:hover {
+    background: #f1f5f9;
+    border-color: #3b82f6;
+}
+
+.quick-action-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #3b82f6;
+    color: white;
+    font-size: 0.9rem;
+}
+
+.quick-action-text {
+    flex: 1;
+}
+
+.quick-action-title {
+    font-weight: 500;
+    color: #1e293b;
+    margin: 0 0 0.25rem 0;
+    font-size: 0.9rem;
+}
+
+.quick-action-desc {
+    color: #64748b;
+    font-size: 0.8rem;
+    margin: 0;
+}
+
+/* Recent Activity */
+.activity-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.activity-item {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    gap: 0.75rem;
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    color: white;
+    flex-shrink: 0;
+}
+
+.activity-icon.approval { background: #10b981; }
+.activity-icon.rejection { background: #ef4444; }
+.activity-icon.escalation { background: #8b5cf6; }
+.activity-icon.modification { background: #f59e0b; }
+
+.activity-content {
+    flex: 1;
+}
+
+.activity-text {
+    font-size: 0.9rem;
+    color: #374151;
+    margin: 0 0 0.25rem 0;
+}
+
+.activity-time {
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+/* User Management Section */
+.user-management-section {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-top: 2rem;
+}
+
+.user-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.user-table th,
+.user-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.user-table th {
+    background: #f8fafc;
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.9rem;
+}
+
+.user-table td {
+    font-size: 0.9rem;
+    color: #64748b;
+}
+
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #3b82f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 500;
+    font-size: 0.8rem;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.user-name {
+    font-weight: 500;
+    color: #1e293b;
+}
+
+.user-email {
+    color: #64748b;
+    font-size: 0.8rem;
+}
+
+.role-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.role-admin {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.role-approver {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.role-user {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+/* Modals */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-overlay.show {
+    display: flex;
+}
+
+.modal {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #64748b;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.modal-close:hover {
+    background: #f1f5f9;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    padding: 1.5rem;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+}
+
+/* Form Styles */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 0.5rem;
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    transition: border-color 0.2s ease;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .main-content-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .sidebar {
+        order: -1;
+    }
+    
+    .filter-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-approval-container {
+        padding: 1rem;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .event-card-header {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .event-actions {
+        justify-content: flex-start;
+    }
+    
+    .user-table {
+        font-size: 0.8rem;
+    }
+    
+    .user-table th,
+    .user-table td {
+        padding: 0.75rem 0.5rem;
+    }
+}
+
+/* Loading States */
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    color: #64748b;
+}
+
+.spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #e5e7eb;
+    border-top: 2px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 0.5rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Notification Toast */
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    padding: 1rem 1.5rem;
+    display: none;
+    align-items: center;
+    gap: 0.75rem;
+    z-index: 1001;
+    border-left: 4px solid #10b981;
+}
+
+.toast.show {
+    display: flex;
+    animation: slideIn 0.3s ease;
+}
+
+.toast.error {
+    border-left-color: #ef4444;
+}
+
+.toast.warning {
+    border-left-color: #f59e0b;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="approval-flow-mgmt">
-  <h1>Approval Flow Management</h1>
-  <p>This section will allow admin to configure approval chains (Coming soon!)</p>
+<div class="admin-approval-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1>
+            <i class="fa-solid fa-route"></i>
+            Admin Approval Flow Management
+        </h1>
+        <p>Comprehensive control over event approval processes, user access, and system monitoring</p>
+    </div>
+
+    <!-- Dashboard Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <div>
+                    <h3 class="stat-number">{{ stats.pending_events|default:0 }}</h3>
+                    <p class="stat-label">Pending Events</p>
+                </div>
+                <div class="stat-icon pending">
+                    <i class="fa-solid fa-clock"></i>
+                </div>
+            </div>
+            <div class="stat-change positive">
+                <i class="fa-solid fa-arrow-up"></i>
+                +12% from last week
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <div>
+                    <h3 class="stat-number">{{ stats.approved_events|default:0 }}</h3>
+                    <p class="stat-label">Approved Events</p>
+                </div>
+                <div class="stat-icon approved">
+                    <i class="fa-solid fa-check"></i>
+                </div>
+            </div>
+            <div class="stat-change positive">
+                <i class="fa-solid fa-arrow-up"></i>
+                +8% from last week
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <div>
+                    <h3 class="stat-number">{{ stats.rejected_events|default:0 }}</h3>
+                    <p class="stat-label">Rejected Events</p>
+                </div>
+                <div class="stat-icon rejected">
+                    <i class="fa-solid fa-times"></i>
+                </div>
+            </div>
+            <div class="stat-change negative">
+                <i class="fa-solid fa-arrow-down"></i>
+                -3% from last week
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <div>
+                    <h3 class="stat-number">{{ stats.escalated_events|default:0 }}</h3>
+                    <p class="stat-label">Escalated Events</p>
+                </div>
+                <div class="stat-icon escalated">
+                    <i class="fa-solid fa-exclamation-triangle"></i>
+                </div>
+            </div>
+            <div class="stat-change positive">
+                <i class="fa-solid fa-arrow-up"></i>
+                +5% from last week
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="main-content-grid">
+        <!-- Event Overview Panel -->
+        <div class="event-overview-panel">
+            <div class="panel-header">
+                <h2 class="panel-title">
+                    <i class="fa-solid fa-list"></i>
+                    Event Overview
+                </h2>
+                <div class="panel-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="refreshEvents()">
+                        <i class="fa-solid fa-refresh"></i>
+                        Refresh
+                    </button>
+                    <button class="btn btn-primary btn-sm" onclick="openBulkActionsModal()">
+                        <i class="fa-solid fa-tasks"></i>
+                        Bulk Actions
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter Panel -->
+            <div class="filter-panel">
+                <div class="filter-grid">
+                    <div class="filter-group">
+                        <label class="filter-label">Search Events</label>
+                        <input type="text" class="filter-input" id="searchInput" placeholder="Search by title, user, or organization...">
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Organization Type</label>
+                        <select class="filter-select" id="orgTypeFilter">
+                            <option value="">All Types</option>
+                            <option value="department">Department</option>
+                            <option value="center">Center</option>
+                            <option value="cell">Cell</option>
+                            <option value="club">Club</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Status</label>
+                        <select class="filter-select" id="statusFilter">
+                            <option value="">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Rejected</option>
+                            <option value="in-review">In Review</option>
+                            <option value="escalated">Escalated</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="applyFilters()">
+                        <i class="fa-solid fa-filter"></i>
+                        Filter
+                    </button>
+                </div>
+            </div>
+
+            <!-- Event List -->
+            <div class="event-list" id="eventList">
+                {% for event in events %}
+                <div class="event-card" data-event-id="{{ event.id }}" onclick="openEventDetails({{ event.id }})">
+                    <div class="event-card-header">
+                        <div>
+                            <h3 class="event-title">{{ event.title }}</h3>
+                            <div class="event-meta">
+                                <span><i class="fa-solid fa-user"></i> {{ event.submitted_by.get_full_name }}</span>
+                                <span><i class="fa-solid fa-building"></i> {{ event.organization.name }}</span>
+                                <span><i class="fa-solid fa-calendar"></i> {{ event.created_at|date:"M d, Y" }}</span>
+                            </div>
+                        </div>
+                        <span class="event-status status-{{ event.status }}">{{ event.get_status_display }}</span>
+                    </div>
+                    
+                    <p class="event-description">{{ event.description|truncatewords:20 }}</p>
+                    
+                    <div class="event-progress">
+                        <div class="progress-label">
+                            <span>Approval Progress</span>
+                            <span>{{ event.approval_stage }}/{{ event.total_stages }}</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: {{ event.progress_percentage }}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="event-actions">
+                        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); redirectApprovalFlow({{ event.id }})">
+                            <i class="fa-solid fa-route"></i>
+                            Redirect Flow
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); modifyApprovalStages({{ event.id }})">
+                            <i class="fa-solid fa-edit"></i>
+                            Modify Stages
+                        </button>
+                        {% if event.status == 'pending' %}
+                        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); escalateEvent({{ event.id }})">
+                            <i class="fa-solid fa-arrow-up"></i>
+                            Escalate
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Loading events...
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <!-- Quick Actions -->
+            <div class="sidebar-panel">
+                <div class="panel-header">
+                    <h3 class="panel-title">
+                        <i class="fa-solid fa-bolt"></i>
+                        Quick Actions
+                    </h3>
+                </div>
+                <div class="quick-actions">
+                    <div class="quick-actions-grid">
+                        <button class="quick-action-btn" onclick="openUserManagementModal()">
+                            <div class="quick-action-icon">
+                                <i class="fa-solid fa-users"></i>
+                            </div>
+                            <div class="quick-action-text">
+                                <h4 class="quick-action-title">User Management</h4>
+                                <p class="quick-action-desc">Manage user roles and permissions</p>
+                            </div>
+                        </button>
+                        
+                        <button class="quick-action-btn" onclick="openBulkApprovalModal()">
+                            <div class="quick-action-icon">
+                                <i class="fa-solid fa-check-double"></i>
+                            </div>
+                            <div class="quick-action-text">
+                                <h4 class="quick-action-title">Bulk Approval</h4>
+                                <p class="quick-action-desc">Approve multiple events at once</p>
+                            </div>
+                        </button>
+                        
+                        <button class="quick-action-btn" onclick="openSystemSettingsModal()">
+                            <div class="quick-action-icon">
+                                <i class="fa-solid fa-cog"></i>
+                            </div>
+                            <div class="quick-action-text">
+                                <h4 class="quick-action-title">System Settings</h4>
+                                <p class="quick-action-desc">Configure approval workflows</p>
+                            </div>
+                        </button>
+                        
+                        <button class="quick-action-btn" onclick="generateReport()">
+                            <div class="quick-action-icon">
+                                <i class="fa-solid fa-chart-bar"></i>
+                            </div>
+                            <div class="quick-action-text">
+                                <h4 class="quick-action-title">Generate Report</h4>
+                                <p class="quick-action-desc">Create approval flow analytics</p>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="sidebar-panel">
+                <div class="panel-header">
+                    <h3 class="panel-title">
+                        <i class="fa-solid fa-history"></i>
+                        Recent Activity
+                    </h3>
+                </div>
+                <div class="activity-list">
+                    {% for activity in recent_activities %}
+                    <div class="activity-item">
+                        <div class="activity-icon {{ activity.type }}">
+                            <i class="fa-solid fa-{{ activity.icon }}"></i>
+                        </div>
+                        <div class="activity-content">
+                            <p class="activity-text">{{ activity.description }}</p>
+                            <span class="activity-time">{{ activity.timestamp|timesince }} ago</span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="activity-item">
+                        <div class="activity-content">
+                            <p class="activity-text">No recent activity</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Management Section -->
+    <div class="user-management-section">
+        <div class="panel-header">
+            <h2 class="panel-title">
+                <i class="fa-solid fa-users-cog"></i>
+                User Management & Access Control
+            </h2>
+            <div class="panel-actions">
+                <button class="btn btn-primary btn-sm" onclick="openAddUserModal()">
+                    <i class="fa-solid fa-user-plus"></i>
+                    Add User
+                </button>
+            </div>
+        </div>
+        
+        <table class="user-table">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Organization</th>
+                    <th>Permissions</th>
+                    <th>Last Active</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>
+                        <div class="user-info">
+                            <div class="user-avatar">{{ user.first_name.0 }}{{ user.last_name.0 }}</div>
+                            <div>
+                                <div class="user-name">{{ user.get_full_name }}</div>
+                                <div class="user-email">{{ user.email }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="role-badge role-{{ user.role }}">{{ user.get_role_display }}</span>
+                    </td>
+                    <td>{{ user.organization.name|default:"—" }}</td>
+                    <td>
+                        <span class="permissions-summary">{{ user.permissions_count }} permissions</span>
+                    </td>
+                    <td>{{ user.last_login|date:"M d, Y"|default:"Never" }}</td>
+                    <td>
+                        <div class="event-actions">
+                            <button class="btn btn-secondary btn-sm" onclick="editUser({{ user.id }})">
+                                <i class="fa-solid fa-edit"></i>
+                            </button>
+                            <button class="btn btn-secondary btn-sm" onclick="managePermissions({{ user.id }})">
+                                <i class="fa-solid fa-key"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 2rem; color: #64748b;">
+                        No users found
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Event Details Modal -->
+<div class="modal-overlay" id="eventDetailsModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">Event Details</h3>
+            <button class="modal-close" onclick="closeModal('eventDetailsModal')">&times;</button>
+        </div>
+        <div class="modal-body" id="eventDetailsContent">
+            <!-- Content will be loaded dynamically -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('eventDetailsModal')">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Redirect Approval Flow Modal -->
+<div class="modal-overlay" id="redirectFlowModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">Redirect Approval Flow</h3>
+            <button class="modal-close" onclick="closeModal('redirectFlowModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="redirectFlowForm">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label class="form-label">Current Approver</label>
+                    <input type="text" class="form-input" id="currentApprover" readonly>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">New Approver</label>
+                    <select class="form-select" id="newApprover" required>
+                        <option value="">Select new approver...</option>
+                        {% for approver in approvers %}
+                        <option value="{{ approver.id }}">{{ approver.get_full_name }} - {{ approver.organization.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Reason for Redirect</label>
+                    <textarea class="form-textarea" id="redirectReason" placeholder="Explain why you're redirecting this approval..." required></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="notifyUsers" checked>
+                        Notify affected users about the change
+                    </label>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('redirectFlowModal')">Cancel</button>
+            <button class="btn btn-primary" onclick="submitRedirectFlow()">Redirect Flow</button>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Actions Modal -->
+<div class="modal-overlay" id="bulkActionsModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">Bulk Actions</h3>
+            <button class="modal-close" onclick="closeModal('bulkActionsModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="bulkActionsForm">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label class="form-label">Select Events</label>
+                    <div id="bulkEventsList" style="max-height: 200px; overflow-y: auto; border: 1px solid #d1d5db; border-radius: 8px; padding: 1rem;">
+                        <!-- Events will be loaded dynamically -->
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Action</label>
+                    <select class="form-select" id="bulkAction" required>
+                        <option value="">Select action...</option>
+                        <option value="approve">Approve Selected</option>
+                        <option value="reject">Reject Selected</option>
+                        <option value="escalate">Escalate Selected</option>
+                        <option value="redirect">Redirect Selected</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Comments</label>
+                    <textarea class="form-textarea" id="bulkComments" placeholder="Add comments for this bulk action..."></textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('bulkActionsModal')">Cancel</button>
+            <button class="btn btn-primary" onclick="submitBulkActions()">Apply Actions</button>
+        </div>
+    </div>
+</div>
+
+<!-- User Management Modal -->
+<div class="modal-overlay" id="userManagementModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">User Management</h3>
+            <button class="modal-close" onclick="closeModal('userManagementModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="userManagementForm">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-input" id="userName" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-input" id="userEmail" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Role</label>
+                    <select class="form-select" id="userRole" required>
+                        <option value="">Select role...</option>
+                        <option value="admin">Admin</option>
+                        <option value="approver">Approver</option>
+                        <option value="user">User</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Organization</label>
+                    <select class="form-select" id="userOrganization" required>
+                        <option value="">Select organization...</option>
+                        {% for org in organizations %}
+                        <option value="{{ org.id }}">{{ org.name }} ({{ org.type }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Permissions</label>
+                    <div style="max-height: 150px; overflow-y: auto; border: 1px solid #d1d5db; border-radius: 8px; padding: 1rem;">
+                        {% for permission in permissions %}
+                        <label style="display: block; margin-bottom: 0.5rem;">
+                            <input type="checkbox" name="permissions" value="{{ permission.id }}">
+                            {{ permission.name }} - {{ permission.description }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('userManagementModal')">Cancel</button>
+            <button class="btn btn-primary" onclick="submitUserManagement()">Save User</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div class="toast" id="toast">
+    <i class="fa-solid fa-check-circle"></i>
+    <span id="toastMessage">Action completed successfully</span>
 </div>
 {% endblock %}
+
+{% block scripts %}
+<script>
+// Global variables
+let currentEventId = null;
+let selectedEvents = [];
+
+// DOM Content Loaded
+document.addEventListener('DOMContentLoaded', function() {
+    initializeFilters();
+    loadRecentActivity();
+    setupEventListeners();
+});
+
+// Initialize filters
+function initializeFilters() {
+    const searchInput = document.getElementById('searchInput');
+    const orgTypeFilter = document.getElementById('orgTypeFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    
+    // Add event listeners for real-time filtering
+    searchInput.addEventListener('input', debounce(applyFilters, 300));
+    orgTypeFilter.addEventListener('change', applyFilters);
+    statusFilter.addEventListener('change', applyFilters);
+}
+
+// Setup event listeners
+function setupEventListeners() {
+    // Close modals when clicking outside
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('modal-overlay')) {
+            closeModal(e.target.id);
+        }
+    });
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeAllModals();
+        }
+    });
+}
+
+// Apply filters to event list
+function applyFilters() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const orgType = document.getElementById('orgTypeFilter').value;
+    const status = document.getElementById('statusFilter').value;
+    
+    const eventCards = document.querySelectorAll('.event-card');
+    
+    eventCards.forEach(card => {
+        const title = card.querySelector('.event-title').textContent.toLowerCase();
+        const meta = card.querySelector('.event-meta').textContent.toLowerCase();
+        const eventStatus = card.querySelector('.event-status').className;
+        
+        let showCard = true;
+        
+        // Search filter
+        if (searchTerm && !title.includes(searchTerm) && !meta.includes(searchTerm)) {
+            showCard = false;
+        }
+        
+        // Status filter
+        if (status && !eventStatus.includes(`status-${status}`)) {
+            showCard = false;
+        }
+        
+        // Organization type filter (would need additional data attributes)
+        if (orgType) {
+            const orgTypeData = card.dataset.orgType;
+            if (orgTypeData && orgTypeData !== orgType) {
+                showCard = false;
+            }
+        }
+        
+        card.style.display = showCard ? 'block' : 'none';
+    });
+}
+
+// Refresh events
+function refreshEvents() {
+    showLoading();
+    
+    fetch('/api/events/refresh/', {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': window.CSRF_TOKEN,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload(); // Simple refresh for now
+        } else {
+            showToast('Failed to refresh events', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error refreshing events', 'error');
+    })
+    .finally(() => {
+        hideLoading();
+    });
+}
+
+// Open event details modal
+function openEventDetails(eventId) {
+    currentEventId = eventId;
+    
+    fetch(`/api/events/${eventId}/details/`, {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': window.CSRF_TOKEN,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('eventDetailsContent').innerHTML = data.html;
+            openModal('eventDetailsModal');
+        } else {
+            showToast('Failed to load event details', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error loading event details', 'error');
+    });
+}
+
+// Redirect approval flow
+function redirectApprovalFlow(eventId) {
+    currentEventId = eventId;
+    
+    // Load current approver info
+    fetch(`/api/events/${eventId}/current-approver/`, {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': window.CSRF_TOKEN,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('currentApprover').value = data.current_approver;
+            openModal('redirectFlowModal');
+        } else {
+            showToast('Failed to load approver info', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error loading approver info', 'error');
+    });
+}
+
+// Submit redirect flow
+function submitRedirectFlow() {
+    const newApprover = document.getElementById('newApprover').value;
+    const reason = document.getElementById('redirectReason').value;
+    const notifyUsers = document.getElementById('notifyUsers').checked;
+    
+    if (!newApprover || !reason) {
+        showToast('Please fill in all required fields', 'error');
+        return;
+    }
+    
+    fetch(`/api/events/${currentEventId}/redirect-flow/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': window.CSRF_TOKEN,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            new_approver: newApprover,
+            reason: reason,
+            notify_users: notifyUsers
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Approval flow redirected successfully');
+            closeModal('redirectFlowModal');
+            refreshEvents();
+        } else {
+            showToast(data.message || 'Failed to redirect approval flow', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error redirecting approval flow', 'error');
+    });
+}
+
+// Modify approval stages
+function modifyApprovalStages(eventId) {
+    // This would open a complex modal for stage management
+    showToast('Approval stage modification feature coming soon', 'warning');
+}
+
+// Escalate event
+function escalateEvent(eventId) {
+    if (confirm('Are you sure you want to escalate this event?')) {
+        fetch(`/api/events/${eventId}/escalate/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': window.CSRF_TOKEN,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Event escalated successfully');
+                refreshEvents();
+            } else {
+                showToast(data.message || 'Failed to escalate event', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error escalating event', 'error');
+        });
+    }
+}
+
+// Open bulk actions modal
+function openBulkActionsModal() {
+    // Load available events for bulk actions
+    fetch('/api/events/bulk-list/', {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': window.CSRF_TOKEN,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const eventsList = document.getElementById('bulkEventsList');
+            eventsList.innerHTML = data.events.map(event => `
+                <label style="display: block; margin-bottom: 0.5rem;">
+                    <input type="checkbox" name="bulkEvents" value="${event.id}">
+                    ${event.title} - ${event.organization} (${event.status})
+                </label>
+            `).join('');
+            openModal('bulkActionsModal');
+        } else {
+            showToast('Failed to load events for bulk actions', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error loading bulk actions', 'error');
+    });
+}
+
+// Submit bulk actions
+function submitBulkActions() {
+    const selectedEvents = Array.from(document.querySelectorAll('input[name="bulkEvents"]:checked')).map(cb => cb.value);
+    const action = document.getElementById('bulkAction').value;
+    const comments = document.getElementById('bulkComments').value;
+    
+    if (selectedEvents.length === 0) {
+        showToast('Please select at least one event', 'error');
+        return;
+    }
+    
+    if (!action) {
+        showToast('Please select an action', 'error');
+        return;
+    }
+    
+    fetch('/api/events/bulk-actions/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': window.CSRF_TOKEN,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            events: selectedEvents,
+            action: action,
+            comments: comments
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(`Bulk action applied to ${selectedEvents.length} events`);
+            closeModal('bulkActionsModal');
+            refreshEvents();
+        } else {
+            showToast(data.message || 'Failed to apply bulk actions', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error applying bulk actions', 'error');
+    });
+}
+
+// Open user management modal
+function openUserManagementModal() {
+    openModal('userManagementModal');
+}
+
+// Open add user modal
+function openAddUserModal() {
+    // Clear form
+    document.getElementById('userManagementForm').reset();
+    openModal('userManagementModal');
+}
+
+// Submit user management
+function submitUserManagement() {
+    const formData = new FormData(document.getElementById('userManagementForm'));
+    const userData = Object.fromEntries(formData.entries());
+    
+    // Get selected permissions
+    const permissions = Array.from(document.querySelectorAll('input[name="permissions"]:checked')).map(cb => cb.value);
+    userData.permissions = permissions;
+    
+    fetch('/api/users/manage/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': window.CSRF_TOKEN,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('User saved successfully');
+            closeModal('userManagementModal');
+            location.reload(); // Refresh to show updated user list
+        } else {
+            showToast(data.message || 'Failed to save user', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error saving user', 'error');
+    });
+}
+
+// Edit user
+function editUser(userId) {
+    fetch(`/api/users/${userId}/details/`, {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': window.CSRF_TOKEN,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Populate form with user data
+            document.getElementById('userName').value = data.user.name;
+            document.getElementById('userEmail').value = data.user.email;
+            document.getElementById('userRole').value = data.user.role;
+            document.getElementById('userOrganization').value = data.user.organization;
+            
+            // Set permissions
+            data.user.permissions.forEach(permId => {
+                const checkbox = document.querySelector(`input[name="permissions"][value="${permId}"]`);
+                if (checkbox) checkbox.checked = true;
+            });
+            
+            openModal('userManagementModal');
+        } else {
+            showToast('Failed to load user details', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error loading user details', 'error');
+    });
+}
+
+// Manage permissions
+function managePermissions(userId) {
+    showToast('Permission management feature coming soon', 'warning');
+}
+
+// Open bulk approval modal
+function openBulkApprovalModal() {
+    showToast('Bulk approval feature coming soon', 'warning');
+}
+
+// Open system settings modal
+function openSystemSettingsModal() {
+    showToast('System settings feature coming soon', 'warning');
+}
+
+// Generate report
+function generateReport() {
+    showToast('Report generation feature coming soon', 'warning');
+}
+
+// Load recent activity
+function loadRecentActivity() {
+    // This would typically fetch from an API
+    // For now, it's handled by Django template
+}
+
+// Utility functions
+function openModal(modalId) {
+    document.getElementById(modalId).classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('show');
+    document.body.style.overflow = 'auto';
+}
+
+function closeAllModals() {
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
+        modal.classList.remove('show');
+    });
+    document.body.style.overflow = 'auto';
+}
+
+function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast');
+    const toastMessage = document.getElementById('toastMessage');
+    
+    toastMessage.textContent = message;
+    toast.className = `toast show ${type}`;
+    
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
+}
+
+function showLoading() {
+    const eventList = document.getElementById('eventList');
+    eventList.innerHTML = '<div class="loading"><div class="spinner"></div>Loading events...</div>';
+}
+
+function hideLoading() {
+    // Loading will be hidden when new content is loaded
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+</script>
+{% endblock %}
+
