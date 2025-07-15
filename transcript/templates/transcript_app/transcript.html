@@ -647,11 +647,13 @@
       <div class="transcript-section-title">Key Responsibilities</div>
       <div class="responsibilities">
         <ul>
-          {% for event in top_events %}
-          <li>{{ event }}</li>
+          {% for name, role in top_events %}
+          <li>{{ name }} — <strong>{{ role }}</strong></li>
           {% endfor %}
+
         </ul>
       </div>
+
 
       {% if qr_code %}
       <div class="qr-container">
