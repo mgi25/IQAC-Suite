@@ -415,32 +415,23 @@
     });
   };
 
-const displayStudents = (students) => {
-  const tbody = document.getElementById("studentListTableBody");
-  tbody.innerHTML = "";
+  const displayStudents = (students) => {
+    const tbody = document.getElementById("studentListTableBody");
+    tbody.innerHTML = "";
 
-  // ✅ Sort students by roll_no
-  const sortedStudents = students.slice().sort((a, b) => {
-    return a.roll_no.localeCompare(b.roll_no, undefined, { numeric: true, sensitivity: 'base' });
-  });
+    studentCount.textContent = `${students.length} students`;
 
-  // ✅ Update both originalStudentList and currentStudents
-  originalStudentList = sortedStudents;
-  currentStudents = sortedStudents;
+    if (students.length === 0) {
+      emptyState.style.display = '';
+      studentListContainer.classList.add('show');
+      return;
+    }
 
-  studentCount.textContent = `${sortedStudents.length} students`;
+    emptyState.style.display = 'none';
 
-  if (sortedStudents.length === 0) {
-    emptyState.style.display = '';
-    studentListContainer.classList.add('show');
-    return;
-  }
-
-  emptyState.style.display = 'none';
-
-  sortedStudents.forEach(student => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
+    students.forEach(student => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
       <td>${student.name}</td>
       <td>${student.roll_no}</td>
       <td>
@@ -453,21 +444,30 @@ const displayStudents = (students) => {
         <a href="/transcript/${student.roll_no}/pdf/" class="action-btn btn-download"><i class="fa-solid fa-download"></i> PDF</a>
       </td>
     `;
-    tbody.appendChild(tr);
-  });
+      tbody.appendChild(tr);
+    });
 
-  studentListContainer.classList.add('show');
-};
+    studentListContainer.classList.add('show');
+  };
 
   function filterStudentList() {
     const input = studentSearchInput.value.toLowerCase().trim();
-    if (input === "") return displayStudents(originalStudentList);
+
+    if (input === "") {
+      // If search bar is cleared, show full course list again
+      displayStudents(originalStudentList);
+      return;
+    }
+
     const filtered = originalStudentList.filter(student =>
       student.name.toLowerCase().includes(input) ||
       student.roll_no.toLowerCase().includes(input)
     );
+
     displayStudents(filtered);
   }
+
+
 
   function downloadAll(type = 'pdf') {
     const year = academicYearSelect.value;
@@ -515,24 +515,33 @@ const displayStudents = (students) => {
     showStudentsBtn.disabled = !this.value;
     studentListContainer.classList.remove('show');
   });
-
   transcriptForm.addEventListener('submit', function (e) {
     e.preventDefault();
+
     const year = academicYearSelect.value;
     const school = schoolSelect.value;
     const course = courseSelect.value;
+
     if (!year || !school || !course) return;
+
     showStudentsBtn.innerHTML = '<span class="skeleton" style="width:80px;height:20px;"></span>';
     showStudentsBtn.disabled = true;
-    const students = studentData[year][school][course];
+
+    // ✅ Sort students by roll_no
+    const students = studentData[year][school][course].slice().sort((a, b) =>
+      a.roll_no.localeCompare(b.roll_no, undefined, { numeric: true, sensitivity: 'base' })
+    );
+
     originalStudentList = students;
     currentStudents = students;
+
     setTimeout(() => {
       displayStudents(students);
       showStudentsBtn.innerHTML = '<i class="fa-solid fa-users"></i> Show Students';
       showStudentsBtn.disabled = false;
     }, 500);
   });
+
 
   downloadAllPDFBtn.addEventListener("click", function (e) {
     e.preventDefault();
