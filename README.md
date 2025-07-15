@@ -34,6 +34,7 @@
 - IQAC report generation with word limit validation
 - Status tracking and reviewer comments
 - CDL (Content Development Lab) request module
+- Graduate Attribute Script
 - Notification panel with visual indicators
 - Dashboard with statistics and filters
 - Fully responsive and mobile-optimized
@@ -147,6 +148,91 @@ Access at: `http://127.0.0.1:8000/`
 | `core-admin`| Admin views for overseeing reports and submissions         |
 | `templates` | HTML files with base layouts and includes                  |
 | `static`    | CSS, JavaScript, and image assets                          |
+
+---
+
+## User Functionalities
+
+IQAC-Suite follows a **role-based access control model**, ensuring each user only sees relevant features for their role. Below is a detailed breakdown of functionalities for each type of user in the system.
+
+---
+
+### Faculty / Event Coordinator
+
+> Primary users responsible for creating and managing event proposals.
+
+- Submit new **Event Proposals** via a multi-step form
+- Upload necessary documents:
+  - Event Invitation
+  - Brochure
+  - Attendance Sheet
+  - Event Report
+- View and track proposal status:
+  - Pending → Under Review → Approved/Rejected
+- Respond to reviewer feedback and edit submissions
+- Generate and export **IQAC Reports** for completed events
+- Submit **CDL (Media)** requests for banners, posters, or content
+- Receive real-time notifications via the dashboard
+
+---
+
+### Head of Department (HOD) / Reviewer
+
+> Departmental reviewer responsible for evaluating submissions.
+
+- View proposals submitted by faculty under the department
+- Provide review feedback, approve, or reject proposals
+- Forward approved proposals to IQAC Admin
+- Monitor department events and proposal statuses
+- Access archive of past events and reports
+
+---
+
+### IQAC Admin
+
+> Core admin responsible for quality control and documentation.
+
+- Access and manage all submitted proposals across departments
+- Review, approve, or reject proposals at final stage
+- Leave reviewer feedback visible to submitters
+- Generate consolidated **IQAC reports** (PDF & HTML)
+- Manage deadlines and reporting periods
+- Access analytics dashboard and proposal statistics
+- Moderate CDL submissions and feedback
+
+---
+
+### CDL Coordinator / Media Team
+
+> Content team responsible for design/media creation and tracking.
+
+- Access all **media/content requests** via CDL module
+- Change status of requests: Submitted → In Progress → Completed
+- Upload final assets (banners, posters, videos, etc.)
+- Provide clarifications or request additional input
+- Maintain task history and approval trail
+
+---
+
+### System Administrator (Superuser)
+
+> Full backend access with administrative privileges.
+
+- Access Django Admin Panel
+- Add, modify, or deactivate users and roles
+- Configure platform-wide settings and deadlines
+- Manage static files and uploaded media
+- Monitor database and logs
+- Enable or disable modules/features as needed
+
+---
+
+Each role has been designed to ensure:
+- **Clarity of workflow**
+- **Security and data integrity**
+- **Seamless collaboration** between academic and media teams
+
+To test multiple roles locally, create accounts and assign roles via the Django Admin Panel (`/admin`).
 
 ---
 
