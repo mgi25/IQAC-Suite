@@ -117,7 +117,8 @@ def transcript_view(request, roll_no):
         s['score'] = round((s['score'] / max_score) * 100, 2) if max_score > 0 else 0
 
     sorted_events = sorted(participations, key=lambda p: len(p.event.attributes.all()), reverse=True)
-    top_events = [p.event.name for p in sorted_events[:5]]
+    top_events = [(p.event.name, p.role.name if p.role else "Participant") for p in sorted_events[:5]]
+
 
     student_list = Student.objects.filter(
         course=student.course,
@@ -152,7 +153,8 @@ def transcript_pdf(request, roll_no):
     strength_data, participations = calculate_strength_data(student)
 
     sorted_events = sorted(participations, key=lambda p: len(p.event.attributes.all()), reverse=True)
-    top_events = [p.event.name for p in sorted_events[:5]]
+    top_events = [(p.event.name, p.role.name if p.role else "Participant") for p in sorted_events[:5]]
+
 
     qr_b64 = None
     if participations.count() > 5:
@@ -184,16 +186,24 @@ def transcript_pdf(request, roll_no):
 def all_events_view(request, roll_no):
     student = get_object_or_404(Student, roll_no=roll_no)
     participations = Participation.objects.filter(student=student)
-    all_event_names = [f"{p.event.name} - {p.event.date}" for p in participations]
 
-    # 💡 Add strength calculations (same as transcript)
+    # 🆕 Create a clean list of events with role and date
+    all_event_data = []
+    for p in participations:
+        all_event_data.append({
+            'name': p.event.name,
+            'date': p.event.date.strftime("%d %b %Y"),  # Optional: format date like "15 Jul 2025"
+            'role': p.role.name if p.role else 'Participant'
+        })
+
+    # 🔁 Strength calculations (same as transcript)
     strength_data, _ = calculate_strength_data(student)
 
-    # Top 5 strengths for sidebar
-    top_5_strengths = []
-    for s in strength_data:
-        if s['average'] > 0:
-            top_5_strengths.append({'name': s['name'], 'score': s['average']})
+    # 🔝 Top 5 strengths for sidebar
+    top_5_strengths = [
+        {'name': s['name'], 'score': s['average']}
+        for s in strength_data if s['average'] > 0
+    ]
     top_5_strengths = sorted(top_5_strengths, key=lambda x: x['score'], reverse=True)[:5]
 
     max_score = max([s['score'] for s in top_5_strengths], default=1)
@@ -202,10 +212,11 @@ def all_events_view(request, roll_no):
 
     return render(request, 'transcript_app/student_events.html', {
         'student': student,
-        'all_events': all_event_names,
+        'all_events': all_event_data,  # 🔁 updated
         'strength_data': strength_data,
         'top_5_strengths': top_5_strengths
     })
+
 
 # ─────────────────────────────────────────────
 # BULK DOWNLOAD HANDLER (PDF or ZIP via ?type=pdf|zip)
@@ -231,7 +242,8 @@ def bulk_download_handler(request):
             for student in students:
                 strength_data, participations = calculate_strength_data(student)
                 sorted_events = sorted(participations, key=lambda p: len(p.event.attributes.all()), reverse=True)
-                top_events = [p.event.name for p in sorted_events[:5]]
+                top_events = [(p.event.name, p.role.name if p.role else "Participant") for p in sorted_events[:5]]
+
 
                 qr_b64 = None
                 if participations.count() > 5:
@@ -266,7 +278,8 @@ def bulk_download_handler(request):
         for student in students:
             strength_data, participations = calculate_strength_data(student)
             sorted_events = sorted(participations, key=lambda p: len(p.event.attributes.all()), reverse=True)
-            top_events = [p.event.name for p in sorted_events[:5]]
+            top_events = [(p.event.name, p.role.name if p.role else "Participant") for p in sorted_events[:5]]
+
 
             qr_b64 = None
             if participations.count() > 5:

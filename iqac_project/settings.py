@@ -95,7 +95,7 @@ AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
-SITE_ID = 2 # Must match ID in django_site table
+SITE_ID = 1 # Must match ID in django_site table
 
 
 LOGIN_URL = '/accounts/login/'
