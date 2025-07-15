@@ -359,7 +359,6 @@
             <tr>
               <th>Name</th>
               <th>Roll No</th>
-              <th>Academic Year</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -416,41 +415,49 @@
     });
   };
 
-  const displayStudents = (students) => {
-    const tbody = document.getElementById("studentListTableBody");
-    tbody.innerHTML = "";
-    studentCount.textContent = `${students.length} students`;
+const displayStudents = (students) => {
+  const tbody = document.getElementById("studentListTableBody");
+  tbody.innerHTML = "";
 
-    if (students.length === 0) {
-      emptyState.style.display = '';
-      studentListContainer.classList.add('show');
-      return;
-    }
+  // ✅ Sort students by roll_no
+  const sortedStudents = students.slice().sort((a, b) => {
+    return a.roll_no.localeCompare(b.roll_no, undefined, { numeric: true, sensitivity: 'base' });
+  });
 
-    emptyState.style.display = 'none';
+  // ✅ Update both originalStudentList and currentStudents
+  originalStudentList = sortedStudents;
+  currentStudents = sortedStudents;
 
-    students.forEach(student => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${student.name}</td>
-        <td>${student.roll_no}</td>
-        <td>${student.year || '-'}</td>
-        <td>
-          <span class="status-badge ${student.active === false ? 'status-inactive' : 'status-active'}">
-            ${student.active === false ? 'Inactive' : 'Active'}
-          </span>
-        </td>
-        <td>
-          <a href="/transcript/${student.roll_no}/" class="action-btn btn-view"><i class="fa-solid fa-eye"></i> View</a>
-          <a href="/transcript/${student.roll_no}/pdf/" class="action-btn btn-download"><i class="fa-solid fa-download"></i> PDF</a>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
+  studentCount.textContent = `${sortedStudents.length} students`;
 
+  if (sortedStudents.length === 0) {
+    emptyState.style.display = '';
     studentListContainer.classList.add('show');
-    currentStudents = students;
-  };
+    return;
+  }
+
+  emptyState.style.display = 'none';
+
+  sortedStudents.forEach(student => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${student.name}</td>
+      <td>${student.roll_no}</td>
+      <td>
+        <span class="status-badge ${student.active === false ? 'status-inactive' : 'status-active'}">
+          ${student.active === false ? 'Inactive' : 'Active'}
+        </span>
+      </td>
+      <td>
+        <a href="/transcript/${student.roll_no}/" class="action-btn btn-view"><i class="fa-solid fa-eye"></i> View</a>
+        <a href="/transcript/${student.roll_no}/pdf/" class="action-btn btn-download"><i class="fa-solid fa-download"></i> PDF</a>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  studentListContainer.classList.add('show');
+};
 
   function filterStudentList() {
     const input = studentSearchInput.value.toLowerCase().trim();
