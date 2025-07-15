@@ -29,9 +29,12 @@ from .models import MediaRequest
 from datetime import timedelta
 from django.utils.timezone import now
 from django.db.models import Sum
+import google.generativeai as genai
+
 # ──────────────────────────────
 # CDL DASHBOARD
 # ──────────────────────────────
+genai.configure(api_key="AIzaSyD1jp9F1JKK0pO0LeL6ifxOrxI0rlkzPRc")
 def cdl_dashboard(request):
     return render(request, 'emt/cdl_dashboard.html')
 
@@ -362,39 +365,6 @@ def submit_expense_details(request, proposal_id):
                   {"proposal": proposal, "formset": formset})
 
 
-# ──────────────────────────────
-# STATUS PAGE
-# ──────────────────────────────
-@login_required
-def proposal_status_detail(request, proposal_id):
-    # load the proposal
-    proposal = get_object_or_404(
-        EventProposal,
-        id=proposal_id,
-        submitted_by=request.user
-    )
-
-    # load its approval steps
-    approval_steps = ApprovalStep.objects.filter(
-        proposal=proposal
-    ).order_by('step_order')
-
-    # compute total budget
-    budget_total = (
-        proposal.expensedetail_set
-                .aggregate(total=Sum('amount'))['total']
-        or 0
-    )
-
-    return render(request, 'emt/proposal_status_detail.html', {
-        'proposal': proposal,
-        'approval_steps': approval_steps,
-        'statuses': ['draft', 'submitted', 'under_review', 'returned', 'rejected', 'finalized'],
-        'budget_total': budget_total,
-    })
-
-
-
 
 # ──────────────────────────────
 # IQAC Suite Dashboard
@@ -712,7 +682,7 @@ def submit_event_report(request, proposal_id):
                 obj.delete()
             messages.success(request, "Report submitted successfully!")
             # Redirect as needed (PDF preview/download, dashboard, etc.)
-            return redirect('pending_reports')  # or wherever you want
+            return redirect('emt:ai_generate_report', proposal_id=proposal.id)
     else:
         form = EventReportForm(instance=report)
         formset = AttachmentFormSet(queryset=report.attachments.all())
@@ -782,8 +752,214 @@ def suite_dashboard(request):
     })
 
 @login_required
+def ai_generate_report(request, proposal_id):
+    proposal = get_object_or_404(EventProposal, id=proposal_id)
+    # Always ensure there is a report
+    report, _ = EventReport.objects.get_or_create(proposal=proposal)
+    return render(request, 'emt/ai_generate_report.html', {
+        'proposal': proposal,
+        'report': report,
+    })
+
+@csrf_exempt
+def generate_ai_report(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+
+            prompt = f"""
+            You are an expert in academic event reporting for university IQAC documentation.
+            Generate a detailed, formal, and highly structured IQAC-style event report using the following data.
+            **Follow the given format strictly**. Use professional, concise, academic language. Format all sections as shown, and fill any missing info sensibly if needed.
+
+            ---
+            # EVENT INFORMATION
+            | Field                | Value                     |
+            |----------------------|--------------------------|
+            | Department           | {data.get('department','')} |
+            | Location             | {data.get('location','')} |
+            | Event Title          | {data.get('event_title','')} |
+            | No of Activities     | {data.get('no_of_activities','1')} |
+            | Date and Time        | {data.get('event_datetime','')} |
+            | Venue                | {data.get('venue','')} |
+            | Academic Year        | {data.get('academic_year','')} |
+            | Event Type (Focus)   | {data.get('event_focus_type','')} |
+
+            # PARTICIPANTS INFORMATION
+            | Field                   | Value              |
+            |-------------------------|--------------------|
+            | Target Audience         | {data.get('target_audience','')} |
+            | Organising Committee    | {data.get('organising_committee_details','')} |
+            | No of Student Volunteers| {data.get('no_of_volunteers','')} |
+            | No of Attendees         | {data.get('no_of_attendees','')} |
+
+            # SUMMARY OF THE OVERALL EVENT
+            {data.get('summary','(Please write a 2–3 paragraph formal summary of the event. Cover objectives, flow, engagement, and outcomes.)')}
+
+            # OUTCOMES OF THE EVENT
+            {data.get('outcomes','- List 3–5 major outcomes, in bullets.')}
+
+            # ANALYSIS
+            - Impact on Attendees: {data.get('impact_on_attendees','')}
+            - Impact on Schools: {data.get('impact_on_schools','')}
+            - Impact on Volunteers: {data.get('impact_on_volunteers','')}
+
+            # RELEVANCE OF THE EVENT
+            | Criteria                | Description         |
+            |-------------------------|---------------------|
+            | Graduate Attributes     | {data.get('graduate_attributes','')} |
+            | Support to SDGs/Values  | {data.get('sdg_value_systems_mapping','')} |
+
+            # SUGGESTIONS FOR IMPROVEMENT / FEEDBACK FROM IQAC
+            {data.get('iqac_feedback','')}
+
+            # ATTACHMENTS/EVIDENCE
+            {data.get('attachments','- List any evidence (photos, worksheets, etc.) if available.')}
+
+            ---
+
+            ## Ensure the final output is clear, formal, and as per IQAC standards. DO NOT leave sections blank, fill with professional-sounding content if data is missing.
+            """
+
+            model = genai.GenerativeModel("models/gemini-1.5-pro-latest")
+            response = model.generate_content(prompt)
+
+            # Google GenAI occasionally returns None
+            if not response or not hasattr(response, 'text'):
+                return JsonResponse({'error': 'AI did not return any text.'}, status=500)
+
+            return JsonResponse({'report_text': response.text})
+
+        except Exception as e:
+            print("AI Generation error:", e)
+            return JsonResponse({'error': str(e)}, status=500)
+
+
+    return JsonResponse({'error': 'Only POST allowed'}, status=405)
+
+@csrf_exempt
+@login_required
+def save_ai_report(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        proposal = get_object_or_404(EventProposal, id=data['proposal_id'], submitted_by=request.user)
+        report, _ = EventReport.objects.get_or_create(proposal=proposal)
+        report.summary = data.get('full_text')[:1000]  # or whatever logic
+        report.save()
+        return JsonResponse({'success': True})
+    return JsonResponse({'error': 'POST only'}, status=405)
+@login_required
+def ai_report_progress(request, proposal_id):
+    proposal = get_object_or_404(EventProposal, id=proposal_id)
+    return render(request, 'emt/ai_report_progress.html', {'proposal': proposal})
+@csrf_exempt
+@login_required
+def ai_report_partial(request, proposal_id):
+    from .models import EventReport
+    import random
+    import time
+    report = EventReport.objects.filter(proposal_id=proposal_id).first()
+    if not report or not report.summary:
+        # Simulate progress if nothing generated yet
+        return JsonResponse({'text': "", 'status': 'in_progress'})
+    # For now, always show the full summary and mark as finished
+    return JsonResponse({'text': report.summary, 'status': 'finished'})
+from django.http import StreamingHttpResponse
+
+@login_required
+def generate_ai_report_stream(request, proposal_id):
+    import time
+
+    proposal = get_object_or_404(EventProposal, id=proposal_id)
+    # Compose strict, flat prompt!
+    prompt = f"""
+You are an academic event reporting assistant. 
+Output an IQAC Event Report using the following fields, one per line, in the exact order, using **plain text** and a colon after each field name. Do NOT use Markdown or bullets, just FIELD: VALUE format. 
+If a value is missing, write "To be filled".
+
+Event Title: {proposal.event_title or "To be filled"}
+Date & Time: {proposal.event_datetime or "To be filled"}
+Venue: {proposal.venue or "To be filled"}
+Academic Year: {proposal.academic_year or "To be filled"}
+Focus / Objective: {getattr(proposal, 'event_focus_type', '') or "To be filled"}
+Target Audience: {getattr(proposal, 'target_audience', '') or "To be filled"}
+Organizing Department: {getattr(proposal, 'department', '') or "To be filled"}
+No. of Participants: To be filled
+
+Event Summary: [Write a concise, formal event summary.]
+Outcomes: [List 2-3 major outcomes.]
+Feedback & Suggestions: [Summarize participant feedback.]
+Recommendations: [Give 1-2 improvements.]
+Attachments: [List any supporting docs, if any.]
+
+Prepared by: AI Assistant
+Date of Submission: To be filled
+Approved by: To be filled
+
+Repeat: Output each field as FIELD: VALUE (colon required), one per line, nothing else. No Markdown, no formatting, no section headings, no empty lines.
+    """
+
+    model = genai.GenerativeModel("models/gemini-1.5-pro-latest")
+
+    def generate():
+        for chunk in model.generate_content(prompt, stream=True):
+            text = getattr(chunk, 'text', '')
+            if text:
+                yield text
+                time.sleep(0.03)
+
+    return StreamingHttpResponse(generate(), content_type='text/plain')
+
+@login_required
 def admin_dashboard(request):
     """
     Render the static admin dashboard template.
     """
     return render(request, 'core/admin_dashboard.html')
+
+@login_required
+def ai_report_edit(request, proposal_id):
+    proposal = get_object_or_404(EventProposal, id=proposal_id)
+    last_instructions = ""
+    last_fields = ""
+    if request.method == "POST":
+        # Collect user changes/prompts
+        instructions = request.POST.get("instructions", "").strip()
+        manual_fields = request.POST.get("manual_fields", "").strip()
+        # You may want to store these temporarily for next reload
+        last_instructions = instructions
+        last_fields = manual_fields
+
+        # Construct a new prompt for the AI
+        ai_prompt = f"""
+        Please regenerate the IQAC Event Report as before, but follow these special user instructions: 
+        ---
+        {instructions}
+        ---
+        {manual_fields}
+        ---
+        Use the same field structure as before.
+        """
+
+        # Call Gemini here or set a session variable with prompt and redirect to progress
+        request.session['ai_custom_prompt'] = ai_prompt
+        return redirect('emt:ai_report_progress', proposal_id=proposal.id)
+
+    # Pre-fill manual_fields with last generated report fields if you want
+    return render(request, "emt/ai_report_edit.html", {
+        "proposal": proposal,
+        "last_instructions": last_instructions,
+        "last_fields": last_fields,
+    })
+@login_required
+def ai_report_submit(request, proposal_id):
+    proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
+    # Mark the report as generated/submitted
+    proposal.report_generated = True
+    proposal.status = "finalized"   # Or "submitted", depending on your workflow
+    proposal.save()
+    # Optionally, add a success message here
+    from django.contrib import messages
+    messages.success(request, "Event report submitted successfully!")
+    return redirect('emt:report_success', proposal_id=proposal.id)
+

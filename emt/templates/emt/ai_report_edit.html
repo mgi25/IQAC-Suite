@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .ai-edit-form { max-width:700px; margin:44px auto 0 auto; background:#fff; border-radius:18px; box-shadow:0 4px 28px #bad2ef33; padding: 38px 36px 30px 36px;}
+    .ai-edit-form h2 { color:#26528d; font-size:1.6rem; font-weight:700;}
+    .ai-edit-form label { font-weight:600; color:#24558d; }
+    .ai-edit-form textarea { width:100%; min-height:88px; margin-bottom:24px; border-radius:8px; border:1.3px solid #c4dafb; padding:10px 15px; font-size:1.12rem;}
+    .ai-edit-btns { display:flex; gap:20px;}
+</style>
+<div class="ai-edit-form">
+  <h2>Edit & Guide AI Event Report Generation</h2>
+  <form method="post">
+    {% csrf_token %}
+    <label for="instructions">What would you like to change or focus on? (e.g. "Rewrite outcomes to be more specific", "Emphasize student engagement", "Add impact on community", etc.)</label>
+    <textarea id="instructions" name="instructions" placeholder="Describe changes, corrections, or special requests for AI...">{% if last_instructions %}{{ last_instructions }}{% endif %}</textarea>
+
+    <label for="manual_fields">Directly Edit Fields (optional):</label>
+    <textarea id="manual_fields" name="manual_fields" placeholder="Paste or edit any fields (e.g., Outcomes: ...&#10;Feedback: ...)" style="min-height:120px;">{% if last_fields %}{{ last_fields }}{% endif %}</textarea>
+    <div class="ai-edit-btns">
+      <button type="submit" class="ai-btn">Regenerate with AI</button>
+      <button type="button" class="ai-btn" onclick="window.location.href='{% url 'emt:ai_report_progress' proposal.id %}'" style="background:#b9d4ff;color:#26528d;">Cancel</button>
+    </div>
+  </form>
+  <div style="margin-top:30px;color:#688;">Any feedback here will guide AI to rewrite the report. You can leave fields blank to let AI fill, or override manually above.</div>
+</div>
+{% endblock %}
