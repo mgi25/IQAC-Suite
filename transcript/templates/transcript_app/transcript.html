@@ -1,691 +1,800 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Character Strength Transcript{% endblock %}
+{% block title %}
+  Character Strength Transcript
+{% endblock %}
 
 {% block head_extra %}
-<link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<style>
-  /* HIDE SIDEBAR SCROLLBAR */
-  .sidebar {
-    scrollbar-width: none;
-    /* Firefox */
-    -ms-overflow-style: none;
-    /* IE 10+ */
-  }
-
-  .sidebar::-webkit-scrollbar {
-    display: none;
-    /* Chrome, Safari, Opera */
-  }
-
-  .transcript-main-bg {
-    min-height: 100vh;
-    background: linear-gradient(120deg, #f6fafd 0%, #e6f5fd 100%);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 48px 0 48px 0;
-    position: relative;
-  }
-
-  .transcript-container {
-    display: flex;
-    gap: 2.5rem;
-    max-width: 1400px;
-    width: 100%;
-    align-items: flex-start;
-    justify-content: center;
-    position: relative;
-    z-index: 1;
-    padding: 32px;
-    background: #f3f7fa;
-    border-radius: 32px;
-    box-shadow: 0 8px 32px rgba(34, 116, 203, 0.08);
-  }
-
-  .sidebar {
-    width: 320px;
-    background: #f9fbfd;
-    border-radius: 20px;
-    padding: 2.5rem 2rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    border: 1px solid #e3eaf3;
-    position: sticky;
-    top: 120px;
-    max-height: calc(100vh - 160px);
-    overflow-y: auto;
-    transition: all 0.3s ease;
-  }
-
-  .sidebar-title {
-    font-size: 1.5rem;
-    font-weight: 800;
-    color: #2274CB;
-    margin-bottom: 1.5rem;
-    text-align: center;
-    padding-bottom: 1rem;
-    border-bottom: 2px solid #2274CB;
-    position: relative;
-    letter-spacing: 0.5px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-  }
-
-  .sidebar-title i {
-    font-size: 1.2rem;
-    color: #2274CB;
-    margin-right: 0.5rem;
-  }
-
-  .course-student-card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1.5rem 1.2rem;
-    background: #fff;
-    border: 1px solid #e3eaf3;
-    border-radius: 18px;
-    margin-bottom: 1.2rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
-    transition: box-shadow 0.2s, transform 0.2s;
-    cursor: pointer;
-    position: relative;
-  }
-
-  .course-student-card:hover {
-    box-shadow: 0 8px 24px rgba(34, 116, 203, 0.13);
-    transform: translateY(-2px) scale(1.01);
-    border-color: #b6d4f7;
-  }
-
-  .course-student-info {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-
-  .course-student-avatar {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: #2274CB;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 800;
-    font-size: 1.3rem;
-    margin-right: 1rem;
-    box-shadow: 0 2px 8px rgba(34, 116, 203, 0.18);
-  }
-
-  .course-student-name {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: #1a2a3a;
-    margin-bottom: 0.1rem;
-  }
-
-  .course-student-roll {
-    font-size: 0.95rem;
-    color: #8ca0b3;
-    font-weight: 500;
-  }
-
-  .view-btn {
-    background: #3b82f6;
-    color: white;
-    padding: 0.7rem 0.9rem;
-    border-radius: 50%;
-    font-size: 1.15rem;
-    font-weight: 700;
-    text-decoration: none;
-    transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.13);
-    border: none;
-    outline: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 44px;
-    min-height: 44px;
-    width: 44px;
-    height: 44px;
-    margin-left: auto;
-  }
-
-  .view-btn i {
-    margin: 0;
-    font-size: 1.15rem;
-  }
-
-  .course-student-card .view-btn {
-    margin-left: auto;
-  }
-
-  .transcript-card {
-    background: #fff;
-    border-radius: 25px;
-    box-shadow: 0 8px 32px rgba(34, 116, 203, 0.10);
-    padding: 3rem 3.5rem;
-    flex: 1;
-    max-width: 950px;
-    min-width: 320px;
-    min-height: 600px;
-    border: 1px solid #e3eaf3;
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: stretch;
-  }
-
-  .transcript-title {
-    font-size: 2.5rem;
-    font-weight: 900;
-    color: #185a9d;
-    text-align: center;
-    margin-bottom: 2.5rem;
-    letter-spacing: 1px;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.7rem;
-  }
-
-  .info-block {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-    margin-bottom: 2.5rem;
-    background: #f7fafd;
-    border-radius: 20px;
-    padding: 2rem;
-    border: 1px solid #e3eaf3;
-  }
-
-  .info-label {
-    font-size: 1rem;
-    color: #6b7280;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .info-value {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #172b4d;
-    margin-bottom: 1rem;
-  }
-
-  .transcript-section-title {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: #2274CB;
-    margin-bottom: 1.5rem;
-    text-align: center;
-    padding-bottom: 0.5rem;
-    border-bottom: 2px solid #2274CB;
-    position: relative;
-  }
-
-  .transcript-table {
-    width: 100%;
-    border-radius: 15px;
-    overflow: hidden;
-    margin-bottom: 2.5rem;
-    background: #f9fbfd;
-    box-shadow: 0 2px 10px rgba(34, 116, 203, 0.04);
-  }
-
-  .transcript-table th {
-    background: #2274CB;
-    color: #fff;
-    font-weight: 700;
-    padding: 1.2rem 1rem;
-    text-align: center;
-    font-size: 1.1rem;
-    letter-spacing: 0.5px;
-  }
-
-  .transcript-table td {
-    text-align: center;
-    padding: 1rem;
-    border-bottom: 1px solid #e2e8f0;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-  }
-
-  .transcript-table tr:hover td {
-    background: #f1f5f9;
-  }
-
-  .transcript-table td:first-child {
-    text-align: left;
-    font-weight: 600;
-    color: #374151;
-  }
-
-  .download-btn-pop {
-    background: #2274CB;
-    color: #fff;
-    border: none;
-    border-radius: 50px;
-    padding: 1.2rem 2.5rem;
-    font-weight: 700;
-    font-size: 1.1rem;
-    box-shadow: 0 8px 32px rgba(34, 116, 203, 0.18);
-    cursor: pointer;
-    transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.8rem;
-    text-decoration: none;
-    margin-top: 1.5rem;
-    justify-content: center;
-  }
-
-  .download-btn-pop:hover {
-    background: #185a9d;
-    transform: translateY(-3px) scale(1.04);
-    box-shadow: 0 12px 40px rgba(34, 116, 203, 0.22);
-  }
-
-  .search-input-wrapper {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 2rem;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .search-select {
-    min-width: 350px;
-    padding: 1rem 1.5rem;
-    border-radius: 50px;
-    border: 2px solid #d1d5db;
-    background: #fff;
-    font-size: 1rem;
-    font-family: inherit;
-    transition: all 0.3s ease;
-  }
-
-  .search-select:focus {
-    outline: none;
-    border-color: #2274CB;
-    box-shadow: 0 0 0 3px rgba(34, 116, 203, 0.1);
-    transform: translateY(-2px);
-  }
-
-  .search-error {
-    color: #e74c3c;
-    font-size: 0.9rem;
-    margin-top: 0.5rem;
-    display: none;
-    background: rgba(231, 76, 60, 0.1);
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    backdrop-filter: blur(10px);
-  }
-
-  .responsibilities {
-    margin-bottom: 2.5rem;
-    background: #f7fafd;
-    padding: 2rem;
-    border-radius: 20px;
-    border: 1px solid #e3eaf3;
-  }
-
-  .responsibilities ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  .responsibilities li {
-    margin-bottom: 1rem;
-    color: #374151;
-    font-size: 1.1rem;
-    padding-left: 2rem;
-    position: relative;
-    transition: all 0.3s ease;
-  }
-
-  .responsibilities li::before {
-    content: '✦';
-    position: absolute;
-    left: 0;
-    color: #2274CB;
-    font-size: 1.2rem;
-    font-weight: bold;
-  }
-
-  .responsibilities li:hover {
-    transform: translateX(5px);
-    color: #2274CB;
-  }
-
-  .qr-container {
-    display: flex;
-    justify-content: center;
-    margin: 2rem 0;
-  }
-
-  .qr-card {
-    background: #fff;
-    border: 2px solid #e3eaf3;
-    padding: 2rem;
-    border-radius: 20px;
-    text-align: center;
-    transition: all 0.3s ease;
-    box-shadow: 0 6px 36px rgba(34, 116, 203, 0.09);
-  }
-
-  .qr-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 40px rgba(34, 116, 203, 0.15);
-  }
-
-  .qr-title {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: #2274CB;
-    margin-bottom: 1rem;
-  }
-
-  .qr-code {
-    width: 150px;
-    height: 150px;
-    border-radius: 15px;
-    border: 3px solid #2274CB;
-    margin-bottom: 1rem;
-  }
-
-  .qr-subtitle {
-    font-size: 0.9rem;
-    color: #6b7280;
-    margin-top: 0.5rem;
-  }
-
-  .transcript-footer {
-    text-align: center;
-    margin-top: 2rem;
-    padding-top: 2rem;
-    border-top: 2px solid #e3eaf3;
-  }
-
-  .barcode {
-    font-family: 'Courier New', monospace;
-    font-size: 1.3rem;
-    color: #2274CB;
-    margin-bottom: 1rem;
-    font-weight: bold;
-  }
-
-  .authority-title {
-    font-weight: 700;
-    color: #172b4d;
-    margin-bottom: 0.5rem;
-    font-size: 1.2rem;
-  }
-
-  .authority-subtitle {
-    color: #6b7280;
-    font-size: 1rem;
-    margin-bottom: 1rem;
-  }
-
-  .transcript-footer-note {
-    color: #6b7280;
-    font-size: 1rem;
-    line-height: 1.6;
-    background: #f7fafd;
-    padding: 1.5rem;
-    border-radius: 15px;
-    border: 1px solid #e3eaf3;
-  }
-
-  @media (max-width: 1200px) {
+  <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    /* HIDE SIDEBAR SCROLLBAR */
+    .sidebar {
+      scrollbar-width: none;
+      /* Firefox */
+      -ms-overflow-style: none;
+      /* IE 10+ */
+    }
+    
+    .sidebar::-webkit-scrollbar {
+      display: none;
+      /* Chrome, Safari, Opera */
+    }
+    
+    .transcript-main-bg {
+      min-height: 100vh;
+      background: linear-gradient(120deg, #f6fafd 0%, #e6f5fd 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 48px 0 48px 0;
+      position: relative;
+    }
+    
     .transcript-container {
+      display: flex;
+      gap: 2.5rem;
+      max-width: 1400px;
+      width: 100%;
+      align-items: flex-start;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+      padding: 32px;
+      background: #f3f7fa;
+      border-radius: 32px;
+      box-shadow: 0 8px 32px rgba(34, 116, 203, 0.08);
+    }
+    
+    .sidebar {
+      width: 320px;
+      background: #f9fbfd;
+      border-radius: 20px;
+      padding: 2.5rem 2rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      border: 1px solid #e3eaf3;
+      position: sticky;
+      top: 120px;
+      max-height: calc(100vh - 160px);
+      overflow-y: auto;
+      transition: all 0.3s ease;
+    }
+    
+    .sidebar-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #2274cb;
+      margin-bottom: 1.5rem;
+      text-align: center;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid #2274cb;
+      position: relative;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    
+    .sidebar-title i {
+      font-size: 1.2rem;
+      color: #2274cb;
+      margin-right: 0.5rem;
+    }
+    
+    .course-student-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem 1.2rem;
+      background: #fff;
+      border: 1px solid #e3eaf3;
+      border-radius: 18px;
+      margin-bottom: 1.2rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transition: box-shadow 0.2s, transform 0.2s;
+      cursor: pointer;
+      position: relative;
+    }
+    
+    .course-student-card:hover {
+      box-shadow: 0 8px 24px rgba(34, 116, 203, 0.13);
+      transform: translateY(-2px) scale(1.01);
+      border-color: #b6d4f7;
+    }
+    
+    .course-student-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    
+    .course-student-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #2274cb;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.3rem;
+      margin-right: 1rem;
+      box-shadow: 0 2px 8px rgba(34, 116, 203, 0.18);
+    }
+    
+    .course-student-name {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #1a2a3a;
+      margin-bottom: 0.1rem;
+    }
+    
+    .course-student-roll {
+      font-size: 0.95rem;
+      color: #8ca0b3;
+      font-weight: 500;
+    }
+    
+    .view-btn {
+      background: #3b82f6;
+      color: white;
+      padding: 0.7rem 0.9rem;
+      border-radius: 50%;
+      font-size: 1.15rem;
+      font-weight: 700;
+      text-decoration: none;
+      transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.13);
+      border: none;
+      outline: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 44px;
+      min-height: 44px;
+      width: 44px;
+      height: 44px;
+      margin-left: auto;
+    }
+    
+    .view-btn i {
+      margin: 0;
+      font-size: 1.15rem;
+    }
+    
+    .course-student-card .view-btn {
+      margin-left: auto;
+    }
+    
+    .transcript-card {
+      background: #fff;
+      border-radius: 25px;
+      box-shadow: 0 8px 32px rgba(34, 116, 203, 0.1);
+      padding: 3rem 3.5rem;
+      flex: 1;
+      max-width: 950px;
+      min-width: 320px;
+      min-height: 600px;
+      border: 1px solid #e3eaf3;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: stretch;
+    }
+    
+    .transcript-title {
+      font-size: 2.5rem;
+      font-weight: 900;
+      color: #185a9d;
+      text-align: center;
+      margin-bottom: 2.5rem;
+      letter-spacing: 1px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.7rem;
+    }
+    
+    /* Updated Info Block Styles */
+    .info-block {
+      display: flex;
+      gap: 2rem;
+      margin-bottom: 2.5rem;
+      background: #f7fafd;
+      border-radius: 20px;
+      padding: 2rem;
+      border: 1px solid #e3eaf3;
+      align-items: center;
+    }
+    
+    .student-profile-section {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      flex: 1;
+    }
+    
+    .profile-picture-container {
+      position: relative;
+    }
+    
+    .profile-picture {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: #2274cb;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border: 3px solid #e3eaf3;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .profile-picture img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .profile-initials {
+      font-size: 2.5rem;
+      font-weight: 800;
+    }
+    
+    .student-basic-info {
+      flex: 1;
+    }
+    
+    .student-academic-info {
+      flex: 1;
+      border-left: 2px solid #e3eaf3;
+      padding-left: 2rem;
+    }
+    
+    .info-label {
+      font-size: 1rem;
+      color: #6b7280;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .info-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #172b4d;
+      margin-bottom: 1rem;
+    }
+    
+    .transcript-section-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #2274cb;
+      margin-bottom: 1.5rem;
+      text-align: center;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #2274cb;
+      position: relative;
+    }
+    
+    .transcript-table {
+      width: 100%;
+      border-radius: 15px;
+      overflow: hidden;
+      margin-bottom: 2.5rem;
+      background: #f9fbfd;
+      box-shadow: 0 2px 10px rgba(34, 116, 203, 0.04);
+    }
+    
+    .transcript-table th {
+      background: #2274cb;
+      color: #fff;
+      font-weight: 700;
+      padding: 1.2rem 1rem;
+      text-align: center;
+      font-size: 1.1rem;
+      letter-spacing: 0.5px;
+    }
+    
+    .transcript-table td {
+      text-align: center;
+      padding: 1rem;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+    
+    .transcript-table tr:hover td {
+      background: #f1f5f9;
+    }
+    
+    .transcript-table td:first-child {
+      text-align: left;
+      font-weight: 600;
+      color: #374151;
+    }
+    
+    .download-btn-pop {
+      background: #2274cb;
+      color: #fff;
+      border: none;
+      border-radius: 50px;
+      padding: 1.2rem 2.5rem;
+      font-weight: 700;
+      font-size: 1.1rem;
+      box-shadow: 0 8px 32px rgba(34, 116, 203, 0.18);
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.8rem;
+      text-decoration: none;
+      margin-top: 1.5rem;
+      justify-content: center;
+    }
+    
+    .download-btn-pop:hover {
+      background: #185a9d;
+      transform: translateY(-3px) scale(1.04);
+      box-shadow: 0 12px 40px rgba(34, 116, 203, 0.22);
+    }
+    
+    .search-input-wrapper {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 2rem;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
-      padding: 16px;
+      gap: 0.5rem;
     }
-
-    .sidebar {
+    
+    .search-select {
+      min-width: 350px;
+      padding: 1rem 1.5rem;
+      border-radius: 50px;
+      border: 2px solid #d1d5db;
+      background: #fff;
+      font-size: 1rem;
+      font-family: inherit;
+      transition: all 0.3s ease;
+    }
+    
+    .search-select:focus {
+      outline: none;
+      border-color: #2274cb;
+      box-shadow: 0 0 0 3px rgba(34, 116, 203, 0.1);
+      transform: translateY(-2px);
+    }
+    
+    .search-error {
+      color: #e74c3c;
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+      display: none;
+      background: rgba(231, 76, 60, 0.1);
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+    }
+    
+    .responsibilities {
+      margin-bottom: 2.5rem;
+      background: #f7fafd;
+      padding: 2rem;
+      border-radius: 20px;
+      border: 1px solid #e3eaf3;
+    }
+    
+    .responsibilities ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .responsibilities li {
+      margin-bottom: 1rem;
+      color: #374151;
+      font-size: 1.1rem;
+      padding-left: 2rem;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    
+    .responsibilities li::before {
+      content: '✦';
+      position: absolute;
+      left: 0;
+      color: #2274cb;
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+    
+    .responsibilities li:hover {
+      transform: translateX(5px);
+      color: #2274cb;
+    }
+    
+    .qr-container {
+      display: flex;
+      justify-content: center;
+      margin: 2rem 0;
+    }
+    
+    .qr-card {
+      background: #fff;
+      border: 2px solid #e3eaf3;
+      padding: 2rem;
+      border-radius: 20px;
+      text-align: center;
+      transition: all 0.3s ease;
+      box-shadow: 0 6px 36px rgba(34, 116, 203, 0.09);
+    }
+    
+    .qr-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 40px rgba(34, 116, 203, 0.15);
+    }
+    
+    .qr-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #2274cb;
+      margin-bottom: 1rem;
+    }
+    
+    .qr-code {
+      width: 150px;
+      height: 150px;
+      border-radius: 15px;
+      border: 3px solid #2274cb;
+      margin-bottom: 1rem;
+    }
+    
+    .qr-subtitle {
+      font-size: 0.9rem;
+      color: #6b7280;
+      margin-top: 0.5rem;
+    }
+    
+    .transcript-footer {
+      text-align: center;
+      margin-top: 2rem;
+      padding-top: 2rem;
+      border-top: 2px solid #e3eaf3;
+    }
+    
+    .barcode {
+      font-family: 'Courier New', monospace;
+      font-size: 1.3rem;
+      color: #2274cb;
+      margin-bottom: 1rem;
+      font-weight: bold;
+    }
+    
+    .authority-title {
+      font-weight: 700;
+      color: #172b4d;
+      margin-bottom: 0.5rem;
+      font-size: 1.2rem;
+    }
+    
+    .authority-subtitle {
+      color: #6b7280;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    .transcript-footer-note {
+      color: #6b7280;
+      font-size: 1rem;
+      line-height: 1.6;
+      background: #f7fafd;
+      padding: 1.5rem;
+      border-radius: 15px;
+      border: 1px solid #e3eaf3;
+    }
+    
+    @media (max-width: 1200px) {
+      .transcript-container {
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 16px;
+      }
+    
+      .sidebar {
+        width: 100%;
+        max-width: 950px;
+        position: static;
+        margin-bottom: 2rem;
+        max-height: none;
+      }
+    
+      .transcript-card {
+        max-width: 100%;
+        min-height: 400px;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .transcript-main-bg {
+        padding: 16px 0 16px 0;
+        align-items: flex-start;
+      }
+    
+      .transcript-container {
+        padding: 8px;
+      }
+    
+      .sidebar {
+        padding: 1.5rem 1rem;
+      }
+    
+      .transcript-card {
+        padding: 2rem 1.5rem;
+        min-height: 300px;
+      }
+    
+      /* Responsive adjustments for info block */
+      .info-block {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    
+      .student-profile-section {
+        width: 100%;
+      }
+    
+      .student-academic-info {
+        border-left: none;
+        border-top: 2px solid #e3eaf3;
+        padding-left: 0;
+        padding-top: 1.5rem;
+        width: 100%;
+      }
+    
+      .profile-picture {
+        width: 80px;
+        height: 80px;
+      }
+    
+      .profile-initials {
+        font-size: 2rem;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .transcript-container {
+        padding: 2px;
+      }
+    
+      .sidebar {
+        padding: 1rem 0.5rem;
+      }
+    
+      .transcript-card {
+        padding: 1.5rem 1rem;
+        min-height: 200px;
+      }
+    
+      .profile-picture {
+        width: 60px;
+        height: 60px;
+      }
+    
+      .profile-initials {
+        font-size: 1.5rem;
+      }
+    }
+    
+    .graduate-attributes-sidebar {
+      margin-top: 2rem;
+      background: #f7fafd;
+      padding: 1.5rem 1rem;
+      border-radius: 18px;
+      border: 1px solid #e3eaf3;
+    }
+    
+    .graduate-attributes-sidebar .ga-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #2274cb;
+      margin-bottom: 1rem;
+      text-align: center;
+      border-bottom: 1px solid #d1d5db;
+      padding-bottom: 0.5rem;
+    }
+    
+    .graduate-attributes-sidebar .ga-bar {
+      margin-bottom: 1rem;
+    }
+    
+    .graduate-attributes-sidebar .ga-label {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 0.3rem;
+      color: #374151;
+    }
+    
+    .graduate-attributes-sidebar .ga-bar-bg {
       width: 100%;
-      max-width: 950px;
-      position: static;
-      margin-bottom: 2rem;
-      max-height: none;
+      height: 10px;
+      background: #e5e7eb;
+      border-radius: 10px;
+      overflow: hidden;
     }
-
-    .transcript-card {
-      max-width: 100%;
-      min-height: 400px;
+    
+    .graduate-attributes-sidebar .ga-bar-fill {
+      height: 100%;
+      background: #3b82f6;
+      transition: width 0.5s ease;
     }
-  }
-
-  @media (max-width: 768px) {
-    .transcript-main-bg {
-      padding: 16px 0 16px 0;
-      align-items: flex-start;
+    
+    .graduate-attributes-sidebar .ga-percentage {
+      font-size: 0.8rem;
+      color: #4b5563;
+      text-align: right;
     }
-
-    .transcript-container {
-      padding: 8px;
-    }
-
-    .sidebar {
-      padding: 1.5rem 1rem;
-    }
-
-    .transcript-card {
-      padding: 2rem 1.5rem;
-      min-height: 300px;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .transcript-container {
-      padding: 2px;
-    }
-
-    .sidebar {
-      padding: 1rem 0.5rem;
-    }
-
-    .transcript-card {
-      padding: 1.5rem 1rem;
-      min-height: 200px;
-    }
-  }
-
-  .graduate-attributes-sidebar {
-    margin-top: 2rem;
-    background: #f7fafd;
-    padding: 1.5rem 1rem;
-    border-radius: 18px;
-    border: 1px solid #e3eaf3;
-  }
-
-  .graduate-attributes-sidebar .ga-title {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: #2274CB;
-    margin-bottom: 1rem;
-    text-align: center;
-    border-bottom: 1px solid #d1d5db;
-    padding-bottom: 0.5rem;
-  }
-
-  .graduate-attributes-sidebar .ga-bar {
-    margin-bottom: 1rem;
-  }
-
-  .graduate-attributes-sidebar .ga-label {
-    font-weight: 600;
-    font-size: 0.95rem;
-    margin-bottom: 0.3rem;
-    color: #374151;
-  }
-
-  .graduate-attributes-sidebar .ga-bar-bg {
-    width: 100%;
-    height: 10px;
-    background: #e5e7eb;
-    border-radius: 10px;
-    overflow: hidden;
-  }
-
-  .graduate-attributes-sidebar .ga-bar-fill {
-    height: 100%;
-    background: #3b82f6;
-    transition: width 0.5s ease;
-  }
-
-  .graduate-attributes-sidebar .ga-percentage {
-    font-size: 0.8rem;
-    color: #4b5563;
-    text-align: right;
-  }
-</style>
+  </style>
 {% endblock %}
+
 {% block content %}
-<div class="transcript-main-bg">
-  <div class="transcript-container">
-
-    <div class="sidebar">
-
-      {% if top_5_strengths %}
-      <div class="transcript-section-title">Top 5 Character Strengths of <br>{{ student.name }}</div>
-      <div class="graduate-attributes-sidebar">
-        {% for s in top_5_strengths %}
-        <div class="ga-bar">
-          <div class="ga-label">{{ s.name }}</div>
-          <div class="ga-bar-bg">
-            <div class="ga-bar-fill" style="width: {{ s.score }}%; background: #3b82f6;"></div>
+  <div class="transcript-main-bg">
+    <div class="transcript-container">
+      <div class="sidebar">
+        {% if top_5_strengths %}
+          <div class="transcript-section-title">
+            Top 5 Character Strengths of <br />{{ student.name }}
           </div>
-          <div class="ga-percentage">{{ s.score }}%</div>
-        </div>
-        {% empty %}
-        <div style="text-align:center; color:#6b7280;">No character strengths found.</div>
-        {% endfor %}
+          <div class="graduate-attributes-sidebar">
+            {% for s in top_5_strengths %}
+              <div class="ga-bar">
+                <div class="ga-label">{{ s.name }}</div>
+                <div class="ga-bar-bg">
+                  <div class="ga-bar-fill" style="width: {{ s.score }}%; background: #3b82f6;"></div>
+                </div>
+                <div class="ga-percentage">{{ s.score }}%</div>
+              </div>
+            {% empty %}
+              <div style="text-align:center; color:#6b7280;">No character strengths found.</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+        <br /><br /><br />
+        {% if student_list %}
+          <div class="sidebar-title">
+            <i class="fa-solid fa-users"></i> Other Students
+          </div>
+          {% for s in student_list %}
+            <div class="course-student-card">
+              <div class="course-student-info">
+                <div class="course-student-avatar">{{ s.name|slice:'0:1' }}</div>
+                <div>
+                  <div class="course-student-name">{{ s.name }}</div>
+                  <div class="course-student-roll">{{ s.roll_no }}</div>
+                </div>
+              </div>
+              <a href="{% url 'transcript:transcript' s.roll_no %}" class="view-btn"><i class="fa-solid fa-eye"></i></a>
+            </div>
+          {% endfor %}
+        {% endif %}
       </div>
-      {% endif %}
-      <br><br><br>
-      {% if student_list %}
-      <div class="sidebar-title"><i class="fa-solid fa-users"></i> Other Students</div>
-      {% for s in student_list %}
-      <div class="course-student-card">
-        <div class="course-student-info">
-          <div class="course-student-avatar">{{ s.name|slice:"0:1" }}</div>
-          <div>
-            <div class="course-student-name">{{ s.name }}</div>
-            <div class="course-student-roll">{{ s.roll_no }}</div>
+
+      <div class="transcript-card">
+        <div class="transcript-title">
+          <i class="fa-solid fa-file-lines"></i> Student Character Strength Transcript
+        </div>
+
+        <!-- Updated Info Block with Profile Picture -->
+        <div class="info-block">
+          <div class="student-profile-section">
+            <div class="profile-picture-container">
+              <div class="profile-picture-container">
+                <div class="profile-picture">
+                  {% if student.photo %}
+                    <img src="{{ student.photo.url }}" alt="{{ student.name }}" />
+                  {% else %}
+                    <div class="profile-initials">{{ student.name|slice:'0:1' }}</div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <div class="student-basic-info">
+              <div class="info-label">Student Name</div>
+              <div class="info-value">{{ student.name }}</div>
+
+              <div class="info-label">Registration Number</div>
+              <div class="info-value">{{ student.roll_no }}</div>
+            </div>
+          </div>
+
+          <div class="student-academic-info">
+            <div class="info-label">Programme</div>
+            <div class="info-value">{{ student.course }}</div>
+
+            <div class="info-label">Date of Issue</div>
+            <div class="info-value">{{ today }}</div>
           </div>
         </div>
-        <a href="{% url 'transcript:transcript' s.roll_no %}" class="view-btn"><i class="fa-solid fa-eye"></i></a>
-      </div>
-      {% endfor %}
-      {% endif %}
 
-    </div>
+        <div class="transcript-section-title">Character Strength Assessment</div>
+        <table class="transcript-table">
+          <thead>
+            <tr>
+              <th>Character Strength</th>
+              <th>EMER</th>
+              <th>DEV</th>
+              <th>ESTD</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for strength in strength_data %}
+              <tr>
+                <td>{{ strength.name }}</td>
+                <td>
+                  {% if strength.category == 'EMER' %}✓{% endif %}
+                </td>
+                <td>
+                  {% if strength.category == 'DEV' %}✓{% endif %}
+                </td>
+                <td>
+                  {% if strength.category == 'ESTD' %}✓{% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
 
-
-    <div class="transcript-card">
-      <div class="transcript-title"><i class="fa-solid fa-file-lines"></i> Student Character Strength Transcript</div>
-
-      <div class="info-block">
-        <div>
-          <div class="info-label">Student Name</div>
-          <div class="info-value">{{ student.name }}</div>
-
-          <div class="info-label">Programme</div>
-          <div class="info-value">{{ student.course }}</div>
+        <div class="transcript-section-title">Key Responsibilities</div>
+        <div class="responsibilities">
+          <ul>
+            {% for name, role in top_events %}
+              <li>
+                {{ name }} — <strong>{{ role }}</strong>
+              </li>
+            {% endfor %}
+          </ul>
         </div>
 
-        <div>
-          <div class="info-label">Registration Number</div>
-          <div class="info-value">{{ student.roll_no }}</div>
+        {% if qr_code %}
+          <div class="qr-container">
+            <div class="qr-card">
+              <div class="qr-title">Scan to View Full Event List</div>
+              <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" class="qr-code" />
+              <div class="qr-subtitle">{{ student.roll_no }} | Secure QR Verification</div>
+            </div>
+          </div>
+        {% endif %}
+
+        <div class="transcript-footer">
+          <div class="barcode">Fr. Justine</div>
+          <div class="authority-title">DEAN & DIRECTOR</div>
+          <div class="authority-subtitle">
+            CHRIST (Deemed to be University)<br />Pune Lavasa Campus
+          </div>
+          <div class="transcript-footer-note">
+            The Student Character Strength Transcript is awarded to selected students, excelling in University Activities fostering Holistic Development.<br />
+            <span style="display:block;margin-top:1rem;font-weight:600;"><strong>Date:</strong> {{ today }}</span>
+          </div>
+          <div style="text-align: center;">
+            <a href="{% url 'transcript:transcript_pdf' student.roll_no %}" class="download-btn-pop"><i class="fa-solid fa-download"></i> Download Transcript PDF</a>
+          </div>
         </div>
       </div>
-
-
-      <div class="transcript-section-title">Character Strength Assessment</div>
-      <table class="transcript-table">
-        <thead>
-          <tr>
-            <th>Character Strength</th>
-            <th>EMER</th>
-            <th>DEV</th>
-            <th>ESTD</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for strength in strength_data %}
-          <tr>
-            <td>{{ strength.name }}</td>
-            <td>{% if strength.category == 'EMER' %}✓{% endif %}</td>
-            <td>{% if strength.category == 'DEV' %}✓{% endif %}</td>
-            <td>{% if strength.category == 'ESTD' %}✓{% endif %}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-
-      <div class="transcript-section-title">Key Responsibilities</div>
-      <div class="responsibilities">
-        <ul>
-          {% for name, role in top_events %}
-          <li>{{ name }} — <strong>{{ role }}</strong></li>
-          {% endfor %}
-
-        </ul>
-      </div>
-
-
-      {% if qr_code %}
-      <div class="qr-container">
-        <div class="qr-card">
-          <div class="qr-title">Scan to View Full Event List</div>
-          <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" class="qr-code">
-          <div class="qr-subtitle">{{ student.roll_no }} | Secure QR Verification</div>
-        </div>
-      </div>
-      {% endif %}
-
-      <div class="transcript-footer">
-        <div class="barcode">Fr. Justine</div>
-        <div class="authority-title">DEAN & DIRECTOR</div>
-        <div class="authority-subtitle">CHRIST (Deemed to be University)<br>Pune Lavasa Campus</div>
-        <div class="transcript-footer-note">
-          The Student Character Strength Transcript is awarded to selected students, excelling in University Activities
-          fostering Holistic Development.<br>
-          <span style="display:block;margin-top:1rem;font-weight:600;"><strong>Date:</strong> {{ today }}</span>
-        </div>
-        <div style="text-align: center;">
-          <a href="{% url 'transcript:transcript_pdf' student.roll_no %}" class="download-btn-pop">
-            <i class="fa-solid fa-download"></i> Download Transcript PDF
-          </a>
-        </div>
-      </div>
-
     </div>
   </div>
-</div>
 
-<script>
+  <script>
   const students = [
     {% for s in student_list %}
   { roll_no: `{{ s.roll_no|lower }}`, name: `{{ s.name|lower }}` },
