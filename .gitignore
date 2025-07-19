@@ -1,5 +1,5 @@
 # Byte-compiled / optimized
-__pycache__/
+_pycache_/
 *.py[cod]
 *.so
 
@@ -9,24 +9,29 @@ venv/
 iqac_env/
 .venv/
 
-# Django stuff
+# Django-specific
 *.log
 *.sqlite3
-staticfiles/
 db.sqlite3
+staticfiles/
+.env
 
+# Migrations (optional – keep only if you regenerate often)
+*/migrations/.py
+**/migrations/_pycache_/
 
-# IDE / Editor
+# IDEs and editors
 .vscode/
 .idea/
 *.suo
-*.ntvs*
+.ntvs
 *.njsproj
 *.sln
 
-# Mac, Windows junk
+# OS
 .DS_Store
 Thumbs.db
-*.pyc
-
-*/migrations/
+# Backup JSON files (containing secrets)
+sqlite_backup.json
+clean_backup.json
+full_data.json

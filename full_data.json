@@ -1,0 +1,1862 @@
+[
+{
+  "model": "core.department",
+  "pk": 1,
+  "fields": {
+    "name": "Computer Science"
+  }
+},
+{
+  "model": "core.department",
+  "pk": 2,
+  "fields": {
+    "name": "Electronics"
+  }
+},
+{
+  "model": "core.department",
+  "pk": 3,
+  "fields": {
+    "name": "Commerce"
+  }
+},
+{
+  "model": "core.department",
+  "pk": 4,
+  "fields": {
+    "name": "Psychology"
+  }
+},
+{
+  "model": "core.department",
+  "pk": 5,
+  "fields": {
+    "name": "Data Science"
+  }
+},
+{
+  "model": "core.department",
+  "pk": 6,
+  "fields": {
+    "name": "Law"
+  }
+},
+{
+  "model": "core.department",
+  "pk": 7,
+  "fields": {
+    "name": "BBA"
+  }
+},
+{
+  "model": "core.department",
+  "pk": 8,
+  "fields": {
+    "name": "BCom"
+  }
+},
+{
+  "model": "core.department",
+  "pk": 9,
+  "fields": {
+    "name": "MBA"
+  }
+},
+{
+  "model": "core.club",
+  "pk": 1,
+  "fields": {
+    "name": "Coding Club"
+  }
+},
+{
+  "model": "core.club",
+  "pk": 2,
+  "fields": {
+    "name": "Photography Club"
+  }
+},
+{
+  "model": "core.club",
+  "pk": 3,
+  "fields": {
+    "name": "Entrepreneurship Club"
+  }
+},
+{
+  "model": "core.club",
+  "pk": 4,
+  "fields": {
+    "name": "hello"
+  }
+},
+{
+  "model": "core.club",
+  "pk": 5,
+  "fields": {
+    "name": "Chess Club"
+  }
+},
+{
+  "model": "core.club",
+  "pk": 6,
+  "fields": {
+    "name": "Science Club"
+  }
+},
+{
+  "model": "core.center",
+  "pk": 1,
+  "fields": {
+    "name": "Center for Digital Learning"
+  }
+},
+{
+  "model": "core.center",
+  "pk": 2,
+  "fields": {
+    "name": "AI Research Center"
+  }
+},
+{
+  "model": "core.center",
+  "pk": 3,
+  "fields": {
+    "name": "Innovation Center"
+  }
+},
+{
+  "model": "core.center",
+  "pk": 4,
+  "fields": {
+    "name": "CSA"
+  }
+},
+{
+  "model": "core.center",
+  "pk": 5,
+  "fields": {
+    "name": "CAPS"
+  }
+},
+{
+  "model": "core.cell",
+  "pk": 1,
+  "fields": {
+    "name": "CPCG"
+  }
+},
+{
+  "model": "core.cell",
+  "pk": 2,
+  "fields": {
+    "name": "IQAC Cell"
+  }
+},
+{
+  "model": "core.cell",
+  "pk": 3,
+  "fields": {
+    "name": "IPC"
+  }
+},
+{
+  "model": "core.association",
+  "pk": 1,
+  "fields": {
+    "name": "DSA",
+    "department": 5
+  }
+},
+{
+  "model": "core.roleassignment",
+  "pk": 5,
+  "fields": {
+    "user": 3,
+    "role": "hod",
+    "department": 5,
+    "club": null,
+    "center": null,
+    "cell": null,
+    "association": null
+  }
+},
+{
+  "model": "core.roleassignment",
+  "pk": 8,
+  "fields": {
+    "user": 7,
+    "role": "academic_coordinator",
+    "department": 5,
+    "club": 4,
+    "center": null,
+    "cell": null,
+    "association": null
+  }
+},
+{
+  "model": "core.roleassignment",
+  "pk": 11,
+  "fields": {
+    "user": 4,
+    "role": "student",
+    "department": 5,
+    "club": null,
+    "center": null,
+    "cell": null,
+    "association": null
+  }
+},
+{
+  "model": "core.roleassignment",
+  "pk": 21,
+  "fields": {
+    "user": 6,
+    "role": "dept_iqac",
+    "department": 5,
+    "club": null,
+    "center": null,
+    "cell": null,
+    "association": null
+  }
+},
+{
+  "model": "core.roleassignment",
+  "pk": 22,
+  "fields": {
+    "user": 6,
+    "role": "faculty",
+    "department": 5,
+    "club": null,
+    "center": null,
+    "cell": null,
+    "association": null
+  }
+},
+{
+  "model": "core.roleassignment",
+  "pk": 25,
+  "fields": {
+    "user": 5,
+    "role": "association_head",
+    "department": null,
+    "club": null,
+    "center": null,
+    "cell": null,
+    "association": 1
+  }
+},
+{
+  "model": "core.roleassignment",
+  "pk": 26,
+  "fields": {
+    "user": 5,
+    "role": "faculty",
+    "department": 5,
+    "club": null,
+    "center": null,
+    "cell": null,
+    "association": null
+  }
+},
+{
+  "model": "core.roleassignment",
+  "pk": 27,
+  "fields": {
+    "user": 2,
+    "role": "uni_iqac",
+    "department": null,
+    "club": null,
+    "center": null,
+    "cell": null,
+    "association": null
+  }
+},
+{
+  "model": "core.roleassignment",
+  "pk": 28,
+  "fields": {
+    "user": 17,
+    "role": "dean",
+    "department": null,
+    "club": null,
+    "center": null,
+    "cell": null,
+    "association": null
+  }
+},
+{
+  "model": "core.roleassignment",
+  "pk": 29,
+  "fields": {
+    "user": 3,
+    "role": "faculty",
+    "department": 5,
+    "club": null,
+    "center": null,
+    "cell": null,
+    "association": null
+  }
+},
+{
+  "model": "core.roleassignment",
+  "pk": 30,
+  "fields": {
+    "user": 3,
+    "role": "center_head",
+    "department": null,
+    "club": null,
+    "center": 5,
+    "cell": null,
+    "association": null
+  }
+},
+{
+  "model": "core.profile",
+  "pk": 1,
+  "fields": {
+    "user": 3,
+    "role": "student"
+  }
+},
+{
+  "model": "core.profile",
+  "pk": 2,
+  "fields": {
+    "user": 2,
+    "role": "student"
+  }
+},
+{
+  "model": "core.profile",
+  "pk": 3,
+  "fields": {
+    "user": 4,
+    "role": "student"
+  }
+},
+{
+  "model": "core.profile",
+  "pk": 4,
+  "fields": {
+    "user": 5,
+    "role": "student"
+  }
+},
+{
+  "model": "core.profile",
+  "pk": 5,
+  "fields": {
+    "user": 6,
+    "role": "student"
+  }
+},
+{
+  "model": "core.profile",
+  "pk": 6,
+  "fields": {
+    "user": 7,
+    "role": "student"
+  }
+},
+{
+  "model": "core.profile",
+  "pk": 11,
+  "fields": {
+    "user": 17,
+    "role": "student"
+  }
+},
+{
+  "model": "emt.eventproposal",
+  "pk": 24,
+  "fields": {
+    "submitted_by": 4,
+    "department": 5,
+    "association": null,
+    "club": null,
+    "center": null,
+    "cell": null,
+    "needs_finance_approval": false,
+    "is_big_event": false,
+    "committees": "test ride",
+    "event_title": "test ride",
+    "num_activities": 4,
+    "event_datetime": "2025-11-11T11:01:00Z",
+    "venue": "test ride",
+    "academic_year": "2025",
+    "target_audience": "test ride",
+    "student_coordinators": "test ride",
+    "event_focus_type": "test ride",
+    "report_generated": true,
+    "fest_fee_participants": 22,
+    "fest_fee_rate": "22.00",
+    "fest_fee_amount": "22.00",
+    "fest_sponsorship_amount": "22.00",
+    "conf_fee_participants": 22,
+    "conf_fee_rate": "22.00",
+    "conf_fee_amount": "22.00",
+    "conf_sponsorship_amount": "22.00",
+    "created_at": "2025-07-09T09:15:15.455Z",
+    "updated_at": "2025-07-10T10:09:06.357Z",
+    "status": "finalized",
+    "faculty_incharges": [
+      5
+    ]
+  }
+},
+{
+  "model": "emt.eventproposal",
+  "pk": 26,
+  "fields": {
+    "submitted_by": 4,
+    "department": 5,
+    "association": null,
+    "club": null,
+    "center": null,
+    "cell": null,
+    "needs_finance_approval": false,
+    "is_big_event": false,
+    "committees": "spider",
+    "event_title": "SPIDER",
+    "num_activities": 2,
+    "event_datetime": "2025-11-11T11:11:00Z",
+    "venue": "spider",
+    "academic_year": "2025",
+    "target_audience": "spider",
+    "student_coordinators": "spider",
+    "event_focus_type": "spider",
+    "report_generated": true,
+    "fest_fee_participants": 11,
+    "fest_fee_rate": "11.00",
+    "fest_fee_amount": "11.00",
+    "fest_sponsorship_amount": "11.00",
+    "conf_fee_participants": 11,
+    "conf_fee_rate": "11.00",
+    "conf_fee_amount": "11.00",
+    "conf_sponsorship_amount": "11.00",
+    "created_at": "2025-07-09T14:38:32.881Z",
+    "updated_at": "2025-07-10T10:09:29.167Z",
+    "status": "finalized",
+    "faculty_incharges": [
+      5
+    ]
+  }
+},
+{
+  "model": "emt.eventproposal",
+  "pk": 27,
+  "fields": {
+    "submitted_by": 4,
+    "department": 5,
+    "association": null,
+    "club": null,
+    "center": null,
+    "cell": null,
+    "needs_finance_approval": false,
+    "is_big_event": false,
+    "committees": "FINAL TEST`",
+    "event_title": "FINAL TEST",
+    "num_activities": 1,
+    "event_datetime": "2025-11-25T11:11:00Z",
+    "venue": "FINAL TEST",
+    "academic_year": "2025",
+    "target_audience": "FINAL TEST",
+    "student_coordinators": "FINAL TEST",
+    "event_focus_type": "FINAL TEST",
+    "report_generated": true,
+    "fest_fee_participants": 11,
+    "fest_fee_rate": "11.00",
+    "fest_fee_amount": "22.00",
+    "fest_sponsorship_amount": "22.00",
+    "conf_fee_participants": 1111,
+    "conf_fee_rate": "1.00",
+    "conf_fee_amount": "1.00",
+    "conf_sponsorship_amount": "1.00",
+    "created_at": "2025-07-10T06:06:39.283Z",
+    "updated_at": "2025-07-10T10:38:44.436Z",
+    "status": "finalized",
+    "faculty_incharges": [
+      5
+    ]
+  }
+},
+{
+  "model": "emt.eventproposal",
+  "pk": 28,
+  "fields": {
+    "submitted_by": 4,
+    "department": 5,
+    "association": null,
+    "club": null,
+    "center": null,
+    "cell": null,
+    "needs_finance_approval": false,
+    "is_big_event": false,
+    "committees": "Data Science Club, IQAC, IEEE Student Branch",
+    "event_title": "Data Science Symposium 2025",
+    "num_activities": 0,
+    "event_datetime": "2025-02-22T11:11:00Z",
+    "venue": "Seminar Hall, Block B",
+    "academic_year": "2025",
+    "target_audience": "UG/PG Students (All Streams), Faculty, Research Scholars",
+    "student_coordinators": "Neha Sharma, Amit Jadhav, Sanjana Rao",
+    "event_focus_type": "Symposium, Workshop, Panel Discussion",
+    "report_generated": true,
+    "fest_fee_participants": 80,
+    "fest_fee_rate": "200.00",
+    "fest_fee_amount": "19.98",
+    "fest_sponsorship_amount": "19.97",
+    "conf_fee_participants": 22,
+    "conf_fee_rate": "33.00",
+    "conf_fee_amount": "33.00",
+    "conf_sponsorship_amount": "33.00",
+    "created_at": "2025-07-10T07:03:43.623Z",
+    "updated_at": "2025-07-10T07:14:28.293Z",
+    "status": "finalized",
+    "faculty_incharges": [
+      5
+    ]
+  }
+},
+{
+  "model": "emt.eventproposal",
+  "pk": 30,
+  "fields": {
+    "submitted_by": 4,
+    "department": null,
+    "association": 1,
+    "club": null,
+    "center": null,
+    "cell": null,
+    "needs_finance_approval": false,
+    "is_big_event": false,
+    "committees": "Data Science Club, IQAC, IEEE Student Branch",
+    "event_title": "Data Science Symposium 2025",
+    "num_activities": 4,
+    "event_datetime": "2025-11-11T11:11:00Z",
+    "venue": "Seminar Hall, Block B",
+    "academic_year": "2025-26",
+    "target_audience": "",
+    "student_coordinators": "Neha Sharma, Amit Jadhav, Sanjana Rao",
+    "event_focus_type": "UG/PG Students (All Streams), Faculty, Research Scholars",
+    "report_generated": false,
+    "fest_fee_participants": 22,
+    "fest_fee_rate": "22.00",
+    "fest_fee_amount": "22.00",
+    "fest_sponsorship_amount": "22.00",
+    "conf_fee_participants": 22,
+    "conf_fee_rate": "22.00",
+    "conf_fee_amount": "22.00",
+    "conf_sponsorship_amount": "22.00",
+    "created_at": "2025-07-11T05:12:13.238Z",
+    "updated_at": "2025-07-11T05:16:08.416Z",
+    "status": "finalized",
+    "faculty_incharges": [
+      5
+    ]
+  }
+},
+{
+  "model": "emt.eventproposal",
+  "pk": 31,
+  "fields": {
+    "submitted_by": 4,
+    "department": null,
+    "association": 1,
+    "club": null,
+    "center": null,
+    "cell": null,
+    "needs_finance_approval": false,
+    "is_big_event": false,
+    "committees": "Data Science Club, IQAC, IEEE Student Branch",
+    "event_title": "Data Science  2025",
+    "num_activities": 3,
+    "event_datetime": "2025-11-11T11:11:00Z",
+    "venue": "Audi",
+    "academic_year": "2025-26",
+    "target_audience": "UG/PG Students (All Streams), Faculty, Research Scholars",
+    "student_coordinators": "Neha Sharma, Amit Jadhav, Sanjana Rao",
+    "event_focus_type": "Symposium, Workshop, Panel Discussion",
+    "report_generated": false,
+    "fest_fee_participants": 11,
+    "fest_fee_rate": "11.00",
+    "fest_fee_amount": "11.00",
+    "fest_sponsorship_amount": "11.00",
+    "conf_fee_participants": 11,
+    "conf_fee_rate": "11.00",
+    "conf_fee_amount": "11.00",
+    "conf_sponsorship_amount": "11.00",
+    "created_at": "2025-07-11T05:28:16.241Z",
+    "updated_at": "2025-07-12T05:20:48.419Z",
+    "status": "under_review",
+    "faculty_incharges": [
+      5
+    ]
+  }
+},
+{
+  "model": "emt.eventproposal",
+  "pk": 32,
+  "fields": {
+    "submitted_by": 4,
+    "department": 5,
+    "association": null,
+    "club": null,
+    "center": null,
+    "cell": null,
+    "needs_finance_approval": false,
+    "is_big_event": false,
+    "committees": "NONE",
+    "event_title": "MICRO TEST",
+    "num_activities": 3,
+    "event_datetime": "2025-02-22T11:11:00Z",
+    "venue": "AUDI",
+    "academic_year": "2025",
+    "target_audience": "BSC",
+    "student_coordinators": "MGI",
+    "event_focus_type": "IDK",
+    "report_generated": true,
+    "fest_fee_participants": 11,
+    "fest_fee_rate": "11.00",
+    "fest_fee_amount": "11.00",
+    "fest_sponsorship_amount": "11.00",
+    "conf_fee_participants": 11,
+    "conf_fee_rate": "11.00",
+    "conf_fee_amount": "11.00",
+    "conf_sponsorship_amount": "11.00",
+    "created_at": "2025-07-14T09:34:36.695Z",
+    "updated_at": "2025-07-14T22:54:19.940Z",
+    "status": "finalized",
+    "faculty_incharges": [
+      5
+    ]
+  }
+},
+{
+  "model": "emt.eventproposal",
+  "pk": 33,
+  "fields": {
+    "submitted_by": 4,
+    "department": 5,
+    "association": null,
+    "club": null,
+    "center": null,
+    "cell": null,
+    "needs_finance_approval": false,
+    "is_big_event": false,
+    "committees": "",
+    "event_title": "example",
+    "num_activities": null,
+    "event_datetime": null,
+    "venue": "",
+    "academic_year": "",
+    "target_audience": "",
+    "student_coordinators": "",
+    "event_focus_type": "",
+    "report_generated": false,
+    "fest_fee_participants": null,
+    "fest_fee_rate": null,
+    "fest_fee_amount": null,
+    "fest_sponsorship_amount": null,
+    "conf_fee_participants": null,
+    "conf_fee_rate": null,
+    "conf_fee_amount": null,
+    "conf_sponsorship_amount": null,
+    "created_at": "2025-07-14T10:02:06.896Z",
+    "updated_at": "2025-07-14T10:02:06.896Z",
+    "status": "draft",
+    "faculty_incharges": [
+      5
+    ]
+  }
+},
+{
+  "model": "emt.eventproposal",
+  "pk": 34,
+  "fields": {
+    "submitted_by": 4,
+    "department": 5,
+    "association": null,
+    "club": null,
+    "center": null,
+    "cell": null,
+    "needs_finance_approval": false,
+    "is_big_event": false,
+    "committees": "NONE",
+    "event_title": "MAX",
+    "num_activities": 4,
+    "event_datetime": "2025-11-11T11:11:00Z",
+    "venue": "AUDI",
+    "academic_year": "2025",
+    "target_audience": "BSC",
+    "student_coordinators": "MAX",
+    "event_focus_type": "NONE",
+    "report_generated": true,
+    "fest_fee_participants": 21,
+    "fest_fee_rate": "22.00",
+    "fest_fee_amount": "22.00",
+    "fest_sponsorship_amount": "22.00",
+    "conf_fee_participants": 22,
+    "conf_fee_rate": "22.00",
+    "conf_fee_amount": "22.00",
+    "conf_sponsorship_amount": "22.00",
+    "created_at": "2025-07-15T06:34:22.028Z",
+    "updated_at": "2025-07-15T06:55:48.892Z",
+    "status": "finalized",
+    "faculty_incharges": [
+      5
+    ]
+  }
+},
+{
+  "model": "emt.eventproposal",
+  "pk": 35,
+  "fields": {
+    "submitted_by": 2,
+    "department": 5,
+    "association": null,
+    "club": null,
+    "center": null,
+    "cell": null,
+    "needs_finance_approval": false,
+    "is_big_event": false,
+    "committees": "NONE",
+    "event_title": "NONE",
+    "num_activities": 2,
+    "event_datetime": "2025-11-11T11:11:00Z",
+    "venue": "NONE",
+    "academic_year": "2025",
+    "target_audience": "NONE",
+    "student_coordinators": "NONE",
+    "event_focus_type": "NONE",
+    "report_generated": true,
+    "fest_fee_participants": 11,
+    "fest_fee_rate": "11.00",
+    "fest_fee_amount": "11.00",
+    "fest_sponsorship_amount": "11.00",
+    "conf_fee_participants": 11,
+    "conf_fee_rate": "11.00",
+    "conf_fee_amount": "11.00",
+    "conf_sponsorship_amount": "11.00",
+    "created_at": "2025-07-18T03:35:41.250Z",
+    "updated_at": "2025-07-18T03:48:58.780Z",
+    "status": "finalized",
+    "faculty_incharges": [
+      5
+    ]
+  }
+},
+{
+  "model": "emt.eventneedanalysis",
+  "pk": 19,
+  "fields": {
+    "proposal": 24,
+    "content": "test ride"
+  }
+},
+{
+  "model": "emt.eventneedanalysis",
+  "pk": 21,
+  "fields": {
+    "proposal": 26,
+    "content": "spider"
+  }
+},
+{
+  "model": "emt.eventneedanalysis",
+  "pk": 22,
+  "fields": {
+    "proposal": 27,
+    "content": "FINAL TEST"
+  }
+},
+{
+  "model": "emt.eventneedanalysis",
+  "pk": 23,
+  "fields": {
+    "proposal": 28,
+    "content": "The need for advanced Data Science skills is rapidly growing among students and faculty. Recent surveys indicate 78% of students are interested in machine learning careers, but only 31% feel confident in foundational concepts. This event is designed to address this skill gap through expert talks and hands-on learning."
+  }
+},
+{
+  "model": "emt.eventneedanalysis",
+  "pk": 24,
+  "fields": {
+    "proposal": 30,
+    "content": "The need for advanced Data Science skills is rapidly growing among students and faculty. Recent surveys indicate 78% of students are interested in machine learning careers, but only 31% feel confident in foundational concepts. This event is designed to address this skill gap through expert talks and hands-on learning."
+  }
+},
+{
+  "model": "emt.eventneedanalysis",
+  "pk": 25,
+  "fields": {
+    "proposal": 31,
+    "content": "The need for advanced Data Science skills is rapidly growing among students and faculty. Recent surveys indicate 78% of students are interested in machine learning careers, but only 31% feel confident in foundational concepts. This event is designed to address this skill gap through expert talks and hands-on learning."
+  }
+},
+{
+  "model": "emt.eventneedanalysis",
+  "pk": 26,
+  "fields": {
+    "proposal": 32,
+    "content": "EXample"
+  }
+},
+{
+  "model": "emt.eventneedanalysis",
+  "pk": 27,
+  "fields": {
+    "proposal": 34,
+    "content": "The Hub of Analytics"
+  }
+},
+{
+  "model": "emt.eventneedanalysis",
+  "pk": 28,
+  "fields": {
+    "proposal": 35,
+    "content": "NONE"
+  }
+},
+{
+  "model": "emt.eventobjectives",
+  "pk": 16,
+  "fields": {
+    "proposal": 24,
+    "content": "test ride\r\n`"
+  }
+},
+{
+  "model": "emt.eventobjectives",
+  "pk": 18,
+  "fields": {
+    "proposal": 26,
+    "content": "spider"
+  }
+},
+{
+  "model": "emt.eventobjectives",
+  "pk": 19,
+  "fields": {
+    "proposal": 27,
+    "content": "FINAL TEST"
+  }
+},
+{
+  "model": "emt.eventobjectives",
+  "pk": 20,
+  "fields": {
+    "proposal": 28,
+    "content": "To introduce students to current trends and career opportunities in Data Science.\r\n\r\nTo provide hands-on exposure to machine learning tools.\r\n\r\nTo enable interaction with industry experts and alumni.\r\n\r\nTo foster interdepartmental collaborations for research and innovation."
+  }
+},
+{
+  "model": "emt.eventobjectives",
+  "pk": 21,
+  "fields": {
+    "proposal": 30,
+    "content": "To introduce students to current trends and career opportunities in Data Science.\r\n\r\nTo provide hands-on exposure to machine learning tools.\r\n\r\nTo enable interaction with industry experts and alumni.\r\n\r\nTo foster interdepartmental collaborations for research and innovation."
+  }
+},
+{
+  "model": "emt.eventobjectives",
+  "pk": 22,
+  "fields": {
+    "proposal": 31,
+    "content": "To introduce students to current trends and career opportunities in Data Science.\r\n\r\nTo provide hands-on exposure to machine learning tools.\r\n\r\nTo enable interaction with industry experts and alumni.\r\n\r\nTo foster interdepartmental collaborations for research and innovation."
+  }
+},
+{
+  "model": "emt.eventobjectives",
+  "pk": 23,
+  "fields": {
+    "proposal": 32,
+    "content": "EXample"
+  }
+},
+{
+  "model": "emt.eventobjectives",
+  "pk": 24,
+  "fields": {
+    "proposal": 34,
+    "content": "The Hub of Analytics"
+  }
+},
+{
+  "model": "emt.eventobjectives",
+  "pk": 25,
+  "fields": {
+    "proposal": 35,
+    "content": "NONE"
+  }
+},
+{
+  "model": "emt.eventexpectedoutcomes",
+  "pk": 14,
+  "fields": {
+    "proposal": 24,
+    "content": "test ride"
+  }
+},
+{
+  "model": "emt.eventexpectedoutcomes",
+  "pk": 16,
+  "fields": {
+    "proposal": 26,
+    "content": "spider"
+  }
+},
+{
+  "model": "emt.eventexpectedoutcomes",
+  "pk": 17,
+  "fields": {
+    "proposal": 27,
+    "content": "FINAL TEST"
+  }
+},
+{
+  "model": "emt.eventexpectedoutcomes",
+  "pk": 18,
+  "fields": {
+    "proposal": 28,
+    "content": "Improved awareness of Data Science career paths and required skillsets.\r\n\r\nParticipants gain practical experience with Python and ML libraries.\r\n\r\nEstablishment of new project groups for competitions/hackathons.\r\n\r\nStrengthened alumni and industry network for internships."
+  }
+},
+{
+  "model": "emt.eventexpectedoutcomes",
+  "pk": 19,
+  "fields": {
+    "proposal": 30,
+    "content": "Improved awareness of Data Science career paths and required skillsets.\r\n\r\nParticipants gain practical experience with Python and ML libraries.\r\n\r\nEstablishment of new project groups for competitions/hackathons.\r\n\r\nStrengthened alumni and industry network for internships."
+  }
+},
+{
+  "model": "emt.eventexpectedoutcomes",
+  "pk": 20,
+  "fields": {
+    "proposal": 31,
+    "content": "Improved awareness of Data Science career paths and required skillsets.\r\n\r\nParticipants gain practical experience with Python and ML libraries.\r\n\r\nEstablishment of new project groups for competitions/hackathons.\r\n\r\nStrengthened alumni and industry network for internships."
+  }
+},
+{
+  "model": "emt.eventexpectedoutcomes",
+  "pk": 21,
+  "fields": {
+    "proposal": 32,
+    "content": "EXample"
+  }
+},
+{
+  "model": "emt.eventexpectedoutcomes",
+  "pk": 22,
+  "fields": {
+    "proposal": 34,
+    "content": "The Hub of Analytics"
+  }
+},
+{
+  "model": "emt.eventexpectedoutcomes",
+  "pk": 23,
+  "fields": {
+    "proposal": 35,
+    "content": "NONE"
+  }
+},
+{
+  "model": "emt.tentativeflow",
+  "pk": 14,
+  "fields": {
+    "proposal": 24,
+    "content": "test ride"
+  }
+},
+{
+  "model": "emt.tentativeflow",
+  "pk": 16,
+  "fields": {
+    "proposal": 26,
+    "content": "spider"
+  }
+},
+{
+  "model": "emt.tentativeflow",
+  "pk": 17,
+  "fields": {
+    "proposal": 27,
+    "content": "FINAL TEST"
+  }
+},
+{
+  "model": "emt.tentativeflow",
+  "pk": 18,
+  "fields": {
+    "proposal": 28,
+    "content": "09:30û10:00\tRegistration & Networking\r\n10:00û10:30\tInauguration & Welcome Address\r\n10:30û11:30\tKeynote: \"AI in the Real World\" (Mr. Anil Patil, TCS)\r\n11:30û12:00\tTea Break\r\n12:00û01:30\tWorkshop: \"Hands-on with Python for ML\" (Ms. Sneha Joshi, IBM)\r\n01:30û02:15\tLunch Break\r\n02:15û03:15\tPanel Discussion: \"Future of Data Science Careers\"\r\n03:15û03:45\tAlumni Sharing: Data Science in Industry\r\n03:45û04:15\tQ&A and Valedictory\r\n04:15û04:30\tCertificate Distribution & Feedback"
+  }
+},
+{
+  "model": "emt.tentativeflow",
+  "pk": 19,
+  "fields": {
+    "proposal": 30,
+    "content": "09:30û10:00\tRegistration & Networking\r\n10:00û10:30\tInauguration & Welcome Address\r\n10:30û11:30\tKeynote: \"AI in the Real World\" (Mr. Anil Patil, TCS)\r\n11:30û12:00\tTea Break\r\n12:00û01:30\tWorkshop: \"Hands-on with Python for ML\" (Ms. Sneha Joshi, IBM)\r\n01:30û02:15\tLunch Break\r\n02:15û03:15\tPanel Discussion: \"Future of Data Science Careers\"\r\n03:15û03:45\tAlumni Sharing: Data Science in Industry\r\n03:45û04:15\tQ&A and Valedictory\r\n04:15û04:30\tCertificate Distribution & Feedback"
+  }
+},
+{
+  "model": "emt.tentativeflow",
+  "pk": 20,
+  "fields": {
+    "proposal": 31,
+    "content": "Time\tActivity\r\n09:30û10:00\tRegistration & Networking\r\n10:00û10:30\tInauguration & Welcome Address\r\n10:30û11:30\tKeynote: \"AI in the Real World\" (Mr. Anil Patil, TCS)\r\n11:30û12:00\tTea Break\r\n12:00û01:30\tWorkshop: \"Hands-on with Python for ML\" (Ms. Sneha Joshi, IBM)\r\n01:30û02:15\tLunch Break\r\n02:15û03:15\tPanel Discussion: \"Future of Data Science Careers\"\r\n03:15û03:45\tAlumni Sharing: Data Science in Industry\r\n03:45û04:15\tQ&A and Valedictory\r\n04:15û04:30\tCertificate Distribution & Feedback"
+  }
+},
+{
+  "model": "emt.tentativeflow",
+  "pk": 21,
+  "fields": {
+    "proposal": 32,
+    "content": "EXample"
+  }
+},
+{
+  "model": "emt.tentativeflow",
+  "pk": 22,
+  "fields": {
+    "proposal": 34,
+    "content": "The Hub of Analytics"
+  }
+},
+{
+  "model": "emt.tentativeflow",
+  "pk": 23,
+  "fields": {
+    "proposal": 35,
+    "content": "NONE"
+  }
+},
+{
+  "model": "emt.speakerprofile",
+  "pk": 1,
+  "fields": {
+    "proposal": 30,
+    "full_name": "Mr. Anil Patil",
+    "designation": "Lead Data Scientist",
+    "affiliation": "TCS Mumbai",
+    "contact_email": "anil.patil@tcs.com",
+    "contact_number": "08590542504",
+    "photo": "speakers/Screenshot_2024-05-10_203642.png",
+    "detailed_profile": "12+ years in machine learning, published author, visiting faculty at IIT Bombay."
+  }
+},
+{
+  "model": "emt.speakerprofile",
+  "pk": 2,
+  "fields": {
+    "proposal": 31,
+    "full_name": "Mr. Anil Patil",
+    "designation": "Lead Data Scientist",
+    "affiliation": "TCS Mumbai",
+    "contact_email": "anil.patil@tcs.com",
+    "contact_number": "08590542504",
+    "photo": "speakers/Screenshot_2024-06-26_213314.png",
+    "detailed_profile": "Expert in applied ML, frequent speaker at PyCon, alumni mentor for Christ University."
+  }
+},
+{
+  "model": "emt.expensedetail",
+  "pk": 2,
+  "fields": {
+    "proposal": 28,
+    "sl_no": 1,
+    "particulars": "Speaker Honorarium",
+    "amount": "8000.00"
+  }
+},
+{
+  "model": "emt.expensedetail",
+  "pk": 3,
+  "fields": {
+    "proposal": 30,
+    "sl_no": 1,
+    "particulars": "Speaker Honorarium",
+    "amount": "8000.00"
+  }
+},
+{
+  "model": "emt.expensedetail",
+  "pk": 4,
+  "fields": {
+    "proposal": 31,
+    "sl_no": 1,
+    "particulars": "Speaker Honorarium",
+    "amount": "2000.00"
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 10,
+  "fields": {
+    "proposal": 24,
+    "step_order": 1,
+    "role_required": "faculty",
+    "assigned_to": 5,
+    "approved_by": 5,
+    "approved_at": "2025-07-09T09:26:29.936Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 11,
+  "fields": {
+    "proposal": 24,
+    "step_order": 1,
+    "role_required": "faculty",
+    "assigned_to": 5,
+    "approved_by": null,
+    "approved_at": null,
+    "status": "pending",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 12,
+  "fields": {
+    "proposal": 24,
+    "step_order": 2,
+    "role_required": "dept_iqac",
+    "assigned_to": 6,
+    "approved_by": null,
+    "approved_at": null,
+    "status": "pending",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 13,
+  "fields": {
+    "proposal": 24,
+    "step_order": 3,
+    "role_required": "hod",
+    "assigned_to": 3,
+    "approved_by": null,
+    "approved_at": null,
+    "status": "pending",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 17,
+  "fields": {
+    "proposal": 26,
+    "step_order": 1,
+    "role_required": "faculty",
+    "assigned_to": 5,
+    "approved_by": 5,
+    "approved_at": "2025-07-09T14:39:48.501Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 18,
+  "fields": {
+    "proposal": 26,
+    "step_order": 2,
+    "role_required": "dept_iqac",
+    "assigned_to": 6,
+    "approved_by": 6,
+    "approved_at": "2025-07-09T14:47:55.616Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 19,
+  "fields": {
+    "proposal": 26,
+    "step_order": 3,
+    "role_required": "hod",
+    "assigned_to": 3,
+    "approved_by": 3,
+    "approved_at": "2025-07-09T14:49:06.447Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 20,
+  "fields": {
+    "proposal": 26,
+    "step_order": 4,
+    "role_required": "academic_coordinator",
+    "assigned_to": 7,
+    "approved_by": 7,
+    "approved_at": "2025-07-09T14:52:59.109Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 21,
+  "fields": {
+    "proposal": 27,
+    "step_order": 1,
+    "role_required": "faculty",
+    "assigned_to": 5,
+    "approved_by": 5,
+    "approved_at": "2025-07-10T06:07:55.933Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 22,
+  "fields": {
+    "proposal": 27,
+    "step_order": 2,
+    "role_required": "dept_iqac",
+    "assigned_to": 6,
+    "approved_by": 6,
+    "approved_at": "2025-07-10T06:08:23.053Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 23,
+  "fields": {
+    "proposal": 27,
+    "step_order": 3,
+    "role_required": "hod",
+    "assigned_to": 3,
+    "approved_by": 3,
+    "approved_at": "2025-07-10T06:10:14.596Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 24,
+  "fields": {
+    "proposal": 27,
+    "step_order": 4,
+    "role_required": "academic_coordinator",
+    "assigned_to": 7,
+    "approved_by": 7,
+    "approved_at": "2025-07-10T06:10:47.018Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 25,
+  "fields": {
+    "proposal": 27,
+    "step_order": 5,
+    "role_required": "dean",
+    "assigned_to": 17,
+    "approved_by": 17,
+    "approved_at": "2025-07-10T06:11:25.497Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 26,
+  "fields": {
+    "proposal": 28,
+    "step_order": 1,
+    "role_required": "faculty",
+    "assigned_to": 5,
+    "approved_by": 5,
+    "approved_at": "2025-07-10T07:07:05.204Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 27,
+  "fields": {
+    "proposal": 28,
+    "step_order": 2,
+    "role_required": "dept_iqac",
+    "assigned_to": 6,
+    "approved_by": 6,
+    "approved_at": "2025-07-10T07:07:22.713Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 28,
+  "fields": {
+    "proposal": 28,
+    "step_order": 3,
+    "role_required": "hod",
+    "assigned_to": 3,
+    "approved_by": 3,
+    "approved_at": "2025-07-10T07:07:41.332Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 29,
+  "fields": {
+    "proposal": 30,
+    "step_order": 1,
+    "role_required": "association_head",
+    "assigned_to": 5,
+    "approved_by": 5,
+    "approved_at": "2025-07-11T05:15:01.578Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 30,
+  "fields": {
+    "proposal": 30,
+    "step_order": 2,
+    "role_required": "dept_iqac",
+    "assigned_to": 6,
+    "approved_by": 6,
+    "approved_at": "2025-07-11T05:15:42.145Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 31,
+  "fields": {
+    "proposal": 30,
+    "step_order": 3,
+    "role_required": "hod",
+    "assigned_to": 3,
+    "approved_by": 3,
+    "approved_at": "2025-07-11T05:16:08.406Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 32,
+  "fields": {
+    "proposal": 31,
+    "step_order": 1,
+    "role_required": "association_head",
+    "assigned_to": 5,
+    "approved_by": 5,
+    "approved_at": "2025-07-12T04:10:51.998Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 33,
+  "fields": {
+    "proposal": 31,
+    "step_order": 2,
+    "role_required": "dept_iqac",
+    "assigned_to": 6,
+    "approved_by": 6,
+    "approved_at": "2025-07-12T05:18:03.024Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 34,
+  "fields": {
+    "proposal": 31,
+    "step_order": 3,
+    "role_required": "hod",
+    "assigned_to": 3,
+    "approved_by": 3,
+    "approved_at": "2025-07-12T05:18:31.054Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 35,
+  "fields": {
+    "proposal": 31,
+    "step_order": 4,
+    "role_required": "academic_coordinator",
+    "assigned_to": 7,
+    "approved_by": 7,
+    "approved_at": "2025-07-12T05:20:48.366Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 36,
+  "fields": {
+    "proposal": 31,
+    "step_order": 5,
+    "role_required": "dean",
+    "assigned_to": 17,
+    "approved_by": null,
+    "approved_at": null,
+    "status": "pending",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 37,
+  "fields": {
+    "proposal": 32,
+    "step_order": 1,
+    "role_required": "faculty",
+    "assigned_to": 5,
+    "approved_by": 5,
+    "approved_at": "2025-07-14T09:36:49.280Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 38,
+  "fields": {
+    "proposal": 32,
+    "step_order": 2,
+    "role_required": "dept_iqac",
+    "assigned_to": 6,
+    "approved_by": 6,
+    "approved_at": "2025-07-14T09:37:33.970Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 39,
+  "fields": {
+    "proposal": 32,
+    "step_order": 3,
+    "role_required": "hod",
+    "assigned_to": 3,
+    "approved_by": 3,
+    "approved_at": "2025-07-14T09:38:32.607Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 40,
+  "fields": {
+    "proposal": 34,
+    "step_order": 1,
+    "role_required": "faculty",
+    "assigned_to": 5,
+    "approved_by": 5,
+    "approved_at": "2025-07-15T06:35:40.894Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 41,
+  "fields": {
+    "proposal": 34,
+    "step_order": 2,
+    "role_required": "dept_iqac",
+    "assigned_to": 6,
+    "approved_by": 6,
+    "approved_at": "2025-07-15T06:36:02.078Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 42,
+  "fields": {
+    "proposal": 34,
+    "step_order": 3,
+    "role_required": "hod",
+    "assigned_to": 3,
+    "approved_by": 3,
+    "approved_at": "2025-07-15T06:36:23.371Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 43,
+  "fields": {
+    "proposal": 35,
+    "step_order": 1,
+    "role_required": "faculty",
+    "assigned_to": 5,
+    "approved_by": 5,
+    "approved_at": "2025-07-18T03:37:12.818Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 44,
+  "fields": {
+    "proposal": 35,
+    "step_order": 2,
+    "role_required": "dept_iqac",
+    "assigned_to": 6,
+    "approved_by": 6,
+    "approved_at": "2025-07-18T03:37:43.294Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.approvalstep",
+  "pk": 45,
+  "fields": {
+    "proposal": 35,
+    "step_order": 3,
+    "role_required": "hod",
+    "assigned_to": 3,
+    "approved_by": 3,
+    "approved_at": "2025-07-18T03:40:43.967Z",
+    "status": "approved",
+    "comment": ""
+  }
+},
+{
+  "model": "emt.eventreport",
+  "pk": 1,
+  "fields": {
+    "proposal": 27,
+    "location": "",
+    "blog_link": "",
+    "num_student_volunteers": null,
+    "num_participants": null,
+    "external_contact_details": "",
+    "summary": "",
+    "outcomes": "",
+    "impact_on_stakeholders": "",
+    "innovations_best_practices": "",
+    "pos_pso_mapping": "",
+    "needs_grad_attr_mapping": "",
+    "contemporary_requirements": "",
+    "sdg_value_systems_mapping": "",
+    "iqac_feedback": "",
+    "report_signed_date": "2025-07-10",
+    "beneficiaries_details": "",
+    "created_at": "2025-07-10T10:10:54.146Z",
+    "updated_at": "2025-07-10T10:35:07.168Z"
+  }
+},
+{
+  "model": "emt.eventreport",
+  "pk": 2,
+  "fields": {
+    "proposal": 32,
+    "location": "Kerala",
+    "blog_link": "https://aistudio.google.com/app/apikey",
+    "num_student_volunteers": 3,
+    "num_participants": 10,
+    "external_contact_details": "return redirect('emt:ai_generate_report', proposal_id=proposal.id)",
+    "summary": "return redirect('emt:ai_generate_report', proposal_id=proposal.id)",
+    "outcomes": "return redirect('emt:ai_generate_report', proposal_id=proposal.id)",
+    "impact_on_stakeholders": "return redirect('emt:ai_generate_report', proposal_id=proposal.id)",
+    "innovations_best_practices": "return redirect('emt:ai_generate_report', proposal_id=proposal.id)",
+    "pos_pso_mapping": "return redirect('emt:ai_generate_report', proposal_id=proposal.id)",
+    "needs_grad_attr_mapping": "return redirect('emt:ai_generate_report', proposal_id=proposal.id)",
+    "contemporary_requirements": "return redirect('emt:ai_generate_report', proposal_id=proposal.id)",
+    "sdg_value_systems_mapping": "return redirect('emt:ai_generate_report', proposal_id=proposal.id)",
+    "iqac_feedback": "return redirect('emt:ai_generate_report', proposal_id=proposal.id)",
+    "report_signed_date": "2025-07-14",
+    "beneficiaries_details": "return redirect('emt:ai_generate_report', proposal_id=proposal.id)",
+    "created_at": "2025-07-14T12:48:51.698Z",
+    "updated_at": "2025-07-14T21:22:51.641Z"
+  }
+},
+{
+  "model": "emt.eventreport",
+  "pk": 3,
+  "fields": {
+    "proposal": 30,
+    "location": "Kerala",
+    "blog_link": "https://aistudio.google.com/app/apikey",
+    "num_student_volunteers": 40,
+    "num_participants": 2222,
+    "external_contact_details": "https://meet.google.com/rzk-bjgz-ikb",
+    "summary": "https://meet.google.com/rzk-bjgz-ikb",
+    "outcomes": "https://meet.google.com/rzk-bjgz-ikb",
+    "impact_on_stakeholders": "https://meet.google.com/rzk-bjgz-ikb",
+    "innovations_best_practices": "https://meet.google.com/rzk-bjgz-ikb",
+    "pos_pso_mapping": "https://meet.google.com/rzk-bjgz-ikb",
+    "needs_grad_attr_mapping": "https://meet.google.com/rzk-bjgz-ikb",
+    "contemporary_requirements": "https://meet.google.com/rzk-bjgz-ikb",
+    "sdg_value_systems_mapping": "https://meet.google.com/rzk-bjgz-ikb",
+    "iqac_feedback": "https://meet.google.com/rzk-bjgz-ikb",
+    "report_signed_date": "2025-07-15",
+    "beneficiaries_details": "https://meet.google.com/rzk-bjgz-ikb",
+    "created_at": "2025-07-15T03:02:05.257Z",
+    "updated_at": "2025-07-15T03:02:46.709Z"
+  }
+},
+{
+  "model": "emt.eventreport",
+  "pk": 4,
+  "fields": {
+    "proposal": 34,
+    "location": "Kerala",
+    "blog_link": "https://aistudio.google.com/app/apikey",
+    "num_student_volunteers": 4,
+    "num_participants": 5,
+    "external_contact_details": "The Hub of Analytics",
+    "summary": "The Hub of Analytics",
+    "outcomes": "The Hub of Analytics",
+    "impact_on_stakeholders": "The Hub of Analytics",
+    "innovations_best_practices": "The Hub of Analytics",
+    "pos_pso_mapping": "The Hub of Analytics",
+    "needs_grad_attr_mapping": "The Hub of Analytics",
+    "contemporary_requirements": "The Hub of Analytics",
+    "sdg_value_systems_mapping": "The Hub of Analytics",
+    "iqac_feedback": "The Hub of Analytics",
+    "report_signed_date": "2025-07-15",
+    "beneficiaries_details": "The Hub of Analytics",
+    "created_at": "2025-07-15T06:36:49.198Z",
+    "updated_at": "2025-07-15T06:37:31.779Z"
+  }
+},
+{
+  "model": "emt.eventreport",
+  "pk": 5,
+  "fields": {
+    "proposal": 35,
+    "location": "Kerala",
+    "blog_link": "https://aistudio.google.com/app/apikey",
+    "num_student_volunteers": 3,
+    "num_participants": 2,
+    "external_contact_details": "NONE",
+    "summary": "NONE",
+    "outcomes": "NONE",
+    "impact_on_stakeholders": "NONE",
+    "innovations_best_practices": "NONE",
+    "pos_pso_mapping": "NONE",
+    "needs_grad_attr_mapping": "NONE",
+    "contemporary_requirements": "NONE",
+    "sdg_value_systems_mapping": "NONE",
+    "iqac_feedback": "NONE",
+    "report_signed_date": "2025-07-18",
+    "beneficiaries_details": "NONE",
+    "created_at": "2025-07-18T03:41:53.780Z",
+    "updated_at": "2025-07-18T03:47:26.425Z"
+  }
+},
+{
+  "model": "emt.eventreportattachment",
+  "pk": 1,
+  "fields": {
+    "report": 3,
+    "file": "report_attachments/Screenshot_2024-06-25_220918.png",
+    "caption": ""
+  }
+},
+{
+  "model": "emt.eventreportattachment",
+  "pk": 2,
+  "fields": {
+    "report": 3,
+    "file": "report_attachments/Screenshot_2024-06-25_215634.png",
+    "caption": ""
+  }
+},
+{
+  "model": "emt.eventreportattachment",
+  "pk": 3,
+  "fields": {
+    "report": 4,
+    "file": "report_attachments/Screenshot_2024-06-25_220918.png",
+    "caption": ""
+  }
+},
+{
+  "model": "emt.eventreportattachment",
+  "pk": 4,
+  "fields": {
+    "report": 5,
+    "file": "report_attachments/Screenshot_2024-05-10_203615.png",
+    "caption": ""
+  }
+},
+{
+  "model": "emt.eventreportattachment",
+  "pk": 5,
+  "fields": {
+    "report": 5,
+    "file": "report_attachments/Screenshot_2024-05-10_203642.png",
+    "caption": ""
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 2,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$0s6vXNYlbIkRKXFy6Zm3pJ$4ryOo3GQG+yyzxUUlk5Ig6UYaOY/7qQl0MRRKBU9ZsE=",
+    "last_login": "2025-07-19T05:13:45.367Z",
+    "is_superuser": true,
+    "username": "admin@gmail.com",
+    "first_name": "Admin",
+    "last_name": "",
+    "email": "admin@gmail.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2025-06-20T09:37:22.207Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 3,
+  "fields": {
+    "password": "!rUe00zohztplCz3uUtCMY2GZwlUYZ5Ojca3vNKwl",
+    "last_login": "2025-07-18T03:40:35.434Z",
+    "is_superuser": false,
+    "username": "alen_jin_shibu",
+    "first_name": "ALEN JIN SHIBU",
+    "last_name": "23112001",
+    "email": "alen.shibu@bscdsh.christuniversity.in",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2025-06-20T10:03:03.320Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 4,
+  "fields": {
+    "password": "!wdHoo8LBQw3uU7NHlkPNUfvqUNKkjYvURmBQXJZI",
+    "last_login": "2025-07-18T04:08:16.229Z",
+    "is_superuser": false,
+    "username": "alen",
+    "first_name": "Alen",
+    "last_name": "Jin",
+    "email": "alenjinmgi@gmail.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2025-06-21T03:17:17.343Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 5,
+  "fields": {
+    "password": "!zRztcyGs4XfSoatBYYdLRowswdcXOnV1dslQDfZv",
+    "last_login": "2025-07-18T03:36:43.911Z",
+    "is_superuser": false,
+    "username": "",
+    "first_name": "MGI",
+    "last_name": "",
+    "email": "alenjinfreefire@gmail.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2025-06-30T13:07:31.790Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 6,
+  "fields": {
+    "password": "!xr8G1AEhPDjuP4ZAIecC9dN0Sa2Bj8JbFmGNXN6m",
+    "last_login": "2025-07-18T03:37:23.553Z",
+    "is_superuser": false,
+    "username": "lonelofi",
+    "first_name": "LOFI",
+    "last_name": "Center",
+    "email": "lonelofi@gmail.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2025-06-30T13:13:55.545Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 7,
+  "fields": {
+    "password": "!B3bN77A44UuPJdTkHp4DzFcUPZYl8ixb51tyy8C6",
+    "last_login": "2025-07-12T05:19:01.239Z",
+    "is_superuser": false,
+    "username": "alenjintrades",
+    "first_name": "Max",
+    "last_name": "Rose",
+    "email": "alenjintrades@gmail.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2025-06-30T13:14:07.822Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 17,
+  "fields": {
+    "password": "!Xn3vfEJnAGry5rkxGU7dEtb6KTDETueps6Dx1zch",
+    "last_login": "2025-07-12T06:31:12.473Z",
+    "is_superuser": false,
+    "username": "gptbrothers69",
+    "first_name": "Gpt brothers",
+    "last_name": "",
+    "email": "gptbrothers69@gmail.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2025-07-10T03:13:56.315Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "sites.site",
+  "pk": 1,
+  "fields": {
+    "domain": "127.0.0.1:8000",
+    "name": "127.0.0.1:8000"
+  }
+}
+]
