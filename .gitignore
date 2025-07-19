@@ -1,5 +1,5 @@
 # Byte-compiled / optimized
-__pycache__/
+_pycache_/
 *.py[cod]
 *.so
 
@@ -17,17 +17,21 @@ staticfiles/
 .env
 
 # Migrations (optional – keep only if you regenerate often)
-**/migrations/*.py
-**/migrations/__pycache__/
+*/migrations/.py
+**/migrations/_pycache_/
 
 # IDEs and editors
 .vscode/
 .idea/
 *.suo
-*.ntvs*
+.ntvs
 *.njsproj
 *.sln
 
 # OS
 .DS_Store
 Thumbs.db
+# Backup JSON files (containing secrets)
+sqlite_backup.json
+clean_backup.json
+full_data.json
