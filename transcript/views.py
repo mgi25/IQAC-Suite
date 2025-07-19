@@ -12,6 +12,7 @@ import json
 import zipfile
 from datetime import date
 from urllib.parse import unquote
+from django.db.models import Prefetch, Prefetch, Q, F
 
 # ─────────────────────────────────────────────
 # HOME
@@ -48,23 +49,29 @@ def validate_roll_no(request):
 # STRENGTH CALCULATION
 # ─────────────────────────────────────────────
 def calculate_strength_data(student):
-    participations = Participation.objects.filter(student=student)
+    participations = Participation.objects.select_related('role', 'event').prefetch_related('event__attributes').filter(student=student)
 
     strength_scores = defaultdict(float)
-    all_participations = Participation.objects.all()
     student_strength_totals = defaultdict(lambda: defaultdict(float))
+
+    attribute_strength_map = AttributeStrengthMap.objects.select_related('graduate_attribute', 'character_strength')
+    attr_map = defaultdict(list)
+    for asm in attribute_strength_map:
+        attr_map[asm.graduate_attribute_id].append((asm.character_strength.name, asm.weight))
+
+    all_participations = Participation.objects.select_related('student', 'role', 'event').prefetch_related('event__attributes')
 
     for part in participations:
         role_factor = part.role.factor if part.role else 1.0
         for attr in part.event.attributes.all():
-            for map in AttributeStrengthMap.objects.filter(graduate_attribute=attr):
-                strength_scores[map.character_strength.name] += map.weight * role_factor
+            for strength_name, weight in attr_map[attr.id]:
+                strength_scores[strength_name] += weight * role_factor
 
     for part in all_participations:
         role_factor = part.role.factor if part.role else 1.0
         for attr in part.event.attributes.all():
-            for map in AttributeStrengthMap.objects.filter(graduate_attribute=attr):
-                student_strength_totals[part.student.roll_no][map.character_strength.name] += map.weight * role_factor
+            for strength_name, weight in attr_map[attr.id]:
+                student_strength_totals[part.student.roll_no][strength_name] += weight * role_factor
 
     all_strengths = CharacterStrength.objects.order_by('name')
     strength_data = []
