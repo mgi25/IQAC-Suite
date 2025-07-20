@@ -371,32 +371,44 @@ def submit_expense_details(request, proposal_id):
 # ──────────────────────────────
 @login_required
 def proposal_status_detail(request, proposal_id):
-    # 1) fetch the proposal
     proposal = get_object_or_404(
         EventProposal,
         id=proposal_id,
         submitted_by=request.user
     )
 
-    # 2) get all approval steps in order
+    # Get approval steps
     approval_steps = ApprovalStep.objects.filter(
         proposal=proposal
     ).order_by('step_order')
 
-    # 3) compute the total budget by querying ExpenseDetail directly
-    #    (instead of proposal.expensedetail_set)
-    budget_agg = ExpenseDetail.objects.filter(
+    # Total budget calculation
+    budget_total = ExpenseDetail.objects.filter(
         proposal=proposal
-    ).aggregate(total=Sum('amount'))
-    budget_total = budget_agg['total'] or 0
+    ).aggregate(total=Sum('amount'))['total'] or 0
 
-    # 4) render
+    # ✅ Dynamically assign statuses
+    db_status = (proposal.status or '').strip().lower()
+
+    if db_status == 'rejected':
+        statuses = ['draft', 'submitted', 'under_review', 'rejected']
+    else:
+        statuses = ['draft', 'submitted', 'under_review', 'finalized']
+
+    status_index = statuses.index(db_status) if db_status in statuses else 0
+    progress_percent = int((status_index + 1) * 100 / len(statuses))
+    current_label = statuses[status_index].replace('_', ' ').capitalize()
+
     return render(request, 'emt/proposal_status_detail.html', {
-        'proposal':       proposal,
+        'proposal': proposal,
         'approval_steps': approval_steps,
-        'budget_total':   budget_total,
-        'statuses':       ['draft', 'submitted', 'under_review', 'returned', 'rejected', 'finalized'],
+        'budget_total': budget_total,
+        'statuses': statuses,
+        'status_index': status_index,
+        'progress_percent': progress_percent,
+        'current_label': current_label,
     })
+
 # ──────────────────────────────
 # PENDING REPORTS, GENERATION, SUCCESS
 # ──────────────────────────────
