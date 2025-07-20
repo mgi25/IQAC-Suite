@@ -84,8 +84,6 @@
               <span class="notif-status notif-status-review">Under Review</span>
               {% elif proposal.status == 'rejected' %}
               <span class="notif-status notif-status-rejected">Rejected</span>
-              {% elif proposal.status == 'returned' %}
-              <span class="notif-status notif-status-feedback">Returned</span>
               {% elif proposal.status == 'finalized' %}
               <span class="notif-status notif-status-success">Finalized</span>
               {% endif %}
@@ -101,14 +99,14 @@
               <span class="notif-age-pill">{{ proposal.updated_at|timesince }} ago</span>
             </div>
 
-            {% if proposal.return_comment %}
-            <div class="notif-feedback"><b>Feedback:</b> {{ proposal.return_comment }}</div>
+            {% if proposal.status == 'rejected' and proposal.return_comment %}
+              <div class="notif-feedback"><b>Rejection Reason:</b> {{ proposal.return_comment }}</div>
             {% endif %}
 
             <!-- MODERN PROGRESS CHART -->
             <div class="workflow-progress">
               <div class="progress-steps">
-                {% for status in statuses %}
+                {% for status in proposal.statuses %}
                 <div class="progress-step">
                   <div class="progress-dot
                     {% if forloop.counter0 < proposal.status_index %}progress-dot-past{% endif %}

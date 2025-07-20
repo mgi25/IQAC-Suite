@@ -715,18 +715,20 @@ def suite_dashboard(request):
     )
 
     # 2) Define your workflow statuses in order
-    statuses = ['draft', 'submitted', 'under_review', 'returned', 'rejected', 'finalized']
-
-    # 3) Annotate each proposal with a numeric index, % progress, and label
-    total_steps = len(statuses)
+    statuses_all = ['draft', 'submitted', 'under_review', 'rejected', 'finalized']
     for p in user_proposals:
         db_status = (p.status or '').strip().lower()
-        # Status index in [0 ... total_steps-1]
-        p.status_index = statuses.index(db_status) if db_status in statuses else 0
-        # Percent done: ((index+1)/total_steps)*100
-        p.progress_percent = int((p.status_index + 1) * 100 / total_steps)
-        # Human label
-        p.current_label = statuses[p.status_index].replace('_', ' ').capitalize()
+
+        if db_status == 'rejected':
+            # Show only till rejected
+            p.statuses = ['draft', 'submitted', 'under_review', 'rejected']
+        else:
+            # Normal workflow (excluding rejected if not applicable)
+            p.statuses = ['draft', 'submitted', 'under_review', 'finalized']
+
+        p.status_index = p.statuses.index(db_status) if db_status in p.statuses else 0
+        p.progress_percent = int((p.status_index + 1) * 100 / len(p.statuses))
+        p.current_label = p.statuses[p.status_index].replace('_', ' ').capitalize()
 
     # 4A) Option A: show approvals card based on the user's assigned roles
     ras = request.user.role_assignments.all()
@@ -747,7 +749,6 @@ def suite_dashboard(request):
     # 5) Render
     return render(request, 'emt/iqac_suite_dashboard.html', {
         'user_proposals': user_proposals,
-        'statuses': statuses,
         'show_approvals_card': show_approvals_card,
     })
 
