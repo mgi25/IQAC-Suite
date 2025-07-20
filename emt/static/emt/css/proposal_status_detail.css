@@ -1,219 +1,373 @@
-/* ----------------------------------------
-   1) PAGE WRAPPER
----------------------------------------- */
+/* ========================================================================
+   Proposal Status & Detail — proposal_status_detail.css
+   ======================================================================== */
+
+/* ——————————————————————————————————————————————————————————————————————
+   1) CSS VARIABLES (CHRIST University Palette + Utilities)
+   —————————————————————————————————————————————————————————————————————— */
+:root {
+  /* Brand Colors */
+  --christ-blue-primary:   #2c5aa0;
+  --christ-blue-secondary: #1e4180;
+  --christ-blue-dark:      #1a3a75;
+  --christ-gold:           #d4af37;
+
+  /* Neutral Grays */
+  --white:     #ffffff;
+  --gray-50:   #f9fafb;
+  --gray-100:  #f3f4f6;
+  --gray-200:  #e5e7eb;
+  --gray-300:  #d1d5db;
+  --gray-400:  #9ca3af;
+  --gray-500:  #6b7280;
+  --gray-600:  #4b5563;
+  --gray-700:  #374151;
+  --gray-800:  #1f2937;
+  --gray-900:  #111827;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow:    0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05);
+  --shadow-xl: 0 20px 25px rgba(0,0,0,0.1), 0 8px 10px rgba(0,0,0,0.05);
+
+  /* Border Radii */
+  --radius-sm: 4px;
+  --radius:    8px;
+  --radius-lg: 12px;
+  --radius-xl:16px;
+
+  /* Transitions */
+  --trans-fast: 0.15s ease;
+  --trans-md:   0.3s ease;
+  --trans-slow: 0.6s ease;
+
+  /* Typography */
+  --font-base: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --fs-xs:     0.75rem;
+  --fs-sm:     0.875rem;
+  --fs-md:     1rem;
+  --fs-lg:     1.125rem;
+  --fs-xl:     1.25rem;
+  --fs-2xl:    1.5rem;
+}
+
+
+/* ——————————————————————————————————————————————————————————————————————
+   2) GLOBAL RESET & BASE TYPOGRAPHY
+   —————————————————————————————————————————————————————————————————————— */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+body {
+  font-family: var(--font-base);
+  font-size: var(--fs-md);
+  color: var(--gray-700);
+  background: var(--gray-50);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+a {
+  color: var(--christ-blue-primary);
+  text-decoration: none;
+  transition: color var(--trans-fast);
+}
+a:hover { color: var(--christ-blue-secondary); }
+
+/* Utility helpers */
+.text-center { text-align: center; }
+.mt-1 { margin-top: 0.5rem; }
+.mt-2 { margin-top: 1rem; }
+.mt-3 { margin-top: 1.5rem; }
+.p-1 { padding: 0.5rem; }
+.p-2 { padding: 1rem; }
+
+/* ========================================================================
+   3) LAYOUT: TWO-COLUMN GRID
+   ======================================================================== */
 .detail-container {
-  max-width: 900px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  max-width: 1280px;
   margin: 2rem auto;
   padding: 0 1rem;
 }
+@media (min-width: 960px) {
+  .detail-container {
+    grid-template-columns: 1fr 1fr;
+  }
+}
 
-/* ----------------------------------------
-   2) OVERVIEW CARD
----------------------------------------- */
+
+/* ========================================================================
+   4) OVERVIEW CARD (Full Width)
+   ======================================================================== */
 .overview-card {
-  background: #fff;
-  border-radius: 1.5rem;
-  box-shadow: 0 4px 24px rgba(33,118,210,0.08);
+  grid-column: 1 / -1;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
   padding: 2rem;
-  margin-bottom: 2rem;
-}
-
-.overview-card h2 {
-  margin: 0 0 1rem;
-  color: #1a365d;
-  font-size: 2rem;
-}
-
-.overview-fields {
-  display: grid;
-  grid-template-columns: repeat(auto-fit,minmax(200px,1fr));
-  gap: 0.75rem 1.5rem;
-}
-
-.overview-fields .label {
-  font-weight: 600;
-  color: #334155;
-}
-
-/* Status badge */
-.status-badge {
-  display: inline-block;
-  padding: 0.3em 0.8em;
-  border-radius: 999px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.status-badge.status-draft        { background:#f1f5f9; color:#64748b; }
-.status-badge.status-submitted    { background:#e3edff; color:#2176d2; }
-.status-badge.status-under_review { background:#eaf1fa; color:#2176d2; }
-.status-badge.status-returned     { background:#fff4e6; color:#d97706; }
-.status-badge.status-rejected     { background:#ffeaea; color:#b91c1c; }
-.status-badge.status-finalized    { background:#d1fae5; color:#059669; }
-
-/* ----------------------------------------
-   3) HORIZONTAL STEPPER (GRAPH)
----------------------------------------- */
-.status-graph {
   display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem 3rem;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 2rem;
-  position: relative;
-  padding: 0 1rem;
 }
-
-.status-graph .node {
+.overview-card h2 {
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  color: var(--christ-blue-dark);
+  flex: 1 1 100%;
+}
+.overview-fields {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex: 1;
-  text-align: center;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  flex: 1 1 auto;
 }
-
-.status-graph .node-circle {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #cbd5e1;
-  margin-bottom: 0.5rem;
-  transition: background 0.3s;
-}
-
-.status-graph .node.active .node-circle {
-  background: #3b82f6;
-}
-
-.status-graph .node-label {
-  font-size: 0.85rem;
-  color: #475569;
-}
-
-.status-graph .node.active .node-label {
-  color: #1e3a8a;
+.overview-fields .label {
   font-weight: 600;
+  color: var(--gray-600);
+  margin-right: 0.25rem;
 }
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: capitalize;
+}
+/* Status-specific badge colors */
+.status-badge.status-draft       { background: #e0f2fe; color: #0369a1; }
+.status-badge.status-submitted   { background: #fef9c3; color: #b45309; }
+.status-badge.status-under_review{ background: #ede9fe; color: #6d28d9; }
+.status-badge.status-returned    { background: #fde8e8; color: #b91c1c; }
+.status-badge.status-rejected    { background: #fee2e2; color: #991b1b; }
+.status-badge.status-finalized   { background: #d1fae5; color: #047857; }
 
+
+/* ========================================================================
+   5) HORIZONTAL STEPPER
+   ======================================================================== */
+.status-graph {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 2rem 0;
+  border-bottom: 1px solid var(--gray-200);
+  overflow-x: auto;
+}
+.status-graph .node,
 .status-graph .connector {
-  height: 4px;
-  background: #cbd5e1;
-  flex: 1;
-  margin: 0 0.5rem;
-  transition: background 0.3s;
+  flex: 1 1 0;
 }
-
+.status-graph .node {
+  text-align: center;
+  position: relative;
+}
+.status-graph .node-circle {
+  width: 14px;
+  height: 14px;
+  margin: 0 auto 0.5rem;
+  border-radius: 50%;
+  background: var(--gray-300);
+  transition: background var(--trans-fast), transform var(--trans-fast);
+}
+.status-graph .node.active .node-circle {
+  background: var(--christ-blue-primary);
+  transform: scale(1.2);
+}
+.status-graph .node-label {
+  font-size: var(--fs-xs);
+  color: var(--gray-600);
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+.status-graph .connector {
+  height: 2px;
+  background: var(--gray-300);
+  margin-top: 6px;
+  transition: background var(--trans-fast);
+}
 .status-graph .connector.active {
-  background: #3b82f6;
+  background: var(--christ-blue-primary);
 }
 
-/* ----------------------------------------
-   4) VERTICAL TIMELINE
----------------------------------------- */
+
+/* ========================================================================
+   6) VERTICAL TIMELINE (Left Column)
+   ======================================================================== */
 .approval-timeline {
   position: relative;
-  margin-left: 1rem;
+  padding-left: 2rem;
+  border-left: 2px solid var(--gray-200);
 }
-
 .timeline-list {
   list-style: none;
-  padding: 0;
-  margin: 0;
-  position: relative;
 }
-
-.timeline-list::before {
-  content: '';
-  position: absolute;
-  top: 1.5rem;
-  bottom: 0;
-  left: 24px;
-  width: 2px;
-  background: #cbd5e1;
-}
-
 .timeline-item {
   position: relative;
   margin-bottom: 2rem;
-  padding-left: 3rem;
 }
+.timeline-item:last-child { margin-bottom: 0; }
 
-.timeline-item:last-child {
-  margin-bottom: 1rem;
-}
-
+/* Dot */
 .timeline-dot {
   position: absolute;
-  top: 0.5rem;
-  left: 16px;
+  left: -8px;
+  top: 4px;
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: #cbd5e1;
-  transition: background 0.3s;
-  z-index: 2;
+  background: var(--gray-300);
+  transition: background var(--trans-fast);
 }
+/* Dot colors by status */
+.timeline-item.approved   .timeline-dot { background: #10b981; }
+.timeline-item.rejected   .timeline-dot { background: #ef4444; }
+.timeline-item.pending    .timeline-dot { background: #f59e0b; }
+.timeline-item.waiting    .timeline-dot { background: var(--gray-300); }
 
-.timeline-item.approved .timeline-dot { background: #22c55e; }
-.timeline-item.pending  .timeline-dot { background: #facc15; }
-.timeline-item.rejected .timeline-dot { background: #ef4444; }
-
+/* Card */
 .timeline-card {
-  background: #fff;
-  border-radius: 1rem;
-  box-shadow: 0 2px 8px rgba(33,118,210,0.08);
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
   padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--trans-fast), box-shadow var(--trans-fast);
+}
+.timeline-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
-.timeline-card h4 {
-  margin: 0 0 0.5rem;
-  color: #1a365d;
-  font-size: 1.1rem;
+/* Header row inside each timeline card */
+.timeline-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
 }
-
-.timeline-card p {
-  margin: 0.4rem 0;
-  color: #475569;
-  font-size: 0.95rem;
-}
-
-/* ----------------------------------------
-   5) BACK BUTTON
----------------------------------------- */
-.back-btn {
-  display: inline-block;
-  margin: 2rem auto;
-  background: linear-gradient(90deg,#2176d2,#3ec6ff);
-  color: #fff;
-  padding: 0.8rem 2rem;
-  border-radius: 2rem;
+.timeline-header-row h4 {
+  font-size: var(--fs-lg);
+  color: var(--christ-blue-dark);
   font-weight: 600;
-  text-decoration: none;
-  transition: background 0.2s;
+}
+.timeline-meta {
+  font-size: var(--fs-sm);
+  color: var(--gray-600);
+  margin-bottom: 0.5rem;
+}
+.timeline-date {
+  margin-left: 1rem;
+  font-style: italic;
+}
+.timeline-comment {
+  font-size: var(--fs-sm);
+  background: var(--gray-50);
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--gray-200);
+}
+.timeline-comment-label {
+  font-weight: 600;
+  margin-right: 0.5rem;
 }
 
+
+/* ========================================================================
+   7) EVENT DETAILS CARD (Right Column)
+   ======================================================================== */
+.event-details-card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 2rem;
+}
+.event-details-card h3 {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  color: var(--christ-blue-primary);
+  margin-bottom: 1rem;
+  border-bottom: 2px solid var(--gray-100);
+  padding-bottom: 0.5rem;
+}
+.event-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem 2rem;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+}
+.field-label {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--gray-600);
+  margin-bottom: 0.25rem;
+}
+.field-value {
+  font-size: var(--fs-md);
+  color: var(--gray-800);
+  line-height: 1.4;
+}
+
+
+/* ========================================================================
+   8) BACK BUTTON (Full Width)
+   ======================================================================== */
+.back-btn {
+  grid-column: 1 / -1;
+  display: inline-block;
+  background: var(--christ-blue-primary);
+  color: var(--white);
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-lg);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-align: center;
+  transition: background var(--trans-fast), transform var(--trans-fast);
+  margin-top: 1rem;
+}
 .back-btn:hover {
-  background: linear-gradient(90deg,#1a365d,#2176d2);
+  background: var(--christ-blue-secondary);
+  transform: translateY(-1px);
 }
 
-/* ----------------------------------------
-   6) RESPONSIVE
----------------------------------------- */
-@media (max-width: 768px) {
-  .overview-fields {
-    grid-template-columns: 1fr;
-  }
-  .status-graph {
-    flex-wrap: wrap;
-    padding: 0;
-  }
-  .status-graph .connector {
-    flex-basis: 100%;
-    margin: 8px 0;
-  }
-  .timeline-list::before {
-    left: 16px;
-  }
-  .timeline-dot {
-    left: 10px;
+
+/* ========================================================================
+   9) RESPONSIVE TWEAKS
+   ======================================================================== */
+@media (max-width: 959px) {
+  .detail-container { grid-template-columns: 1fr; }
+  .approval-timeline { padding-left: 1rem; }
+  .timeline-dot { left: -6px; }
+}
+@media (max-width: 599px) {
+  .overview-card { flex-direction: column; gap: 1rem; }
+  .status-graph { flex-wrap: wrap; gap: 1rem; padding: 1rem; }
+}
+
+
+/* ========================================================================
+   10) REDUCED MOTION & ACCESSIBILITY
+   ======================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition: none !important;
+    animation: none !important;
   }
 }
