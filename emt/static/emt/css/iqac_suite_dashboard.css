@@ -1,5 +1,5 @@
 /* -------------------------------- */
-/* 1) MAIN LAYOUT                  */
+/* 1) MAIN LAYOUT                   */
 /* -------------------------------- */
 .suite-dashboard-container {
   display: flex;
@@ -8,63 +8,146 @@
   width: 100%;
   min-height: 100vh;
   background: #eaf6ff;
-  padding: 2rem;
+  padding: 0;
   box-sizing: border-box;
+}
+
+.suite-dashboard-content {
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 2.5rem 2rem 2rem 2rem;
+  box-sizing: border-box;
+}
+
+.suite-dashboard-header {
+  width: 100%;
+  padding: 2rem 0 1.5rem 0;
+  text-align: left;
 }
 
 .suite-dashboard-title {
-  font-size: 2.5rem;
+  font-size: 2.7rem;
+  font-weight: 800;
+  color: #204d8c;
+  margin-bottom: 0.6rem;
+  letter-spacing: -1px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+.suite-dashboard-title span:first-child {
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: #475569;
+  margin-right: 0.25em;
+  letter-spacing: 0;
+}
+.suite-dashboard-username {
+  font-size: 2.2rem;
   font-weight: 700;
   color: #2176d2;
-  margin-bottom: 2rem;
-  text-align: center;
+  letter-spacing: -1px;
+  margin-left: 0.25em;
 }
 
+.suite-dashboard-subtitle {
+  font-size: 1.25rem;
+  color: #304160;
+  margin-bottom: 0.3rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.suite-dashboard-desc {
+  display: block;
+  font-size: 1.02rem;
+  color: #7894b2;
+  margin-top: 0.3rem;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+
+/* -------------------------------- */
+/* 2) BODY SPLIT LAYOUT             */
+/* -------------------------------- */
 .suite-dashboard-body {
   display: flex;
   width: 100%;
-  max-width: 1400px;
-  gap: 2rem;
+  gap: 2.8rem;
   box-sizing: border-box;
-  align-items: flex-start;    /* don’t force left grid to stretch */
+  align-items: flex-start;
 }
 
 /* -------------------------------- */
-/* 2) LEFT GRID WITH UP TO 4 CARDS */
+/* 3) LEFT: APPLICATIONS            */
 /* -------------------------------- */
-.suite-left-section {
-  flex: 1;
+.suite-apps-section {
+  flex: 1.3;
+  min-width: 340px;
+}
+
+.suite-apps-header {
+  margin-bottom: 1.1rem;
+}
+.suite-apps-header h2 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #1d3666;
+  margin: 0 0 0.3rem 0;
+  letter-spacing: 0.01em;
+}
+
+/* Grid for app cards */
+.suite-apps-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  grid-auto-rows: auto;        /* let rows size to their content */
-  gap: 2rem;
-  align-content: start;        /* collapse unused space */
+  gap: 1.8rem 2rem;
 }
 
-/* -------------------------------- */
-/* 3) CARD STYLES                  */
-/* -------------------------------- */
-.suite-card {
+.suite-app-card {
   background: #fff;
-  border-radius: 2rem;
-  box-shadow: 0 4px 24px rgba(33,118,210,0.08);
-  padding: 2rem;
+  border-radius: 1.6rem;
+  box-shadow: 0 4px 28px rgba(33,118,210,0.10), 0 1.5px 8px rgba(47,56,69,0.02);
+  padding: 1.5rem 1.8rem 1.2rem 1.8rem;
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: space-between;
-  height: 100%;                /* fill its grid cell */
+  min-height: 170px;
+  transition: box-shadow 0.18s, transform 0.14s;
+  border: 1.5px solid #eaf6ff;
+  position: relative;
+}
+
+.suite-card-hover:hover, .suite-app-card:focus-within {
+  box-shadow: 0 6px 32px rgba(33,118,210,0.15), 0 1.5px 12px rgba(47,56,69,0.04);
+  transform: translateY(-2px) scale(1.015);
+  border-color: #b0e1fc;
+  z-index: 2;
+}
+
+.suite-app-card-header {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
 }
 
 .suite-card-icon {
-  width: 60px;
-  height: 60px;
+  width: 54px;
+  height: 54px;
   background: #eaf6ff;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 1.2rem;
+  min-width: 54px;
+  margin-bottom: 0;
+}
+.suite-card-icon svg {
+  stroke: currentColor;
+  width: 30px;
+  height: 30px;
 }
 
 /* icon color overrides */
@@ -73,72 +156,73 @@
 .suite-card-icon-green  { color: #22c55e; }
 .suite-card-icon-orange { color: #f97316; }
 
-.suite-card-icon svg {
-  stroke: currentColor;
-  width: 32px;
-  height: 32px;
-}
-
-.suite-card-title {
-  font-size: 1.25rem;
+.suite-app-card-title {
+  font-size: 1.22rem;
   font-weight: 700;
   color: #1a365d;
-  margin-bottom: 0.5rem;
-  text-align: center;
+  margin-bottom: 0.25rem;
+  text-align: left;
+  letter-spacing: 0.01em;
 }
-
-.suite-card-desc {
+.suite-app-card-desc {
   font-size: 1rem;
   color: #5a6a85;
-  text-align: center;
-  margin-bottom: 1.5rem;
+  text-align: left;
+  font-weight: 400;
+  margin-bottom: 0;
 }
 
-.suite-card-btn {
+.suite-app-card-btn {
+  margin-top: 1.1rem;
+  align-self: flex-end;
   background: linear-gradient(90deg, #2176d2 0%, #3ec6ff 100%);
   color: #fff;
-  padding: 0.7rem 2.2rem;
+  padding: 0.66rem 2rem;
   border-radius: 2rem;
-  font-size: 1.1rem;
+  font-size: 1.08rem;
   font-weight: 700;
   text-decoration: none;
   border: none;
-  transition: background 0.2s;
+  transition: background 0.16s, box-shadow 0.14s;
+  box-shadow: 0 2px 6px rgba(33,118,210,0.04);
 }
-
-.suite-card-btn:hover {
+.suite-app-card-btn:hover, .suite-app-card-btn:focus {
   background: linear-gradient(90deg, #1a365d 0%, #2176d2 100%);
+  box-shadow: 0 4px 18px rgba(33,118,210,0.09);
 }
 
 /* -------------------------------- */
 /* 4) RIGHT PANEL: NOTIFICATIONS    */
 /* -------------------------------- */
 .suite-right-section {
-  flex: 1;
+  flex: 0.9;
+  min-width: 340px;
+  max-width: 440px;
   background: #fff;
-  border-radius: 1.5rem;
-  box-shadow: 0 2px 8px rgba(33,118,210,0.08);
-  padding: 2rem;
+  border-radius: 1.6rem;
+  box-shadow: 0 2.5px 12px rgba(33,118,210,0.10), 0 1px 4px rgba(47,56,69,0.03);
+  padding: 2rem 1.5rem;
   display: flex;
   flex-direction: column;
 }
 
 .notif-heading {
-  font-size: 1.2rem;
-  font-weight: bold;
-  margin-bottom: 1rem;
-  padding: 0.5rem 1.5rem;
+  font-size: 1.22rem;
+  font-weight: 700;
+  margin-bottom: 1.1rem;
+  padding: 0.45rem 1.2rem;
   background: #eaf6ff;
   color: #2176d2;
-  border-radius: 1.5rem;
+  border-radius: 1.3rem;
   display: inline-block;
+  letter-spacing: 0.01em;
 }
 
 .notif-box {
   background: #f6fbff;
   border-radius: 1rem;
-  padding: 1rem;
-  border: 1px solid #e3eaf2;
+  padding: 1.15rem 1rem;
+  border: 1.5px solid #e3eaf2;
   flex: 1;
   overflow-y: auto;
 }
@@ -152,12 +236,12 @@
 .notif-item {
   background: #fff;
   border-radius: 1.2rem;
-  box-shadow: 0 2px 8px rgba(33,118,210,0.08);
-  padding: 1.2rem 1.5rem;
+  box-shadow: 0 2px 8px rgba(33,118,210,0.07);
+  padding: 1.2rem 1.3rem 1.1rem 1.3rem;
   margin-bottom: 1.2rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.55rem;
 }
 
 .notif-row {
@@ -167,41 +251,156 @@
 }
 
 .notif-event-title {
-  font-size: 1.1rem;
-  font-weight: 600;
+  font-size: 1.13rem;
+  font-weight: 700;
   color: #1a365d;
 }
 
-/* new rule for your “Submitted” / “Under Review” badges */
+/* Badge styles */
 .notif-status {
   display: inline-block;
-  font-size: 0.95rem;
-  font-weight: 600;
-  padding: 0.25em 1em;
+  font-size: 0.97rem;
+  font-weight: 700;
+  padding: 0.25em 1.15em;
   border-radius: 999px;
-  box-shadow: 0 1px 4px rgba(33,118,210,0.06);
+  box-shadow: 0 1px 4px rgba(33,118,210,0.07);
 }
-
 .notif-status-pending   { background: #fffbe6; color: #bfa100; border: 1px solid #ffe066; }
 .notif-status-submitted { background: #e3edff; color: #2176d2; }
 .notif-status-review    { background: #eaf1fa; color: #2176d2; }
 .notif-status-rejected  { background: #ffeaea; color: #e23c3c; }
 .notif-status-feedback  { background: #ffeaea; color: #e23c3c; }
+.notif-status-success   { background: #e8faf0; color: #22c55e; border: 1px solid #bbf7d0; }
+
+.notif-meta-badge {
+  margin: 7px 0;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.notif-date-pill, .notif-age-pill {
+  background-color: #f1f5f9;
+  border-radius: 999px;
+  padding: 4px 11px;
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+.notif-date-pill svg {
+  color: #64748b;
+}
+
+.notif-feedback {
+  background: #fef3f2;
+  color: #b91c1c;
+  border-radius: 0.7rem;
+  padding: 0.65em 1em;
+  margin: 0.5em 0 0 0;
+  font-size: 0.96rem;
+  font-weight: 500;
+  border: 1px solid #fca5a5;
+}
+
+.notif-view-btn {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 0.96rem;
+  color: #2563eb;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.18s;
+}
+.notif-view-btn:hover {
+  color: #1e40af;
+  text-decoration: underline;
+}
+
+.notif-empty {
+  text-align: center;
+  color: #8099bb;
+  font-size: 1.09rem;
+  padding: 2.5rem 0 1.2rem 0;
+  font-weight: 500;
+  opacity: 0.85;
+}
 
 /* -------------------------------- */
 /* 5) RESPONSIVE                   */
 /* -------------------------------- */
+@media (max-width: 1250px) {
+  .suite-dashboard-content {
+    padding-left: 0.7rem;
+    padding-right: 0.7rem;
+  }
+  .suite-dashboard-body {
+    gap: 1.5rem;
+  }
+  .suite-right-section {
+    min-width: 280px;
+    max-width: 99vw;
+    padding: 1.2rem 0.7rem;
+  }
+}
+
 @media (max-width: 1024px) {
   .suite-dashboard-body {
     flex-direction: column;
+    gap: 2.3rem;
   }
-  .suite-left-section {
+  .suite-apps-grid {
     grid-template-columns: 1fr;
-    grid-auto-rows: auto;
+    gap: 1.3rem 0;
   }
   .suite-right-section {
-    margin-top: 2rem;
+    margin-top: 2.4rem;
     width: 100%;
+    min-width: 0;
+    max-width: 100vw;
+    padding: 1.2rem 0.7rem;
+  }
+}
+
+@media (max-width: 700px) {
+  .suite-dashboard-header {
+    padding-left: 0.3rem;
+    padding-right: 0.3rem;
+    padding-top: 1.1rem;
+  }
+  .suite-dashboard-title {
+    font-size: 2.1rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+  }
+  .suite-dashboard-username {
+    font-size: 1.4rem;
+  }
+  .suite-dashboard-desc, .suite-dashboard-subtitle {
+    font-size: 0.99rem;
+  }
+  .suite-apps-section {
+    min-width: 0;
+  }
+  .suite-right-section {
+    padding: 0.9rem 0.2rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .suite-apps-grid {
+    grid-template-columns: 1fr;
+    gap: 1.1rem 0;
+  }
+  .suite-app-card, .suite-right-section {
+    padding-left: 0.7rem;
+    padding-right: 0.7rem;
+  }
+  .suite-dashboard-header {
+    padding: 0.6rem 0 1rem 0;
   }
 }
 
@@ -209,8 +408,10 @@
   .notif-row {
     flex-direction: column;
     align-items: flex-start;
+    gap: 0.4em;
   }
 }
+
 /* ---- DOT STEP PROGRESS ---- */
 .status-bar {
   display: flex;
@@ -222,18 +423,18 @@
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background-color: #cbd5e1; /* light gray */
+  background-color: #cbd5e1;
   transition: background-color 0.3s ease;
 }
 .status-dot-past {
-  background-color: #22c55e; /* green */
+  background-color: #22c55e;
 }
 .status-dot-current {
-  background-color: #3b82f6; /* blue */
+  background-color: #3b82f6;
   box-shadow: 0 0 4px #60a5fa;
 }
 .status-dot-future {
-  background-color: #e5e7eb; /* gray */
+  background-color: #e5e7eb;
 }
 .status-bar-line {
   flex: 1;
@@ -243,106 +444,6 @@
 }
 
 /* ---- FILLED HORIZONTAL BAR ---- */
-.progress-bar-container {
-  width: 90%;
-  background: #e5e7eb;
-  border-radius: 8px;
-  height: 10px;
-  margin: 10px 0 4px 0;
-  overflow: hidden;
-  box-shadow: 0 1px 2px rgba(60,90,130,0.04);
-}
-.progress-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg,#22c55e,#3b82f6);
-  border-radius: 8px;
-  transition: width 0.4s cubic-bezier(.4,2,.3,1);
-}
-.progress-bar-label {
-  display: block;
-  text-align: right;
-  font-size: 12px;
-  color: #64748b;
-  margin-top: -4px;
-  margin-bottom: 6px;
-}
-/* --- Modern Workflow Chart --- */
-
-.workflow-progress {
-  margin: 18px 0 10px 0;
-}
-
-.progress-steps {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  position: relative;
-  margin-bottom: 20px;
-  margin-left: 10px;
-  margin-right: 10px;
-}
-
-.progress-step {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex: 1 1 0;
-  position: relative;
-}
-
-.progress-dot {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 5px;
-  z-index: 1;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.10);
-}
-
-.progress-dot-past {
-  background: #e0ffe9;
-}
-
-.progress-dot-current {
-  background: #dbeafe;
-  border: 2px solid #3b82f6;
-}
-
-.progress-dot-future {
-  background: #f4f4f5;
-  opacity: 0.8;
-}
-
-.progress-step-line {
-  position: absolute;
-  left: 50%;
-  top: 10px;
-  width: 100%;
-  height: 2px;
-  background: linear-gradient(90deg, #22c55e, #3b82f6 80%);
-  z-index: 0;
-  transform: translateX(11px);
-}
-
-.progress-step-label {
-  margin-top: 6px;
-  font-size: 12px;
-  color: #64748b;
-  text-align: center;
-  min-width: 65px;
-  white-space: nowrap;
-}
-
-/* Hide last line */
-.progress-step:last-child .progress-step-line {
-  display: none;
-}
-
-/* Progress Bar */
 .progress-bar-container {
   width: 100%;
   background: #e5e7eb;
@@ -367,39 +468,68 @@
   margin-bottom: 2px;
   letter-spacing: 0.2px;
 }
-.notif-meta-badge {
-  margin: 6px 0;
+
+/* --- Modern Workflow Chart --- */
+.workflow-progress {
+  margin: 18px 0 10px 0;
+}
+.progress-steps {
   display: flex;
-  gap: 10px;
-  align-items: center;
-  font-size: 13px;
+  align-items: flex-end;
+  justify-content: space-between;
+  position: relative;
+  margin-bottom: 20px;
+  margin-left: 10px;
+  margin-right: 10px;
 }
-
-.notif-date-pill, .notif-age-pill {
-  background-color: #f1f5f9;
-  border-radius: 999px;
-  padding: 4px 10px;
-  color: #334155;
-  display: inline-flex;
+.progress-step {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
-  font-weight: 500;
+  flex: 1 1 0;
+  position: relative;
 }
-
-.notif-date-pill svg {
+.progress-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 5px;
+  z-index: 1;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.10);
+}
+.progress-dot-past {
+  background: #e0ffe9;
+}
+.progress-dot-current {
+  background: #dbeafe;
+  border: 2px solid #3b82f6;
+}
+.progress-dot-future {
+  background: #f4f4f5;
+  opacity: 0.8;
+}
+.progress-step-line {
+  position: absolute;
+  left: 50%;
+  top: 10px;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, #22c55e, #3b82f6 80%);
+  z-index: 0;
+  transform: translateX(11px);
+}
+.progress-step-label {
+  margin-top: 6px;
+  font-size: 12px;
   color: #64748b;
+  text-align: center;
+  min-width: 65px;
+  white-space: nowrap;
 }
-.notif-view-btn {
-  display: inline-block;
-  margin-top: 10px;
-  font-size: 0.9rem;
-  color: #2563eb;
-  font-weight: 500;
-  text-decoration: none;
-  transition: all 0.2s ease;
-}
-
-.notif-view-btn:hover {
-  color: #1e40af;
-  text-decoration: underline;
+.progress-step:last-child .progress-step-line {
+  display: none;
 }

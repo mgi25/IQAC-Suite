@@ -1,0 +1,10 @@
+TODO - EMT
+  -> Event Approvel Flow Management Admin side
+  -> fix the bugs in Event flow approvel 
+  -> Improve and automate Event Report Genenration 
+  -> admin side POS PSO
+  -> New Design Updates 
+  -> The Proposal Automation on Application Based on their Membership (example: A user is a Member of an Art's club so when the User  clicks on event Proposal it should automaticaly select arts club and if not the user can change it based on user prefrence)
+  -> In event proposal we need to add new option releated to CDL service 
+  -> Other works Assigned to team members are pending 
+  ->CDL Part is pending(will work on that after completing the emt)
