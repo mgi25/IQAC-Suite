@@ -1,4 +1,10 @@
 from pathlib import Path
+import os
+from dotenv import load_dotenv
+import dj_database_url
+
+# Load environment variables from .env file
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -80,16 +86,10 @@ WSGI_APPLICATION = 'iqac_project.wsgi.application'
 # ──────────────────────────────────────────────────────────────────────────────
 # DATABASE
 # ──────────────────────────────────────────────────────────────────────────────
-import os
-from dotenv import load_dotenv
-import dj_database_url
-
-load_dotenv()  # 👈 This is critical
-
 DATABASES = {
-    'default': dj_database_url.parse(
-        os.getenv('DATABASE_URL'),
-        engine='django.db.backends.postgresql',
+    'default': dj_database_url.config(
+        conn_max_age=600,
+        ssl_require=True
     )
 }
 
@@ -150,8 +150,6 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
-
-# settings.py
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
