@@ -975,4 +975,3 @@ def ai_report_submit(request, proposal_id):
     from django.contrib import messages
     messages.success(request, "Event report submitted successfully!")
     return redirect('emt:report_success', proposal_id=proposal.id)
-
