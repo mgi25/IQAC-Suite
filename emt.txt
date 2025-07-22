@@ -8,3 +8,11 @@ TODO - EMT
   -> In event proposal we need to add new option releated to CDL service 
   -> Other works Assigned to team members are pending 
   ->CDL Part is pending(will work on that after completing the emt)
+
+
+
+  year 
+
+  -> In master data page - enter acadamic year (based on this year all data will save or working) master data management page -> 25-26
+  -> for Analytics use (user can selelct any year based on prefere)
+  -> for eg creating a new organization (admin already have selected an acdimic year) -> (comes under this year) 
