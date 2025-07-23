@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',  # ← required by allauth
+    'django_extensions',
 
     # Allauth for Google login
     'allauth',

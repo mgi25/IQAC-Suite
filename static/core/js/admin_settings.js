@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-
     // --- UTILITY FUNCTIONS ---
     const getCookie = (name) => {
         let cookieValue = null;
@@ -16,6 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return cookieValue;
     };
     const CSRF_TOKEN = getCookie('csrftoken');
+
+    // Make sure your Django view passes this!
+    const orgsByType = window.orgsByType || JSON.parse('{{ orgs_by_type_json|safe }}');
 
     const showToast = (message, type = 'success') => {
         const toast = document.getElementById('toast-notification');
@@ -48,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     errorData = { error: response.statusText };
                 }
                 if (errorData.error && errorData.error.includes('UNIQUE constraint failed')) {
-                   return { success: false, error: 'An entry with this name already exists in this academic year.' };
+                    return { success: false, error: 'An entry with this name already exists in this academic year.' };
                 }
                 return { success: false, error: errorData.error || 'Request failed' };
             }
@@ -60,165 +62,157 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- ADD FORM LOGIC ---
+    // --- ADD NEW ENTRY FORM LOGIC ---
     const addForm = document.getElementById('add-form-container');
     const addNewEntryBtn = document.getElementById('addNewEntryBtn');
     const addEntryConfirmBtn = document.getElementById('addEntryConfirmBtn');
     const addEntryCancelBtn = document.getElementById('addEntryCancelBtn');
     const categorySelect = document.getElementById('categorySelect');
-    const associationDeptGroup = document.getElementById('association-department-group');
+    const parentOrgGroup = document.getElementById('parent-organization-group');
+    const parentOrgSelect = document.getElementById('parentOrganizationSelect');
 
-    const toggleAddForm = () => {
-        if (!addForm) return;
-        const isHidden = addForm.style.display === 'none';
-        addForm.style.display = isHidden ? 'flex' : 'none';
-    };
+    // Dynamic parent select logic
+    function handleCategoryChange() {
+        if (!categorySelect || !parentOrgGroup) return;
+        const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+        const canHaveParent = selectedOption.getAttribute('data-can-have-parent') === 'true';
+        const parentType = selectedOption.getAttribute('data-parent-type');
+        parentOrgGroup.style.display = canHaveParent ? 'block' : 'none';
 
-    const handleCategoryChange = () => {
-        if (!categorySelect || !associationDeptGroup) return;
-        associationDeptGroup.style.display = categorySelect.value === 'Association' ? 'block' : 'none';
-    };
+        // Fill the parentOrgSelect dropdown
+        parentOrgSelect.innerHTML = `<option value="" disabled selected>Select Parent</option>`;
+        if (canHaveParent && parentType && orgsByType[parentType]) {
+            orgsByType[parentType].forEach(org => {
+                parentOrgSelect.innerHTML += `<option value="${org.id}">${org.name}</option>`;
+            });
+        }
+    }
 
-    const addNewEntry = async () => {
-        const category = categorySelect.value;
+    if (categorySelect) {
+        categorySelect.addEventListener('change', handleCategoryChange);
+        handleCategoryChange(); // on page load
+    }
+
+    // Show add form and hide category form
+    if (addNewEntryBtn) addNewEntryBtn.addEventListener('click', () => {
+        addForm.style.display = 'block';
+        document.getElementById("add-category-container").style.display = 'none';
+        handleCategoryChange(); // Refresh parent select in case the default changed
+    });
+
+    if (addEntryCancelBtn) addEntryCancelBtn.addEventListener('click', () => {
+        addForm.style.display = 'none';
+        document.getElementById('newEntryName').value = '';
+        if (parentOrgSelect) parentOrgSelect.value = '';
+        parentOrgSelect.innerHTML = `<option value="" disabled selected>Select Parent</option>`;
+    });
+
+    if (addEntryConfirmBtn) addEntryConfirmBtn.addEventListener('click', async () => {
         const name = document.getElementById('newEntryName').value.trim();
+        const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+        const category = categorySelect.value;
+        const canHaveParent = selectedOption.getAttribute('data-can-have-parent') === 'true';
+        let parent = null;
+        if (canHaveParent) {
+            parent = parentOrgSelect.value;
+            if (!parent) {
+                showToast('Please select the parent organization.', 'error');
+                return;
+            }
+        }
         if (!name) {
             showToast('Please enter a name.', 'error');
             return;
         }
+        let postData = { name: name, org_type: category };
+        if (parent) postData.parent = parent;
 
-        const payload = { name };
-        if (category === 'Association') {
-            const departmentId = document.getElementById('associationDepartmentSelect').value;
-            if (!departmentId) {
-                showToast('Please select a department for the association.', 'error');
+        // Optional: attach academic year if needed in payload
+        const currentYear = new URLSearchParams(window.location.search).get('year');
+        if (currentYear) postData.academic_year = currentYear;
+
+        const data = await apiRequest("/core-admin/settings/organization/add/", {
+            method: "POST",
+            body: JSON.stringify(postData)
+        });
+        if (data.success) {
+            window.location.reload();
+        } else {
+            showToast(data.error || "Failed to add entry.", "error");
+        }
+    });
+
+    // --- ADD NEW CATEGORY FORM LOGIC (WITH PARENT) ---
+    const addNewCategoryBtn = document.getElementById('addNewCategoryBtn');
+    const addCategoryConfirmBtn = document.getElementById('addCategoryConfirmBtn');
+    const addCategoryCancelBtn = document.getElementById('addCategoryCancelBtn');
+    const addCategoryContainer = document.getElementById('add-category-container');
+    const hasParentCheckbox = document.getElementById('hasParentCategory');
+    const parentCategoryGroup = document.getElementById('parentCategoryGroup');
+    const parentCategorySelect = document.getElementById('parentCategorySelect');
+
+    // Toggle parent category dropdown
+    hasParentCheckbox.addEventListener('change', function() {
+        parentCategoryGroup.style.display = this.checked ? 'block' : 'none';
+        if (!this.checked) {
+            parentCategorySelect.value = '';
+        }
+    });
+
+    // Show category form, hide entry form
+    addNewCategoryBtn.addEventListener('click', () => {
+        addCategoryContainer.style.display = 'block';
+        if (addForm) addForm.style.display = 'none';
+    });
+
+    addCategoryCancelBtn.addEventListener('click', () => {
+        addCategoryContainer.style.display = 'none';
+        document.getElementById('newCategoryName').value = '';
+        hasParentCheckbox.checked = false;
+        parentCategoryGroup.style.display = 'none';
+        parentCategorySelect.value = '';
+    });
+
+    addCategoryConfirmBtn.addEventListener('click', async () => {
+        const name = document.getElementById('newCategoryName').value.trim();
+        let parent = null;
+        if (hasParentCheckbox.checked) {
+            parent = parentCategorySelect.value;
+            if (!parent) {
+                showToast('Please select a parent category.', 'error');
                 return;
             }
-            payload.department_id = departmentId;
         }
-
-        const currentYear = new URLSearchParams(window.location.search).get('year');
-        if (currentYear) {
-            payload.academic_year = currentYear;
-        }
-
-        const data = await apiRequest(`/core-admin/settings/${category.toLowerCase()}/add/`, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
-
-        if (data.success) {
-            location.reload();
-        } else {
-            showToast(data.error || 'Failed to add entry.', 'error');
-        }
-    };
-
-    if (addNewEntryBtn) addNewEntryBtn.addEventListener('click', toggleAddForm);
-    if (addEntryConfirmBtn) addEntryConfirmBtn.addEventListener('click', addNewEntry);
-    if (addEntryCancelBtn) addEntryCancelBtn.addEventListener('click', toggleAddForm);
-    if (categorySelect) categorySelect.addEventListener('change', handleCategoryChange);
-
-    // --- INLINE ROW EDITING & DELETION LOGIC (using Event Delegation) ---
-    const widgetGrid = document.querySelector('.widget-grid');
-
-    const handleRowAction = (e) => {
-        const target = e.target.closest('button');
-        if (!target) return;
-
-        if (target.classList.contains('btn-edit')) editRow(target);
-        else if (target.classList.contains('btn-row-save')) saveRow(target);
-        else if (target.classList.contains('btn-row-cancel')) cancelEdit(target);
-    };
-
-    const editRow = (button) => {
-        const row = button.closest('tr');
-        const currentlyEditing = document.querySelector('.editing-row');
-        if (currentlyEditing && currentlyEditing !== row) {
-            cancelEdit(currentlyEditing.querySelector('.btn-row-cancel'));
-        }
-
-        row.classList.add('editing-row');
-        const nameCell = row.cells[0];
-        const statusCell = row.cells[1];
-        const actionsCell = row.cells[2];
-
-        const originalName = nameCell.innerText.split(' (')[0];
-        const originalStatus = statusCell.querySelector('.status-badge').innerText.toLowerCase();
-        row.dataset.originalNameHTML = nameCell.innerHTML;
-        row.dataset.originalStatus = originalStatus;
-
-        nameCell.innerHTML = `<input type="text" class="inline-edit-input" value="${originalName}">`;
-        statusCell.innerHTML = `<select class="inline-edit-select"><option value="active">Active</option><option value="inactive">Inactive</option></select>`;
-        statusCell.querySelector('select').value = originalStatus;
-        
-        actionsCell.innerHTML = `
-            <button class="btn btn-row-save"><i class="fas fa-check"></i></button>
-            <button class="btn btn-row-cancel"><i class="fas fa-times"></i></button>
-        `;
-    };
-
-    const saveRow = async (button) => {
-        const row = button.closest('tr');
-        const model = row.closest('.data-widget').dataset.widgetName.toLowerCase();
-        const id = row.dataset.id;
-        
-        const nameInput = row.querySelector('.inline-edit-input');
-        const statusSelect = row.querySelector('.inline-edit-select');
-        const newName = nameInput.value.trim();
-        const newStatus = statusSelect.value === 'active';
-
-        if (!newName) {
-            showToast('Name cannot be empty.', 'error');
+        if (!name) {
+            showToast('Enter a category name.', 'error');
             return;
         }
+        let payload = { name: name };
+        if (parent) payload.parent = parent;
 
-        const data = await apiRequest(`/core-admin/settings/${model}/${id}/edit/`, {
-            method: 'POST',
-            body: JSON.stringify({ name: newName, is_active: newStatus })
+        const data = await apiRequest("/core-admin/settings/organization_type/add/", {
+            method: "POST",
+            body: JSON.stringify(payload)
         });
-
-        if(data.success) {
-            const nameCell = row.cells[0];
-            const statusCell = row.cells[1];
-            const actionsCell = row.cells[2];
-
-            if (model === 'association' && data.department_name) {
-                 nameCell.innerHTML = `${data.name} (${data.department_name})`;
-            } else {
-                 nameCell.innerHTML = data.name || newName;
-            }
-            
-            statusCell.innerHTML = `<span class="status-badge status-${newStatus ? 'active' : 'inactive'}">${newStatus ? 'Active' : 'Inactive'}</span>`;
-            actionsCell.innerHTML = `<button class="btn btn-edit"><i class="fas fa-pen"></i></button>`;
-            row.className = newStatus ? '' : 'inactive-row-display';
-            row.classList.remove('editing-row');
-            showToast('Changes saved!', 'success');
+        if (data.success) {
+            window.location.reload();
         } else {
-            showToast(data.error || 'Failed to save changes.', 'error');
-            cancelEdit(button);
+            showToast(data.error || "Failed to add category.", "error");
         }
-    };
+    });
 
-    const cancelEdit = (button) => {
-        const row = button.closest('tr');
-        row.classList.remove('editing-row');
-        const originalNameHTML = row.dataset.originalNameHTML;
-        const originalStatus = row.dataset.originalStatus;
+    // Hide category form if Add New Entry is clicked
+    if (addNewEntryBtn) addNewEntryBtn.addEventListener('click', () => {
+        if (addForm) addForm.style.display = 'block';
+        if (addCategoryContainer) addCategoryContainer.style.display = 'none';
+        handleCategoryChange();
+    });
 
-        row.cells[0].innerHTML = originalNameHTML;
-        row.cells[1].innerHTML = `<span class="status-badge status-${originalStatus}">${originalStatus.charAt(0).toUpperCase() + originalStatus.slice(1)}</span>`;
-        row.cells[2].innerHTML = `<button class="btn btn-edit"><i class="fas fa-pen"></i></button>`;
-        row.className = originalStatus === 'inactive' ? 'inactive-row-display' : '';
-    };
-
-    if(widgetGrid) widgetGrid.addEventListener('click', handleRowAction);
-    
     // --- UNIVERSAL SEARCH LOGIC ---
     const universalSearch = document.getElementById('universalSearch');
     const notFoundMessage = document.getElementById('search-not-found');
     const notFoundText = notFoundMessage ? notFoundMessage.querySelector('strong') : null;
-    
+
     const filterAllData = () => {
         const searchTerm = universalSearch.value.toLowerCase();
         const allWidgets = document.querySelectorAll('.data-widget');
@@ -254,10 +248,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (addFromSearchBtn) {
         addFromSearchBtn.addEventListener('click', () => {
             const searchTerm = universalSearch.value;
-            toggleAddForm();
+            addForm.style.display = 'block';
             document.getElementById('newEntryName').value = searchTerm;
             if (notFoundMessage) notFoundMessage.style.display = 'none';
+            handleCategoryChange();
         });
     }
-
 });

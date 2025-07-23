@@ -18,7 +18,7 @@ from .forms import (
     ExpenseDetailForm,EventReportForm, EventReportAttachmentForm
 )
 from django.forms import modelformset_factory
-from core.models import Department,Association, Club, Center, Cell      # FK model you created
+from core.models import Organization, OrganizationType    # FK model you created
 from django.contrib.auth.models import User
 from emt.utils import build_approval_chain
 from emt.models import ApprovalStep
@@ -30,7 +30,7 @@ from datetime import timedelta
 from django.utils.timezone import now
 from django.db.models import Sum
 import google.generativeai as genai
-
+from django.contrib.auth.decorators import login_required, user_passes_test
 # ──────────────────────────────
 # CDL DASHBOARD
 # ──────────────────────────────
@@ -90,6 +90,10 @@ def generate_report_pdf(request):
 # ──────────────────────────────
 @login_required
 def submit_proposal(request, pk=None):
+    # --- Academic year: set a default if missing (for demo/dev, set your real logic as needed) ---
+    if not request.session.get('selected_academic_year'):
+        request.session['selected_academic_year'] = "2024-2025"  # Or dynamically fetch the current active year!
+
     proposal = None
     if pk:
         proposal = get_object_or_404(
@@ -100,35 +104,17 @@ def submit_proposal(request, pk=None):
         post_data = request.POST.copy()
 
         # Normalize org fields for new names
-        dept_value = post_data.get("department")
-        if dept_value and not dept_value.isdigit():
-            dept_obj, _ = Department.objects.get_or_create(name=dept_value)
-            post_data["department"] = str(dept_obj.id)
+        org_type = post_data.get("organization_type")  # You'll need a way in your form to specify org type
+        org_name = post_data.get("organization")
+        organization = None
+        if org_type and org_name:
+            org_type_obj, _ = OrganizationType.objects.get_or_create(name=org_type)
+            organization, _ = Organization.objects.get_or_create(name=org_name, org_type=org_type_obj)
+            post_data["organization"] = str(organization.id)
 
-        assoc_value = post_data.get("association")
-        if assoc_value and not assoc_value.isdigit():
-            assoc_obj, _ = Association.objects.get_or_create(name=assoc_value)
-            post_data["association"] = str(assoc_obj.id)
-
-        club_value = post_data.get("club")
-        if club_value and not club_value.isdigit():
-            club_obj, _ = Club.objects.get_or_create(name=club_value)
-            post_data["club"] = str(club_obj.id)
-
-        center_value = post_data.get("center")
-        if center_value and not center_value.isdigit():
-            center_obj, _ = Center.objects.get_or_create(name=center_value)
-            post_data["center"] = str(center_obj.id)
-
-        cell_value = post_data.get("cell")
-        if cell_value and not cell_value.isdigit():
-            cell_obj, _ = Cell.objects.get_or_create(name=cell_value)
-            post_data["cell"] = str(cell_obj.id)
-
-        form = EventProposalForm(post_data, instance=proposal)
+        form = EventProposalForm(post_data, instance=proposal, selected_academic_year=request.session.get('selected_academic_year'))
 
         # --------- FACULTY INCHARGES QUERYSET FIX ---------
-        # Always set the queryset to include posted IDs (and all faculty for JS search)
         faculty_ids = post_data.getlist("faculty_incharges")
         if faculty_ids:
             form.fields['faculty_incharges'].queryset = User.objects.filter(
@@ -139,11 +125,9 @@ def submit_proposal(request, pk=None):
         # --------------------------------------------------
 
     else:
-        # Get selected academic year from session (now in "2024-2025" format)
+        # Always get the selected academic year from session (ensured above)
         selected_academic_year = request.session.get('selected_academic_year')
-        academic_year_display = selected_academic_year  # Use it directly since it's already in correct format
-            
-        form = EventProposalForm(instance=proposal, selected_academic_year=academic_year_display)
+        form = EventProposalForm(instance=proposal, selected_academic_year=selected_academic_year)
         # Populate all faculty as available choices for JS search/select on GET
         form.fields['faculty_incharges'].queryset = User.objects.filter(role_assignments__role='faculty').distinct()
 
@@ -159,11 +143,7 @@ def submit_proposal(request, pk=None):
     ctx = {
         "form": form,
         "proposal": proposal,
-        "department_name": get_name(Department, form['department'].value()),
-        "association_name": get_name(Association, form['association'].value()),
-        "club_name": get_name(Club, form['club'].value()),
-        "center_name": get_name(Center, form['center'].value()),
-        "cell_name": get_name(Cell, form['cell'].value()),
+        "organization_name": get_name(Organization, form['organization'].value()),
     }
 
     if request.method == "POST" and form.is_valid():
@@ -188,10 +168,15 @@ def autosave_proposal(request):
 
     data = json.loads(request.body.decode("utf-8"))
 
-    # Same dept text-to-ID conversion as above
-    if (dept_val := data.get("department")) and not str(dept_val).isdigit():
-        dept_obj, _ = Department.objects.get_or_create(name=dept_val)
-        data["department"] = str(dept_obj.id)
+    # Replace department logic with generic organization
+    org_type_val = data.get("organization_type")  # You'll need to capture org type in your frontend/form!
+    org_name_val = data.get("organization")
+    if org_type_val and org_name_val and not str(org_name_val).isdigit():
+        from core.models import Organization, OrganizationType
+        org_type_obj, _ = OrganizationType.objects.get_or_create(name=org_type_val)
+        org_obj, _ = Organization.objects.get_or_create(name=org_name_val, org_type=org_type_obj)
+        data["organization"] = str(org_obj.id)
+
 
     proposal = None
     if pid := data.get("proposal_id"):
@@ -484,34 +469,14 @@ def autosave_need_analysis(request):
         return JsonResponse({'success': True})
     return JsonResponse({'success': False}, status=400)
 @login_required
-def api_departments(request):
+def api_organizations(request):
     q = request.GET.get("q", "").strip()
-    depts = Department.objects.filter(name__icontains=q, is_active=True).order_by("name")[:20]
-    return JsonResponse([{"id": d.id, "text": d.name} for d in depts], safe=False)
-
-@login_required
-def api_associations(request):
-    q = request.GET.get("q", "").strip()
-    assocs = Association.objects.filter(name__icontains=q, is_active=True).order_by("name")[:20]
-    return JsonResponse([{"id": a.id, "text": a.name} for a in assocs], safe=False)
-
-@login_required
-def api_clubs(request):
-    q = request.GET.get("q", "").strip()
-    clubs = Club.objects.filter(name__icontains=q, is_active=True).order_by("name")[:20]
-    return JsonResponse([{"id": c.id, "text": c.name} for c in clubs], safe=False)
-
-@login_required
-def api_centers(request):
-    q = request.GET.get("q", "").strip()
-    centers = Center.objects.filter(name__icontains=q, is_active=True).order_by("name")[:20]
-    return JsonResponse([{"id": c.id, "text": c.name} for c in centers], safe=False)
-
-@login_required
-def api_cells(request):
-    q = request.GET.get("q", "").strip()
-    cells = Cell.objects.filter(name__icontains=q, is_active=True).order_by("name")[:20]
-    return JsonResponse([{"id": c.id, "text": c.name} for c in cells], safe=False)
+    org_type = request.GET.get("org_type", "").strip()  # e.g., "Department", "Club", etc.
+    orgs = Organization.objects.filter(name__icontains=q, is_active=True)
+    if org_type:
+        orgs = orgs.filter(org_type__name=org_type)
+    orgs = orgs.order_by("name")[:20]
+    return JsonResponse([{"id": o.id, "text": o.name} for o in orgs], safe=False)
 
 @login_required
 def api_faculty(request):
@@ -979,3 +944,8 @@ def ai_report_submit(request, proposal_id):
     from django.contrib import messages
     messages.success(request, "Event report submitted successfully!")
     return redirect('emt:report_success', proposal_id=proposal.id)
+@user_passes_test(lambda u: u.is_superuser)
+def api_organization_types(request):
+    org_types = OrganizationType.objects.filter(is_active=True).order_by('name')
+    data = [{"id": ot.name.lower(), "name": ot.name} for ot in org_types]
+    return JsonResponse(data, safe=False)

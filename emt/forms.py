@@ -4,50 +4,22 @@ from django.urls import reverse_lazy
 from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
     EventExpectedOutcomes, TentativeFlow, SpeakerProfile,
-    ExpenseDetail,EventReport, EventReportAttachment
+    ExpenseDetail, EventReport, EventReportAttachment
 )
-from core.models import Department, Association, Club, Center, Cell
+from core.models import Organization, OrganizationType
 
-ORG_TYPE_CHOICES = [
-    ('department', 'Department'),
-    ('association', 'Association'),
-    ('club', 'Club'),
-    ('center', 'Center'),
-    ('cell', 'Cell'),
-]
 class EventProposalForm(forms.ModelForm):
-    org_type = forms.ChoiceField(
+    organization_type = forms.ModelChoiceField(
         required=True,
         label="Type of Organisation",
-        choices=ORG_TYPE_CHOICES,
-        widget=forms.Select(attrs={
-            'class': 'tomselect-orgtype',
-        }),
+        queryset=OrganizationType.objects.all(),
+        widget=forms.Select(attrs={'class': 'tomselect-orgtype'}),
     )
-    department = forms.ModelChoiceField(
-        queryset=Department.objects.filter(is_active=True),
-        required=False,
-        widget=forms.Select(attrs={'class': 'org-box department-box'})
-    )
-    association = forms.ModelChoiceField(
-        queryset=Association.objects.filter(is_active=True),
-        required=False,
-        widget=forms.Select(attrs={'class': 'org-box association-box'})
-    )
-    club = forms.ModelChoiceField(
-        queryset=Club.objects.filter(is_active=True),
-        required=False,
-        widget=forms.Select(attrs={'class': 'org-box club-box'})
-    )
-    center = forms.ModelChoiceField(
-        queryset=Center.objects.filter(is_active=True),
-        required=False,
-        widget=forms.Select(attrs={'class': 'org-box center-box'})
-    )
-    cell = forms.ModelChoiceField(
-        queryset=Cell.objects.filter(is_active=True),
-        required=False,
-        widget=forms.Select(attrs={'class': 'org-box cell-box'})
+    organization = forms.ModelChoiceField(
+        required=True,
+        label="Organization Name",
+        queryset=Organization.objects.none(),  # Populated in __init__ below!
+        widget=forms.Select(attrs={'class': 'org-box organization-box'})
     )
 
     faculty_incharges = forms.ModelMultipleChoiceField(
@@ -59,7 +31,7 @@ class EventProposalForm(forms.ModelForm):
             'placeholder': "Type a lecturer name…",
         })
     )
-    
+
     academic_year = forms.CharField(
         required=True,
         label="Academic Year",
@@ -71,25 +43,38 @@ class EventProposalForm(forms.ModelForm):
         }),
         help_text="This academic year is set by the admin and cannot be changed."
     )
-    
+
     def __init__(self, *args, **kwargs):
-        # Extract the selected academic year from kwargs if passed
         selected_academic_year = kwargs.pop('selected_academic_year', None)
         super().__init__(*args, **kwargs)
-        
-        # Set initial value if provided and make it readonly
+
+        # Filter organization queryset by selected type if available in POST/data/instance
+        org_type = None
+        if self.data.get("organization_type"):
+            try:
+                org_type_id = int(self.data.get("organization_type"))
+                org_type = OrganizationType.objects.filter(id=org_type_id).first()
+            except Exception:
+                org_type = None
+        elif self.instance and getattr(self.instance, "organization", None):
+            org_type = self.instance.organization.org_type
+
+        if org_type:
+            self.fields['organization'].queryset = Organization.objects.filter(org_type=org_type, is_active=True)
+        else:
+            self.fields['organization'].queryset = Organization.objects.filter(is_active=True)
+
+        # Academic year setup
         if selected_academic_year and not self.instance.pk:
             self.fields['academic_year'].initial = selected_academic_year
             self.fields['academic_year'].widget.attrs['value'] = selected_academic_year
         elif not self.instance.pk:
-            # If no academic year is set by admin, show a message
             self.fields['academic_year'].widget.attrs['placeholder'] = 'No academic year set by admin'
 
     class Meta:
         model = EventProposal
         fields = [
-            'org_type', 'department', 'association', 'club', 'center', 'cell',
-            'faculty_incharges', 'event_title', 'event_datetime', 'venue',
+            'organization_type', 'organization', 'faculty_incharges', 'event_title', 'event_datetime', 'venue',
             'committees', 'num_activities', 'academic_year', 'student_coordinators',
             'target_audience', 'event_focus_type', 'fest_fee_participants',
             'fest_fee_rate', 'fest_fee_amount', 'fest_sponsorship_amount',
@@ -98,13 +83,8 @@ class EventProposalForm(forms.ModelForm):
         exclude = ['submitted_by', 'created_at', 'updated_at', 'status', 'report_generated', 'needs_finance_approval', 'is_big_event']
 
         labels = {
-            'org_type': 'Type of Organisation',
-            'department': 'Department',
-            'association': 'Association',
-            'club': 'Club',
-            'center': 'Center',
-            'cell': 'Cell',
-            # ...rest as before...
+            'organization_type': 'Type of Organisation',
+            'organization': 'Organization Name',
         }
         widgets = {
             'event_datetime': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
@@ -115,42 +95,18 @@ class EventProposalForm(forms.ModelForm):
 
     def clean(self):
         data = super().clean()
-        org_type = data.get('org_type', '').lower()
-        model_map = {
-            'department': Department,
-            'association': Association,
-            'club': Club,
-            'center': Center,
-            'cell': Cell,
-        }
-        found = False
-        for org_field, model in model_map.items():
-            if org_type == org_field:
-                val = data.get(org_field)
-                # If not found by id, check by posted string (for new names)
-                if not val:
-                    posted_val = self.data.get(org_field)
-                    if posted_val:
-                        if posted_val.isdigit():
-                            val = model.objects.filter(id=int(posted_val), is_active=True).first()
-                        else:
-                            val = model.objects.filter(name=posted_val, is_active=True).first()
-                            if not val:
-                                val = model.objects.create(name=posted_val)
-                if val:
-                    data[org_field] = val
-                    found = True
-                else:
-                    self.add_error(org_field, f'Please select or enter a valid {org_field.title()} name.')
-            else:
-                data[org_field] = None
-        if not found:
-            self.add_error('org_type', 'Please select an organization and its name.')
+        org_type = data.get('organization_type')
+        organization = data.get('organization')
+        if not org_type:
+            self.add_error('organization_type', 'Please select an organization type.')
+        if not organization:
+            self.add_error('organization', 'Please select an organization name.')
+        elif org_type and organization and organization.org_type != org_type:
+            self.add_error('organization', 'Selected organization does not match the chosen type.')
         return data
 
-
 # ──────────────────────────────────────────────────────────────
-#  Remaining forms (unchanged)
+#  Remaining forms (unchanged, but imports updated)
 # ──────────────────────────────────────────────────────────────
 class NeedAnalysisForm(forms.ModelForm):
     class Meta:
@@ -220,6 +176,7 @@ class ExpenseDetailForm(forms.ModelForm):
     class Meta:
         model  = ExpenseDetail
         fields = ['sl_no', 'particulars', 'amount']
+
 class EventReportForm(forms.ModelForm):
     class Meta:
         model = EventReport

@@ -8,14 +8,42 @@
   <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/corejs-typeahead/1.3.1/typeaheadjs.min.css" rel="stylesheet" />
   <style>
-    .typeahead, .tt-query, .tt-hint { width: 100%; height: 38px; padding: 6px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #fff; font-size: 16px; }
-    .tt-menu { width: 100%; background: #fff; border: 1px solid #ddd; border-radius: 4px; }
-    .tt-suggestion { padding: 8px 14px; cursor: pointer; }
-    .tt-suggestion:hover, .tt-suggestion.tt-cursor { background: #0d6efd; color: #fff; }
-    .input-group { margin-bottom: 18px; }
-    .input-group label { font-weight: 500; }
-    .has-error input, .has-error .typeahead { border-color: #d9534f; }
-    .error { color: #d9534f; font-size: 90%; }
+    .typeahead, .tt-query, .tt-hint {
+      width: 100%;
+      height: 38px;
+      padding: 6px 12px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      background: #fff;
+      font-size: 16px;
+    }
+    .tt-menu {
+      width: 100%;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .tt-suggestion {
+      padding: 8px 14px;
+      cursor: pointer;
+    }
+    .tt-suggestion:hover, .tt-suggestion.tt-cursor {
+      background: #0d6efd;
+      color: #fff;
+    }
+    .input-group {
+      margin-bottom: 18px;
+    }
+    .input-group label {
+      font-weight: 500;
+    }
+    .has-error input, .has-error .typeahead {
+      border-color: #d9534f;
+    }
+    .error {
+      color: #d9534f;
+      font-size: 90%;
+    }
   </style>
 {% endblock %}
 
@@ -38,9 +66,7 @@
         <!-- Organisation Type (typeahead, but value is key, UI is label) -->
         <div class="input-group">
           <label for="orgtype-input">Type of Organisation</label>
-          <!-- hidden value field -->
           <input type="hidden" name="org_type" id="orgtype-value" value="{{ form.org_type.value|default:'' }}">
-          <!-- visible UI field -->
           <input type="text" id="orgtype-input" class="typeahead"
                  autocomplete="off"
                  placeholder="Type: Department, Club, Center, Cell, Association"
@@ -52,7 +78,7 @@
           <label for="department-name-input">Department</label>
           <input type="text" id="department-name-input"
                  class="typeahead org-specific"
-                 data-url="{% url 'emt:api_departments' %}"
+                 data-url="{% url 'emt:api_organizations' %}?org_type=Department"
                  placeholder="Type Department name…"
                  value="{{ department_name|default:'' }}">
           <input type="hidden" id="department-id-input" name="department" value="{{ form.department.value|default:'' }}">
@@ -65,7 +91,7 @@
           <label for="association-name-input">Association</label>
           <input type="text" id="association-name-input"
                  class="typeahead org-specific"
-                 data-url="{% url 'emt:api_associations' %}"
+                 data-url="{% url 'emt:api_organizations' %}?org_type=Association"
                  placeholder="Type Association name…"
                  value="{{ association_name|default:'' }}">
           <input type="hidden" id="association-id-input" name="association" value="{{ form.association.value|default:'' }}">
@@ -78,7 +104,7 @@
           <label for="club-name-input">Club</label>
           <input type="text" id="club-name-input"
                  class="typeahead org-specific"
-                 data-url="{% url 'emt:api_clubs' %}"
+                 data-url="{% url 'emt:api_organizations' %}?org_type=Club"
                  placeholder="Type Club name…"
                  value="{{ club_name|default:'' }}">
           <input type="hidden" id="club-id-input" name="club" value="{{ form.club.value|default:'' }}">
@@ -91,7 +117,7 @@
           <label for="center-name-input">Center</label>
           <input type="text" id="center-name-input"
                  class="typeahead org-specific"
-                 data-url="{% url 'emt:api_centers' %}"
+                 data-url="{% url 'emt:api_organizations' %}?org_type=Center"
                  placeholder="Type Center name…"
                  value="{{ center_name|default:'' }}">
           <input type="hidden" id="center-id-input" name="center" value="{{ form.center.value|default:'' }}">
@@ -104,7 +130,7 @@
           <label for="cell-name-input">Cell</label>
           <input type="text" id="cell-name-input"
                  class="typeahead org-specific"
-                 data-url="{% url 'emt:api_cells' %}"
+                 data-url="{% url 'emt:api_organizations' %}?org_type=Cell"
                  placeholder="Type Cell name…"
                  value="{{ cell_name|default:'' }}">
           <input type="hidden" id="cell-id-input" name="cell" value="{{ form.cell.value|default:'' }}">
@@ -130,9 +156,9 @@
           {% endfor %}
         </div>
 
-        <!-- All other fields (keep your previous logic) -->
+        <!-- All other fields (exclude org and faculty fields to prevent duplicates) -->
         {% for field in form.visible_fields %}
-          {% if field.name not in "org_type,department,association,club,center,cell,faculty_incharges" %}
+          {% if field.name not in "org_type,organization_type,organization,faculty_incharges,department,association,club,center,cell" %}
             <div class="input-group{% if field.errors %} has-error{% endif %}">
               {{ field.label_tag }} {{ field }}
               {% if field.help_text %}
@@ -145,6 +171,7 @@
           {% endif %}
         {% endfor %}
       </div>
+
       <button type="submit" name="submit" class="btn btn-primary" style="margin-top:24px;">
         Save &amp; Continue
       </button>
@@ -223,11 +250,14 @@
         var nameInput = $('#' + name + '-name-input');
         var idInput   = $('#' + name + '-id-input');
         var endpoint  = nameInput.data('url');
+        var separator = endpoint.includes('?') ? '&' : '?';
+        var remoteUrl = endpoint + separator + 'q=%QUERY';
+
         var engine = new Bloodhound({
           datumTokenizer: Bloodhound.tokenizers.obj.whitespace('text'),
           queryTokenizer: Bloodhound.tokenizers.whitespace,
           remote: {
-            url: endpoint + '?q=%QUERY',
+            url: remoteUrl,
             wildcard: '%QUERY',
             transform: function(response) {
               return response.map(function(item){
@@ -248,16 +278,15 @@
             }
           }
         ).on('typeahead:select', function(ev, sel){
-          idInput.val(sel.id);       // Store the selected object's ID
-          nameInput.val(sel.text);   // Show readable name
+          idInput.val(sel.id);
+          nameInput.val(sel.text);
         });
-        // On manual change, clear the hidden input if not from picker
         nameInput.on('input', function() {
           idInput.val('');
         });
       }
 
-      // Setup for each org type
+      // Setup typeahead for each org type
       setupOrgTypeahead('department');
       setupOrgTypeahead('association');
       setupOrgTypeahead('club');
