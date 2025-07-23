@@ -25,27 +25,27 @@ class EventProposalForm(forms.ModelForm):
         }),
     )
     department = forms.ModelChoiceField(
-        queryset=Department.objects.all(),
+        queryset=Department.objects.filter(is_active=True),
         required=False,
         widget=forms.Select(attrs={'class': 'org-box department-box'})
     )
     association = forms.ModelChoiceField(
-        queryset=Association.objects.all(),
+        queryset=Association.objects.filter(is_active=True),
         required=False,
         widget=forms.Select(attrs={'class': 'org-box association-box'})
     )
     club = forms.ModelChoiceField(
-        queryset=Club.objects.all(),
+        queryset=Club.objects.filter(is_active=True),
         required=False,
         widget=forms.Select(attrs={'class': 'org-box club-box'})
     )
     center = forms.ModelChoiceField(
-        queryset=Center.objects.all(),
+        queryset=Center.objects.filter(is_active=True),
         required=False,
         widget=forms.Select(attrs={'class': 'org-box center-box'})
     )
     cell = forms.ModelChoiceField(
-        queryset=Cell.objects.all(),
+        queryset=Cell.objects.filter(is_active=True),
         required=False,
         widget=forms.Select(attrs={'class': 'org-box cell-box'})
     )
@@ -59,6 +59,31 @@ class EventProposalForm(forms.ModelForm):
             'placeholder': "Type a lecturer name…",
         })
     )
+    
+    academic_year = forms.CharField(
+        required=True,
+        label="Academic Year",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'readonly': 'readonly',
+            'style': 'background-color: #f8f9fa; cursor: not-allowed;',
+            'placeholder': 'Academic year will be set by admin',
+        }),
+        help_text="This academic year is set by the admin and cannot be changed."
+    )
+    
+    def __init__(self, *args, **kwargs):
+        # Extract the selected academic year from kwargs if passed
+        selected_academic_year = kwargs.pop('selected_academic_year', None)
+        super().__init__(*args, **kwargs)
+        
+        # Set initial value if provided and make it readonly
+        if selected_academic_year and not self.instance.pk:
+            self.fields['academic_year'].initial = selected_academic_year
+            self.fields['academic_year'].widget.attrs['value'] = selected_academic_year
+        elif not self.instance.pk:
+            # If no academic year is set by admin, show a message
+            self.fields['academic_year'].widget.attrs['placeholder'] = 'No academic year set by admin'
 
     class Meta:
         model = EventProposal
@@ -107,9 +132,9 @@ class EventProposalForm(forms.ModelForm):
                     posted_val = self.data.get(org_field)
                     if posted_val:
                         if posted_val.isdigit():
-                            val = model.objects.filter(id=int(posted_val)).first()
+                            val = model.objects.filter(id=int(posted_val), is_active=True).first()
                         else:
-                            val = model.objects.filter(name=posted_val).first()
+                            val = model.objects.filter(name=posted_val, is_active=True).first()
                             if not val:
                                 val = model.objects.create(name=posted_val)
                 if val:

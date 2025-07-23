@@ -1,189 +1,190 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block title %}Master Data Management{% endblock %}
+
+{% block head_extra %}
+    <link rel="stylesheet" href="{% static 'core/css/admin_master_data.css' %}?v=1.5">
+{% endblock %}
+
 {% block content %}
-<link rel="stylesheet" href="{% static 'core/css/admin_master_data.css' %}">
-<!-- DataTables (optional, can be used for search/sort) -->
-<link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.min.css">
-
-<div class="admin-settings-container">
-  <h1>Settings: Master Data Management</h1>
-  <div class="settings-grid">
-
-    <!-- Departments -->
-    <div class="settings-card">
-      <h3>Departments</h3>
-      <div class="table-responsive">
-        <table class="settings-table datatable" id="departments-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th style="width:140px">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for dept in departments %}
-              <tr>
-                <td>{{ dept.name }}</td>
-                <td>
-                  <button class="edit-btn" data-id="{{ dept.id }}" data-model="department">Edit</button>
-                  <button class="delete-btn" data-id="{{ dept.id }}" data-model="department">Delete</button>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      <div class="table-add-row">
-        <input type="text" id="new-department-name" placeholder="Add Department">
-        <button class="add-btn" data-model="department">Add</button>
-      </div>
+<div class="main-container">
+    
+    <div class="page-header">
+        <h1>Master Data Management</h1>
+        <!-- Academic Year Dropdown -->
+        <div class="academic-year-filter">
+            <label for="academicYearSelect">Academic Year:</label>
+            <select id="academicYearSelect" onchange="setAcademicYear(this.value)">
+                {% for year in academic_years %}
+                    <option value="{{ year.value }}" {% if year.value == selected_year.value %}selected{% endif %}>
+                        {{ year.display }}
+                    </option>
+                {% endfor %}
+            </select>
+            <button class="btn btn-secondary btn-sm" onclick="showAddAcademicYearForm()" title="Add New Academic Year">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
     </div>
 
-    <!-- Clubs -->
-    <div class="settings-card">
-      <h3>Clubs</h3>
-      <div class="table-responsive">
-        <table class="settings-table datatable" id="clubs-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th style="width:140px">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for club in clubs %}
-              <tr>
-                <td>{{ club.name }}</td>
-                <td>
-                  <button class="edit-btn" data-id="{{ club.id }}" data-model="club">Edit</button>
-                  <button class="delete-btn" data-id="{{ club.id }}" data-model="club">Delete</button>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      <div class="table-add-row">
-        <input type="text" id="new-club-name" placeholder="Add Club">
-        <button class="add-btn" data-model="club">Add</button>
-      </div>
+    <!-- Controls Section for Search and Add -->
+    <div class="controls-container">
+        <div class="search-bar">
+            <i class="fas fa-search"></i>
+            <input type="text" id="universalSearch" placeholder="Search for any entry...">
+        </div>
+        <div class="main-actions">
+            <button class="btn btn-primary" id="addNewEntryBtn">
+                <i class="fas fa-plus"></i> Add New Entry
+            </button>
+        </div>
     </div>
 
-    <!-- Centers -->
-    <div class="settings-card">
-      <h3>Centers</h3>
-      <div class="table-responsive">
-        <table class="settings-table datatable" id="centers-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th style="width:140px">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for center in centers %}
-              <tr>
-                <td>{{ center.name }}</td>
-                <td>
-                  <button class="edit-btn" data-id="{{ center.id }}" data-model="center">Edit</button>
-                  <button class="delete-btn" data-id="{{ center.id }}" data-model="center">Delete</button>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      <div class="table-add-row">
-        <input type="text" id="new-center-name" placeholder="Add Center">
-        <button class="add-btn" data-model="center">Add</button>
-      </div>
+    <!-- Inline Add Form Container (hidden by default) -->
+    <div id="add-form-container" class="add-form-container" style="display: none;">
+        <div class="form-group">
+            <label for="categorySelect">Category</label>
+            <select id="categorySelect">
+                <option value="Department">Department</option>
+                <option value="Club">Club</option>
+                <option value="Center">Center</option>
+                <option value="Cell">Cell</option>
+                <option value="Association">Association</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="newEntryName">Name</label>
+            <input type="text" id="newEntryName" placeholder="Enter the name">
+        </div>
+        <!-- Department dropdown for Associations, hidden by default -->
+        <div id="association-department-group" class="form-group" style="display: none;">
+            <label for="associationDepartmentSelect">Assign to Department</label>
+            <select id="associationDepartmentSelect">
+                <option value="" disabled selected>Select a Department</option>
+                {% for dept in active_departments %}
+                    {% if dept.is_active %}
+                        <option value="{{ dept.id }}">{{ dept.name }}</option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-actions">
+            <button class="btn btn-primary" id="addEntryConfirmBtn">
+                <i class="fas fa-check"></i> Add
+            </button>
+            <button class="btn btn-secondary" id="addEntryCancelBtn">Cancel</button>
+        </div>
     </div>
 
-    <!-- Cells -->
-    <div class="settings-card">
-      <h3>Cells</h3>
-      <div class="table-responsive">
-        <table class="settings-table datatable" id="cells-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th style="width:140px">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for cell in cells %}
-              <tr>
-                <td>{{ cell.name }}</td>
-                <td>
-                  <button class="edit-btn" data-id="{{ cell.id }}" data-model="cell">Edit</button>
-                  <button class="delete-btn" data-id="{{ cell.id }}" data-model="cell">Delete</button>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      <div class="table-add-row">
-        <input type="text" id="new-cell-name" placeholder="Add Cell">
-        <button class="add-btn" data-model="cell">Add</button>
-      </div>
+    <div class="widget-grid">
+        <!-- Department Widget -->
+        <div class="data-widget" data-widget-name="department">
+            <div class="widget-header"><div class="widget-title">Departments</div></div>
+            <div class="widget-content">
+                <table class="data-table">
+                    <thead><tr><th>Name</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody>
+                        {% for entry in departments %}
+                        <tr data-id="{{ entry.id }}" class="{% if not entry.is_active %}inactive-row-display{% endif %}">
+                            <td data-label="Name">{{ entry.name }}</td>
+                            <td data-label="Status">
+                                <span class="status-badge status-{% if entry.is_active %}active{% else %}inactive{% endif %}">
+                                    {% if entry.is_active %}Active{% else %}Inactive{% endif %}
+                                </span>
+                            </td>
+                            <td data-label="Actions" class="actions">
+                                <button class="btn btn-edit"><i class="fas fa-pen"></i></button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="text-center">No departments found.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Other Widgets (Clubs, Centers, etc.) -->
+        {% include 'partials/master_data_widget.html' with category_name="Clubs" entries=clubs model_name="club" %}
+        {% include 'partials/master_data_widget.html' with category_name="Centers" entries=centers model_name="center" %}
+        {% include 'partials/master_data_widget.html' with category_name="Cells" entries=cells model_name="cell" %}
+        {% include 'partials/master_data_widget.html' with category_name="Associations" entries=associations model_name="association" is_association=True %}
     </div>
 
-    <!-- Associations -->
-    <div class="settings-card">
-      <h3>Associations</h3>
-      <div class="table-responsive">
-        <table class="settings-table datatable" id="associations-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Department</th>
-              <th style="width:140px">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for assoc in associations %}
-              <tr>
-                <td>{{ assoc.name }}</td>
-                <td>{% if assoc.department %}{{ assoc.department.name }}{% else %}-{% endif %}</td>
-                <td>
-                  <button class="edit-btn" data-id="{{ assoc.id }}" data-model="association">Edit</button>
-                  <button class="delete-btn" data-id="{{ assoc.id }}" data-model="association">Delete</button>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      <div class="table-add-row">
-        <input type="text" id="new-association-name" placeholder="Add Association">
-        <select id="new-association-dept">
-          <option value="">No Department</option>
-          {% for dept in departments %}
-            <option value="{{ dept.id }}">{{ dept.name }}</option>
-          {% endfor %}
-        </select>
-        <button class="add-btn" data-model="association">Add</button>
-      </div>
+    <!-- "Not Found" message for search -->
+    <div id="search-not-found" class="search-not-found" style="display: none;">
+        <p>No results found for "<strong></strong>".</p>
+        <button class="btn btn-primary" id="addFromSearchBtn">
+            <i class="fas fa-plus"></i> Add as New Entry
+        </button>
     </div>
 
-  </div>
 </div>
 
-<script src="{% static 'core/js/admin_settings.js' %}"></script>
-<script src="https://cdn.datatables.net/2.0.8/js/dataTables.min.js"></script>
+<!-- Toast Notification -->
+<div id="toast-notification" class="toast"></div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'core/js/admin_settings.js' %}?v=1.5" defer></script>
 <script>
-  // Activate DataTables (optional)
-  document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.datatable').forEach(table => {
-      new DataTable(table, {
-        paging: false,
-        info: false,
-        searching: true,  // or false if you don't want search
-        language: { search: "🔍 " }
-      });
+    function setAcademicYear(year) {
+        // Store the selected academic year in localStorage
+        localStorage.setItem('selectedAcademicYear', year);
+        
+        // Send to server to store in session
+        fetch('/core-admin/set-academic-year/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ academic_year: year })
+        }).then(() => {
+            // Redirect to the new year
+            window.location.href = '?year=' + encodeURIComponent(year);
+        }).catch(() => {
+            // Fallback if AJAX fails
+            window.location.href = '?year=' + encodeURIComponent(year);
+        });
+    }
+    
+    function showAddAcademicYearForm() {
+        const year = prompt("Enter new academic year (format: YYYY-YYYY):\nExample: 2025-2026");
+        if (year && year.match(/^\d{4}-\d{4}$/)) {
+            addAcademicYear(year);
+        } else if (year) {
+            alert("Please enter academic year in correct format: YYYY-YYYY (e.g., 2025-2026)");
+        }
+    }
+    
+    function addAcademicYear(yearString) {
+        fetch('/core-admin/add-academic-year/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ academic_year: yearString })
+        }).then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Refresh the page to show the new academic year
+                window.location.reload();
+            } else {
+                alert(data.error || 'Failed to add academic year');
+            }
+        }).catch(() => {
+            alert('Error adding academic year');
+        });
+    }
+    
+    // Set initial academic year in localStorage
+    document.addEventListener('DOMContentLoaded', function() {
+        const currentYear = "{% if selected_year.value %}{{ selected_year.value }}{% else %}2025-2026{% endif %}";
+        localStorage.setItem('selectedAcademicYear', currentYear);
     });
-  });
 </script>
 {% endblock %}

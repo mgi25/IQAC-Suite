@@ -33,7 +33,11 @@ def build_approval_chain(proposal):
 
     # 1️⃣ ASSOCIATION PROPOSAL
     if org_type == 'association':
-        assoc = Association.objects.get(id=org_id)
+        try:
+            assoc = Association.objects.get(id=org_id, is_active=True)
+        except Association.DoesNotExist:
+            # Skip if association is inactive
+            return []
         head = User.objects.filter(role_assignments__role='association_head', role_assignments__association=assoc).first()
         if head:
             steps.append(ApprovalStep(
@@ -55,7 +59,11 @@ def build_approval_chain(proposal):
 
     # 2️⃣ CENTER PROPOSAL
     elif org_type == 'center':
-        center = Center.objects.get(id=org_id)
+        try:
+            center = Center.objects.get(id=org_id, is_active=True)
+        except Center.DoesNotExist:
+            # Skip if center is inactive
+            return []
         head = User.objects.filter(role_assignments__role='center_head', role_assignments__center=center).first()
         if head:
             steps.append(ApprovalStep(
@@ -71,7 +79,11 @@ def build_approval_chain(proposal):
 
     # 3️⃣ CLUB PROPOSAL
     elif org_type == 'club':
-        club = Club.objects.get(id=org_id)
+        try:
+            club = Club.objects.get(id=org_id, is_active=True)
+        except Club.DoesNotExist:
+            # Skip if club is inactive
+            return []
         head = User.objects.filter(role_assignments__role='club_head', role_assignments__club=club).first()
         if head:
             steps.append(ApprovalStep(
@@ -87,7 +99,11 @@ def build_approval_chain(proposal):
 
     # 4️⃣ CELL PROPOSAL
     elif org_type == 'cell':
-        cell = Cell.objects.get(id=org_id)
+        try:
+            cell = Cell.objects.get(id=org_id, is_active=True)
+        except Cell.DoesNotExist:
+            # Skip if cell is inactive
+            return []
         head = User.objects.filter(role_assignments__role='cell_head', role_assignments__cell=cell).first()
         if head:
             steps.append(ApprovalStep(

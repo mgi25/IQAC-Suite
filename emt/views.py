@@ -139,7 +139,11 @@ def submit_proposal(request, pk=None):
         # --------------------------------------------------
 
     else:
-        form = EventProposalForm(instance=proposal)
+        # Get selected academic year from session (now in "2024-2025" format)
+        selected_academic_year = request.session.get('selected_academic_year')
+        academic_year_display = selected_academic_year  # Use it directly since it's already in correct format
+            
+        form = EventProposalForm(instance=proposal, selected_academic_year=academic_year_display)
         # Populate all faculty as available choices for JS search/select on GET
         form.fields['faculty_incharges'].queryset = User.objects.filter(role_assignments__role='faculty').distinct()
 
@@ -482,31 +486,31 @@ def autosave_need_analysis(request):
 @login_required
 def api_departments(request):
     q = request.GET.get("q", "").strip()
-    depts = Department.objects.filter(name__icontains=q).order_by("name")[:20]
+    depts = Department.objects.filter(name__icontains=q, is_active=True).order_by("name")[:20]
     return JsonResponse([{"id": d.id, "text": d.name} for d in depts], safe=False)
 
 @login_required
 def api_associations(request):
     q = request.GET.get("q", "").strip()
-    assocs = Association.objects.filter(name__icontains=q).order_by("name")[:20]
+    assocs = Association.objects.filter(name__icontains=q, is_active=True).order_by("name")[:20]
     return JsonResponse([{"id": a.id, "text": a.name} for a in assocs], safe=False)
 
 @login_required
 def api_clubs(request):
     q = request.GET.get("q", "").strip()
-    clubs = Club.objects.filter(name__icontains=q).order_by("name")[:20]
+    clubs = Club.objects.filter(name__icontains=q, is_active=True).order_by("name")[:20]
     return JsonResponse([{"id": c.id, "text": c.name} for c in clubs], safe=False)
 
 @login_required
 def api_centers(request):
     q = request.GET.get("q", "").strip()
-    centers = Center.objects.filter(name__icontains=q).order_by("name")[:20]
+    centers = Center.objects.filter(name__icontains=q, is_active=True).order_by("name")[:20]
     return JsonResponse([{"id": c.id, "text": c.name} for c in centers], safe=False)
 
 @login_required
 def api_cells(request):
     q = request.GET.get("q", "").strip()
-    cells = Cell.objects.filter(name__icontains=q).order_by("name")[:20]
+    cells = Cell.objects.filter(name__icontains=q, is_active=True).order_by("name")[:20]
     return JsonResponse([{"id": c.id, "text": c.name} for c in cells], safe=False)
 
 @login_required

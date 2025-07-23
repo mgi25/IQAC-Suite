@@ -7,6 +7,7 @@ from django.conf import settings
 # ────────────────────────────────────────────────────────────────
 class Department(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         ordering = ["name"]
@@ -16,6 +17,7 @@ class Department(models.Model):
 
 class Club(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         ordering = ["name"]
@@ -25,6 +27,7 @@ class Club(models.Model):
 
 class Center(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         ordering = ["name"]
@@ -34,6 +37,7 @@ class Center(models.Model):
 
 class Cell(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         ordering = ["name"]
@@ -46,6 +50,7 @@ class Association(models.Model):
     An Association belongs *optionally* to a Department.
     """
     name = models.CharField(max_length=100, unique=True)
+    is_active = models.BooleanField(default=True)
     department = models.ForeignKey(
         Department,
         on_delete=models.SET_NULL,

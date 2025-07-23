@@ -42,5 +42,7 @@ urlpatterns = [
     path('core-admin/settings/<str:model_name>/<int:pk>/delete/', views.admin_master_data_delete, name='admin_settings_delete'),
     path('core-admin/proposal/<int:proposal_id>/detail/', views.admin_proposal_detail, name='admin_proposal_detail'),
     path('core-admin/approval-flow/', views.admin_approval_flow, name='admin_approval_flow'),
+    path('core-admin/set-academic-year/', views.set_academic_year, name='set_academic_year'),
+    path('core-admin/add-academic-year/', views.add_academic_year, name='add_academic_year'),
 
 ]
