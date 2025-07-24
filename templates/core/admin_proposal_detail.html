@@ -10,7 +10,10 @@
     <div class="info-card glass">
       <h2>Event Information</h2>
       <table>
-        <tr><th>Department</th><td>{{ proposal.department.name|default:"—" }}</td></tr>
+        <tr>
+          <th>Organization</th>
+          <td>{{ proposal.organization|default:"—" }}</td>
+        </tr>
         <tr><th>Committee(s)</th><td>{{ proposal.committees|default:"—" }}</td></tr>
         <tr><th>Event Title</th><td>{{ proposal.event_title }}</td></tr>
         <tr><th>No. of Activities</th><td>{{ proposal.num_activities|default:"—" }}</td></tr>
