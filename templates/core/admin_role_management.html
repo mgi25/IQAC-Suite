@@ -3,14 +3,18 @@
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'core/css/admin_role_management.css' %}">
+
 <div class="role-mgmt-wrapper">
   <h1 class="role-mgmt-title">Organization Roles</h1>
+
   {% for type in org_types %}
     <section class="org-type-section">
       <h2 class="org-type-heading">{{ type.name }}</h2>
+
       {% for org in type.organizations.all %}
         <div class="org-card">
           <div class="org-name">{{ org.name }}</div>
+
           <ul class="role-list">
             {% for r in org.roles.all %}
               <li class="role-chip">
@@ -21,9 +25,10 @@
                 </form>
               </li>
             {% empty %}
-              <li>No roles</li>
+              <li class="role-chip role-none">No roles</li>
             {% endfor %}
           </ul>
+
           <form class="add-role-form" method="post" action="{% url 'add_org_role' %}">
             {% csrf_token %}
             <input type="hidden" name="org_id" value="{{ org.id }}">
