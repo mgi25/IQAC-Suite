@@ -155,6 +155,7 @@ def admin_role_management(request):
     return render(request, "core/admin_role_management.html", {"org_types": org_types})
 
 
+
 @user_passes_test(lambda u: u.is_superuser)
 @require_POST
 def add_org_role(request):

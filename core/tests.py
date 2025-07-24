@@ -4,7 +4,7 @@ from .models import (
     OrganizationType,
     Organization,
     ApprovalFlowTemplate,
-    OrganizationRole,  # Only include if this model exists
+    OrganizationRole,  # Ensure this exists in models.py
 )
 
 
@@ -21,7 +21,7 @@ class ApprovalFlowViewTests(TestCase):
     def test_delete_approval_flow(self):
         ot = OrganizationType.objects.create(name="Dept")
         org = Organization.objects.create(name="Math", org_type=ot)
-        step = ApprovalFlowTemplate.objects.create(
+        ApprovalFlowTemplate.objects.create(
             organization=org, step_order=1, role_required="faculty"
         )
 
