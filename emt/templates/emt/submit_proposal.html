@@ -63,80 +63,12 @@
     <form method="post" enctype="multipart/form-data" class="proposal-form" autocomplete="off">
       {% csrf_token %}
       <div class="section">
-        <!-- Organisation Type (typeahead, but value is key, UI is label) -->
         <div class="input-group">
-          <label for="orgtype-input">Type of Organisation</label>
-          <input type="hidden" name="org_type" id="orgtype-value" value="{{ form.org_type.value|default:'' }}">
-          <input type="text" id="orgtype-input" class="typeahead"
-                 autocomplete="off"
-                 placeholder="Type: Department, Club, Center, Cell, Association"
-                 value="{% for o in org_types %}{% if o.0 == form.org_type.value %}{{ o.1 }}{% endif %}{% endfor %}">
+          {{ form.organization_type.label_tag }} {{ form.organization_type }}
         </div>
-
-        <!-- Department Picker (Typeahead + Hidden ID) -->
-        <div class="input-group orgfield-group" id="orgfield-department" style="display:none;">
-          <label for="department-name-input">Department</label>
-          <input type="text" id="department-name-input"
-                 class="typeahead org-specific"
-                 data-url="{% url 'emt:api_organizations' %}?org_type=Department"
-                 placeholder="Type Department name…"
-                 value="{{ department_name|default:'' }}">
-          <input type="hidden" id="department-id-input" name="department" value="{{ form.department.value|default:'' }}">
-          {% for err in form.department.errors %}
-            <span class="error">{{ err }}</span>
-          {% endfor %}
-        </div>
-        <!-- Association Picker -->
-        <div class="input-group orgfield-group" id="orgfield-association" style="display:none;">
-          <label for="association-name-input">Association</label>
-          <input type="text" id="association-name-input"
-                 class="typeahead org-specific"
-                 data-url="{% url 'emt:api_organizations' %}?org_type=Association"
-                 placeholder="Type Association name…"
-                 value="{{ association_name|default:'' }}">
-          <input type="hidden" id="association-id-input" name="association" value="{{ form.association.value|default:'' }}">
-          {% for err in form.association.errors %}
-            <span class="error">{{ err }}</span>
-          {% endfor %}
-        </div>
-        <!-- Club Picker -->
-        <div class="input-group orgfield-group" id="orgfield-club" style="display:none;">
-          <label for="club-name-input">Club</label>
-          <input type="text" id="club-name-input"
-                 class="typeahead org-specific"
-                 data-url="{% url 'emt:api_organizations' %}?org_type=Club"
-                 placeholder="Type Club name…"
-                 value="{{ club_name|default:'' }}">
-          <input type="hidden" id="club-id-input" name="club" value="{{ form.club.value|default:'' }}">
-          {% for err in form.club.errors %}
-            <span class="error">{{ err }}</span>
-          {% endfor %}
-        </div>
-        <!-- Center Picker -->
-        <div class="input-group orgfield-group" id="orgfield-center" style="display:none;">
-          <label for="center-name-input">Center</label>
-          <input type="text" id="center-name-input"
-                 class="typeahead org-specific"
-                 data-url="{% url 'emt:api_organizations' %}?org_type=Center"
-                 placeholder="Type Center name…"
-                 value="{{ center_name|default:'' }}">
-          <input type="hidden" id="center-id-input" name="center" value="{{ form.center.value|default:'' }}">
-          {% for err in form.center.errors %}
-            <span class="error">{{ err }}</span>
-          {% endfor %}
-        </div>
-        <!-- Cell Picker -->
-        <div class="input-group orgfield-group" id="orgfield-cell" style="display:none;">
-          <label for="cell-name-input">Cell</label>
-          <input type="text" id="cell-name-input"
-                 class="typeahead org-specific"
-                 data-url="{% url 'emt:api_organizations' %}?org_type=Cell"
-                 placeholder="Type Cell name…"
-                 value="{{ cell_name|default:'' }}">
-          <input type="hidden" id="cell-id-input" name="cell" value="{{ form.cell.value|default:'' }}">
-          {% for err in form.cell.errors %}
-            <span class="error">{{ err }}</span>
-          {% endfor %}
+        <div class="input-group">
+          {{ form.organization.label_tag }} {{ form.organization }}
+          {% for err in form.organization.errors %}<span class="error">{{ err }}</span>{% endfor %}
         </div>
 
         <!-- Faculty incharges (AJAX select) -->
@@ -158,7 +90,7 @@
 
         <!-- All other fields (exclude org and faculty fields to prevent duplicates) -->
         {% for field in form.visible_fields %}
-          {% if field.name not in "org_type,organization_type,organization,faculty_incharges,department,association,club,center,cell" %}
+          {% if field.name not in "organization_type,organization,faculty_incharges" %}
             <div class="input-group{% if field.errors %} has-error{% endif %}">
               {{ field.label_tag }} {{ field }}
               {% if field.help_text %}
@@ -181,134 +113,26 @@
 {% endblock %}
 
 {% block scripts %}
-  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/corejs-typeahead/1.3.1/typeahead.bundle.min.js"></script>
   <script>
-    // Org type choices (should match your Django form's choices)
-    var ORG_TYPES = [
-      { id: "department", name: "Department" },
-      { id: "association", name: "Association" },
-      { id: "club", name: "Club" },
-      { id: "center", name: "Center" },
-      { id: "cell", name: "Cell" }
-    ];
-    $(function(){
-      // Typeahead for Org Type (shows name, but stores id in hidden)
-      var orgEngine = new Bloodhound({
-        datumTokenizer: Bloodhound.tokenizers.obj.whitespace('name'),
-        queryTokenizer: Bloodhound.tokenizers.whitespace,
-        local: ORG_TYPES
-      });
-      $('#orgtype-input').typeahead(
-        { hint: true, highlight: true, minLength: 1 },
-        {
-          name: 'orgtype',
-          display: 'name',
-          source: orgEngine,
-          limit: 5,
-          templates: {
-            suggestion: function(item) { return '<div>' + item.name + '</div>'; }
-          }
-        }
-      ).on('typeahead:select', function(ev, sel){
-        // On select, set hidden input value to id, and show/hide org picker
-        $('#orgtype-value').val(sel.id);
-        $('#orgtype-input').val(sel.name); // Just for nice UI
-        $('.orgfield-group').hide();
-        if(sel.id) {
-          $('#orgfield-' + sel.id).show();
-        }
-      });
-      // On manual input blur, only allow exact matches
-      $('#orgtype-input').on('blur', function(){
-        var label = $(this).val().trim();
-        var found = ORG_TYPES.find(o => o.name.toLowerCase() === label.toLowerCase());
-        if(found) {
-          $('#orgtype-input').val(found.name);
-          $('#orgtype-value').val(found.id);
-          $('.orgfield-group').hide();
-          $('#orgfield-' + found.id).show();
-        } else {
-          // Invalid value, clear both
-          $('#orgtype-input').val('');
-          $('#orgtype-value').val('');
-          $('.orgfield-group').hide();
-        }
-      });
-      // On page load, show correct group if org_type is set
-      var orgTypeVal = $('#orgtype-value').val();
-      if(orgTypeVal) {
-        var found = ORG_TYPES.find(o => o.id === orgTypeVal);
-        if(found) $('#orgtype-input').val(found.name);
-        $('.orgfield-group').hide();
-        $('#orgfield-' + orgTypeVal).show();
-      }
+    document.addEventListener('DOMContentLoaded', () => {
+      const typeSelect = document.getElementById('id_organization_type');
+      const orgSelect = document.getElementById('id_organization');
 
-      // Helper function for setting up typeahead+hidden for each org type
-      function setupOrgTypeahead(name) {
-        var nameInput = $('#' + name + '-name-input');
-        var idInput   = $('#' + name + '-id-input');
-        var endpoint  = nameInput.data('url');
-        var separator = endpoint.includes('?') ? '&' : '?';
-        var remoteUrl = endpoint + separator + 'q=%QUERY';
-
-        var engine = new Bloodhound({
-          datumTokenizer: Bloodhound.tokenizers.obj.whitespace('text'),
-          queryTokenizer: Bloodhound.tokenizers.whitespace,
-          remote: {
-            url: remoteUrl,
-            wildcard: '%QUERY',
-            transform: function(response) {
-              return response.map(function(item){
-                return { id: item.id, text: item.text };
-              });
-            }
-          }
-        });
-        nameInput.typeahead(
-          { hint: true, highlight: true, minLength: 1 },
-          {
-            name: name + '-picker',
-            display: 'text',
-            source: engine,
-            limit: 10,
-            templates: {
-              suggestion: function(item) { return '<div>' + item.text + '</div>'; }
-            }
-          }
-        ).on('typeahead:select', function(ev, sel){
-          idInput.val(sel.id);
-          nameInput.val(sel.text);
-        });
-        nameInput.on('input', function() {
-          idInput.val('');
+      async function loadOrgs() {
+        const typeName = typeSelect.options[typeSelect.selectedIndex]?.text;
+        if (!typeName) return;
+        const resp = await fetch('{% url "emt:api_organizations" %}?org_type=' + encodeURIComponent(typeName));
+        const data = await resp.json();
+        orgSelect.innerHTML = '<option value="">---------</option>';
+        data.forEach(item => {
+          const opt = document.createElement('option');
+          opt.value = item.id;
+          opt.textContent = item.text;
+          orgSelect.appendChild(opt);
         });
       }
 
-      // Setup typeahead for each org type
-      setupOrgTypeahead('department');
-      setupOrgTypeahead('association');
-      setupOrgTypeahead('club');
-      setupOrgTypeahead('center');
-      setupOrgTypeahead('cell');
-
-      // TomSelect for faculty in-charges (AJAX)
-      new TomSelect('#faculty-select', {
-        plugins: ['remove_button'],
-        valueField: 'id',
-        labelField: 'text',
-        searchField: 'text',
-        create: false,
-        placeholder: 'Type a lecturer name…',
-        load: function(query, callback) {
-          if (!query.length) return callback();
-          fetch("{% url 'emt:api_faculty' %}?q=" + encodeURIComponent(query))
-            .then(r => r.json())
-            .then(json => callback(json))
-            .catch(() => callback());
-        }
-      });
+      typeSelect.addEventListener('change', loadOrgs);
     });
   </script>
 {% endblock %}
