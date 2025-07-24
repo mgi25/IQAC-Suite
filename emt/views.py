@@ -30,6 +30,7 @@ from datetime import timedelta
 from django.utils.timezone import now
 from django.db.models import Sum
 import google.generativeai as genai
+import os
 from django.contrib.auth.decorators import login_required, user_passes_test
 
 # --- Added for the new function ---
@@ -40,7 +41,8 @@ from operator import attrgetter
 # ──────────────────────────────
 # CDL DASHBOARD
 # ──────────────────────────────
-genai.configure(api_key="AIzaSyD1jp9F1JKK0pO0LeL6ifxOrxI0rlkzPRc")
+# Configure Gemini API key from environment variable
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 def cdl_dashboard(request):
     return render(request, 'emt/cdl_dashboard.html')
 
@@ -108,16 +110,6 @@ def submit_proposal(request, pk=None):
 
     if request.method == "POST":
         post_data = request.POST.copy()
-
-        # Normalize org fields for new names
-        org_type = post_data.get("organization_type")  # You'll need a way in your form to specify org type
-        org_name = post_data.get("organization")
-        organization = None
-        if org_type and org_name:
-            org_type_obj, _ = OrganizationType.objects.get_or_create(name=org_type)
-            organization, _ = Organization.objects.get_or_create(name=org_name, org_type=org_type_obj)
-            post_data["organization"] = str(organization.id)
-
         form = EventProposalForm(post_data, instance=proposal, selected_academic_year=request.session.get('selected_academic_year'))
 
         # --------- FACULTY INCHARGES QUERYSET FIX ---------
@@ -149,7 +141,7 @@ def submit_proposal(request, pk=None):
     ctx = {
         "form": form,
         "proposal": proposal,
-        "organization_name": get_name(Organization, form['organization'].value()),
+        "org_types": OrganizationType.objects.filter(is_active=True).order_by('name'),
     }
 
     if request.method == "POST" and form.is_valid():
