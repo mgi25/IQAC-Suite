@@ -113,26 +113,38 @@
 {% endblock %}
 
 {% block scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const typeSelect = document.getElementById('id_organization_type');
-      const orgSelect = document.getElementById('id_organization');
-
-      async function loadOrgs() {
-        const typeName = typeSelect.options[typeSelect.selectedIndex]?.text;
-        if (!typeName) return;
-        const resp = await fetch('{% url "emt:api_organizations" %}?org_type=' + encodeURIComponent(typeName));
-        const data = await resp.json();
-        orgSelect.innerHTML = '<option value="">---------</option>';
-        data.forEach(item => {
-          const opt = document.createElement('option');
-          opt.value = item.id;
-          opt.textContent = item.text;
-          orgSelect.appendChild(opt);
-        });
-      }
-
-      typeSelect.addEventListener('change', loadOrgs);
+      // Initialize TomSelect for organization_type and organization
+      const orgTypeTS = new TomSelect('#id_organization_type');
+      const orgTS = new TomSelect('#id_organization', {
+        valueField: 'id',
+        labelField: 'text',
+        searchField: 'text',
+        create: false,
+        load: function(query, callback) {
+          // Get selected org_type text
+          const typeEl = document.querySelector('#id_organization_type');
+          let typeName = '';
+          if (typeEl.tomselect) {
+            const val = typeEl.tomselect.getValue();
+            typeName = typeEl.tomselect.getItem(val)?.textContent;
+          } else {
+            typeName = typeEl.options[typeEl.selectedIndex]?.text;
+          }
+          let url = '{% url "emt:api_organizations" %}?q=' + encodeURIComponent(query || '');
+          if (typeName) url += '&org_type=' + encodeURIComponent(typeName.trim());
+          fetch(url)
+            .then(r => r.json())
+            .then(callback)
+            .catch(() => callback());
+        }
+      });
+      orgTypeTS.on('change', () => {
+        orgTS.clear();
+        orgTS.clearOptions();
+      });
     });
   </script>
 {% endblock %}
