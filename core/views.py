@@ -7,7 +7,6 @@ from django.contrib import messages
 from django.db.models import Q, Sum
 from django.forms import inlineformset_factory
 from django.urls import reverse
-from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 import json
 from .models import (
@@ -17,7 +16,8 @@ from emt.models import (
     EventProposal, EventNeedAnalysis, EventObjectives, EventExpectedOutcomes, TentativeFlow,
     ExpenseDetail, SpeakerProfile, ApprovalStep
 )
-
+from django.views.decorators.http import require_GET, require_POST
+from .models import ApprovalFlowTemplate, Organization
 # ─────────────────────────────────────────────────────────────
 #  Helpers
 # ─────────────────────────────────────────────────────────────
@@ -157,14 +157,6 @@ def admin_user_edit(request, user_id):
     )
     if request.method == "POST":
         formset = RoleFormSet(request.POST, instance=user)
-        for form in formset.forms:
-            new_org_type = request.POST.get(f'new_org_type_{form.prefix}', '').strip()
-            new_org_name = request.POST.get(f'new_organization_{form.prefix}', '').strip()
-            if new_org_type and new_org_name:
-                org_type_obj, _ = OrganizationType.objects.get_or_create(name=new_org_type)
-                org_obj, _ = Organization.objects.get_or_create(name=new_org_name, org_type=org_type_obj)
-                form.instance.organization = org_obj
-
         user.first_name = request.POST.get("first_name", "").strip()
         user.last_name  = request.POST.get("last_name", "").strip()
         user.email      = request.POST.get("email", "").strip()
@@ -178,6 +170,7 @@ def admin_user_edit(request, user_id):
             messages.error(request, "Please fix the errors below and try again.")
     else:
         formset = RoleFormSet(instance=user)
+
 
     return render(
         request,
@@ -450,7 +443,8 @@ def admin_settings_dashboard(request):
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_approval_flow(request):
-    return render(request, "core/admin_approval_flow.html")
+    orgs = Organization.objects.filter(is_active=True).order_by('name')
+    return render(request, "core/admin_approval_flow.html", {"organizations": orgs})
 
 @login_required
 @csrf_exempt
@@ -498,3 +492,74 @@ def admin_pso_po_management(request):
         "programs": programs,
     }
     return render(request, "core/admin_pso_po_management.html", context)
+
+@require_GET
+def get_approval_flow(request, org_id):
+    steps = ApprovalFlowTemplate.objects.filter(organization_id=org_id).order_by('step_order')
+    data = [
+        {
+            'id': step.id,
+            'step_order': step.step_order,
+            'role_required': step.role_required,
+            'user_id': step.user.id if step.user else None,
+            'user_name': step.user.get_full_name() if step.user else '',
+        } for step in steps
+    ]
+    return JsonResponse({'success': True, 'steps': data})
+
+@require_POST
+@csrf_exempt
+def save_approval_flow(request, org_id):
+    data = json.loads(request.body)
+    steps = data.get('steps', [])
+    org = Organization.objects.get(id=org_id)
+    # Remove old steps
+    ApprovalFlowTemplate.objects.filter(organization=org).delete()
+    # Add new steps
+    for idx, step in enumerate(steps, 1):
+        if not step.get('role_required'):
+            continue  # skip empty roles
+        ApprovalFlowTemplate.objects.create(
+            organization=org,
+            step_order=idx,
+            role_required=step['role_required'],
+            user_id=step.get('user_id')
+        )
+
+    return JsonResponse({'success': True})
+def api_approval_flow_steps(request, org_id):
+    steps = list(
+        ApprovalFlowTemplate.objects.filter(organization_id=org_id).order_by('step_order').values(
+            'id', 'step_order', 'role_required', 'user_id'
+        )
+    )
+    return JsonResponse({'success': True, 'steps': steps})
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def search_users(request):
+    q = request.GET.get("q", "")
+    role = request.GET.get("role", "")
+    org_id = request.GET.get("org_id", "")
+
+    users = User.objects.all()
+
+    # --- Filter by search string ---
+    if q:
+        users = users.filter(
+            Q(first_name__icontains=q) |
+            Q(last_name__icontains=q) |
+            Q(email__icontains=q)
+        )
+
+    # --- Filter by role ---
+    if role:
+        users = users.filter(role_assignments__role__iexact=role)
+
+    # --- Filter by organization/department ---
+    if org_id:
+        users = users.filter(role_assignments__organization_id=org_id)
+
+    users = users.distinct()[:10]
+    data = [{"id": u.id, "name": u.get_full_name(), "email": u.email} for u in users]
+    return JsonResponse({"success": True, "users": data})
+

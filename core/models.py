@@ -173,3 +173,13 @@ class ProgramSpecificOutcome(models.Model):
     description = models.TextField()
     def __str__(self):
         return f"PSO - {self.program.name}"
+
+class ApprovalFlowTemplate(models.Model):
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="approval_flow_templates")
+    step_order = models.PositiveIntegerField()
+    role_required = models.CharField(max_length=50)  # e.g., "faculty", "hod"
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)  # If you want to fix to a person (optional)
+
+    class Meta:
+        unique_together = ('organization', 'step_order')
+        ordering = ['organization', 'step_order']

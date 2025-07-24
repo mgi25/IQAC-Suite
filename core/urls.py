@@ -67,6 +67,12 @@ urlpatterns = [
     # PSO/PO Management (admin)
     path('core-admin/pso-po/', views.admin_pso_po_management, name='admin_pso_po_management'),
 
+    # Event Approval Workflow
+    path('core-admin/approval-flow/<int:org_id>/get/', views.get_approval_flow, name='get_approval_flow'),
+    path('core-admin/approval-flow/<int:org_id>/save/', views.save_approval_flow, name='save_approval_flow'),
+    path('api/approval-flow/<int:org_id>/', views.api_approval_flow_steps, name='api_approval_flow_steps'),
+    path('core-admin/api/search-users/', views.search_users, name='search_users'),
+
     # ---- OPTIONAL: Direct organization add endpoint ----
     # path('core-admin/master-data/add/organization/', views.admin_master_data_add, {"model_name": "organization"}, name='admin_settings_add_organization'),
 ]

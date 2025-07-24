@@ -3,106 +3,25 @@ import requests
 from django.contrib.auth.models import User
 from .models import ApprovalStep
 from core.models import Organization, OrganizationType
+# emt/utils.py
+from core.models import ApprovalFlowTemplate
 
 def build_approval_chain(proposal):
-    """
-    Build a dynamic approval chain based on org type, escalation, and flags.
-    Only the first step is 'pending', others are 'waiting'.
-    """
-
+    flow = ApprovalFlowTemplate.objects.filter(organization=proposal.organization).order_by('step_order')
     steps = []
-    order = 1
-    org = getattr(proposal, 'organization', None)
-    org_type = org.org_type.name.lower() if org and org.org_type else "individual"
-
-    # Approver user lookup helpers
-    def get_user_for_role(role, **filters):
-        return User.objects.filter(role_assignments__role=role, **filters).first()
-
-    # 🚩 1. Association
-    if org_type == 'association':
-        head = get_user_for_role('association_head', role_assignments__organization=org)
-        if head:
-            steps.append(ApprovalStep(proposal=proposal, step_order=order, role_required='association_head', assigned_to=head))
-            order += 1
-        # Assume associations are linked to departments by parent (set that up in your org model if you want this logic)
-        department = org.parent if hasattr(org, 'parent') else None
-        if department:
-            iqac = get_user_for_role('dept_iqac', role_assignments__organization=department)
-            if iqac:
-                steps.append(ApprovalStep(proposal=proposal, step_order=order, role_required='dept_iqac', assigned_to=iqac))
-                order += 1
-            hod = get_user_for_role('hod', role_assignments__organization=department)
-            if hod:
-                steps.append(ApprovalStep(proposal=proposal, step_order=order, role_required='hod', assigned_to=hod))
-                order += 1
-
-    # 🚩 2. Center
-    elif org_type == 'center':
-        head = get_user_for_role('center_head', role_assignments__organization=org)
-        if head:
-            steps.append(ApprovalStep(proposal=proposal, step_order=order, role_required='center_head', assigned_to=head))
-            order += 1
-        uni_iqac = get_user_for_role('uni_iqac')
-        if uni_iqac:
-            steps.append(ApprovalStep(proposal=proposal, step_order=order, role_required='uni_iqac', assigned_to=uni_iqac))
-            order += 1
-
-    # 🚩 3. Club
-    elif org_type == 'club':
-        head = get_user_for_role('club_head', role_assignments__organization=org)
-        if head:
-            steps.append(ApprovalStep(proposal=proposal, step_order=order, role_required='club_head', assigned_to=head))
-            order += 1
-        uni_club_head = get_user_for_role('university_club_head')
-        if uni_club_head:
-            steps.append(ApprovalStep(proposal=proposal, step_order=order, role_required='university_club_head', assigned_to=uni_club_head))
-            order += 1
-
-    # 🚩 4. Cell
-    elif org_type == 'cell':
-        head = get_user_for_role('cell_head', role_assignments__organization=org)
-        if head:
-            steps.append(ApprovalStep(proposal=proposal, step_order=order, role_required='cell_head', assigned_to=head))
-            order += 1
-        uni_iqac = get_user_for_role('uni_iqac')
-        if uni_iqac:
-            steps.append(ApprovalStep(proposal=proposal, step_order=order, role_required='uni_iqac', assigned_to=uni_iqac))
-            order += 1
-
-    # 🚩 5. Department
-    elif org_type == 'department':
-        # Faculty incharges
-        faculty_users = proposal.faculty_incharges.all()
-        for fac in faculty_users:
-            steps.append(ApprovalStep(
-                proposal=proposal, step_order=order, role_required='faculty', assigned_to=fac
-            ))
-            order += 1
-        dept_iqac = get_user_for_role('dept_iqac', role_assignments__organization=org)
-        if dept_iqac:
-            steps.append(ApprovalStep(proposal=proposal, step_order=order, role_required='dept_iqac', assigned_to=dept_iqac))
-            order += 1
-        hod = get_user_for_role('hod', role_assignments__organization=org)
-        if hod:
-            steps.append(ApprovalStep(proposal=proposal, step_order=order, role_required='hod', assigned_to=hod))
-            order += 1
-
-    # 🚩 6. Anything else (Individual)
-    else:
-        acad_coord = get_user_for_role('academic_coordinator')
-        dean = get_user_for_role('dean')
-        assigned = acad_coord or dean
-        if assigned:
-            steps.append(ApprovalStep(
-                proposal=proposal, step_order=order,
-                role_required=assigned.role_assignments.first().role,
-                assigned_to=assigned
-            ))
-
-    # Set only the first step as 'pending', others as 'waiting'
-    for i, step in enumerate(steps):
-        step.status = 'pending' if i == 0 else 'waiting'
+    for idx, tmpl in enumerate(flow, 1):
+        # If a user is specified in the template, assign them, else assign first available by role in this org
+        assigned_to = tmpl.user or User.objects.filter(
+            role_assignments__role=tmpl.role_required,
+            role_assignments__organization=proposal.organization
+        ).first()
+        steps.append(ApprovalStep(
+            proposal=proposal,
+            step_order=idx,
+            role_required=tmpl.role_required,
+            assigned_to=assigned_to,
+            status='pending' if idx == 1 else 'waiting'
+        ))
     ApprovalStep.objects.bulk_create(steps)
 
 # ---------------------------------------------
