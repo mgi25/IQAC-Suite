@@ -1,0 +1,101 @@
+:root {
+  --rm-padding: 2rem;
+}
+
+.role-mgmt-wrapper {
+  max-width: 900px;
+  margin: 2rem auto;
+  background: var(--white);
+  border-radius: var(--border-radius-xl);
+  box-shadow: var(--shadow-lg);
+  padding: var(--rm-padding);
+}
+
+.role-mgmt-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--christ-blue-primary);
+  margin-bottom: 1rem;
+}
+
+.org-type-section {
+  margin-top: 2rem;
+}
+
+.org-type-heading {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--christ-blue-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.org-card {
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius-lg);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.org-name {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--christ-blue-dark);
+}
+
+.role-list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+  padding: 0;
+}
+
+.role-chip {
+  background: var(--christ-blue-primary);
+  color: #fff;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--border-radius);
+  font-size: 0.85rem;
+}
+
+.delete-role-btn {
+  background: none;
+  border: none;
+  color: var(--christ-blue-primary);
+  margin-left: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.delete-role-btn:hover {
+  color: var(--christ-blue-dark);
+  text-decoration: underline;
+}
+
+.add-role-form {
+  margin-top: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.add-role-form input[type="text"] {
+  flex: 1;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--gray-300);
+  background: var(--white);
+}
+
+.add-role-form button {
+  padding: 0.4rem 1rem;
+  border-radius: var(--border-radius);
+  background: var(--christ-blue-primary);
+  color: #fff;
+  border: none;
+}
+
+.add-role-form button:hover {
+  background: var(--christ-blue-secondary);
+}

@@ -44,13 +44,22 @@
       <button class="modal-close" onclick="closeModal('approvalFlowEditorModal')">&times;</button>
     </div>
     <div class="modal-body">
-      <!-- Organization select -->
       <div class="form-group">
-        <label for="approvalFlowOrgSelect">Organization</label>
-        <select id="approvalFlowOrgSelect" class="form-select" onchange="loadApprovalFlow()">
+        <label for="orgTypeFilter">Category</label>
+        <select id="orgTypeFilter" class="form-select" onchange="filterOrgOptions()">
+          <option value="">All Categories</option>
+          {% for ot in org_types %}
+          <option value="{{ ot.id }}">{{ ot.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="orgSearchInput">Organization</label>
+        <input type="text" id="orgSearchInput" class="form-control" placeholder="Search..." oninput="filterOrgOptions()">
+        <select id="approvalFlowOrgSelect" class="form-select" onchange="loadApprovalFlow()" size="8" style="margin-top:0.5rem;">
           <option value="">– Select organization –</option>
           {% for org in organizations %}
-            <option value="{{ org.id }}">{{ org.name }} ({{ org.org_type.name }})</option>
+            <option value="{{ org.id }}" data-org-type="{{ org.org_type.id }}">{{ org.name }} ({{ org.org_type.name }})</option>
           {% endfor %}
         </select>
       </div>
@@ -64,6 +73,7 @@
       <p class="form-tip">Tip: Use roles like <code>faculty</code>, <code>dept_iqac</code>, <code>hod</code>, etc.</p>
     </div>
     <div class="modal-footer">
+      <button class="btn btn-danger" onclick="deleteApprovalFlow()">Delete Flow</button>
       <button class="btn btn-secondary" onclick="closeModal('approvalFlowEditorModal')">Cancel</button>
       <button class="btn btn-primary" onclick="saveApprovalFlow()">Save</button>
     </div>
