@@ -1,15 +1,43 @@
 /* reports.css - For the Reports Page only */
 
+/* -- KEY UPDATES --
+  1. CSS Variables for easy color management.
+  2. Statuses are now styled as modern "pills" or "badges".
+  3. Added a new style for the "Generated" status.
+  4. Minor UI improvements like table row hover effects.
+*/
+
+:root {
+  --primary-dark-blue: #1258c3;
+  --primary-text: #4c5c72;
+  --header-blue: #194d89;
+  --bg-main: #f5f7fa;
+  --bg-container: #fff;
+  --bg-table-header: #e2eefd;
+  --border-color: #ebedf1;
+
+  /* Status Colors */
+  --status-approved-text: #198754;
+  --status-approved-bg: #d1e7dd;
+  --status-pending-text: #664d03;
+  --status-pending-bg: #fff3cd;
+  --status-rejected-text: #b02a37;
+  --status-rejected-bg: #f8d7da;
+  --status-generated-text: #0056b3;
+  --status-generated-bg: #e7f3ff;
+}
+
 body {
-  background: #f5f7fa;
+  background: var(--bg-main);
   font-family: 'Inter', Arial, sans-serif;
 }
 
+/* --- Layout & Container --- */
 .reports-main-container {
-  max-width: 1000px;
+  max-width: 1100px;
   margin: 50px auto 0 auto;
   padding: 36px 32px 32px 32px;
-  background: #fff;
+  background: var(--bg-container);
   border-radius: 18px;
   box-shadow: 0 6px 32px 0 rgba(30, 58, 138, 0.07);
 }
@@ -17,96 +45,120 @@ body {
 .reports-header-title {
   font-size: 2.2rem;
   font-weight: 700;
-  color: #1258c3;
+  color: var(--primary-dark-blue);
   margin-bottom: 10px;
   letter-spacing: -1px;
 }
 
 .reports-header-desc {
   font-size: 1.05rem;
-  color: #4c5c72;
+  color: var(--primary-text);
   margin-bottom: 32px;
 }
 
+/* --- Table Styles --- */
 .reports-table-wrap {
   overflow-x: auto;
   border-radius: 12px;
-  box-shadow: 0 2px 12px 0 rgba(22,58,150,0.07);
-  background: #f9fbfd;
+  border: 1px solid var(--border-color);
 }
 
 .reports-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 800px;
+  min-width: 900px;
   font-size: 1rem;
-  background: #f9fbfd;
+  background: var(--bg-container);
   border-radius: 12px;
   overflow: hidden;
 }
 
 .reports-table th, .reports-table td {
-  padding: 16px 14px;
-  text-align: center;
-  border-bottom: 1px solid #ebedf1;
+  padding: 18px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
 }
 
 .reports-table th {
-  background: #e2eefd;
-  color: #194d89;
-  font-weight: 700;
-  font-size: 1.05rem;
-  letter-spacing: 0.02em;
-}
-
-.reports-table td {
-  background: #fff;
+  background: var(--bg-table-header);
+  color: var(--header-blue);
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .reports-table tr:last-child td {
   border-bottom: none;
 }
 
-.status-approved {
-  color: #20c997;
+.reports-table tr:hover td {
+  background-color: #f9fafb;
+}
+
+/* --- Status Badges --- */
+.status-approved,
+.status-pending,
+.status-rejected,
+.status-generated {
+  padding: 5px 12px;
+  border-radius: 15px;
+  font-size: 13px;
   font-weight: 600;
+  display: inline-block;
+  text-align: center;
+}
+
+.status-approved {
+  color: var(--status-approved-text);
+  background-color: var(--status-approved-bg);
 }
 .status-pending {
-  color: #f2c94c;
-  font-weight: 600;
+  color: var(--status-pending-text);
+  background-color: var(--status-pending-bg);
 }
 .status-rejected {
-  color: #e63946;
-  font-weight: 600;
+  color: var(--status-rejected-text);
+  background-color: var(--status-rejected-bg);
+}
+/* This is the new style you needed */
+.status-generated {
+  color: var(--status-generated-text);
+  background-color: var(--status-generated-bg);
 }
 
+
+/* --- Action Buttons --- */
 .report-action-btn {
   background: none;
-  color: #1565d8;
-  border: none;
-  padding: 4px 10px;
+  color: var(--primary-dark-blue);
+  border: 1px solid transparent;
+  padding: 6px 12px;
   margin-right: 7px;
   cursor: pointer;
-  font-weight: 500;
-  border-radius: 4px;
-  transition: background 0.16s, color 0.16s;
-  text-decoration: underline;
+  font-weight: 600;
+  border-radius: 6px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  text-decoration: none; /* Removed underline for a cleaner look */
+  font-size: 14px;
 }
 .report-action-btn:hover {
-  color: #003366;
-  background: #e2eefd;
+  color: var(--header-blue);
+  background-color: var(--bg-table-header);
+  text-decoration: none;
 }
 
+/* --- Responsive --- */
 @media (max-width: 700px) {
   .reports-main-container {
-    padding: 18px 4vw 18px 4vw;
-    max-width: 99vw;
+    padding: 18px 4vw;
+    margin-top: 20px;
   }
   .reports-header-title {
-    font-size: 1.4rem;
+    font-size: 1.6rem;
   }
   .reports-table {
     font-size: 0.95rem;
-    min-width: 520px;
   }
 }

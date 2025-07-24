@@ -3,6 +3,7 @@
 from django.urls import path
 from . import views
 from core.views import custom_logout
+from emt import views as emt_views
 
 urlpatterns = [
     # Authentication
@@ -52,6 +53,9 @@ urlpatterns = [
 
     # Proposal Detail View (admin)
     path('core-admin/proposal/<int:proposal_id>/detail/', views.admin_proposal_detail, name='admin_proposal_detail'),
+
+    # Report View Management (Admin)
+    path('reports/', emt_views.admin_reports_view, name='admin_reports'),
 
     # Approval Flow Setup UI
     path('core-admin/approval-flow/', views.admin_approval_flow, name='admin_approval_flow'),

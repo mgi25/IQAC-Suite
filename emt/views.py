@@ -18,7 +18,7 @@ from .forms import (
     ExpenseDetailForm,EventReportForm, EventReportAttachmentForm
 )
 from django.forms import modelformset_factory
-from core.models import Organization, OrganizationType    # FK model you created
+from core.models import Organization, OrganizationType, Report as SubmittedReport    # FK model you created AND the submitted report model
 from django.contrib.auth.models import User
 from emt.utils import build_approval_chain
 from emt.models import ApprovalStep
@@ -31,6 +31,12 @@ from django.utils.timezone import now
 from django.db.models import Sum
 import google.generativeai as genai
 from django.contrib.auth.decorators import login_required, user_passes_test
+
+# --- Added for the new function ---
+from itertools import chain
+from operator import attrgetter
+# ----------------------------------
+
 # ──────────────────────────────
 # CDL DASHBOARD
 # ──────────────────────────────
@@ -482,13 +488,13 @@ def api_organizations(request):
 def api_faculty(request):
     q = request.GET.get("q", "").strip()
     users = (User.objects
-             .filter(role_assignments__role="faculty")
-             .filter(
-                 Q(first_name__icontains=q) |
-                 Q(last_name__icontains=q) |
-                 Q(email__icontains=q))
-             .distinct()
-             .order_by("first_name")[:20])
+                  .filter(role_assignments__role="faculty")
+                  .filter(
+                      Q(first_name__icontains=q) |
+                      Q(last_name__icontains=q) |
+                      Q(email__icontains=q))
+                  .distinct()
+                  .order_by("first_name")[:20])
     return JsonResponse(
         [{"id": u.id, "text": f"{u.get_full_name() or u.username} ({u.email})"} for u in users],
         safe=False
@@ -756,8 +762,8 @@ def generate_ai_report(request):
 
             ---
             # EVENT INFORMATION
-            | Field                | Value                     |
-            |----------------------|--------------------------|
+            | Field                | Value                         |
+            |----------------------|-------------------------------|
             | Department           | {data.get('department','')} |
             | Location             | {data.get('location','')} |
             | Event Title          | {data.get('event_title','')} |
@@ -768,8 +774,8 @@ def generate_ai_report(request):
             | Event Type (Focus)   | {data.get('event_focus_type','')} |
 
             # PARTICIPANTS INFORMATION
-            | Field                   | Value              |
-            |-------------------------|--------------------|
+            | Field                   | Value                      |
+            |-------------------------|----------------------------|
             | Target Audience         | {data.get('target_audience','')} |
             | Organising Committee    | {data.get('organising_committee_details','')} |
             | No of Student Volunteers| {data.get('no_of_volunteers','')} |
@@ -787,8 +793,8 @@ def generate_ai_report(request):
             - Impact on Volunteers: {data.get('impact_on_volunteers','')}
 
             # RELEVANCE OF THE EVENT
-            | Criteria                | Description         |
-            |-------------------------|---------------------|
+            | Criteria                | Description                 |
+            |-------------------------|-----------------------------|
             | Graduate Attributes     | {data.get('graduate_attributes','')} |
             | Support to SDGs/Values  | {data.get('sdg_value_systems_mapping','')} |
 
@@ -944,8 +950,42 @@ def ai_report_submit(request, proposal_id):
     from django.contrib import messages
     messages.success(request, "Event report submitted successfully!")
     return redirect('emt:report_success', proposal_id=proposal.id)
+
 @user_passes_test(lambda u: u.is_superuser)
 def api_organization_types(request):
     org_types = OrganizationType.objects.filter(is_active=True).order_by('name')
     data = [{"id": ot.name.lower(), "name": ot.name} for ot in org_types]
     return JsonResponse(data, safe=False)
+
+# ------------------------------------------------------------------
+# │ NEW FUNCTION ADDED BELOW                                       │
+# ------------------------------------------------------------------
+
+@login_required
+def admin_reports_view(request):
+    """
+    Displays a combined list of all reports for the admin dashboard.
+    This includes submitted reports from the 'core' app and generated
+    reports from the 'emt' app.
+    """
+    # 1. Get all user-submitted reports from the 'core' app
+    # Assuming the model in core.models is named 'Report'
+    submitted_reports = SubmittedReport.objects.all()
+
+    # 2. Get all generated event reports from the 'emt' app
+    # Using 'select_related' to efficiently fetch the related proposal details
+    generated_reports = EventReport.objects.select_related('proposal').all()
+
+    # 3. Combine the two different querysets into a single Python list
+    all_reports_list = list(chain(submitted_reports, generated_reports))
+
+    # 4. Sort the combined list by their creation date in descending order
+    # This assumes both models have a 'created_at' field. If not, you can
+    # use a @property on each model to return a common date field.
+    all_reports_list.sort(key=attrgetter('created_at'), reverse=True)
+
+    # 5. Pass the final list to the admin reports template
+    context = {
+        'reports': all_reports_list
+    }
+    return render(request, 'core/admin_reports.html', context)

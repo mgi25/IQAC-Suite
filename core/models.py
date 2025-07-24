@@ -136,7 +136,7 @@ class Report(models.Model):
         blank=True,
         related_name="submitted_reports",
     )
-    date_submitted = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     report_type = models.CharField(max_length=30, choices=REPORT_TYPE_CHOICES)
     file = models.FileField(upload_to="reports/", blank=True, null=True)
 

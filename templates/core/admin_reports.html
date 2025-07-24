@@ -4,67 +4,98 @@
 <link rel="stylesheet" href="{% static 'core/css/reports.css' %}">
 
 <div class="reports-main-container">
-  <div class="reports-header-title">Reports</div>
-  <div class="reports-header-desc">
-    Review, approve, and download submitted reports below.
-  </div>
-  <div class="reports-table-wrap">
-    <table class="reports-table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Title</th>
-          <th>Type</th>
-          <th>Department</th>
-          <th>Submitted By</th>
-          <th>Date Submitted</th>
-          <th>Status</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for report in reports %}
-        <tr>
-          <td>{{ forloop.counter }}</td>
-          <td>{{ report.title }}</td>
-          <td>{{ report.get_report_type_display }}</td>
-          <td>{{ report.department }}</td>
-          <td>
-            {% if report.submitted_by %}
-              {{ report.submitted_by.get_full_name|default:report.submitted_by.username }}
-            {% else %}
-              -
-            {% endif %}
-          </td>
-          <td>{{ report.date_submitted|date:"Y-m-d H:i" }}</td>
-          <td>
-            {% if report.status == "approved" %}
-              <span class="status-approved">Approved</span>
-            {% elif report.status == "submitted" %}
-              <span class="status-pending">Pending</span>
-            {% elif report.status == "rejected" %}
-              <span class="status-rejected">Rejected</span>
-            {% else %}
-              <span>{{ report.get_status_display }}</span>
-            {% endif %}
-          </td>
-          <td>
-            {% if report.file %}
-              <a href="{{ report.file.url }}" class="report-action-btn" download>Download</a>
-            {% endif %}
-            {% if report.status == "submitted" %}
-              <a href="{% url 'admin_reports_approve' report.id %}" class="report-action-btn">Approve</a>
-              <a href="{% url 'admin_reports_reject' report.id %}" class="report-action-btn">Reject</a>
-            {% endif %}
-          </td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="8" style="text-align:center;">No reports found.</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+    <div class="reports-header-title">Reports</div>
+    <div class="reports-header-desc">
+        Review, approve, and download submitted or generated reports below.
+    </div>
+    <div class="reports-table-wrap">
+        <table class="reports-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Title</th>
+                    <th>Type</th>
+                    <th>Organization</th>
+                    <th>Submitted By</th>
+                    <th>Date Created</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for report in reports %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    
+                    {# Title: Handles both direct title and title from a proposal #}
+                    <td>{{ report.title|default:report.proposal.title }}</td>
+
+                    {# Type: Displays the specific type or a generic "Event Report" #}
+                    <td>
+                        {% if report.proposal %}
+                            Event Report
+                        {% else %}
+                            {{ report.get_report_type_display }}
+                        {% endif %}
+                    </td>
+
+                    {# Organization: Handles both direct org and org from a proposal #}
+                    <td>
+                        {{ report.organization|default:report.proposal.organization|default:"-" }}
+                    </td>
+
+                    {# Submitted By: Handles both direct user and user from a proposal #}
+                    <td>
+                        {% with submitter=report.submitted_by|default:report.proposal.submitted_by %}
+                            {{ submitter.get_full_name|default:submitter.username }}
+                        {% endwith %}
+                    </td>
+
+                    {# Date: Assumes a 'created_at' field on both models for consistency #}
+                    <td>{{ report.created_at|date:"Y-m-d H:i" }}</td>
+
+                    {# Status: Shows workflow status for core reports, or "Generated" for event reports #}
+                    <td>
+                        {% if report.proposal %}
+                            <span class="status-generated">Generated</span>
+                        {% else %}
+                            {% if report.status == "approved" %}
+                                <span class="status-approved">Approved</span>
+                            {% elif report.status == "submitted" %}
+                                <span class="status-pending">Pending</span>
+                            {% elif report.status == "rejected" %}
+                                <span class="status-rejected">Rejected</span>
+                            {% else %}
+                                <span>{{ report.get_status_display }}</span>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+
+                    {# Action Buttons: Shows different actions based on the report type #}
+                    <td>
+                        {% if report.proposal %}
+                            {# Actions for generated Event Reports from the 'emt' app #}
+                            <a href="{% url 'emt:view_report' report.id %}" class="report-action-btn">View</a>
+                            <a href="{% url 'emt:download_pdf' report.id %}" class="report-action-btn">PDF</a>
+                        {% else %}
+                            {# Actions for submitted Reports from the 'core' app #}
+                            {% if report.file %}
+                                <a href="{{ report.file.url }}" class="report-action-btn" download>Download</a>
+                            {% endif %}
+                            {% if report.status == "submitted" %}
+                                <a href="{% url 'admin_reports_approve' report.id %}" class="report-action-btn">Approve</a>
+                                <a href="{% url 'admin_reports_reject' report.id %}" class="report-action-btn">Reject</a>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" style="text-align:center;">No reports found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 {% endblock %}

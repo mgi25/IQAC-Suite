@@ -2,23 +2,45 @@
 {% load static %}
 {% block content %}
 <link rel="stylesheet" href="{% static 'emt/css/iqac_view_report.css' %}">
-<div class="iqac-view-bg">
-  <div class="iqac-view-container">
-    <div class="iqac-view-header">
-      <span class="iqac-view-icon">📄</span>
-      <span class="iqac-view-title">{{ report.event_title }}</span>
+<link rel="stylesheet" href="{% static 'emt/css/report_styles.css' %}"> <div class="iqac-view-bg">
+    <div class="iqac-view-container">
+
+        <a href="{% url 'emt:generated_reports' %}" class="iqac-back-link">← Back to All Reports</a>
+
+        <div class="iqac-view-header">
+            <span class="iqac-view-icon">📄</span>
+            <div class="iqac-header-text">
+                <span class="iqac-view-title">{{ report.proposal.title }}</span>
+                <span class="iqac-view-subtitle">Generated Event Report</span>
+            </div>
+        </div>
+
+        <div class="report-meta">
+            <div class="meta-item">
+                <strong>Organization:</strong>
+                <span>{{ report.proposal.organization|default:"N/A" }}</span>
+            </div>
+            <div class="meta-item">
+                <strong>Event Date:</strong>
+                <span>{{ report.proposal.event_datetime|date:"F j, Y" }}</span>
+            </div>
+            <div class="meta-item">
+                <strong>Report Generated:</strong>
+                <span>{{ report.created_at|date:"F j, Y, P" }}</span>
+            </div>
+        </div>
+
+        <div class="report-content">
+            {% if report.html_content %}
+                {{ report.html_content|safe }}
+            {% else %}
+                <p>No detailed report content is available.</p>
+            {% endif %}
+        </div>
+
+        <div class="iqac-view-actions">
+            <a href="{% url 'emt:download_pdf' report.id %}" class="iqac-action-btn primary">Download PDF</a>
+            <a href="#" class="iqac-action-btn">Download Word</a> </div>
     </div>
-    <div class="iqac-view-details">
-      <!-- Example content, replace/expand with your real report fields -->
-      <div class="iqac-view-field"><strong>Date:</strong> {{ report.generated_at|date:"M d, Y" }}</div>
-      <div class="iqac-view-field"><strong>Status:</strong> Generated</div>
-      <div class="iqac-view-field"><strong>Description:</strong> {{ report.description|default:"—" }}</div>
-      <!-- ...more fields as needed -->
-    </div>
-    <div class="iqac-view-actions">
-      <a href="{% url 'emt:download_pdf' report.id %}" class="iqac-action-btn">Download PDF</a>
-      <a href="{% url 'emt:download_word' report.id %}" class="iqac-action-btn">Download Word</a>
-    </div>
-  </div>
 </div>
 {% endblock %}
