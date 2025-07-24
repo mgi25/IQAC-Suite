@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
-<div style="padding:2rem;text-align:center;">
-    <h2>User Management Coming Soon!</h2>
-    <p>This is a placeholder for the user management panel.</p>
+<div class="container" style="padding:2rem;">
+  <h1>User Administration</h1>
+  <div class="list-group" style="max-width:400px;margin-top:1rem;">
+    <a href="{% url 'admin_user_management' %}" class="list-group-item list-group-item-action">Manage Users</a>
+    <a href="{% url 'admin_role_management' %}" class="list-group-item list-group-item-action">Add Roles</a>
+  </div>
 </div>
 {% endblock %}

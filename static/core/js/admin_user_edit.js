@@ -14,9 +14,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function bindCard(card) {
     const roleSel = card.querySelector("select[name$='-role']");
+    const orgSel = card.querySelector("select[name$='-organization']");
     const orgGroup = card.querySelectorAll('.field-group')[1];
     const delBox = card.querySelector("input[name$='-DELETE']");
     const remBtn = card.querySelector('.remove-role-btn');
+
+    function populateOptions() {
+      const current = roleSel.value;
+      const opts = [...BASE_ROLES];
+      const extras = ORG_ROLES[orgSel.value] || [];
+      extras.forEach(r => opts.push([r, r]));
+      roleSel.innerHTML = opts.map(o => `<option value="${o[0]}">${o[1]}</option>`).join('');
+      if (current) roleSel.value = current;
+    }
 
     function toggleOrg() {
       const r = (roleSel.value || '').toLowerCase();
@@ -28,7 +38,13 @@ document.addEventListener('DOMContentLoaded', () => {
         orgGroup.style.display = '';
       }
     }
+
+    orgSel.addEventListener('change', () => {
+      populateOptions();
+      toggleOrg();
+    });
     roleSel.addEventListener('change', toggleOrg);
+    populateOptions();
     toggleOrg();
 
     remBtn?.addEventListener('click', () => {

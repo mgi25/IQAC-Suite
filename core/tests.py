@@ -1,7 +1,11 @@
 from django.test import TestCase
-
 from django.contrib.auth.models import User
-from .models import OrganizationType, Organization, ApprovalFlowTemplate
+from .models import (
+    OrganizationType,
+    Organization,
+    ApprovalFlowTemplate,
+    OrganizationRole,  # include only if actually present in your models
+)
 
 
 class OrganizationModelTests(TestCase):
@@ -23,6 +27,23 @@ class ApprovalFlowViewTests(TestCase):
 
         admin = User.objects.create_superuser("admin", "a@x.com", "pass")
         self.client.force_login(admin)
+
         resp = self.client.post(f"/core-admin/approval-flow/{org.id}/delete/")
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(ApprovalFlowTemplate.objects.count(), 0)
+
+
+class RoleManagementTests(TestCase):
+    def test_add_role(self):
+        ot = OrganizationType.objects.create(name="Dept")
+        org = Organization.objects.create(name="Math", org_type=ot)
+        admin = User.objects.create_superuser("admin", "a@x.com", "pass")
+        self.client.force_login(admin)
+
+        resp = self.client.post("/core-admin/user-roles/add/", {
+            "org_id": org.id,
+            "name": "Coordinator"
+        })
+
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(OrganizationRole.objects.filter(organization=org, name="Coordinator").count(), 1)
