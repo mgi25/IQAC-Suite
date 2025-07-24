@@ -23,8 +23,8 @@ urlpatterns = [
     path('proposal-status/<int:pk>/', views.proposal_status, name='proposal_status'),
 
     # Admin User Management
-    path('users/', views.admin_user_panel, name='admin_user_panel'),
-    path('core-admin/users/', views.admin_user_management, name='admin_user_management'), 
+    path('core-admin/user-management/', views.admin_user_panel, name='admin_user_panel'),
+    path('core-admin/users/', views.admin_user_management, name='admin_user_management'),
     path('core-admin/users/<int:user_id>/edit/', views.admin_user_edit, name='admin_user_edit'),
     path('core-admin/user-roles/', views.admin_role_management, name='admin_role_management'),
     path('core-admin/user-roles/add/', views.add_org_role, name='add_org_role'),

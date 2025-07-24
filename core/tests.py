@@ -4,7 +4,7 @@ from .models import (
     OrganizationType,
     Organization,
     ApprovalFlowTemplate,
-    OrganizationRole,  # include only if actually present in your models
+    OrganizationRole,  # Only include if this model exists
 )
 
 
