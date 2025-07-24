@@ -405,6 +405,7 @@ window.loadApprovalFlow = async function() {
 }
 
 let approvalSteps = [];
+let draggedIdx = null;
 
 window.addApprovalStep = function() {
   const stepsDiv = document.getElementById('approvalFlowSteps');
@@ -420,14 +421,17 @@ function renderApprovalSteps() {
     return;
   }
   stepsDiv.innerHTML = approvalSteps.map((step, i) => `
-    <div class="approval-step-row" data-idx="${i}">
-      <span class="approval-step-badge">${i + 1}</span>
-      <input class="role-input" type="text" placeholder="Role (e.g. faculty)" value="${step.role || ''}" 
+    <div class="step-block" draggable="true" data-idx="${i}" ondragstart="startDrag(event, ${i})" ondragover="allowDrop(event)" ondrop="dropStep(event, ${i})">
+      <span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span>
+      <span class="step-number">${i + 1}</span>
+      <input class="role-input" type="text" placeholder="Role (e.g. faculty)" value="${step.role || ''}"
              oninput="updateStepRole(${i}, this.value)">
-      <input class="user-search-input" type="text" placeholder="Search user..." 
-             value="${step.user ? step.user.name : ''}" 
-             oninput="searchUserForStep(${i}, this.value)">
-      <div class="user-search-results" id="user-search-results-${i}"></div>
+      <div style="position:relative;">
+        <input class="user-search-input" type="text" placeholder="Search user..."
+               value="${step.user ? step.user.name : ''}"
+               oninput="debouncedSearchUser(${i}, this.value)">
+        <div class="user-search-results" id="user-search-results-${i}"></div>
+      </div>
       <button onclick="removeStep(${i})" class="btn btn-danger btn-sm">Delete</button>
     </div>
   `).join('');
@@ -438,12 +442,13 @@ window.updateStepRole = function(idx, value) {
   approvalSteps[idx].role = value;
 };
 
-window.searchUserForStep = function(idx, q) {
-  if (!q) return;
-  // Get role and org_id from inputs
-  const role = document.querySelector(`.approval-step-row[data-idx="${idx}"] .role-input`).value;
+function searchUserForStep(idx, q) {
+  if (!q) {
+    document.getElementById(`user-search-results-${idx}`).innerHTML = '';
+    return;
+  }
+  const role = document.querySelector(`.step-block[data-idx="${idx}"] .role-input`).value;
   const orgId = document.getElementById('approvalFlowOrgSelect').value;
-  // Build query
   const params = new URLSearchParams({ q, role, org_id: orgId });
   fetch(`/core-admin/api/search-users/?${params}`)
     .then(r => r.json())
@@ -453,6 +458,26 @@ window.searchUserForStep = function(idx, q) {
       ).join('');
       document.getElementById(`user-search-results-${idx}`).innerHTML = results || '<div class="user-search-option disabled">No users found</div>';
     });
+}
+
+const debouncedSearchUser = debounce(searchUserForStep, 300);
+
+window.startDrag = function(e, idx) {
+  draggedIdx = idx;
+  e.dataTransfer.effectAllowed = 'move';
+};
+
+window.allowDrop = function(e) {
+  e.preventDefault();
+};
+
+window.dropStep = function(e, idx) {
+  e.preventDefault();
+  if (draggedIdx === null || draggedIdx === idx) return;
+  const step = approvalSteps.splice(draggedIdx, 1)[0];
+  approvalSteps.splice(idx, 0, step);
+  draggedIdx = null;
+  renderApprovalSteps();
 };
 
 
