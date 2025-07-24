@@ -30,4 +30,14 @@ TODO - EMT
   -> event report view -> Abhi pending
   -> Acadamic Year 
   -> A new window for user role addition
-  testing 
+
+
+git checkout -b add-student-coordinators 
+git add .
+git commit -m "feat: added student_coordinators field to EventProposalForm"
+
+git push origin add-student-coordinators
+
+
+
+git pull origin master
