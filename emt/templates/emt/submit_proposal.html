@@ -71,7 +71,6 @@
           {% for err in form.organization.errors %}<span class="error">{{ err }}</span>{% endfor %}
         </div>
 
-        <!-- Faculty incharges (AJAX select) -->
         <div class="input-group{% if form.faculty_incharges.errors %} has-error{% endif %}">
           <label for="faculty-select">{{ form.faculty_incharges.label }}</label>
           <select id="faculty-select" name="faculty_incharges" multiple>
@@ -88,7 +87,6 @@
           {% endfor %}
         </div>
 
-        <!-- All other fields (exclude org and faculty fields to prevent duplicates) -->
         {% for field in form.visible_fields %}
           {% if field.name not in "organization_type,organization,faculty_incharges" %}
             <div class="input-group{% if field.errors %} has-error{% endif %}">
@@ -116,7 +114,9 @@
   <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
+      // Organization Type select
       const orgTypeTS = new TomSelect('#id_organization_type');
+      // Organization select (dependent on org type)
       const orgTS = new TomSelect('#id_organization', {
         valueField: 'id',
         labelField: 'text',
@@ -127,7 +127,7 @@
           const typeName = typeEl.tomselect ?
             typeEl.tomselect.getItem(typeEl.tomselect.getValue())?.textContent :
             typeEl.options[typeEl.selectedIndex]?.text;
-          let url = '{% url "emt:api_organizations" %}?q=' + encodeURIComponent(query);
+          let url = '{% url "emt:api_organizations" %}?q=' + encodeURIComponent(query || '');
           if (typeName) url += '&org_type=' + encodeURIComponent(typeName.trim());
           fetch(url)
             .then(r => r.json())
@@ -140,7 +140,7 @@
         orgTS.clearOptions();
       });
 
-      // Typeahead for selecting faculty in-charges
+      // Faculty select (AJAX multi-select with live search)
       new TomSelect('#faculty-select', {
         plugins: ['remove_button'],
         valueField: 'id',
