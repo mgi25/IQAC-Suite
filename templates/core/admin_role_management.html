@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container" style="padding:2rem;">
+  <h1>Organization Roles</h1>
+  {% for type in org_types %}
+    <h3 style="margin-top:1.5rem;">{{ type.name }}</h3>
+    <ul class="list-group">
+      {% for org in type.organizations.all %}
+        <li class="list-group-item">
+          <strong>{{ org.name }}</strong>
+          <ul style="margin-top:0.5rem;">
+            {% for r in org.roles.all %}
+              <li>
+                {{ r.name }}
+                <form method="post" action="{% url 'delete_org_role' r.id %}" style="display:inline;">
+                  {% csrf_token %}
+                  <button class="btn btn-sm btn-link" type="submit">delete</button>
+                </form>
+              </li>
+            {% empty %}
+              <li>No roles</li>
+            {% endfor %}
+          </ul>
+          <form method="post" action="{% url 'add_org_role' %}" class="d-flex" style="gap:0.5rem; margin-top:0.5rem;">
+            {% csrf_token %}
+            <input type="hidden" name="org_id" value="{{ org.id }}">
+            <input type="text" name="name" placeholder="New role" class="form-control" required>
+            <button type="submit" class="btn btn-primary btn-sm">Add</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  {% empty %}
+    <p>No organization types found.</p>
+  {% endfor %}
+</div>
+{% endblock %}
