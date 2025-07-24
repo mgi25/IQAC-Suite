@@ -30,6 +30,7 @@ from datetime import timedelta
 from django.utils.timezone import now
 from django.db.models import Sum
 import google.generativeai as genai
+import os
 from django.contrib.auth.decorators import login_required, user_passes_test
 
 # --- Added for the new function ---
@@ -40,7 +41,8 @@ from operator import attrgetter
 # ──────────────────────────────
 # CDL DASHBOARD
 # ──────────────────────────────
-genai.configure(api_key="AIzaSyD1jp9F1JKK0pO0LeL6ifxOrxI0rlkzPRc")
+# Configure Gemini API key from environment variable
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 def cdl_dashboard(request):
     return render(request, 'emt/cdl_dashboard.html')
 
