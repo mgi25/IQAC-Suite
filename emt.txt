@@ -29,4 +29,5 @@ TODO - EMT
   -> Bug fix in event proposal 
   -> event report view -> Abhi pending
   -> Acadamic Year 
-  -> A new window for user role addition 
+  -> A new window for user role addition
+  testing 
