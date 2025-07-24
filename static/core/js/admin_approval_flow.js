@@ -466,7 +466,7 @@ window.removeStep = function(idx) {
   approvalSteps.splice(idx, 1);
   renderApprovalSteps();
 };
-window.saveApprovalFlow = function() {
+  window.saveApprovalFlow = function() {
   const orgId = document.getElementById('approvalFlowOrgSelect').value;
 
   // Map your frontend data to the backend format!
@@ -475,7 +475,7 @@ window.saveApprovalFlow = function() {
     user_id: s.user ? s.user.id : null
   }));
 
-  fetch(`/core-admin/approval-flow/${orgId}/save/`, {
+    fetch(`/core-admin/approval-flow/${orgId}/save/`, {
     method: "POST",
     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
     body: JSON.stringify({ steps: payloadSteps })
@@ -491,6 +491,39 @@ window.saveApprovalFlow = function() {
     }
   }).catch(e => {
     alert("Error: " + e);
+  });
+};
+
+window.deleteApprovalFlow = function() {
+  const orgId = document.getElementById('approvalFlowOrgSelect').value;
+  if (!orgId) return;
+  if (!confirm('Delete entire approval flow for this organization?')) return;
+  fetch(`/core-admin/approval-flow/${orgId}/delete/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF_TOKEN }
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      approvalSteps = [];
+      renderApprovalSteps();
+      showToast('Approval flow deleted', 'success');
+    } else {
+      showToast('Failed to delete flow', 'error');
+    }
+  })
+  .catch(() => showToast('Error deleting flow', 'error'));
+};
+
+window.filterOrgOptions = function() {
+  const type = document.getElementById('orgTypeFilter').value;
+  const search = document.getElementById('orgSearchInput').value.toLowerCase();
+  const select = document.getElementById('approvalFlowOrgSelect');
+  Array.from(select.options).forEach(opt => {
+    if (!opt.value) return;
+    const matchesType = !type || opt.dataset.orgType === type;
+    const matchesSearch = !search || opt.textContent.toLowerCase().includes(search);
+    opt.style.display = matchesType && matchesSearch ? '' : 'none';
   });
 };
 
