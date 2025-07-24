@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="{% static 'core/css/admin_role_management.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="role-mgmt-container">
+  <h1 class="mgmt-title">Organization Roles</h1>
+  <form id="addRoleForm" class="add-role-global" method="post" action="{% url 'add_org_role' %}">
+    {% csrf_token %}
+    <div class="field-group">
+      <select id="orgTypeSelect" class="form-select" required>
+        <option value="">Select Category</option>
+        {% for t in org_types %}
+        <option value="{{ t.id }}">{{ t.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field-group">
+      <select name="org_id" id="orgSelect" class="form-select" required>
+        <option value="">Select Organization</option>
+        {% for org in organizations %}
+        <option value="{{ org.id }}" data-org-type="{{ org.org_type.id }}">{{ org.name }} ({{ org.org_type.name }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field-group">
+      <input type="text" name="name" placeholder="Role name" required>
+    </div>
+    <button type="submit" class="btn btn-primary btn-sm">Add</button>
+  </form>
+
+  <table id="rolesTable" class="roles-table display nowrap" style="width:100%">
+    <thead>
+      <tr>
+        <th>Category</th>
+        <th>Organization</th>
+        <th>Role</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in roles %}
+      <tr>
+        <td>{{ r.organization.org_type.name }}</td>
+        <td>{{ r.organization.name }}</td>
+        <td>{{ r.name }}</td>
+        <td>
+          <form class="delete-role-form" method="post" action="{% url 'delete_org_role' r.id %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger btn-sm delete-role-btn">&times;</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="{% static 'core/js/admin_role_management.js' %}"></script>
+{% endblock %}

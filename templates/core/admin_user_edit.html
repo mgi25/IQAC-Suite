@@ -84,6 +84,9 @@
     <button type="button" class="remove-role-btn">×</button>
   </div>
 </template>
-
+<script>
+  const ORG_ROLES = {{ org_roles_json|safe }};
+  const BASE_ROLES = {{ role_choices_json|safe }};
+</script>
 <script src="{% static 'core/js/admin_user_edit.js' %}"></script>
 {% endblock %}
