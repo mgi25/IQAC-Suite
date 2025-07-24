@@ -16,3 +16,17 @@ TODO - EMT
   -> In master data page - enter acadamic year (based on this year all data will save or working) master data management page -> 25-26
   -> for Analytics use (user can selelct any year based on prefere)
   -> for eg creating a new organization (admin already have selected an acdimic year) -> (comes under this year) 
+
+
+
+
+
+  TODO
+  -> admin Approvel FLow Management
+  -> Admin User Role Management -> organization
+  -> Pso,POs Admin Panel
+  -> Report Genenration
+  -> Bug fix in event proposal 
+  -> event report view -> Abhi pending
+  -> Acadamic Year 
+  -> A new window for user role addition 
