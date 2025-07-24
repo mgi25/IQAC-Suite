@@ -6,7 +6,7 @@ function showProposalModal(id) {
         document.getElementById("modal-title").innerText = data.title;
         document.getElementById("modal-details").innerHTML = `
             <b>Description:</b> ${data.description}<br>
-            <b>Department:</b> ${data.department || "-"}<br>
+            <b>Organization:</b> ${data.organization || "-"}<br>
             <b>User Type:</b> ${data.user_type}<br>
             <b>Status:</b> ${data.status_display}<br>
             <b>Date Submitted:</b> ${data.date_submitted}<br>
