@@ -31,6 +31,12 @@ class EventProposalForm(forms.ModelForm):
             'placeholder': "Type a lecturer name…",
         })
     )
+    student_coordinators = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'rows': 2, 'placeholder': 'e.g., Alice, Bob'}),
+        help_text="Enter student coordinator names, separated by commas."
+    )
+
 
     academic_year = forms.CharField(
         required=True,
