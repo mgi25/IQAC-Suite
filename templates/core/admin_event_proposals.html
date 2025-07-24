@@ -41,13 +41,11 @@
                     </td>
                     <td>{{ p.submitted_by.get_full_name|default:p.submitted_by.username }}</td>
                     <td>
-                        {# Show the relevant organization for the proposal #}
-                        {% if p.department %}Dept: {{ p.department.name }}{% endif %}
-                        {% if p.association %}Assoc: {{ p.association.name }}{% endif %}
-                        {% if p.club %}Club: {{ p.club.name }}{% endif %}
-                        {% if p.center %}Center: {{ p.center.name }}{% endif %}
-                        {% if p.cell %}Cell: {{ p.cell.name }}{% endif %}
-                        {% if not p.department and not p.association and not p.club and not p.center and not p.cell %}—{% endif %}
+                        {% if p.organization %}
+                            {{ p.organization.org_type.name }}: {{ p.organization.name }}
+                        {% else %}
+                            —
+                        {% endif %}
                     </td>
                     <td>{{ p.created_at|date:"Y-m-d H:i" }}</td>
                     <td>
