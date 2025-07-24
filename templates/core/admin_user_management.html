@@ -51,11 +51,7 @@
                             {% for ra in user.role_assignments.all %}
                                 <span class="role-badge">
                                     {{ ra.get_role_display }}
-                                    {% if ra.department %}<span class="role-context">({{ ra.department.name }})</span>{% endif %}
-                                    {% if ra.club %}<span class="role-context">({{ ra.club.name }})</span>{% endif %}
-                                    {% if ra.center %}<span class="role-context">({{ ra.center.name }})</span>{% endif %}
-                                    {% if ra.cell %}<span class="role-context">({{ ra.cell.name }})</span>{% endif %}
-                                    {% if ra.association %}<span class="role-context">({{ ra.association.name }})</span>{% endif %}
+                                    {% if ra.organization %}<span class="role-context">({{ ra.organization }})</span>{% endif %}
                                 </span>{% if not forloop.last %}<br>{% endif %}
                             {% endfor %}
                         {% else %}

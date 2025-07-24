@@ -81,25 +81,23 @@ window.showToast = showToast;
   }
 
   // ———————————————————————————————————————————————
-  // Filters
+  // Filters for organization list
   // ———————————————————————————————————————————————
-  function applyFilters() {
-    const term = document.getElementById('searchInput').value.toLowerCase();
-    const orgType = document.getElementById('orgTypeFilter').value;
-    const status = document.getElementById('statusFilter').value;
+  function filterOrgList() {
+    const term = document.getElementById('orgSearch').value.toLowerCase();
+    const type = document.getElementById('orgTypeFilter').value;
 
-    document.querySelectorAll('.event-card').forEach(card => {
-      const title = card.querySelector('.event-title').textContent.toLowerCase();
-      const meta = card.querySelector('.event-meta').textContent.toLowerCase();
-      const cardStatus = card.querySelector('.event-status').className;
-      const cardType = card.dataset.orgType || '';
-
-      let visible = true;
-      if (term && !title.includes(term) && !meta.includes(term)) visible = false;
-      if (status && !cardStatus.includes(`status-${status}`)) visible = false;
-      if (orgType && cardType !== orgType) visible = false;
-
-      card.style.display = visible ? '' : 'none';
+    document.querySelectorAll('#orgList .org-items').forEach(list => {
+      const listType = list.dataset.type;
+      let anyVisible = false;
+      list.querySelectorAll('.org-item').forEach(item => {
+        const name = item.dataset.name;
+        const show = (!term || name.includes(term)) && (!type || listType === type);
+        item.style.display = show ? '' : 'none';
+        if (show) anyVisible = true;
+      });
+      list.previousElementSibling.style.display = anyVisible ? '' : 'none';
+      list.style.display = anyVisible ? '' : 'none';
     });
   }
 
@@ -335,22 +333,19 @@ window.showToast = showToast;
   // Initialization
   // ———————————————————————————————————————————————
   document.addEventListener('DOMContentLoaded', () => {
-    // Filters
-    document.getElementById('searchInput')
-      .addEventListener('input', debounce(applyFilters, 300));
-    document.getElementById('orgTypeFilter')
-      .addEventListener('change', applyFilters);
-    document.getElementById('statusFilter')
-      .addEventListener('change', applyFilters);
+    const search = document.getElementById('orgSearch');
+    const type = document.getElementById('orgTypeFilter');
+    if (search) search.addEventListener('input', debounce(filterOrgList, 200));
+    if (type) type.addEventListener('change', filterOrgList);
 
     setupGlobalListeners();
-    loadRecentActivity();
+    filterOrgList();
   });
 
   // ———————————————————————————————————————————————
   // Expose core functions to inline onclicks
   // ———————————————————————————————————————————————
-  window.applyFilters = applyFilters;
+  window.filterOrgList = filterOrgList;
   window.refreshEvents = refreshEvents;
   window.openEventDetails = openEventDetails;
   window.redirectApprovalFlow = redirectApprovalFlow;
@@ -492,5 +487,33 @@ window.saveApprovalFlow = function() {
   }).catch(e => {
     alert("Error: " + e);
   });
+};
+
+window.openFlowForOrg = function(orgId, label) {
+  const select = document.getElementById('approvalFlowOrgSelect');
+  if (select) {
+    select.value = String(orgId);
+  }
+  loadApprovalFlow().then(() => {
+    openApprovalFlowEditor();
+  });
+};
+
+window.deleteApprovalFlow = function() {
+  const orgId = document.getElementById('approvalFlowOrgSelect').value;
+  if (!orgId) { return; }
+  if (!confirm('Delete all approval steps for this organization?')) return;
+  fetch(`/core-admin/approval-flow/${orgId}/delete/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF_TOKEN }
+  }).then(r => r.json()).then(data => {
+    if (data.success) {
+      showToast('Flow deleted');
+      approvalSteps = [];
+      renderApprovalSteps();
+    } else {
+      showToast('Failed to delete', 'error');
+    }
+  }).catch(() => showToast('Error deleting', 'error'));
 };
 

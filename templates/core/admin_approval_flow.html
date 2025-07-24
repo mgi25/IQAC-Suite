@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load dict_filters %}
 
 {% block title %}Approval Flow Management – CHRIST University{% endblock %}
 
@@ -27,12 +28,30 @@
     <p>Define and maintain the hierarchical approval chain for each organization.</p>
   </div>
 
-  <!-- Manage Flow Button -->
-  <div class="manage-flow-action">
-    <button class="btn btn-primary" onclick="openApprovalFlowEditor()">
-      <i class="fa-solid fa-diagram-project"></i> Manage Approval Flow
-    </button>
-    <span class="hint">Pick an organization to configure its approval steps</span>
+  <div class="filters">
+    <input type="text" id="orgSearch" placeholder="Search organizations..." oninput="filterOrgList()">
+    <select id="orgTypeFilter" onchange="filterOrgList()">
+      <option value="">All Categories</option>
+      {% for ot in org_types %}
+        <option value="{{ ot.name|lower }}">{{ ot.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div id="orgList">
+    {% for ot in org_types %}
+      <h3 class="org-type-header" data-type="{{ ot.name|lower }}">{{ ot.name }}</h3>
+      <ul class="org-items" data-type="{{ ot.name|lower }}">
+        {% for org in orgs_by_type|get_item:ot.name %}
+          <li class="org-item" data-name="{{ org.name|lower }}" data-type="{{ ot.name|lower }}">
+            <span>{{ org.name }}</span>
+            <button class="btn btn-primary btn-sm" onclick="openFlowForOrg({{ org.id }}, '{{ org.name|escapejs }} ({{ ot.name }})')">Manage Flow</button>
+          </li>
+        {% empty %}
+          <li class="no-org">No organizations</li>
+        {% endfor %}
+      </ul>
+    {% endfor %}
   </div>
 </div>
 
@@ -64,6 +83,8 @@
       <p class="form-tip">Tip: Use roles like <code>faculty</code>, <code>dept_iqac</code>, <code>hod</code>, etc.</p>
     </div>
     <div class="modal-footer">
+      <button class="btn btn-danger" onclick="deleteApprovalFlow()">Delete Flow</button>
+      <span style="flex:1"></span>
       <button class="btn btn-secondary" onclick="closeModal('approvalFlowEditorModal')">Cancel</button>
       <button class="btn btn-primary" onclick="saveApprovalFlow()">Save</button>
     </div>
