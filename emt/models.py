@@ -46,9 +46,8 @@ class EventProposal(models.Model):
         User, blank=True, related_name="faculty_incharge_proposals"
     )
     # UPDATED: Changed from TextField to ManyToManyField for better data integrity
-    student_coordinators = models.ManyToManyField(
-        User, blank=True, related_name="student_coordinator_proposals"
-    )
+    student_coordinators = models.TextField(blank=True, help_text="Comma-separated student coordinator names (temporary).")
+
     event_focus_type = models.CharField(max_length=200, blank=True)
     report_generated = models.BooleanField(default=False)
 
