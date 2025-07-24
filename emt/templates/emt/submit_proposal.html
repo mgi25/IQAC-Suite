@@ -116,7 +116,6 @@
     document.addEventListener('DOMContentLoaded', () => {
       // Organization Type select
       const orgTypeTS = new TomSelect('#id_organization_type');
-
       // Organization select (dependent on org type)
       const orgTS = new TomSelect('#id_organization', {
         valueField: 'id',
@@ -136,13 +135,12 @@
             .catch(() => callback());
         }
       });
-
       orgTypeTS.on('change', () => {
         orgTS.clear();
         orgTS.clearOptions();
       });
 
-      // Faculty select with live search
+      // Faculty select (AJAX multi-select with live search)
       new TomSelect('#faculty-select', {
         plugins: ['remove_button'],
         valueField: 'id',
