@@ -3,10 +3,11 @@ import os
 from dotenv import load_dotenv
 import dj_database_url
 
-load_dotenv() 
+load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-…'  # rotate this before you go to production!
+# SECRET_KEY loaded from environment with a development fallback
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-…')
 DEBUG = True
 
 ALLOWED_HOSTS = [
@@ -88,9 +89,8 @@ WSGI_APPLICATION = 'iqac_project.wsgi.application'
 
 
 DATABASES = {
-    'default': dj_database_url.parse(
-        os.getenv('DATABASE_URL'),
-        engine='django.db.backends.postgresql',
+    'default': dj_database_url.config(
+        default=os.getenv('DATABASE_URL', 'sqlite:///db.sqlite3')
     )
 }
 
