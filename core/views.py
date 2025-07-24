@@ -443,8 +443,20 @@ def admin_settings_dashboard(request):
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_approval_flow(request):
-    orgs = Organization.objects.filter(is_active=True).order_by('name')
-    return render(request, "core/admin_approval_flow.html", {"organizations": orgs})
+    org_types = OrganizationType.objects.filter(is_active=True).order_by('name')
+    orgs_by_type = {}
+    for t in org_types:
+        orgs_by_type[t.name] = list(
+            Organization.objects.filter(org_type=t, is_active=True).order_by("name")
+        )
+    return render(
+        request,
+        "core/admin_approval_flow.html",
+        {
+            "org_types": org_types,
+            "orgs_by_type": orgs_by_type,
+        },
+    )
 
 @login_required
 @csrf_exempt
@@ -526,6 +538,13 @@ def save_approval_flow(request, org_id):
             user_id=step.get('user_id')
         )
 
+    return JsonResponse({'success': True})
+
+
+@require_POST
+@user_passes_test(lambda u: u.is_superuser)
+def delete_approval_flow(request, org_id):
+    ApprovalFlowTemplate.objects.filter(organization_id=org_id).delete()
     return JsonResponse({'success': True})
 def api_approval_flow_steps(request, org_id):
     steps = list(

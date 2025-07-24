@@ -106,6 +106,7 @@ DEBUG=True
 SECRET_KEY=your-secret-key
 DATABASE_URL=sqlite:///db.sqlite3
 ALLOWED_HOSTS=127.0.0.1,localhost
+GEMINI_API_KEY=your-gemini-api-key
 ```
 
 ### 4. Database Migrations
