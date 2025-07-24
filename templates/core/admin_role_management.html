@@ -2,13 +2,15 @@
 {% load static %}
 
 {% block head_extra %}
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-<link rel="stylesheet" href="{% static 'core/css/admin_role_management.css' %}">
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="{% static 'core/css/admin_role_management.css' %}">
 {% endblock %}
 
 {% block content %}
 <div class="role-mgmt-container">
   <h1 class="mgmt-title">Organization Roles</h1>
+
+  <!-- Global Add Role Form -->
   <form id="addRoleForm" class="add-role-global" method="post" action="{% url 'add_org_role' %}">
     {% csrf_token %}
     <div class="field-group">
@@ -33,6 +35,7 @@
     <button type="submit" class="btn btn-primary btn-sm">Add</button>
   </form>
 
+  <!-- DataTable for All Roles -->
   <table id="rolesTable" class="roles-table display nowrap" style="width:100%">
     <thead>
       <tr>
@@ -58,11 +61,44 @@
       {% endfor %}
     </tbody>
   </table>
+
+  <!-- Optional: Detailed Card-based View by Type -->
+  {% for type in org_types %}
+    <section class="org-type-section">
+      <h2 class="org-type-heading">{{ type.name }}</h2>
+      {% for org in type.organizations.all %}
+        <div class="org-card">
+          <div class="org-name">{{ org.name }}</div>
+          <ul class="role-list">
+            {% for r in org.roles.all %}
+              <li class="role-chip">
+                {{ r.name }}
+                <form class="delete-role-form" method="post" action="{% url 'delete_org_role' r.id %}">
+                  {% csrf_token %}
+                  <button type="submit" class="delete-role-btn">×</button>
+                </form>
+              </li>
+            {% empty %}
+              <li class="role-chip role-none">No roles</li>
+            {% endfor %}
+          </ul>
+          <form class="add-role-form" method="post" action="{% url 'add_org_role' %}">
+            {% csrf_token %}
+            <input type="hidden" name="org_id" value="{{ org.id }}">
+            <input type="text" name="name" placeholder="New role" required>
+            <button type="submit">Add</button>
+          </form>
+        </div>
+      {% endfor %}
+    </section>
+  {% empty %}
+    <p>No organization types found.</p>
+  {% endfor %}
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<script src="{% static 'core/js/admin_role_management.js' %}"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script src="{% static 'core/js/admin_role_management.js' %}"></script>
 {% endblock %}

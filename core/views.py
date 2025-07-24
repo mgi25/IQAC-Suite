@@ -147,22 +147,13 @@ def admin_user_panel(request):
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_role_management(request):
-    org_types = OrganizationType.objects.all().order_by("name")
-    organizations = (
-        Organization.objects.filter(is_active=True)
-        .select_related("org_type")
+    org_types = (
+        OrganizationType.objects.all()
         .order_by("name")
+        .prefetch_related("organizations__roles")
     )
-    roles = (
-        OrganizationRole.objects.select_related("organization__org_type")
-        .order_by("organization__org_type__name", "organization__name", "name")
-    )
-    context = {
-        "org_types": org_types,
-        "organizations": organizations,
-        "roles": roles,
-    }
-    return render(request, "core/admin_role_management.html", context)
+    return render(request, "core/admin_role_management.html", {"org_types": org_types})
+
 
 
 @user_passes_test(lambda u: u.is_superuser)
