@@ -9,6 +9,7 @@ from django.forms import inlineformset_factory
 from django import forms
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
 import json
 from .models import (
     Profile,
@@ -389,10 +390,12 @@ def admin_master_data(request):
     orgs_by_type_json = {}
 
     for org_type in org_types:
-        qs = Organization.objects.filter(org_type=org_type, is_active=True).order_by('name')
+        # Include both active and inactive organizations for comprehensive management
+        qs = Organization.objects.filter(org_type=org_type).order_by('name')
         orgs_by_type[org_type.name] = qs
-        # For JS: simple dict with id & name, keyed by org_type name (lowercase for JS consistency)
-        orgs_by_type_json[org_type.name.lower()] = [{'id': o.id, 'name': o.name} for o in qs]
+        # For JS: only include active organizations for parent dropdown
+        active_orgs = qs.filter(is_active=True)
+        orgs_by_type_json[org_type.name.lower()] = [{'id': o.id, 'name': o.name} for o in active_orgs]
 
     return render(request, "core/admin_master_data.html", {
         "org_types": org_types,
@@ -419,17 +422,49 @@ def admin_master_data_edit(request, model_name, pk):
             data = json.loads(request.body)
             name = data.get("name", "").strip()
             is_active = data.get("is_active", True)
+            parent_id = data.get("parent")  # Can be None, empty string, or an ID
+            
             if not name:
                 return JsonResponse({"success": False, "error": "Name is required"})
+            
             obj.name = name
             if hasattr(obj, "is_active"):
                 obj.is_active = is_active
+            
+            # Handle parent assignment for organizations
+            if model_name == "organization" and hasattr(obj, "parent"):
+                if parent_id and parent_id.strip():  # If parent_id is provided and not empty
+                    try:
+                        parent_obj = Organization.objects.get(id=parent_id)
+                        # Validate that the parent is of the correct type for this organization
+                        if obj.org_type.parent_type and parent_obj.org_type != obj.org_type.parent_type:
+                            return JsonResponse({
+                                "success": False, 
+                                "error": f"Invalid parent type. Expected {obj.org_type.parent_type.name}, got {parent_obj.org_type.name}"
+                            })
+                        obj.parent = parent_obj
+                    except Organization.DoesNotExist:
+                        return JsonResponse({"success": False, "error": "Parent organization not found"})
+                    except ValueError:
+                        return JsonResponse({"success": False, "error": "Invalid parent ID"})
+                else:
+                    # Remove parent if empty or None
+                    obj.parent = None
+            
             obj.save()
-            return JsonResponse({
+            
+            response_data = {
                 "success": True,
                 "name": obj.name,
                 "is_active": getattr(obj, "is_active", True),
-            })
+            }
+            
+            # Include parent name in response if applicable
+            if hasattr(obj, "parent"):
+                response_data["parent"] = obj.parent.name if obj.parent else None
+            
+            return JsonResponse(response_data)
+            
         except json.JSONDecodeError:
             return JsonResponse({"success": False, "error": "Invalid JSON data"})
         except Exception as e:
@@ -449,17 +484,65 @@ def admin_master_data_add(request, model_name):
         try:
             data = json.loads(request.body)
             name = data.get("name", "").strip()
-            org_type_name = data.get("org_type", "").strip()  # if org_type needed
+            
             if not name:
                 return JsonResponse({"success": False, "error": "Name is required"})
             
             if model_name == "organization":
+                org_type_name = data.get("org_type", "").strip()
+                parent_id = data.get("parent")
+                
                 if not org_type_name:
                     return JsonResponse({"success": False, "error": "Organization type required"})
-                org_type_obj, _ = OrganizationType.objects.get_or_create(name=org_type_name)
-                obj, created = Organization.objects.get_or_create(name=name, org_type=org_type_obj, defaults={'is_active': True})
-                if not created:
-                    return JsonResponse({"success": False, "error": "Organization already exists"})
+                
+                # Get or create the organization type
+                try:
+                    org_type_obj = OrganizationType.objects.get(name__iexact=org_type_name)
+                except OrganizationType.DoesNotExist:
+                    return JsonResponse({"success": False, "error": f"Organization type '{org_type_name}' does not exist"})
+                
+                # Check if organization with same name and type already exists
+                if Organization.objects.filter(name__iexact=name, org_type=org_type_obj).exists():
+                    return JsonResponse({"success": False, "error": f"{org_type_obj.name} with name '{name}' already exists"})
+                
+                # Handle parent organization
+                parent_obj = None
+                if parent_id:
+                    try:
+                        parent_obj = Organization.objects.get(id=parent_id)
+                    except Organization.DoesNotExist:
+                        return JsonResponse({"success": False, "error": "Parent organization not found"})
+                
+                # Create the organization
+                obj = Organization.objects.create(
+                    name=name,
+                    org_type=org_type_obj,
+                    parent=parent_obj,
+                    is_active=True
+                )
+                
+            elif model_name == "organization_type":
+                parent_id = data.get("parent")
+                
+                # Check if organization type already exists
+                if OrganizationType.objects.filter(name__iexact=name).exists():
+                    return JsonResponse({"success": False, "error": f"Organization type '{name}' already exists"})
+                
+                # Handle parent type
+                parent_obj = None
+                if parent_id:
+                    try:
+                        parent_obj = OrganizationType.objects.get(id=parent_id)
+                    except OrganizationType.DoesNotExist:
+                        return JsonResponse({"success": False, "error": "Parent organization type not found"})
+                
+                # Create the organization type
+                obj = OrganizationType.objects.create(
+                    name=name,
+                    parent_type=parent_obj,
+                    can_have_parent=bool(parent_obj),
+                    is_active=True
+                )
             else:
                 obj, created = Model.objects.get_or_create(name=name, defaults={'is_active': True})
                 if not created:
@@ -470,8 +553,11 @@ def admin_master_data_add(request, model_name):
                 "id": obj.id,
                 "name": obj.name,
                 "org_type": obj.org_type.name if model_name == "organization" else None,
-                "is_active": obj.is_active
+                "parent": obj.parent.name if hasattr(obj, 'parent') and obj.parent else None,
+                "is_active": getattr(obj, 'is_active', True)
             })
+        except json.JSONDecodeError:
+            return JsonResponse({"success": False, "error": "Invalid JSON data"})
         except Exception as e:
             return JsonResponse({"success": False, "error": str(e)})
     return JsonResponse({"success": False, "error": "Invalid request"})
@@ -520,6 +606,33 @@ def admin_proposal_detail(request, proposal_id):
 @user_passes_test(lambda u: u.is_superuser)
 def admin_settings_dashboard(request):
     return render(request, "core/admin_settings.html")
+
+@user_passes_test(lambda u: u.is_superuser)
+def master_data_dashboard(request):
+    from transcript.models import AcademicYear
+    from django.contrib.auth.models import User
+    
+    # Calculate statistics
+    stats = {
+        'organizations': Organization.objects.count(),
+        'org_types': OrganizationType.objects.count(),
+        'academic_years': AcademicYear.objects.count(),
+        'active_users': User.objects.filter(is_active=True).count(),
+    }
+    
+    # Recent activities (placeholder - you can implement actual activity tracking)
+    recent_activities = [
+        {
+            'description': 'System initialized',
+            'icon': 'info-circle',
+            'created_at': timezone.now(),
+        }
+    ]
+    
+    return render(request, "core/master_data_dashboard.html", {
+        'stats': stats,
+        'recent_activities': recent_activities,
+    })
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_approval_flow(request):
