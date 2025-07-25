@@ -15,6 +15,12 @@
   gap: 1rem;
 }
 
+.role-card .org-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--christ-blue-dark);
+}
+
 .role-card form {
   display: flex;
   gap: 0.5rem;

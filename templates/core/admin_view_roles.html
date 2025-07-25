@@ -16,6 +16,7 @@
         <div class="roles-container">
             {% for role in roles %}
             <div class="role-card">
+                <div class="org-name">{{ role.organization.name }}</div>
                 <form method="post" action="{% url 'update_org_role' role.id %}?org_type_id={{ org_type.id }}">
                     {% csrf_token %}
                     <input type="text" name="name" value="{{ role.name }}" class="form-control form-control-sm" />
