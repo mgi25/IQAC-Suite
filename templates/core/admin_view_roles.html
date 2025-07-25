@@ -4,7 +4,9 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'core/css/admin_user_management.css' %}">
 <div class="user-mgmt-container">
-    <h1 class="mgmt-title">{{ org_type.name if org_type else "Organization Roles" }}</h1>
+    <h1 class="mgmt-title">
+        {% if org_type %}{{ org_type.name }}{% else %}Organization Roles{% endif %}
+    </h1>
     <div class="table-responsive">
         <table id="rolesTable" class="admin-users-table display nowrap" style="width:100%">
             <thead>
