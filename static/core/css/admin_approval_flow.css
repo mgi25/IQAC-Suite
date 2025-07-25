@@ -348,3 +348,55 @@ body {
   color: #aaa;
   text-align: center;
 }
+
+/* -------------------------------------------------------
+   New Editing Layout
+------------------------------------------------------- */
+.edit-layout {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.steps-pane { flex: 1; }
+
+.user-pane {
+  width: 220px;
+  max-height: 400px;
+  overflow-y: auto;
+  border-left: 1px solid #e5e7eb;
+  padding-left: 1rem;
+}
+
+.user-list {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.user-item {
+  padding: 0.25rem 0.5rem;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  cursor: grab;
+}
+
+.user-item .role {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.current-flow {
+  margin-bottom: 1.5rem;
+}
+
+.flow-list {
+  list-style: none;
+  padding-left: 0;
+  margin-bottom: 1rem;
+}
+.flow-list li {
+  padding: 0.25rem 0;
+}

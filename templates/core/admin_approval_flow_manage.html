@@ -26,11 +26,23 @@
     <h1>
       <i class="fa-solid fa-route"></i> Approval Flow – {{ selected_org.name }}
     </h1>
-    <p>Drag to reorder the steps or assign users.</p>
+    <p>View or edit the proposal approval hierarchy.</p>
     <p><a class="btn btn-secondary btn-sm" href="{% url 'admin_approval_flow' %}">Back to list</a></p>
   </div>
 
-</div>
+  <div id="currentFlow" class="current-flow">
+    {% if existing_steps %}
+      <ol id="currentFlowList" class="flow-list">
+        {% for step in existing_steps %}
+          <li>{{ step.step_order }}. {{ step.role_required }} – {{ step.user.get_full_name|default:'Unassigned' }}</li>
+        {% endfor %}
+      </ol>
+      <button class="btn btn-primary" onclick="openApprovalFlowEditor()">Edit Flow</button>
+    {% else %}
+      <p>No approval flow defined.</p>
+      <button class="btn btn-primary" onclick="openApprovalFlowEditor()">Create Flow</button>
+    {% endif %}
+  </div>
 
 <!-- Approval Flow Editor Modal -->
 <div id="approvalFlowEditorModal" class="modal-overlay">
@@ -40,33 +52,19 @@
       <button class="modal-close" onclick="closeModal('approvalFlowEditorModal')">&times;</button>
     </div>
     <div class="modal-body">
-      <div class="form-group">
-        <label for="orgTypeFilter">Category</label>
-        <select id="orgTypeFilter" class="form-select" onchange="filterOrgOptions()">
-          <option value="">All Categories</option>
-          {% for ot in org_types %}
-          <option value="{{ ot.id }}">{{ ot.name }}</option>
-          {% endfor %}
-        </select>
+      <div class="edit-layout">
+        <div class="steps-pane">
+          <div id="approvalFlowSteps" class="steps-container" ondragover="allowDrop(event)" ondrop="dropOnSteps(event)">
+            <!-- Steps will render here (JS) -->
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="addApprovalStep()">+ Add Step</button>
+        </div>
+        <div class="user-pane">
+          <input type="text" id="userSearchInput" class="form-control" placeholder="Search users" oninput="loadOrgUsers(this.value)">
+          <div id="orgUserList" class="user-list"></div>
+        </div>
       </div>
-      <div class="form-group">
-        <label for="orgSearchInput">Organization</label>
-        <input type="text" id="orgSearchInput" class="form-control" placeholder="Search..." oninput="filterOrgOptions()">
-        <select id="approvalFlowOrgSelect" class="form-select" onchange="loadApprovalFlow()" size="8" style="margin-top:0.5rem;">
-          <option value="">– Select organization –</option>
-          {% for org in organizations %}
-            <option value="{{ org.id }}" data-org-type="{{ org.org_type.id }}">{{ org.name }} ({{ org.org_type.name }})</option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <!-- Approval steps go here -->
-      <div id="approvalFlowSteps" class="steps-container">
-        <!-- Steps will render here (JS) -->
-      </div>
-
-      <button type="button" class="btn btn-secondary btn-sm" onclick="addApprovalStep()">+ Add Step</button>
-      <p class="form-tip">Tip: Use roles like <code>faculty</code>, <code>dept_iqac</code>, <code>hod</code>, etc.</p>
+      <p class="form-tip">Drag users from the right to build the flow. Roles can be adjusted per step.</p>
     </div>
     <div class="modal-footer">
       <button class="btn btn-danger" onclick="deleteApprovalFlow()">Delete Flow</button>
@@ -86,6 +84,7 @@
 {% block scripts %}
   <script>
     window.SELECTED_ORG_ID = {{ selected_org_id|default:'null' }};
+    window.SELECTED_ORG_NAME = "{{ selected_org.name }}";
   </script>
   <script src="{% static 'core/js/admin_approval_flow.js' %}"></script>
 {% endblock %}

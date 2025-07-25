@@ -368,9 +368,12 @@ window.showToast = showToast;
   window.openSystemSettingsModal = openSystemSettingsModal;
   window.generateReport = generateReport;
 })();
+let draggedUser = null;
 function openApprovalFlowEditor() {
     document.getElementById('approvalFlowEditorModal').classList.add('show');
     document.body.style.overflow = 'hidden';
+    loadApprovalFlow();
+    loadOrgUsers();
 }
 
 function closeModal(modalId) {
@@ -378,7 +381,7 @@ function closeModal(modalId) {
     document.body.style.overflow = 'auto';
 }
 window.loadApprovalFlow = async function() {
-  const orgId = document.getElementById('approvalFlowOrgSelect').value;
+  const orgId = window.SELECTED_ORG_ID;
   approvalSteps = [];
   const stepsDiv = document.getElementById('approvalFlowSteps');
   if (!orgId) {
@@ -448,7 +451,7 @@ function searchUserForStep(idx, q) {
     return;
   }
   const role = document.querySelector(`.step-block[data-idx="${idx}"] .role-input`).value;
-  const orgId = document.getElementById('approvalFlowOrgSelect').value;
+  const orgId = window.SELECTED_ORG_ID;
   const params = new URLSearchParams({ q, role, org_id: orgId });
   fetch(`/core-admin/api/search-users/?${params}`)
     .then(r => r.json())
@@ -492,7 +495,7 @@ window.removeStep = function(idx) {
   renderApprovalSteps();
 };
   window.saveApprovalFlow = function() {
-  const orgId = document.getElementById('approvalFlowOrgSelect').value;
+  const orgId = window.SELECTED_ORG_ID;
 
   // Map your frontend data to the backend format!
   const payloadSteps = approvalSteps.map(s => ({
@@ -500,7 +503,7 @@ window.removeStep = function(idx) {
     user_id: s.user ? s.user.id : null
   }));
 
-    fetch(`/core-admin/approval-flow/${orgId}/save/`, {
+  fetch(`/core-admin/approval-flow/${orgId}/save/`, {
     method: "POST",
     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
     body: JSON.stringify({ steps: payloadSteps })
@@ -510,7 +513,7 @@ window.removeStep = function(idx) {
     if (data.success) {
       showToast('Approval flow saved!', 'success');
       closeModal('approvalFlowEditorModal');
-      // Optionally reload the flow or page here
+      loadCurrentFlow();
     } else {
       alert("Failed to save flow");
     }
@@ -520,7 +523,7 @@ window.removeStep = function(idx) {
 };
 
 window.deleteApprovalFlow = function() {
-  const orgId = document.getElementById('approvalFlowOrgSelect').value;
+  const orgId = window.SELECTED_ORG_ID;
   if (!orgId) return;
   if (!confirm('Delete entire approval flow for this organization?')) return;
   fetch(`/core-admin/approval-flow/${orgId}/delete/`, {
@@ -533,6 +536,7 @@ window.deleteApprovalFlow = function() {
       approvalSteps = [];
       renderApprovalSteps();
       showToast('Approval flow deleted', 'success');
+      loadCurrentFlow();
     } else {
       showToast('Failed to delete flow', 'error');
     }
@@ -540,26 +544,52 @@ window.deleteApprovalFlow = function() {
   .catch(() => showToast('Error deleting flow', 'error'));
 };
 
-window.filterOrgOptions = function() {
-  const type = document.getElementById('orgTypeFilter').value;
-  const search = document.getElementById('orgSearchInput').value.toLowerCase();
-  const select = document.getElementById('approvalFlowOrgSelect');
-  Array.from(select.options).forEach(opt => {
-    if (!opt.value) return;
-    const matchesType = !type || opt.dataset.orgType === type;
-    const matchesSearch = !search || opt.textContent.toLowerCase().includes(search);
-    opt.style.display = matchesType && matchesSearch ? '' : 'none';
-  });
+window.loadOrgUsers = async function(q = '') {
+  const list = document.getElementById('orgUserList');
+  if (!list) return;
+  list.innerHTML = '<div style="padding:0.5rem">Loading...</div>';
+  const params = new URLSearchParams({ q });
+  const resp = await fetch(`/core-admin/api/org-users/${window.SELECTED_ORG_ID}/?${params}`);
+  const data = await resp.json();
+  if (data.success) {
+    list.innerHTML = (data.users || []).map(u =>
+      `<div class="user-item" draggable="true" ondragstart="startUserDrag(${u.id}, '${u.name.replace("'", "\'")}', '${u.role.replace("'", "\'")}')">${u.name} <span class="role">(${u.role})</span></div>`
+    ).join('') || '<div class="empty-msg">No users found</div>';
+  } else {
+    list.innerHTML = '<div class="error-msg">Failed to load users</div>';
+  }
+};
+
+window.startUserDrag = function(id, name, role) {
+  draggedUser = { id, name, role };
+};
+
+window.dropOnSteps = function(e) {
+  e.preventDefault();
+  if (!draggedUser) return;
+  approvalSteps.push({ role: draggedUser.role.toLowerCase(), user: { id: draggedUser.id, name: draggedUser.name } });
+  renderApprovalSteps();
+  draggedUser = null;
+};
+
+window.loadCurrentFlow = async function() {
+  const container = document.getElementById('currentFlowList');
+  if (!container) return;
+  container.innerHTML = '';
+  const resp = await fetch(`/core-admin/api/approval-flow/${window.SELECTED_ORG_ID}/`);
+  const data = await resp.json();
+  if (data.success) {
+    if (data.steps.length === 0) {
+      container.innerHTML = '<li>No approval flow defined.</li>';
+    } else {
+      container.innerHTML = data.steps.map(s => `<li>${s.step_order}. ${s.role_required} – ${s.user_name || 'Unassigned'}</li>`).join('');
+    }
+  }
 };
 
 document.addEventListener('DOMContentLoaded', () => {
   if (window.SELECTED_ORG_ID) {
-    openApprovalFlowEditor();
-    const select = document.getElementById('approvalFlowOrgSelect');
-    if (select) {
-      select.value = String(window.SELECTED_ORG_ID);
-      loadApprovalFlow();
-    }
+    loadCurrentFlow();
   }
 });
 

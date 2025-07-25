@@ -77,6 +77,7 @@ urlpatterns = [
     path('core-admin/approval-flow/<int:org_id>/delete/', views.delete_approval_flow, name='delete_approval_flow'),
     path('api/approval-flow/<int:org_id>/', views.api_approval_flow_steps, name='api_approval_flow_steps'),
     path('core-admin/api/search-users/', views.search_users, name='search_users'),
+    path('core-admin/api/org-users/<int:org_id>/', views.organization_users, name='organization_users'),
 
     # ---- OPTIONAL: Direct organization add endpoint ----
     # path('core-admin/master-data/add/organization/', views.admin_master_data_add, {"model_name": "organization"}, name='admin_settings_add_organization'),
