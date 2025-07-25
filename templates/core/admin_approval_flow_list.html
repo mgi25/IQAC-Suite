@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load dict_filters %}
+
+{% block title %}Approval Flow Management – CHRIST University{% endblock %}
+
+{% block head_extra %}
+  <link rel="stylesheet" href="{% static 'core/css/admin_master_data.css' %}">
+{% endblock %}
+
+{% block page_title %}Approval Flow Management{% endblock %}
+{% block current_page %}Approval Flow Management{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'dashboard' %}">Home</a>
+  <i class="fa-solid fa-chevron-right"></i>
+  <a href="{% url 'core_admin_dashboard' %}">Admin Dashboard</a>
+  <i class="fa-solid fa-chevron-right"></i>
+  <span>Approval Flow Management</span>
+{% endblock %}
+
+{% block content %}
+<div class="main-container">
+  <div class="page-header">
+    <h1>Proposal Approval Flows</h1>
+    <p>Select an organization to view or edit its approval hierarchy.</p>
+  </div>
+
+  <div class="widget-grid">
+    {% for org_type in org_types %}
+      <div class="data-widget">
+        <div class="widget-header">
+          <div class="widget-title">{{ org_type.name }}{% if not org_type.name|lower == 'cell' %}s{% endif %}</div>
+        </div>
+        <div class="widget-content">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for org in orgs_by_type|get_item:org_type.name %}
+                <tr>
+                  <td>{{ org.name }}</td>
+                  <td class="actions">
+                    <a class="btn btn-primary btn-sm" href="{% url 'admin_approval_flow_manage' org.id %}">View</a>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="2" class="text-center">No organizations.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

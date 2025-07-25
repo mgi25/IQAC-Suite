@@ -62,6 +62,7 @@ urlpatterns = [
 
     # Approval Flow Setup UI
     path('core-admin/approval-flow/', views.admin_approval_flow, name='admin_approval_flow'),
+    path('core-admin/approval-flow/<int:org_id>/', views.admin_approval_flow_manage, name='admin_approval_flow_manage'),
 
     # Academic Year Select/Add (AJAX)
     path('core-admin/set-academic-year/', views.set_academic_year, name='set_academic_year'),
