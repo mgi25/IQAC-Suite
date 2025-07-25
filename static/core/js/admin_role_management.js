@@ -1,8 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // Initialize DataTable (if rolesTable exists)
-  const tableEl = document.getElementById('rolesTable');
+  // Initialize DataTable (if orgRolesTable exists)
+  const tableEl = document.getElementById('orgRolesTable');
   if (tableEl) {
-    $('#rolesTable').DataTable({
+    $('#orgRolesTable').DataTable({
       dom: '<"dt-toolbar d-flex justify-content-between align-items-center flex-wrap mb-3"lfB>rtip',
       pagingType: 'simple',
       lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "All"]],

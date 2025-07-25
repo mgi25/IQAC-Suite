@@ -37,65 +37,56 @@
     <button type="submit" class="btn btn-primary btn-sm">Add</button>
   </form>
 
-  <!-- DataTable for All Roles -->
-  <table id="rolesTable" class="roles-table display nowrap" style="width:100%">
+  <!-- DataTable of Organizations & Roles -->
+  <table id="orgRolesTable" class="org-roles-table display nowrap" style="width:100%">
     <thead>
       <tr>
         <th>Category</th>
         <th>Organization</th>
-        <th>Role</th>
-        <th>Action</th>
+        <th>Roles</th>
+        <th>Add Role</th>
       </tr>
     </thead>
     <tbody>
-      {% for r in roles %}
-      <tr>
-        <td>{{ r.organization.org_type.name }}</td>
-        <td>{{ r.organization.name }}</td>
-        <td>{{ r.name }}</td>
-        <td>
-          <form class="delete-role-form" method="post" action="{% url 'delete_org_role' r.id %}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-danger btn-sm delete-role-btn">&times;</button>
-          </form>
-        </td>
-      </tr>
+      {% for type in org_types %}
+        {% for org in type.organizations.all %}
+        <tr>
+          <td>{{ type.name }}</td>
+          <td>{{ org.name }}</td>
+          <td>
+            <ul class="role-list mb-0">
+              {% for r in org.roles.all %}
+                <li class="role-chip">
+                  {{ r.name }}
+                  <form class="delete-role-form" method="post" action="{% url 'delete_org_role' r.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="delete-role-btn">×</button>
+                  </form>
+                </li>
+              {% empty %}
+                <li class="role-chip role-none">No roles</li>
+              {% endfor %}
+            </ul>
+          </td>
+          <td>
+            <form class="add-role-form" method="post" action="{% url 'add_org_role' %}">
+              {% csrf_token %}
+              <input type="hidden" name="org_id" value="{{ org.id }}">
+              <div class="d-flex gap-1">
+                <input type="text" name="name" placeholder="New role" required class="form-control form-control-sm">
+                <button type="submit" class="btn btn-primary btn-sm">Add</button>
+              </div>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      {% empty %}
+        <tr>
+          <td colspan="4" class="text-center">No organization types found.</td>
+        </tr>
       {% endfor %}
     </tbody>
   </table>
-
-  <!-- Optional: Detailed Card-based View by Type -->
-  {% for type in org_types %}
-    <section class="org-type-section">
-      <h2 class="org-type-heading">{{ type.name }}</h2>
-      {% for org in type.organizations.all %}
-        <div class="org-card">
-          <div class="org-name">{{ org.name }}</div>
-          <ul class="role-list">
-            {% for r in org.roles.all %}
-              <li class="role-chip">
-                {{ r.name }}
-                <form class="delete-role-form" method="post" action="{% url 'delete_org_role' r.id %}">
-                  {% csrf_token %}
-                  <button type="submit" class="delete-role-btn">×</button>
-                </form>
-              </li>
-            {% empty %}
-              <li class="role-chip role-none">No roles</li>
-            {% endfor %}
-          </ul>
-          <form class="add-role-form" method="post" action="{% url 'add_org_role' %}">
-            {% csrf_token %}
-            <input type="hidden" name="org_id" value="{{ org.id }}">
-            <input type="text" name="name" placeholder="New role" required>
-            <button type="submit">Add</button>
-          </form>
-        </div>
-      {% endfor %}
-    </section>
-  {% empty %}
-    <p>No organization types found.</p>
-  {% endfor %}
 </div>
 {% endblock %}
 
