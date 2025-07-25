@@ -46,6 +46,25 @@ class RoleAssignmentForm(forms.ModelForm):
         extra = [(r.name, r.name) for r in OrganizationRole.objects.all()]
         self.fields["role"].choices = RoleAssignment.ROLE_CHOICES + extra
 
+
+class RoleAssignmentFormSet(forms.BaseInlineFormSet):
+    """Validate duplicate role assignments on the formset level."""
+
+    def clean(self):
+        super().clean()
+        seen = set()
+        for form in self.forms:
+            if form.cleaned_data.get("DELETE"):
+                continue
+            role = form.cleaned_data.get("role")
+            org = form.cleaned_data.get("organization")
+            key = (role, org)
+            if key in seen:
+                raise forms.ValidationError(
+                    "Duplicate role assignment for the same organization is not allowed."
+                )
+            seen.add(key)
+
 # ─────────────────────────────────────────────────────────────
 #  Auth Views
 # ─────────────────────────────────────────────────────────────
@@ -268,6 +287,7 @@ def admin_user_edit(request, user_id):
         User,
         RoleAssignment,
         form=RoleAssignmentForm,
+        formset=RoleAssignmentFormSet,
         fields=("role", "organization"),
         extra=0,
         can_delete=True,
@@ -288,22 +308,6 @@ def admin_user_edit(request, user_id):
     else:
         formset = RoleFormSet(instance=user)
 
-    orgs = (
-        Organization.objects.filter(is_active=True)
-        .select_related("org_type")
-        .prefetch_related("roles")
-    )
-
-    org_roles = {org.id: [r.name for r in org.roles.all()] for org in orgs}
-
-    orgs_by_type = {}
-    roles_by_type = {}
-    for org in orgs:
-        ot_id = org.org_type_id
-        orgs_by_type.setdefault(ot_id, []).append({"id": org.id, "name": org.name})
-        roles_by_type.setdefault(ot_id, set()).update(r.name for r in org.roles.all())
-    roles_by_type = {k: sorted(v) for k, v in roles_by_type.items()}
-
     return render(
         request,
         "core/admin_user_edit.html",
@@ -312,10 +316,6 @@ def admin_user_edit(request, user_id):
             "formset": formset,
             "organizations": Organization.objects.filter(is_active=True),
             "organization_types": OrganizationType.objects.filter(),
-            "org_roles_json": json.dumps(org_roles),
-            "role_choices_json": json.dumps(RoleAssignment.ROLE_CHOICES),
-            "orgs_by_type_json": json.dumps(orgs_by_type),
-            "roles_by_type_json": json.dumps(roles_by_type),
         },
     )
 
@@ -884,4 +884,40 @@ def organization_users(request, org_id):
         for a in assignments
     ]
     return JsonResponse({"success": True, "users": users_data})
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def api_org_type_organizations(request, org_type_id):
+    """Return active organizations for a given organization type."""
+    orgs = Organization.objects.filter(org_type_id=org_type_id, is_active=True).order_by("name")
+    data = [{"id": o.id, "name": o.name} for o in orgs]
+    return JsonResponse({"success": True, "organizations": data})
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def api_org_type_roles(request, org_type_id):
+    """Return distinct role names for a given organization type."""
+    roles = (
+        OrganizationRole.objects
+        .filter(organization__org_type_id=org_type_id, is_active=True)
+        .values_list("name", flat=True)
+        .distinct()
+        .order_by("name")
+    )
+    return JsonResponse({"success": True, "roles": list(roles)})
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def api_organization_roles(request, org_id):
+    """Return role names for a specific organization."""
+    roles = (
+        OrganizationRole.objects
+        .filter(organization_id=org_id, is_active=True)
+        .values_list("name", flat=True)
+        .order_by("name")
+    )
+    return JsonResponse({"success": True, "roles": list(roles)})
 

@@ -1,9 +1,6 @@
 // simplified dynamic organization handling
 
 document.addEventListener('DOMContentLoaded', () => {
-  const $ = (sel, ctx = document) => ctx.querySelector(sel);
-  const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
-
   const listBox    = document.getElementById('roles-list-container');
   const addBtn     = document.getElementById('add-role-btn');
   const tplHTML    = document.getElementById('role-card-template').innerHTML;
@@ -12,68 +9,74 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const ORG_OPTIONAL_ROLES = ['dean','academic_coordinator','director','cdl','uni_iqac','admin'];
 
+  const fetchJson = (url) => fetch(url, {headers: {'Accept': 'application/json'}}).then(r => r.json());
+
   function bindCard(card) {
     const typeSel = card.querySelector('.org-type-select');
     const roleSel = card.querySelector("select[name$='-role']");
-    const orgSel = card.querySelector("select[name$='-organization']");
+    const orgSel  = card.querySelector("select[name$='-organization']");
     const orgGroup = card.querySelectorAll('.field-group')[2];
-    const delBox = card.querySelector("input[name$='-DELETE']");
-    const remBtn = card.querySelector('.remove-role-btn');
+    const delBox  = card.querySelector("input[name$='-DELETE']");
+    const remBtn  = card.querySelector('.remove-role-btn');
 
-    function populateOrganizations() {
+    async function loadOrganizations() {
       const typeId = typeSel.value;
-      const orgs = ORGS_BY_TYPE[typeId] || [];
       const current = orgSel.value;
+      if (!typeId) {
+        orgSel.innerHTML = '<option value="">---------</option>';
+        await loadRoles();
+        return;
+      }
+      const data = await fetchJson(`/core-admin/api/org-type/${typeId}/organizations/`);
+      const orgs = data.organizations || [];
       orgSel.innerHTML = '<option value="">---------</option>' +
         orgs.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
       if (current && orgSel.querySelector(`option[value="${current}"]`)) {
         orgSel.value = current;
       }
+      await loadRoles();
     }
 
-    function populateRoleOptions() {
-      const current = roleSel.value;
-      const opts = [...BASE_ROLES];
-      let extras = [];
+    async function loadRoles() {
       const typeId = typeSel.value;
-      const orgId = orgSel.value;
-      if (orgId && ORG_ROLES[orgId]) {
-        extras = ORG_ROLES[orgId];
-      } else if (typeId && ROLES_BY_TYPE[typeId]) {
-        extras = ROLES_BY_TYPE[typeId];
+      const orgId  = orgSel.value;
+      const current = roleSel.value;
+      if (!typeId && !orgId) {
+        roleSel.innerHTML = '<option value="">---------</option>';
+        toggleOrg();
+        return;
       }
-      extras.forEach(r => opts.push([r, r]));
-      roleSel.innerHTML = opts.map(o => `<option value="${o[0]}">${o[1]}</option>`).join('');
-      if (current) roleSel.value = current;
+      let url = '';
+      if (orgId) {
+        url = `/core-admin/api/organization/${orgId}/roles/`;
+      } else {
+        url = `/core-admin/api/org-type/${typeId}/roles/`;
+      }
+      const data = await fetchJson(url);
+      const roles = data.roles || [];
+      roleSel.innerHTML = '<option value="">---------</option>' +
+        roles.map(r => `<option value="${r}">${r}</option>`).join('');
+      if (current && roleSel.querySelector(`option[value="${current}"]`)) {
+        roleSel.value = current;
+      }
+      toggleOrg();
     }
 
     function toggleOrg() {
       const r = (roleSel.value || '').toLowerCase();
       if (ORG_OPTIONAL_ROLES.includes(r)) {
         orgGroup.style.display = 'none';
-        const inp = orgGroup.querySelector('select, input');
-        if (inp) inp.value = '';
+        orgSel.value = '';
       } else {
         orgGroup.style.display = '';
       }
     }
 
-    typeSel.addEventListener('change', () => {
-      populateOrganizations();
-      populateRoleOptions();
-      toggleOrg();
-    });
-
-    orgSel.addEventListener('change', () => {
-      populateRoleOptions();
-      toggleOrg();
-    });
-
+    typeSel.addEventListener('change', loadOrganizations);
+    orgSel.addEventListener('change', loadRoles);
     roleSel.addEventListener('change', toggleOrg);
 
-    populateOrganizations();
-    populateRoleOptions();
-    toggleOrg();
+    loadOrganizations();
 
     remBtn?.addEventListener('click', () => {
       if (delBox) delBox.checked = true;
@@ -81,13 +84,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  $$(".role-card", listBox).forEach(bindCard);
+  document.querySelectorAll('.role-card').forEach(bindCard);
 
   addBtn.addEventListener('click', () => {
     saveBtn.disabled = true;
     const idx = +totalInput.value;
     listBox.insertAdjacentHTML('beforeend', tplHTML.replace(/__prefix__/g, idx));
-    bindCard($(`.role-card[data-form-index="${idx}"]`));
+    bindCard(listBox.querySelector(`.role-card[data-form-index="${idx}"]`));
     totalInput.value = idx + 1;
     requestAnimationFrame(() => (saveBtn.disabled = false));
   });
