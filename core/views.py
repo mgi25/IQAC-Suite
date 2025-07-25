@@ -191,6 +191,9 @@ def add_org_role(request):
 def delete_org_role(request, role_id):
     role = get_object_or_404(OrganizationRole, id=role_id)
     role.delete()
+    org_type_id = request.GET.get("org_type_id")
+    if org_type_id:
+        return redirect(reverse("view_org_roles") + f"?org_type_id={org_type_id}")
     return redirect("admin_role_management")
 
 
@@ -223,6 +226,9 @@ def update_org_role(request, role_id):
     if new_name:
         role.name = new_name
         role.save()
+    org_type_id = request.GET.get("org_type_id")
+    if org_type_id:
+        return redirect(reverse("view_org_roles") + f"?org_type_id={org_type_id}")
     return redirect("view_org_roles")
 
 
@@ -232,6 +238,9 @@ def toggle_org_role(request, role_id):
     role = get_object_or_404(OrganizationRole, id=role_id)
     role.is_active = not role.is_active
     role.save()
+    org_type_id = request.GET.get("org_type_id")
+    if org_type_id:
+        return redirect(reverse("view_org_roles") + f"?org_type_id={org_type_id}")
     return redirect("view_org_roles")
 
 @user_passes_test(lambda u: u.is_superuser)
