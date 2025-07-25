@@ -152,7 +152,24 @@ def admin_role_management(request):
         .order_by("name")
         .prefetch_related("organizations__roles")
     )
-    return render(request, "core/admin_role_management.html", {"org_types": org_types})
+
+    organizations = (
+        Organization.objects.filter(is_active=True)
+        .select_related("org_type")
+        .order_by("org_type__name", "name")
+    )
+
+    roles = (
+        OrganizationRole.objects.select_related("organization__org_type")
+        .order_by("organization__org_type__name", "organization__name", "name")
+    )
+
+    context = {
+        "org_types": org_types,
+        "organizations": organizations,
+        "roles": roles,
+    }
+    return render(request, "core/admin_role_management.html", context)
 
 
 
@@ -160,10 +177,19 @@ def admin_role_management(request):
 @require_POST
 def add_org_role(request):
     org_id = request.POST.get("org_id")
+    org_type_id = request.POST.get("org_type_id")
     name = request.POST.get("name", "").strip()
-    if org_id and name:
+
+    if not name:
+        return redirect("admin_role_management")
+
+    if org_id:
         org = get_object_or_404(Organization, id=org_id)
         OrganizationRole.objects.get_or_create(organization=org, name=name)
+    elif org_type_id:
+        orgs = Organization.objects.filter(org_type_id=org_type_id, is_active=True)
+        for org in orgs:
+            OrganizationRole.objects.get_or_create(organization=org, name=name)
     return redirect("admin_role_management")
 
 
