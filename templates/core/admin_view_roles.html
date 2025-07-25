@@ -4,13 +4,15 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'core/css/admin_user_management.css' %}">
 <div class="user-mgmt-container">
-    <h1 class="mgmt-title">Organization Roles</h1>
+    <h1 class="mgmt-title">
+        {% if org_type %}{{ org_type.name }}{% else %}Organization Roles{% endif %}
+    </h1>
     <div class="table-responsive">
         <table id="rolesTable" class="admin-users-table display nowrap" style="width:100%">
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>Organization Type</th>
+                    {% if not org_type %}<th>Organization Type</th>{% endif %}
                     <th>Organization</th>
                     <th>Role Name</th>
                     <th>Status</th>
@@ -21,7 +23,7 @@
             {% for role in roles %}
                 <tr>
                     <td>{{ forloop.counter }}</td>
-                    <td>{{ role.organization.org_type.name }}</td>
+                    {% if not org_type %}<td>{{ role.organization.org_type.name }}</td>{% endif %}
                     <td>{{ role.organization.name }}</td>
                     <td>
                         <form method="post" action="{% url 'update_org_role' role.id %}" class="d-flex">
