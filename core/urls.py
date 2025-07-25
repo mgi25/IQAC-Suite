@@ -45,6 +45,7 @@ urlpatterns = [
 
     # Admin Master Data Management UI
     path('core-admin/master-data/', views.admin_master_data, name='admin_master_data'),
+    path('core-admin/master-data-dashboard/', views.master_data_dashboard, name='master_data_dashboard'),
 
     # Settings Dashboard (cards view, if needed)
     path('core-admin/settings/', views.admin_settings_dashboard, name='admin_settings'),
