@@ -44,11 +44,20 @@
           {{ form.id }}{{ form.DELETE }}
 
           <div class="field-group">
-            {{ form.role }}
+            <select class="org-type-select">
+              <option value="">Select Category</option>
+              {% for ot in organization_types %}
+              <option value="{{ ot.id }}" {% if form.instance.organization and form.instance.organization.org_type.id == ot.id %}selected{% endif %}>{{ ot.name }}</option>
+              {% endfor %}
+            </select>
           </div>
 
           <div class="field-group">
             {{ form.organization }}
+          </div>
+
+          <div class="field-group">
+            {{ form.role }}
           </div>
 
           <button type="button" class="remove-role-btn">×</button>
@@ -74,11 +83,20 @@
     {{ formset.empty_form.id }}{{ formset.empty_form.DELETE }}
 
     <div class="field-group">
-      {{ formset.empty_form.role }}
+      <select class="org-type-select">
+        <option value="">Select Category</option>
+        {% for ot in organization_types %}
+        <option value="{{ ot.id }}">{{ ot.name }}</option>
+        {% endfor %}
+      </select>
     </div>
 
     <div class="field-group">
       {{ formset.empty_form.organization }}
+    </div>
+
+    <div class="field-group">
+      {{ formset.empty_form.role }}
     </div>
 
     <button type="button" class="remove-role-btn">×</button>
@@ -87,6 +105,8 @@
 <script>
   const ORG_ROLES = {{ org_roles_json|safe }};
   const BASE_ROLES = {{ role_choices_json|safe }};
+  const ORGS_BY_TYPE = {{ orgs_by_type_json|safe }};
+  const ROLES_BY_TYPE = {{ roles_by_type_json|safe }};
 </script>
 <script src="{% static 'core/js/admin_user_edit.js' %}"></script>
 {% endblock %}

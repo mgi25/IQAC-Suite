@@ -196,11 +196,23 @@ def delete_org_role(request, role_id):
 
 @user_passes_test(lambda u: u.is_superuser)
 def view_org_roles(request):
+    """Display roles, optionally filtered by organization type."""
     roles = (
         OrganizationRole.objects.select_related("organization", "organization__org_type")
         .order_by("organization__org_type__name", "organization__name", "name")
     )
-    return render(request, "core/admin_view_roles.html", {"roles": roles})
+
+    org_type_id = request.GET.get("org_type_id")
+    org_type = None
+    if org_type_id:
+        org_type = get_object_or_404(OrganizationType, id=org_type_id)
+        roles = roles.filter(organization__org_type=org_type)
+
+    context = {
+        "roles": roles,
+        "org_type": org_type,
+    }
+    return render(request, "core/admin_view_roles.html", context)
 
 
 @user_passes_test(lambda u: u.is_superuser)
@@ -267,10 +279,21 @@ def admin_user_edit(request, user_id):
     else:
         formset = RoleFormSet(instance=user)
 
-    org_roles = {
-        org.id: [r.name for r in org.roles.all()]
-        for org in Organization.objects.filter(is_active=True)
-    }
+    orgs = (
+        Organization.objects.filter(is_active=True)
+        .select_related("org_type")
+        .prefetch_related("roles")
+    )
+
+    org_roles = {org.id: [r.name for r in org.roles.all()] for org in orgs}
+
+    orgs_by_type = {}
+    roles_by_type = {}
+    for org in orgs:
+        ot_id = org.org_type_id
+        orgs_by_type.setdefault(ot_id, []).append({"id": org.id, "name": org.name})
+        roles_by_type.setdefault(ot_id, set()).update(r.name for r in org.roles.all())
+    roles_by_type = {k: sorted(v) for k, v in roles_by_type.items()}
 
     return render(
         request,
@@ -282,6 +305,8 @@ def admin_user_edit(request, user_id):
             "organization_types": OrganizationType.objects.filter(),
             "org_roles_json": json.dumps(org_roles),
             "role_choices_json": json.dumps(RoleAssignment.ROLE_CHOICES),
+            "orgs_by_type_json": json.dumps(orgs_by_type),
+            "roles_by_type_json": json.dumps(roles_by_type),
         },
     )
 
