@@ -148,27 +148,10 @@ def admin_user_panel(request):
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_role_management(request):
-    org_types = (
-        OrganizationType.objects.all()
-        .order_by("name")
-        .prefetch_related("organizations__roles")
-    )
-
-    organizations = (
-        Organization.objects.filter(is_active=True)
-        .select_related("org_type")
-        .order_by("org_type__name", "name")
-    )
-
-    roles = (
-        OrganizationRole.objects.select_related("organization__org_type")
-        .order_by("organization__org_type__name", "organization__name", "name")
-    )
+    org_types = OrganizationType.objects.all().order_by("name")
 
     context = {
         "org_types": org_types,
-        "organizations": organizations,
-        "roles": roles,
     }
     return render(request, "core/admin_role_management.html", context)
 
@@ -187,10 +170,19 @@ def add_org_role(request):
     if org_id:
         org = get_object_or_404(Organization, id=org_id)
         OrganizationRole.objects.get_or_create(organization=org, name=name)
+        messages.success(request, f"Role '{name}' added to {org.name}.")
     elif org_type_id:
         orgs = Organization.objects.filter(org_type_id=org_type_id, is_active=True)
+        org_names = []
         for org in orgs:
             OrganizationRole.objects.get_or_create(organization=org, name=name)
+            org_names.append(org.name)
+        org_type = get_object_or_404(OrganizationType, id=org_type_id)
+        if org_names:
+            msg = f"Role '{name}' added to all organizations in {org_type.name}: {', '.join(org_names)}"
+        else:
+            msg = f"No active organizations found in {org_type.name}."
+        messages.success(request, msg)
     return redirect("admin_role_management")
 
 

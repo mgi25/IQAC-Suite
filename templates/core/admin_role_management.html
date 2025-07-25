@@ -2,8 +2,6 @@
 {% load static %}
 
 {% block head_extra %}
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
   <link rel="stylesheet" href="{% static 'core/css/admin_role_management.css' %}">
 {% endblock %}
 
@@ -11,79 +9,38 @@
 <div class="role-mgmt-container">
   <h1 class="mgmt-title">Organization Roles</h1>
 
-  <!-- Global Add Role Form -->
-  <form id="addRoleForm" class="add-role-global" method="post" action="{% url 'add_org_role' %}">
-    {% csrf_token %}
-    <div class="field-group">
-      <select id="orgTypeSelect" name="org_type_id" class="form-select" required>
-        <option value="">Select Category</option>
-        {% for t in org_types %}
-        <option value="{{ t.id }}">{{ t.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="field-group">
-      <select name="org_id" id="orgSelect" class="form-select">
-        <option value="">Select Organization (optional)</option>
-        {% for org in organizations %}
-        <option value="{{ org.id }}" data-org-type="{{ org.org_type.id }}">{{ org.name }} ({{ org.org_type.name }})</option>
-        {% endfor %}
-      </select>
-      <small class="form-text text-muted">Leave blank to add role to all organizations in the selected category.</small>
-    </div>
-    <div class="field-group">
-      <input type="text" name="name" placeholder="Role name" required>
-    </div>
-    <button type="submit" class="btn btn-primary btn-sm">Add</button>
-  </form>
+  {% if messages %}
+    <ul class="messages">
+      {% for msg in messages %}
+        <li class="message {{ msg.tags }}">{{ msg }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
 
-  <!-- DataTable of Organizations & Roles -->
-  <table id="orgRolesTable" class="org-roles-table display nowrap" style="width:100%">
+  <table id="orgTypeTable" class="org-type-table">
     <thead>
       <tr>
         <th>Category</th>
-        <th>Organization</th>
-        <th>Roles</th>
         <th>Add Role</th>
       </tr>
     </thead>
     <tbody>
       {% for type in org_types %}
-        {% for org in type.organizations.all %}
-        <tr>
-          <td>{{ type.name }}</td>
-          <td>{{ org.name }}</td>
-          <td>
-            <ul class="role-list mb-0">
-              {% for r in org.roles.all %}
-                <li class="role-chip">
-                  {{ r.name }}
-                  <form class="delete-role-form" method="post" action="{% url 'delete_org_role' r.id %}">
-                    {% csrf_token %}
-                    <button type="submit" class="delete-role-btn">×</button>
-                  </form>
-                </li>
-              {% empty %}
-                <li class="role-chip role-none">No roles</li>
-              {% endfor %}
-            </ul>
-          </td>
-          <td>
-            <form class="add-role-form" method="post" action="{% url 'add_org_role' %}">
-              {% csrf_token %}
-              <input type="hidden" name="org_id" value="{{ org.id }}">
-              <div class="d-flex gap-1">
-                <input type="text" name="name" placeholder="New role" required class="form-control form-control-sm">
-                <button type="submit" class="btn btn-primary btn-sm">Add</button>
-              </div>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
+      <tr>
+        <td>{{ type.name }}</td>
+        <td>
+          <form class="add-role-form" method="post" action="{% url 'add_org_role' %}">
+            {% csrf_token %}
+            <input type="hidden" name="org_type_id" value="{{ type.id }}">
+            <input type="text" name="name" placeholder="Role name" required class="form-control form-control-sm">
+            <button type="submit" class="btn btn-primary btn-sm">Add</button>
+          </form>
+        </td>
+      </tr>
       {% empty %}
-        <tr>
-          <td colspan="4" class="text-center">No organization types found.</td>
-        </tr>
+      <tr>
+        <td colspan="2" class="text-center">No organization types found.</td>
+      </tr>
       {% endfor %}
     </tbody>
   </table>
@@ -91,13 +48,5 @@
 {% endblock %}
 
 {% block scripts %}
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
-  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
   <script src="{% static 'core/js/admin_role_management.js' %}"></script>
 {% endblock %}
