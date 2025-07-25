@@ -546,13 +546,22 @@ def admin_approval_flow_manage(request, org_id):
     )
     org_types = OrganizationType.objects.all().order_by("name")
     selected_org = get_object_or_404(Organization, id=org_id)
+
+    steps = (
+        ApprovalFlowTemplate.objects.filter(organization=selected_org)
+        .select_related("user")
+        .order_by("step_order")
+    )
+
     context = {
         "organizations": orgs,
         "org_types": org_types,
         "selected_org_id": org_id,
         "selected_org": selected_org,
+        "existing_steps": steps,
     }
     return render(request, "core/admin_approval_flow_manage.html", context)
+
 
 @login_required
 @csrf_exempt
@@ -677,4 +686,34 @@ def search_users(request):
     users = users.distinct()[:10]
     data = [{"id": u.id, "name": u.get_full_name(), "email": u.email} for u in users]
     return JsonResponse({"success": True, "users": data})
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def organization_users(request, org_id):
+    """Return users for a given organization, optional search by name or role."""
+    q = request.GET.get("q", "")
+    role = request.GET.get("role", "")
+
+    assignments = RoleAssignment.objects.filter(organization_id=org_id)
+    if role:
+        assignments = assignments.filter(role__iexact=role)
+    if q:
+        assignments = assignments.filter(
+            Q(user__first_name__icontains=q)
+            | Q(user__last_name__icontains=q)
+            | Q(user__email__icontains=q)
+        )
+
+    assignments = assignments.select_related("user").order_by("user__first_name", "user__last_name")
+
+    users_data = [
+        {
+            "id": a.user.id,
+            "name": a.user.get_full_name() or a.user.username,
+            "role": a.get_role_display(),
+        }
+        for a in assignments
+    ]
+    return JsonResponse({"success": True, "users": users_data})
 
