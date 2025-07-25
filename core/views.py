@@ -523,17 +523,36 @@ def admin_settings_dashboard(request):
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_approval_flow(request):
+    """List all organizations grouped by type for approval flow management."""
+    org_types = OrganizationType.objects.filter(is_active=True).order_by("name")
+    orgs_by_type = {
+        ot.name: Organization.objects.filter(org_type=ot, is_active=True).order_by("name")
+        for ot in org_types
+    }
+    context = {
+        "org_types": org_types,
+        "orgs_by_type": orgs_by_type,
+    }
+    return render(request, "core/admin_approval_flow_list.html", context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def admin_approval_flow_manage(request, org_id):
+    """Display and edit approval flow for a single organization."""
     orgs = (
         Organization.objects.filter(is_active=True)
         .select_related("org_type")
         .order_by("org_type__name", "name")
     )
     org_types = OrganizationType.objects.all().order_by("name")
+    selected_org = get_object_or_404(Organization, id=org_id)
     context = {
         "organizations": orgs,
         "org_types": org_types,
+        "selected_org_id": org_id,
+        "selected_org": selected_org,
     }
-    return render(request, "core/admin_approval_flow.html", context)
+    return render(request, "core/admin_approval_flow_manage.html", context)
 
 @login_required
 @csrf_exempt

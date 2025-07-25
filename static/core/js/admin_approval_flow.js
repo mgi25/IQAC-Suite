@@ -552,3 +552,14 @@ window.filterOrgOptions = function() {
   });
 };
 
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.SELECTED_ORG_ID) {
+    openApprovalFlowEditor();
+    const select = document.getElementById('approvalFlowOrgSelect');
+    if (select) {
+      select.value = String(window.SELECTED_ORG_ID);
+      loadApprovalFlow();
+    }
+  }
+});
+
