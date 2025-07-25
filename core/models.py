@@ -69,17 +69,18 @@ class RoleAssignment(models.Model):
         ('academic_coordinator', 'Academic Coordinator'),
     ]
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='role_assignments')
-    role = models.CharField(max_length=30, choices=ROLE_CHOICES)
+    role = models.ForeignKey('OrganizationRole', on_delete=models.CASCADE, null=True)
     organization = models.ForeignKey(Organization, null=True, blank=True, on_delete=models.SET_NULL)
 
     class Meta:
         unique_together = ("user", "role", "organization")
 
     def __str__(self):
-        parts = [self.get_role_display()]
+        parts = [self.role.name]  # Use the OrganizationRole name
         if self.organization:
             parts.append(f"of {self.organization}")
         return f"{self.user.username} – {' '.join(parts)}"
+
 
 # ───────────────────────────────
 #  User Profile (unchanged)
