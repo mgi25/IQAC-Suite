@@ -42,6 +42,7 @@
         {% for form in formset.forms %}
         <div class="role-card" data-form-index="{{ forloop.counter0 }}">
           {{ form.id }}{{ form.DELETE }}
+          {{ form.non_field_errors }}
 
           <!-- Category -->
           <div class="field-group">
@@ -60,11 +61,13 @@
           <!-- Organization -->
           <div class="field-group">
             {{ form.organization }}
+            {{ form.organization.errors }}
           </div>
 
           <!-- Role -->
           <div class="field-group">
             {{ form.role }}
+            {{ form.role.errors }}
           </div>
 
           <button type="button" class="remove-role-btn">×</button>
@@ -73,6 +76,7 @@
       </div>
 
       {{ formset.management_form }}
+      {{ formset.non_form_errors }}
 
       <button type="button" id="add-role-btn" class="btn-add-role">+ Add Role</button>
     </div>
