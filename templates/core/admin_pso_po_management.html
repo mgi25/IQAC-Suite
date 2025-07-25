@@ -1,280 +1,130 @@
 {% extends "base.html" %}
 {% load static %}
+{% load dict_filters %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'core/css/admin_settings_dashboard.css' %}">
-<style>
-.tab-nav { display: flex; gap: 24px; margin-bottom: 2rem; }
-.tab-btn {
-  border: none; background: none; padding: 10px 24px;
-  font-size: 1.1rem; font-weight: 600; border-radius: 16px 16px 0 0;
-  color: #1456a6; cursor: pointer; border-bottom: 3px solid transparent;
-  transition: background .2s, border .2s;
-}
-.tab-btn.active {
-  background: #e9f2fc; border-bottom: 3px solid #2176d2; color: #2176d2;
-}
-.data-table {
-  width: 100%; border-collapse: collapse; margin-bottom: 2rem;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
-}
-.data-table th, .data-table td { padding: 10px 18px; border-bottom: 1px solid #e2e2e2; text-align: left; }
-.data-table th { background: #f5faff; color: #2176d2; font-size: 1rem; }
-.data-table tr:hover { background: #f0f6ff; cursor: pointer; }
-.status-badge { border-radius: 14px; font-size: 0.95em; padding: 2px 12px; }
-.status-badge.active { background: #dbffea; color: #12832b; }
-.status-badge.inactive { background: #fbeeea; color: #af2e2e; }
-#org-search { margin-bottom: 14px; padding: 6px 12px; border: 1px solid #b4d0f7; border-radius: 7px; min-width: 220px; }
-#po-pso-editor { background: #fff; border-radius: 15px; box-shadow: 0 4px 18px #0001; padding: 2rem; margin-top: 1rem; }
-.admin-list { list-style: none; padding: 0; }
-.admin-list li { padding: 8px 4px; border-bottom: 1px solid #eee; display:flex; align-items:center; }
-.admin-list li .delete-btn { color: #e00; background:none; border:none; margin-left:10px; cursor:pointer;}
-</style>
+<link rel="stylesheet" href="{% static 'core/css/admin_master_data.css' %}">
+<link rel="stylesheet" href="{% static 'core/css/admin_pso_po_management.css' %}">
 
-<div class="admin-settings-dashboard-bg">
-  <div class="admin-settings-dashboard-container">
-    <div class="admin-settings-header">
-      <div class="admin-settings-icon">
-        <i class="fa-solid fa-graduation-cap"></i>
+<div class="main-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1 class="page-title">PSO & PO Management</h1>
+  </div>
+
+  <!-- Controls Section -->
+  <div class="controls-section">
+    <div class="filter-tabs">
+      <button class="filter-btn active" data-type="all">All</button>
+      <button class="filter-btn" data-type="department">Departments</button>
+      <button class="filter-btn" data-type="club">Clubs</button>
+      <button class="filter-btn" data-type="center">Centers</button>
+      <button class="filter-btn" data-type="cell">Cells</button>
+      <button class="filter-btn" data-type="association">Associations</button>
+    </div>
+    
+    <div class="search-container">
+      <input type="text" id="org-search" placeholder="Search organizations...">
+    </div>
+  </div>
+
+  <!-- Organizations Table -->
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Organization</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Parent</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="organizations-list">
+        {% for org_type in org_types %}
+          {% for org in orgs_by_type|get_item:org_type.name %}
+            <tr class="org-row" 
+                data-id="{{ org.id }}" 
+                data-name="{{ org.name }}" 
+                data-type="{{ org_type.name|lower }}"
+                data-parent="{{ org.parent.name|default:'' }}">
+              <td>{{ org.id }}</td>
+              <td class="org-name">{{ org.name }}</td>
+              <td>{{ org_type.name }}</td>
+              <td>
+                <span class="status-badge {% if org.is_active %}active{% else %}inactive{% endif %}">
+                  {% if org.is_active %}Active{% else %}Inactive{% endif %}
+                </span>
+              </td>
+              <td class="parent-name">
+                {% if org.parent %}{{ org.parent.name }}{% else %}-{% endif %}
+              </td>
+              <td>
+                <button class="manage-btn manage-outcomes-btn">
+                  <i class="fas fa-cog"></i> Manage Outcomes
+                </button>
+              </td>
+            </tr>
+          {% endfor %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- PSO/PO Management Section -->
+  <div class="pso-po-management" id="pso-po-management">
+    <div class="management-header">
+      <h2>Manage Outcomes for <span id="selected-org-name"></span></h2>
+    </div>
+    
+    <div class="management-content">
+      <div class="outcome-section">
+        <h3>Programme Outcomes (POs)</h3>
+        <ul class="outcome-list" id="po-list"></ul>
+        <form class="add-outcome-form" id="add-po-form">
+          <input type="text" id="new-po" placeholder="Add new Programme Outcome..." required>
+          <button type="submit">
+            <i class="fas fa-plus"></i> Add PO
+          </button>
+        </form>
       </div>
-      <h1 class="admin-settings-title">PSO & PO Management</h1>
-    </div>
-
-    <!-- Tabs -->
-    <div class="tab-nav">
-      <button class="tab-btn active" data-tab="departments">Departments</button>
-      <button class="tab-btn" data-tab="clubs">Clubs</button>
-      <button class="tab-btn" data-tab="centers">Centers</button>
-      <button class="tab-btn" data-tab="cells">Cells</button>
-      <button class="tab-btn" data-tab="associations">Associations</button>
-    </div>
-
-    <!-- Filter/Search Bar -->
-    <input type="text" id="org-search" placeholder="Search organization...">
-
-    <!-- DataTables for each tab -->
-    <div class="tab-content" id="departments-tab">
-      <table class="data-table">
-        <thead><tr><th>Name</th><th>Status</th><th>Action</th></tr></thead>
-        <tbody>
-        {% for d in departments %}
-          <tr data-id="{{ d.id }}" data-name="{{ d.name }}">
-            <td>{{ d.name }}</td>
-            <td><span class="status-badge {% if d.is_active %}active{% else %}inactive{% endif %}">{{ d.is_active|yesno:"Active,Inactive" }}</span></td>
-            <td><button class="manage-pos-pso-btn btn btn-sm btn-primary">Manage POs/PSOs</button></td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <div class="tab-content" id="clubs-tab" style="display:none;">
-      <table class="data-table">
-        <thead><tr><th>Name</th><th>Status</th><th>Action</th></tr></thead>
-        <tbody>
-        {% for c in clubs %}
-          <tr data-id="{{ c.id }}" data-name="{{ c.name }}">
-            <td>{{ c.name }}</td>
-            <td><span class="status-badge {% if c.is_active %}active{% else %}inactive{% endif %}">{{ c.is_active|yesno:"Active,Inactive" }}</span></td>
-            <td><button class="manage-pos-pso-btn btn btn-sm btn-primary">Manage POs/PSOs</button></td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <div class="tab-content" id="centers-tab" style="display:none;">
-      <table class="data-table">
-        <thead><tr><th>Name</th><th>Status</th><th>Action</th></tr></thead>
-        <tbody>
-        {% for c in centers %}
-          <tr data-id="{{ c.id }}" data-name="{{ c.name }}">
-            <td>{{ c.name }}</td>
-            <td><span class="status-badge {% if c.is_active %}active{% else %}inactive{% endif %}">{{ c.is_active|yesno:"Active,Inactive" }}</span></td>
-            <td><button class="manage-pos-pso-btn btn btn-sm btn-primary">Manage POs/PSOs</button></td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <div class="tab-content" id="cells-tab" style="display:none;">
-      <table class="data-table">
-        <thead><tr><th>Name</th><th>Status</th><th>Action</th></tr></thead>
-        <tbody>
-        {% for c in cells %}
-          <tr data-id="{{ c.id }}" data-name="{{ c.name }}">
-            <td>{{ c.name }}</td>
-            <td><span class="status-badge {% if c.is_active %}active{% else %}inactive{% endif %}">{{ c.is_active|yesno:"Active,Inactive" }}</span></td>
-            <td><button class="manage-pos-pso-btn btn btn-sm btn-primary">Manage POs/PSOs</button></td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <div class="tab-content" id="associations-tab" style="display:none;">
-      <table class="data-table">
-        <thead><tr><th>Name</th><th>Status</th><th>Action</th></tr></thead>
-        <tbody>
-        {% for a in associations %}
-          <tr data-id="{{ a.id }}" data-name="{{ a.name }}">
-            <td>{{ a.name }}</td>
-            <td><span class="status-badge {% if a.is_active %}active{% else %}inactive{% endif %}">{{ a.is_active|yesno:"Active,Inactive" }}</span></td>
-            <td><button class="manage-pos-pso-btn btn btn-sm btn-primary">Manage POs/PSOs</button></td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
-    <!-- PSO/PO editor section (hidden until an org is selected) -->
-    <div id="po-pso-editor" style="display:none;">
-      <h2>Manage POs & PSOs for <span id="selected-org-name"></span></h2>
-      <!-- Same editor as previous version; plug in AJAX here as before -->
-      <div style="display:flex; gap: 2rem;">
-        <div style="flex:1;">
-          <h3>Programme Outcomes (POs)</h3>
-          <ul id="po-list" class="admin-list"></ul>
-          <form id="add-po-form">
-            <input type="text" id="new-po" placeholder="Add new PO" required style="width:80%;">
-            <button type="submit" class="btn btn-primary" style="margin-top:0.5rem;">Add PO</button>
-          </form>
-        </div>
-        <div style="flex:1;">
-          <h3>Programme Specific Outcomes (PSOs)</h3>
-          <ul id="pso-list" class="admin-list"></ul>
-          <form id="add-pso-form">
-            <input type="text" id="new-pso" placeholder="Add new PSO" required style="width:80%;">
-            <button type="submit" class="btn btn-primary" style="margin-top:0.5rem;">Add PSO</button>
-          </form>
-        </div>
+      
+      <div class="outcome-section">
+        <h3>Programme Specific Outcomes (PSOs)</h3>
+        <ul class="outcome-list" id="pso-list"></ul>
+        <form class="add-outcome-form" id="add-pso-form">
+          <input type="text" id="new-pso" placeholder="Add new Programme Specific Outcome..." required>
+          <button type="submit">
+            <i class="fas fa-plus"></i> Add PSO
+          </button>
+        </form>
       </div>
     </div>
-
   </div>
 </div>
 
-<script>
-let currentTab = "departments";
-let currentOrgId = null;
-let currentOrgType = "department";
-let currentOrgName = "";
+<!-- Edit Outcome Modal -->
+<div id="editOutcomeModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Edit Outcome</h3>
+      <button class="close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="editOutcomeForm">
+        <div class="form-group">
+          <label for="editOutcomeText">Outcome Description</label>
+          <textarea id="editOutcomeText" rows="4" required style="width: 100%; padding: 12px 16px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; outline: none; transition: all 0.3s ease; background: white; box-sizing: border-box; resize: vertical; font-family: inherit;"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-cancel">Cancel</button>
+          <button type="submit" class="btn-save">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.onclick = function() {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    this.classList.add('active');
-    document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = "none");
-    document.getElementById(this.dataset.tab + "-tab").style.display = "";
-    document.getElementById('org-search').value = "";
-    currentTab = this.dataset.tab;
-    // Hide editor
-    document.getElementById('po-pso-editor').style.display = "none";
-  }
-});
-
-// Filter/search
-document.getElementById('org-search').addEventListener('keyup', function() {
-  const val = this.value.toLowerCase();
-  const table = document.getElementById(currentTab + "-tab").querySelector("table");
-  Array.from(table.querySelectorAll("tbody tr")).forEach(row => {
-    if(row.dataset.name.toLowerCase().includes(val)) {
-      row.style.display = "";
-    } else {
-      row.style.display = "none";
-    }
-  });
-});
-
-// Handle Manage PO/PSO
-document.querySelectorAll('.tab-content').forEach(tab => {
-  tab.addEventListener('click', function(e) {
-    if (e.target.classList.contains('manage-pos-pso-btn')) {
-      const tr = e.target.closest('tr');
-      currentOrgId = tr.dataset.id;
-      currentOrgName = tr.dataset.name;
-      currentOrgType = currentTab.slice(0, -1); // e.g. "department"
-      document.getElementById('selected-org-name').textContent = currentOrgName + " (" + capitalize(currentOrgType) + ")";
-      // Load data (replace below with AJAX as needed)
-      fetch(`/core-admin/pso-po/data/${currentOrgType}/${currentOrgId}/`)
-        .then(r => r.json())
-        .then(data => {
-          document.getElementById('po-list').innerHTML = "";
-          document.getElementById('pso-list').innerHTML = "";
-          data.pos.forEach(po =>
-            document.getElementById('po-list').innerHTML += `<li>${po.description} <button class="delete-btn" onclick="deleteOutcome('po',${po.id})">🗑</button></li>`
-          );
-          data.psos.forEach(pso =>
-            document.getElementById('pso-list').innerHTML += `<li>${pso.description} <button class="delete-btn" onclick="deleteOutcome('pso',${pso.id})">🗑</button></li>`
-          );
-          document.getElementById('po-pso-editor').style.display = "";
-        });
-    }
-  });
-});
-
-// Add PO/PSO
-document.getElementById('add-po-form').onsubmit = function(e) {
-  e.preventDefault();
-  let desc = document.getElementById('new-po').value.trim();
-  if (!desc || !currentOrgId) return;
-  fetch(`/core-admin/pso-po/add/po/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-    body: JSON.stringify({ org_type: currentOrgType, org_id: currentOrgId, description: desc })
-  }).then(r => r.json()).then(data => {
-    if (data.success) reloadEditor();
-    document.getElementById('new-po').value = '';
-  });
-};
-document.getElementById('add-pso-form').onsubmit = function(e) {
-  e.preventDefault();
-  let desc = document.getElementById('new-pso').value.trim();
-  if (!desc || !currentOrgId) return;
-  fetch(`/core-admin/pso-po/add/pso/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-    body: JSON.stringify({ org_type: currentOrgType, org_id: currentOrgId, description: desc })
-  }).then(r => r.json()).then(data => {
-    if (data.success) reloadEditor();
-    document.getElementById('new-pso').value = '';
-  });
-};
-window.deleteOutcome = function(type, id) {
-  if (!confirm('Delete this outcome?')) return;
-  fetch(`/core-admin/pso-po/delete/${type}/${id}/`, {
-    method: 'POST',
-    headers: { 'X-CSRFToken': getCookie('csrftoken') }
-  }).then(r => r.json()).then(data => {
-    if (data.success) reloadEditor();
-  });
-}
-function reloadEditor() {
-  fetch(`/core-admin/pso-po/data/${currentOrgType}/${currentOrgId}/`)
-    .then(r => r.json())
-    .then(data => {
-      document.getElementById('po-list').innerHTML = "";
-      document.getElementById('pso-list').innerHTML = "";
-      data.pos.forEach(po =>
-        document.getElementById('po-list').innerHTML += `<li>${po.description} <button class="delete-btn" onclick="deleteOutcome('po',${po.id})">🗑</button></li>`
-      );
-      data.psos.forEach(pso =>
-        document.getElementById('pso-list').innerHTML += `<li>${pso.description} <button class="delete-btn" onclick="deleteOutcome('pso',${pso.id})">🗑</button></li>`
-      );
-    });
-}
-function capitalize(str) { return str.charAt(0).toUpperCase() + str.slice(1); }
-// CSRF helper
-function getCookie(name) {
-  let cookieValue = null;
-  if (document.cookie && document.cookie !== '') {
-    let cookies = document.cookie.split(';');
-    for (let i = 0; i < cookies.length; i++) {
-      let cookie = cookies[i].trim();
-      if (cookie.substring(0, name.length + 1) === (name + '=')) {
-        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-        break;
-      }
-    }
-  }
-  return cookieValue;
-}
-</script>
+<script src="{% static 'core/js/admin_pso_po_management.js' %}"></script>
 {% endblock %}

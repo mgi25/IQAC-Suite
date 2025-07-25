@@ -74,6 +74,9 @@ urlpatterns = [
 
     # PSO/PO Management (admin)
     path('core-admin/pso-po/', views.admin_pso_po_management, name='admin_pso_po_management'),
+    path('core-admin/pso-po/data/<str:org_type>/<int:org_id>/', views.get_pso_po_data, name='get_pso_po_data'),
+    path('core-admin/pso-po/add/<str:outcome_type>/', views.add_outcome, name='add_outcome'),
+    path('core-admin/pso-po/delete/<str:outcome_type>/<int:outcome_id>/', views.delete_outcome, name='delete_outcome'),
 
     # Event Approval Workflow
     path('core-admin/approval-flow/<int:org_id>/get/', views.get_approval_flow, name='get_approval_flow'),
