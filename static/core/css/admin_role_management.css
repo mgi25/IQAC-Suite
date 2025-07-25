@@ -1,0 +1,217 @@
+.role-mgmt-container {
+  padding: 20px 30px;
+}
+
+.mgmt-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #154d8b;
+  margin-bottom: 1rem;
+}
+
+.add-role-global {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 1rem;
+  align-items: flex-end;
+}
+.add-role-global .field-group {
+  display: flex;
+  flex-direction: column;
+}
+.add-role-global select,
+.add-role-global input {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+.add-role-global button {
+  padding: 8px 14px;
+  border-radius: 6px;
+  background: #2274cb;
+  color: #fff;
+  border: none;
+  font-size: 0.9rem;
+}
+.add-role-global button:hover {
+  background: #154d8b;
+}
+
+.org-roles-table.dataTable {
+  width: 100% !important;
+  border-collapse: collapse;
+  border: 1px solid #dbeaff;
+  font-size: 0.95rem;
+  background: #fff;
+}
+.org-roles-table thead th {
+  background: linear-gradient(to right, #2274cb, #185db4);
+  color: #fff;
+  padding: 12px 14px;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.org-roles-table tbody td {
+  padding: 12px 14px;
+  vertical-align: middle;
+}
+.org-roles-table tbody tr:nth-child(even) {
+  background: #f7fbff;
+}
+.delete-role-btn {
+  background: none;
+  border: none;
+  color: #d43f3a;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.delete-role-btn:hover {
+  color: #861f1a;
+}
+
+.dataTables_wrapper .dt-toolbar {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 1rem 0;
+}
+
+.dt-buttons .dt-button {
+  background: #2274cb;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+.dt-buttons .dt-button:hover {
+  background: #154d8b;
+}
+
+.dataTables_paginate {
+  text-align: center;
+  margin-top: 1rem;
+}
+.dataTables_paginate a {
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: #ddefff;
+  color: #154d8b;
+  margin: 0 4px;
+  text-decoration: none;
+}
+.dataTables_paginate a.current {
+  background: #154d8b;
+  color: #fff;
+}
+.dataTables_paginate a:hover {
+  background: #2274cb;
+  color: #fff;
+}
+
+:root {
+  --rm-padding: 2rem;
+}
+
+.role-mgmt-wrapper {
+  max-width: 900px;
+  margin: 2rem auto;
+  background: var(--white);
+  border-radius: var(--border-radius-xl);
+  box-shadow: var(--shadow-lg);
+  padding: var(--rm-padding);
+}
+
+.role-mgmt-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--christ-blue-primary);
+  margin-bottom: 1rem;
+}
+
+.org-type-section {
+  margin-top: 2rem;
+}
+
+.org-type-heading {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--christ-blue-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.org-card {
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius-lg);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.org-name {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--christ-blue-dark);
+}
+
+.role-list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+  padding: 0;
+}
+
+.role-chip {
+  background: var(--christ-blue-primary);
+  color: #fff;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--border-radius);
+  font-size: 0.85rem;
+}
+
+.delete-role-btn {
+  background: none;
+  border: none;
+  color: var(--christ-blue-primary);
+  margin-left: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.delete-role-btn:hover {
+  color: var(--christ-blue-dark);
+  text-decoration: underline;
+}
+
+.add-role-form {
+  margin-top: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.add-role-form input[type="text"] {
+  flex: 1;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--gray-300);
+  background: var(--white);
+}
+
+.add-role-form button {
+  padding: 0.4rem 1rem;
+  border-radius: var(--border-radius);
+  background: var(--christ-blue-primary);
+  color: #fff;
+  border: none;
+}
+
+.add-role-form button:hover {
+  background: var(--christ-blue-secondary);
+}

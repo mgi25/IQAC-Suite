@@ -1,7 +1,26 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block content %}
-<div style="padding:2rem;text-align:center;">
-    <h2>User Management Coming Soon!</h2>
-    <p>This is a placeholder for the user management panel.</p>
+<link rel="stylesheet" href="{% static 'core/css/admin_dashboard.css' %}">
+
+<div class="admin-dashboard-bg">
+  <div class="admin-dashboard-container" style="padding-top:2rem;">
+    <h1 class="admin-dashboard-title">User Administration</h1>
+
+    <div class="admin-dashboard-navcards">
+      <a class="admin-navcard" href="{% url 'admin_user_management' %}">
+        <div class="navcard-icon"><i class="fa-solid fa-users-gear"></i></div>
+        <div class="navcard-title">Manage Users</div>
+        <div class="navcard-desc">View and edit existing users</div>
+      </a>
+
+      <a class="admin-navcard" href="{% url 'admin_role_management' %}">
+        <div class="navcard-icon"><i class="fa-solid fa-user-tag"></i></div>
+        <div class="navcard-title">Add Roles</div>
+        <div class="navcard-desc">Configure organization-specific roles</div>
+      </a>
+    </div>
+  </div>
 </div>
 {% endblock %}
