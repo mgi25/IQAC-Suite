@@ -1,11 +1,14 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
+from django.forms import inlineformset_factory
 from .models import (
     OrganizationType,
     Organization,
     ApprovalFlowTemplate,
-    OrganizationRole,  # Ensure this exists in models.py
+    OrganizationRole,
+    RoleAssignment,
 )
+from .views import RoleAssignmentForm, RoleAssignmentFormSet
 
 
 class OrganizationModelTests(TestCase):
@@ -65,3 +68,34 @@ class RoleManagementTests(TestCase):
             OrganizationRole.objects.filter(organization__org_type=ot, name="Coordinator").count(),
             2,
         )
+
+    def test_duplicate_role_assignments_rejected(self):
+        user = User.objects.create(username="u1")
+        ot = OrganizationType.objects.create(name="Dept")
+        org = Organization.objects.create(name="Math", org_type=ot)
+        RoleAssignment.objects.create(user=user, role="hod", organization=org)
+
+        RoleFormSet = inlineformset_factory(
+            User,
+            RoleAssignment,
+            form=RoleAssignmentForm,
+            formset=RoleAssignmentFormSet,
+            fields=("role", "organization"),
+            extra=0,
+            can_delete=True,
+        )
+
+        data = {
+            "role_assignments-TOTAL_FORMS": "2",
+            "role_assignments-INITIAL_FORMS": "1",
+            "role_assignments-MIN_NUM_FORMS": "0",
+            "role_assignments-MAX_NUM_FORMS": "1000",
+            "role_assignments-0-id": str(RoleAssignment.objects.first().id),
+            "role_assignments-0-role": "hod",
+            "role_assignments-0-organization": str(org.id),
+            "role_assignments-1-role": "hod",
+            "role_assignments-1-organization": str(org.id),
+        }
+        formset = RoleFormSet(data, instance=user)
+        self.assertFalse(formset.is_valid())
+        self.assertIn("Duplicate role assignment", formset.non_form_errors()[0])
