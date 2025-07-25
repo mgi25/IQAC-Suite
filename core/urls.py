@@ -29,6 +29,9 @@ urlpatterns = [
     path('core-admin/user-roles/', views.admin_role_management, name='admin_role_management'),
     path('core-admin/user-roles/add/', views.add_org_role, name='add_org_role'),
     path('core-admin/user-roles/<int:role_id>/delete/', views.delete_org_role, name='delete_org_role'),
+    path('core-admin/user-roles/view/', views.view_org_roles, name='view_org_roles'),
+    path('core-admin/user-roles/<int:role_id>/update/', views.update_org_role, name='update_org_role'),
+    path('core-admin/user-roles/<int:role_id>/toggle/', views.toggle_org_role, name='toggle_org_role'),
 
     # Event Proposal Admin
     path('core-admin/event-proposals/', views.admin_event_proposals, name='admin_event_proposals'),

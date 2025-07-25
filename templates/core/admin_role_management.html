@@ -34,6 +34,7 @@
             <input type="hidden" name="org_type_id" value="{{ type.id }}">
             <input type="text" name="name" placeholder="Role name" required class="form-control form-control-sm">
             <button type="submit" class="btn btn-primary btn-sm">Add</button>
+            <a href="{% url 'view_org_roles' %}" class="btn btn-secondary btn-sm ms-2">View Roles</a>
           </form>
         </td>
       </tr>
