@@ -33,6 +33,20 @@ class Organization(models.Model):
     def __str__(self):
         return f"{self.name} ({self.org_type.name})"
 
+
+class OrganizationRole(models.Model):
+    org_type = models.ForeignKey(
+        OrganizationType, on_delete=models.CASCADE, related_name="roles"
+    )
+    name = models.CharField(max_length=100)
+
+    class Meta:
+        unique_together = ("org_type", "name")
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.org_type.name})"
+
 # ───────────────────────────────
 #  User Role Assignment (now generic)
 # ───────────────────────────────

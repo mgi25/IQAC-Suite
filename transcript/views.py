@@ -12,7 +12,7 @@ import json
 import zipfile
 from datetime import date
 from urllib.parse import unquote
-from django.db.models import Prefetch, Prefetch, Q, F
+from django.db.models import Prefetch, Q
 
 # ─────────────────────────────────────────────
 # HOME

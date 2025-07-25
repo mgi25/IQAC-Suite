@@ -99,7 +99,7 @@ pip install -r requirements.txt
 
 ### 3. Environment Configuration
 
-Create a `.env` file in the root directory:
+Copy `.env.example` to `.env` and adjust values as needed:
 
 ```
 DEBUG=True

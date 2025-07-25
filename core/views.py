@@ -6,18 +6,24 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 from django.db.models import Q, Sum
 from django.forms import inlineformset_factory
+from django import forms
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 import json
 from .models import (
-    Profile, RoleAssignment, Organization, OrganizationType, Report
+    Profile,
+    RoleAssignment,
+    Organization,
+    OrganizationType,
+    Report,
+    OrganizationRole,
 )
 from emt.models import (
     EventProposal, EventNeedAnalysis, EventObjectives, EventExpectedOutcomes, TentativeFlow,
     ExpenseDetail, SpeakerProfile, ApprovalStep
 )
 from django.views.decorators.http import require_GET, require_POST
-from .models import ApprovalFlowTemplate, Organization
+from .models import ApprovalFlowTemplate
 # ─────────────────────────────────────────────────────────────
 #  Helpers
 # ─────────────────────────────────────────────────────────────
@@ -27,6 +33,17 @@ def superuser_required(view_func):
             return HttpResponseForbidden("You are not authorized to access this page.")
         return view_func(request, *args, **kwargs)
     return _wrapped_view
+
+
+class RoleAssignmentForm(forms.ModelForm):
+    class Meta:
+        model = RoleAssignment
+        fields = ("role", "organization")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        extra = [(r.name, r.name) for r in OrganizationRole.objects.all()]
+        self.fields["role"].choices = RoleAssignment.ROLE_CHOICES + extra
 
 # ─────────────────────────────────────────────────────────────
 #  Auth Views
@@ -127,6 +144,39 @@ def admin_dashboard(request):
 def admin_user_panel(request):
     return render(request, "core/admin_user_panel.html")
 
+
+@user_passes_test(lambda u: u.is_superuser)
+def admin_role_management(request):
+    org_types = OrganizationType.objects.all().order_by("name")
+    roles = (
+        OrganizationRole.objects.select_related("org_type")
+        .order_by("org_type__name", "name")
+    )
+    context = {
+        "org_types": org_types,
+        "roles": roles,
+    }
+    return render(request, "core/admin_role_management.html", context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_POST
+def add_org_role(request):
+    org_type_id = request.POST.get("org_type_id")
+    name = request.POST.get("name", "").strip()
+    if org_type_id and name:
+        org_type = get_object_or_404(OrganizationType, id=org_type_id)
+        OrganizationRole.objects.get_or_create(org_type=org_type, name=name)
+    return redirect("admin_role_management")
+
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_POST
+def delete_org_role(request, role_id):
+    role = get_object_or_404(OrganizationRole, id=role_id)
+    role.delete()
+    return redirect("admin_role_management")
+
 @user_passes_test(lambda u: u.is_superuser)
 def admin_user_management(request):
     users = User.objects.all().order_by('-date_joined')
@@ -151,9 +201,10 @@ def admin_user_edit(request, user_id):
     RoleFormSet = inlineformset_factory(
         User,
         RoleAssignment,
-        fields=('role', 'organization'),
+        form=RoleAssignmentForm,
+        fields=("role", "organization"),
         extra=0,
-        can_delete=True
+        can_delete=True,
     )
     if request.method == "POST":
         formset = RoleFormSet(request.POST, instance=user)
@@ -171,6 +222,10 @@ def admin_user_edit(request, user_id):
     else:
         formset = RoleFormSet(instance=user)
 
+    org_roles = {}
+    for org in Organization.objects.filter(is_active=True).select_related('org_type'):
+        roles = OrganizationRole.objects.filter(org_type=org.org_type).values_list('name', flat=True)
+        org_roles[org.id] = list(roles)
 
     return render(
         request,
@@ -180,6 +235,8 @@ def admin_user_edit(request, user_id):
             "formset": formset,
             "organizations": Organization.objects.filter(is_active=True),
             "organization_types": OrganizationType.objects.filter(),
+            "org_roles_json": json.dumps(org_roles),
+            "role_choices_json": json.dumps(RoleAssignment.ROLE_CHOICES),
         },
     )
 
@@ -443,8 +500,17 @@ def admin_settings_dashboard(request):
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_approval_flow(request):
-    orgs = Organization.objects.filter(is_active=True).order_by('name')
-    return render(request, "core/admin_approval_flow.html", {"organizations": orgs})
+    orgs = (
+        Organization.objects.filter(is_active=True)
+        .select_related("org_type")
+        .order_by("org_type__name", "name")
+    )
+    org_types = OrganizationType.objects.all().order_by("name")
+    context = {
+        "organizations": orgs,
+        "org_types": org_types,
+    }
+    return render(request, "core/admin_approval_flow.html", context)
 
 @login_required
 @csrf_exempt
@@ -534,6 +600,13 @@ def api_approval_flow_steps(request, org_id):
         )
     )
     return JsonResponse({'success': True, 'steps': steps})
+
+@require_POST
+@csrf_exempt
+@user_passes_test(lambda u: u.is_superuser)
+def delete_approval_flow(request, org_id):
+    ApprovalFlowTemplate.objects.filter(organization_id=org_id).delete()
+    return JsonResponse({'success': True})
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def search_users(request):

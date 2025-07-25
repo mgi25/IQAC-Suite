@@ -8,7 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECRET_KEY loaded from environment with a development fallback
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-…')
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = [
     '127.0.0.1',
