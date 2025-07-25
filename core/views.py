@@ -688,9 +688,27 @@ def add_academic_year(request):
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_pso_po_management(request):
+    import json
     from .models import Program, ProgramOutcome, ProgramSpecificOutcome
+    
+    # Get all organization types and their organizations (same as admin_master_data)
+    org_types = OrganizationType.objects.filter(is_active=True).order_by('name')
+    orgs_by_type = {}
+    orgs_by_type_json = {}
+
+    for org_type in org_types:
+        # Include both active and inactive organizations for comprehensive management
+        qs = Organization.objects.filter(org_type=org_type).order_by('name')
+        orgs_by_type[org_type.name] = qs
+        # For JS: only include active organizations for parent dropdown
+        active_orgs = qs.filter(is_active=True)
+        orgs_by_type_json[org_type.name.lower()] = [{'id': o.id, 'name': o.name} for o in active_orgs]
+    
     programs = Program.objects.all().order_by("name")
     context = {
+        "org_types": org_types,
+        "orgs_by_type": orgs_by_type,
+        "orgs_by_type_json": json.dumps(orgs_by_type_json),
         "programs": programs,
     }
     return render(request, "core/admin_pso_po_management.html", context)
@@ -771,4 +789,102 @@ def search_users(request):
     users = users.distinct()[:10]
     data = [{"id": u.id, "name": u.get_full_name(), "email": u.email} for u in users]
     return JsonResponse({"success": True, "users": data})
+
+
+# PSO/PO Management API endpoints
+from django.views.decorators.http import require_GET, require_POST
+
+@require_GET
+@user_passes_test(lambda u: u.is_superuser)
+def get_pso_po_data(request, org_type, org_id):
+    """Get POs and PSOs for a specific organization"""
+    try:
+        from .models import Program, ProgramOutcome, ProgramSpecificOutcome
+        
+        # Get organization
+        org = Organization.objects.get(id=org_id)
+        
+        # Get program for this organization (if exists)
+        programs = Program.objects.filter(organization=org)
+        
+        pos = []
+        psos = []
+        
+        if programs.exists():
+            program = programs.first()
+            pos = list(ProgramOutcome.objects.filter(program=program).values('id', 'description'))
+            psos = list(ProgramSpecificOutcome.objects.filter(program=program).values('id', 'description'))
+        
+        return JsonResponse({
+            'success': True,
+            'pos': pos,
+            'psos': psos,
+            'organization': org.name
+        })
+    except Organization.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Organization not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@require_POST
+@csrf_exempt
+@user_passes_test(lambda u: u.is_superuser)
+def add_outcome(request, outcome_type):
+    """Add a new PO or PSO"""
+    try:
+        from .models import Program, ProgramOutcome, ProgramSpecificOutcome
+        
+        data = json.loads(request.body)
+        org_id = data.get('org_id')
+        description = data.get('description')
+        
+        if not org_id or not description:
+            return JsonResponse({'success': False, 'error': 'Missing required fields'})
+        
+        # Get or create organization
+        org = Organization.objects.get(id=org_id)
+        
+        # Get or create program for this organization
+        program, created = Program.objects.get_or_create(
+            organization=org,
+            defaults={'name': f"{org.name} Program"}
+        )
+        
+        # Add outcome based on type
+        if outcome_type == 'po':
+            ProgramOutcome.objects.create(program=program, description=description)
+        elif outcome_type == 'pso':
+            ProgramSpecificOutcome.objects.create(program=program, description=description)
+        else:
+            return JsonResponse({'success': False, 'error': 'Invalid outcome type'})
+        
+        return JsonResponse({'success': True})
+        
+    except Organization.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Organization not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@require_POST
+@csrf_exempt
+@user_passes_test(lambda u: u.is_superuser)
+def delete_outcome(request, outcome_type, outcome_id):
+    """Delete a PO or PSO"""
+    try:
+        from .models import ProgramOutcome, ProgramSpecificOutcome
+        
+        if outcome_type == 'po':
+            outcome = ProgramOutcome.objects.get(id=outcome_id)
+        elif outcome_type == 'pso':
+            outcome = ProgramSpecificOutcome.objects.get(id=outcome_id)
+        else:
+            return JsonResponse({'success': False, 'error': 'Invalid outcome type'})
+        
+        outcome.delete()
+        return JsonResponse({'success': True})
+        
+    except (ProgramOutcome.DoesNotExist, ProgramSpecificOutcome.DoesNotExist):
+        return JsonResponse({'success': False, 'error': 'Outcome not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
 
