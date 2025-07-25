@@ -11,6 +11,7 @@ from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 import json
+from .forms import RoleAssignmentForm
 from .models import (
     Profile,
     RoleAssignment,
@@ -36,15 +37,7 @@ def superuser_required(view_func):
     return _wrapped_view
 
 
-class RoleAssignmentForm(forms.ModelForm):
-    class Meta:
-        model = RoleAssignment
-        fields = ("role", "organization")
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        extra = [(r.name, r.name) for r in OrganizationRole.objects.all()]
-        self.fields["role"].choices = RoleAssignment.ROLE_CHOICES + extra
+# Reuse the ModelForm defined in core.forms so it can be imported from here for tests
 
 
 class RoleAssignmentFormSet(forms.BaseInlineFormSet):
@@ -308,14 +301,31 @@ def admin_user_edit(request, user_id):
     else:
         formset = RoleFormSet(instance=user)
 
+    # Build data for JavaScript dropdowns. Include any inactive entries referenced by the user.
+    org_ids = list(
+        user.role_assignments.exclude(organization__isnull=True).values_list("organization_id", flat=True)
+    )
+    org_qs = Organization.objects.filter(Q(is_active=True) | Q(id__in=org_ids)).select_related("org_type")
+    role_ids = list(user.role_assignments.values_list("role_id", flat=True))
+    role_qs = OrganizationRole.objects.filter(Q(is_active=True) | Q(id__in=role_ids)).select_related("organization")
+
+    organizations_json = {
+        str(o.id): {"name": o.name, "org_type": str(o.org_type_id)} for o in org_qs
+    }
+    roles_json = {
+        str(r.id): {"name": r.name, "organization": str(r.organization_id)} for r in role_qs
+    }
+
     return render(
         request,
         "core/admin_user_edit.html",
         {
             "user_obj": user,
             "formset": formset,
-            "organizations": Organization.objects.filter(is_active=True),
+            "organizations": org_qs,
             "organization_types": OrganizationType.objects.filter(),
+            "organizations_json": json.dumps(organizations_json),
+            "roles_json": json.dumps(roles_json),
         },
     )
 
