@@ -47,3 +47,21 @@ class RoleManagementTests(TestCase):
 
         self.assertEqual(resp.status_code, 302)
         self.assertEqual(OrganizationRole.objects.filter(organization=org, name="Coordinator").count(), 1)
+
+    def test_add_role_to_org_type(self):
+        ot = OrganizationType.objects.create(name="Club")
+        org1 = Organization.objects.create(name="Art", org_type=ot)
+        org2 = Organization.objects.create(name="Music", org_type=ot)
+        admin = User.objects.create_superuser("admin", "a@x.com", "pass")
+        self.client.force_login(admin)
+
+        resp = self.client.post("/core-admin/user-roles/add/", {
+            "org_type_id": ot.id,
+            "name": "Coordinator",
+        })
+
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(
+            OrganizationRole.objects.filter(organization__org_type=ot, name="Coordinator").count(),
+            2,
+        )

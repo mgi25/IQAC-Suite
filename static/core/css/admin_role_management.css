@@ -215,3 +215,17 @@
 .add-role-form button:hover {
   background: var(--christ-blue-secondary);
 }
+
+/* Flash messages */
+.messages {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 1rem;
+}
+.messages .message {
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+.messages .error   { background: #ffe6e6; color: var(--danger-red); }
+.messages .success { background: #e6f4ea; color: #267f42; }
