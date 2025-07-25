@@ -39,14 +39,14 @@
   background: #154d8b;
 }
 
-.roles-table.dataTable {
+.org-roles-table.dataTable {
   width: 100% !important;
   border-collapse: collapse;
   border: 1px solid #dbeaff;
   font-size: 0.95rem;
   background: #fff;
 }
-.roles-table thead th {
+.org-roles-table thead th {
   background: linear-gradient(to right, #2274cb, #185db4);
   color: #fff;
   padding: 12px 14px;
@@ -54,11 +54,11 @@
   font-size: 0.9rem;
   font-weight: 600;
 }
-.roles-table tbody td {
+.org-roles-table tbody td {
   padding: 12px 14px;
   vertical-align: middle;
 }
-.roles-table tbody tr:nth-child(even) {
+.org-roles-table tbody tr:nth-child(even) {
   background: #f7fbff;
 }
 .delete-role-btn {
