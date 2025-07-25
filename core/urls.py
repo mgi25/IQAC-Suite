@@ -82,6 +82,9 @@ urlpatterns = [
     path('api/approval-flow/<int:org_id>/', views.api_approval_flow_steps, name='api_approval_flow_steps'),
     path('core-admin/api/search-users/', views.search_users, name='search_users'),
     path('core-admin/api/org-users/<int:org_id>/', views.organization_users, name='organization_users'),
+    path('core-admin/api/org-type/<int:org_type_id>/organizations/', views.api_org_type_organizations, name='api_org_type_organizations'),
+    path('core-admin/api/org-type/<int:org_type_id>/roles/', views.api_org_type_roles, name='api_org_type_roles'),
+    path('core-admin/api/organization/<int:org_id>/roles/', views.api_organization_roles, name='api_organization_roles'),
 
     # ---- OPTIONAL: Direct organization add endpoint ----
     # path('core-admin/master-data/add/organization/', views.admin_master_data_add, {"model_name": "organization"}, name='admin_settings_add_organization'),
