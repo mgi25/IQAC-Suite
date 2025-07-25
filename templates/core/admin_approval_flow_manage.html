@@ -23,17 +23,13 @@
 
   <!-- Page Header -->
   <div class="page-header">
-    <h1><i class="fa-solid fa-route"></i> Admin Approval Flow Management</h1>
-    <p>Define and maintain the hierarchical approval chain for each organization.</p>
+    <h1>
+      <i class="fa-solid fa-route"></i> Approval Flow – {{ selected_org.name }}
+    </h1>
+    <p>Drag to reorder the steps or assign users.</p>
+    <p><a class="btn btn-secondary btn-sm" href="{% url 'admin_approval_flow' %}">Back to list</a></p>
   </div>
 
-  <!-- Manage Flow Button -->
-  <div class="manage-flow-action">
-    <button class="btn btn-primary" onclick="openApprovalFlowEditor()">
-      <i class="fa-solid fa-diagram-project"></i> Manage Approval Flow
-    </button>
-    <span class="hint">Pick an organization to configure its approval steps</span>
-  </div>
 </div>
 
 <!-- Approval Flow Editor Modal -->
@@ -88,5 +84,8 @@
 {% endblock %}
 
 {% block scripts %}
+  <script>
+    window.SELECTED_ORG_ID = {{ selected_org_id|default:'null' }};
+  </script>
   <script src="{% static 'core/js/admin_approval_flow.js' %}"></script>
 {% endblock %}
