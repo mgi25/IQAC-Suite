@@ -13,16 +13,35 @@ document.addEventListener('DOMContentLoaded', () => {
   const ORG_OPTIONAL_ROLES = ['dean','academic_coordinator','director','cdl','uni_iqac','admin'];
 
   function bindCard(card) {
+    const typeSel = card.querySelector('.org-type-select');
     const roleSel = card.querySelector("select[name$='-role']");
     const orgSel = card.querySelector("select[name$='-organization']");
-    const orgGroup = card.querySelectorAll('.field-group')[1];
+    const orgGroup = card.querySelectorAll('.field-group')[2];
     const delBox = card.querySelector("input[name$='-DELETE']");
     const remBtn = card.querySelector('.remove-role-btn');
 
-    function populateOptions() {
+    function populateOrganizations() {
+      const typeId = typeSel.value;
+      const orgs = ORGS_BY_TYPE[typeId] || [];
+      const current = orgSel.value;
+      orgSel.innerHTML = '<option value="">---------</option>' +
+        orgs.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+      if (current && orgSel.querySelector(`option[value="${current}"]`)) {
+        orgSel.value = current;
+      }
+    }
+
+    function populateRoleOptions() {
       const current = roleSel.value;
       const opts = [...BASE_ROLES];
-      const extras = ORG_ROLES[orgSel.value] || [];
+      let extras = [];
+      const typeId = typeSel.value;
+      const orgId = orgSel.value;
+      if (orgId && ORG_ROLES[orgId]) {
+        extras = ORG_ROLES[orgId];
+      } else if (typeId && ROLES_BY_TYPE[typeId]) {
+        extras = ROLES_BY_TYPE[typeId];
+      }
       extras.forEach(r => opts.push([r, r]));
       roleSel.innerHTML = opts.map(o => `<option value="${o[0]}">${o[1]}</option>`).join('');
       if (current) roleSel.value = current;
@@ -39,12 +58,21 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    orgSel.addEventListener('change', () => {
-      populateOptions();
+    typeSel.addEventListener('change', () => {
+      populateOrganizations();
+      populateRoleOptions();
       toggleOrg();
     });
+
+    orgSel.addEventListener('change', () => {
+      populateRoleOptions();
+      toggleOrg();
+    });
+
     roleSel.addEventListener('change', toggleOrg);
-    populateOptions();
+
+    populateOrganizations();
+    populateRoleOptions();
     toggleOrg();
 
     remBtn?.addEventListener('click', () => {
