@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'core/css/admin_user_management.css' %}">
+<link rel="stylesheet" href="{% static 'core/css/admin_view_roles.css' %}">
+<div class="user-mgmt-container">
+    <h1 class="mgmt-title">
+        {% if org_type %}
+            {{ org_type.name }}
+        {% else %}
+            Organization Roles
+        {% endif %}
+    </h1>
+    {% if org_type %}
+        <div class="roles-container">
+            {% for role in roles %}
+            <div class="role-card">
+                <div class="org-name">{{ role.organization.name }}</div>
+                <form method="post" action="{% url 'update_org_role' role.id %}?org_type_id={{ org_type.id }}">
+                    {% csrf_token %}
+                    <input type="text" name="name" value="{{ role.name }}" class="form-control form-control-sm" />
+                    <button type="submit" class="btn btn-sm btn-primary ms-2">Save</button>
+                </form>
+                <div class="status">{{ role.is_active|yesno:"Active,Inactive" }}</div>
+                <div class="actions">
+                    <form method="post" action="{% url 'toggle_org_role' role.id %}?org_type_id={{ org_type.id }}" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-secondary">Toggle</button>
+                    </form>
+                    <form method="post" action="{% url 'delete_org_role' role.id %}?org_type_id={{ org_type.id }}" class="delete-role-form" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </div>
+            </div>
+            {% empty %}
+            <p>No roles found.</p>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="table-responsive">
+            <table id="rolesTable" class="admin-users-table display nowrap" style="width:100%">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Organization Type</th>
+                        <th>Organization</th>
+                        <th>Role Name</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for role in roles %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ role.organization.org_type.name }}</td>
+                        <td>{{ role.organization.name }}</td>
+                        <td>
+                            <form method="post" action="{% url 'update_org_role' role.id %}" class="d-flex">
+                                {% csrf_token %}
+                                <input type="text" name="name" value="{{ role.name }}" class="form-control form-control-sm" />
+                                <button type="submit" class="btn btn-sm btn-primary ms-2">Save</button>
+                            </form>
+                        </td>
+                        <td>{{ role.is_active|yesno:"Active,Inactive" }}</td>
+                        <td>
+                            <form method="post" action="{% url 'toggle_org_role' role.id %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-secondary">Toggle</button>
+                            </form>
+                            <form method="post" action="{% url 'delete_org_role' role.id %}" class="delete-role-form" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="6" style="text-align:center;">No roles found.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'core/js/admin_role_management.js' %}"></script>
+{% if not org_type %}
+<script>
+  $(document).ready(function(){
+    $('#rolesTable').DataTable({
+      dom: '<"dt-toolbar d-flex justify-content-between align-items-center flex-wrap mb-3"lBf>rtip',
+      responsive: true,
+      pagingType: 'simple'
+    });
+  });
+</script>
+{% endif %}
+{% endblock %}

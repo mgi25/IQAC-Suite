@@ -18,7 +18,7 @@
   <form id="user-edit-form" method="post" autocomplete="off">
     {% csrf_token %}
 
-    <!-- ── Basic info ─────────────────────────────── -->
+    <!-- Basic info -->
     <div class="form-group">
       <label>First Name</label>
       <input type="text" name="first_name" value="{{ user_obj.first_name }}" required>
@@ -34,7 +34,7 @@
 
     <hr>
 
-    <!-- ── Roles & assignments ────────────────────── -->
+    <!-- Roles & assignments -->
     <div class="roles-section">
       <h3>User Roles &amp; Assignments</h3>
 
@@ -42,13 +42,32 @@
         {% for form in formset.forms %}
         <div class="role-card" data-form-index="{{ forloop.counter0 }}">
           {{ form.id }}{{ form.DELETE }}
+          {{ form.non_field_errors }}
 
+          <!-- Category -->
           <div class="field-group">
-            {{ form.role }}
+            <select class="org-type-select" name="category_{{ forloop.counter0 }}">
+              <option value="">Select Category</option>
+              {% for ot in organization_types %}
+                <option value="{{ ot.id }}"
+                  {% if form.instance.organization and form.instance.organization.org_type.id == ot.id %}
+                    selected
+                  {% endif %}
+                >{{ ot.name }}</option>
+              {% endfor %}
+            </select>
           </div>
 
+          <!-- Organization -->
           <div class="field-group">
             {{ form.organization }}
+            {{ form.organization.errors }}
+          </div>
+
+          <!-- Role -->
+          <div class="field-group">
+            {{ form.role }}
+            {{ form.role.errors }}
           </div>
 
           <button type="button" class="remove-role-btn">×</button>
@@ -57,6 +76,7 @@
       </div>
 
       {{ formset.management_form }}
+      {{ formset.non_form_errors }}
 
       <button type="button" id="add-role-btn" class="btn-add-role">+ Add Role</button>
     </div>
@@ -68,25 +88,88 @@
   </form>
 </div>
 
-<!-- ── Empty-form prototype (hidden) ─────────────── -->
+<!-- Empty-form prototype (hidden) -->
 <template id="role-card-template">
   <div class="role-card" data-form-index="__prefix__">
     {{ formset.empty_form.id }}{{ formset.empty_form.DELETE }}
 
     <div class="field-group">
-      {{ formset.empty_form.role }}
+      <select class="org-type-select" name="category___prefix__">
+        <option value="">Select Category</option>
+        {% for ot in organization_types %}
+          <option value="{{ ot.id }}">{{ ot.name }}</option>
+        {% endfor %}
+      </select>
     </div>
 
     <div class="field-group">
       {{ formset.empty_form.organization }}
     </div>
 
+    <div class="field-group">
+      {{ formset.empty_form.role }}
+    </div>
+
     <button type="button" class="remove-role-btn">×</button>
   </div>
 </template>
+
 <script>
-  const ORG_ROLES = {{ org_roles_json|safe }};
-  const BASE_ROLES = {{ role_choices_json|safe }};
+  // Pass your org/role mapping to JS
+  const ORGS = {{ organizations_json|safe }};
+  const ROLES = {{ roles_json|safe }};
+
+  // Function to update organizations based on selected category
+  function updateOrganizations(card) {
+    const catSelect = card.querySelector('.org-type-select');
+    const orgSelect = card.querySelector('select[name$="organization"]');
+    const roleSelect = card.querySelector('select[name$="role"]');
+
+    const selectedCat = catSelect.value;
+    // Filter orgs by category
+    orgSelect.innerHTML = '<option value="">Select Organization</option>';
+    Object.entries(ORGS).forEach(([orgId, org]) => {
+      if (!selectedCat || org.org_type == selectedCat) {
+        const opt = document.createElement('option');
+        opt.value = orgId;
+        opt.textContent = org.name;
+        orgSelect.appendChild(opt);
+      }
+    });
+
+    // Reset roles
+    roleSelect.innerHTML = '<option value="">Select Role</option>';
+  }
+
+  // Function to update roles based on selected organization
+  function updateRoles(card) {
+    const orgSelect = card.querySelector('select[name$="organization"]');
+    const roleSelect = card.querySelector('select[name$="role"]');
+    const selectedOrg = orgSelect.value;
+
+    roleSelect.innerHTML = '<option value="">Select Role</option>';
+    Object.entries(ROLES).forEach(([roleId, role]) => {
+      if (!selectedOrg || role.organization == selectedOrg) {
+        const opt = document.createElement('option');
+        opt.value = roleId;
+        opt.textContent = role.name;
+        roleSelect.appendChild(opt);
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.role-card').forEach(card => {
+      // Category change updates organizations
+      card.querySelector('.org-type-select').addEventListener('change', function () {
+        updateOrganizations(card);
+      });
+      // Organization change updates roles
+      card.querySelector('select[name$="organization"]').addEventListener('change', function () {
+        updateRoles(card);
+      });
+    });
+  });
 </script>
 <script src="{% static 'core/js/admin_user_edit.js' %}"></script>
 {% endblock %}

@@ -29,6 +29,9 @@ urlpatterns = [
     path('core-admin/user-roles/', views.admin_role_management, name='admin_role_management'),
     path('core-admin/user-roles/add/', views.add_org_role, name='add_org_role'),
     path('core-admin/user-roles/<int:role_id>/delete/', views.delete_org_role, name='delete_org_role'),
+    path('core-admin/user-roles/view/', views.view_org_roles, name='view_org_roles'),
+    path('core-admin/user-roles/<int:role_id>/update/', views.update_org_role, name='update_org_role'),
+    path('core-admin/user-roles/<int:role_id>/toggle/', views.toggle_org_role, name='toggle_org_role'),
 
     # Event Proposal Admin
     path('core-admin/event-proposals/', views.admin_event_proposals, name='admin_event_proposals'),
@@ -63,6 +66,7 @@ urlpatterns = [
 
     # Approval Flow Setup UI
     path('core-admin/approval-flow/', views.admin_approval_flow, name='admin_approval_flow'),
+    path('core-admin/approval-flow/<int:org_id>/', views.admin_approval_flow_manage, name='admin_approval_flow_manage'),
 
     # Academic Year Select/Add (AJAX)
     path('core-admin/set-academic-year/', views.set_academic_year, name='set_academic_year'),
@@ -80,6 +84,10 @@ urlpatterns = [
     path('core-admin/approval-flow/<int:org_id>/delete/', views.delete_approval_flow, name='delete_approval_flow'),
     path('api/approval-flow/<int:org_id>/', views.api_approval_flow_steps, name='api_approval_flow_steps'),
     path('core-admin/api/search-users/', views.search_users, name='search_users'),
+    path('core-admin/api/org-users/<int:org_id>/', views.organization_users, name='organization_users'),
+    path('core-admin/api/org-type/<int:org_type_id>/organizations/', views.api_org_type_organizations, name='api_org_type_organizations'),
+    path('core-admin/api/org-type/<int:org_type_id>/roles/', views.api_org_type_roles, name='api_org_type_roles'),
+    path('core-admin/api/organization/<int:org_id>/roles/', views.api_organization_roles, name='api_organization_roles'),
 
     # ---- OPTIONAL: Direct organization add endpoint ----
     # path('core-admin/master-data/add/organization/', views.admin_master_data_add, {"model_name": "organization"}, name='admin_settings_add_organization'),
