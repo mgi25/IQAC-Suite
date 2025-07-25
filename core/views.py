@@ -312,10 +312,6 @@ def admin_user_edit(request, user_id):
             "formset": formset,
             "organizations": Organization.objects.filter(is_active=True),
             "organization_types": OrganizationType.objects.filter(),
-            "org_roles_json": json.dumps(org_roles),
-            "role_choices_json": json.dumps(RoleAssignment.ROLE_CHOICES),
-            "orgs_by_type_json": json.dumps(orgs_by_type),
-            "roles_by_type_json": json.dumps(roles_by_type),
         },
     )
 
@@ -884,4 +880,40 @@ def organization_users(request, org_id):
         for a in assignments
     ]
     return JsonResponse({"success": True, "users": users_data})
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def api_org_type_organizations(request, org_type_id):
+    """Return active organizations for a given organization type."""
+    orgs = Organization.objects.filter(org_type_id=org_type_id, is_active=True).order_by("name")
+    data = [{"id": o.id, "name": o.name} for o in orgs]
+    return JsonResponse({"success": True, "organizations": data})
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def api_org_type_roles(request, org_type_id):
+    """Return distinct role names for a given organization type."""
+    roles = (
+        OrganizationRole.objects
+        .filter(organization__org_type_id=org_type_id, is_active=True)
+        .values_list("name", flat=True)
+        .distinct()
+        .order_by("name")
+    )
+    return JsonResponse({"success": True, "roles": list(roles)})
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def api_organization_roles(request, org_id):
+    """Return role names for a specific organization."""
+    roles = (
+        OrganizationRole.objects
+        .filter(organization_id=org_id, is_active=True)
+        .values_list("name", flat=True)
+        .order_by("name")
+    )
+    return JsonResponse({"success": True, "roles": list(roles)})
 
