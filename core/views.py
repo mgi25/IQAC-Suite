@@ -546,11 +546,13 @@ def admin_approval_flow_manage(request, org_id):
     )
     org_types = OrganizationType.objects.all().order_by("name")
     selected_org = get_object_or_404(Organization, id=org_id)
+
     steps = (
         ApprovalFlowTemplate.objects.filter(organization=selected_org)
         .select_related("user")
         .order_by("step_order")
     )
+
     context = {
         "organizations": orgs,
         "org_types": org_types,
@@ -559,6 +561,7 @@ def admin_approval_flow_manage(request, org_id):
         "existing_steps": steps,
     }
     return render(request, "core/admin_approval_flow_manage.html", context)
+
 
 @login_required
 @csrf_exempt

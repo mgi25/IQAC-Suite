@@ -590,6 +590,13 @@ window.loadCurrentFlow = async function() {
 document.addEventListener('DOMContentLoaded', () => {
   if (window.SELECTED_ORG_ID) {
     loadCurrentFlow();
+    // Optionally also load the editable flow if needed:
+    // loadApprovalFlow();
+    // Or open the editor if you want to auto-open:
+    // openApprovalFlowEditor();
+    const select = document.getElementById('approvalFlowOrgSelect');
+    if (select) {
+      select.value = String(window.SELECTED_ORG_ID);
+    }
   }
 });
-

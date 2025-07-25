@@ -26,7 +26,7 @@
     <h1>
       <i class="fa-solid fa-route"></i> Approval Flow – {{ selected_org.name }}
     </h1>
-    <p>View or edit the proposal approval hierarchy.</p>
+    <p>View or edit the proposal approval hierarchy. Drag to reorder the steps or assign users.</p>
     <p><a class="btn btn-secondary btn-sm" href="{% url 'admin_approval_flow' %}">Back to list</a></p>
   </div>
 
@@ -43,6 +43,7 @@
       <button class="btn btn-primary" onclick="openApprovalFlowEditor()">Create Flow</button>
     {% endif %}
   </div>
+</div>
 
 <!-- Approval Flow Editor Modal -->
 <div id="approvalFlowEditorModal" class="modal-overlay">
@@ -52,19 +53,22 @@
       <button class="modal-close" onclick="closeModal('approvalFlowEditorModal')">&times;</button>
     </div>
     <div class="modal-body">
+
       <div class="edit-layout">
+        <!-- Step Edit Pane -->
         <div class="steps-pane">
           <div id="approvalFlowSteps" class="steps-container" ondragover="allowDrop(event)" ondrop="dropOnSteps(event)">
             <!-- Steps will render here (JS) -->
           </div>
           <button type="button" class="btn btn-secondary btn-sm" onclick="addApprovalStep()">+ Add Step</button>
+          <p class="form-tip">Drag users from the right to build the flow. Roles can be adjusted per step.</p>
         </div>
+        <!-- User Search/List Pane -->
         <div class="user-pane">
           <input type="text" id="userSearchInput" class="form-control" placeholder="Search users" oninput="loadOrgUsers(this.value)">
           <div id="orgUserList" class="user-list"></div>
         </div>
       </div>
-      <p class="form-tip">Drag users from the right to build the flow. Roles can be adjusted per step.</p>
     </div>
     <div class="modal-footer">
       <button class="btn btn-danger" onclick="deleteApprovalFlow()">Delete Flow</button>
