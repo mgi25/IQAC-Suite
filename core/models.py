@@ -39,6 +39,7 @@ class OrganizationRole(models.Model):
         Organization, on_delete=models.CASCADE, related_name="roles"
     )
     name = models.CharField(max_length=100)
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         unique_together = ("organization", "name")

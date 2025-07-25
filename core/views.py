@@ -193,6 +193,35 @@ def delete_org_role(request, role_id):
     role.delete()
     return redirect("admin_role_management")
 
+
+@user_passes_test(lambda u: u.is_superuser)
+def view_org_roles(request):
+    roles = (
+        OrganizationRole.objects.select_related("organization", "organization__org_type")
+        .order_by("organization__org_type__name", "organization__name", "name")
+    )
+    return render(request, "core/admin_view_roles.html", {"roles": roles})
+
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_POST
+def update_org_role(request, role_id):
+    role = get_object_or_404(OrganizationRole, id=role_id)
+    new_name = request.POST.get("name", "").strip()
+    if new_name:
+        role.name = new_name
+        role.save()
+    return redirect("view_org_roles")
+
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_POST
+def toggle_org_role(request, role_id):
+    role = get_object_or_404(OrganizationRole, id=role_id)
+    role.is_active = not role.is_active
+    role.save()
+    return redirect("view_org_roles")
+
 @user_passes_test(lambda u: u.is_superuser)
 def admin_user_management(request):
     users = User.objects.all().order_by('-date_joined')
