@@ -874,7 +874,7 @@ def search_users(request):
 
     # --- Filter by role ---
     if role:
-        users = users.filter(role_assignments__role__iexact=role)
+        users = users.filter(role_assignments__role__name__iexact=role)
 
     # --- Filter by organization/department ---
     if org_id:
@@ -898,7 +898,7 @@ def organization_users(request, org_id):
     if not assignments.exists() and org_type_id:
         assignments = RoleAssignment.objects.filter(organization__org_type_id=org_type_id)
     if role:
-        assignments = assignments.filter(role__iexact=role)
+        assignments = assignments.filter(role__name__iexact=role)
     if q:
         assignments = assignments.filter(
             Q(user__first_name__icontains=q)

@@ -100,3 +100,24 @@ class RoleManagementTests(TestCase):
         formset = RoleFormSet(data, instance=user)
         self.assertFalse(formset.is_valid())
         self.assertIn("Duplicate role assignment", formset.non_form_errors()[0])
+
+
+class SearchUsersTests(TestCase):
+    def setUp(self):
+        self.ot = OrganizationType.objects.create(name="Dept")
+        self.org = Organization.objects.create(name="Math", org_type=self.ot)
+        self.role_obj = OrganizationRole.objects.create(organization=self.org, name="Faculty")
+        self.user = User.objects.create(username="u1", first_name="Alpha", email="alpha@example.com")
+        RoleAssignment.objects.create(user=self.user, role=self.role_obj, organization=self.org)
+        self.admin = User.objects.create_superuser("admin", "admin@example.com", "pass")
+        self.client.force_login(self.admin)
+
+    def test_search_users_by_role(self):
+        resp = self.client.get("/core-admin/api/search-users/", {
+            "role": "Faculty",
+            "org_id": self.org.id,
+        })
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data.get("users", [])), 1)
+        self.assertEqual(data["users"][0]["id"], self.user.id)
