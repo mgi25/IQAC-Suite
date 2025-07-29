@@ -498,7 +498,9 @@ function initUserSearchInputs() {
         fetch(`/core-admin/api/search-users/?${params}`)
           .then(r => r.json())
           .then(data => {
-            callback((data.users || []).map(u => ({ value: u.id, text: `${u.name} (${u.email})` })));
+            callback(
+              (data.users || []).map(u => ({ id: u.id, text: `${u.name} (${u.email})` }))
+            );
           })
           .catch(() => callback());
       },
