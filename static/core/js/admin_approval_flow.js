@@ -391,7 +391,7 @@ window.loadApprovalFlow = async function() {
   }
   stepsDiv.innerHTML = '<div style="padding:1rem 0;">Loading flow…</div>';
   try {
-    const resp = await fetch(`/core-admin/api/approval-flow/${orgId}/`);
+    const resp = await fetch(`/core-admin/approval-flow/${orgId}/get/`);
     const data = await resp.json();
     if (data.success && data.steps.length > 0) {
       approvalSteps = data.steps.map(s => ({
@@ -651,7 +651,7 @@ window.loadCurrentFlow = async function() {
   const container = document.getElementById('currentFlowList');
   if (!container) return;
   container.innerHTML = '';
-  const resp = await fetch(`/core-admin/api/approval-flow/${window.SELECTED_ORG_ID}/`);
+  const resp = await fetch(`/core-admin/approval-flow/${window.SELECTED_ORG_ID}/get/`);
   const data = await resp.json();
   if (data.success) {
     if (data.steps.length === 0) {
