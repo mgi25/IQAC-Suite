@@ -127,7 +127,7 @@ def submit_proposal(request, pk=None):
         selected_academic_year = request.session.get('selected_academic_year')
         form = EventProposalForm(instance=proposal, selected_academic_year=selected_academic_year)
         # Populate all faculty as available choices for JS search/select on GET
-        form.fields['faculty_incharges'].queryset = User.objects.filter(role_assignments__role='faculty').distinct()
+        form.fields['faculty_incharges'].queryset = User.objects.filter(role_assignments__role__name='faculty').distinct()
 
     # Utility to get the display name from ID
     def get_name(model, value):
