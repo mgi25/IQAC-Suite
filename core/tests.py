@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.forms import inlineformset_factory
+import json
 from .models import (
     OrganizationType,
     Organization,
@@ -34,6 +35,19 @@ class ApprovalFlowViewTests(TestCase):
         resp = self.client.post(f"/core-admin/approval-flow/{org.id}/delete/")
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(ApprovalFlowTemplate.objects.count(), 0)
+
+    def test_save_approval_flow_forbidden_for_non_superuser(self):
+        ot = OrganizationType.objects.create(name="Dept")
+        org = Organization.objects.create(name="Math", org_type=ot)
+        user = User.objects.create_user("user", "u@x.com", "pass")
+        self.client.force_login(user)
+
+        resp = self.client.post(
+            f"/core-admin/approval-flow/{org.id}/save/",
+            data=json.dumps({"steps": []}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 403)
 
 
 class RoleManagementTests(TestCase):
