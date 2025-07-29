@@ -929,11 +929,17 @@ def api_org_type_roles(request, org_type_id):
     roles = (
         OrganizationRole.objects
         .filter(organization__org_type_id=org_type_id, is_active=True)
-        .values_list("name", flat=True)
-        .distinct()
+        .values("id", "name")
         .order_by("name")
     )
-    return JsonResponse({"success": True, "roles": list(roles)})
+    # Deduplicate by name while preserving an ID for each
+    seen = set()
+    unique_roles = []
+    for r in roles:
+        if r["name"] not in seen:
+            seen.add(r["name"])
+            unique_roles.append({"id": r["id"], "name": r["name"]})
+    return JsonResponse({"success": True, "roles": unique_roles})
 
 
 @login_required
@@ -943,10 +949,11 @@ def api_organization_roles(request, org_id):
     roles = (
         OrganizationRole.objects
         .filter(organization_id=org_id, is_active=True)
-        .values_list("name", flat=True)
+        .values("id", "name")
         .order_by("name")
     )
-    return JsonResponse({"success": True, "roles": list(roles)})
+    data = list(roles)
+    return JsonResponse({"success": True, "roles": data})
 # PSO/PO Management API endpoints
 from django.views.decorators.http import require_GET, require_POST
 

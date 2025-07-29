@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await fetchJson(url);
       const roles = data.roles || [];
       roleSel.innerHTML = '<option value="">---------</option>' +
-        roles.map(r => `<option value="${r}">${r}</option>`).join('');
+        roles.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
       if (current && roleSel.querySelector(`option[value="${current}"]`)) {
         roleSel.value = current;
       }
@@ -63,7 +63,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function toggleOrg() {
-      const r = (roleSel.value || '').toLowerCase();
+      const opt = roleSel.options[roleSel.selectedIndex];
+      const r = opt ? opt.textContent.toLowerCase() : '';
       if (ORG_OPTIONAL_ROLES.includes(r)) {
         orgGroup.style.display = 'none';
         orgSel.value = '';
