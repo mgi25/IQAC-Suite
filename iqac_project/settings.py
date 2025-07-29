@@ -75,6 +75,7 @@ TEMPLATES = [
             'context_processors': [
                 'django.template.context_processors.request',  # ← required by allauth
                 'django.contrib.auth.context_processors.auth',
+                'django.template.context_processors.csrf',
                 'django.contrib.messages.context_processors.messages',
             ],
         },

@@ -335,13 +335,20 @@ window.showToast = showToast;
   // Initialization
   // ———————————————————————————————————————————————
   document.addEventListener('DOMContentLoaded', () => {
+    console.log("✅ DOM ready, script loaded");
     // Filters
-    document.getElementById('searchInput')
-      .addEventListener('input', debounce(applyFilters, 300));
-    document.getElementById('orgTypeFilter')
-      .addEventListener('change', applyFilters);
-    document.getElementById('statusFilter')
-      .addEventListener('change', applyFilters);
+    const searchInputEl = document.getElementById('searchInput');
+    if (searchInputEl) {
+      searchInputEl.addEventListener('input', debounce(applyFilters, 300));
+    }
+    const orgTypeFilterEl = document.getElementById('orgTypeFilter');
+    if (orgTypeFilterEl) {
+      orgTypeFilterEl.addEventListener('change', applyFilters);
+    }
+    const statusFilterEl = document.getElementById('statusFilter');
+    if (statusFilterEl) {
+      statusFilterEl.addEventListener('change', applyFilters);
+    }
 
     setupGlobalListeners();
     loadRecentActivity();
@@ -367,19 +374,18 @@ window.showToast = showToast;
   window.openBulkApprovalModal = openBulkApprovalModal;
   window.openSystemSettingsModal = openSystemSettingsModal;
   window.generateReport = generateReport;
-})();
-let draggedUser = null;
-function openApprovalFlowEditor() {
-    document.getElementById('approvalFlowEditorModal').classList.add('show');
-    document.body.style.overflow = 'hidden';
+
+  // ———————————————————————————————————————————————
+  // Approval flow editor
+  // ———————————————————————————————————————————————
+  let draggedUser = null;
+
+  function openApprovalFlowEditor() {
+    openModal('approvalFlowEditorModal');
     loadApprovalFlow();
     loadOrgUsers();
-}
-
-function closeModal(modalId) {
-    document.getElementById(modalId).classList.remove('show');
-    document.body.style.overflow = 'auto';
-}
+    loadRoles();
+  }
 window.loadApprovalFlow = async function() {
   const orgId = window.SELECTED_ORG_ID;
   approvalSteps = [];
@@ -390,7 +396,7 @@ window.loadApprovalFlow = async function() {
   }
   stepsDiv.innerHTML = '<div style="padding:1rem 0;">Loading flow…</div>';
   try {
-    const resp = await fetch(`/core-admin/api/approval-flow/${orgId}/`);
+    const resp = await fetch(`/core-admin/approval-flow/${orgId}/get/`);
     const data = await resp.json();
     if (data.success && data.steps.length > 0) {
       approvalSteps = data.steps.map(s => ({
@@ -409,6 +415,42 @@ window.loadApprovalFlow = async function() {
 
 let approvalSteps = [];
 let draggedIdx = null;
+let roleSuggestions = [];
+
+async function loadRoles() {
+  const typeSel = document.getElementById('approvalCategorySelect');
+  const orgSel = document.getElementById('approvalFlowOrgSelect');
+  const typeId = typeSel ? typeSel.value : null;
+  const orgId = orgSel ? orgSel.value : window.SELECTED_ORG_ID;
+
+  if (!typeId && !orgId) {
+    document.getElementById('roleSuggestions').innerHTML = '';
+    return;
+  }
+
+  let url = '';
+  if (orgId) {
+    url = `/core-admin/api/organization/${orgId}/roles/`;
+  } else {
+    url = `/core-admin/api/org-type/${typeId}/roles/`;
+  }
+
+  try {
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data.success) {
+      roleSuggestions = data.roles || [];
+      const list = document.getElementById('roleSuggestions');
+      if (list) {
+        list.innerHTML = roleSuggestions
+          .map(r => `<option value="${r.name}"></option>`)
+          .join('');
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load role suggestions', e);
+  }
+}
 
 window.addApprovalStep = function() {
   const stepsDiv = document.getElementById('approvalFlowSteps');
@@ -427,17 +469,54 @@ function renderApprovalSteps() {
     <div class="step-block" draggable="true" data-idx="${i}" ondragstart="startDrag(event, ${i})" ondragover="allowDrop(event)" ondrop="dropStep(event, ${i})">
       <span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span>
       <span class="step-number">${i + 1}</span>
-      <input class="role-input" type="text" placeholder="Role (e.g. faculty)" value="${step.role || ''}"
-             oninput="updateStepRole(${i}, this.value)">
-      <div style="position:relative;">
+      <input class="role-input" list="roleSuggestions" type="text" placeholder="Role (e.g. faculty)" value="${step.role || ''}"
+             oninput="updateStepRole(${i}, this.value); loadRoles();">
+      <div class="user-select-wrapper">
         <input class="user-search-input" type="text" placeholder="Search user..."
-               value="${step.user ? step.user.name : ''}"
-               oninput="debouncedSearchUser(${i}, this.value)">
-        <div class="user-search-results" id="user-search-results-${i}"></div>
+               value="${step.user ? step.user.name : ''}" data-idx="${i}">
       </div>
       <button onclick="removeStep(${i})" class="btn btn-danger btn-sm">Delete</button>
     </div>
   `).join('');
+  initUserSearchInputs();
+}
+
+function initUserSearchInputs() {
+  document.querySelectorAll('.user-search-input').forEach(el => {
+    if (el.dataset.tsInit) return;
+    el.dataset.tsInit = '1';
+    const idx = el.getAttribute('data-idx');
+    new TomSelect(el, {
+      valueField: 'id',
+      labelField: 'text',
+      searchField: 'text',
+      create: false,
+      load: function(query, callback) {
+        const roleInput = document.querySelector(`.step-block[data-idx="${idx}"] .role-input`);
+        const role = roleInput ? roleInput.value : '';
+        const params = new URLSearchParams({
+          q: query,
+          role: role,
+          org_id: window.SELECTED_ORG_ID,
+          org_type_id: window.SELECTED_ORG_TYPE_ID
+        });
+        fetch(`/core-admin/api/search-users/?${params}`)
+          .then(r => r.json())
+          .then(data => {
+            callback(
+              (data.users || []).map(u => ({ id: u.id, text: `${u.name} (${u.email})` }))
+            );
+          })
+          .catch(() => callback());
+      },
+      onChange: function(value) {
+        const option = this.options[value];
+        if (option) {
+          selectUserForStep(parseInt(idx), value, option.text);
+        }
+      }
+    });
+  });
 }
 
 
@@ -452,7 +531,8 @@ function searchUserForStep(idx, q) {
   }
   const role = document.querySelector(`.step-block[data-idx="${idx}"] .role-input`).value;
   const orgId = window.SELECTED_ORG_ID;
-  const params = new URLSearchParams({ q, role, org_id: orgId });
+  const typeId = window.SELECTED_ORG_TYPE_ID;
+  const params = new URLSearchParams({ q, role, org_id: orgId, org_type_id: typeId });
   fetch(`/core-admin/api/search-users/?${params}`)
     .then(r => r.json())
     .then(data => {
@@ -495,6 +575,7 @@ window.removeStep = function(idx) {
   renderApprovalSteps();
 };
   window.saveApprovalFlow = function() {
+    console.log("🟦 Save clicked");
   const orgId = window.SELECTED_ORG_ID;
 
   // Map your frontend data to the backend format!
@@ -506,6 +587,7 @@ window.removeStep = function(idx) {
   fetch(`/core-admin/approval-flow/${orgId}/save/`, {
     method: "POST",
     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+    credentials: 'same-origin',
     body: JSON.stringify({ steps: payloadSteps })
   })
   .then(r => r.json())
@@ -523,12 +605,14 @@ window.removeStep = function(idx) {
 };
 
 window.deleteApprovalFlow = function() {
+  console.log("🟥 Delete clicked");
   const orgId = window.SELECTED_ORG_ID;
   if (!orgId) return;
   if (!confirm('Delete entire approval flow for this organization?')) return;
   fetch(`/core-admin/approval-flow/${orgId}/delete/`, {
     method: 'POST',
-    headers: { 'X-CSRFToken': CSRF_TOKEN }
+    headers: { 'X-CSRFToken': CSRF_TOKEN },
+    credentials: 'same-origin'
   })
   .then(r => r.json())
   .then(data => {
@@ -548,7 +632,7 @@ window.loadOrgUsers = async function(q = '') {
   const list = document.getElementById('orgUserList');
   if (!list) return;
   list.innerHTML = '<div style="padding:0.5rem">Loading...</div>';
-  const params = new URLSearchParams({ q });
+  const params = new URLSearchParams({ q, org_type_id: window.SELECTED_ORG_TYPE_ID });
   const resp = await fetch(`/core-admin/api/org-users/${window.SELECTED_ORG_ID}/?${params}`);
   const data = await resp.json();
   if (data.success) {
@@ -576,7 +660,7 @@ window.loadCurrentFlow = async function() {
   const container = document.getElementById('currentFlowList');
   if (!container) return;
   container.innerHTML = '';
-  const resp = await fetch(`/core-admin/api/approval-flow/${window.SELECTED_ORG_ID}/`);
+  const resp = await fetch(`/core-admin/approval-flow/${window.SELECTED_ORG_ID}/get/`);
   const data = await resp.json();
   if (data.success) {
     if (data.steps.length === 0) {
@@ -590,6 +674,7 @@ window.loadCurrentFlow = async function() {
 document.addEventListener('DOMContentLoaded', () => {
   if (window.SELECTED_ORG_ID) {
     loadCurrentFlow();
+    loadRoles();
     // Optionally also load the editable flow if needed:
     // loadApprovalFlow();
     // Or open the editor if you want to auto-open:
@@ -597,6 +682,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const select = document.getElementById('approvalFlowOrgSelect');
     if (select) {
       select.value = String(window.SELECTED_ORG_ID);
+      select.addEventListener('change', () => {
+        window.SELECTED_ORG_ID = select.value;
+        loadRoles();
+      });
+    }
+    const typeSelect = document.getElementById('approvalCategorySelect');
+    if (typeSelect) {
+      typeSelect.addEventListener('change', loadRoles);
     }
   }
 });
+
+  // Expose approval flow helpers
+  window.openApprovalFlowEditor = openApprovalFlowEditor;
+  window.closeModal = closeModal;
+  window.loadRoles = loadRoles;
+})();

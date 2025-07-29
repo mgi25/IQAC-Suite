@@ -10,6 +10,8 @@ from django import forms
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
+from django.core.exceptions import PermissionDenied
+import logging
 import json
 from .forms import RoleAssignmentForm
 from .models import (
@@ -35,6 +37,12 @@ def superuser_required(view_func):
             return HttpResponseForbidden("You are not authorized to access this page.")
         return view_func(request, *args, **kwargs)
     return _wrapped_view
+
+
+def _superuser_check(user):
+    if not user.is_superuser:
+        raise PermissionDenied("You are not authorized to access this page.")
+    return True
 
 
 # Reuse the ModelForm defined in core.forms so it can be imported from here for tests
@@ -119,7 +127,7 @@ def propose_event(request):
         title = request.POST.get("title", "").strip()
         desc  = request.POST.get("description", "").strip()
 
-        roles = [ra.get_role_display() for ra in request.user.role_assignments.all()]
+        roles = [ra.role.name for ra in request.user.role_assignments.all()]
         user_type = ", ".join(roles) or getattr(request.user.profile, "role", "")
 
         EventProposal.objects.create(
@@ -821,7 +829,8 @@ def get_approval_flow(request, org_id):
     return JsonResponse({'success': True, 'steps': data})
 
 @require_POST
-@csrf_exempt
+@login_required
+@user_passes_test(lambda u: _superuser_check(u))
 def save_approval_flow(request, org_id):
     data = json.loads(request.body)
     steps = data.get('steps', [])
@@ -857,30 +866,43 @@ def delete_approval_flow(request, org_id):
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def search_users(request):
-    q = request.GET.get("q", "")
-    role = request.GET.get("role", "")
-    org_id = request.GET.get("org_id", "")
+    q = request.GET.get("q", "").strip()
+    role = request.GET.get("role", "").strip()
+    org_id = request.GET.get("org_id", "").strip()
+    org_type_id = request.GET.get("org_type_id", "").strip()
 
     users = User.objects.all()
 
-    # --- Filter by search string ---
     if q:
         users = users.filter(
-            Q(first_name__icontains=q) |
-            Q(last_name__icontains=q) |
-            Q(email__icontains=q)
+            Q(first_name__icontains=q)
+            | Q(last_name__icontains=q)
+            | Q(email__icontains=q)
         )
 
-    # --- Filter by role ---
-    if role:
-        users = users.filter(role_assignments__role__iexact=role)
-
-    # --- Filter by organization/department ---
-    if org_id:
-        users = users.filter(role_assignments__organization_id=org_id)
+    if role or org_id or org_type_id:
+        filters = {}
+        if role:
+            filters["role_assignments__role__name__iexact"] = role
+        if org_id:
+            filters["role_assignments__organization_id"] = org_id
+        elif org_type_id:
+            filters["role_assignments__organization__org_type_id"] = org_type_id
+        users = users.filter(**filters)
 
     users = users.distinct()[:10]
-    data = [{"id": u.id, "name": u.get_full_name(), "email": u.email} for u in users]
+    data = [
+        {"id": u.id, "name": u.get_full_name() or u.username, "email": u.email}
+        for u in users
+    ]
+    if not data:
+        logging.debug(
+            "search_users returned no results for q=%r role=%r org_id=%r org_type_id=%r",
+            q,
+            role,
+            org_id,
+            org_type_id,
+        )
     return JsonResponse({"success": True, "users": data})
 
 @login_required
@@ -889,10 +911,13 @@ def organization_users(request, org_id):
     """Return users for a given organization, optional search by name or role."""
     q = request.GET.get("q", "")
     role = request.GET.get("role", "")
+    org_type_id = request.GET.get("org_type_id", "")
 
     assignments = RoleAssignment.objects.filter(organization_id=org_id)
+    if not assignments.exists() and org_type_id:
+        assignments = RoleAssignment.objects.filter(organization__org_type_id=org_type_id)
     if role:
-        assignments = assignments.filter(role__iexact=role)
+        assignments = assignments.filter(role__name__iexact=role)
     if q:
         assignments = assignments.filter(
             Q(user__first_name__icontains=q)
@@ -906,7 +931,7 @@ def organization_users(request, org_id):
         {
             "id": a.user.id,
             "name": a.user.get_full_name() or a.user.username,
-            "role": a.get_role_display(),
+            "role": a.role.name,
         }
         for a in assignments
     ]
