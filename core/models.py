@@ -53,21 +53,9 @@ class OrganizationRole(models.Model):
 # ───────────────────────────────
 
 class RoleAssignment(models.Model):
-    ROLE_CHOICES = [
-        ('student', 'Student'),
-        ('faculty', 'Faculty'),
-        ('hod', 'HOD'),
-        ('dept_iqac', 'Department IQAC Coordinator'),
-        ('club_head', 'Club Head'),
-        ('center_head', 'Center Head'),
-        ('cell_head', 'Cell Head'),
-        ('association_head', 'Association Head'),
-        ('dean', 'Dean'),
-        ('cdl', 'CDL'),
-        ('uni_iqac', 'University IQAC Coordinator'),
-        ('admin', 'Admin'),
-        ('academic_coordinator', 'Academic Coordinator'),
-    ]
+    # ROLE_CHOICES used to contain a list of predefined roles, but the
+    # application now relies entirely on ``OrganizationRole`` for the actual
+    # role names. The old constant was unused and has been removed.
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='role_assignments')
     role = models.ForeignKey('OrganizationRole', on_delete=models.CASCADE, null=True)
     organization = models.ForeignKey(Organization, null=True, blank=True, on_delete=models.SET_NULL)
