@@ -368,20 +368,18 @@ window.showToast = showToast;
   window.openBulkApprovalModal = openBulkApprovalModal;
   window.openSystemSettingsModal = openSystemSettingsModal;
   window.generateReport = generateReport;
-})();
-let draggedUser = null;
-function openApprovalFlowEditor() {
-    document.getElementById('approvalFlowEditorModal').classList.add('show');
-    document.body.style.overflow = 'hidden';
+
+  // ———————————————————————————————————————————————
+  // Approval flow editor
+  // ———————————————————————————————————————————————
+  let draggedUser = null;
+
+  function openApprovalFlowEditor() {
+    openModal('approvalFlowEditorModal');
     loadApprovalFlow();
     loadOrgUsers();
     loadRoles();
-}
-
-function closeModal(modalId) {
-    document.getElementById(modalId).classList.remove('show');
-    document.body.style.overflow = 'auto';
-}
+  }
 window.loadApprovalFlow = async function() {
   const orgId = window.SELECTED_ORG_ID;
   approvalSteps = [];
@@ -689,3 +687,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 });
+
+  // Expose approval flow helpers
+  window.openApprovalFlowEditor = openApprovalFlowEditor;
+  window.closeModal = closeModal;
+})();
