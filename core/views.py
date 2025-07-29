@@ -10,6 +10,7 @@ from django import forms
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
+from django.core.exceptions import PermissionDenied
 import logging
 import json
 from .forms import RoleAssignmentForm
@@ -36,6 +37,12 @@ def superuser_required(view_func):
             return HttpResponseForbidden("You are not authorized to access this page.")
         return view_func(request, *args, **kwargs)
     return _wrapped_view
+
+
+def _superuser_check(user):
+    if not user.is_superuser:
+        raise PermissionDenied("You are not authorized to access this page.")
+    return True
 
 
 # Reuse the ModelForm defined in core.forms so it can be imported from here for tests
@@ -822,7 +829,8 @@ def get_approval_flow(request, org_id):
     return JsonResponse({'success': True, 'steps': data})
 
 @require_POST
-@csrf_exempt
+@login_required
+@user_passes_test(lambda u: _superuser_check(u))
 def save_approval_flow(request, org_id):
     data = json.loads(request.body)
     steps = data.get('steps', [])
