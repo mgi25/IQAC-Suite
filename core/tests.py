@@ -50,6 +50,49 @@ class ApprovalFlowViewTests(TestCase):
         self.assertEqual(resp.status_code, 403)
 
 
+class SaveApprovalFlowTests(TestCase):
+    def setUp(self):
+        self.ot = OrganizationType.objects.create(name="Dept")
+        self.org = Organization.objects.create(name="Math", org_type=self.ot)
+
+    def test_save_approval_flow_creates_steps(self):
+        admin = User.objects.create_superuser("admin", "a@x.com", "pass")
+        user1 = User.objects.create(username="u1")
+        self.client.force_login(admin)
+
+        steps = [
+            {"role_required": "faculty"},
+            {"role_required": "hod", "user_id": user1.id},
+        ]
+
+        resp = self.client.post(
+            f"/core-admin/approval-flow/{self.org.id}/save/",
+            data=json.dumps({"steps": steps}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+
+        templates = list(ApprovalFlowTemplate.objects.filter(organization=self.org).order_by("step_order"))
+        self.assertEqual(len(templates), 2)
+        self.assertEqual(templates[0].step_order, 1)
+        self.assertEqual(templates[0].role_required, "faculty")
+        self.assertIsNone(templates[0].user)
+        self.assertEqual(templates[1].step_order, 2)
+        self.assertEqual(templates[1].role_required, "hod")
+        self.assertEqual(templates[1].user, user1)
+
+    def test_save_approval_flow_forbidden_for_non_superuser(self):
+        user = User.objects.create_user("user", "u@x.com", "pass")
+        self.client.force_login(user)
+
+        resp = self.client.post(
+            f"/core-admin/approval-flow/{self.org.id}/save/",
+            data=json.dumps({"steps": []}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 403)
+
+
 class RoleManagementTests(TestCase):
     def test_add_role(self):
         ot = OrganizationType.objects.create(name="Dept")
