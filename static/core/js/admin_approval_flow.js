@@ -335,6 +335,7 @@ window.showToast = showToast;
   // Initialization
   // ———————————————————————————————————————————————
   document.addEventListener('DOMContentLoaded', () => {
+    console.log("✅ DOM ready, script loaded");
     // Filters
     document.getElementById('searchInput')
       .addEventListener('input', debounce(applyFilters, 300));
@@ -570,6 +571,7 @@ window.removeStep = function(idx) {
   renderApprovalSteps();
 };
   window.saveApprovalFlow = function() {
+    console.log("🟦 Save clicked");
   const orgId = window.SELECTED_ORG_ID;
 
   // Map your frontend data to the backend format!
@@ -599,6 +601,7 @@ window.removeStep = function(idx) {
 };
 
 window.deleteApprovalFlow = function() {
+  console.log("🟥 Delete clicked");
   const orgId = window.SELECTED_ORG_ID;
   if (!orgId) return;
   if (!confirm('Delete entire approval flow for this organization?')) return;

@@ -38,10 +38,10 @@
           <li>{{ step.step_order }}. {{ step.role_required }} – {{ step.user.get_full_name|default:'Unassigned' }}</li>
         {% endfor %}
       </ol>
-      <button class="btn btn-primary" onclick="openApprovalFlowEditor()">Edit Flow</button>
+      <button class="btn btn-primary" type="button" onclick="openApprovalFlowEditor()">Edit Flow</button>
     {% else %}
       <p>No approval flow defined.</p>
-      <button class="btn btn-primary" onclick="openApprovalFlowEditor()">Create Flow</button>
+      <button class="btn btn-primary" type="button" onclick="openApprovalFlowEditor()">Create Flow</button>
     {% endif %}
   </div>
 </div>
@@ -80,11 +80,10 @@
   </div>
 </div>
 
-<!-- Toast for notifications (optional, for success/error messages) -->
+<!-- Toast for notifications -->
 <div class="toast" id="toast">
   <span id="toastMessage"></span>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
@@ -97,3 +96,4 @@
   <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
   <script src="{% static 'core/js/admin_approval_flow.js' %}"></script>
 {% endblock %}
+
