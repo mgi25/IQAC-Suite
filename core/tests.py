@@ -73,7 +73,8 @@ class RoleManagementTests(TestCase):
         user = User.objects.create(username="u1")
         ot = OrganizationType.objects.create(name="Dept")
         org = Organization.objects.create(name="Math", org_type=ot)
-        RoleAssignment.objects.create(user=user, role="hod", organization=org)
+        role_obj = OrganizationRole.objects.create(organization=org, name="hod")
+        RoleAssignment.objects.create(user=user, role=role_obj, organization=org)
 
         RoleFormSet = inlineformset_factory(
             User,
@@ -91,9 +92,9 @@ class RoleManagementTests(TestCase):
             "role_assignments-MIN_NUM_FORMS": "0",
             "role_assignments-MAX_NUM_FORMS": "1000",
             "role_assignments-0-id": str(RoleAssignment.objects.first().id),
-            "role_assignments-0-role": "hod",
+            "role_assignments-0-role": str(role_obj.id),
             "role_assignments-0-organization": str(org.id),
-            "role_assignments-1-role": "hod",
+            "role_assignments-1-role": str(role_obj.id),
             "role_assignments-1-organization": str(org.id),
         }
         formset = RoleFormSet(data, instance=user)
