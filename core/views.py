@@ -860,6 +860,7 @@ def search_users(request):
     q = request.GET.get("q", "")
     role = request.GET.get("role", "")
     org_id = request.GET.get("org_id", "")
+    org_type_id = request.GET.get("org_type_id", "")
 
     users = User.objects.all()
 
@@ -878,6 +879,8 @@ def search_users(request):
     # --- Filter by organization/department ---
     if org_id:
         users = users.filter(role_assignments__organization_id=org_id)
+    elif org_type_id:
+        users = users.filter(role_assignments__organization__org_type_id=org_type_id)
 
     users = users.distinct()[:10]
     data = [{"id": u.id, "name": u.get_full_name(), "email": u.email} for u in users]
@@ -889,8 +892,11 @@ def organization_users(request, org_id):
     """Return users for a given organization, optional search by name or role."""
     q = request.GET.get("q", "")
     role = request.GET.get("role", "")
+    org_type_id = request.GET.get("org_type_id", "")
 
     assignments = RoleAssignment.objects.filter(organization_id=org_id)
+    if not assignments.exists() and org_type_id:
+        assignments = RoleAssignment.objects.filter(organization__org_type_id=org_type_id)
     if role:
         assignments = assignments.filter(role__iexact=role)
     if q:

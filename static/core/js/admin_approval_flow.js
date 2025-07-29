@@ -466,15 +466,50 @@ function renderApprovalSteps() {
       <span class="step-number">${i + 1}</span>
       <input class="role-input" list="roleSuggestions" type="text" placeholder="Role (e.g. faculty)" value="${step.role || ''}"
              oninput="updateStepRole(${i}, this.value); loadRoles();">
-      <div style="position:relative;">
+      <div>
         <input class="user-search-input" type="text" placeholder="Search user..."
-               value="${step.user ? step.user.name : ''}"
-               oninput="debouncedSearchUser(${i}, this.value)">
-        <div class="user-search-results" id="user-search-results-${i}"></div>
+               value="${step.user ? step.user.name : ''}" data-idx="${i}">
       </div>
       <button onclick="removeStep(${i})" class="btn btn-danger btn-sm">Delete</button>
     </div>
   `).join('');
+  initUserSearchInputs();
+}
+
+function initUserSearchInputs() {
+  document.querySelectorAll('.user-search-input').forEach(el => {
+    if (el.dataset.tsInit) return;
+    el.dataset.tsInit = '1';
+    const idx = el.getAttribute('data-idx');
+    new TomSelect(el, {
+      valueField: 'id',
+      labelField: 'text',
+      searchField: 'text',
+      create: false,
+      load: function(query, callback) {
+        const roleInput = document.querySelector(`.step-block[data-idx="${idx}"] .role-input`);
+        const role = roleInput ? roleInput.value : '';
+        const params = new URLSearchParams({
+          q: query,
+          role: role,
+          org_id: window.SELECTED_ORG_ID,
+          org_type_id: window.SELECTED_ORG_TYPE_ID
+        });
+        fetch(`/core-admin/api/search-users/?${params}`)
+          .then(r => r.json())
+          .then(data => {
+            callback((data.users || []).map(u => ({ value: u.id, text: `${u.name} (${u.email})` })));
+          })
+          .catch(() => callback());
+      },
+      onChange: function(value) {
+        const option = this.options[value];
+        if (option) {
+          selectUserForStep(parseInt(idx), value, option.text);
+        }
+      }
+    });
+  });
 }
 
 
@@ -489,7 +524,8 @@ function searchUserForStep(idx, q) {
   }
   const role = document.querySelector(`.step-block[data-idx="${idx}"] .role-input`).value;
   const orgId = window.SELECTED_ORG_ID;
-  const params = new URLSearchParams({ q, role, org_id: orgId });
+  const typeId = window.SELECTED_ORG_TYPE_ID;
+  const params = new URLSearchParams({ q, role, org_id: orgId, org_type_id: typeId });
   fetch(`/core-admin/api/search-users/?${params}`)
     .then(r => r.json())
     .then(data => {
@@ -585,7 +621,7 @@ window.loadOrgUsers = async function(q = '') {
   const list = document.getElementById('orgUserList');
   if (!list) return;
   list.innerHTML = '<div style="padding:0.5rem">Loading...</div>';
-  const params = new URLSearchParams({ q });
+  const params = new URLSearchParams({ q, org_type_id: window.SELECTED_ORG_TYPE_ID });
   const resp = await fetch(`/core-admin/api/org-users/${window.SELECTED_ORG_ID}/?${params}`);
   const data = await resp.json();
   if (data.success) {
