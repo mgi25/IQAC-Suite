@@ -581,7 +581,6 @@ window.removeStep = function(idx) {
   fetch(`/core-admin/approval-flow/${orgId}/save/`, {
     method: "POST",
     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
-    credentials: 'same-origin',
     body: JSON.stringify({ steps: payloadSteps })
   })
   .then(r => r.json())
@@ -604,8 +603,7 @@ window.deleteApprovalFlow = function() {
   if (!confirm('Delete entire approval flow for this organization?')) return;
   fetch(`/core-admin/approval-flow/${orgId}/delete/`, {
     method: 'POST',
-    headers: { 'X-CSRFToken': CSRF_TOKEN },
-    credentials: 'same-origin'
+    headers: { 'X-CSRFToken': CSRF_TOKEN }
   })
   .then(r => r.json())
   .then(data => {
