@@ -471,7 +471,7 @@ function renderApprovalSteps() {
       <span class="step-number">${i + 1}</span>
       <input class="role-input" list="roleSuggestions" type="text" placeholder="Role (e.g. faculty)" value="${step.role || ''}"
              oninput="updateStepRole(${i}, this.value); loadRoles();">
-      <div>
+      <div class="user-select-wrapper">
         <input class="user-search-input" type="text" placeholder="Search user..."
                value="${step.user ? step.user.name : ''}" data-idx="${i}">
       </div>
