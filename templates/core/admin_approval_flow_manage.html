@@ -89,6 +89,7 @@
 
 {% block scripts %}
   <script>
+    window.CSRF_TOKEN = "{{ csrf_token }}";
     window.SELECTED_ORG_ID = {{ selected_org_id|default:'null' }};
     window.SELECTED_ORG_TYPE_ID = {{ selected_org.org_type_id|default:'null' }};
     window.SELECTED_ORG_NAME = "{{ selected_org.name }}";
