@@ -374,7 +374,7 @@ function openApprovalFlowEditor() {
     document.body.style.overflow = 'hidden';
     loadApprovalFlow();
     loadOrgUsers();
-    loadRoleSuggestions();
+    loadRoles();
 }
 
 function closeModal(modalId) {
@@ -412,11 +412,26 @@ let approvalSteps = [];
 let draggedIdx = null;
 let roleSuggestions = [];
 
-async function loadRoleSuggestions() {
-  const orgId = window.SELECTED_ORG_ID;
-  if (!orgId) return;
+async function loadRoles() {
+  const typeSel = document.getElementById('approvalCategorySelect');
+  const orgSel = document.getElementById('approvalFlowOrgSelect');
+  const typeId = typeSel ? typeSel.value : null;
+  const orgId = orgSel ? orgSel.value : window.SELECTED_ORG_ID;
+
+  if (!typeId && !orgId) {
+    document.getElementById('roleSuggestions').innerHTML = '';
+    return;
+  }
+
+  let url = '';
+  if (orgId) {
+    url = `/core-admin/api/organization/${orgId}/roles/`;
+  } else {
+    url = `/core-admin/api/org-type/${typeId}/roles/`;
+  }
+
   try {
-    const resp = await fetch(`/core-admin/api/organization/${orgId}/roles/`);
+    const resp = await fetch(url);
     const data = await resp.json();
     if (data.success) {
       roleSuggestions = data.roles || [];
@@ -450,7 +465,7 @@ function renderApprovalSteps() {
       <span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span>
       <span class="step-number">${i + 1}</span>
       <input class="role-input" list="roleSuggestions" type="text" placeholder="Role (e.g. faculty)" value="${step.role || ''}"
-             oninput="updateStepRole(${i}, this.value)">
+             oninput="updateStepRole(${i}, this.value); loadRoles();">
       <div style="position:relative;">
         <input class="user-search-input" type="text" placeholder="Search user..."
                value="${step.user ? step.user.name : ''}"
@@ -612,7 +627,7 @@ window.loadCurrentFlow = async function() {
 document.addEventListener('DOMContentLoaded', () => {
   if (window.SELECTED_ORG_ID) {
     loadCurrentFlow();
-    loadRoleSuggestions();
+    loadRoles();
     // Optionally also load the editable flow if needed:
     // loadApprovalFlow();
     // Or open the editor if you want to auto-open:
@@ -620,6 +635,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const select = document.getElementById('approvalFlowOrgSelect');
     if (select) {
       select.value = String(window.SELECTED_ORG_ID);
+      select.addEventListener('change', () => {
+        window.SELECTED_ORG_ID = select.value;
+        loadRoles();
+      });
+    }
+    const typeSelect = document.getElementById('approvalCategorySelect');
+    if (typeSelect) {
+      typeSelect.addEventListener('change', loadRoles);
     }
   }
 });
