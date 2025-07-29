@@ -89,10 +89,10 @@
 
 {% block scripts %}
   <script>
-    window.CSRF_TOKEN = "{{ csrf_token }}";
+    window.CSRF_TOKEN = "{{ csrf_token|escapejs }}";
     window.SELECTED_ORG_ID = {{ selected_org_id|default:'null' }};
     window.SELECTED_ORG_TYPE_ID = {{ selected_org.org_type_id|default:'null' }};
-    window.SELECTED_ORG_NAME = "{{ selected_org.name }}";
+    window.SELECTED_ORG_NAME = "{{ selected_org.name|escapejs }}";
   </script>
   <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
   <script src="{% static 'core/js/admin_approval_flow.js' %}"></script>
