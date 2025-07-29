@@ -374,6 +374,7 @@ function openApprovalFlowEditor() {
     document.body.style.overflow = 'hidden';
     loadApprovalFlow();
     loadOrgUsers();
+    loadRoleSuggestions();
 }
 
 function closeModal(modalId) {
@@ -409,6 +410,27 @@ window.loadApprovalFlow = async function() {
 
 let approvalSteps = [];
 let draggedIdx = null;
+let roleSuggestions = [];
+
+async function loadRoleSuggestions() {
+  const orgId = window.SELECTED_ORG_ID;
+  if (!orgId) return;
+  try {
+    const resp = await fetch(`/core-admin/api/organization/${orgId}/roles/`);
+    const data = await resp.json();
+    if (data.success) {
+      roleSuggestions = data.roles || [];
+      const list = document.getElementById('roleSuggestions');
+      if (list) {
+        list.innerHTML = roleSuggestions
+          .map(r => `<option value="${r.name}"></option>`)
+          .join('');
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load role suggestions', e);
+  }
+}
 
 window.addApprovalStep = function() {
   const stepsDiv = document.getElementById('approvalFlowSteps');
@@ -427,7 +449,7 @@ function renderApprovalSteps() {
     <div class="step-block" draggable="true" data-idx="${i}" ondragstart="startDrag(event, ${i})" ondragover="allowDrop(event)" ondrop="dropStep(event, ${i})">
       <span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span>
       <span class="step-number">${i + 1}</span>
-      <input class="role-input" type="text" placeholder="Role (e.g. faculty)" value="${step.role || ''}"
+      <input class="role-input" list="roleSuggestions" type="text" placeholder="Role (e.g. faculty)" value="${step.role || ''}"
              oninput="updateStepRole(${i}, this.value)">
       <div style="position:relative;">
         <input class="user-search-input" type="text" placeholder="Search user..."
@@ -590,6 +612,7 @@ window.loadCurrentFlow = async function() {
 document.addEventListener('DOMContentLoaded', () => {
   if (window.SELECTED_ORG_ID) {
     loadCurrentFlow();
+    loadRoleSuggestions();
     // Optionally also load the editable flow if needed:
     // loadApprovalFlow();
     // Or open the editor if you want to auto-open:
