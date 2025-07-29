@@ -337,12 +337,18 @@ window.showToast = showToast;
   document.addEventListener('DOMContentLoaded', () => {
     console.log("✅ DOM ready, script loaded");
     // Filters
-    document.getElementById('searchInput')
-      .addEventListener('input', debounce(applyFilters, 300));
-    document.getElementById('orgTypeFilter')
-      .addEventListener('change', applyFilters);
-    document.getElementById('statusFilter')
-      .addEventListener('change', applyFilters);
+    const searchInputEl = document.getElementById('searchInput');
+    if (searchInputEl) {
+      searchInputEl.addEventListener('input', debounce(applyFilters, 300));
+    }
+    const orgTypeFilterEl = document.getElementById('orgTypeFilter');
+    if (orgTypeFilterEl) {
+      orgTypeFilterEl.addEventListener('change', applyFilters);
+    }
+    const statusFilterEl = document.getElementById('statusFilter');
+    if (statusFilterEl) {
+      statusFilterEl.addEventListener('change', applyFilters);
+    }
 
     setupGlobalListeners();
     loadRecentActivity();
@@ -691,4 +697,5 @@ document.addEventListener('DOMContentLoaded', () => {
   // Expose approval flow helpers
   window.openApprovalFlowEditor = openApprovalFlowEditor;
   window.closeModal = closeModal;
+  window.loadRoles = loadRoles;
 })();
