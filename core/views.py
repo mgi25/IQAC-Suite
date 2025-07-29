@@ -120,7 +120,7 @@ def propose_event(request):
         title = request.POST.get("title", "").strip()
         desc  = request.POST.get("description", "").strip()
 
-        roles = [ra.get_role_display() for ra in request.user.role_assignments.all()]
+        roles = [ra.role.name for ra in request.user.role_assignments.all()]
         user_type = ", ".join(roles) or getattr(request.user.profile, "role", "")
 
         EventProposal.objects.create(
@@ -923,7 +923,7 @@ def organization_users(request, org_id):
         {
             "id": a.user.id,
             "name": a.user.get_full_name() or a.user.username,
-            "role": a.get_role_display(),
+            "role": a.role.name,
         }
         for a in assignments
     ]
