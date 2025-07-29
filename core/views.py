@@ -10,6 +10,7 @@ from django import forms
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
+import logging
 import json
 from .forms import RoleAssignmentForm
 from .models import (
@@ -857,33 +858,43 @@ def delete_approval_flow(request, org_id):
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def search_users(request):
-    q = request.GET.get("q", "")
-    role = request.GET.get("role", "")
-    org_id = request.GET.get("org_id", "")
-    org_type_id = request.GET.get("org_type_id", "")
+    q = request.GET.get("q", "").strip()
+    role = request.GET.get("role", "").strip()
+    org_id = request.GET.get("org_id", "").strip()
+    org_type_id = request.GET.get("org_type_id", "").strip()
 
     users = User.objects.all()
 
-    # --- Filter by search string ---
     if q:
         users = users.filter(
-            Q(first_name__icontains=q) |
-            Q(last_name__icontains=q) |
-            Q(email__icontains=q)
+            Q(first_name__icontains=q)
+            | Q(last_name__icontains=q)
+            | Q(email__icontains=q)
         )
 
-    # --- Filter by role ---
-    if role:
-        users = users.filter(role_assignments__role__name__iexact=role)
-
-    # --- Filter by organization/department ---
-    if org_id:
-        users = users.filter(role_assignments__organization_id=org_id)
-    elif org_type_id:
-        users = users.filter(role_assignments__organization__org_type_id=org_type_id)
+    if role or org_id or org_type_id:
+        filters = {}
+        if role:
+            filters["role_assignments__role__name__iexact"] = role
+        if org_id:
+            filters["role_assignments__organization_id"] = org_id
+        elif org_type_id:
+            filters["role_assignments__organization__org_type_id"] = org_type_id
+        users = users.filter(**filters)
 
     users = users.distinct()[:10]
-    data = [{"id": u.id, "name": u.get_full_name(), "email": u.email} for u in users]
+    data = [
+        {"id": u.id, "name": u.get_full_name() or u.username, "email": u.email}
+        for u in users
+    ]
+    if not data:
+        logging.debug(
+            "search_users returned no results for q=%r role=%r org_id=%r org_type_id=%r",
+            q,
+            role,
+            org_id,
+            org_type_id,
+        )
     return JsonResponse({"success": True, "users": data})
 
 @login_required
