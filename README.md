@@ -36,6 +36,7 @@
 - CDL (Content Development Lab) request module
 - Graduate Attribute Script
 - Notification panel with visual indicators
+- Dynamic notifications about event proposals
 - Dashboard with statistics and filters
 - Fully responsive and mobile-optimized
 

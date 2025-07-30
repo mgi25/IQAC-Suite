@@ -78,7 +78,7 @@
         <a href="/transcript/" class="nav-link {% if 'transcript' in request.resolver_match.url_name %}active{% endif %}">
           <i class="fa-solid fa-graduation-cap"></i> Transcript
         </a>
-        <a href="/core-admin/cdl/" class="nav-link {% if 'cdl' in request.resolver_match.url_name %}active{% endif %}">
+        <a href="{% url 'cdl_dashboard' %}" class="nav-link {% if 'cdl' in request.resolver_match.url_name %}active{% endif %}">
           <i class="fa-solid fa-photo-video"></i> CDL
         </a>
       </nav>
@@ -109,7 +109,7 @@
       </a>
       {% endif %}
       {% if request.session.role in 'cdl_admin,super_admin' or user.is_superuser %}
-      <a href="/core-admin/cdl/" class="nav-link {% if 'cdl' in request.resolver_match.url_name %}active{% endif %}">
+      <a href="{% url 'cdl_dashboard' %}" class="nav-link {% if 'cdl' in request.resolver_match.url_name %}active{% endif %}">
         <i class="fa-solid fa-photo-video"></i> CDL
       </a>
       {% endif %}
@@ -209,7 +209,7 @@
 
         <!-- CDL Card -->
         {% if request.session.role in 'cdl_admin,super_admin' or user.is_superuser %}
-        <a href="/core-admin/cdl/" class="app-card app-card-orange">
+        <a href="{% url 'cdl_dashboard' %}" class="app-card app-card-orange">
           <div class="app-icon">
             <i class="fa-solid fa-camera"></i>
           </div>

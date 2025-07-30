@@ -2,16 +2,16 @@
 {% load static %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'emt/css/submit_event_report.css' %}">
+<link rel="stylesheet" href="{% static 'emt/css/event_report_details.css' %}">
 
-<div class="ultra-proposal-root">
+<div class="event-report-layout">
 
   <!-- Side Info Card -->
-  <div class="ultra-side-info">
+  <div class="event-report-side">
     <div class="info-card glass-card">
       <h2>EVENT INFORMATION</h2>
       <table>
-        <tr><th>Department</th><td>{{ proposal.department }}</td></tr>
+        <tr><th>Organization</th><td>{{ proposal.organization.name }}</td></tr>
         <tr><th>Title</th><td>{{ proposal.event_title }}</td></tr>
         <tr><th>Date & Time</th><td>{{ proposal.event_datetime|date:"d M Y, H:i" }}</td></tr>
         <tr><th>Venue</th><td>{{ proposal.venue }}</td></tr>
@@ -23,13 +23,13 @@
   </div>
 
   <!-- Main Content: Ultra Report Form -->
-  <div class="ultra-main-content">
+  <div class="event-report-main">
     <div class="ultra-header">
       <h1 class="glow-text">Generate Event Report</h1>
       <span class="meta">Fill the required fields, let AI help, and upload any supporting documents.</span>
     </div>
 
-    <form method="post" enctype="multipart/form-data" class="review-form-ultra glass-card">
+    <form method="post" enctype="multipart/form-data" class="event-report-form glass-card">
       {% csrf_token %}
       <div class="section-glass">
         <h3>Report Details</h3>
@@ -63,9 +63,71 @@
           {% endfor %}
         </div>
       </div>
-  <div style="margin-top:24px; text-align:right;">
-    <button type="submit" class="btn-ultra btn-success-ultra">Save & Generate</button>
+    <div style="margin-top:24px; text-align:right;">
+      <button type="submit" class="btn-ultra btn-success-ultra">Save & Generate</button>
+    </div>
+    </form>
+  </div>
+
+<div id="outcomeModal" class="outcome-modal" style="display:none;">
+  <div class="modal-content glass-card">
+    <h3>Select Outcomes</h3>
+    <div id="outcomeOptions">Loading...</div>
+    <div style="margin-top:10px;text-align:right;">
+      <button type="button" id="outcomeCancel" class="btn-ultra btn-danger-ultra">Cancel</button>
+      <button type="button" id="outcomeSave" class="btn-ultra btn-success-ultra">Add</button>
+    </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const field = document.getElementById('id_pos_pso_mapping');
+  if(field){
+    field.addEventListener('click', openOutcomeModal);
+    field.style.cursor = 'pointer';
+    field.readOnly = true;
+  }
+});
+
+function openOutcomeModal(){
+  const modal = document.getElementById('outcomeModal');
+  const container = document.getElementById('outcomeOptions');
+  modal.style.display = 'flex';
+  container.textContent = 'Loading...';
+  fetch("{% url 'emt:api_outcomes' proposal.organization.id %}")
+    .then(r=>r.json())
+    .then(data=>{
+      if(data.success){
+        container.innerHTML='';
+        data.pos.forEach(po=>{ addOption(container,'PO: '+po.description); });
+        data.psos.forEach(pso=>{ addOption(container,'PSO: '+pso.description); });
+      } else { container.textContent='No data'; }
+    })
+    .catch(()=>{ container.textContent='Error loading'; });
+}
+
+function addOption(container,labelText){
+  const lbl=document.createElement('label');
+  const cb=document.createElement('input');
+  cb.type='checkbox';
+  cb.value=labelText;
+  lbl.appendChild(cb); lbl.appendChild(document.createTextNode(' '+labelText));
+  container.appendChild(lbl); container.appendChild(document.createElement('br'));
+}
+
+document.getElementById('outcomeCancel').onclick=function(){
+  document.getElementById('outcomeModal').style.display='none';
+};
+document.getElementById('outcomeSave').onclick=function(){
+  const modal=document.getElementById('outcomeModal');
+  const selected=Array.from(modal.querySelectorAll('input[type=checkbox]:checked')).map(c=>c.value);
+  const field=document.getElementById('id_pos_pso_mapping');
+  let existing=field.value.trim();
+  if(existing){existing+='\n';}
+  field.value=existing+selected.join('\n');
+  modal.style.display='none';
+};
+</script>
 
 {% endblock %}
