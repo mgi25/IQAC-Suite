@@ -171,7 +171,7 @@ class SearchUsersTests(TestCase):
 
     def test_search_users_by_role(self):
         resp = self.client.get("/core-admin/api/search-users/", {
-            "role": "Faculty",
+            "role": "faculty",
             "org_id": self.org.id,
         })
         self.assertEqual(resp.status_code, 200)

@@ -120,10 +120,10 @@ def submit_proposal(request, pk=None):
         faculty_ids = post_data.getlist("faculty_incharges")
         if faculty_ids:
             form.fields['faculty_incharges'].queryset = User.objects.filter(
-                Q(role_assignments__role='faculty') | Q(id__in=faculty_ids)
+                Q(role_assignments__role__slug='faculty') | Q(id__in=faculty_ids)
             ).distinct()
         else:
-            form.fields['faculty_incharges'].queryset = User.objects.filter(role_assignments__role='faculty').distinct()
+            form.fields['faculty_incharges'].queryset = User.objects.filter(role_assignments__role__slug='faculty').distinct()
         # --------------------------------------------------
 
     else:
@@ -131,7 +131,7 @@ def submit_proposal(request, pk=None):
         selected_academic_year = request.session.get('selected_academic_year')
         form = EventProposalForm(instance=proposal, selected_academic_year=selected_academic_year)
         # Populate all faculty as available choices for JS search/select on GET
-        form.fields['faculty_incharges'].queryset = User.objects.filter(role_assignments__role__name='faculty').distinct()
+        form.fields['faculty_incharges'].queryset = User.objects.filter(role_assignments__role__slug='faculty').distinct()
 
     # Utility to get the display name from ID
     def get_name(model, value):
@@ -484,7 +484,7 @@ def api_organizations(request):
 def api_faculty(request):
     q = request.GET.get("q", "").strip()
     users = (User.objects
-                  .filter(role_assignments__role="faculty")
+                  .filter(role_assignments__role__slug="faculty")
                   .filter(
                       Q(first_name__icontains=q) |
                       Q(last_name__icontains=q) |
@@ -553,7 +553,7 @@ def review_approval_step(request, step_id):
 
             if step.role_required in GATEKEEPER_ROLES:
                 if needs_academic_coord_approval and not approval_exists('academic_coordinator'):
-                    acad_coord = User.objects.filter(role_assignments__role='academic_coordinator').first()
+                    acad_coord = User.objects.filter(role_assignments__role__slug='academic_coordinator').first()
                     if acad_coord:
                         additional_steps.append(
                             ApprovalStep(
@@ -567,7 +567,7 @@ def review_approval_step(request, step_id):
                         next_step_order += 1
 
                 if needs_dean_approval and not approval_exists('dean'):
-                    dean = User.objects.filter(role_assignments__role='dean').first()
+                    dean = User.objects.filter(role_assignments__role__slug='dean').first()
                     if dean:
                         additional_steps.append(
                             ApprovalStep(
@@ -582,7 +582,7 @@ def review_approval_step(request, step_id):
 
             if step.role_required == "academic_coordinator":
                 if needs_dean_approval and not approval_exists('dean'):
-                    dean = User.objects.filter(role_assignments__role='dean').first()
+                    dean = User.objects.filter(role_assignments__role__slug='dean').first()
                     if dean:
                         additional_steps.append(
                             ApprovalStep(

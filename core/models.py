@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
+from django.utils.text import slugify
 
 # ───────────────────────────────
 #  New Generic Organization Models
@@ -35,14 +36,26 @@ class OrganizationRole(models.Model):
         Organization, on_delete=models.CASCADE, related_name="roles"
     )
     name = models.CharField(max_length=100)
+    slug = models.SlugField(max_length=100, editable=False, blank=True)
     is_active = models.BooleanField(default=True)
 
     class Meta:
-        unique_together = ("organization", "name")
+        unique_together = (("organization", "name"), ("organization", "slug"))
         ordering = ["name"]
 
     def __str__(self):
         return f"{self.name} ({self.organization.name})"
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(self.name)
+            slug = base
+            counter = 2
+            while OrganizationRole.objects.filter(organization=self.organization, slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base}-{counter}"
+                counter += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
 
 # ───────────────────────────────
 #  User Role Assignment (now generic)

@@ -10,6 +10,7 @@ from django import forms
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
+from django.utils.text import slugify
 from django.core.exceptions import PermissionDenied
 import logging
 import json
@@ -191,13 +192,21 @@ def add_org_role(request):
 
     if org_id:
         org = get_object_or_404(Organization, id=org_id)
-        OrganizationRole.objects.get_or_create(organization=org, name=name)
+        OrganizationRole.objects.get_or_create(
+            organization=org,
+            slug=slugify(name),
+            defaults={"name": name},
+        )
         messages.success(request, f"Role '{name}' added to {org.name}.")
     elif org_type_id:
         orgs = Organization.objects.filter(org_type_id=org_type_id, is_active=True)
         org_names = []
         for org in orgs:
-            OrganizationRole.objects.get_or_create(organization=org, name=name)
+            OrganizationRole.objects.get_or_create(
+                organization=org,
+                slug=slugify(name),
+                defaults={"name": name},
+            )
             org_names.append(org.name)
         org_type = get_object_or_404(OrganizationType, id=org_type_id)
         if org_names:
@@ -271,7 +280,7 @@ def admin_user_management(request):
     role = request.GET.get('role')
     q = request.GET.get('q', '').strip()
     if role:
-        users = users.filter(role_assignments__role=role)
+        users = users.filter(role_assignments__role__slug=role)
     if q:
         users = users.filter(
             Q(email__icontains=q) | 
@@ -977,7 +986,7 @@ def search_users(request):
     if role or org_id or org_type_id:
         filters = {}
         if role:
-            filters["role_assignments__role__name__iexact"] = role
+            filters["role_assignments__role__slug__iexact"] = role
         if org_id:
             filters["role_assignments__organization_id"] = org_id
         elif org_type_id:
@@ -1011,7 +1020,7 @@ def organization_users(request, org_id):
     if not assignments.exists() and org_type_id:
         assignments = RoleAssignment.objects.filter(organization__org_type_id=org_type_id)
     if role:
-        assignments = assignments.filter(role__name__iexact=role)
+        assignments = assignments.filter(role__slug__iexact=role)
     if q:
         assignments = assignments.filter(
             Q(user__first_name__icontains=q)
