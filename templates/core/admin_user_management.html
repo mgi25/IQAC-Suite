@@ -1,8 +1,23 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block content %}
+{% block head_extra %}
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<!-- Bootstrap CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
+
+<!-- Custom CSS -->
 <link rel="stylesheet" href="{% static 'core/css/admin_user_management.css' %}">
+{% endblock %}
+
+{% block content %}
 <div class="user-mgmt-container">
     <h1 class="mgmt-title">User Management</h1>
     <div class="table-responsive">
@@ -75,52 +90,125 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- DataTables JS -->
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+
+<!-- DataTables Buttons -->
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.colVis.min.js"></script>
+
+<!-- JSZip for Excel export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<!-- pdfmake for PDF export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
 <script>
   $(document).ready(function () {
     const table = $('#myTable').DataTable({
       dom: '<"dt-toolbar d-flex justify-content-between align-items-center flex-wrap mb-3"lBf>rtip',
       responsive: true,
-      pagingType: 'simple',
+      pagingType: 'simple_numbers',
       lengthMenu: [
         [5, 10, 25, 50, -1],
         [5, 10, 25, 50, "All"]
       ],
       pageLength: 10,
       columnDefs: [
-        { targets: 3, orderable: false }
+        { targets: 3, orderable: false }, // Roles column
+        { targets: 5, orderable: false }  // Action column
       ],
       buttons: [
         {
           extend: 'colvis',
-          text: '<i class="fa fa-eye"></i> Columns'
+          text: '<i class="fa fa-eye"></i> Columns',
+          className: 'btn btn-secondary btn-sm'
         },
         {
           extend: 'copyHtml5',
           text: '<i class="fa fa-copy"></i> Copy',
-          exportOptions: { columns: ':visible' }
+          className: 'btn btn-info btn-sm',
+          exportOptions: { 
+            columns: ':visible:not(:last-child)' // Exclude action column
+          }
         },
         {
           extend: 'excelHtml5',
           text: '<i class="fa fa-file-excel"></i> Excel',
-          exportOptions: { columns: ':visible' }
+          className: 'btn btn-success btn-sm',
+          exportOptions: { 
+            columns: ':visible:not(:last-child)' // Exclude action column
+          },
+          title: 'User Management Report'
         },
         {
           extend: 'pdfHtml5',
           text: '<i class="fa fa-file-pdf"></i> PDF',
-          exportOptions: { columns: ':visible' }
+          className: 'btn btn-danger btn-sm',
+          exportOptions: { 
+            columns: ':visible:not(:last-child)' // Exclude action column
+          },
+          title: 'User Management Report',
+          orientation: 'landscape',
+          pageSize: 'A4'
         },
         {
           extend: 'print',
           text: '<i class="fa fa-print"></i> Print',
-          exportOptions: { columns: ':visible' }
+          className: 'btn btn-primary btn-sm',
+          exportOptions: { 
+            columns: ':visible:not(:last-child)' // Exclude action column
+          },
+          title: 'User Management Report'
         }
       ],
-      order: [[0, 'asc']]
+      order: [[0, 'asc']],
+      language: {
+        search: "Search users:",
+        lengthMenu: "Show _MENU_ entries",
+        info: "Showing _START_ to _END_ of _TOTAL_ users",
+        paginate: {
+          first: "First",
+          last: "Last",
+          next: "Next",
+          previous: "Previous"
+        }
+      }
     });
 
+    // Role filter functionality
     $('#roleFilterBtn').on('click', function() {
-      var val = $('#roleFilterSelect').val();
-      table.column(3).search(val).draw();
+      var selectedRole = $('#roleFilterSelect').val();
+      if (selectedRole === '') {
+        // Clear the search filter
+        table.column(3).search('').draw();
+      } else {
+        // Apply the role filter
+        table.column(3).search(selectedRole, true, false).draw();
+      }
+    });
+
+    // Clear filter when "All Roles" is selected
+    $('#roleFilterSelect').on('change', function() {
+      if ($(this).val() === '') {
+        table.column(3).search('').draw();
+      }
+    });
+
+    // Add some custom styling for buttons
+    $('.dt-buttons .btn').css({
+      'margin-right': '5px',
+      'margin-bottom': '5px'
     });
   });
 </script>

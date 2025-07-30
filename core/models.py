@@ -35,11 +35,10 @@ class Organization(models.Model):
 
 
 class OrganizationRole(models.Model):
-    organization = models.ForeignKey(
-        Organization, on_delete=models.CASCADE, related_name="roles"
-    )
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
     is_active = models.BooleanField(default=True)
+    description = models.TextField(blank=True, null=True)  # <-- Add this line
 
     class Meta:
         unique_together = ("organization", "name")
