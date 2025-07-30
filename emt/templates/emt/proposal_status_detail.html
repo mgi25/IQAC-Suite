@@ -51,7 +51,7 @@
               <div class="timeline-dot"></div>
               <div class="timeline-card">
                 <div class="timeline-header-row">
-                  <h4>{{ step.role_required|capfirst }}</h4>
+                  <h4>{{ step.get_role_required_display }}</h4>
                   <span class="status-badge status-{{ step.status }}">
                     {{ step.status|capfirst }}
                   </span>

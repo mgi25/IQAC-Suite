@@ -141,6 +141,7 @@ class ApprovalStep(models.Model):
 
     class Role(models.TextChoices):
         FACULTY = 'faculty', 'Faculty'
+        FACULTY_INCHARGE = 'faculty_incharge', 'Faculty In-Charge'
         DEPT_IQAC = 'dept_iqac', 'Department IQAC'
         HOD = 'hod', 'Head of Department'
         DIRECTOR = 'director', 'Director'
