@@ -67,6 +67,53 @@ urlpatterns = [
     path('approval-flow/<int:org_id>/get/', views.get_approval_flow, name='get_approval_flow'),
     path('approval-flow/<int:org_id>/save/', views.save_approval_flow, name='save_approval_flow'),
     path('approval-flow/<int:org_id>/delete/', views.delete_approval_flow, name='delete_approval_flow'),
+    # Core Admin Dashboard
+    path('core-admin/dashboard/', views.admin_dashboard, name='core_admin_dashboard'),
+
+    # Admin Master Data Management UI
+    path('core-admin/master-data/', views.admin_master_data, name='admin_master_data'),
+    path('core-admin/master-data-dashboard/', views.master_data_dashboard, name='master_data_dashboard'),
+
+    # Settings Dashboard (cards view, if needed)
+    path('core-admin/settings/', views.admin_settings_dashboard, name='admin_settings'),
+
+    # AJAX Master Data Add/Edit/Delete (for Departments, Clubs, etc.)
+    path('core-admin/settings/<str:model_name>/add/', views.admin_master_data_add, name='admin_settings_add'),
+    path('core-admin/settings/<str:model_name>/<int:pk>/edit/', views.admin_master_data_edit, name='admin_settings_edit'),
+    path('core-admin/settings/<str:model_name>/<int:pk>/delete/', views.admin_master_data_delete, name='admin_settings_delete'),
+
+    # Proposal Detail View (admin)
+    path('core-admin/proposal/<int:proposal_id>/detail/', views.admin_proposal_detail, name='admin_proposal_detail'),
+
+    # Report View Management (Admin)
+    path('reports/', emt_views.admin_reports_view, name='admin_reports'),
+
+    # Approval Flow Setup UI
+    path('core-admin/approval-flow/', views.admin_approval_flow, name='admin_approval_flow'),
+    path('core-admin/approval-flow/<int:org_id>/', views.admin_approval_flow_manage, name='admin_approval_flow_manage'),
+
+    # Approval dashboard & visibility controls
+    path('core-admin/approval/', views.admin_approval_dashboard, name='admin_approval_dashboard'),
+    path('core-admin/approval-box-visibility/', views.approval_box_visibility_orgs, name='approval_box_visibility_orgs'),
+    path('core-admin/approval-box-visibility/<int:org_id>/', views.approval_box_visibility_roles, name='approval_box_roles'),
+    path('core-admin/approval-box-visibility/<int:org_id>/role/<int:role_id>/users/', views.approval_box_visibility_users, name='approval_box_users'),
+    path('core-admin/approval-box-visibility/role/<int:role_id>/toggle/', views.toggle_role_visibility, name='toggle_role_visibility'),
+    path('core-admin/approval-box-visibility/user/<int:user_id>/<int:role_id>/toggle/', views.toggle_user_visibility, name='toggle_user_visibility'),
+
+    # Academic Year Select/Add (AJAX)
+    path('core-admin/set-academic-year/', views.set_academic_year, name='set_academic_year'),
+    path('core-admin/add-academic-year/', views.add_academic_year, name='add_academic_year'),
+
+    # PSO/PO Management (admin)
+    path('core-admin/pso-po/', views.admin_pso_po_management, name='admin_pso_po_management'),
+    path('core-admin/pso-po/data/<str:org_type>/<int:org_id>/', views.get_pso_po_data, name='get_pso_po_data'),
+    path('core-admin/pso-po/add/<str:outcome_type>/', views.add_outcome, name='add_outcome'),
+    path('core-admin/pso-po/delete/<str:outcome_type>/<int:outcome_id>/', views.delete_outcome, name='delete_outcome'),
+
+    # Event Approval Workflow
+    path('core-admin/approval-flow/<int:org_id>/get/', views.get_approval_flow, name='get_approval_flow'),
+    path('core-admin/approval-flow/<int:org_id>/save/', views.save_approval_flow, name='save_approval_flow'),
+    path('core-admin/approval-flow/<int:org_id>/delete/', views.delete_approval_flow, name='delete_approval_flow'),
     path('api/approval-flow/<int:org_id>/', views.api_approval_flow_steps, name='api_approval_flow_steps'),
     path('api/search-users/', views.search_users, name='search_users'),
     path('api/org-users/<int:org_id>/', views.organization_users, name='organization_users'),

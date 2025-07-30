@@ -4,10 +4,16 @@ body {
 .admin-proposals-container {
     background: #fff;
     border-radius: 24px;
-    max-width: 1100px;
-    margin: 60px auto 0;
-    padding: 40px 40px 32px 40px;
-    box-shadow: 0 4px 36px rgba(34,116,203,0.13);
+    width: calc(100% - 40px);
+    margin: 40px auto;
+    padding: 40px;
+    box-shadow: 0 8px 40px rgba(34,116,203,0.10);
+    animation: fadeInContainer .5s ease-out;
+}
+
+@keyframes fadeInContainer {
+    from { opacity: 0; transform: scale(0.98); }
+    to { opacity: 1; transform: none; }
 }
 .proposals-title {
     font-size: 2.1rem;
@@ -20,6 +26,8 @@ body {
     display: flex;
     gap: 16px;
     margin-bottom: 26px;
+    flex-wrap: wrap;
+    width: 100%;
 }
 .proposals-filter-form input,
 .proposals-filter-form select {
@@ -29,6 +37,13 @@ body {
     font-size: 1rem;
     background: #f4f8fc;
     transition: border 0.2s;
+}
+.proposals-filter-form input[type="text"] {
+    flex: 1 1 220px;
+    min-width: 0;
+}
+.proposals-filter-form select {
+    flex: 0 0 180px;
 }
 .proposals-filter-form input:focus,
 .proposals-filter-form select:focus {
@@ -57,6 +72,16 @@ body {
     box-shadow: 0 2px 14px 0 rgba(34,116,203,0.07);
     background: #f8fbfd;
     overflow: hidden;
+    transform-origin: top;
+}
+
+.proposals-table.fade-in {
+    animation: fadeInUp .6s ease-out;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: none; }
 }
 .proposals-table th {
     background: #2274cb;
@@ -74,6 +99,10 @@ body {
 }
 .proposals-table tr:nth-child(even) td {
     background: #e6f2fc;
+}
+.proposals-table tbody tr:hover td {
+    background: #d7e9fb;
+    transition: background .2s;
 }
 .proposal-title-link {
     color: #18528a;
@@ -152,7 +181,16 @@ body {
     margin-top: 7px;
 }
 @media (max-width: 650px) {
-    .admin-proposals-container { padding: 10px 2vw; max-width: 99vw; }
+    .admin-proposals-container { padding: 10px 2vw; width: 100%; }
     .modal-content { padding: 13px 8px 8px 8px; }
     .proposals-title { font-size: 1.4rem; }
+    .proposals-filter-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .proposals-filter-form input[type="text"],
+    .proposals-filter-form select,
+    .proposals-filter-form button {
+        width: 100%;
+    }
 }

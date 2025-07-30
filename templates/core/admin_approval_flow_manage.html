@@ -5,6 +5,7 @@
 
 {% block head_extra %}
   <link rel="stylesheet" href="{% static 'core/css/admin_approval_flow.css' %}">
+  <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet"/>
 {% endblock %}
 
 {% block page_title %}Admin Approval Flow{% endblock %}
@@ -34,13 +35,13 @@
     {% if existing_steps %}
       <ol id="currentFlowList" class="flow-list">
         {% for step in existing_steps %}
-          <li>{{ step.step_order }}. {{ step.role_required }} – {{ step.user.get_full_name|default:'Unassigned' }}</li>
+          <li>{{ step.step_order }}. {{ step.get_role_required_display }} – {{ step.user.get_full_name|default:'Unassigned' }}</li>
         {% endfor %}
       </ol>
-      <button class="btn btn-primary" onclick="openApprovalFlowEditor()">Edit Flow</button>
+      <button class="btn btn-primary" type="button" onclick="openApprovalFlowEditor()">Edit Flow</button>
     {% else %}
       <p>No approval flow defined.</p>
-      <button class="btn btn-primary" onclick="openApprovalFlowEditor()">Create Flow</button>
+      <button class="btn btn-primary" type="button" onclick="openApprovalFlowEditor()">Create Flow</button>
     {% endif %}
   </div>
 </div>
@@ -53,6 +54,12 @@
       <button class="modal-close" onclick="closeModal('approvalFlowEditorModal')">&times;</button>
     </div>
     <div class="modal-body">
+      <div class="form-check mb-3">
+        <label class="form-check-label">
+          <input type="checkbox" class="form-check-input" id="facultyFirstToggle" {% if require_faculty_incharge_first %}checked{% endif %}>
+          Enable Faculty In-Charge First Approval
+        </label>
+      </div>
 
       <div class="edit-layout">
         <!-- Step Edit Pane -->
@@ -69,26 +76,31 @@
           <div id="orgUserList" class="user-list"></div>
         </div>
       </div>
+      <datalist id="roleSuggestions"></datalist>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-danger" onclick="deleteApprovalFlow()">Delete Flow</button>
-      <button class="btn btn-secondary" onclick="closeModal('approvalFlowEditorModal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveApprovalFlow()">Save</button>
+      <button type="button" class="btn btn-danger" onclick="deleteApprovalFlow()">Delete Flow</button>
+      <button type="button" class="btn btn-secondary" onclick="closeModal('approvalFlowEditorModal')">Cancel</button>
+      <button type="button" class="btn btn-primary" onclick="saveApprovalFlow()">Save</button>
     </div>
   </div>
 </div>
 
-<!-- Toast for notifications (optional, for success/error messages) -->
+<!-- Toast for notifications -->
 <div class="toast" id="toast">
   <span id="toastMessage"></span>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
   <script>
+    window.CSRF_TOKEN = "{{ csrf_token|escapejs }}";
     window.SELECTED_ORG_ID = {{ selected_org_id|default:'null' }};
-    window.SELECTED_ORG_NAME = "{{ selected_org.name }}";
+    window.SELECTED_ORG_TYPE_ID = {{ selected_org.org_type_id|default:'null' }};
+    window.SELECTED_ORG_NAME = "{{ selected_org.name|escapejs }}";
+    window.REQUIRE_FACULTY_FIRST = {{ require_faculty_incharge_first|yesno:'true,false' }};
   </script>
+  <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
   <script src="{% static 'core/js/admin_approval_flow.js' %}"></script>
 {% endblock %}
+

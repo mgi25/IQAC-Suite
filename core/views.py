@@ -10,7 +10,6 @@ from django import forms
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 import json
 from .forms import RoleAssignmentForm
 from .models import (
@@ -20,13 +19,15 @@ from .models import (
     OrganizationType,
     Report,
     OrganizationRole,
+    RoleEventApprovalVisibility,
+    UserEventApprovalVisibility,
 )
 from emt.models import (
     EventProposal, EventNeedAnalysis, EventObjectives, EventExpectedOutcomes, TentativeFlow,
     ExpenseDetail, SpeakerProfile, ApprovalStep
 )
 from django.views.decorators.http import require_GET, require_POST
-from .models import ApprovalFlowTemplate
+from .models import ApprovalFlowTemplate, ApprovalFlowConfig
 # ─────────────────────────────────────────────────────────────
 #  Helpers
 # ─────────────────────────────────────────────────────────────
@@ -36,6 +37,12 @@ def superuser_required(view_func):
             return HttpResponseForbidden("You are not authorized to access this page.")
         return view_func(request, *args, **kwargs)
     return _wrapped_view
+
+
+def _superuser_check(user):
+    if not user.is_superuser:
+        raise PermissionDenied("You are not authorized to access this page.")
+    return True
 
 
 # Reuse the ModelForm defined in core.forms so it can be imported from here for tests
@@ -120,7 +127,7 @@ def propose_event(request):
         title = request.POST.get("title", "").strip()
         desc  = request.POST.get("description", "").strip()
 
-        roles = [ra.get_role_display() for ra in request.user.role_assignments.all()]
+        roles = [ra.role.name for ra in request.user.role_assignments.all()]
         user_type = ", ".join(roles) or getattr(request.user.profile, "role", "")
 
         EventProposal.objects.create(
@@ -834,6 +841,8 @@ def admin_approval_flow_manage(request, org_id):
     org_types = OrganizationType.objects.all().order_by("name")
     selected_org = get_object_or_404(Organization, id=org_id)
 
+    config, _ = ApprovalFlowConfig.objects.get_or_create(organization=selected_org)
+
     steps = (
         ApprovalFlowTemplate.objects.filter(organization=selected_org)
         .select_related("user")
@@ -846,8 +855,90 @@ def admin_approval_flow_manage(request, org_id):
         "selected_org_id": org_id,
         "selected_org": selected_org,
         "existing_steps": steps,
+        "require_faculty_incharge_first": config.require_faculty_incharge_first,
     }
     return render(request, "core/admin_approval_flow_manage.html", context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def admin_approval_dashboard(request):
+    """Intermediate page for approval related settings."""
+    return render(request, "core/admin_approval_dashboard.html")
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def approval_box_visibility_orgs(request):
+    """List organizations for visibility management."""
+    org_types = OrganizationType.objects.filter(is_active=True).order_by("name")
+    orgs_by_type = {
+        ot.name: Organization.objects.filter(org_type=ot, is_active=True).order_by("name")
+        for ot in org_types
+    }
+    context = {"org_types": org_types, "orgs_by_type": orgs_by_type}
+    return render(request, "core/approval_box_orgs.html", context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def approval_box_visibility_roles(request, org_id):
+    organization = get_object_or_404(Organization, id=org_id)
+    roles = OrganizationRole.objects.filter(organization=organization, is_active=True).order_by("name")
+    vis_map = {
+        v.role_id: v.can_view
+        for v in RoleEventApprovalVisibility.objects.filter(role__organization=organization)
+    }
+    context = {
+        "organization": organization,
+        "roles": roles,
+        "role_visibility": vis_map,
+    }
+    return render(request, "core/approval_box_roles.html", context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_POST
+def toggle_role_visibility(request, role_id):
+    role = get_object_or_404(OrganizationRole, id=role_id)
+    vis, _ = RoleEventApprovalVisibility.objects.get_or_create(role=role, defaults={"can_view": True})
+    vis.can_view = not vis.can_view
+    vis.save()
+    return redirect("approval_box_roles", org_id=role.organization_id)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def approval_box_visibility_users(request, org_id, role_id):
+    organization = get_object_or_404(Organization, id=org_id)
+    role = get_object_or_404(OrganizationRole, id=role_id, organization=organization)
+    q = request.GET.get("q", "").strip()
+    assignments = RoleAssignment.objects.filter(role=role, organization=organization).select_related("user")
+    if q:
+        assignments = assignments.filter(
+            Q(user__first_name__icontains=q)
+            | Q(user__last_name__icontains=q)
+            | Q(user__email__icontains=q)
+        )
+    user_map = {
+        v.user_id: v.can_view
+        for v in UserEventApprovalVisibility.objects.filter(role=role)
+    }
+    context = {
+        "organization": organization,
+        "role": role,
+        "assignments": assignments,
+        "user_visibility": user_map,
+        "q": q,
+    }
+    return render(request, "core/approval_box_users.html", context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_POST
+def toggle_user_visibility(request, user_id, role_id):
+    role = get_object_or_404(OrganizationRole, id=role_id)
+    user = get_object_or_404(User, id=user_id)
+    vis, _ = UserEventApprovalVisibility.objects.get_or_create(user=user, role=role, defaults={"can_view": True})
+    vis.can_view = not vis.can_view
+    vis.save()
+    return redirect("approval_box_users", org_id=role.organization_id, role_id=role.id)
 
 
 @login_required
@@ -915,22 +1006,27 @@ def admin_pso_po_management(request):
 @require_GET
 def get_approval_flow(request, org_id):
     steps = ApprovalFlowTemplate.objects.filter(organization_id=org_id).order_by('step_order')
+    config = ApprovalFlowConfig.objects.filter(organization_id=org_id).first()
     data = [
         {
             'id': step.id,
             'step_order': step.step_order,
             'role_required': step.role_required,
+            'role_display': step.get_role_required_display(),
             'user_id': step.user.id if step.user else None,
             'user_name': step.user.get_full_name() if step.user else '',
         } for step in steps
     ]
-    return JsonResponse({'success': True, 'steps': data})
+    return JsonResponse({'success': True, 'steps': data,
+                         'require_faculty_incharge_first': config.require_faculty_incharge_first if config else False})
 
 @require_POST
-@csrf_exempt
+@login_required
+@user_passes_test(lambda u: _superuser_check(u))
 def save_approval_flow(request, org_id):
     data = json.loads(request.body)
     steps = data.get('steps', [])
+    require_first = data.get('require_faculty_incharge_first', False)
     org = Organization.objects.get(id=org_id)
     ApprovalFlowTemplate.objects.filter(organization=org).delete()
     for idx, step in enumerate(steps, 1):
@@ -942,6 +1038,10 @@ def save_approval_flow(request, org_id):
             role_required=step['role_required'],
             user_id=step.get('user_id')
         )
+
+    config, _ = ApprovalFlowConfig.objects.get_or_create(organization=org)
+    config.require_faculty_incharge_first = require_first
+    config.save()
 
     return JsonResponse({'success': True})
 def api_approval_flow_steps(request, org_id):
@@ -961,27 +1061,41 @@ def delete_approval_flow(request, org_id):
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def search_users(request):
-    q = request.GET.get("q", "")
-    role = request.GET.get("role", "")
-    org_id = request.GET.get("org_id", "")
+    q = request.GET.get("q", "").strip()
+    role = request.GET.get("role", "").strip()
+    org_id = request.GET.get("org_id", "").strip()
+    org_type_id = request.GET.get("org_type_id", "").strip()
 
     users = User.objects.all()
 
     if q:
         users = users.filter(
-            Q(first_name__icontains=q) |
-            Q(last_name__icontains=q) |
-            Q(email__icontains=q)
+            Q(first_name__icontains=q)
+            | Q(last_name__icontains=q)
+            | Q(email__icontains=q)
         )
 
+    # --- Filter by role ---
     if role:
         users = users.filter(role_assignments__role__iexact=role)
 
+    # --- Filter by organization/department ---
     if org_id:
         users = users.filter(role_assignments__organization_id=org_id)
 
     users = users.distinct()[:10]
-    data = [{"id": u.id, "name": u.get_full_name(), "email": u.email} for u in users]
+    data = [
+        {"id": u.id, "name": u.get_full_name() or u.username, "email": u.email}
+        for u in users
+    ]
+    if not data:
+        logging.debug(
+            "search_users returned no results for q=%r role=%r org_id=%r org_type_id=%r",
+            q,
+            role,
+            org_id,
+            org_type_id,
+        )
     return JsonResponse({"success": True, "users": data})
 
 @login_required
@@ -990,10 +1104,13 @@ def organization_users(request, org_id):
     """Return users for a given organization, optional search by name or role."""
     q = request.GET.get("q", "")
     role = request.GET.get("role", "")
+    org_type_id = request.GET.get("org_type_id", "")
 
     assignments = RoleAssignment.objects.filter(organization_id=org_id)
+    if not assignments.exists() and org_type_id:
+        assignments = RoleAssignment.objects.filter(organization__org_type_id=org_type_id)
     if role:
-        assignments = assignments.filter(role__iexact=role)
+        assignments = assignments.filter(role__name__iexact=role)
     if q:
         assignments = assignments.filter(
             Q(user__first_name__icontains=q)
@@ -1007,7 +1124,7 @@ def organization_users(request, org_id):
         {
             "id": a.user.id,
             "name": a.user.get_full_name() or a.user.username,
-            "role": a.get_role_display(),
+            "role": a.role.name,
         }
         for a in assignments
     ]
@@ -1030,11 +1147,17 @@ def api_org_type_roles(request, org_type_id):
     roles = (
         OrganizationRole.objects
         .filter(organization__org_type_id=org_type_id, is_active=True)
-        .values_list("name", flat=True)
-        .distinct()
+        .values("id", "name")
         .order_by("name")
     )
-    return JsonResponse({"success": True, "roles": list(roles)})
+    # Deduplicate by name while preserving an ID for each
+    seen = set()
+    unique_roles = []
+    for r in roles:
+        if r["name"] not in seen:
+            seen.add(r["name"])
+            unique_roles.append({"id": r["id"], "name": r["name"]})
+    return JsonResponse({"success": True, "roles": unique_roles})
 
 
 @login_required
@@ -1044,10 +1167,11 @@ def api_organization_roles(request, org_id):
     roles = (
         OrganizationRole.objects
         .filter(organization_id=org_id, is_active=True)
-        .values_list("name", flat=True)
+        .values("id", "name")
         .order_by("name")
     )
-    return JsonResponse({"success": True, "roles": list(roles)})
+    data = list(roles)
+    return JsonResponse({"success": True, "roles": data})
 # PSO/PO Management API endpoints
 from django.views.decorators.http import require_GET, require_POST
 

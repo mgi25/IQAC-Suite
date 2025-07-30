@@ -44,3 +44,10 @@ function handleAction(proposalId, action) {
         }
     });
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    const table = document.querySelector('.proposals-table');
+    if (table) {
+        table.classList.add('fade-in');
+    }
+});

@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.forms import inlineformset_factory
+import json
 from .models import (
     OrganizationType,
     Organization,
@@ -34,6 +35,62 @@ class ApprovalFlowViewTests(TestCase):
         resp = self.client.post(f"/core-admin/approval-flow/{org.id}/delete/")
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(ApprovalFlowTemplate.objects.count(), 0)
+
+    def test_save_approval_flow_forbidden_for_non_superuser(self):
+        ot = OrganizationType.objects.create(name="Dept")
+        org = Organization.objects.create(name="Math", org_type=ot)
+        user = User.objects.create_user("user", "u@x.com", "pass")
+        self.client.force_login(user)
+
+        resp = self.client.post(
+            f"/core-admin/approval-flow/{org.id}/save/",
+            data=json.dumps({"steps": []}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 403)
+
+
+class SaveApprovalFlowTests(TestCase):
+    def setUp(self):
+        self.ot = OrganizationType.objects.create(name="Dept")
+        self.org = Organization.objects.create(name="Math", org_type=self.ot)
+
+    def test_save_approval_flow_creates_steps(self):
+        admin = User.objects.create_superuser("admin", "a@x.com", "pass")
+        user1 = User.objects.create(username="u1")
+        self.client.force_login(admin)
+
+        steps = [
+            {"role_required": "faculty"},
+            {"role_required": "hod", "user_id": user1.id},
+        ]
+
+        resp = self.client.post(
+            f"/core-admin/approval-flow/{self.org.id}/save/",
+            data=json.dumps({"steps": steps}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+
+        templates = list(ApprovalFlowTemplate.objects.filter(organization=self.org).order_by("step_order"))
+        self.assertEqual(len(templates), 2)
+        self.assertEqual(templates[0].step_order, 1)
+        self.assertEqual(templates[0].role_required, "faculty")
+        self.assertIsNone(templates[0].user)
+        self.assertEqual(templates[1].step_order, 2)
+        self.assertEqual(templates[1].role_required, "hod")
+        self.assertEqual(templates[1].user, user1)
+
+    def test_save_approval_flow_forbidden_for_non_superuser(self):
+        user = User.objects.create_user("user", "u@x.com", "pass")
+        self.client.force_login(user)
+
+        resp = self.client.post(
+            f"/core-admin/approval-flow/{self.org.id}/save/",
+            data=json.dumps({"steps": []}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 403)
 
 
 class RoleManagementTests(TestCase):
@@ -73,7 +130,8 @@ class RoleManagementTests(TestCase):
         user = User.objects.create(username="u1")
         ot = OrganizationType.objects.create(name="Dept")
         org = Organization.objects.create(name="Math", org_type=ot)
-        RoleAssignment.objects.create(user=user, role="hod", organization=org)
+        role_obj = OrganizationRole.objects.create(organization=org, name="hod")
+        RoleAssignment.objects.create(user=user, role=role_obj, organization=org)
 
         RoleFormSet = inlineformset_factory(
             User,
@@ -91,11 +149,64 @@ class RoleManagementTests(TestCase):
             "role_assignments-MIN_NUM_FORMS": "0",
             "role_assignments-MAX_NUM_FORMS": "1000",
             "role_assignments-0-id": str(RoleAssignment.objects.first().id),
-            "role_assignments-0-role": "hod",
+            "role_assignments-0-role": str(role_obj.id),
             "role_assignments-0-organization": str(org.id),
-            "role_assignments-1-role": "hod",
+            "role_assignments-1-role": str(role_obj.id),
             "role_assignments-1-organization": str(org.id),
         }
         formset = RoleFormSet(data, instance=user)
         self.assertFalse(formset.is_valid())
         self.assertIn("Duplicate role assignment", formset.non_form_errors()[0])
+
+
+class SearchUsersTests(TestCase):
+    def setUp(self):
+        self.ot = OrganizationType.objects.create(name="Dept")
+        self.org = Organization.objects.create(name="Math", org_type=self.ot)
+        self.role_obj = OrganizationRole.objects.create(organization=self.org, name="Faculty")
+        self.user = User.objects.create(username="u1", first_name="Alpha", email="alpha@example.com")
+        RoleAssignment.objects.create(user=self.user, role=self.role_obj, organization=self.org)
+        self.admin = User.objects.create_superuser("admin", "admin@example.com", "pass")
+        self.client.force_login(self.admin)
+
+    def test_search_users_by_role(self):
+        resp = self.client.get("/core-admin/api/search-users/", {
+            "role": "Faculty",
+            "org_id": self.org.id,
+        })
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data.get("users", [])), 1)
+        self.assertEqual(data["users"][0]["id"], self.user.id)
+
+
+class ApprovalFlowTemplateDisplayTests(TestCase):
+    def setUp(self):
+        self.ot = OrganizationType.objects.create(name="Dept")
+        self.org = Organization.objects.create(name="Math", org_type=self.ot)
+
+    def test_get_role_required_display_uses_org_role(self):
+        OrganizationRole.objects.create(organization=self.org, name="Faculty")
+        step = ApprovalFlowTemplate.objects.create(
+            organization=self.org, step_order=1, role_required="faculty"
+        )
+        self.assertEqual(step.get_role_required_display(), "Faculty")
+
+    def test_get_role_required_display_formats_fallback(self):
+        step = ApprovalFlowTemplate.objects.create(
+            organization=self.org,
+            step_order=1,
+            role_required="committee_member",
+        )
+        self.assertEqual(step.get_role_required_display(), "Committee Member")
+
+    def test_get_approval_flow_endpoint_returns_display(self):
+        OrganizationRole.objects.create(organization=self.org, name="Faculty")
+        ApprovalFlowTemplate.objects.create(
+            organization=self.org, step_order=1, role_required="faculty"
+        )
+        resp = self.client.get(f"/core-admin/approval-flow/{self.org.id}/get/")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["steps"][0]["role_display"], "Faculty")

@@ -2,26 +2,55 @@ import os
 import requests
 from django.contrib.auth.models import User
 from .models import ApprovalStep
-from core.models import Organization, OrganizationType
-# emt/utils.py
-from core.models import ApprovalFlowTemplate
+from core.models import (
+    Organization,
+    OrganizationType,
+    ApprovalFlowTemplate,
+    ApprovalFlowConfig,
+)
 
 def build_approval_chain(proposal):
-    flow = ApprovalFlowTemplate.objects.filter(organization=proposal.organization).order_by('step_order')
+    """Create approval steps for a proposal based on org config and templates."""
+    config = ApprovalFlowConfig.objects.filter(
+        organization=proposal.organization
+    ).first()
+
+    flow = ApprovalFlowTemplate.objects.filter(
+        organization=proposal.organization
+    ).order_by("step_order")
+
     steps = []
-    for idx, tmpl in enumerate(flow, 1):
-        # If a user is specified in the template, assign them, else assign first available by role in this org
+    idx = 1
+
+    if config and config.require_faculty_incharge_first:
+        for fic in proposal.faculty_incharges.all():
+            steps.append(
+                ApprovalStep(
+                    proposal=proposal,
+                    step_order=idx,
+                    role_required=ApprovalStep.Role.FACULTY_INCHARGE,
+                    assigned_to=fic,
+                    status="pending" if idx == 1 else "waiting",
+                )
+            )
+            idx += 1
+
+    for tmpl in flow:
         assigned_to = tmpl.user or User.objects.filter(
             role_assignments__role=tmpl.role_required,
-            role_assignments__organization=proposal.organization
+            role_assignments__organization=proposal.organization,
         ).first()
-        steps.append(ApprovalStep(
-            proposal=proposal,
-            step_order=idx,
-            role_required=tmpl.role_required,
-            assigned_to=assigned_to,
-            status='pending' if idx == 1 else 'waiting'
-        ))
+        steps.append(
+            ApprovalStep(
+                proposal=proposal,
+                step_order=idx,
+                role_required=tmpl.role_required,
+                assigned_to=assigned_to,
+                status="pending" if idx == 1 else "waiting",
+            )
+        )
+        idx += 1
+
     ApprovalStep.objects.bulk_create(steps)
 
 # ---------------------------------------------

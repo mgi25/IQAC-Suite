@@ -65,7 +65,7 @@
                         {% if user.role_assignments.exists %}
                             {% for ra in user.role_assignments.all %}
                                 <span class="role-badge">
-                                    {{ ra.get_role_display }}
+                                    {{ ra.role.name }}
                                     {% if ra.organization %}<span class="role-context">({{ ra.organization }})</span>{% endif %}
                                 </span>{% if not forloop.last %}<br>{% endif %}
                             {% endfor %}

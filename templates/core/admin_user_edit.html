@@ -116,8 +116,8 @@
 
 <script>
   // Pass your org/role mapping to JS
-  const ORGS = {{ organizations_json|safe }};
-  const ROLES = {{ roles_json|safe }};
+  const ORGS = JSON.parse('{{ organizations_json|escapejs }}');
+  const ROLES = JSON.parse('{{ roles_json|escapejs }}');
 
   // Function to update organizations based on selected category
   function updateOrganizations(card) {
