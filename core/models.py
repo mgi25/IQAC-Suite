@@ -184,6 +184,23 @@ class ApprovalFlowTemplate(models.Model):
         unique_together = ('organization', 'step_order')
         ordering = ['organization', 'step_order']
 
+    def get_role_required_display(self):
+        """Return a human friendly version of ``role_required``.
+
+        If an :class:`OrganizationRole` exists for this template's organization
+        with a name matching ``role_required`` (case-insensitive), use that
+        name. Otherwise, return ``role_required`` converted to title case with
+        underscores replaced by spaces.
+        """
+
+        role = OrganizationRole.objects.filter(
+            organization=self.organization,
+            name__iexact=self.role_required,
+        ).first()
+        if role:
+            return role.name
+        return self.role_required.replace("_", " ").title()
+
 class ApprovalFlowConfig(models.Model):
     """
     Configuration flags for a department's approval flow, e.g. faculty-in-charge first.

@@ -178,3 +178,35 @@ class SearchUsersTests(TestCase):
         data = resp.json()
         self.assertEqual(len(data.get("users", [])), 1)
         self.assertEqual(data["users"][0]["id"], self.user.id)
+
+
+class ApprovalFlowTemplateDisplayTests(TestCase):
+    def setUp(self):
+        self.ot = OrganizationType.objects.create(name="Dept")
+        self.org = Organization.objects.create(name="Math", org_type=self.ot)
+
+    def test_get_role_required_display_uses_org_role(self):
+        OrganizationRole.objects.create(organization=self.org, name="Faculty")
+        step = ApprovalFlowTemplate.objects.create(
+            organization=self.org, step_order=1, role_required="faculty"
+        )
+        self.assertEqual(step.get_role_required_display(), "Faculty")
+
+    def test_get_role_required_display_formats_fallback(self):
+        step = ApprovalFlowTemplate.objects.create(
+            organization=self.org,
+            step_order=1,
+            role_required="committee_member",
+        )
+        self.assertEqual(step.get_role_required_display(), "Committee Member")
+
+    def test_get_approval_flow_endpoint_returns_display(self):
+        OrganizationRole.objects.create(organization=self.org, name="Faculty")
+        ApprovalFlowTemplate.objects.create(
+            organization=self.org, step_order=1, role_required="faculty"
+        )
+        resp = self.client.get(f"/core-admin/approval-flow/{self.org.id}/get/")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["steps"][0]["role_display"], "Faculty")
