@@ -28,6 +28,19 @@ from core.models import (
 from django.contrib.auth.models import User
 from emt.utils import build_approval_chain
 from emt.models import ApprovalStep
+
+# ---------------------------------------------------------------------------
+# Role name constants for lookup to avoid hardcoded strings
+# ---------------------------------------------------------------------------
+FACULTY_ROLE = ApprovalStep.Role.FACULTY.value
+DEAN_ROLE = ApprovalStep.Role.DEAN.value
+ACADEMIC_COORDINATOR_ROLE = "academic_coordinator"
+
+# Roles that should appear in the faculty search API
+FACULTY_LIKE_ROLES = [
+    ApprovalStep.Role.FACULTY.value,
+    ApprovalStep.Role.FACULTY_INCHARGE.value,
+]
 from django.contrib import messages
 from django.utils import timezone
 from django.db import models
@@ -122,10 +135,12 @@ def submit_proposal(request, pk=None):
         faculty_ids = post_data.getlist("faculty_incharges")
         if faculty_ids:
             form.fields['faculty_incharges'].queryset = User.objects.filter(
-                Q(role_assignments__role='faculty') | Q(id__in=faculty_ids)
+                Q(role_assignments__role__name=FACULTY_ROLE) | Q(id__in=faculty_ids)
             ).distinct()
         else:
-            form.fields['faculty_incharges'].queryset = User.objects.filter(role_assignments__role='faculty').distinct()
+            form.fields['faculty_incharges'].queryset = User.objects.filter(
+                role_assignments__role__name=FACULTY_ROLE
+            ).distinct()
         # --------------------------------------------------
 
     else:
@@ -133,7 +148,9 @@ def submit_proposal(request, pk=None):
         selected_academic_year = request.session.get('selected_academic_year')
         form = EventProposalForm(instance=proposal, selected_academic_year=selected_academic_year)
         # Populate all faculty as available choices for JS search/select on GET
-        form.fields['faculty_incharges'].queryset = User.objects.filter(role_assignments__role__name='faculty').distinct()
+        form.fields['faculty_incharges'].queryset = User.objects.filter(
+            role_assignments__role__name=FACULTY_ROLE
+        ).distinct()
 
     # Utility to get the display name from ID
     def get_name(model, value):
@@ -485,14 +502,17 @@ def api_organizations(request):
 @login_required
 def api_faculty(request):
     q = request.GET.get("q", "").strip()
-    users = (User.objects
-                  .filter(role_assignments__role="faculty")
-                  .filter(
-                      Q(first_name__icontains=q) |
-                      Q(last_name__icontains=q) |
-                      Q(email__icontains=q))
-                  .distinct()
-                  .order_by("first_name")[:20])
+    users = (
+        User.objects
+            .filter(role_assignments__role__name__in=FACULTY_LIKE_ROLES)
+            .filter(
+                Q(first_name__icontains=q) |
+                Q(last_name__icontains=q) |
+                Q(email__icontains=q)
+            )
+            .distinct()
+            .order_by("first_name")[:20]
+    )
     return JsonResponse(
         [{"id": u.id, "text": f"{u.get_full_name() or u.username} ({u.email})"} for u in users],
         safe=False
@@ -523,7 +543,11 @@ def review_approval_step(request, step_id):
     expenses = ExpenseDetail.objects.filter(proposal=proposal)
 
     GATEKEEPER_ROLES = [
-        "hod", "uni_iqac", "university_club_head", "center_head", "cell_head"
+        ApprovalStep.Role.HOD.value,
+        "uni_iqac",
+        "university_club_head",
+        "center_head",
+        "cell_head",
     ]
 
     if request.method == 'POST':
@@ -554,43 +578,49 @@ def review_approval_step(request, step_id):
                 ).exists()
 
             if step.role_required in GATEKEEPER_ROLES:
-                if needs_academic_coord_approval and not approval_exists('academic_coordinator'):
-                    acad_coord = User.objects.filter(role_assignments__role='academic_coordinator').first()
+                if needs_academic_coord_approval and not approval_exists(ACADEMIC_COORDINATOR_ROLE):
+                    acad_coord = User.objects.filter(
+                        role_assignments__role__name=ACADEMIC_COORDINATOR_ROLE
+                    ).first()
                     if acad_coord:
                         additional_steps.append(
                             ApprovalStep(
                                 proposal=proposal,
                                 step_order=next_step_order,
-                                role_required='academic_coordinator',
+                                role_required=ACADEMIC_COORDINATOR_ROLE,
                                 assigned_to=acad_coord,
                                 status='waiting'
                             )
                         )
                         next_step_order += 1
 
-                if needs_dean_approval and not approval_exists('dean'):
-                    dean = User.objects.filter(role_assignments__role='dean').first()
+                if needs_dean_approval and not approval_exists(DEAN_ROLE):
+                    dean = User.objects.filter(
+                        role_assignments__role__name=DEAN_ROLE
+                    ).first()
                     if dean:
                         additional_steps.append(
                             ApprovalStep(
                                 proposal=proposal,
                                 step_order=next_step_order,
-                                role_required='dean',
+                                role_required=DEAN_ROLE,
                                 assigned_to=dean,
                                 status='waiting'
                             )
                         )
                         next_step_order += 1
 
-            if step.role_required == "academic_coordinator":
-                if needs_dean_approval and not approval_exists('dean'):
-                    dean = User.objects.filter(role_assignments__role='dean').first()
+            if step.role_required == ACADEMIC_COORDINATOR_ROLE:
+                if needs_dean_approval and not approval_exists(DEAN_ROLE):
+                    dean = User.objects.filter(
+                        role_assignments__role__name=DEAN_ROLE
+                    ).first()
                     if dean:
                         additional_steps.append(
                             ApprovalStep(
                                 proposal=proposal,
                                 step_order=next_step_order,
-                                role_required='dean',
+                                role_required=DEAN_ROLE,
                                 assigned_to=dean,
                                 status='waiting'
                             )
@@ -715,9 +745,16 @@ def suite_dashboard(request):
         p.progress_percent = int((p.status_index + 1) * 100 / len(p.statuses))
         p.current_label = p.statuses[p.status_index].replace('_', ' ').capitalize()
 
-    # Determine visibility of the "Event Approvals" card based on role and user settings
-    ras = request.user.role_assignments.select_related("role")
+    # Determine visibility of the "Event Approvals" card. Respect admin
+    # visibility settings for the user's roles, but always show the card if the
+    # user has any pending approvals assigned to them.
+    has_pending = ApprovalStep.objects.filter(
+        assigned_to=request.user,
+        status=ApprovalStep.Status.PENDING,
+    ).exists()
+
     show_approvals_card = False
+    ras = request.user.role_assignments.select_related("role")
     for ra in ras:
         role_vis = getattr(ra.role, "approval_visibility", None)
         can_view = role_vis.can_view if role_vis else True
@@ -731,6 +768,8 @@ def suite_dashboard(request):
         if can_view:
             show_approvals_card = True
             break
+
+    show_approvals_card = show_approvals_card or has_pending
 
     # 5) Render
     return render(request, 'emt/iqac_suite_dashboard.html', {
