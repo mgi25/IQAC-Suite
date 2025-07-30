@@ -715,9 +715,16 @@ def suite_dashboard(request):
         p.progress_percent = int((p.status_index + 1) * 100 / len(p.statuses))
         p.current_label = p.statuses[p.status_index].replace('_', ' ').capitalize()
 
-    # Determine visibility of the "Event Approvals" card based on role and user settings
-    ras = request.user.role_assignments.select_related("role")
+    # Determine visibility of the "Event Approvals" card. Respect admin
+    # visibility settings for the user's roles, but always show the card if the
+    # user has any pending approvals assigned to them.
+    has_pending = ApprovalStep.objects.filter(
+        assigned_to=request.user,
+        status=ApprovalStep.Status.PENDING,
+    ).exists()
+
     show_approvals_card = False
+    ras = request.user.role_assignments.select_related("role")
     for ra in ras:
         role_vis = getattr(ra.role, "approval_visibility", None)
         can_view = role_vis.can_view if role_vis else True
@@ -731,6 +738,8 @@ def suite_dashboard(request):
         if can_view:
             show_approvals_card = True
             break
+
+    show_approvals_card = show_approvals_card or has_pending
 
     # 5) Render
     return render(request, 'emt/iqac_suite_dashboard.html', {
