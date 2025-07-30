@@ -39,3 +39,40 @@ class FacultyAPITests(TestCase):
         ids = {item["id"] for item in data}
         self.assertIn(self.user1.id, ids)
         self.assertIn(self.user2.id, ids)
+
+    def test_api_faculty_includes_profile_role(self):
+        user3 = User.objects.create(
+            username="f3",
+            first_name="Gamma",
+            email="gamma@example.com",
+        )
+        user3.profile.role = "faculty"
+        user3.profile.save()
+
+        resp = self.client.get(reverse("emt:api_faculty"), {"q": "Gamma"})
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        ids = {item["id"] for item in data}
+        self.assertIn(user3.id, ids)
+
+    def test_api_faculty_matches_capitalized_roles(self):
+        user4 = User.objects.create(
+            username="f4",
+            first_name="Delta",
+            email="delta@example.com",
+        )
+        cap_role = OrganizationRole.objects.create(
+            organization=self.org,
+            name="Faculty",
+        )
+        RoleAssignment.objects.create(
+            user=user4,
+            role=cap_role,
+            organization=self.org,
+        )
+
+        resp = self.client.get(reverse("emt:api_faculty"), {"q": "Delta"})
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        ids = {item["id"] for item in data}
+        self.assertIn(user4.id, ids)
