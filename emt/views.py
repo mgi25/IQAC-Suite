@@ -435,7 +435,11 @@ def proposal_status_detail(request, proposal_id):
         statuses = ['draft', 'submitted', 'under_review', 'finalized']
 
     status_index = statuses.index(db_status) if db_status in statuses else 0
-    progress_percent = int((status_index + 1) * 100 / len(statuses))
+    # Progress should start at 0% for the initial status
+    if len(statuses) > 1:
+        progress_percent = int(status_index * 100 / (len(statuses) - 1))
+    else:
+        progress_percent = 100
     current_label = statuses[status_index].replace('_', ' ').capitalize()
 
     return render(request, 'emt/proposal_status_detail.html', {
@@ -774,7 +778,10 @@ def suite_dashboard(request):
             p.statuses = ['draft', 'submitted', 'under_review', 'finalized']
 
         p.status_index = p.statuses.index(db_status) if db_status in p.statuses else 0
-        p.progress_percent = int((p.status_index + 1) * 100 / len(p.statuses))
+        if len(p.statuses) > 1:
+            p.progress_percent = int(p.status_index * 100 / (len(p.statuses) - 1))
+        else:
+            p.progress_percent = 100
         p.current_label = p.statuses[p.status_index].replace('_', ' ').capitalize()
 
     # Determine visibility of the "Event Approvals" card. Respect admin
