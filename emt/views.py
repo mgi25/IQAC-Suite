@@ -40,6 +40,8 @@ ACADEMIC_COORDINATOR_ROLE = "academic_coordinator"
 FACULTY_LIKE_ROLES = [
     ApprovalStep.Role.FACULTY.value,
     ApprovalStep.Role.FACULTY_INCHARGE.value,
+    "Faculty",
+    "Faculty In-Charge",
 ]
 
 # Fallback profile roles for faculty search when no role assignments exist
