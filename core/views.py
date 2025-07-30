@@ -21,13 +21,15 @@ from .models import (
     OrganizationType,
     Report,
     OrganizationRole,
+    RoleEventApprovalVisibility,
+    UserEventApprovalVisibility,
 )
 from emt.models import (
     EventProposal, EventNeedAnalysis, EventObjectives, EventExpectedOutcomes, TentativeFlow,
     ExpenseDetail, SpeakerProfile, ApprovalStep
 )
 from django.views.decorators.http import require_GET, require_POST
-from .models import ApprovalFlowTemplate
+from .models import ApprovalFlowTemplate, ApprovalFlowConfig
 # ─────────────────────────────────────────────────────────────
 #  Helpers
 # ─────────────────────────────────────────────────────────────
@@ -733,6 +735,8 @@ def admin_approval_flow_manage(request, org_id):
     org_types = OrganizationType.objects.all().order_by("name")
     selected_org = get_object_or_404(Organization, id=org_id)
 
+    config, _ = ApprovalFlowConfig.objects.get_or_create(organization=selected_org)
+
     steps = (
         ApprovalFlowTemplate.objects.filter(organization=selected_org)
         .select_related("user")
@@ -745,8 +749,90 @@ def admin_approval_flow_manage(request, org_id):
         "selected_org_id": org_id,
         "selected_org": selected_org,
         "existing_steps": steps,
+        "require_faculty_incharge_first": config.require_faculty_incharge_first,
     }
     return render(request, "core/admin_approval_flow_manage.html", context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def admin_approval_dashboard(request):
+    """Intermediate page for approval related settings."""
+    return render(request, "core/admin_approval_dashboard.html")
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def approval_box_visibility_orgs(request):
+    """List organizations for visibility management."""
+    org_types = OrganizationType.objects.filter(is_active=True).order_by("name")
+    orgs_by_type = {
+        ot.name: Organization.objects.filter(org_type=ot, is_active=True).order_by("name")
+        for ot in org_types
+    }
+    context = {"org_types": org_types, "orgs_by_type": orgs_by_type}
+    return render(request, "core/approval_box_orgs.html", context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def approval_box_visibility_roles(request, org_id):
+    organization = get_object_or_404(Organization, id=org_id)
+    roles = OrganizationRole.objects.filter(organization=organization, is_active=True).order_by("name")
+    vis_map = {
+        v.role_id: v.can_view
+        for v in RoleEventApprovalVisibility.objects.filter(role__organization=organization)
+    }
+    context = {
+        "organization": organization,
+        "roles": roles,
+        "role_visibility": vis_map,
+    }
+    return render(request, "core/approval_box_roles.html", context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_POST
+def toggle_role_visibility(request, role_id):
+    role = get_object_or_404(OrganizationRole, id=role_id)
+    vis, _ = RoleEventApprovalVisibility.objects.get_or_create(role=role, defaults={"can_view": True})
+    vis.can_view = not vis.can_view
+    vis.save()
+    return redirect("approval_box_roles", org_id=role.organization_id)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def approval_box_visibility_users(request, org_id, role_id):
+    organization = get_object_or_404(Organization, id=org_id)
+    role = get_object_or_404(OrganizationRole, id=role_id, organization=organization)
+    q = request.GET.get("q", "").strip()
+    assignments = RoleAssignment.objects.filter(role=role, organization=organization).select_related("user")
+    if q:
+        assignments = assignments.filter(
+            Q(user__first_name__icontains=q)
+            | Q(user__last_name__icontains=q)
+            | Q(user__email__icontains=q)
+        )
+    user_map = {
+        v.user_id: v.can_view
+        for v in UserEventApprovalVisibility.objects.filter(role=role)
+    }
+    context = {
+        "organization": organization,
+        "role": role,
+        "assignments": assignments,
+        "user_visibility": user_map,
+        "q": q,
+    }
+    return render(request, "core/approval_box_users.html", context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_POST
+def toggle_user_visibility(request, user_id, role_id):
+    role = get_object_or_404(OrganizationRole, id=role_id)
+    user = get_object_or_404(User, id=user_id)
+    vis, _ = UserEventApprovalVisibility.objects.get_or_create(user=user, role=role, defaults={"can_view": True})
+    vis.can_view = not vis.can_view
+    vis.save()
+    return redirect("approval_box_users", org_id=role.organization_id, role_id=role.id)
 
 
 @login_required
@@ -817,16 +903,19 @@ def admin_pso_po_management(request):
 @require_GET
 def get_approval_flow(request, org_id):
     steps = ApprovalFlowTemplate.objects.filter(organization_id=org_id).order_by('step_order')
+    config = ApprovalFlowConfig.objects.filter(organization_id=org_id).first()
     data = [
         {
             'id': step.id,
             'step_order': step.step_order,
             'role_required': step.role_required,
+            'role_display': step.get_role_required_display(),
             'user_id': step.user.id if step.user else None,
             'user_name': step.user.get_full_name() if step.user else '',
         } for step in steps
     ]
-    return JsonResponse({'success': True, 'steps': data})
+    return JsonResponse({'success': True, 'steps': data,
+                         'require_faculty_incharge_first': config.require_faculty_incharge_first if config else False})
 
 @require_POST
 @login_required
@@ -834,6 +923,7 @@ def get_approval_flow(request, org_id):
 def save_approval_flow(request, org_id):
     data = json.loads(request.body)
     steps = data.get('steps', [])
+    require_first = data.get('require_faculty_incharge_first', False)
     org = Organization.objects.get(id=org_id)
     # Remove old steps
     ApprovalFlowTemplate.objects.filter(organization=org).delete()
@@ -847,6 +937,10 @@ def save_approval_flow(request, org_id):
             role_required=step['role_required'],
             user_id=step.get('user_id')
         )
+
+    config, _ = ApprovalFlowConfig.objects.get_or_create(organization=org)
+    config.require_faculty_incharge_first = require_first
+    config.save()
 
     return JsonResponse({'success': True})
 def api_approval_flow_steps(request, org_id):

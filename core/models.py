@@ -6,7 +6,6 @@ from django.conf import settings
 #  New Generic Organization Models
 # ───────────────────────────────
 
-# models.py
 class OrganizationType(models.Model):
     name = models.CharField(max_length=100, unique=True)
     is_active = models.BooleanField(default=True)
@@ -14,8 +13,6 @@ class OrganizationType(models.Model):
     parent_type = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='child_types')
     def __str__(self):
         return self.name
-
-
 
 class Organization(models.Model):
     """
@@ -32,7 +29,6 @@ class Organization(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.org_type.name})"
-
 
 class OrganizationRole(models.Model):
     organization = models.ForeignKey(
@@ -53,9 +49,6 @@ class OrganizationRole(models.Model):
 # ───────────────────────────────
 
 class RoleAssignment(models.Model):
-    # ROLE_CHOICES used to contain a list of predefined roles, but the
-    # application now relies entirely on ``OrganizationRole`` for the actual
-    # role names. The old constant was unused and has been removed.
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='role_assignments')
     role = models.ForeignKey('OrganizationRole', on_delete=models.CASCADE, null=True)
     organization = models.ForeignKey(Organization, null=True, blank=True, on_delete=models.SET_NULL)
@@ -68,7 +61,6 @@ class RoleAssignment(models.Model):
         if self.organization:
             parts.append(f"of {self.organization}")
         return f"{self.user.username} – {' '.join(parts)}"
-
 
 # ───────────────────────────────
 #  User Profile (unchanged)
@@ -157,7 +149,7 @@ class Report(models.Model):
         return f"{self.title} – {self.get_report_type_display()} ({self.get_status_display()})"
 
 # ───────────────────────────────
-#  Programs & Outcomes (update FKs if needed)
+#  Programs & Outcomes
 # ───────────────────────────────
 
 class Program(models.Model):
@@ -178,12 +170,85 @@ class ProgramSpecificOutcome(models.Model):
     def __str__(self):
         return f"PSO - {self.program.name}"
 
+# ───────────────────────────────
+#  Approval Flow Templates & Config
+# ───────────────────────────────
+
 class ApprovalFlowTemplate(models.Model):
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="approval_flow_templates")
     step_order = models.PositiveIntegerField()
     role_required = models.CharField(max_length=50)  # e.g., "faculty", "hod"
-    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)  # If you want to fix to a person (optional)
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)  # Optional: Fix to a specific user
 
     class Meta:
         unique_together = ('organization', 'step_order')
         ordering = ['organization', 'step_order']
+
+    def get_role_required_display(self):
+        """Return a human friendly version of ``role_required``.
+
+        If an :class:`OrganizationRole` exists for this template's organization
+        with a name matching ``role_required`` (case-insensitive), use that
+        name. Otherwise, return ``role_required`` converted to title case with
+        underscores replaced by spaces.
+        """
+
+        role = OrganizationRole.objects.filter(
+            organization=self.organization,
+            name__iexact=self.role_required,
+        ).first()
+        if role:
+            return role.name
+        return self.role_required.replace("_", " ").title()
+
+class ApprovalFlowConfig(models.Model):
+    """
+    Configuration flags for a department's approval flow, e.g. faculty-in-charge first.
+    """
+    organization = models.OneToOneField(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="approval_flow_config",
+    )
+    require_faculty_incharge_first = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Config for {self.organization.name}"
+
+# ───────────────────────────────
+#  Event Approval Box Visibility (Role & User)
+# ───────────────────────────────
+
+class RoleEventApprovalVisibility(models.Model):
+    """
+    Visibility preference for the dashboard event approvals box by role.
+    """
+    role = models.OneToOneField(
+        OrganizationRole,
+        on_delete=models.CASCADE,
+        related_name="approval_visibility",
+    )
+    can_view = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.role} – {'Visible' if self.can_view else 'Hidden'}"
+
+class UserEventApprovalVisibility(models.Model):
+    """
+    Per-user override for the approvals dashboard box.
+    """
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="approval_box_overrides",
+    )
+    role = models.ForeignKey(OrganizationRole, on_delete=models.CASCADE)
+    can_view = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ("user", "role")
+
+    def __str__(self):
+        return (
+            f"{self.user.username} – {self.role} – {'Visible' if self.can_view else 'Hidden'}"
+        )
