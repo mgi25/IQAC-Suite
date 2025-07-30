@@ -271,7 +271,7 @@ def admin_user_management(request):
     role = request.GET.get('role')
     q = request.GET.get('q', '').strip()
     if role:
-        users = users.filter(role_assignments__role=role)
+        users = users.filter(role_assignments__role__name=role)
     if q:
         users = users.filter(
             Q(email__icontains=q) | 

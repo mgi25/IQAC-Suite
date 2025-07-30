@@ -37,7 +37,7 @@ def build_approval_chain(proposal):
 
     for tmpl in flow:
         assigned_to = tmpl.user or User.objects.filter(
-            role_assignments__role=tmpl.role_required,
+            role_assignments__role__name=tmpl.role_required,
             role_assignments__organization=proposal.organization,
         ).first()
         steps.append(
