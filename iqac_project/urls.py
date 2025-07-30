@@ -10,8 +10,6 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),  # login/logout
     path('suite/', include(('emt.urls', 'emt'), namespace='emt')),  # emt app
     path('transcript/', include('transcript.urls')),  # transcript module
-    path('core-admin/', include('core.urls')),  # optional alternate route
-    path('emt/', include('emt.urls')),
 ]
 
 # ✅ This line enables media file serving (for student photos) in development:
