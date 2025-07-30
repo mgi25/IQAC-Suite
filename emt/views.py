@@ -22,6 +22,8 @@ from core.models import (
     Organization,
     OrganizationType,
     Report as SubmittedReport,
+    RoleEventApprovalVisibility,
+    UserEventApprovalVisibility,
 )
 from django.contrib.auth.models import User
 from emt.utils import build_approval_chain
@@ -713,11 +715,22 @@ def suite_dashboard(request):
         p.progress_percent = int((p.status_index + 1) * 100 / len(p.statuses))
         p.current_label = p.statuses[p.status_index].replace('_', ' ').capitalize()
 
-    # Show the "Event Approvals" card only if the user has pending approvals.
-    show_approvals_card = ApprovalStep.objects.filter(
-        assigned_to=request.user,
-        status=ApprovalStep.Status.PENDING,
-    ).exists()
+    # Determine visibility of the "Event Approvals" card based on role and user settings
+    ras = request.user.role_assignments.select_related("role")
+    show_approvals_card = False
+    for ra in ras:
+        role_vis = getattr(ra.role, "approval_visibility", None)
+        can_view = role_vis.can_view if role_vis else True
+        if not can_view:
+            continue
+        user_override = UserEventApprovalVisibility.objects.filter(
+            user=request.user, role=ra.role
+        ).first()
+        if user_override is not None:
+            can_view = user_override.can_view
+        if can_view:
+            show_approvals_card = True
+            break
 
     # 5) Render
     return render(request, 'emt/iqac_suite_dashboard.html', {
