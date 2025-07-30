@@ -35,6 +35,12 @@ from emt.models import ApprovalStep
 FACULTY_ROLE = ApprovalStep.Role.FACULTY.value
 DEAN_ROLE = ApprovalStep.Role.DEAN.value
 ACADEMIC_COORDINATOR_ROLE = "academic_coordinator"
+
+# Roles that should appear in the faculty search API
+FACULTY_LIKE_ROLES = [
+    ApprovalStep.Role.FACULTY.value,
+    ApprovalStep.Role.FACULTY_INCHARGE.value,
+]
 from django.contrib import messages
 from django.utils import timezone
 from django.db import models
@@ -496,14 +502,17 @@ def api_organizations(request):
 @login_required
 def api_faculty(request):
     q = request.GET.get("q", "").strip()
-    users = (User.objects
-                  .filter(role_assignments__role__name=FACULTY_ROLE)
-                  .filter(
-                      Q(first_name__icontains=q) |
-                      Q(last_name__icontains=q) |
-                      Q(email__icontains=q))
-                  .distinct()
-                  .order_by("first_name")[:20])
+    users = (
+        User.objects
+            .filter(role_assignments__role__name__in=FACULTY_LIKE_ROLES)
+            .filter(
+                Q(first_name__icontains=q) |
+                Q(last_name__icontains=q) |
+                Q(email__icontains=q)
+            )
+            .distinct()
+            .order_by("first_name")[:20]
+    )
     return JsonResponse(
         [{"id": u.id, "text": f"{u.get_full_name() or u.username} ({u.email})"} for u in users],
         safe=False
