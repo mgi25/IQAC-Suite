@@ -567,10 +567,11 @@ def review_approval_step(request, step_id):
     step = get_object_or_404(ApprovalStep, id=step_id, assigned_to=request.user)
     proposal = step.proposal
 
-    need_analysis = getattr(proposal, "eventneedanalysis", None)
-    objectives = getattr(proposal, "eventobjectives", None)
-    outcomes = getattr(proposal, "eventexpectedoutcomes", None)
-    flow = getattr(proposal, "tentativeflow", None)
+    # Fetch related proposal details using the proper `related_name`
+    need_analysis = getattr(proposal, "need_analysis", None)
+    objectives = getattr(proposal, "objectives", None)
+    outcomes = getattr(proposal, "expected_outcomes", None)
+    flow = getattr(proposal, "tentative_flow", None)
     speakers = SpeakerProfile.objects.filter(proposal=proposal)
     expenses = ExpenseDetail.objects.filter(proposal=proposal)
 
