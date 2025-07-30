@@ -10,9 +10,8 @@ from django import forms
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
-from django.core.exceptions import PermissionDenied
-import logging
 import json
+import logging
 from .forms import RoleAssignmentForm
 from .models import (
     Profile,
@@ -30,6 +29,8 @@ from emt.models import (
 )
 from django.views.decorators.http import require_GET, require_POST
 from .models import ApprovalFlowTemplate, ApprovalFlowConfig
+from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 # ─────────────────────────────────────────────────────────────
 #  Helpers
 # ─────────────────────────────────────────────────────────────
@@ -168,119 +169,243 @@ def admin_user_panel(request):
     return render(request, "core/admin_user_panel.html")
 
 
+# ===================================================================
+# SINGLE-PAGE ROLE MANAGEMENT VIEW
+# ===================================================================
+
 @user_passes_test(lambda u: u.is_superuser)
-def admin_role_management(request):
-    org_types = OrganizationType.objects.all().order_by("name")
-
-    context = {
-        "org_types": org_types,
-    }
-    return render(request, "core/admin_role_management.html", context)
-
+def admin_role_management(request, organization_id=None):
+    """Fixed role management with deduplication"""
+    
+    if organization_id:
+        # Direct access to one organization's roles
+        org = get_object_or_404(Organization, id=organization_id)
+        roles = OrganizationRole.objects.filter(organization=org).order_by('name')
+        
+        context = {
+            'selected_organization': org,
+            'roles': roles,
+            'step': 'single_org_roles'
+        }
+        return render(request, "core/admin_role_management.html", context)
+    
+    else:
+        org_type_id = request.GET.get('org_type_id')
+        
+        if org_type_id:
+            # Show UNIQUE roles from this org type (no duplicates)
+            org_type = get_object_or_404(OrganizationType, id=org_type_id)
+            
+            # Get all organizations of this type for the add form
+            organizations = Organization.objects.filter(
+                org_type=org_type, 
+                is_active=True
+            ).order_by('name')
+            
+            # Get UNIQUE role names (deduplicated) from all organizations of this type
+            unique_role_names = OrganizationRole.objects.filter(
+                organization__org_type=org_type,
+                organization__is_active=True
+            ).values_list('name', flat=True).distinct().order_by('name')
+            
+            # For each unique role name, get one representative role object
+            unique_roles = []
+            for role_name in unique_role_names:
+                # Get the first role with this name from this org type
+                role = OrganizationRole.objects.filter(
+                    organization__org_type=org_type,
+                    organization__is_active=True,
+                    name=role_name
+                ).select_related('organization').first()
+                if role:
+                    unique_roles.append(role)
+            
+            context = {
+                'selected_org_type': org_type,
+                'roles': unique_roles,  # Now deduplicated
+                'organizations': organizations,
+                'step': 'org_type_roles'
+            }
+            return render(request, "core/admin_role_management.html", context)
+        
+        else:
+            # Show organization types
+            org_types = OrganizationType.objects.all().order_by('name')
+            
+            context = {
+                'org_types': org_types,
+                'step': 'org_types'
+            }
+            return render(request, "core/admin_role_management.html", context)
 
 
 @user_passes_test(lambda u: u.is_superuser)
 @require_POST
-def add_org_role(request):
-    org_id = request.POST.get("org_id")
-    org_type_id = request.POST.get("org_type_id")
+def add_org_role(request, organization_id):
+    """Add role to ALL organizations of the same type"""
+    org = get_object_or_404(Organization, id=organization_id)
     name = request.POST.get("name", "").strip()
+    description = request.POST.get("description", "").strip()
 
     if not name:
-        return redirect("admin_role_management")
+        messages.error(request, "Role name is required.")
+        return redirect(f"{reverse('admin_role_management')}?org_type_id={org.org_type.id}")
 
-    if org_id:
-        org = get_object_or_404(Organization, id=org_id)
-        OrganizationRole.objects.get_or_create(organization=org, name=name)
-        messages.success(request, f"Role '{name}' added to {org.name}.")
-    elif org_type_id:
-        orgs = Organization.objects.filter(org_type_id=org_type_id, is_active=True)
-        org_names = []
-        for org in orgs:
-            OrganizationRole.objects.get_or_create(organization=org, name=name)
-            org_names.append(org.name)
-        org_type = get_object_or_404(OrganizationType, id=org_type_id)
-        if org_names:
-            msg = f"Role '{name}' added to all organizations in {org_type.name}: {', '.join(org_names)}"
-        else:
-            msg = f"No active organizations found in {org_type.name}."
-        messages.success(request, msg)
-    return redirect("admin_role_management")
+    # Check if this role already exists in ANY organization of this type
+    existing_role = OrganizationRole.objects.filter(
+        organization__org_type=org.org_type,
+        name__iexact=name
+    ).first()
+    
+    if existing_role:
+        messages.warning(request, f"Role '{name}' already exists for {org.org_type.name}s.")
+        return redirect(f"{reverse('admin_role_management')}?org_type_id={org.org_type.id}")
 
-
-@user_passes_test(lambda u: u.is_superuser)
-@require_POST
-def delete_org_role(request, role_id):
-    role = get_object_or_404(OrganizationRole, id=role_id)
-    role.delete()
-    org_type_id = request.GET.get("org_type_id")
-    if org_type_id:
-        return redirect(reverse("view_org_roles") + f"?org_type_id={org_type_id}")
-    return redirect("admin_role_management")
-
-
-@user_passes_test(lambda u: u.is_superuser)
-def view_org_roles(request):
-    """Display roles, optionally filtered by organization type."""
-    roles = (
-        OrganizationRole.objects.select_related("organization", "organization__org_type")
-        .order_by("organization__org_type__name", "organization__name", "name")
+    # Add this role to ALL organizations of this type
+    all_orgs_of_type = Organization.objects.filter(
+        org_type=org.org_type,
+        is_active=True
     )
-
-    org_type_id = request.GET.get("org_type_id")
-    org_type = None
-    if org_type_id:
-        org_type = get_object_or_404(OrganizationType, id=org_type_id)
-        roles = roles.filter(organization__org_type=org_type)
-
-    context = {
-        "roles": roles,
-        "org_type": org_type,
-    }
-    return render(request, "core/admin_view_roles.html", context)
+    
+    for target_org in all_orgs_of_type:
+        if not OrganizationRole.objects.filter(
+            organization=target_org,
+            name__iexact=name
+        ).exists():
+            OrganizationRole.objects.create(
+                organization=target_org,
+                name=name,
+                is_active=True
+                # Remove description if not in model
+            )
+    return redirect("admin_role_management") + f"?org_type_id={org.org_type.id}"
 
 
 @user_passes_test(lambda u: u.is_superuser)
 @require_POST
 def update_org_role(request, role_id):
+    """Update this role for ALL organizations of the same type"""
     role = get_object_or_404(OrganizationRole, id=role_id)
+    org_type = role.organization.org_type
+    old_name = role.name
+    
     new_name = request.POST.get("name", "").strip()
-    if new_name:
-        role.name = new_name
-        role.save()
-    org_type_id = request.GET.get("org_type_id")
-    if org_type_id:
-        return redirect(reverse("view_org_roles") + f"?org_type_id={org_type_id}")
-    return redirect("view_org_roles")
+    new_description = request.POST.get("description", "").strip()
+
+    if not new_name:
+        messages.error(request, "Role name is required.")
+        return redirect("admin_role_management") + f"?org_type_id={org_type.id}"
+
+    # Update all roles with the old name from all organizations of this type
+    updated_count = OrganizationRole.objects.filter(
+        organization__org_type=org_type,
+        name__iexact=old_name
+    ).update(
+        name=new_name,
+        description=new_description
+    )
+    
+    messages.success(request, f"Role updated for {updated_count} {org_type.name}(s).")
+    return redirect("admin_role_management") + f"?org_type_id={org_type.id}"
 
 
 @user_passes_test(lambda u: u.is_superuser)
 @require_POST
 def toggle_org_role(request, role_id):
+    """Handles activating or deactivating a role."""
     role = get_object_or_404(OrganizationRole, id=role_id)
     role.is_active = not role.is_active
     role.save()
-    org_type_id = request.GET.get("org_type_id")
-    if org_type_id:
-        return redirect(reverse("view_org_roles") + f"?org_type_id={org_type_id}")
-    return redirect("view_org_roles")
+    status = "activated" if role.is_active else "deactivated"
+    messages.success(request, f"Role '{role.name}' has been {status}.")
+    return redirect("admin_role_management_org", organization_id=role.organization.id)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_POST
+def delete_org_role(request, role_id):
+    """Delete this role from ALL organizations of the same type"""
+    role = get_object_or_404(OrganizationRole, id=role_id)
+    org_type = role.organization.org_type
+    role_name = role.name
+    
+    # Delete all roles with this name from all organizations of this type
+    deleted_count = OrganizationRole.objects.filter(
+        organization__org_type=org_type,
+        name__iexact=role_name
+    ).delete()[0]
+    
+    messages.success(request, f"Role '{role_name}' deleted from {deleted_count} {org_type.name}(s).")
+    return redirect("admin_role_management") + f"?org_type_id={org_type.id}"
+
+# ===================================================================
+# END OF SINGLE-PAGE ROLE MANAGEMENT
+# ===================================================================
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_user_management(request):
-    users = User.objects.all().order_by('-date_joined')
-    role = request.GET.get('role')
+    """
+    Manages and displays a paginated list of users with filtering capabilities.
+    """
+    users_list = User.objects.select_related('profile').prefetch_related(
+        'role_assignments__organization', 
+        'role_assignments__role'
+    ).order_by('-date_joined')
+
     q = request.GET.get('q', '').strip()
-    if role:
-        users = users.filter(role_assignments__role__name=role)
+    role_id = request.GET.get('role')
+    org_id = request.GET.get('organization')
+    status = request.GET.get('status')
+
     if q:
-        users = users.filter(
-            Q(email__icontains=q) | 
+        users_list = users_list.filter(
+            Q(email__icontains=q) |
             Q(first_name__icontains=q) |
             Q(last_name__icontains=q) |
             Q(username__icontains=q)
         )
-    users = users.distinct().prefetch_related('role_assignments', 'role_assignments__organization')
-    return render(request, "core/admin_user_management.html", {"users": users})
+    
+    if role_id:
+        users_list = users_list.filter(role_assignments__role_id=role_id)
+    
+    if org_id:
+        users_list = users_list.filter(role_assignments__organization_id=org_id)
+
+    if status in ['active', 'inactive']:
+        users_list = users_list.filter(is_active=(status == 'active'))
+
+    users_list = users_list.distinct()
+
+    paginator = Paginator(users_list, 25)
+    page_number = request.GET.get('page')
+    try:
+        users = paginator.page(page_number)
+    except PageNotAnInteger:
+        users = paginator.page(1)
+    except EmptyPage:
+        users = paginator.page(paginator.num_pages)
+
+    all_roles = OrganizationRole.objects.filter(is_active=True).order_by('name')
+    all_organizations = Organization.objects.filter(is_active=True).order_by('name')
+
+    query_params = request.GET.copy()
+    if 'page' in query_params:
+        del query_params['page']
+
+    context = {
+        'users': users,
+        'all_roles': all_roles,
+        'all_organizations': all_organizations,
+        'current_filters': {
+            'q': q,
+            'role': int(role_id) if role_id and role_id.isdigit() else None,
+            'organization': int(org_id) if org_id and org_id.isdigit() else None,
+            'status': status,
+        },
+        'query_params': query_params.urlencode(),
+    }
+    
+    return render(request, "core/admin_user_management.html", context)
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
@@ -311,7 +436,6 @@ def admin_user_edit(request, user_id):
     else:
         formset = RoleFormSet(instance=user)
 
-    # Build data for JavaScript dropdowns. Include any inactive entries referenced by the user.
     org_ids = list(
         user.role_assignments.exclude(organization__isnull=True).values_list("organization_id", flat=True)
     )
@@ -465,10 +589,8 @@ def admin_master_data(request):
     orgs_by_type_json = {}
 
     for org_type in org_types:
-        # Include both active and inactive organizations for comprehensive management
         qs = Organization.objects.filter(org_type=org_type).order_by('name')
         orgs_by_type[org_type.name] = qs
-        # For JS: only include active organizations for parent dropdown
         active_orgs = qs.filter(is_active=True)
         orgs_by_type_json[org_type.name.lower()] = [{'id': o.id, 'name': o.name} for o in active_orgs]
 
@@ -477,7 +599,7 @@ def admin_master_data(request):
         "orgs_by_type": orgs_by_type,
         "academic_years": academic_years,
         "selected_year": selected_year,
-        "orgs_by_type_json": json.dumps(orgs_by_type_json),  # Pass for JS dynamic dropdown!
+        "orgs_by_type_json": json.dumps(orgs_by_type_json),
     })
 
 
@@ -497,7 +619,7 @@ def admin_master_data_edit(request, model_name, pk):
             data = json.loads(request.body)
             name = data.get("name", "").strip()
             is_active = data.get("is_active", True)
-            parent_id = data.get("parent")  # Can be None, empty string, or an ID
+            parent_id = data.get("parent")
             
             if not name:
                 return JsonResponse({"success": False, "error": "Name is required"})
@@ -506,12 +628,10 @@ def admin_master_data_edit(request, model_name, pk):
             if hasattr(obj, "is_active"):
                 obj.is_active = is_active
             
-            # Handle parent assignment for organizations
             if model_name == "organization" and hasattr(obj, "parent"):
-                if parent_id and parent_id.strip():  # If parent_id is provided and not empty
+                if parent_id and parent_id.strip():
                     try:
                         parent_obj = Organization.objects.get(id=parent_id)
-                        # Validate that the parent is of the correct type for this organization
                         if obj.org_type.parent_type and parent_obj.org_type != obj.org_type.parent_type:
                             return JsonResponse({
                                 "success": False, 
@@ -523,7 +643,6 @@ def admin_master_data_edit(request, model_name, pk):
                     except ValueError:
                         return JsonResponse({"success": False, "error": "Invalid parent ID"})
                 else:
-                    # Remove parent if empty or None
                     obj.parent = None
             
             obj.save()
@@ -534,7 +653,6 @@ def admin_master_data_edit(request, model_name, pk):
                 "is_active": getattr(obj, "is_active", True),
             }
             
-            # Include parent name in response if applicable
             if hasattr(obj, "parent"):
                 response_data["parent"] = obj.parent.name if obj.parent else None
             
@@ -570,17 +688,14 @@ def admin_master_data_add(request, model_name):
                 if not org_type_name:
                     return JsonResponse({"success": False, "error": "Organization type required"})
                 
-                # Get or create the organization type
                 try:
                     org_type_obj = OrganizationType.objects.get(name__iexact=org_type_name)
                 except OrganizationType.DoesNotExist:
                     return JsonResponse({"success": False, "error": f"Organization type '{org_type_name}' does not exist"})
                 
-                # Check if organization with same name and type already exists
                 if Organization.objects.filter(name__iexact=name, org_type=org_type_obj).exists():
                     return JsonResponse({"success": False, "error": f"{org_type_obj.name} with name '{name}' already exists"})
                 
-                # Handle parent organization
                 parent_obj = None
                 if parent_id:
                     try:
@@ -588,7 +703,6 @@ def admin_master_data_add(request, model_name):
                     except Organization.DoesNotExist:
                         return JsonResponse({"success": False, "error": "Parent organization not found"})
                 
-                # Create the organization
                 obj = Organization.objects.create(
                     name=name,
                     org_type=org_type_obj,
@@ -599,11 +713,9 @@ def admin_master_data_add(request, model_name):
             elif model_name == "organization_type":
                 parent_id = data.get("parent")
                 
-                # Check if organization type already exists
                 if OrganizationType.objects.filter(name__iexact=name).exists():
                     return JsonResponse({"success": False, "error": f"Organization type '{name}' already exists"})
                 
-                # Handle parent type
                 parent_obj = None
                 if parent_id:
                     try:
@@ -611,7 +723,6 @@ def admin_master_data_add(request, model_name):
                     except OrganizationType.DoesNotExist:
                         return JsonResponse({"success": False, "error": "Parent organization type not found"})
                 
-                # Create the organization type
                 obj = OrganizationType.objects.create(
                     name=name,
                     parent_type=parent_obj,
@@ -663,7 +774,7 @@ def admin_proposal_detail(request, proposal_id):
     speakers = SpeakerProfile.objects.filter(proposal=proposal)
     expenses = ExpenseDetail.objects.filter(proposal=proposal)
     approval_steps = ApprovalStep.objects.filter(proposal=proposal).order_by('step_order')
-    budget_total = expenses.aggregate(total=Sum('amount'))['total'] or 0
+    budget_total = expenses.aggregate(total=Sum('total'))['total'] or 0
 
     context = {
         "proposal": proposal,
@@ -687,7 +798,6 @@ def master_data_dashboard(request):
     from transcript.models import AcademicYear
     from django.contrib.auth.models import User
     
-    # Calculate statistics
     stats = {
         'organizations': Organization.objects.count(),
         'org_types': OrganizationType.objects.count(),
@@ -695,7 +805,6 @@ def master_data_dashboard(request):
         'active_users': User.objects.filter(is_active=True).count(),
     }
     
-    # Recent activities (placeholder - you can implement actual activity tracking)
     recent_activities = [
         {
             'description': 'System initialized',
@@ -878,16 +987,13 @@ def admin_pso_po_management(request):
     import json
     from .models import Program, ProgramOutcome, ProgramSpecificOutcome
     
-    # Get all organization types and their organizations (same as admin_master_data)
     org_types = OrganizationType.objects.filter(is_active=True).order_by('name')
     orgs_by_type = {}
     orgs_by_type_json = {}
 
     for org_type in org_types:
-        # Include both active and inactive organizations for comprehensive management
         qs = Organization.objects.filter(org_type=org_type).order_by('name')
         orgs_by_type[org_type.name] = qs
-        # For JS: only include active organizations for parent dropdown
         active_orgs = qs.filter(is_active=True)
         orgs_by_type_json[org_type.name.lower()] = [{'id': o.id, 'name': o.name} for o in active_orgs]
     
@@ -925,12 +1031,10 @@ def save_approval_flow(request, org_id):
     steps = data.get('steps', [])
     require_first = data.get('require_faculty_incharge_first', False)
     org = Organization.objects.get(id=org_id)
-    # Remove old steps
     ApprovalFlowTemplate.objects.filter(organization=org).delete()
-    # Add new steps
     for idx, step in enumerate(steps, 1):
         if not step.get('role_required'):
-            continue  # skip empty roles
+            continue
         ApprovalFlowTemplate.objects.create(
             organization=org,
             step_order=idx,
@@ -974,15 +1078,13 @@ def search_users(request):
             | Q(email__icontains=q)
         )
 
-    if role or org_id or org_type_id:
-        filters = {}
-        if role:
-            filters["role_assignments__role__name__iexact"] = role
-        if org_id:
-            filters["role_assignments__organization_id"] = org_id
-        elif org_type_id:
-            filters["role_assignments__organization__org_type_id"] = org_type_id
-        users = users.filter(**filters)
+    # --- Filter by role ---
+    if role:
+        users = users.filter(role_assignments__role__iexact=role)
+
+    # --- Filter by organization/department ---
+    if org_id:
+        users = users.filter(role_assignments__organization_id=org_id)
 
     users = users.distinct()[:10]
     data = [
@@ -1083,10 +1185,8 @@ def get_pso_po_data(request, org_type, org_id):
     try:
         from .models import Program, ProgramOutcome, ProgramSpecificOutcome
         
-        # Get organization
         org = Organization.objects.get(id=org_id)
         
-        # Get program for this organization (if exists)
         programs = Program.objects.filter(organization=org)
         
         pos = []
@@ -1123,16 +1223,13 @@ def add_outcome(request, outcome_type):
         if not org_id or not description:
             return JsonResponse({'success': False, 'error': 'Missing required fields'})
         
-        # Get or create organization
         org = Organization.objects.get(id=org_id)
         
-        # Get or create program for this organization
         program, created = Program.objects.get_or_create(
             organization=org,
             defaults={'name': f"{org.name} Program"}
         )
         
-        # Add outcome based on type
         if outcome_type == 'po':
             ProgramOutcome.objects.create(program=program, description=description)
         elif outcome_type == 'pso':
@@ -1170,3 +1267,6 @@ def delete_outcome(request, outcome_type, outcome_id):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
+def admin_reports_view(request):
+    # Your code here
+    pass

@@ -68,11 +68,12 @@ h1.mgmt-title {
 
 .dataTables_wrapper .dt-toolbar {
   display: flex;
-  justify-content: flex-start;  /* All elements aligned left */
+  justify-content: space-between;  /* Spread elements across */
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
   margin: 1rem 0;
+  padding: 10px 0;
 }
 
 /* --- Responsive action row for buttons + search --- */
@@ -83,11 +84,35 @@ h1.mgmt-title {
   flex-wrap: wrap;
   margin-bottom: 20px;
 }
+
+.dt-toolbar .dataTables_length {
+  order: 1;
+}
+
+.dt-toolbar .dt-buttons {
+  order: 2;
+  flex: 1;
+  justify-content: center;
+}
+
 .dt-toolbar .dataTables_filter {
+  order: 3;
   margin-left: auto;
 }
+
 .dt-toolbar .dataTables_filter input[type="search"] {
   max-width: 220px;
+}
+
+/* DataTables info and pagination */
+.dataTables_info {
+  color: #154d8b;
+  font-weight: 500;
+  margin-top: 15px;
+}
+
+.dataTables_paginate {
+  margin-top: 15px;
 }
 
 /* Entries Dropdown */
@@ -111,19 +136,44 @@ h1.mgmt-title {
 .dt-buttons {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
-.dt-button {
+
+.dt-button, .btn {
   background: #2274cb;
-  color: white;
+  color: white !important;
   border: none;
   padding: 8px 14px;
   border-radius: 8px;
   font-weight: 500;
   font-size: 0.9rem;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
 }
-.dt-button:hover {
-  background: #154d8b;
+
+.dt-button:hover, .btn:hover {
+  background: #154d8b !important;
+  color: white !important;
 }
+
+/* Specific button colors */
+.btn-secondary { background: #6c757d !important; }
+.btn-secondary:hover { background: #5a6268 !important; }
+
+.btn-info { background: #0dcaf0 !important; }
+.btn-info:hover { background: #0bb5d8 !important; }
+
+.btn-success { background: #198754 !important; }
+.btn-success:hover { background: #157347 !important; }
+
+.btn-danger { background: #dc3545 !important; }
+.btn-danger:hover { background: #bb2d3b !important; }
+
+.btn-primary { background: #2274cb !important; }
+.btn-primary:hover { background: #154d8b !important; }
 
 /* Search bar */
 .dataTables_filter {
@@ -152,14 +202,30 @@ h1.mgmt-title {
   align-items: center;
   gap: 8px;
 }
+
 #roleFilterSelect {
-  min-width: 110px;
-  font-size: 0.95rem;
-  padding: 2px 8px;
+  min-width: 140px;
+  font-size: 0.9rem;
+  padding: 4px 8px;
+  border: 1px solid rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.9);
+  color: #154d8b;
+  border-radius: 4px;
 }
+
 #roleFilterBtn {
-  font-size: 0.95rem;
-  padding: 2px 12px;
+  font-size: 0.9rem;
+  padding: 4px 12px;
+  background: rgba(255,255,255,0.9);
+  color: #154d8b;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#roleFilterBtn:hover {
+  background: #fff;
+  color: #2274cb;
 }
 
 @media (max-width: 850px) {
@@ -178,6 +244,32 @@ h1.mgmt-title {
     gap: 6px;
     align-items: flex-start;
   }
+}
+
+/* ───────────────────────────────────────────── */
+/* ✅ Role Badges Styling                        */
+/* ───────────────────────────────────────────── */
+
+.role-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  background: #e3f2fd;
+  color: #1565c0;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin: 1px;
+}
+
+.role-badge.role-none {
+  background: #f5f5f5;
+  color: #757575;
+}
+
+.role-context {
+  font-size: 0.75rem;
+  color: #666;
+  font-weight: normal;
 }
 
 /* ───────────────────────────────────────────── */
