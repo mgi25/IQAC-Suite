@@ -35,3 +35,6 @@ Thumbs.db
 sqlite_backup.json
 clean_backup.json
 full_data.json
+# Data files
+*.json
+emt.txt
