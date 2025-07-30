@@ -4,6 +4,7 @@
   // Configuration
   // ———————————————————————————————————————————————
   const CSRF_TOKEN = window.CSRF_TOKEN || '';
+  let REQUIRE_FACULTY_FIRST = window.REQUIRE_FACULTY_FIRST || false;
 
   // ———————————————————————————————————————————————
   // Utility: fetch wrapper with CSRF
@@ -408,6 +409,11 @@ window.loadApprovalFlow = async function() {
       approvalSteps = [];
       renderApprovalSteps();
     }
+    if (typeof data.require_faculty_incharge_first !== 'undefined') {
+      window.REQUIRE_FACULTY_FIRST = data.require_faculty_incharge_first;
+      const toggle = document.getElementById('facultyFirstToggle');
+      if (toggle) toggle.checked = data.require_faculty_incharge_first;
+    }
   } catch (e) {
     stepsDiv.innerHTML = '<div class="error-msg">Failed to load steps.</div>';
   }
@@ -583,12 +589,14 @@ window.removeStep = function(idx) {
     role_required: s.role,
     user_id: s.user ? s.user.id : null
   }));
+  const requireFic = document.getElementById('facultyFirstToggle');
+  const requireFlag = requireFic ? requireFic.checked : false;
 
   fetch(`/core-admin/approval-flow/${orgId}/save/`, {
     method: "POST",
     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
     credentials: 'same-origin',
-    body: JSON.stringify({ steps: payloadSteps })
+    body: JSON.stringify({ steps: payloadSteps, require_faculty_incharge_first: requireFlag })
   })
   .then(r => r.json())
   .then(data => {
@@ -666,7 +674,12 @@ window.loadCurrentFlow = async function() {
     if (data.steps.length === 0) {
       container.innerHTML = '<li>No approval flow defined.</li>';
     } else {
-      container.innerHTML = data.steps.map(s => `<li>${s.step_order}. ${s.role_required} – ${s.user_name || 'Unassigned'}</li>`).join('');
+      container.innerHTML = data.steps.map(s => `<li>${s.step_order}. ${s.role_display || s.role_required} – ${s.user_name || 'Unassigned'}</li>`).join('');
+      if (typeof data.require_faculty_incharge_first !== 'undefined') {
+        const toggle = document.getElementById('facultyFirstToggle');
+        if (toggle) toggle.checked = data.require_faculty_incharge_first;
+        window.REQUIRE_FACULTY_FIRST = data.require_faculty_incharge_first;
+      }
     }
   }
 };
@@ -691,6 +704,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeSelect) {
       typeSelect.addEventListener('change', loadRoles);
     }
+    const ficToggle = document.getElementById('facultyFirstToggle');
+    if (ficToggle) ficToggle.checked = REQUIRE_FACULTY_FIRST;
   }
 });
 
