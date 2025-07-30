@@ -4,7 +4,7 @@ from django.urls import reverse_lazy
 from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
     EventExpectedOutcomes, TentativeFlow, SpeakerProfile,
-    ExpenseDetail, EventReport, EventReportAttachment
+    ExpenseDetail, EventReport, EventReportAttachment, CDLSupport
 )
 from core.models import Organization, OrganizationType
 
@@ -215,3 +215,29 @@ class EventReportAttachmentForm(forms.ModelForm):
     class Meta:
         model = EventReportAttachment
         fields = ['file', 'caption']
+
+
+class CDLSupportForm(forms.ModelForm):
+    support_options = forms.MultipleChoiceField(
+        choices=[
+            ("media", "Media Support"),
+            ("poster", "Poster Support"),
+            ("certificates", "Certificates"),
+        ],
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+    )
+
+    class Meta:
+        model = CDLSupport
+        fields = ["needs_support", "blog_content", "poster_link", "support_options"]
+        widgets = {
+            "blog_content": forms.Textarea(attrs={"rows": 6}),
+        }
+
+    def clean_blog_content(self):
+        text = self.cleaned_data.get("blog_content", "").strip()
+        if text:
+            if len(text.split()) > 150:
+                raise forms.ValidationError("Blog content must be 150 words or fewer.")
+        return text

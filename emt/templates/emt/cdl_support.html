@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}CDL Support{% endblock %}
+
+{% block head_extra %}
+  <link rel="stylesheet" href="{% static 'emt/css/styles.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="header">
+    <h1>CDL Support for "{{ proposal.event_title }}"</h1>
+    <p>Request assistance from the Content Development Lab</p>
+  </div>
+
+  <div class="page-content">
+    <form method="post">
+      {% csrf_token %}
+      <div class="section">
+        <div class="input-group">
+          {{ form.needs_support.label_tag }} {{ form.needs_support }}
+        </div>
+        <div class="input-group">
+          {{ form.blog_content.label_tag }}
+          {{ form.blog_content }}
+          <small class="help-text">Provide up to 150 words.</small>
+        </div>
+        <div class="input-group">
+          {{ form.poster_link.label_tag }} {{ form.poster_link }}
+        </div>
+        <div class="input-group">
+          {{ form.support_options.label_tag }}
+          {{ form.support_options }}
+        </div>
+      </div>
+      <div class="input-group">
+        <button type="submit" class="btn">Submit</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    window.PROPOSAL_ID = "{{ proposal.id|default:'' }}";
+    window.AUTOSAVE_URL = "{% url 'emt:autosave_proposal' %}";
+    window.AUTOSAVE_CSRF = "{{ csrf_token }}";
+  </script>
+  <script src="{% static 'emt/js/autosave_draft.js' %}"></script>
+{% endblock %}

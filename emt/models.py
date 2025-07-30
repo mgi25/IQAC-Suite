@@ -191,6 +191,32 @@ class MediaRequest(models.Model):
     def __str__(self):
         return f"{self.get_media_type_display()} request by {self.user.username}"
 
+
+# ────────────────────────────────────────────────────────────────
+#  CDL SUPPORT REQUEST
+# ────────────────────────────────────────────────────────────────
+class CDLSupport(models.Model):
+    """Optional support request from CDL while submitting a proposal."""
+
+    SUPPORT_CHOICES = [
+        ("media", "Media Support"),
+        ("poster", "Poster Support"),
+        ("certificates", "Certificates"),
+    ]
+
+    proposal = models.OneToOneField(
+        EventProposal,
+        on_delete=models.CASCADE,
+        related_name="cdl_support",
+    )
+    needs_support = models.BooleanField(default=False)
+    blog_content = models.TextField(blank=True)
+    poster_link = models.URLField(blank=True)
+    support_options = models.JSONField(default=list, blank=True)
+
+    def __str__(self):
+        return f"CDL Support for {self.proposal.event_title}"
+
 # ────────────────────────────────────────────────────────────────
 #  EVENT REPORT
 # ────────────────────────────────────────────────────────────────

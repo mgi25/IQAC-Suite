@@ -10,12 +10,12 @@ from django.db.models import Q
 from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
     EventExpectedOutcomes, TentativeFlow,
-    ExpenseDetail, SpeakerProfile,EventReport, EventReportAttachment
+    ExpenseDetail, SpeakerProfile,EventReport, EventReportAttachment, CDLSupport
 )
 from .forms import (
     EventProposalForm, NeedAnalysisForm, ExpectedOutcomesForm,
     ObjectivesForm, TentativeFlowForm, SpeakerProfileForm,
-    ExpenseDetailForm,EventReportForm, EventReportAttachmentForm
+    ExpenseDetailForm,EventReportForm, EventReportAttachmentForm, CDLSupportForm
 )
 from django.forms import modelformset_factory
 from core.models import (
@@ -357,22 +357,46 @@ def submit_expense_details(request, proposal_id):
             for obj in formset.deleted_objects:
                 obj.delete()
 
-            # ✅ Now mark as submitted
-            proposal.status = "submitted"
-            proposal.save()
-
-            # ✅ Create approvals
-            from emt.utils import build_approval_chain
-            build_approval_chain(proposal)
-
-            messages.success(request, "Your event proposal has been submitted for approval.")
-            return redirect("dashboard")
+            return redirect("emt:submit_cdl_support", proposal_id=proposal.id)
     else:
         formset = ExpenseFS(queryset=ExpenseDetail.objects.filter(
             proposal=proposal))
 
     return render(request, "emt/expense_details.html",
                   {"proposal": proposal, "formset": formset})
+
+
+# ──────────────────────────────
+# PROPOSAL STEP 8: CDL Support
+# ──────────────────────────────
+@login_required
+def submit_cdl_support(request, proposal_id):
+    proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
+    instance = getattr(proposal, "cdl_support", None)
+
+    if request.method == "POST":
+        form = CDLSupportForm(request.POST, instance=instance)
+        if form.is_valid():
+            support = form.save(commit=False)
+            support.proposal = proposal
+            support.support_options = form.cleaned_data.get("support_options", [])
+            support.save()
+
+            proposal.status = "submitted"
+            proposal.save()
+
+            from emt.utils import build_approval_chain
+            build_approval_chain(proposal)
+
+            messages.success(request, "Your event proposal has been submitted for approval.")
+            return redirect("dashboard")
+    else:
+        initial = {}
+        if instance:
+            initial["support_options"] = instance.support_options
+        form = CDLSupportForm(instance=instance, initial=initial)
+
+    return render(request, "emt/cdl_support.html", {"form": form, "proposal": proposal})
 
 
 
