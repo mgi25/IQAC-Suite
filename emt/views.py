@@ -556,6 +556,26 @@ def api_faculty(request):
 
 
 @login_required
+def api_outcomes(request, org_id):
+    """Return Program Outcomes and Program Specific Outcomes for an organization."""
+    from core.models import Program, ProgramOutcome, ProgramSpecificOutcome, Organization
+    try:
+        org = Organization.objects.get(id=org_id)
+    except Organization.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Organization not found"}, status=404)
+
+    programs = Program.objects.filter(organization=org)
+    pos = []
+    psos = []
+    if programs.exists():
+        program = programs.first()
+        pos = list(ProgramOutcome.objects.filter(program=program).values("id", "description"))
+        psos = list(ProgramSpecificOutcome.objects.filter(program=program).values("id", "description"))
+
+    return JsonResponse({"success": True, "pos": pos, "psos": psos})
+
+
+@login_required
 def my_approvals(request):
     pending_steps = ApprovalStep.objects.filter(
         assigned_to=request.user,
