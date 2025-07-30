@@ -41,7 +41,7 @@
       <tr>
         <td>{{ a.user.get_full_name|default:a.user.username }}</td>
         <td>{{ a.user.email }}</td>
-        <td>{{ visibility|default:True|yesno:'Enabled,Disabled' }}</td>
+        <td>{{ visibility|default_if_none:True|yesno:'Enabled,Disabled' }}</td>
         <td class="actions">
           <form method="post" action="{% url 'toggle_user_visibility' a.user.id role.id %}" style="display:inline-block;">
             {% csrf_token %}
