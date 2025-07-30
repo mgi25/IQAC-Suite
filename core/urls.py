@@ -86,7 +86,7 @@ urlpatterns = [
     path('core-admin/proposal/<int:proposal_id>/detail/', views.admin_proposal_detail, name='admin_proposal_detail'),
 
     # Report View Management (Admin)
-    path('reports/', emt_views.admin_reports_view, name='admin_reports'),
+    path('reports/', views.admin_reports_view, name='admin_reports'),
 
     # Approval Flow Setup UI
     path('core-admin/approval-flow/', views.admin_approval_flow, name='admin_approval_flow'),

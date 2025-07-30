@@ -11,6 +11,7 @@ from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 import json
+import logging
 from .forms import RoleAssignmentForm
 from .models import (
     Profile,
@@ -28,6 +29,8 @@ from emt.models import (
 )
 from django.views.decorators.http import require_GET, require_POST
 from .models import ApprovalFlowTemplate, ApprovalFlowConfig
+from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 # ─────────────────────────────────────────────────────────────
 #  Helpers
 # ─────────────────────────────────────────────────────────────
@@ -1263,3 +1266,7 @@ def delete_outcome(request, outcome_type, outcome_id):
         return JsonResponse({'success': False, 'error': 'Outcome not found'})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+def admin_reports_view(request):
+    # Your code here
+    pass

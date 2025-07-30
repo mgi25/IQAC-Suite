@@ -23,6 +23,7 @@
                         </div>
                     </div>
                     <div class="card-body">
+                        {% if organizations and organizations.0 %}
                         <!-- Add New Role Form -->
                         <div class="card mt-4 mb-4" style="max-width: 600px; margin: 0 auto;">
                             <div class="card-body">
@@ -45,6 +46,11 @@
                                 </form>
                             </div>
                         </div>
+                        {% else %}
+                        <div class="alert alert-warning text-center" style="max-width: 600px; margin: 0 auto;">
+                            <i class="fas fa-exclamation-triangle"></i> No organizations found for this type. Please add an organization first.
+                        </div>
+                        {% endif %}
                         
                         <hr>
                         
@@ -79,7 +85,6 @@
                                                     {% if role.is_active %}Deactivate{% else %}Activate{% endif %}
                                                 </button>
                                             </form>
-                                            <button type="button" class="btn btn-sm btn-primary" onclick="editRole('{{ role.id }}', '{{ role.name|escapejs }}', '{{ role.description|escapejs }}')">Edit</button>
                                             <form method="post" action="{% url 'delete_org_role' role.id %}" class="d-inline" onsubmit="return confirm('Delete this role?');">
                                                 {% csrf_token %}
                                                 <button type="submit" class="btn btn-sm btn-danger">Delete</button>
