@@ -68,6 +68,14 @@ urlpatterns = [
     path('core-admin/approval-flow/', views.admin_approval_flow, name='admin_approval_flow'),
     path('core-admin/approval-flow/<int:org_id>/', views.admin_approval_flow_manage, name='admin_approval_flow_manage'),
 
+    # Approval dashboard & visibility controls
+    path('core-admin/approval/', views.admin_approval_dashboard, name='admin_approval_dashboard'),
+    path('core-admin/approval-box-visibility/', views.approval_box_visibility_orgs, name='approval_box_visibility_orgs'),
+    path('core-admin/approval-box-visibility/<int:org_id>/', views.approval_box_visibility_roles, name='approval_box_roles'),
+    path('core-admin/approval-box-visibility/<int:org_id>/role/<int:role_id>/users/', views.approval_box_visibility_users, name='approval_box_users'),
+    path('core-admin/approval-box-visibility/role/<int:role_id>/toggle/', views.toggle_role_visibility, name='toggle_role_visibility'),
+    path('core-admin/approval-box-visibility/user/<int:user_id>/<int:role_id>/toggle/', views.toggle_user_visibility, name='toggle_user_visibility'),
+
     # Academic Year Select/Add (AJAX)
     path('core-admin/set-academic-year/', views.set_academic_year, name='set_academic_year'),
     path('core-admin/add-academic-year/', views.add_academic_year, name='add_academic_year'),

@@ -21,6 +21,8 @@ from .models import (
     OrganizationType,
     Report,
     OrganizationRole,
+    RoleEventApprovalVisibility,
+    UserEventApprovalVisibility,
 )
 from emt.models import (
     EventProposal, EventNeedAnalysis, EventObjectives, EventExpectedOutcomes, TentativeFlow,
@@ -747,6 +749,87 @@ def admin_approval_flow_manage(request, org_id):
         "existing_steps": steps,
     }
     return render(request, "core/admin_approval_flow_manage.html", context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def admin_approval_dashboard(request):
+    """Intermediate page for approval related settings."""
+    return render(request, "core/admin_approval_dashboard.html")
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def approval_box_visibility_orgs(request):
+    """List organizations for visibility management."""
+    org_types = OrganizationType.objects.filter(is_active=True).order_by("name")
+    orgs_by_type = {
+        ot.name: Organization.objects.filter(org_type=ot, is_active=True).order_by("name")
+        for ot in org_types
+    }
+    context = {"org_types": org_types, "orgs_by_type": orgs_by_type}
+    return render(request, "core/approval_box_orgs.html", context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def approval_box_visibility_roles(request, org_id):
+    organization = get_object_or_404(Organization, id=org_id)
+    roles = OrganizationRole.objects.filter(organization=organization, is_active=True).order_by("name")
+    vis_map = {
+        v.role_id: v.can_view
+        for v in RoleEventApprovalVisibility.objects.filter(role__organization=organization)
+    }
+    context = {
+        "organization": organization,
+        "roles": roles,
+        "role_visibility": vis_map,
+    }
+    return render(request, "core/approval_box_roles.html", context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_POST
+def toggle_role_visibility(request, role_id):
+    role = get_object_or_404(OrganizationRole, id=role_id)
+    vis, _ = RoleEventApprovalVisibility.objects.get_or_create(role=role, defaults={"can_view": True})
+    vis.can_view = not vis.can_view
+    vis.save()
+    return redirect("approval_box_roles", org_id=role.organization_id)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def approval_box_visibility_users(request, org_id, role_id):
+    organization = get_object_or_404(Organization, id=org_id)
+    role = get_object_or_404(OrganizationRole, id=role_id, organization=organization)
+    q = request.GET.get("q", "").strip()
+    assignments = RoleAssignment.objects.filter(role=role, organization=organization).select_related("user")
+    if q:
+        assignments = assignments.filter(
+            Q(user__first_name__icontains=q)
+            | Q(user__last_name__icontains=q)
+            | Q(user__email__icontains=q)
+        )
+    user_map = {
+        v.user_id: v.can_view
+        for v in UserEventApprovalVisibility.objects.filter(role=role)
+    }
+    context = {
+        "organization": organization,
+        "role": role,
+        "assignments": assignments,
+        "user_visibility": user_map,
+        "q": q,
+    }
+    return render(request, "core/approval_box_users.html", context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_POST
+def toggle_user_visibility(request, user_id, role_id):
+    role = get_object_or_404(OrganizationRole, id=role_id)
+    user = get_object_or_404(User, id=user_id)
+    vis, _ = UserEventApprovalVisibility.objects.get_or_create(user=user, role=role, defaults={"can_view": True})
+    vis.can_view = not vis.can_view
+    vis.save()
+    return redirect("approval_box_users", org_id=role.organization_id, role_id=role.id)
 
 
 @login_required

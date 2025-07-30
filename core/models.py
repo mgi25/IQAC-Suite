@@ -187,3 +187,36 @@ class ApprovalFlowTemplate(models.Model):
     class Meta:
         unique_together = ('organization', 'step_order')
         ordering = ['organization', 'step_order']
+
+
+class RoleEventApprovalVisibility(models.Model):
+    """Visibility preference for the dashboard approvals box by role."""
+    role = models.OneToOneField(
+        OrganizationRole,
+        on_delete=models.CASCADE,
+        related_name="approval_visibility",
+    )
+    can_view = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.role} – {'Visible' if self.can_view else 'Hidden'}"
+
+
+class UserEventApprovalVisibility(models.Model):
+    """Per-user override for the approvals dashboard box."""
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="approval_box_overrides",
+    )
+    role = models.ForeignKey(OrganizationRole, on_delete=models.CASCADE)
+    can_view = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ("user", "role")
+
+    def __str__(self):
+        return (
+            f"{self.user.username} – {self.role} – {'Visible' if self.can_view else 'Hidden'}"
+        )
+
