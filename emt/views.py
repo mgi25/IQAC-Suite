@@ -67,8 +67,6 @@ from operator import attrgetter
 # ──────────────────────────────
 # Configure Gemini API key from environment variable
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-def cdl_dashboard(request):
-    return render(request, 'emt/cdl_dashboard.html')
 
 @login_required
 def submit_request_view(request):
