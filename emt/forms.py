@@ -202,7 +202,7 @@ class EventReportForm(forms.ModelForm):
             'outcomes': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 3}),
             'impact_on_stakeholders': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 3}),
             'innovations_best_practices': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 3}),
-            'pos_pso_mapping': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 2}),
+            'pos_pso_mapping': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 2, 'placeholder': 'Click to select POs/PSOs'}),
             'needs_grad_attr_mapping': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 2}),
             'contemporary_requirements': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 2}),
             'sdg_value_systems_mapping': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 2}),
