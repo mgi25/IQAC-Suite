@@ -88,12 +88,12 @@ def submit_request_view(request):
         messages.success(request, 'Your media request has been submitted.')
         return redirect('cdl_dashboard')
 
-    return render(request, 'cdl/cdl_submit_request.html')
+    return render(request, 'emt/cdl_submit_request.html')
 
 @login_required
 def my_requests_view(request):
     requests = MediaRequest.objects.filter(user=request.user).order_by('-created_at')
-    return render(request, 'cdl/cdl_my_requests.html', {'requests': requests})
+    return render(request, 'emt/cdl_my_requests.html', {'requests': requests})
 
 # ──────────────────────────────
 # REPORT GENERATION
