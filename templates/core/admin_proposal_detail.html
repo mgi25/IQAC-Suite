@@ -170,7 +170,7 @@
         <ul>
           {% for hist in approval_steps %}
             <li>
-              <span class="history-role">{{ hist.role_required|capfirst }}</span>
+              <span class="history-role">{{ hist.get_role_required_display }}</span>
               <span class="history-person">
                 {% if hist.assigned_to %}{{ hist.assigned_to.get_full_name }}{% else %}—{% endif %}
               </span>

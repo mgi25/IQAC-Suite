@@ -187,3 +187,16 @@ class ApprovalFlowTemplate(models.Model):
     class Meta:
         unique_together = ('organization', 'step_order')
         ordering = ['organization', 'step_order']
+
+
+class ApprovalFlowConfig(models.Model):
+    """Configuration flags for a department's approval flow."""
+    organization = models.OneToOneField(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="approval_flow_config",
+    )
+    require_faculty_incharge_first = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Config for {self.organization.name}"
