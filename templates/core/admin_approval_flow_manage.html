@@ -32,12 +32,6 @@
   </div>
 
   <div id="currentFlow" class="current-flow">
-    <div class="form-check mb-2">
-      <label class="form-check-label">
-        <input type="checkbox" class="form-check-input" id="facultyFirstToggle" {% if require_faculty_incharge_first %}checked{% endif %}>
-        Enable Faculty In-Charge First Approval
-      </label>
-    </div>
     {% if existing_steps %}
       <ol id="currentFlowList" class="flow-list">
         {% for step in existing_steps %}
@@ -60,6 +54,12 @@
       <button class="modal-close" onclick="closeModal('approvalFlowEditorModal')">&times;</button>
     </div>
     <div class="modal-body">
+      <div class="form-check mb-3">
+        <label class="form-check-label">
+          <input type="checkbox" class="form-check-input" id="facultyFirstToggle" {% if require_faculty_incharge_first %}checked{% endif %}>
+          Enable Faculty In-Charge First Approval
+        </label>
+      </div>
 
       <div class="edit-layout">
         <!-- Step Edit Pane -->
