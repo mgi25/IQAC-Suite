@@ -4,7 +4,8 @@ document.addEventListener('DOMContentLoaded', function(){
   });
 
   const posField = document.getElementById('id_pos_pso_mapping');
-  if(posField){
+  const modal = document.getElementById('outcomeModal');
+  if(posField && modal && modal.dataset.url){
     posField.addEventListener('click', openOutcomeModal);
     posField.readOnly = true;
     posField.style.cursor = 'pointer';
@@ -15,6 +16,10 @@ function openOutcomeModal(){
   const modal = document.getElementById('outcomeModal');
   const container = document.getElementById('outcomeOptions');
   const url = modal.dataset.url;
+  if(!url){
+    alert('No organization set for this proposal.');
+    return;
+  }
   modal.classList.add('show');
   container.textContent = 'Loading...';
   fetch(url)
