@@ -74,16 +74,37 @@
   </section>
 </div>
 
-<div id="outcomeModal" class="outcome-modal" data-url="{% url 'emt:api_outcomes' proposal.organization.id %}">
-  <div class="modal-content">
-    <h3>Select Outcomes</h3>
-    <div id="outcomeOptions">Loading...</div>
-    <div class="modal-actions">
-      <button type="button" id="outcomeCancel" class="btn-cancel">Cancel</button>
-      <button type="button" id="outcomeSave" class="btn-save">Add</button>
+{% if proposal.organization %}
+  {% comment %}
+    When the proposal is associated with an organization, allow the outcomes
+    modal to load Program Outcomes/Program Specific Outcomes via AJAX.
+  {% endcomment %}
+  <div id="outcomeModal" class="outcome-modal"
+       data-url="{% url 'emt:api_outcomes' proposal.organization.id %}">
+    <div class="modal-content">
+      <h3>Select Outcomes</h3>
+      <div id="outcomeOptions">Loading...</div>
+      <div class="modal-actions">
+        <button type="button" id="outcomeCancel" class="btn-cancel">Cancel</button>
+        <button type="button" id="outcomeSave" class="btn-save">Add</button>
+      </div>
     </div>
   </div>
-</div>
+{% else %}
+  {# If no organization is set for the proposal, keep the modal in the DOM but
+     do not provide an API URL. The JS will detect this and skip showing the
+     modal. #}
+  <div id="outcomeModal" class="outcome-modal" data-url="">
+    <div class="modal-content">
+      <h3>Select Outcomes</h3>
+      <div id="outcomeOptions">No organization selected.</div>
+      <div class="modal-actions">
+        <button type="button" id="outcomeCancel" class="btn-cancel">Cancel</button>
+        <button type="button" id="outcomeSave" class="btn-save">Add</button>
+      </div>
+    </div>
+  </div>
+{% endif %}
 
 {% endblock %}
 
