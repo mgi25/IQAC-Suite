@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpResponseForbidden, JsonResponse, HttpResponseRedirect
 from django.contrib.auth.models import User
 from django.contrib import messages
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Count
 from django.forms import inlineformset_factory
 from django import forms
 from django.urls import reverse
@@ -163,20 +163,17 @@ def proposal_status(request, pk):
 # ─────────────────────────────────────────────────────────────
 def admin_dashboard(request):
     if not request.user.is_superuser:
-        return redirect('user_dashboard')
-    stats = {
-        "students": Profile.objects.filter(
-            role="student", user__is_active=True
-        ).count(),
-        "faculties": Profile.objects.filter(
-            role="faculty", user__is_active=True
-        ).count(),
-        "hods": Profile.objects.filter(
-            role="hod", user__is_active=True
-        ).count(),
-        "centers": Organization.objects.count(),
-    }
-    return render(request, "core/admin_dashboard.html", {"stats": stats})
+        return redirect("user_dashboard")
+
+    org_stats = (
+        RoleAssignment.objects
+        .filter(user__is_active=True, organization__isnull=False)
+        .values("organization__org_type__name")
+        .annotate(user_count=Count("user", distinct=True))
+        .order_by("-user_count")
+    )
+
+    return render(request, "core/admin_dashboard.html", {"org_stats": org_stats})
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_user_panel(request):

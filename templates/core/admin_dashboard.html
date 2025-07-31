@@ -17,27 +17,15 @@
       Welcome, <b>{{ user.get_full_name|default:user.username }}</b>!
     </div>
     <div class="admin-dashboard-stats-row">
-      <div class="admin-dashboard-stat">
-        <div class="stat-icon stat-student"></div>
-        <div class="stat-count">{{ stats.students }}</div>
-        <div class="stat-label">Students</div>
-      </div>
-      <div class="admin-dashboard-stat">
-        <div class="stat-icon stat-faculty"></div>
-        <div class="stat-count">{{ stats.faculties }}</div>
-        <div class="stat-label">Faculties</div>
-      </div>
-      <div class="admin-dashboard-stat">
-        <div class="stat-icon stat-hod"></div>
-        <div class="stat-count">{{ stats.hods }}</div>
-        <div class="stat-label">HODs</div>
-      </div>
+      {% for stat in org_stats %}
       <div class="admin-dashboard-stat">
         <div class="stat-icon stat-center"></div>
-        <div class="stat-count">{{ stats.centers }}</div>
-        <div class="stat-label">Centers</div>
+        <div class="stat-count">{{ stat.user_count }}</div>
+        <div class="stat-label">{{ stat.organization__org_type__name }}</div>
       </div>
-      <!-- Add more role stats if you want, or keep it at just these 4 -->
+      {% empty %}
+      <p>No organization data.</p>
+      {% endfor %}
     </div>
     <div class="admin-dashboard-navcards">
       <a class="admin-navcard" href="{% url 'admin_user_panel' %}">
