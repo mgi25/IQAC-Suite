@@ -224,6 +224,7 @@
   padding: 1.15rem 1rem;
   border: 1.5px solid #e3eaf2;
   flex: 1;
+  max-height: 400px;
   overflow-y: auto;
 }
 

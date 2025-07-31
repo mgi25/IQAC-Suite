@@ -1,5 +1,7 @@
 from django.utils import timezone
 from django.utils.timesince import timesince
+from django.db.models import Q
+from datetime import timedelta
 from emt.models import EventProposal
 
 
@@ -8,10 +10,15 @@ def notifications(request):
     if not request.user.is_authenticated:
         return {}
 
+    two_days_ago = timezone.now() - timedelta(days=2)
     proposals = (
         EventProposal.objects
         .filter(submitted_by=request.user)
-        .order_by('-updated_at')[:5]
+        .filter(
+            ~Q(status=EventProposal.Status.FINALIZED) |
+            Q(updated_at__gte=two_days_ago)
+        )
+        .order_by('-updated_at')[:10]
     )
 
     notif_list = []
