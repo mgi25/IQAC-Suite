@@ -319,6 +319,20 @@
   color: #1e40af;
   text-decoration: underline;
 }
+.notif-edit-btn {
+  display: inline-block;
+  margin-top: 8px;
+  margin-right: 10px;
+  font-size: 0.96rem;
+  color: #d97706;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.18s;
+}
+.notif-edit-btn:hover {
+  color: #b45309;
+  text-decoration: underline;
+}
 
 .notif-empty {
   text-align: center;

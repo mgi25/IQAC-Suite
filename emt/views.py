@@ -786,6 +786,7 @@ def suite_dashboard(request):
             status='finalized',
             updated_at__lt=now() - timedelta(days=2)
         )
+        .prefetch_related('approval_steps')
         .order_by('-updated_at')
     )
 

@@ -75,6 +75,16 @@ class EventProposal(models.Model):
     def __str__(self):
         return self.event_title or f"Proposal #{self.id}"
 
+    @property
+    def return_comment(self):
+        """Return the comment from the latest rejected approval step, if any."""
+        step = (
+            self.approval_steps.filter(status=ApprovalStep.Status.REJECTED)
+            .order_by("-step_order")
+            .first()
+        )
+        return getattr(step, "comment", "")
+
 # ────────────────────────────────────────────────────────────────
 #  One-to-one / related tables
 # ────────────────────────────────────────────────────────────────

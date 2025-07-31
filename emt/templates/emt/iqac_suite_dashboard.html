@@ -171,7 +171,10 @@
                 </span>
               </div>
               <!-- END CHART -->
-               <a href="{% url 'emt:proposal_status_detail' proposal.id %}" class="notif-view-btn">View More Details →</a>
+              {% if proposal.status == 'rejected' %}
+                <a href="{% url 'emt:submit_proposal_with_pk' proposal.id %}" class="notif-edit-btn">Edit Proposal →</a>
+              {% endif %}
+              <a href="{% url 'emt:proposal_status_detail' proposal.id %}" class="notif-view-btn">View More Details →</a>
             </li>
             {% endfor %}
           </ul>
