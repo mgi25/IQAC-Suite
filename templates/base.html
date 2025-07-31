@@ -3,301 +3,434 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>{% block title %}CHRIST University - Character Strength Transcript{% endblock %}</title>
+  <title>{% block title %}CHRIST University - Central Command Center{% endblock %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/x-icon" href="{% static 'core/img/favicon.ico' %}">
   
   <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   
   <!-- Styles -->
   <link rel="stylesheet" href="{% static 'core/css/base.css' %}">
+  <link rel="stylesheet" href="{% static 'core/css/command-center.css' %}">
   
   {% block head_extra %}{% endblock %}
 </head>
-<body>
-  <!-- HEADER -->
-  <div class="header-container">
-    <!-- Layer 1: Top Utility Bar with User Controls -->
-    <div class="header-layer-1">
-      <div class="announcement-text">
-        IQAC Suite & Transcript Automater
+<body class="command-center-layout">
+  
+  <!-- ZONE 1: TOP UTILITY BAR -->
+  <div class="top-utility-bar">
+    <div class="utility-left">
+      <div class="app-logo">
+        <img src="{% static 'core/img/campus-logo.png' %}" alt="CHRIST University" class="logo-img">
+        <span class="app-name">IQAC Command Center</span>
       </div>
-      <div class="user-controls">
-        <!-- Dashboard Icon -->
-        <a href="/core-admin/dashboard/" class="dashboard-btn" aria-label="Dashboard">
-          <i class="fa-solid fa-chart-line"></i>
-        </a>
-        
-        <!-- Notification Bell -->
-        <button id="notifBtn" class="notif-btn" aria-label="Notifications">
-          <i class="fa-solid fa-bell"></i>
-          {% if notifications %}<span class="notif-badge"></span>{% endif %}
+    </div>
+    
+    <div class="utility-center">
+      <div class="universal-search">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" id="globalSearch" placeholder="Search students, reports, proposals..." class="search-input" autocomplete="off">
+        <div class="search-shortcut">Ctrl+K</div>
+        <div class="search-results" id="searchResults"></div>
+      </div>
+    </div>
+    
+    <div class="utility-right">
+      <!-- Notification Bell -->
+      <div class="notification-section">
+        <button class="utility-btn notification-btn" id="notificationBtn" aria-label="Notifications">
+          <i class="fas fa-bell"></i>
+          {% if notifications and notifications|length > 0 %}
+          <span class="notification-badge" id="notificationBadge">{{ notifications|length }}</span>
+          {% endif %}
         </button>
-        
-        <!-- Profile Dropdown -->
-        <div class="profile-dropdown">
-          <button id="profileBtn" class="profile-btn" aria-label="Profile">
-            <i class="fa-solid fa-user"></i>
-          </button>
-          <div id="profileMenu" class="profile-dropdown-menu">
-            <div class="dropdown-item" style="border-bottom: 1px solid var(--gray-200); font-weight: 600; color: var(--christ-blue-primary);">
-              <i class="fa-solid fa-user"></i>
-              {{ request.user.get_full_name|default:request.user.username }}
+        <div class="notification-dropdown" id="notificationDropdown">
+          <div class="notification-header">
+            <h3>Notifications</h3>
+            {% if notifications and notifications|length > 0 %}
+            <button class="mark-all-read" id="markAllRead">Mark all read</button>
+            {% endif %}
+          </div>
+          <div class="notification-list" id="notificationList">
+            {% if notifications and notifications|length > 0 %}
+              {% for notification in notifications %}
+              <div class="notification-item {% if not notification.is_read %}unread{% endif %}">
+                <div class="notification-icon">
+                  <i class="fas fa-{{ notification.icon|default:'bell' }}"></i>
+                </div>
+                <div class="notification-content">
+                  <div class="notification-title">{{ notification.title }}</div>
+                  <div class="notification-text">{{ notification.message }}</div>
+                  <div class="notification-time">{{ notification.created_at|timesince }} ago</div>
+                </div>
+              </div>
+              {% endfor %}
+            {% else %}
+            <div class="notification-item">
+              <div class="notification-content" style="text-align: center; color: #6b7280; padding: 2rem;">
+                <div class="notification-title">No notifications</div>
+                <div class="notification-text">You're all caught up!</div>
+              </div>
             </div>
-            <a href="{% url 'logout' %}" class="dropdown-item">
-              <i class="fa-solid fa-sign-out-alt"></i>
-              Logout
+            {% endif %}
+          </div>
+          {% if notifications and notifications|length > 0 %}
+          <div class="notification-footer">
+            <a href="/core-admin/notifications/" class="view-all-link">View all notifications</a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      
+      <!-- Profile Dropdown -->
+      <div class="profile-section">
+        <button class="profile-btn" aria-label="Profile">
+          <div class="profile-avatar">
+            {{ request.user.get_full_name|default:request.user.username|slice:":1"|upper }}
+          </div>
+          <span class="profile-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+          <i class="fas fa-chevron-down"></i>
+        </button>
+        <div class="profile-dropdown">
+          <div class="dropdown-header">
+            <div class="user-info">
+              <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+              <small>{{ request.session.role|default:"User" }}</small>
+            </div>
+          </div>
+          <div class="dropdown-divider"></div>
+          <a href="#" class="dropdown-item">
+            <i class="fas fa-user"></i> Profile Settings
+          </a>
+          <a href="{% url 'logout' %}" class="dropdown-item">
+            <i class="fas fa-sign-out-alt"></i> Logout
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ZONE 2: LEFT CONTROL PANEL -->
+  <div class="left-control-panel">
+    <nav class="control-navigation">
+      
+      <!-- Dashboard - Always Visible -->
+      <div class="nav-item">
+        <a href="{% url 'admin_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
+          <i class="fas fa-chart-pie nav-icon"></i>
+          <span class="nav-text">Dashboard</span>
+        </a>
+      </div>
+
+      <!-- IQAC Suite - Expandable -->
+      <div class="nav-section {% if 'suite' in request.resolver_match.url_name or '/suite/' in request.path or request.resolver_match.namespace == 'emt' %}expanded{% endif %}">
+        <div class="nav-section-header">
+          <i class="fas fa-clipboard-list nav-icon"></i>
+          <span class="nav-text">IQAC Suite</span>
+          <i class="fas fa-chevron-right expand-icon {% if 'suite' in request.resolver_match.url_name or '/suite/' in request.path or request.resolver_match.namespace == 'emt' %}rotated{% endif %}"></i>
+        </div>
+        <div class="nav-submenu {% if 'suite' in request.resolver_match.url_name or '/suite/' in request.path or request.resolver_match.namespace == 'emt' %}open{% endif %}">
+          <a href="/suite/submit/" class="nav-sublink {% if request.resolver_match.url_name == 'submit_proposal' %}active{% endif %}">
+            <i class="fas fa-edit"></i> Event Proposal
+          </a>
+          <a href="/suite/pending-reports/" class="nav-sublink {% if request.resolver_match.url_name == 'pending_reports' %}active{% endif %}">
+            <i class="fas fa-chart-bar"></i> Report Generation
+          </a>
+          <a href="/suite/generated-reports/" class="nav-sublink {% if request.resolver_match.url_name == 'generated_reports' %}active{% endif %}">
+            <i class="fas fa-eye"></i> View Reports
+          </a>
+        </div>
+      </div>
+
+      <!-- Graduate Transcript - Standalone -->
+      <div class="nav-item">
+        <a href="/transcript/" class="nav-link {% if request.resolver_match.namespace == 'transcript' or 'transcript' in request.resolver_match.url_name or '/transcript/' in request.path %}active{% endif %}">
+          <i class="fas fa-graduation-cap nav-icon"></i>
+          <span class="nav-text">Graduate Transcript</span>
+        </a>
+      </div>
+
+      <!-- CDL - Expandable -->
+      <div class="nav-section {% if 'cdl' in request.resolver_match.url_name or '/cdl/' in request.path %}expanded{% endif %}">
+        <div class="nav-section-header">
+          <i class="fas fa-photo-video nav-icon"></i>
+          <span class="nav-text">CDL</span>
+          <i class="fas fa-chevron-right expand-icon {% if 'cdl' in request.resolver_match.url_name or '/cdl/' in request.path %}rotated{% endif %}"></i>
+        </div>
+        <div class="nav-submenu {% if 'cdl' in request.resolver_match.url_name or '/cdl/' in request.path %}open{% endif %}">
+          <a href="/cdl/" class="nav-sublink {% if request.resolver_match.url_name == 'cdl_dashboard' %}active{% endif %}">
+            <i class="fas fa-clock"></i> Pre-Event
+          </a>
+          <a href="/cdl/" class="nav-sublink">
+            <i class="fas fa-check-circle"></i> Post-Event
+          </a>
+        </div>
+      </div>
+
+      <!-- User Management - Expandable (Admin Only) -->
+      {% if user.is_superuser or request.session.role == 'admin' %}
+      <div class="nav-section {% if 'users' in request.path or 'user-roles' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' %}expanded{% endif %}">
+        <div class="nav-section-header">
+          <i class="fas fa-users nav-icon"></i>
+          <span class="nav-text">User Management</span>
+          <i class="fas fa-chevron-right expand-icon {% if 'users' in request.path or 'user-roles' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' %}rotated{% endif %}"></i>
+        </div>
+        <div class="nav-submenu {% if 'users' in request.path or 'user-roles' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' %}open{% endif %}">
+          <a href="/core-admin/users/" class="nav-sublink {% if request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_user_panel' %}active{% endif %}">
+            <i class="fas fa-user"></i> Manage Users
+          </a>
+          <a href="/core-admin/user-roles/" class="nav-sublink {% if request.resolver_match.url_name == 'admin_role_management' %}active{% endif %}">
+            <i class="fas fa-tags"></i> Add Roles
+          </a>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Event Proposals - Standalone -->
+      <div class="nav-item">
+        <a href="/core-admin/event-proposals/" class="nav-link {% if request.resolver_match.url_name == 'admin_event_proposals' %}active{% endif %}">
+          <i class="fas fa-list nav-icon"></i>
+          <span class="nav-text">Event Proposals</span>
+        </a>
+      </div>
+
+      <!-- Reports - Standalone -->
+      <div class="nav-item">
+        <a href="/core-admin/reports/" class="nav-link {% if request.resolver_match.url_name == 'admin_reports' or request.resolver_match.url_name == 'admin_reports_view' %}active{% endif %}">
+          <i class="fas fa-file-alt nav-icon"></i>
+          <span class="nav-text">Reports</span>
+        </a>
+      </div>
+
+      <!-- Settings - Expandable (Admin Only) -->
+      {% if user.is_superuser or request.session.role == 'admin' %}
+      <div class="nav-section {% if 'settings' in request.path or 'approval' in request.path or 'pso-po' in request.path or 'master-data' in request.path or request.resolver_match.url_name == 'admin_settings' or request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'approval_box_visibility_orgs' or request.resolver_match.url_name == 'admin_pso_po_management' %}expanded{% endif %}">
+        <div class="nav-section-header">
+          <i class="fas fa-cog nav-icon"></i>
+          <span class="nav-text">Settings</span>
+          <i class="fas fa-chevron-right expand-icon {% if 'settings' in request.path or 'approval' in request.path or 'pso-po' in request.path or 'master-data' in request.path or request.resolver_match.url_name == 'admin_settings' or request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'approval_box_visibility_orgs' or request.resolver_match.url_name == 'admin_pso_po_management' %}rotated{% endif %}"></i>
+        </div>
+        <div class="nav-submenu {% if 'settings' in request.path or 'approval' in request.path or 'pso-po' in request.path or 'master-data' in request.path or request.resolver_match.url_name == 'admin_settings' or request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'approval_box_visibility_orgs' or request.resolver_match.url_name == 'admin_pso_po_management' %}open{% endif %}">
+          <a href="{% url 'admin_master_data' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'master_data_dashboard' %}active{% endif %}">
+            <i class="fas fa-user-cog"></i> User Settings
+          </a>
+          <div class="nav-subsection">
+            <div class="nav-subsection-header">
+              <i class="fas fa-check"></i> Approval Settings
+            </div>
+            <a href="{% url 'admin_approval_flow' %}" class="nav-sublink nested {% if request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'admin_approval_flow_manage' %}active{% endif %}">
+              <i class="fas fa-route"></i> Approval Flow Management
+            </a>
+            <a href="{% url 'approval_box_visibility_orgs' %}" class="nav-sublink nested {% if request.resolver_match.url_name == 'approval_box_visibility_orgs' or 'approval_box' in request.resolver_match.url_name %}active{% endif %}">
+              <i class="fas fa-eye"></i> Event Approval Box Visibility
             </a>
           </div>
+          <a href="{% url 'admin_pso_po_management' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_pso_po_management' %}active{% endif %}">
+            <i class="fas fa-clipboard-list"></i> PSO & PO Management
+          </a>
         </div>
       </div>
-    </div>
-    
-    <!-- Layer 2: Main Navigation & Logo -->
-    <div class="header-layer-2">
-      <div class="brand-section">
-        <img src="{% static 'core/img/campus-logo.png' %}" alt="CHRIST University Logo" class="navbar-logo">
-        <div class="brand-text">
-          <div class="brand-title">CHRIST (Deemed to be University)</div>
-          <div class="brand-subtitle">Pune Lavasa - The Hub of Analytics</div>
-        </div>
+      {% endif %}
+
+    </nav>
+  </div>
+
+  <!-- ZONE 3: MAIN VIEWSCREEN -->
+  <div class="main-viewscreen">
+    <div class="viewscreen-content">
+      {% block content %}
+      <div class="welcome-screen">
+        <h1>Welcome to IQAC Command Center</h1>
+        <p>Select an option from the left panel to begin.</p>
       </div>
-      
-      <!-- Desktop Navigation - Hidden on Dashboard -->
-      {% if request.resolver_match.url_name != 'dashboard' %}
-      <nav class="main-nav">
-        <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-          <i class="fa-solid fa-home"></i> Home
-        </a>
-        {% comment %} Show all navigation items with proper URLs {% endcomment %}
-        <a href="/suite/suite/" class="nav-link {% if 'suite' in request.resolver_match.url_name or 'iqac' in request.resolver_match.url_name %}active{% endif %}">
-          <i class="fa-solid fa-clipboard-list"></i> IQAC
-        </a>
-        <a href="/transcript/" class="nav-link {% if 'transcript' in request.resolver_match.url_name %}active{% endif %}">
-          <i class="fa-solid fa-graduation-cap"></i> Transcript
-        </a>
-        <a href="{% url 'cdl_dashboard' %}" class="nav-link {% if 'cdl' in request.resolver_match.url_name %}active{% endif %}">
-          <i class="fa-solid fa-photo-video"></i> CDL
-        </a>
-      </nav>
-      {% endif %}
-      
-      <!-- Mobile Menu Button - Hidden on Dashboard -->
-      {% if request.resolver_match.url_name != 'dashboard' %}
-      <button id="mobileMenuBtn" class="mobile-menu-btn">
-        <i class="fa-solid fa-bars"></i>
-      </button>
-      {% endif %}
-    </div>
-    
-    <!-- Mobile Navigation -->
-    <div id="mobileNav" class="mobile-nav">
-      <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-        <i class="fa-solid fa-home"></i> Home
-      </a>
-      {% comment %} Role-based navigation with proper URLs {% endcomment %}
-      {% if request.session.role != 'student' or user.is_superuser %}
-      <a href="/suite/suite/" class="nav-link {% if 'suite' in request.resolver_match.url_name or 'iqac' in request.resolver_match.url_name %}active{% endif %}">
-        <i class="fa-solid fa-clipboard-list"></i> IQAC
-      </a>
-      {% endif %}
-      {% if request.session.role == 'student' or user.is_superuser %}
-      <a href="/transcript/" class="nav-link {% if 'transcript' in request.resolver_match.url_name %}active{% endif %}">
-        <i class="fa-solid fa-graduation-cap"></i> Transcript
-      </a>
-      {% endif %}
-      {% if request.session.role in 'cdl_admin,super_admin' or user.is_superuser %}
-      <a href="{% url 'cdl_dashboard' %}" class="nav-link {% if 'cdl' in request.resolver_match.url_name %}active{% endif %}">
-        <i class="fa-solid fa-photo-video"></i> CDL
-      </a>
-      {% endif %}
-    </div>
-    
-    <!-- Layer 3: Separator -->
-    <div class="header-layer-3"></div>
-    
-    <!-- Layer 4: Page Info/Breadcrumb -->
-    <div class="header-layer-4">
-      {% if request.resolver_match.url_name != 'dashboard' %}
-      <div class="page-info">
-        <i class="fa-solid fa-location-dot"></i>
-        <span>{% block page_title %}Dashboard{% endblock %}</span>
-      </div>
-      <div class="breadcrumb" style="margin-left: auto;">
-        {% block breadcrumb %}
-        <a href="{% url 'dashboard' %}">Home</a>
-        <i class="fa-solid fa-chevron-right" style="font-size: 0.75rem;"></i>
-        <span>{% block current_page %}Dashboard{% endblock %}</span>
-        {% endblock %}
-      </div>
-      {% endif %}
+      {% endblock %}
     </div>
   </div>
-  
-  <!-- NOTIFICATION POPUP -->
-  <div id="notifPopup" class="notif-popup">
-    <div class="notif-head">
-      <span>Notifications</span>
-      <button id="notifClose" aria-label="Close">&times;</button>
-    </div>
-    <div class="notif-body">
-      {% if notifications %}
-        {% for n in notifications %}
-          <article class="notif-item {{ n.type }}">
-            <i class="fa {% if n.type == 'info' %}fa-info-circle{% elif n.type == 'reminder' %}fa-bell{% else %}fa-exclamation-circle{% endif %}"></i>
-            <div>
-              <span>{{ n.msg }}</span>
-              <time>{{ n.time }}</time>
-            </div>
-          </article>
-        {% endfor %}
-      {% else %}
-        <p class="notif-empty">No notifications.</p>
-      {% endif %}
-    </div>
-  </div>
-  
-  <!-- PAGE CONTENT -->
-  <main>
-    <!-- Dashboard Content Block -->
-    {% block content %}
-    <div class="dashboard-wrapper">
-      <!-- Welcome Section -->
-      <section class="welcome-section">
-        <h2 class="welcome-subtitle">Welcome to</h2>
-        <h1 class="welcome-title">
-          IQAC Suite <span class="welcome-ampersand">&amp;</span> Transcript Automater
-        </h1>
-        <p class="welcome-message">
-          Hi, <strong>{{ request.user.get_full_name|default:request.user.username|upper }}</strong>! Pick an application to get started:
-        </p>
-      </section>
 
-      <!-- Application Cards -->
-      <section class="application-grid">
-        <!-- IQAC Suite Card -->
-        {% if request.session.role != 'student' or user.is_superuser %}
-        <a href="/suite/suite/" class="app-card app-card-blue">
-          <div class="app-icon">
-            <i class="fa-solid fa-file-lines"></i>
-          </div>
-          <h3 class="app-title">IQAC Suite</h3>
-          <p class="app-description">Submit event proposals, track approvals, and generate reports.</p>
-          <div class="app-launch">
-            <span>Launch</span>
-            <i class="fa-solid fa-arrow-right"></i>
-          </div>
-        </a>
-        {% endif %}
-
-        <!-- Graduate Transcript Card -->
-        {% if request.session.role == 'student' or user.is_superuser %}
-        <a href="/transcript/" class="app-card app-card-green">
-          <div class="app-icon">
-            <i class="fa-solid fa-graduation-cap"></i>
-          </div>
-          <h3 class="app-title">Graduate Transcript</h3>
-          <p class="app-description">Generate character strength transcript reports. For students.</p>
-          <div class="app-launch">
-            <span>Launch</span>
-            <i class="fa-solid fa-arrow-right"></i>
-          </div>
-        </a>
-        {% endif %}
-
-        <!-- CDL Card -->
-        {% if request.session.role in 'cdl_admin,super_admin' or user.is_superuser %}
-        <a href="{% url 'cdl_dashboard' %}" class="app-card app-card-orange">
-          <div class="app-icon">
-            <i class="fa-solid fa-camera"></i>
-          </div>
-          <h3 class="app-title">CDL</h3>
-          <p class="app-description">Request media content creation and approval. For marketing and communications.</p>
-          <div class="app-launch">
-            <span>Launch</span>
-            <i class="fa-solid fa-arrow-right"></i>
-          </div>
-        </a>
-        {% endif %}
-      </section>
-    </div>
-    {% endblock %}
-  </main>
-  
-  <!-- Scripts -->
+  <!-- JavaScript for interactions -->
   <script>
-    // DOM Content Loaded
     document.addEventListener('DOMContentLoaded', function() {
-      // Notification popup functionality
-      const notifBtn = document.getElementById('notifBtn');
-      const notifPopup = document.getElementById('notifPopup');
-      const notifClose = document.getElementById('notifClose');
-      
-      if (notifBtn && notifPopup) {
-        notifBtn.addEventListener('click', function(e) {
+      // Profile dropdown toggle
+      const profileBtn = document.querySelector('.profile-btn');
+      if (profileBtn) {
+        profileBtn.addEventListener('click', function(e) {
           e.stopPropagation();
-          notifPopup.style.display = notifPopup.style.display === 'block' ? 'none' : 'block';
-          // Close profile menu if open
-          const profileMenu = document.getElementById('profileMenu');
-          if (profileMenu) profileMenu.classList.remove('show');
+          document.querySelector('.profile-dropdown').classList.toggle('active');
         });
-        
-        if (notifClose) {
-          notifClose.addEventListener('click', function() {
-            notifPopup.style.display = 'none';
+      }
+
+      // Notification dropdown toggle
+      const notificationBtn = document.getElementById('notificationBtn');
+      const notificationDropdown = document.getElementById('notificationDropdown');
+      const markAllReadBtn = document.getElementById('markAllRead');
+
+      if (notificationBtn && notificationDropdown) {
+        notificationBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          notificationDropdown.classList.toggle('active');
+          const profileDropdown = document.querySelector('.profile-dropdown');
+          if (profileDropdown) {
+            profileDropdown.classList.remove('active');
+          }
+        });
+
+        if (markAllReadBtn) {
+          markAllReadBtn.addEventListener('click', function() {
+            const unreadItems = document.querySelectorAll('.notification-item.unread');
+            unreadItems.forEach(item => { item.classList.remove('unread'); });
+            const badge = document.getElementById('notificationBadge');
+            if (badge) { badge.style.display = 'none'; }
           });
         }
       }
-      
-      // Profile dropdown functionality
-      const profileBtn = document.getElementById('profileBtn');
-      const profileMenu = document.getElementById('profileMenu');
-      
-      if (profileBtn && profileMenu) {
-        profileBtn.addEventListener('click', function(e) {
-          e.stopPropagation();
-          profileMenu.classList.toggle('show');
-          // Close notification popup if open
-          if (notifPopup) notifPopup.style.display = 'none';
+
+      // Navigation section expand/collapse
+      const navHeaders = document.querySelectorAll('.nav-section-header');
+      navHeaders.forEach(header => {
+        header.addEventListener('click', function(e) {
+          const section = this.parentElement;
+          const submenu = section.querySelector('.nav-submenu');
+          const icon = this.querySelector('.expand-icon');
+          if (section.classList.contains('expanded')) {
+            section.classList.remove('expanded');
+            if (submenu) submenu.classList.remove('open');
+            if (icon) icon.classList.remove('rotated');
+          } else {
+            section.classList.add('expanded');
+            if (submenu) submenu.classList.add('open');
+            if (icon) icon.classList.add('rotated');
+          }
+        });
+      });
+
+      // Universal Search Functionality
+      const searchInput = document.getElementById('globalSearch');
+      const searchResults = document.getElementById('searchResults');
+      let searchTimeout;
+
+      if (searchInput) {
+        searchInput.addEventListener('input', function() {
+          const query = this.value.trim();
+          clearTimeout(searchTimeout);
+          if (query.length < 2) {
+            searchResults.classList.remove('show');
+            return;
+          }
+          searchResults.innerHTML = '<div class="search-loading">Searching...</div>';
+          searchResults.classList.add('show');
+          searchTimeout = setTimeout(() => { performSearch(query); }, 300);
+        });
+
+        document.addEventListener('click', function(e) {
+          if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+            searchResults.classList.remove('show');
+          }
+        });
+
+        searchInput.addEventListener('focus', function() {
+          if (this.value.trim().length >= 2 && searchResults.innerHTML.trim()) {
+            searchResults.classList.add('show');
+          }
         });
       }
-      
-      // Mobile menu functionality
-      const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-      const mobileNav = document.getElementById('mobileNav');
-      
-      if (mobileMenuBtn && mobileNav) {
-        mobileMenuBtn.addEventListener('click', function(e) {
-          e.stopPropagation();
-          mobileNav.classList.toggle('show');
-        });
+
+      function performSearch(query) {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || getCookie('csrftoken');
+        fetch(`/core-admin/api/search/?q=${encodeURIComponent(query)}`, {
+          method: 'GET',
+          headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
+          credentials: 'same-origin'
+        })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              displaySearchResults(data.results.students || [], data.results.proposals || [], data.results.reports || [], data.results.users || [], query);
+            } else {
+              searchResults.innerHTML = `<div class="search-no-results">Search error: ${data.error || 'Unknown error'}</div>`;
+              searchResults.classList.add('show');
+            }
+          })
+          .catch(error => {
+            console.error('Search error:', error);
+            searchResults.innerHTML = `<div class="search-no-results">Search temporarily unavailable</div>`;
+            searchResults.classList.add('show');
+          });
       }
-      
-      // Close all dropdowns when clicking outside
-      document.addEventListener('click', function(e) {
-        // Close notification popup
-        if (notifPopup && !notifPopup.contains(e.target) && !notifBtn.contains(e.target)) {
-          notifPopup.style.display = 'none';
+
+      function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+          const cookies = document.cookie.split(';');
+          for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+              cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+              break;
+            }
+          }
         }
-        
-        // Close profile dropdown
-        if (profileMenu && !profileMenu.contains(e.target) && !profileBtn.contains(e.target)) {
-          profileMenu.classList.remove('show');
+        return cookieValue;
+      }
+
+      function displaySearchResults(students, proposals, reports, users, query) {
+        let html = '';
+        if (students.length === 0 && proposals.length === 0 && reports.length === 0 && users.length === 0) {
+          html = `<div class="search-no-results">No results found for "${query}"</div>`;
+        } else {
+          if (students.length > 0) {
+            html += '<div class="search-category">Students</div>';
+            students.forEach(student => {
+              html += `<a href="${student.url}" class="search-item"><div class="search-item-icon"><i class="fas fa-graduation-cap"></i></div><div class="search-item-content"><div class="search-item-title">${student.name}</div><div class="search-item-subtitle">Roll: ${student.roll_no} • ${student.course}</div></div></a>`;
+            });
+          }
+
+          if (proposals.length > 0) {
+            html += '<div class="search-category">Event Proposals</div>';
+            proposals.forEach(proposal => {
+              html += `<a href="${proposal.url}" class="search-item"><div class="search-item-icon"><i class="fas fa-clipboard-list"></i></div><div class="search-item-content"><div class="search-item-title">${proposal.title}</div><div class="search-item-subtitle">By ${proposal.faculty} • ${proposal.status} • ${proposal.date}</div></div></a>`;
+            });
+          }
+
+          if (reports.length > 0) {
+            html += '<div class="search-category">Reports</div>';
+            reports.forEach(report => {
+              html += `<a href="${report.url}" class="search-item"><div class="search-item-icon"><i class="fas fa-file-alt"></i></div><div class="search-item-content"><div class="search-item-title">${report.title}</div><div class="search-item-subtitle">${report.date} • ${report.type}</div></div></a>`;
+            });
+          }
+
+          if (users.length > 0) {
+            html += '<div class="search-category">Users</div>';
+            users.forEach(user => {
+              html += `<a href="${user.url}" class="search-item"><div class="search-item-icon"><i class="fas fa-user"></i></div><div class="search-item-content"><div class="search-item-title">${user.name}</div><div class="search-item-subtitle">${user.email} • ${user.role} • Last login: ${user.last_login}</div></div></a>`;
+            });
+          }
         }
-        
-        // Close mobile menu
-        if (mobileNav && !mobileNav.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
-          mobileNav.classList.remove('show');
+        searchResults.innerHTML = html;
+        searchResults.classList.add('show');
+      }
+
+      document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.key === 'k') {
+          e.preventDefault();
+          const searchInput = document.querySelector('#globalSearch');
+          if (searchInput) { searchInput.focus(); searchInput.select(); }
+        }
+        if (e.key === 'Escape') {
+          const searchResults = document.getElementById('searchResults');
+          if (searchResults) { searchResults.classList.remove('show'); }
         }
       });
+
+      document.addEventListener('click', function(e) {
+        const profileDropdown = document.querySelector('.profile-dropdown');
+        if (profileDropdown && !e.target.closest('.profile-section')) { profileDropdown.classList.remove('active'); }
+        const notificationDropdown = document.getElementById('notificationDropdown');
+        if (notificationDropdown && !e.target.closest('.notification-section')) { notificationDropdown.classList.remove('active'); }
+      });
     });
-    
-    // CSRF Token for forms
-    window.CSRF_TOKEN = '{{ csrf_token }}';
   </script>
-  
-  {% block scripts %}{% endblock %}
+
 </body>
 </html>
