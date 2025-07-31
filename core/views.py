@@ -164,19 +164,13 @@ def proposal_status(request, pk):
 def admin_dashboard(request):
     if not request.user.is_superuser:
         return redirect('user_dashboard')
-    proposals = EventProposal.objects.all().order_by("-created_at")
-    q = request.GET.get("q", "").strip()
-    status = request.GET.get("status", "").strip()
-    if q:
-        proposals = proposals.filter(
-            Q(event_title__icontains=q) |
-            Q(submitted_by__username__icontains=q) |
-            Q(organization__name__icontains=q) |
-            Q(organization__org_type__name__icontains=q)
-        )
-    if status:
-        proposals = proposals.filter(status=status)
-    return render(request, "core/admin_event_proposals.html", {"proposals": proposals})
+    stats = {
+        "students": Profile.objects.filter(role="student").count(),
+        "faculties": Profile.objects.filter(role="faculty").count(),
+        "hods": Profile.objects.filter(role="hod").count(),
+        "centers": Organization.objects.count(),
+    }
+    return render(request, "core/admin_dashboard.html", {"stats": stats})
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_user_panel(request):
