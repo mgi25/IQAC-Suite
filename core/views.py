@@ -165,9 +165,15 @@ def admin_dashboard(request):
     if not request.user.is_superuser:
         return redirect('user_dashboard')
     stats = {
-        "students": Profile.objects.filter(role="student").count(),
-        "faculties": Profile.objects.filter(role="faculty").count(),
-        "hods": Profile.objects.filter(role="hod").count(),
+        "students": Profile.objects.filter(
+            role="student", user__is_active=True
+        ).count(),
+        "faculties": Profile.objects.filter(
+            role="faculty", user__is_active=True
+        ).count(),
+        "hods": Profile.objects.filter(
+            role="hod", user__is_active=True
+        ).count(),
         "centers": Organization.objects.count(),
     }
     return render(request, "core/admin_dashboard.html", {"stats": stats})
