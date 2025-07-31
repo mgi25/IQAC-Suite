@@ -219,7 +219,8 @@ class EventReportAttachmentForm(forms.ModelForm):
         model = EventReportAttachment
         fields = ['file', 'caption']
         widgets = {
-            'file': forms.ClearableFileInput(attrs={'class': 'file-input', 'style': 'display:none;'}),
+            # Use plain FileInput to avoid Django's "Change" and "Clear" controls
+            'file': forms.FileInput(attrs={'class': 'file-input', 'style': 'display:none;'}),
             'caption': forms.TextInput(attrs={'style': 'display:none;'}),
         }
 

@@ -74,7 +74,14 @@ function initAttachments(){
     const upload = block.querySelector('.attach-upload');
     const fileInput = block.querySelector('.file-input');
     const removeBtn = block.querySelector('.attach-remove');
-    upload.addEventListener('click', () => fileInput.click());
+    upload.addEventListener('click', () => {
+      const img = upload.querySelector('img');
+      if(img){
+        openImageModal(img.src);
+      } else {
+        fileInput.click();
+      }
+    });
     fileInput.addEventListener('change', () => {
       if(fileInput.files && fileInput.files[0]){
         const url = URL.createObjectURL(fileInput.files[0]);
@@ -107,3 +114,20 @@ function initAttachments(){
     block.querySelector('.file-input').click();
   });
 }
+
+function openImageModal(src){
+  const modal = document.getElementById('imgModal');
+  const img = document.getElementById('imgModalImg');
+  if(!modal || !img) return;
+  img.src = src;
+  modal.classList.add('show');
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  const modal = document.getElementById('imgModal');
+  const closeBtn = modal ? modal.querySelector('.close-btn') : null;
+  if(closeBtn){
+    closeBtn.addEventListener('click', () => modal.classList.remove('show'));
+  }
+});
+
