@@ -22,13 +22,7 @@
         <tr><th>Target Audience</th><td>{{ proposal.target_audience }}</td></tr>
       </table>
     </div>
-    <nav class="stepper">
-      <ol>
-        <li class="active">Report Details</li>
-        <li>Attachments</li>
-        <li>Review &amp; Submit</li>
-      </ol>
-    </nav>
+    {# Stepper removed - single page layout #}
   </aside>
 
   <section class="form-wrapper">
@@ -69,8 +63,11 @@
           </div>
         </div>
 
-        <div class="save-btn">
-          <button type="submit">Save &amp; Generate</button>
+        <div class="section">
+          <h3 class="section-title">Review &amp; Submit</h3>
+          <div class="save-btn">
+            <button type="submit">Save &amp; Generate</button>
+          </div>
         </div>
       </form>
     </div>

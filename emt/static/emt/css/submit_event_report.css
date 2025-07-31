@@ -7,6 +7,10 @@
   --muted: #64748b;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background: var(--bg);
   font-family: 'Inter', 'Poppins', sans-serif;
@@ -76,43 +80,6 @@ body {
   border-bottom: none;
 }
 
-.stepper {
-  margin-top: 24px;
-}
-
-.stepper ol {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  border-left: 2px solid var(--border);
-}
-
-.stepper li {
-  position: relative;
-  padding: 12px 0 12px 24px;
-  color: var(--muted);
-  font-weight: 500;
-}
-
-.stepper li:before {
-  content: '';
-  position: absolute;
-  left: -9px;
-  top: 14px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--border);
-}
-
-.stepper li.active {
-  color: var(--primary);
-  font-weight: 600;
-}
-
-.stepper li.active:before {
-  background: var(--primary);
-}
 
 .form-card {
   background: var(--surface);
