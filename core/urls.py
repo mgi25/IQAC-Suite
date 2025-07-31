@@ -30,6 +30,7 @@ urlpatterns = [
     path('user-roles/', views.admin_role_management, name='admin_role_management'),
     path('user-roles/<int:organization_id>/', views.admin_role_management, name='admin_role_management_org'),
     path('user-roles/<int:organization_id>/add/', views.add_org_role, name='add_org_role'),
+    path('user-roles/add/', views.add_role, name='add_role'),
     path('user-roles/role/<int:role_id>/update/', views.update_org_role, name='update_org_role'),
     path('user-roles/role/<int:role_id>/toggle/', views.toggle_org_role, name='toggle_org_role'),
     path('user-roles/role/<int:role_id>/delete/', views.delete_org_role, name='delete_org_role'),

@@ -11,7 +11,7 @@
     <div class="info-card glass-card">
       <h2>EVENT INFORMATION</h2>
       <table>
-        <tr><th>Department</th><td>{{ proposal.department }}</td></tr>
+        <tr><th>Organization</th><td>{{ proposal.organization.name }}</td></tr>
         <tr><th>Title</th><td>{{ proposal.event_title }}</td></tr>
         <tr><th>Date & Time</th><td>{{ proposal.event_datetime|date:"d M Y, H:i" }}</td></tr>
         <tr><th>Venue</th><td>{{ proposal.venue }}</td></tr>

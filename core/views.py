@@ -297,6 +297,34 @@ def add_org_role(request, organization_id):
 
 @user_passes_test(lambda u: u.is_superuser)
 @require_POST
+def add_role(request):
+    """Add a role by organization or organization type (used by tests)."""
+    name = request.POST.get("name", "").strip()
+    org_id = request.POST.get("org_id")
+    org_type_id = request.POST.get("org_type_id")
+
+    if not name:
+        return HttpResponseRedirect(reverse("admin_role_management"))
+
+    if org_id:
+        orgs = Organization.objects.filter(id=org_id, is_active=True)
+        redirect_url = reverse("admin_role_management_org", args=[org_id])
+    elif org_type_id:
+        orgs = Organization.objects.filter(org_type_id=org_type_id, is_active=True)
+        redirect_url = reverse("admin_role_management") + f"?org_type_id={org_type_id}"
+    else:
+        orgs = []
+        redirect_url = reverse("admin_role_management")
+
+    for org in orgs:
+        if not OrganizationRole.objects.filter(organization=org, name__iexact=name).exists():
+            OrganizationRole.objects.create(organization=org, name=name, is_active=True)
+
+    return HttpResponseRedirect(redirect_url)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_POST
 def update_org_role(request, role_id):
     """Update this role for ALL organizations of the same type"""
     role = get_object_or_404(OrganizationRole, id=role_id)
@@ -1094,7 +1122,7 @@ def search_users(request):
 
     # --- Filter by role ---
     if role:
-        users = users.filter(role_assignments__role__iexact=role)
+        users = users.filter(role_assignments__role__name__iexact=role)
 
     # --- Filter by organization/department ---
     if org_id:

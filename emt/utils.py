@@ -93,7 +93,7 @@ def generate_report_with_ai(event_report):
     {event_report.summary}
 
     **2. Objectives & Outcomes:**
-    - **Stated Objectives:** {proposal.eventobjectives.content if hasattr(proposal, 'eventobjectives') else 'Not provided.'}
+    - **Stated Objectives:** {proposal.objectives.content if hasattr(proposal, 'objectives') else 'Not provided.'}
     - **Achieved Outcomes:** {event_report.outcomes}
 
     **3. Participation & Engagement:**

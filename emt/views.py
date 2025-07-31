@@ -67,8 +67,6 @@ from operator import attrgetter
 # ──────────────────────────────
 # Configure Gemini API key from environment variable
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-def cdl_dashboard(request):
-    return render(request, 'emt/cdl_dashboard.html')
 
 @login_required
 def submit_request_view(request):
@@ -90,12 +88,12 @@ def submit_request_view(request):
         messages.success(request, 'Your media request has been submitted.')
         return redirect('cdl_dashboard')
 
-    return render(request, 'cdl/cdl_submit_request.html')
+    return render(request, 'emt/cdl_submit_request.html')
 
 @login_required
 def my_requests_view(request):
     requests = MediaRequest.objects.filter(user=request.user).order_by('-created_at')
-    return render(request, 'cdl/cdl_my_requests.html', {'requests': requests})
+    return render(request, 'emt/cdl_my_requests.html', {'requests': requests})
 
 # ──────────────────────────────
 # REPORT GENERATION
@@ -435,7 +433,11 @@ def proposal_status_detail(request, proposal_id):
         statuses = ['draft', 'submitted', 'under_review', 'finalized']
 
     status_index = statuses.index(db_status) if db_status in statuses else 0
-    progress_percent = int((status_index + 1) * 100 / len(statuses))
+    # Progress should start at 0% for the initial status
+    if len(statuses) > 1:
+        progress_percent = int(status_index * 100 / (len(statuses) - 1))
+    else:
+        progress_percent = 100
     current_label = statuses[status_index].replace('_', ' ').capitalize()
 
     return render(request, 'emt/proposal_status_detail.html', {
@@ -552,6 +554,26 @@ def api_faculty(request):
 
 
 @login_required
+def api_outcomes(request, org_id):
+    """Return Program Outcomes and Program Specific Outcomes for an organization."""
+    from core.models import Program, ProgramOutcome, ProgramSpecificOutcome, Organization
+    try:
+        org = Organization.objects.get(id=org_id)
+    except Organization.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Organization not found"}, status=404)
+
+    programs = Program.objects.filter(organization=org)
+    pos = []
+    psos = []
+    if programs.exists():
+        program = programs.first()
+        pos = list(ProgramOutcome.objects.filter(program=program).values("id", "description"))
+        psos = list(ProgramSpecificOutcome.objects.filter(program=program).values("id", "description"))
+
+    return JsonResponse({"success": True, "pos": pos, "psos": psos})
+
+
+@login_required
 def my_approvals(request):
     pending_steps = ApprovalStep.objects.filter(
         assigned_to=request.user,
@@ -567,10 +589,11 @@ def review_approval_step(request, step_id):
     step = get_object_or_404(ApprovalStep, id=step_id, assigned_to=request.user)
     proposal = step.proposal
 
-    need_analysis = getattr(proposal, "eventneedanalysis", None)
-    objectives = getattr(proposal, "eventobjectives", None)
-    outcomes = getattr(proposal, "eventexpectedoutcomes", None)
-    flow = getattr(proposal, "tentativeflow", None)
+    # Fetch related proposal details using the proper `related_name`
+    need_analysis = getattr(proposal, "need_analysis", None)
+    objectives = getattr(proposal, "objectives", None)
+    outcomes = getattr(proposal, "expected_outcomes", None)
+    flow = getattr(proposal, "tentative_flow", None)
     speakers = SpeakerProfile.objects.filter(proposal=proposal)
     expenses = ExpenseDetail.objects.filter(proposal=proposal)
 
@@ -774,7 +797,10 @@ def suite_dashboard(request):
             p.statuses = ['draft', 'submitted', 'under_review', 'finalized']
 
         p.status_index = p.statuses.index(db_status) if db_status in p.statuses else 0
-        p.progress_percent = int((p.status_index + 1) * 100 / len(p.statuses))
+        if len(p.statuses) > 1:
+            p.progress_percent = int(p.status_index * 100 / (len(p.statuses) - 1))
+        else:
+            p.progress_percent = 100
         p.current_label = p.statuses[p.status_index].replace('_', ' ').capitalize()
 
     # Determine visibility of the "Event Approvals" card. Respect admin

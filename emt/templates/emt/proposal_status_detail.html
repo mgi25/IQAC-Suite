@@ -14,7 +14,7 @@
         {% if proposal.event_datetime %}
           <div><span class="label">Event Date:</span> {{ proposal.event_datetime|date:"M d, Y H:i" }}</div>
         {% endif %}
-        <div><span class="label">Department:</span> {{ proposal.department.name }}</div>
+        <div><span class="label">Organization:</span> {{ proposal.organization.name }}</div>
         {% if proposal.association %}
           <div><span class="label">Association:</span> {{ proposal.association.name }}</div>
         {% endif %}

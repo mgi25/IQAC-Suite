@@ -3,7 +3,10 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 
 from emt.models import ApprovalStep
-from core.models import OrganizationType, Organization, OrganizationRole, RoleAssignment
+from core.models import (
+    OrganizationType, Organization, OrganizationRole, RoleAssignment,
+    Program, ProgramOutcome, ProgramSpecificOutcome,
+)
 
 class FacultyAPITests(TestCase):
     def setUp(self):
@@ -62,3 +65,23 @@ class FacultyAPITests(TestCase):
         data = resp.json()
         ids = {item["id"] for item in data}
         self.assertIn(user4.id, ids)
+
+
+class OutcomesAPITests(TestCase):
+    def setUp(self):
+        self.ot = OrganizationType.objects.create(name="Dept")
+        self.org = Organization.objects.create(name="Science", org_type=self.ot)
+        program = Program.objects.create(name="Prog", organization=self.org)
+        self.po = ProgramOutcome.objects.create(program=program, description="PO1")
+        self.pso = ProgramSpecificOutcome.objects.create(program=program, description="PSO1")
+        self.user = User.objects.create(username="user")
+        self.client.force_login(self.user)
+
+    def test_api_outcomes_returns_outcomes(self):
+        resp = self.client.get(reverse("emt:api_outcomes", args=[self.org.id]))
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(len(data["pos"]), 1)
+        self.assertEqual(len(data["psos"]), 1)
+        self.assertEqual(data["pos"][0]["description"], self.po.description)
