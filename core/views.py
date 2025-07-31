@@ -162,7 +162,21 @@ def proposal_status(request, pk):
 #  Admin Dashboard and User Management
 # ─────────────────────────────────────────────────────────────
 def admin_dashboard(request):
-    return render(request, "core/admin_dashboard.html")
+    if not request.user.is_superuser:
+        return redirect('user_dashboard')
+    proposals = EventProposal.objects.all().order_by("-created_at")
+    q = request.GET.get("q", "").strip()
+    status = request.GET.get("status", "").strip()
+    if q:
+        proposals = proposals.filter(
+            Q(event_title__icontains=q) |
+            Q(submitted_by__username__icontains=q) |
+            Q(organization__name__icontains=q) |
+            Q(organization__org_type__name__icontains=q)
+        )
+    if status:
+        proposals = proposals.filter(status=status)
+    return render(request, "core/admin_event_proposals.html", {"proposals": proposals})
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_user_panel(request):
@@ -1270,3 +1284,37 @@ def delete_outcome(request, outcome_type, outcome_id):
 def admin_reports_view(request):
     # Your code here
     pass
+
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def api_auth_me(request):
+    user = request.user
+    # Example: determine role and user info
+    role = 'faculty' if user.is_staff else 'student'
+    initials = ''.join([x[0] for x in user.get_full_name().split()]) or user.username[:2].upper()
+    return JsonResponse({
+        'role': role,
+        'name': user.get_full_name(),
+        'subtitle': '',  # Add more info if needed
+        'initials': initials,
+    })
+
+@login_required
+def api_faculty_overview(request):
+    # Query your models for stats
+    stats = [
+        # Build from your models
+    ]
+    return JsonResponse(stats, safe=False)
+
+# Repeat for other endpoints...
+
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+
+@login_required
+def user_dashboard(request):
+    # Do NOT render the admin dashboard here!
+    return render(request, 'core/user_dashboard.html')
