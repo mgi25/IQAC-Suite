@@ -1,8 +1,12 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block head_extra %}
+  <link rel="stylesheet" href="{% static 'emt/css/submit_event_report.css' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+{% endblock %}
+
 {% block content %}
-<link rel="stylesheet" href="{% static 'emt/css/event_report_details.css' %}">
 
 <div class="event-report-layout">
 
