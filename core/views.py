@@ -1270,3 +1270,148 @@ def delete_outcome(request, outcome_type, outcome_id):
 def admin_reports_view(request):
     # Your code here
     pass
+# Add this to your core/views.py file
+
+from django.http import JsonResponse
+from django.db.models import Q
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.views.decorators.http import require_GET
+import json
+
+@login_required
+@require_GET
+def api_global_search(request):
+    """
+    Global search API endpoint for the Central Command Center
+    Searches across Students, Event Proposals, Reports, and Users
+    """
+    query = request.GET.get('q', '').strip()
+    
+    # Minimum query length check
+    if len(query) < 2:
+        return JsonResponse({
+            'success': True,
+            'results': {
+                'students': [],
+                'proposals': [],
+                'reports': [],
+                'users': []
+            }
+        })
+    
+    try:
+        results = {
+            'students': [],
+            'proposals': [],
+            'reports': [],
+            'users': []
+        }
+        
+        # Search Students (from transcript app if available)
+        try:
+            from transcript.models import Student
+            students = Student.objects.filter(
+                Q(name__icontains=query) |
+                Q(roll_no__icontains=query)
+            ).select_related('school', 'course')[:5]
+            
+            results['students'] = [{
+                'id': student.id,
+                'name': student.name,
+                'roll_no': student.roll_no,
+                'school': student.school.name if student.school else 'N/A',
+                'course': student.course.name if student.course else 'N/A',
+                'url': f'/transcript/{student.roll_no}/'
+            } for student in students]
+        except ImportError:
+            # If transcript app not available, search User model for students
+            student_users = User.objects.filter(
+                Q(first_name__icontains=query) |
+                Q(last_name__icontains=query) |
+                Q(username__icontains=query)
+            ).filter(
+                profile__isnull=False
+            )[:5]
+            
+            results['students'] = [{
+                'id': user.id,
+                'name': f"{user.first_name} {user.last_name}".strip() or user.username,
+                'roll_no': user.username,
+                'school': 'N/A',
+                'course': 'N/A',
+                'url': f'/core-admin/users/{user.id}/'
+            } for user in student_users]
+        
+        # Search Event Proposals (from emt app)
+        try:
+            from emt.models import EventProposal
+            proposals = EventProposal.objects.filter(
+                Q(title__icontains=query) |
+                Q(faculty_incharge__first_name__icontains=query) |
+                Q(faculty_incharge__last_name__icontains=query)
+            ).select_related('faculty_incharge').order_by('-created_at')[:5]
+            
+            results['proposals'] = [{
+                'id': proposal.id,
+                'title': proposal.title,
+                'faculty': proposal.faculty_incharge.get_full_name() if proposal.faculty_incharge else 'N/A',
+                'status': getattr(proposal, 'status', 'Unknown'),
+                'date': proposal.created_at.strftime('%Y-%m-%d') if hasattr(proposal, 'created_at') else 'N/A',
+                'url': f'/core-admin/event-proposals/{proposal.id}/'
+            } for proposal in proposals]
+        except (ImportError, AttributeError):
+            results['proposals'] = []
+        
+        # Search Reports (from core app)
+        try:
+            from core.models import Report
+            reports = Report.objects.filter(
+                Q(title__icontains=query)
+            ).order_by('-created_at')[:5]
+            
+            results['reports'] = [{
+                'id': report.id,
+                'title': report.title,
+                'type': getattr(report, 'report_type', 'Report'),
+                'date': report.created_at.strftime('%Y-%m-%d'),
+                'url': f'/core-admin/reports/{report.id}/'
+            } for report in reports]
+        except (ImportError, AttributeError):
+            results['reports'] = []
+        
+        # Search Users (for admin functionality)
+        if request.user.is_superuser or hasattr(request.user, 'profile'):
+            users = User.objects.filter(
+                Q(first_name__icontains=query) |
+                Q(last_name__icontains=query) |
+                Q(username__icontains=query) |
+                Q(email__icontains=query)
+            ).exclude(id=request.user.id)[:5]
+            
+            results['users'] = [{
+                'id': user.id,
+                'name': f"{user.first_name} {user.last_name}".strip() or user.username,
+                'email': user.email,
+                'role': getattr(user.profile, 'role', 'User') if hasattr(user, 'profile') else 'User',
+                'last_login': user.last_login.strftime('%Y-%m-%d') if user.last_login else 'Never',
+                'url': f'/core-admin/users/{user.id}/edit/'
+            } for user in users]
+        
+        return JsonResponse({
+            'success': True,
+            'results': results,
+            'query': query
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'results': {
+                'students': [],
+                'proposals': [],
+                'reports': [],
+                'users': []
+            }
+        }, status=500)
