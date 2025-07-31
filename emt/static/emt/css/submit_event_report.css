@@ -228,6 +228,11 @@ body {
   cursor: pointer;
 }
 
+/* Hide formset delete checkboxes */
+input[name$="-DELETE"] {
+  display: none;
+}
+
 .add-attachment-btn {
   margin-top: 12px;
   padding: 8px 16px;

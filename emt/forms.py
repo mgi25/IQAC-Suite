@@ -218,6 +218,10 @@ class EventReportAttachmentForm(forms.ModelForm):
     class Meta:
         model = EventReportAttachment
         fields = ['file', 'caption']
+        widgets = {
+            'file': forms.ClearableFileInput(attrs={'class': 'file-input', 'style': 'display:none;'}),
+            'caption': forms.TextInput(attrs={'style': 'display:none;'}),
+        }
 
 
 class CDLSupportForm(forms.ModelForm):

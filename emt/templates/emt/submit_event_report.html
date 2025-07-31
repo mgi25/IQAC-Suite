@@ -63,10 +63,10 @@
                     <span class="attach-remove" style="display:none;">&times;</span>
                   {% endif %}
                 </div>
-                {{ f.file.as_widget(attrs={'class':'file-input','style':'display:none;'}) }}
-                {{ f.caption.as_widget(attrs={'style':'display:none;'}) }}
+                {{ f.file }}
+                {{ f.caption }}
                 {% if f.instance.pk %}
-                  {{ f.DELETE.as_widget(attrs={'style':'display:none;'}) }}
+                  {{ f.DELETE }}
                 {% endif %}
               </div>
             {% endfor %}
@@ -80,8 +80,8 @@
                 <span class="attach-add">+</span>
                 <span class="attach-remove" style="display:none;">&times;</span>
               </div>
-              {{ formset.empty_form.file.as_widget(attrs={'class':'file-input','style':'display:none;'}) }}
-              {{ formset.empty_form.caption.as_widget(attrs={'style':'display:none;'}) }}
+              {{ formset.empty_form.file }}
+              {{ formset.empty_form.caption }}
             </div>
           </template>
         </div>
