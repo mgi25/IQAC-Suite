@@ -5,11 +5,14 @@ let timeoutId = null;
 const fields = Array.from(document.querySelectorAll('input[name], textarea[name], select[name]'));
 
 // Unique key for this page's local storage
-const pageKey = `proposal_draft_${window.location.pathname}_${proposalId || 'new'}`;
+const pageKey = `proposal_draft_${window.location.pathname}_new`;
 
 // Load any saved draft from localStorage
 try {
     const savedData = JSON.parse(localStorage.getItem(pageKey) || '{}');
+    if (savedData._proposal_id && !proposalId) {
+        proposalId = savedData._proposal_id;
+    }
     fields.forEach(f => {
         if (savedData.hasOwnProperty(f.name) && !f.value) {
             if (f.type === 'checkbox' || f.type === 'radio') {
@@ -42,6 +45,9 @@ function saveLocal() {
             }
         }
     });
+    if (proposalId) {
+        data._proposal_id = proposalId;
+    }
     localStorage.setItem(pageKey, JSON.stringify(data));
 }
 
@@ -74,7 +80,7 @@ function autosaveDraft() {
     .then(data => {
         if (data.success && data.proposal_id) {
             proposalId = data.proposal_id;
-            clearLocal(); // server saved, clear local draft
+            saveLocal(); // persist id with draft
         }
     })
     .catch(() => { /* Optionally show: "Draft Not Saved" */ });
