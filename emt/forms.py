@@ -64,6 +64,8 @@ class EventProposalForm(forms.ModelForm):
                 org_type = None
         elif self.instance and getattr(self.instance, "organization", None):
             org_type = self.instance.organization.org_type
+            # Pre-populate organization type when editing existing proposals
+            self.fields["organization_type"].initial = org_type
 
         if org_type:
             self.fields['organization'].queryset = Organization.objects.filter(org_type=org_type, is_active=True)

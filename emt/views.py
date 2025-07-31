@@ -150,9 +150,11 @@ def submit_proposal(request, pk=None):
         # Always get the selected academic year from session (ensured above)
         selected_academic_year = request.session.get('selected_academic_year')
         form = EventProposalForm(instance=proposal, selected_academic_year=selected_academic_year)
-        # Populate all faculty as available choices for JS search/select on GET
+        # Populate all faculty as available choices for JS search/select on GET.
+        # Include already assigned faculty so their selections remain visible.
+        fac_ids = list(proposal.faculty_incharges.all().values_list('id', flat=True)) if proposal else []
         form.fields['faculty_incharges'].queryset = User.objects.filter(
-            role_assignments__role__name=FACULTY_ROLE
+            Q(role_assignments__role__name=FACULTY_ROLE) | Q(id__in=fac_ids)
         ).distinct()
 
     # Utility to get the display name from ID

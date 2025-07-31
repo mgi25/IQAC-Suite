@@ -126,9 +126,6 @@
                 <span class="notif-age-pill">{{ proposal.updated_at|timesince }} ago</span>
               </div>
 
-              {% if proposal.status == 'rejected' and proposal.return_comment %}
-                <div class="notif-feedback"><b>Rejection Reason:</b> {{ proposal.return_comment }}</div>
-              {% endif %}
 
               <!-- MODERN PROGRESS CHART -->
               <div class="workflow-progress">
@@ -171,9 +168,6 @@
                 </span>
               </div>
               <!-- END CHART -->
-              {% if proposal.status == 'rejected' %}
-                <a href="{% url 'emt:submit_proposal_with_pk' proposal.id %}" class="notif-edit-btn">Edit Proposal →</a>
-              {% endif %}
               <a href="{% url 'emt:proposal_status_detail' proposal.id %}" class="notif-view-btn">View More Details →</a>
             </li>
             {% endfor %}
