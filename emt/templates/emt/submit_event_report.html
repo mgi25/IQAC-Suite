@@ -3,17 +3,15 @@
 
 {% block head_extra %}
   <link rel="stylesheet" href="{% static 'emt/css/submit_event_report.css' %}">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
 
-<div class="event-report-layout">
-
-  <!-- Side Info Card -->
-  <div class="event-report-side">
-    <div class="info-card glass-card tilt-card animate-scroll" data-tilt data-tilt-max="10" data-tilt-glare="true" data-tilt-max-glare="0.25">
-      <h2>EVENT INFORMATION</h2>
+<div class="report-layout">
+  <aside class="info-panel">
+    <div class="info-card">
+      <h2 class="panel-title">Event Info</h2>
       <table>
         <tr><th>Organization</th><td>{{ proposal.organization.name }}</td></tr>
         <tr><th>Title</th><td>{{ proposal.event_title }}</td></tr>
@@ -24,148 +22,75 @@
         <tr><th>Target Audience</th><td>{{ proposal.target_audience }}</td></tr>
       </table>
     </div>
-  </div>
+    <nav class="stepper">
+      <ol>
+        <li class="active">Report Details</li>
+        <li>Attachments</li>
+        <li>Review &amp; Submit</li>
+      </ol>
+    </nav>
+  </aside>
 
-  <!-- Main Content: Ultra Report Form -->
-  <div class="event-report-main">
-    <div class="ultra-header">
-      <h1 class="glow-text">Generate Event Report</h1>
-      <span class="meta">Fill the required fields, let AI help, and upload any supporting documents.</span>
-    </div>
+  <section class="form-wrapper">
+    <div class="form-card">
+      <h1 class="page-title">Generate Event Report</h1>
+      <p class="form-meta">Fill the required fields and attach supporting documents.</p>
+      <form method="post" enctype="multipart/form-data" class="event-report-form">
+        {% csrf_token %}
 
-    <form method="post" enctype="multipart/form-data" class="event-report-form glass-card animate-scroll">
-      {% csrf_token %}
-      <div class="section-glass animate-scroll">
-        <h3>Report Details</h3>
-        {{ form.non_field_errors }}
-        <div class="form-flex">
-          {% for field in form %}
-            <div class="form-field-block">
-              <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
-              {{ field }}
-              {% if field.help_text %}
-                <small style="color: #8399bb">{{ field.help_text }}</small>
-              {% endif %}
-              {{ field.errors }}
-            </div>
-          {% endfor %}
+        <div class="section">
+          <h3 class="section-title">Report Details</h3>
+          {{ form.non_field_errors }}
+          <div class="form-grid">
+            {% for field in form %}
+              <div class="form-group">
+                {{ field }}
+                <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+                {% if field.help_text %}<small class="help">{{ field.help_text }}</small>{% endif %}
+                {{ field.errors }}
+              </div>
+            {% endfor %}
+          </div>
         </div>
-      </div>
 
-      <div class="section-glass animate-scroll">
-        <h3>Upload Attachments</h3>
-        {{ formset.management_form }}
-        <div class="attachment-row">
-          {% for f in formset %}
-            <div class="attachment-block">
-              {{ f.file.label_tag }} {{ f.file }}
-              {{ f.caption.label_tag }} {{ f.caption }}
-              {% if f.instance.pk %}
-                <label>Delete:</label> {{ f.DELETE }}
-              {% endif %}
-            </div>
-          {% endfor %}
+        <div class="section">
+          <h3 class="section-title">Upload Attachments</h3>
+          {{ formset.management_form }}
+          <div class="attachment-row">
+            {% for f in formset %}
+              <div class="attachment-block">
+                {{ f.file.label_tag }} {{ f.file }}
+                {{ f.caption.label_tag }} {{ f.caption }}
+                {% if f.instance.pk %}
+                  <label>Delete:</label> {{ f.DELETE }}
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
         </div>
-      </div>
-    <div style="margin-top:24px; text-align:right;">
-      <button type="submit" class="btn-ultra btn-success-ultra">Save & Generate</button>
-    </div>
-    </form>
-  </div>
 
-<div id="outcomeModal" class="outcome-modal">
-  <div class="modal-content glass-card">
+        <div class="save-btn">
+          <button type="submit">Save &amp; Generate</button>
+        </div>
+      </form>
+    </div>
+  </section>
+</div>
+
+<div id="outcomeModal" class="outcome-modal" data-url="{% url 'emt:api_outcomes' proposal.organization.id %}">
+  <div class="modal-content">
     <h3>Select Outcomes</h3>
     <div id="outcomeOptions">Loading...</div>
-    <div style="margin-top:10px;text-align:right;">
-      <button type="button" id="outcomeCancel" class="btn-ultra btn-danger-ultra">Cancel</button>
-      <button type="button" id="outcomeSave" class="btn-ultra btn-success-ultra">Add</button>
+    <div class="modal-actions">
+      <button type="button" id="outcomeCancel" class="btn-cancel">Cancel</button>
+      <button type="button" id="outcomeSave" class="btn-save">Add</button>
     </div>
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.7.2/vanilla-tilt.min.js" integrity="sha512-jJr0vCLl8kgVFvQLFnmO02RHb0g9FeFW3Z+FawHOvY61vPZXoqBYwygJyI072QtdgQXl3k5iADGcd+9E5rN2Rg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-  const field = document.getElementById('id_pos_pso_mapping');
-  if(field){
-    field.addEventListener('click', openOutcomeModal);
-    field.style.cursor = 'pointer';
-    field.readOnly = true;
-  }
-
-  // 3D tilt on cards
-  if(window.VanillaTilt){
-    VanillaTilt.init(document.querySelectorAll('.tilt-card'), {
-      max: 10,
-      speed: 400,
-      glare: true,
-      'max-glare': 0.25
-    });
-  }
-
-  // Floating labels
-  document.querySelectorAll('.form-field-block').forEach(function(block){
-    var input = block.querySelector('input, textarea, select');
-    var label = block.querySelector('label');
-    if(input && label){
-      if(!input.placeholder) input.placeholder = ' ';
-      block.classList.add('floating-label');
-      var toggle = function(){
-        if(input.value) label.classList.add('active');
-        else label.classList.remove('active');
-      };
-      input.addEventListener('focus', function(){ label.classList.add('active'); });
-      input.addEventListener('blur', toggle);
-      toggle();
-    }
-  });
-
-  // Scroll animations
-  var observer = new IntersectionObserver(function(entries){
-    entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in-view'); }});
-  }, {threshold: 0.1});
-  document.querySelectorAll('.animate-scroll').forEach(function(el){ observer.observe(el); });
-});
-
-function openOutcomeModal(){
-  const modal = document.getElementById('outcomeModal');
-  const container = document.getElementById('outcomeOptions');
-  modal.classList.add('show');
-  container.textContent = 'Loading...';
-  fetch("{% url 'emt:api_outcomes' proposal.organization.id %}")
-    .then(r=>r.json())
-    .then(data=>{
-      if(data.success){
-        container.innerHTML='';
-        data.pos.forEach(po=>{ addOption(container,'PO: '+po.description); });
-        data.psos.forEach(pso=>{ addOption(container,'PSO: '+pso.description); });
-      } else { container.textContent='No data'; }
-    })
-    .catch(()=>{ container.textContent='Error loading'; });
-}
-
-function addOption(container,labelText){
-  const lbl=document.createElement('label');
-  const cb=document.createElement('input');
-  cb.type='checkbox';
-  cb.value=labelText;
-  lbl.appendChild(cb); lbl.appendChild(document.createTextNode(' '+labelText));
-  container.appendChild(lbl); container.appendChild(document.createElement('br'));
-}
-
-document.getElementById('outcomeCancel').onclick=function(){
-  document.getElementById('outcomeModal').classList.remove('show');
-};
-document.getElementById('outcomeSave').onclick=function(){
-  const modal=document.getElementById('outcomeModal');
-  const selected=Array.from(modal.querySelectorAll('input[type=checkbox]:checked')).map(c=>c.value);
-  const field=document.getElementById('id_pos_pso_mapping');
-  let existing=field.value.trim();
-  if(existing){existing+='\n';}
-  field.value=existing+selected.join('\n');
-  modal.classList.remove('show');
-};
-</script>
-
 {% endblock %}
+
+{% block scripts %}
+<script src="{% static 'emt/js/submit_event_report.js' %}"></script>
+{% endblock %}
+
