@@ -702,18 +702,23 @@ def review_approval_step(request, step_id):
                 proposal.status = 'finalized'
             proposal.save()
             messages.success(request, 'Proposal approved.')
+            return redirect('emt:my_approvals')
 
         elif action == 'reject':
-            step.status = 'rejected'
-            step.comment = comment
-            step.approved_by = request.user
-            step.approved_at = timezone.now()
-            proposal.status = 'rejected'
-            proposal.save()
-            step.save()
-            messages.error(request, 'Proposal rejected.')
-
-        return redirect('emt:my_approvals')
+            if not comment.strip():
+                messages.error(request, 'Comment is required to reject the proposal.')
+            else:
+                step.status = 'rejected'
+                step.comment = comment
+                step.approved_by = request.user
+                step.approved_at = timezone.now()
+                proposal.status = 'rejected'
+                proposal.save()
+                step.save()
+                messages.error(request, 'Proposal rejected.')
+                return redirect('emt:my_approvals')
+        else:
+            return redirect('emt:my_approvals')
 
     return render(request, 'emt/review_approval_step.html', {
         'step': step,
