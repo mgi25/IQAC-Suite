@@ -347,6 +347,25 @@ a:hover { color: var(--christ-blue-secondary); }
   transform: translateY(-1px);
 }
 
+.edit-btn {
+  grid-column: 1 / -1;
+  display: inline-block;
+  background: #fb923c;
+  color: var(--white);
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-lg);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-align: center;
+  transition: background var(--trans-fast), transform var(--trans-fast);
+  margin-top: 1rem;
+  margin-right: 0.5rem;
+}
+.edit-btn:hover {
+  background: #f97316;
+  transform: translateY(-1px);
+}
+
 
 /* ========================================================================
    9) RESPONSIVE TWEAKS
