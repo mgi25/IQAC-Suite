@@ -50,16 +50,43 @@
         <div class="section">
           <h3 class="section-title">Upload Attachments</h3>
           {{ formset.management_form }}
-          <div class="attachment-row">
+          <div id="attachment-list" class="attachment-row">
             {% for f in formset %}
-              <div class="attachment-block">
-                {{ f.file.label_tag }} {{ f.file }}
-                {{ f.caption.label_tag }} {{ f.caption }}
+              <div class="attachment-block" data-form-index="{{ forloop.counter0 }}" {% if f.instance.pk %}data-existing="1"{% endif %}>
+                {{ f.id }}
+                <div class="attach-upload">
+                  {% if f.instance.pk %}
+                    <img src="{{ f.instance.file.url }}" alt="attachment">
+                    <span class="attach-remove">&times;</span>
+                  {% else %}
+                    <span class="attach-add">+</span>
+                    <span class="attach-remove" style="display:none;">&times;</span>
+                  {% endif %}
+                </div>
+                {{ f.file }}
+                {{ f.caption }}
                 {% if f.instance.pk %}
-                  <label>Delete:</label> {{ f.DELETE }}
+                  {{ f.DELETE }}
                 {% endif %}
               </div>
             {% endfor %}
+          </div>
+          <button type="button" id="add-attachment-btn" class="add-attachment-btn">Add Attachment</button>
+
+          <template id="attachment-template">
+            <div class="attachment-block" data-form-index="__prefix__">
+              {{ formset.empty_form.id }}
+              <div class="attach-upload">
+                <span class="attach-add">+</span>
+                <span class="attach-remove" style="display:none;">&times;</span>
+              </div>
+              {{ formset.empty_form.file }}
+              {{ formset.empty_form.caption }}
+            </div>
+          </template>
+          <div id="imgModal" class="image-modal">
+            <span class="close-btn">&times;</span>
+            <img id="imgModalImg" src="" alt="preview">
           </div>
         </div>
 
@@ -74,16 +101,37 @@
   </section>
 </div>
 
-<div id="outcomeModal" class="outcome-modal" data-url="{% url 'emt:api_outcomes' proposal.organization.id %}">
-  <div class="modal-content">
-    <h3>Select Outcomes</h3>
-    <div id="outcomeOptions">Loading...</div>
-    <div class="modal-actions">
-      <button type="button" id="outcomeCancel" class="btn-cancel">Cancel</button>
-      <button type="button" id="outcomeSave" class="btn-save">Add</button>
+{% if proposal.organization %}
+  {% comment %}
+    When the proposal is associated with an organization, allow the outcomes
+    modal to load Program Outcomes/Program Specific Outcomes via AJAX.
+  {% endcomment %}
+  <div id="outcomeModal" class="outcome-modal"
+       data-url="{% url 'emt:api_outcomes' proposal.organization.id %}">
+    <div class="modal-content">
+      <h3>Select Outcomes</h3>
+      <div id="outcomeOptions">Loading...</div>
+      <div class="modal-actions">
+        <button type="button" id="outcomeCancel" class="btn-cancel">Cancel</button>
+        <button type="button" id="outcomeSave" class="btn-save">Add</button>
+      </div>
     </div>
   </div>
-</div>
+{% else %}
+  {# If no organization is set for the proposal, keep the modal in the DOM but
+     do not provide an API URL. The JS will detect this and skip showing the
+     modal. #}
+  <div id="outcomeModal" class="outcome-modal" data-url="">
+    <div class="modal-content">
+      <h3>Select Outcomes</h3>
+      <div id="outcomeOptions">No organization selected.</div>
+      <div class="modal-actions">
+        <button type="button" id="outcomeCancel" class="btn-cancel">Cancel</button>
+        <button type="button" id="outcomeSave" class="btn-save">Add</button>
+      </div>
+    </div>
+  </div>
+{% endif %}
 
 {% endblock %}
 

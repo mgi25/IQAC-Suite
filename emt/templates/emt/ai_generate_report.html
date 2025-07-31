@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'emt/css/submit_event_report.css' %}">
+<link rel="stylesheet" href="{% static 'emt/css/ai_generate_report.css' %}">
 
 <div class="ultra-proposal-root">
 
@@ -43,20 +43,6 @@
         <div><b>IQAC Feedback:</b> {{ report.iqac_feedback|default:"<span class='placeholder'>(not provided)</span>"|safe }}</div>
         <div><b>Beneficiaries:</b> {{ report.beneficiaries_details|default:"<span class='placeholder'>(not provided)</span>"|safe }}</div>
       </div>
-      <style>
-        .report-data-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px 32px;
-          margin-top: 18px;
-          margin-bottom: 6px;
-        }
-        .report-data-grid div { font-size: 1.07rem; color: #253660; }
-        .placeholder { color: #aaa; font-style: italic; }
-        @media (max-width: 900px) {
-          .report-data-grid { grid-template-columns: 1fr; }
-        }
-      </style>
     </div>
 
     <!-- AI Generate Button & Preview -->

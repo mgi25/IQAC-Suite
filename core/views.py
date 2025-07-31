@@ -813,7 +813,10 @@ def admin_proposal_detail(request, proposal_id):
     speakers = SpeakerProfile.objects.filter(proposal=proposal)
     expenses = ExpenseDetail.objects.filter(proposal=proposal)
     approval_steps = ApprovalStep.objects.filter(proposal=proposal).order_by('step_order')
-    budget_total = expenses.aggregate(total=Sum('total'))['total'] or 0
+    # Sum the "amount" field from each expense entry to calculate the total
+    # budget. Using "total" as the aggregate key avoids clashes with any model
+    # field names while still providing a descriptive context variable.
+    budget_total = expenses.aggregate(total=Sum("amount"))['total'] or 0
 
     context = {
         "proposal": proposal,
