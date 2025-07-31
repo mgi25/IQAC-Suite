@@ -11,7 +11,7 @@ from core.models import Organization, OrganizationType
 class EventProposalForm(forms.ModelForm):
     organization_type = forms.ModelChoiceField(
         required=True,
-        label="Type of Organisation",
+        label="Type of Organization",
         queryset=OrganizationType.objects.all(),
         widget=forms.Select(attrs={'class': 'tomselect-orgtype'}),
     )
@@ -89,8 +89,9 @@ class EventProposalForm(forms.ModelForm):
         exclude = ['submitted_by', 'created_at', 'updated_at', 'status', 'report_generated', 'needs_finance_approval', 'is_big_event']
 
         labels = {
-            'organization_type': 'Type of Organisation',
+            'organization_type': 'Type of Organization',
             'organization': 'Organization Name',
+            'event_datetime': 'Date Time',
         }
         widgets = {
             'event_datetime': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
