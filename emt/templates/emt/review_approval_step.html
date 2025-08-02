@@ -193,7 +193,7 @@
         <form method="post" class="review-form-ultra">
           {% csrf_token %}
           <div class="form-group">
-            <label>Comment / Remarks:</label>
+            <label>Comment / Remarks: <small class="text-muted">(required when rejecting)</small></label>
             <textarea name="comment" class="form-control"></textarea>
           </div>
           {% if step.role_required in GATEKEEPER_ROLES %}
@@ -223,8 +223,9 @@
           This step is <strong>{{ step.get_status_display }}</strong>.
         </div>
       {% endif %}
-    </div>
+</div>
 
   </main>
 </div>
+<script src="{% static 'emt/js/review_approval_step.js' %}"></script>
 {% endblock %}

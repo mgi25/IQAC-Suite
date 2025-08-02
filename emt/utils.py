@@ -22,7 +22,10 @@ def build_approval_chain(proposal):
     steps = []
     idx = 1
 
-    if config and config.require_faculty_incharge_first:
+    # Track if we've already added faculty in-charge approvals
+    fic_first = config and config.require_faculty_incharge_first
+
+    if fic_first:
         for fic in proposal.faculty_incharges.all():
             steps.append(
                 ApprovalStep(
@@ -36,10 +39,15 @@ def build_approval_chain(proposal):
             idx += 1
 
     for tmpl in flow:
+        # Skip duplicate faculty in-charge steps if they're already added above
+        if fic_first and tmpl.role_required == ApprovalStep.Role.FACULTY_INCHARGE:
+            continue
+
         assigned_to = tmpl.user or User.objects.filter(
             role_assignments__role__name=tmpl.role_required,
             role_assignments__organization=proposal.organization,
         ).first()
+
         steps.append(
             ApprovalStep(
                 proposal=proposal,
@@ -66,9 +74,9 @@ def generate_report_with_ai(event_report):
     Returns:
         The generated report text as a string, or an error message if something goes wrong.
     """
-    api_key = os.getenv("GEMINI_API_KEY")
+    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if not api_key:
-        return "Error: GEMINI_API_KEY is not set in the .env file."
+        return "Error: GEMINI_API_KEY or GOOGLE_API_KEY is not set in the .env file."
 
     api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
 

@@ -74,13 +74,15 @@
         <div class="input-group{% if form.faculty_incharges.errors %} has-error{% endif %}">
           <label for="faculty-select">{{ form.faculty_incharges.label }}</label>
           <select id="faculty-select" name="faculty_incharges" multiple>
-            {% for user in form.fields.faculty_incharges.queryset %}
-              {% if user.id|stringformat:"s" in form.faculty_incharges.value %}
-                <option value="{{ user.id }}" selected>
-                  {{ user.get_full_name|default:user.username }} ({{ user.email }})
-                </option>
-              {% endif %}
-            {% endfor %}
+            {% with selected=form.faculty_incharges.value %}
+              {% for user in form.fields.faculty_incharges.queryset %}
+                {% if selected and user.id in selected %}
+                  <option value="{{ user.id }}" selected>
+                    {{ user.get_full_name|default:user.username }} ({{ user.email }})
+                  </option>
+                {% endif %}
+              {% endfor %}
+            {% endwith %}
           </select>
           {% for err in form.faculty_incharges.errors %}
             <span class="error">{{ err }}</span>
@@ -157,4 +159,10 @@
       });
     });
   </script>
+  <script>
+    window.PROPOSAL_ID = "{{ proposal.id|default:'' }}";
+    window.AUTOSAVE_URL = "{% url 'emt:autosave_proposal' %}";
+    window.AUTOSAVE_CSRF = "{{ csrf_token }}";
+  </script>
+  <script src="{% static 'emt/js/autosave_draft.js' %}"></script>
 {% endblock %}

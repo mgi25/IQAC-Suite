@@ -107,6 +107,7 @@ DEBUG=True
 SECRET_KEY=your-secret-key
 DATABASE_URL=sqlite:///db.sqlite3
 ALLOWED_HOSTS=127.0.0.1,localhost
+# Either set `GEMINI_API_KEY` or `GOOGLE_API_KEY` for Gemini access
 GEMINI_API_KEY=your-gemini-api-key
 ```
 
