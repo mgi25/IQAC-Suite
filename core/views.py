@@ -1347,7 +1347,6 @@ from django.shortcuts import render
 def user_dashboard(request):
     # Do NOT render the admin dashboard here!
     return render(request, 'core/user_dashboard.html')
-=======
 # Add this to your core/views.py file
 
 from django.http import JsonResponse

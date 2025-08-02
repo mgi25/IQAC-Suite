@@ -377,7 +377,7 @@
                          getCookie('csrftoken');
 
         // Make AJAX request to Django API
-        fetch(`/core-admin/api/search/?q=${encodeURIComponent(query)}`, {
+        fetch(/core-admin/api/search/?q=${encodeURIComponent(query)}, {
           method: 'GET',
           headers: {
             'X-CSRFToken': csrfToken,
@@ -396,13 +396,13 @@
                 query
               );
             } else {
-              searchResults.innerHTML = `<div class="search-no-results">Search error: ${data.error || 'Unknown error'}</div>`;
+              searchResults.innerHTML = <div class="search-no-results">Search error: ${data.error || 'Unknown error'}</div>;
               searchResults.classList.add('show');
             }
           })
           .catch(error => {
             console.error('Search error:', error);
-            searchResults.innerHTML = `<div class="search-no-results">Search temporarily unavailable</div>`;
+            searchResults.innerHTML = <div class="search-no-results">Search temporarily unavailable</div>;
             searchResults.classList.add('show');
           });
       }
@@ -427,7 +427,7 @@
         let html = '';
 
         if (students.length === 0 && proposals.length === 0 && reports.length === 0 && users.length === 0) {
-          html = `<div class="search-no-results">No results found for "${query}"</div>`;
+          html = <div class="search-no-results">No results found for "${query}"</div>;
         } else {
           // Students section
           if (students.length > 0) {
