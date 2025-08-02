@@ -1,20 +1,33 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 {% load static %}
+
+{% block title %}Admin Dashboard - CHRIST University{% endblock %}
+
 {% block content %}
-<link rel="stylesheet" href="{% static 'core/css/admin_dashboard.css' %}">
-<div class="admin-dashboard-bg">
-  <div class="admin-dashboard-container">
-    <div class="admin-dashboard-header">
-      <span class="admin-dashboard-icon">
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="#2274CB" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="12" cy="12" r="10" fill="#e9f3fa"/>
-          <path d="M12 4C9 6.5 5 7 5 13C5 17.42 12 21 12 21C12 21 19 17.42 19 13C19 7 15 6.5 12 4Z" stroke="#2274CB" stroke-width="1.5" fill="#fff"/>
-        </svg>
-      </span>
-      <span class="admin-dashboard-title">Admin Dashboard</span>
+<!-- ADMIN DASHBOARD CONTENT -->
+<div class="dashboard-container">
+  <!-- Dashboard Header -->
+  <div class="dashboard-header">
+    <div class="dashboard-icon">
+      <i class="fas fa-tachometer-alt"></i>
     </div>
-    <div class="admin-dashboard-welcome">
-      Welcome, <b>{{ user.get_full_name|default:user.username }}</b>!
+    <h1 class="dashboard-title">Admin Dashboard</h1>
+  </div>
+  
+  <!-- Welcome Message -->
+  <div class="dashboard-welcome">
+    <p>Welcome, <strong>{{ request.user.get_full_name|default:request.user.username }}!</strong></p>
+  </div>
+
+  <!-- Statistics Row -->
+  <div class="dashboard-stats">
+    <div class="stat-card">
+      <div class="stat-number">21</div>
+      <div class="stat-label">Students</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number">0</div>
+      <div class="stat-label">Faculties</div>
     </div>
     <div class="admin-dashboard-stats-row">
       {% for stat in org_stats %}
@@ -57,6 +70,57 @@
         <div class="navcard-desc">Admin panel settings</div>
       </a>
     </div>
+    <div class="stat-card">
+      <div class="stat-number">0</div>
+      <div class="stat-label">HODs</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number">20</div>
+      <div class="stat-label">Centers</div>
+    </div>
+  </div>
+
+  <!-- Quick Action Cards -->
+  <div class="dashboard-actions">
+    <a href="/core-admin/users/" class="action-card">
+      <div class="action-icon">
+        <i class="fas fa-users"></i>
+      </div>
+      <div class="action-content">
+        <h3>User Management</h3>
+        <p>View and manage user roles</p>
+      </div>
+    </a>
+
+    <a href="/core-admin/event-proposals/" class="action-card">
+      <div class="action-icon">
+        <i class="fas fa-clipboard-list"></i>
+      </div>
+      <div class="action-content">
+        <h3>Event Proposals</h3>
+        <p>View all submitted proposals</p>
+      </div>
+    </a>
+
+    <a href="/core-admin/reports/" class="action-card">
+      <div class="action-icon">
+        <i class="fas fa-file-alt"></i>
+      </div>
+      <div class="action-content">
+        <h3>Reports</h3>
+        <p>Review all generated reports</p>
+      </div>
+    </a>
+
+    <a href="/core-admin/settings/" class="action-card">
+      <div class="action-icon">
+        <i class="fas fa-cog"></i>
+      </div>
+      <div class="action-content">
+        <h3>Settings</h3>
+        <p>Admin panel settings</p>
+      </div>
+    </a>
   </div>
 </div>
 {% endblock %}

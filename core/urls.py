@@ -121,13 +121,11 @@ urlpatterns = [
     path('api/org-type/<int:org_type_id>/organizations/', views.api_org_type_organizations, name='api_org_type_organizations'),
     path('api/org-type/<int:org_type_id>/roles/', views.api_org_type_roles, name='api_org_type_roles'),
     path('api/organization/<int:org_id>/roles/', views.api_organization_roles, name='api_organization_roles'),
-
+    path('dashboard/', views.user_dashboard, name='user_dashboard'),
+    path('api/search/', views.api_global_search, name='api_global_search'),
     # API Endpoints
     path('api/auth/me', views.api_auth_me, name='api_auth_me'),
     path('api/faculty/overview', views.api_faculty_overview, name='api_faculty_overview'),
     # Add other endpoints here
 ]
 
-urlpatterns += [
-    path('dashboard/', views.user_dashboard, name='user_dashboard'),
-]
