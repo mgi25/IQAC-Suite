@@ -160,10 +160,10 @@
           <i class="fas fa-chevron-right expand-icon {% if 'cdl' in request.resolver_match.url_name or '/cdl/' in request.path %}rotated{% endif %}"></i>
         </div>
         <div class="nav-submenu {% if 'cdl' in request.resolver_match.url_name or '/cdl/' in request.path %}open{% endif %}">
-          <a href="/cdl/" class="nav-sublink {% if request.resolver_match.url_name == 'cdl_dashboard' %}active{% endif %}">
+          <a href="{% url 'cdl_dashboard' %}" class="nav-sublink {% if request.resolver_match.url_name == 'cdl_dashboard' %}active{% endif %}">
             <i class="fas fa-clock"></i> Pre-Event
           </a>
-          <a href="/cdl/" class="nav-sublink">
+          <a href="{% url 'cdl_dashboard' %}" class="nav-sublink">
             <i class="fas fa-check-circle"></i> Post-Event
           </a>
         </div>
