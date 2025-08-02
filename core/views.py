@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpResponseForbidden, JsonResponse, HttpResponseRedirect
 from django.contrib.auth.models import User
 from django.contrib import messages
-from django.db.models import Q, Sum, Count
+from django.db.models import Q, Sum
 from django.forms import inlineformset_factory
 from django import forms
 from django.urls import reverse
@@ -112,7 +112,7 @@ def dashboard(request):
 @login_required
 def propose_event(request):
     """
-    This is the *old* quick proposal form. If you want to keep it, now use Organization instead of Department.
+    This is the old quick proposal form. If you want to keep it, now use Organization instead of Department.
     """
     if request.method == "POST":
         org_type_name = request.POST.get("organization_type", "").strip()
@@ -162,18 +162,7 @@ def proposal_status(request, pk):
 #  Admin Dashboard and User Management
 # ─────────────────────────────────────────────────────────────
 def admin_dashboard(request):
-    if not request.user.is_superuser:
-        return redirect("user_dashboard")
-
-    org_stats = (
-        RoleAssignment.objects
-        .filter(user__is_active=True, organization__isnull=False)
-        .values("organization__org_type__name")
-        .annotate(user_count=Count("user", distinct=True))
-        .order_by("-user_count")
-    )
-
-    return render(request, "core/admin_dashboard.html", {"org_stats": org_stats})
+    return render(request, "core/admin_dashboard.html")
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_user_panel(request):
@@ -510,9 +499,9 @@ def admin_event_proposals(request):
     if q:
         proposals = proposals.filter(
             Q(event_title__icontains=q) |
-            Q(submitted_by__username__icontains=q) |
-            Q(organization__name__icontains=q) |
-            Q(organization__org_type__name__icontains=q)
+            Q(submitted_by_username_icontains=q) |
+            Q(organization_name_icontains=q) |
+            Q(organization_org_typename_icontains=q)
         )
     if status:
         proposals = proposals.filter(status=status)
@@ -813,10 +802,7 @@ def admin_proposal_detail(request, proposal_id):
     speakers = SpeakerProfile.objects.filter(proposal=proposal)
     expenses = ExpenseDetail.objects.filter(proposal=proposal)
     approval_steps = ApprovalStep.objects.filter(proposal=proposal).order_by('step_order')
-    # Sum the "amount" field from each expense entry to calculate the total
-    # budget. Using "total" as the aggregate key avoids clashes with any model
-    # field names while still providing a descriptive context variable.
-    budget_total = expenses.aggregate(total=Sum("amount"))['total'] or 0
+    budget_total = expenses.aggregate(total=Sum('total'))['total'] or 0
 
     context = {
         "proposal": proposal,
@@ -957,9 +943,9 @@ def approval_box_visibility_users(request, org_id, role_id):
     assignments = RoleAssignment.objects.filter(role=role, organization=organization).select_related("user")
     if q:
         assignments = assignments.filter(
-            Q(user__first_name__icontains=q)
-            | Q(user__last_name__icontains=q)
-            | Q(user__email__icontains=q)
+            Q(user_first_name_icontains=q)
+            | Q(user_last_name_icontains=q)
+            | Q(user_email_icontains=q)
         )
     user_map = {
         v.user_id: v.can_view
@@ -1122,7 +1108,7 @@ def search_users(request):
 
     # --- Filter by role ---
     if role:
-        users = users.filter(role_assignments__role__name__iexact=role)
+        users = users.filter(role_assignments_rolename_iexact=role)
 
     # --- Filter by organization/department ---
     if org_id:
@@ -1155,15 +1141,15 @@ def organization_users(request, org_id):
     if not assignments.exists() and org_type_id:
         assignments = RoleAssignment.objects.filter(organization__org_type_id=org_type_id)
     if role:
-        assignments = assignments.filter(role__name__iexact=role)
+        assignments = assignments.filter(role_name_iexact=role)
     if q:
         assignments = assignments.filter(
-            Q(user__first_name__icontains=q)
-            | Q(user__last_name__icontains=q)
-            | Q(user__email__icontains=q)
+            Q(user_first_name_icontains=q)
+            | Q(user_last_name_icontains=q)
+            | Q(user_email_icontains=q)
         )
 
-    assignments = assignments.select_related("user").order_by("user__first_name", "user__last_name")
+    assignments = assignments.select_related("user").order_by("user_first_name", "user_last_name")
 
     users_data = [
         {
@@ -1312,41 +1298,6 @@ def delete_outcome(request, outcome_type, outcome_id):
 def admin_reports_view(request):
     # Your code here
     pass
-
-
-from django.http import JsonResponse
-from django.contrib.auth.decorators import login_required
-
-@login_required
-def api_auth_me(request):
-    user = request.user
-    # Example: determine role and user info
-    role = 'faculty' if user.is_staff else 'student'
-    initials = ''.join([x[0] for x in user.get_full_name().split()]) or user.username[:2].upper()
-    return JsonResponse({
-        'role': role,
-        'name': user.get_full_name(),
-        'subtitle': '',  # Add more info if needed
-        'initials': initials,
-    })
-
-@login_required
-def api_faculty_overview(request):
-    # Query your models for stats
-    stats = [
-        # Build from your models
-    ]
-    return JsonResponse(stats, safe=False)
-
-# Repeat for other endpoints...
-
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
-
-@login_required
-def user_dashboard(request):
-    # Do NOT render the admin dashboard here!
-    return render(request, 'core/user_dashboard.html')
 # Add this to your core/views.py file
 
 from django.http import JsonResponse
@@ -1425,8 +1376,8 @@ def api_global_search(request):
             from emt.models import EventProposal
             proposals = EventProposal.objects.filter(
                 Q(title__icontains=query) |
-                Q(faculty_incharge__first_name__icontains=query) |
-                Q(faculty_incharge__last_name__icontains=query)
+                Q(faculty_incharge_first_name_icontains=query) |
+                Q(faculty_incharge_last_name_icontains=query)
             ).select_related('faculty_incharge').order_by('-created_at')[:5]
             
             results['proposals'] = [{
@@ -1468,7 +1419,7 @@ def api_global_search(request):
             
             results['users'] = [{
                 'id': user.id,
-                'name': f"{user.first_namhttps://github.com/CHRISTInfotech/IQAC-Suite/pull/24/conflict?name=templates%252Fcore%252Fadmin_dashboard.html&ancestor_oid=7544f2a58a9adad0d7ffabbb8f5d294b5c2b318c&base_oid=27fdfec6e3b9a0c39510534430d4eb0a78a4cd5c&head_oid=c29ad426d1ce8ec0fbae037547f8cf53ad420f99e} {user.last_name}".strip() or user.username,
+                'name': f"{user.first_name} {user.last_name}".strip() or user.username,
                 'email': user.email,
                 'role': getattr(user.profile, 'role', 'User') if hasattr(user, 'profile') else 'User',
                 'last_login': user.last_login.strftime('%Y-%m-%d') if user.last_login else 'Never',
