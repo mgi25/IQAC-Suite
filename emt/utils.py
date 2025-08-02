@@ -74,9 +74,9 @@ def generate_report_with_ai(event_report):
     Returns:
         The generated report text as a string, or an error message if something goes wrong.
     """
-    api_key = os.getenv("GEMINI_API_KEY")
+    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if not api_key:
-        return "Error: GEMINI_API_KEY is not set in the .env file."
+        return "Error: GEMINI_API_KEY or GOOGLE_API_KEY is not set in the .env file."
 
     api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
 
