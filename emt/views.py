@@ -65,8 +65,11 @@ from operator import attrgetter
 # ──────────────────────────────
 # CDL DASHBOARD
 # ──────────────────────────────
-# Configure Gemini API key from environment variable
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+# Configure Gemini API key from environment variable(s)
+# Prefer `GEMINI_API_KEY`; fall back to `GOOGLE_API_KEY`
+api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+if api_key:
+    genai.configure(api_key=api_key)
 
 @login_required
 def submit_request_view(request):
