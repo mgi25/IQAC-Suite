@@ -132,13 +132,16 @@
           <i class="fas fa-chevron-right expand-icon {% if 'suite' in request.resolver_match.url_name or '/suite/' in request.path or request.resolver_match.namespace == 'emt' %}rotated{% endif %}"></i>
         </div>
         <div class="nav-submenu {% if 'suite' in request.resolver_match.url_name or '/suite/' in request.path or request.resolver_match.namespace == 'emt' %}open{% endif %}">
-          <a href="/suite/submit/" class="nav-sublink {% if request.resolver_match.url_name == 'submit_proposal' %}active{% endif %}">
+          <a href="{% url 'emt:iqac_suite_dashboard' %}" class="nav-sublink {% if request.resolver_match.url_name == 'iqac_suite_dashboard' %}active{% endif %}">
+            <i class="fas fa-home"></i> Dashboard
+          </a>
+          <a href="{% url 'emt:submit_proposal' %}" class="nav-sublink {% if request.resolver_match.url_name == 'submit_proposal' %}active{% endif %}">
             <i class="fas fa-edit"></i> Event Proposal
           </a>
-          <a href="/suite/pending-reports/" class="nav-sublink {% if request.resolver_match.url_name == 'pending_reports' %}active{% endif %}">
+          <a href="{% url 'emt:pending_reports' %}" class="nav-sublink {% if request.resolver_match.url_name == 'pending_reports' %}active{% endif %}">
             <i class="fas fa-chart-bar"></i> Report Generation
           </a>
-          <a href="/suite/generated-reports/" class="nav-sublink {% if request.resolver_match.url_name == 'generated_reports' %}active{% endif %}">
+          <a href="{% url 'emt:generated_reports' %}" class="nav-sublink {% if request.resolver_match.url_name == 'generated_reports' %}active{% endif %}">
             <i class="fas fa-eye"></i> View Reports
           </a>
         </div>
@@ -146,7 +149,7 @@
 
       <!-- Graduate Transcript - Standalone -->
       <div class="nav-item">
-        <a href="/transcript/" class="nav-link {% if request.resolver_match.namespace == 'transcript' or 'transcript' in request.resolver_match.url_name or '/transcript/' in request.path %}active{% endif %}">
+        <a href="{% url 'transcript:home' %}" class="nav-link {% if request.resolver_match.namespace == 'transcript' or 'transcript' in request.resolver_match.url_name or '/transcript/' in request.path %}active{% endif %}">
           <i class="fas fa-graduation-cap nav-icon"></i>
           <span class="nav-text">Graduate Transcript</span>
         </a>
@@ -178,10 +181,10 @@
           <i class="fas fa-chevron-right expand-icon {% if 'users' in request.path or 'user-roles' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' %}rotated{% endif %}"></i>
         </div>
         <div class="nav-submenu {% if 'users' in request.path or 'user-roles' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' %}open{% endif %}">
-          <a href="/core-admin/users/" class="nav-sublink {% if request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_user_panel' %}active{% endif %}">
+          <a href="{% url 'admin_user_management' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_user_panel' %}active{% endif %}">
             <i class="fas fa-user"></i> Manage Users
           </a>
-          <a href="/core-admin/user-roles/" class="nav-sublink {% if request.resolver_match.url_name == 'admin_role_management' %}active{% endif %}">
+          <a href="{% url 'admin_role_management' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_role_management' %}active{% endif %}">
             <i class="fas fa-tags"></i> Add Roles
           </a>
         </div>
@@ -190,7 +193,7 @@
 
       <!-- Event Proposals - Standalone -->
       <div class="nav-item">
-        <a href="/core-admin/event-proposals/" class="nav-link {% if request.resolver_match.url_name == 'admin_event_proposals' %}active{% endif %}">
+        <a href="{% url 'admin_event_proposals' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_event_proposals' %}active{% endif %}">
           <i class="fas fa-list nav-icon"></i>
           <span class="nav-text">Event Proposals</span>
         </a>
@@ -198,7 +201,7 @@
 
       <!-- Reports - Standalone -->
       <div class="nav-item">
-        <a href="/core-admin/reports/" class="nav-link {% if request.resolver_match.url_name == 'admin_reports' or request.resolver_match.url_name == 'admin_reports_view' %}active{% endif %}">
+        <a href="{% url 'admin_reports' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_reports' or request.resolver_match.url_name == 'admin_reports_view' %}active{% endif %}">
           <i class="fas fa-file-alt nav-icon"></i>
           <span class="nav-text">Reports</span>
         </a>
