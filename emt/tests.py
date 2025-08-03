@@ -85,3 +85,29 @@ class OutcomesAPITests(TestCase):
         self.assertEqual(len(data["pos"]), 1)
         self.assertEqual(len(data["psos"]), 1)
         self.assertEqual(data["pos"][0]["description"], self.po.description)
+
+
+class EventApprovalsNavTests(TestCase):
+    def setUp(self):
+        self.faculty = User.objects.create_user("faculty", password="pass")
+        self.student = User.objects.create_user("student", password="pass")
+
+    def _set_role(self, role):
+        session = self.client.session
+        session["role"] = role
+        session.save()
+
+    def test_faculty_sees_event_approvals_link(self):
+        self.client.force_login(self.faculty)
+        self._set_role("faculty")
+        resp = self.client.get(reverse("dashboard"))
+        self.assertContains(resp, "Event Approvals")
+        self.assertContains(resp, reverse("emt:my_approvals"))
+        approvals = self.client.get(reverse("emt:my_approvals"))
+        self.assertEqual(approvals.status_code, 200)
+
+    def test_student_does_not_see_event_approvals_link(self):
+        self.client.force_login(self.student)
+        self._set_role("student")
+        resp = self.client.get(reverse("dashboard"))
+        self.assertNotContains(resp, "Event Approvals")

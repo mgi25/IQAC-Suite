@@ -1,11 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 import json
-from django.http import JsonResponse
 from django.db.models import Q
 from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
@@ -22,8 +18,6 @@ from core.models import (
     Organization,
     OrganizationType,
     Report as SubmittedReport,
-    RoleEventApprovalVisibility,
-    UserEventApprovalVisibility,
 )
 from django.contrib.auth.models import User
 from emt.utils import build_approval_chain
@@ -612,8 +606,9 @@ def my_approvals(request):
 
 
 @login_required
+@user_passes_test(lambda u: getattr(getattr(u, 'profile', None), 'role', '') != 'student')
 def review_approval_step(request, step_id):
-    step = get_object_or_404(ApprovalStep, id=step_id, assigned_to=request.user)
+    step = get_object_or_404(ApprovalStep, id=step_id)
     proposal = step.proposal
 
     # Fetch related proposal details using safe lookups
@@ -836,31 +831,10 @@ def suite_dashboard(request):
             p.progress_percent = 100
         p.current_label = p.statuses[p.status_index].replace('_', ' ').capitalize()
 
-    # Determine visibility of the "Event Approvals" card. Respect admin
-    # visibility settings for the user's roles, but always show the card if the
-    # user has any pending approvals assigned to them.
-    has_pending = ApprovalStep.objects.filter(
-        assigned_to=request.user,
-        status=ApprovalStep.Status.PENDING,
-    ).exists()
-
-    show_approvals_card = False
-    ras = request.user.role_assignments.select_related("role")
-    for ra in ras:
-        role_vis = getattr(ra.role, "approval_visibility", None)
-        can_view = role_vis.can_view if role_vis else True
-        if not can_view:
-            continue
-        user_override = UserEventApprovalVisibility.objects.filter(
-            user=request.user, role=ra.role
-        ).first()
-        if user_override is not None:
-            can_view = user_override.can_view
-        if can_view:
-            show_approvals_card = True
-            break
-
-    show_approvals_card = show_approvals_card or has_pending
+    # Determine visibility of the "Event Approvals" card.
+    # Show it to all non-student users.
+    is_student = getattr(getattr(request.user, 'profile', None), 'role', '') == 'student'
+    show_approvals_card = not is_student
 
     # 5) Render
     return render(request, 'emt/iqac_suite_dashboard.html', {
