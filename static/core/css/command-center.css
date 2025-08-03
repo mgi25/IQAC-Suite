@@ -439,6 +439,50 @@
     border: none !important;
     box-sizing: border-box !important;
   }
+
+  /* =============================================================================
+     FLASH MESSAGES
+     ============================================================================= */
+  .messages {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 50 !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .alert {
+    border: none !important;
+    border-radius: var(--border-radius-lg) !important;
+    padding: 1rem 1.5rem !important;
+    margin-bottom: 1rem !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.75rem !important;
+  }
+
+  .alert-warning {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+    color: #92400e !important;
+    border-left: 4px solid #f59e0b !important;
+  }
+
+  .alert-success {
+    background: linear-gradient(135deg, var(--christ-blue-light) 0%, rgba(44, 90, 160, 0.1) 100%) !important;
+    color: var(--christ-blue-dark) !important;
+    border-left: 4px solid var(--christ-blue) !important;
+  }
+
+  .alert-danger {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%) !important;
+    color: #991b1b !important;
+    border-left: 4px solid #ef4444 !important;
+  }
+
+  .alert-info {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+    color: #1e40af !important;
+    border-left: 4px solid #3b82f6 !important;
+  }
   
   @keyframes fadeIn {
     from {

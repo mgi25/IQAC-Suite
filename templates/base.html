@@ -254,6 +254,13 @@
   <!-- ZONE 3: MAIN VIEWSCREEN -->
   <div class="main-viewscreen main-content">
     <div class="viewscreen-content">
+      {% if messages %}
+      <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
       {% block content %}
       <div class="welcome-screen">
         <h1>Welcome to IQAC Command Center</h1>
