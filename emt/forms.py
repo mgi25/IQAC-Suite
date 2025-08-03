@@ -52,6 +52,7 @@ class EventProposalForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         selected_academic_year = kwargs.pop('selected_academic_year', None)
+        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
 
         # Filter organization queryset by selected type if available in POST/data/instance
@@ -66,6 +67,17 @@ class EventProposalForm(forms.ModelForm):
             org_type = self.instance.organization.org_type
             # Pre-populate organization type when editing existing proposals
             self.fields["organization_type"].initial = org_type
+        elif user:
+            assignment = (
+                user.role_assignments
+                .filter(organization__isnull=False)
+                .select_related("organization__org_type")
+                .first()
+            )
+            if assignment:
+                org_type = assignment.organization.org_type
+                self.fields["organization_type"].initial = org_type
+                self.fields["organization"].initial = assignment.organization
 
         if org_type:
             self.fields['organization'].queryset = Organization.objects.filter(org_type=org_type, is_active=True)
