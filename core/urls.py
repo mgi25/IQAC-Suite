@@ -23,42 +23,40 @@ urlpatterns = [
     # ────────────────────────────────────────────────
     # Admin - User Management
     # ────────────────────────────────────────────────
-    path('dashboard/', views.admin_dashboard, name='admin_dashboard'),
-    path('user-management/', views.admin_user_panel, name='admin_user_panel'),
-    path('users/', views.admin_user_management, name='admin_user_management'),
-    path('users/<int:user_id>/edit/', views.admin_user_edit, name='admin_user_edit'),
+    path('core-admin/user-management/', views.admin_user_panel, name='admin_user_panel'),
+    path('core-admin/users/', views.admin_user_management, name='admin_user_management'),
+    path('core-admin/users/<int:user_id>/edit/', views.admin_user_edit, name='admin_user_edit'),
 
     # ────────────────────────────────────────────────
     # Admin - Role Management
     # ────────────────────────────────────────────────
-    path('user-roles/', views.admin_role_management, name='admin_role_management'),
-    path('user-roles/<int:organization_id>/', views.admin_role_management, name='admin_role_management_org'),
-    path('user-roles/<int:organization_id>/add/', views.add_org_role, name='add_org_role'),
-    path('user-roles/add/', views.add_role, name='add_role'),
-    path('user-roles/role/<int:role_id>/update/', views.update_org_role, name='update_org_role'),
-    path('user-roles/role/<int:role_id>/toggle/', views.toggle_org_role, name='toggle_org_role'),
-    path('user-roles/role/<int:role_id>/delete/', views.delete_org_role, name='delete_org_role'),
+    path('core-admin/user-roles/', views.admin_role_management, name='admin_role_management'),
+    path('core-admin/user-roles/<int:organization_id>/', views.admin_role_management, name='admin_role_management_org'),
+    path('core-admin/user-roles/<int:organization_id>/add/', views.add_org_role, name='add_org_role'),
+    path('core-admin/user-roles/add/', views.add_role, name='add_role'),
+    path('core-admin/user-roles/role/<int:role_id>/update/', views.update_org_role, name='update_org_role'),
+    path('core-admin/user-roles/role/<int:role_id>/toggle/', views.toggle_org_role, name='toggle_org_role'),
+    path('core-admin/user-roles/role/<int:role_id>/delete/', views.delete_org_role, name='delete_org_role'),
 
     # ────────────────────────────────────────────────
     # Admin - Event Proposals
     # ────────────────────────────────────────────────
-    path('event-proposals/', views.admin_event_proposals, name='admin_event_proposals'),
-    path('event-proposal/<int:proposal_id>/json/', views.event_proposal_json, name='event_proposal_json'),
-    path('event-proposal/<int:proposal_id>/action/', views.event_proposal_action, name='event_proposal_action'),
-    path('proposal/<int:proposal_id>/detail/', views.admin_proposal_detail, name='admin_proposal_detail'),
+    path('core-admin/event-proposals/', views.admin_event_proposals, name='admin_event_proposals'),
+    path('core-admin/event-proposal/<int:proposal_id>/json/', views.event_proposal_json, name='event_proposal_json'),
+    path('core-admin/event-proposal/<int:proposal_id>/action/', views.event_proposal_action, name='event_proposal_action'),
     path('core-admin/proposal/<int:proposal_id>/detail/', views.admin_proposal_detail, name='admin_proposal_detail'),
 
     # ────────────────────────────────────────────────
     # Admin - Reports
     # ────────────────────────────────────────────────
-    path('reports/', views.admin_reports_view, name='admin_reports'),
-    path('reports/<int:report_id>/approve/', views.admin_reports_approve, name='admin_reports_approve'),
-    path('reports/<int:report_id>/reject/', views.admin_reports_reject, name='admin_reports_reject'),
+    path('core-admin/reports/', views.admin_reports_view, name='admin_reports'),
+    path('core-admin/reports/<int:report_id>/approve/', views.admin_reports_approve, name='admin_reports_approve'),
+    path('core-admin/reports/<int:report_id>/reject/', views.admin_reports_reject, name='admin_reports_reject'),
 
     # ────────────────────────────────────────────────
     # Admin - Master Data & Settings
     # ────────────────────────────────────────────────
-    path('core-admin/dashboard/', views.admin_dashboard, name='core_admin_dashboard'),
+    path('core-admin/dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('core-admin/master-data/', views.admin_master_data, name='admin_master_data'),
     path('core-admin/master-data-dashboard/', views.master_data_dashboard, name='master_data_dashboard'),
     path('core-admin/settings/', views.admin_settings_dashboard, name='admin_settings'),
@@ -102,18 +100,18 @@ urlpatterns = [
     # ────────────────────────────────────────────────
     # APIs
     # ────────────────────────────────────────────────
-    path('api/auth/me', views.api_auth_me, name='api_auth_me'),
-    path('api/faculty/overview', views.api_faculty_overview, name='api_faculty_overview'),
-    path('api/approval-flow/<int:org_id>/', views.api_approval_flow_steps, name='api_approval_flow_steps'),
-    path('api/search-users/', views.search_users, name='search_users'),
-    path('api/org-users/<int:org_id>/', views.organization_users, name='organization_users'),
-    path('api/org-type/<int:org_type_id>/organizations/', views.api_org_type_organizations, name='api_org_type_organizations'),
-    path('api/org-type/<int:org_type_id>/roles/', views.api_org_type_roles, name='api_org_type_roles'),
-    path('api/organization/<int:org_id>/roles/', views.api_organization_roles, name='api_organization_roles'),
-    path('api/search/', views.api_global_search, name='api_global_search'),
+    path('core-admin/api/auth/me', views.api_auth_me, name='api_auth_me'),
+    path('core-admin/api/faculty/overview', views.api_faculty_overview, name='api_faculty_overview'),
+    path('core-admin/api/approval-flow/<int:org_id>/', views.api_approval_flow_steps, name='api_approval_flow_steps'),
+    path('core-admin/api/search-users/', views.search_users, name='search_users'),
+    path('core-admin/api/org-users/<int:org_id>/', views.organization_users, name='organization_users'),
+    path('core-admin/api/org-type/<int:org_type_id>/organizations/', views.api_org_type_organizations, name='api_org_type_organizations'),
+    path('core-admin/api/org-type/<int:org_type_id>/roles/', views.api_org_type_roles, name='api_org_type_roles'),
+    path('core-admin/api/organization/<int:org_id>/roles/', views.api_organization_roles, name='api_organization_roles'),
+    path('core-admin/api/search/', views.api_global_search, name='api_global_search'),
 
     # ────────────────────────────────────────────────
     # Optional: User Dashboard (if not admin)
     # ────────────────────────────────────────────────
-    path('dashboard/', views.user_dashboard, name='user_dashboard'),
+    # path('dashboard/', views.user_dashboard, name='user_dashboard'),
 ]

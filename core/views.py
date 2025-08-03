@@ -163,7 +163,7 @@ def proposal_status(request, pk):
 # ─────────────────────────────────────────────────────────────
 def admin_dashboard(request):
     if not request.user.is_superuser:
-        return redirect("user_dashboard")
+        return redirect("dashboard")
 
     org_stats = (
         RoleAssignment.objects
