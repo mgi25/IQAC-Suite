@@ -184,6 +184,7 @@ def submit_proposal(request, pk=None):
             proposal.submitted_at = timezone.now()
             proposal.save()
             form.save_m2m()
+            build_approval_chain(proposal)
             messages.success(
                 request,
                 f"Proposal '{proposal.event_title}' submitted.",
