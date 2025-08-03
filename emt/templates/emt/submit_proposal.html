@@ -192,15 +192,7 @@
 
                 <div class="input-group{% if form.faculty_incharges.errors %} has-error{% endif %}">
                     {{ form.faculty_incharges.label_tag }}
-                    <select id="faculty-select" name="faculty_incharges" multiple>
-                        {% for user in form.fields.faculty_incharges.queryset %}
-                            {% if user.id|stringformat:"s" in form.faculty_incharges.value %}
-                                <option value="{{ user.id }}" selected>
-                                    {{ user.get_full_name|default:user.username }} ({{ user.email }})
-                                </option>
-                            {% endif %}
-                        {% endfor %}
-                    </select>
+                    {{ form.faculty_incharges }}
                     {% for err in form.faculty_incharges.errors %}
                         <span class="error">{{ err }}</span>
                     {% endfor %}
