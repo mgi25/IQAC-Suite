@@ -118,10 +118,17 @@
       
       <!-- Dashboard - Always Visible -->
       <div class="nav-item">
+        {% if user.is_superuser or request.session.role == 'admin' %}
         <a href="{% url 'admin_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
           <i class="fas fa-chart-pie nav-icon"></i>
           <span class="nav-text">Dashboard</span>
         </a>
+        {% else %}
+        <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+          <i class="fas fa-chart-pie nav-icon"></i>
+          <span class="nav-text">Dashboard</span>
+        </a>
+        {% endif %}
       </div>
 
       <!-- IQAC Suite - Expandable -->
@@ -155,7 +162,7 @@
       {% endif %}
 
       <!-- CDL - Expandable (Faculty and Superuser) -->
-      {% if user.is_superuser or user|has_group:"Faculty" %}
+      {% if user.is_superuser or request.session.role == 'faculty' or user|has_group:"Faculty" %}
       <div class="nav-section {% if 'cdl' in request.resolver_match.url_name or '/cdl/' in request.path %}expanded{% endif %}">
         <div class="nav-section-header">
           <i class="fas fa-photo-video nav-icon"></i>
@@ -200,13 +207,15 @@
         </a>
       </div>
 
-      <!-- Reports - Standalone -->
+      <!-- Reports - Standalone (Admin Only) -->
+      {% if user.is_superuser or request.session.role == 'admin' %}
       <div class="nav-item">
         <a href="/core-admin/reports/" class="nav-link {% if request.resolver_match.url_name == 'admin_reports' or request.resolver_match.url_name == 'admin_reports_view' %}active{% endif %}">
           <i class="fas fa-file-alt nav-icon"></i>
           <span class="nav-text">Reports</span>
         </a>
       </div>
+      {% endif %}
 
       <!-- Settings - Expandable (Admin Only) -->
       {% if user.is_superuser or request.session.role == 'admin' %}
