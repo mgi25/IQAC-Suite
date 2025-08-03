@@ -145,6 +145,76 @@
                 Complete all sections above to enable submission
             </div>
         </div>
+
+        <!-- Hidden Django Form Fields -->
+        <div style="display: none;" id="django-forms">
+            <!-- Basic Info Fields -->
+            <div id="django-basic-info">
+                {{ form.organization_type.label_tag }}
+                {{ form.organization_type }}
+                {% for err in form.organization_type.errors %}<span class="error">{{ err }}</span>{% endfor %}
+
+                {{ form.organization.label_tag }}
+                {{ form.organization }}
+                {% for err in form.organization.errors %}<span class="error">{{ err }}</span>{% endfor %}
+
+                {{ form.event_title.label_tag }}
+                {{ form.event_title }}
+                {% for err in form.event_title.errors %}<span class="error">{{ err }}</span>{% endfor %}
+
+                {{ form.event_datetime.label_tag }}
+                {{ form.event_datetime }}
+                {% for err in form.event_datetime.errors %}<span class="error">{{ err }}</span>{% endfor %}
+
+                {{ form.venue.label_tag }}
+                {{ form.venue }}
+                {% for err in form.venue.errors %}<span class="error">{{ err }}</span>{% endfor %}
+
+                {{ form.target_audience.label_tag }}
+                {{ form.target_audience }}
+                {% for err in form.target_audience.errors %}<span class="error">{{ err }}</span>{% endfor %}
+
+                {{ form.event_focus_type.label_tag }}
+                {{ form.event_focus_type }}
+                {% for err in form.event_focus_type.errors %}<span class="error">{{ err }}</span>{% endfor %}
+
+                {{ form.academic_year.label_tag }}
+                {{ form.academic_year }}
+                {% for err in form.academic_year.errors %}<span class="error">{{ err }}</span>{% endfor %}
+
+                {{ form.student_coordinators.label_tag }}
+                {{ form.student_coordinators }}
+                {% for err in form.student_coordinators.errors %}<span class="error">{{ err }}</span>{% endfor %}
+
+                {{ form.num_activities.label_tag }}
+                {{ form.num_activities }}
+                {% for err in form.num_activities.errors %}<span class="error">{{ err }}</span>{% endfor %}
+
+                <div class="input-group{% if form.faculty_incharges.errors %} has-error{% endif %}">
+                    {{ form.faculty_incharges.label_tag }}
+                    {{ form.faculty_incharges }}
+                    {% for err in form.faculty_incharges.errors %}
+                        <span class="error">{{ err }}</span>
+                    {% endfor %}
+                </div>
+
+                <!-- Other sections would have their form fields here when implemented -->
+                {% for field in form.visible_fields %}
+                    {% if field.name not in "organization_type,organization,event_title,event_datetime,venue,target_audience,event_focus_type,academic_year,student_coordinators,num_activities,faculty_incharges" %}
+                        <div id="django-field-{{ field.name }}">
+                            {{ field.label_tag }}
+                            {{ field }}
+                            {% if field.help_text %}
+                                <small class="help-text">{{ field.help_text }}</small>
+                            {% endif %}
+                            {% for e in field.errors %}
+                                <span class="error">{{ e }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
     </form>
 
     <!-- Form Panel (Right Side) -->
@@ -170,87 +240,15 @@
     </div>
 </div>
 
-<!-- Hidden Django Form Fields -->
-<div style="display: none;" id="django-forms">
-    <!-- Basic Info Fields -->
-    <div id="django-basic-info">
-        {{ form.organization_type.label_tag }}
-        {{ form.organization_type }}
-        {% for err in form.organization_type.errors %}<span class="error">{{ err }}</span>{% endfor %}
-        
-        {{ form.organization.label_tag }}
-        {{ form.organization }}
-        {% for err in form.organization.errors %}<span class="error">{{ err }}</span>{% endfor %}
-        
-        {{ form.event_title.label_tag }}
-        {{ form.event_title }}
-        {% for err in form.event_title.errors %}<span class="error">{{ err }}</span>{% endfor %}
-        
-        {{ form.event_datetime.label_tag }}
-        {{ form.event_datetime }}
-        {% for err in form.event_datetime.errors %}<span class="error">{{ err }}</span>{% endfor %}
-        
-        {{ form.venue.label_tag }}
-        {{ form.venue }}
-        {% for err in form.venue.errors %}<span class="error">{{ err }}</span>{% endfor %}
-        
-        {{ form.target_audience.label_tag }}
-        {{ form.target_audience }}
-        {% for err in form.target_audience.errors %}<span class="error">{{ err }}</span>{% endfor %}
-        
-        {{ form.event_focus_type.label_tag }}
-        {{ form.event_focus_type }}
-        {% for err in form.event_focus_type.errors %}<span class="error">{{ err }}</span>{% endfor %}
-        
-        {{ form.academic_year.label_tag }}
-        {{ form.academic_year }}
-        {% for err in form.academic_year.errors %}<span class="error">{{ err }}</span>{% endfor %}
-        
-        {{ form.student_coordinators.label_tag }}
-        {{ form.student_coordinators }}
-        {% for err in form.student_coordinators.errors %}<span class="error">{{ err }}</span>{% endfor %}
-        
-        {{ form.num_activities.label_tag }}
-        {{ form.num_activities }}
-        {% for err in form.num_activities.errors %}<span class="error">{{ err }}</span>{% endfor %}
-        
-        <div class="input-group{% if form.faculty_incharges.errors %} has-error{% endif %}">
-    {{ form.faculty_incharges.label_tag }}
-    <select id="faculty-select" name="faculty_incharges" multiple>
-        {% for user in form.fields.faculty_incharges.queryset %}
-            {% if user.id|stringformat:"s" in form.faculty_incharges.value %}
-                <option value="{{ user.id }}" selected>
-                    {{ user.get_full_name|default:user.username }} ({{ user.email }})
-                </option>
-            {% endif %}
-        {% endfor %}
-    </select>
-    {% for err in form.faculty_incharges.errors %}
-        <span class="error">{{ err }}</span>
-    {% endfor %}
-</div>
-
-    
-    <!-- Other sections would have their form fields here when implemented -->
-    {% for field in form.visible_fields %}
-        {% if field.name not in "organization_type,organization,event_title,event_datetime,venue,target_audience,event_focus_type,academic_year,student_coordinators,num_activities,faculty_incharges" %}
-            <div id="django-field-{{ field.name }}">
-                {{ field.label_tag }}
-                {{ field }}
-                {% if field.help_text %}
-                    <small class="help-text">{{ field.help_text }}</small>
-                {% endif %}
-                {% for e in field.errors %}
-                    <span class="error">{{ e }}</span>
-                {% endfor %}
-            </div>
-        {% endif %}
-    {% endfor %}
-</div>
 {% endblock %}
 
 {% block scripts %}
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script>
+        if (!window.jQuery) {
+            document.write("<script src='{% static 'emt/js/jquery-3.7.1.min.js' %}'><\/script>");
+        }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
     <script>
         // Django integration variables

@@ -539,9 +539,9 @@
         if (notificationDropdown && !e.target.closest('.notification-section')) {
           notificationDropdown.classList.remove('active');
         }
-      });
     });
+  });
   </script>
-
-</body>
-</html>
+  {% block scripts %}{% endblock %}
+  </body>
+  </html>
