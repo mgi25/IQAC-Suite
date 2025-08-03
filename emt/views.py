@@ -175,13 +175,28 @@ def submit_proposal(request, pk=None):
         "org_types": OrganizationType.objects.filter(is_active=True).order_by('name'),
     }
 
+
     if request.method == "POST" and form.is_valid():
         proposal = form.save(commit=False)
         proposal.submitted_by = request.user
-        proposal.status = "draft"
-        proposal.save()
-        form.save_m2m()
-        return redirect("emt:submit_need_analysis", proposal_id=proposal.id)
+        if "final_submit" in request.POST:
+            proposal.status = "submitted"
+            proposal.submitted_at = timezone.now()
+            proposal.save()
+            form.save_m2m()
+            # --- Notification logic (simple example) ---
+            from core.models import Notification
+            Notification.objects.create(
+                user=request.user,
+                message=f"Proposal '{proposal.event_title}' submitted.",
+                link=f"/emt/proposal/{proposal.id}/status/"
+            )
+            return redirect("emt:proposal_status_detail", proposal_id=proposal.id)
+        else:
+            proposal.status = "draft"
+            proposal.save()
+            form.save_m2m()
+            return redirect("emt:submit_need_analysis", proposal_id=proposal.id)
 
     return render(request, "emt/submit_proposal.html", ctx)
 

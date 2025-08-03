@@ -1,168 +1,316 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Submit Event Proposal{% endblock %}
+{% block title %}Modern Event Proposal Dashboard{% endblock %}
 
 {% block head_extra %}
-  <link rel="stylesheet" href="{% static 'emt/css/styles.css' %}">
-  <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet"/>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/corejs-typeahead/1.3.1/typeaheadjs.min.css" rel="stylesheet" />
-  <style>
-    .typeahead, .tt-query, .tt-hint {
-      width: 100%;
-      height: 38px;
-      padding: 6px 12px;
-      border: 1px solid #ced4da;
-      border-radius: 4px;
-      background: #fff;
-      font-size: 16px;
-    }
-    .tt-menu {
-      width: 100%;
-      background: #fff;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-    }
-    .tt-suggestion {
-      padding: 8px 14px;
-      cursor: pointer;
-    }
-    .tt-suggestion:hover, .tt-suggestion.tt-cursor {
-      background: #0d6efd;
-      color: #fff;
-    }
-    .input-group {
-      margin-bottom: 18px;
-    }
-    .input-group label {
-      font-weight: 500;
-    }
-    .has-error input, .has-error .typeahead {
-      border-color: #d9534f;
-    }
-    .error {
-      color: #d9534f;
-      font-size: 90%;
-    }
-  </style>
+    <link rel="stylesheet" href="{% static 'emt/css/styles.css' %}">
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet"/>
 {% endblock %}
 
 {% block content %}
-<div class="container">
-  <div class="header">
-    <h1>Submit Your Event Proposal</h1>
-    <p>Fill out the details below to register your event.</p>
-  </div>
-  {% if form.errors %}
-    <div style="color: red;">
-      <strong>Form Errors:</strong>
-      <pre>{{ form.errors }}</pre>
-    </div>
-  {% endif %}
-  <div class="page-content">
-    <form method="post" enctype="multipart/form-data" class="proposal-form" autocomplete="off">
-      {% csrf_token %}
-      <div class="section">
-        <div class="input-group">
-          {{ form.organization_type.label_tag }} {{ form.organization_type }}
-        </div>
-        <div class="input-group">
-          {{ form.organization.label_tag }} {{ form.organization }}
-          {% for err in form.organization.errors %}<span class="error">{{ err }}</span>{% endfor %}
-        </div>
-
-        <div class="input-group{% if form.faculty_incharges.errors %} has-error{% endif %}">
-          <label for="faculty-select">{{ form.faculty_incharges.label }}</label>
-          <select id="faculty-select" name="faculty_incharges" multiple>
-            {% with selected=form.faculty_incharges.value %}
-              {% for user in form.fields.faculty_incharges.queryset %}
-                {% if selected and user.id in selected %}
-                  <option value="{{ user.id }}" selected>
-                    {{ user.get_full_name|default:user.username }} ({{ user.email }})
-                  </option>
-                {% endif %}
-              {% endfor %}
-            {% endwith %}
-          </select>
-          {% for err in form.faculty_incharges.errors %}
-            <span class="error">{{ err }}</span>
-          {% endfor %}
-        </div>
-
-        {% for field in form.visible_fields %}
-          {% if field.name not in "organization_type,organization,faculty_incharges" %}
-            <div class="input-group{% if field.errors %} has-error{% endif %}">
-              {{ field.label_tag }} {{ field }}
-              {% if field.help_text %}
-                <small class="help-text">{{ field.help_text }}</small>
-              {% endif %}
-              {% for e in field.errors %}
-                <span class="error">{{ e }}</span>
-              {% endfor %}
+<div class="dashboard-container" id="dashboard-container">
+    <div class="dashboard-header">
+        <h1>Event Proposal Dashboard</h1>
+        <div class="overall-progress">
+            <div class="progress-bar">
+                <div class="progress-fill" id="overall-progress-fill"></div>
             </div>
-          {% endif %}
-        {% endfor %}
-      </div>
+            <span class="progress-text" id="overall-progress-text">0% Complete</span>
+        </div>
+    </div>
 
-      <button type="submit" name="submit" class="btn btn-primary" style="margin-top:24px;">
-        Save &amp; Continue
-      </button>
+    <!-- Display form errors -->
+    {% if form.errors %}
+        <div class="form-errors-banner">
+            <strong>Please fix the following errors:</strong>
+            <ul>
+                {% for field, errors in form.errors.items %}
+                    {% for error in errors %}
+                        <li>{{ field }}: {{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" id="proposal-form" autocomplete="off">
+        {% csrf_token %}
+        <div class="cards-stack">
+            <!-- Card 1: Basic Information -->
+            <div class="proposal-card" data-section="basic-info" data-order="1">
+                <div class="card-header">
+                    <div class="card-info">
+                        <span class="card-number">1</span>
+                        <div>
+                            <div class="card-title">Basic Information</div>
+                            <div class="card-subtitle">Organization details and event basics</div>
+                        </div>
+                    </div>
+                    <span class="status-icon" id="basic-info-status" data-status="not-started">○</span>
+                </div>
+            </div>
+
+            <!-- Card 2: Need Analysis -->
+            <div class="proposal-card disabled" data-section="need-analysis" data-order="2">
+                <div class="card-header">
+                    <div class="card-info">
+                        <span class="card-number">2</span>
+                        <div>
+                            <div class="card-title">Need Analysis</div>
+                            <div class="card-subtitle">Why is this event needed?</div>
+                        </div>
+                    </div>
+                    <span class="status-icon" id="need-analysis-status" data-status="not-started">○</span>
+                </div>
+            </div>
+
+            <!-- Card 3: Objectives -->
+            <div class="proposal-card disabled" data-section="objectives" data-order="3">
+                <div class="card-header">
+                    <div class="card-info">
+                        <span class="card-number">3</span>
+                        <div>
+                            <div class="card-title">Objectives</div>
+                            <div class="card-subtitle">What do you aim to achieve?</div>
+                        </div>
+                    </div>
+                    <span class="status-icon" id="objectives-status" data-status="not-started">○</span>
+                </div>
+            </div>
+
+            <!-- Card 4: Expected Outcomes -->
+            <div class="proposal-card disabled" data-section="outcomes" data-order="4">
+                <div class="card-header">
+                    <div class="card-info">
+                        <span class="card-number">4</span>
+                        <div>
+                            <div class="card-title">Expected Outcomes</div>
+                            <div class="card-subtitle">What results do you expect?</div>
+                        </div>
+                    </div>
+                    <span class="status-icon" id="outcomes-status" data-status="not-started">○</span>
+                </div>
+            </div>
+
+            <!-- Card 5: Tentative Flow -->
+            <div class="proposal-card disabled" data-section="flow" data-order="5">
+                <div class="card-header">
+                    <div class="card-info">
+                        <span class="card-number">5</span>
+                        <div>
+                            <div class="card-title">Tentative Flow</div>
+                            <div class="card-subtitle">Event timeline and schedule</div>
+                        </div>
+                    </div>
+                    <span class="status-icon" id="flow-status" data-status="not-started">○</span>
+                </div>
+            </div>
+
+            <!-- Card 6: Speaker Profiles -->
+            <div class="proposal-card disabled" data-section="speakers" data-order="6">
+                <div class="card-header">
+                    <div class="card-info">
+                        <span class="card-number">6</span>
+                        <div>
+                            <div class="card-title">Speaker Profiles</div>
+                            <div class="card-subtitle">Add speaker details</div>
+                        </div>
+                    </div>
+                    <span class="status-icon" id="speakers-status" data-status="not-started">○</span>
+                </div>
+            </div>
+
+            <!-- Card 7: Expenses -->
+            <div class="proposal-card disabled" data-section="expenses" data-order="7">
+                <div class="card-header">
+                    <div class="card-info">
+                        <span class="card-number">7</span>
+                        <div>
+                            <div class="card-title">Expenses</div>
+                            <div class="card-subtitle">Event costs and expenditures</div>
+                        </div>
+                    </div>
+                    <span class="status-icon" id="expenses-status" data-status="not-started">○</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit Section -->
+        <div class="submit-section">
+            <button type="submit" name="final_submit" class="btn-submit" id="submit-proposal-btn">
+                Submit Proposal
+            </button>
+            <div class="submit-help-text">
+                Complete all sections above to enable submission
+            </div>
+        </div>
     </form>
-  </div>
+
+    <!-- Form Panel (Right Side) -->
+    <div class="form-panel" id="form-panel">
+        <div class="form-panel-header">
+            <div class="form-panel-title">
+                <span class="form-panel-number" id="form-panel-number">1</span>
+                <div class="form-panel-info">
+                    <h2 id="form-panel-title">Basic Information</h2>
+                    <p id="form-panel-subtitle">Organization details and event basics</p>
+                </div>
+            </div>
+            <button type="button" class="form-panel-close" id="form-panel-close">×</button>
+        </div>
+        <div class="form-panel-content" id="form-panel-content">
+            <!-- Dynamic form content will be loaded here -->
+        </div>
+    </div>
+
+    <!-- Auto-save indicator -->
+    <div class="autosave-indicator" id="autosave-indicator">
+        <span class="indicator-text">Saved</span>
+    </div>
+</div>
+
+<!-- Hidden Django Form Fields -->
+<div style="display: none;" id="django-forms">
+    <!-- Basic Info Fields -->
+    <div id="django-basic-info">
+        {{ form.organization_type.label_tag }}
+        {{ form.organization_type }}
+        {% for err in form.organization_type.errors %}<span class="error">{{ err }}</span>{% endfor %}
+        
+        {{ form.organization.label_tag }}
+        {{ form.organization }}
+        {% for err in form.organization.errors %}<span class="error">{{ err }}</span>{% endfor %}
+        
+        {{ form.event_title.label_tag }}
+        {{ form.event_title }}
+        {% for err in form.event_title.errors %}<span class="error">{{ err }}</span>{% endfor %}
+        
+        {{ form.event_datetime.label_tag }}
+        {{ form.event_datetime }}
+        {% for err in form.event_datetime.errors %}<span class="error">{{ err }}</span>{% endfor %}
+        
+        {{ form.venue.label_tag }}
+        {{ form.venue }}
+        {% for err in form.venue.errors %}<span class="error">{{ err }}</span>{% endfor %}
+        
+        {{ form.target_audience.label_tag }}
+        {{ form.target_audience }}
+        {% for err in form.target_audience.errors %}<span class="error">{{ err }}</span>{% endfor %}
+        
+        {{ form.event_focus_type.label_tag }}
+        {{ form.event_focus_type }}
+        {% for err in form.event_focus_type.errors %}<span class="error">{{ err }}</span>{% endfor %}
+        
+        {{ form.academic_year.label_tag }}
+        {{ form.academic_year }}
+        {% for err in form.academic_year.errors %}<span class="error">{{ err }}</span>{% endfor %}
+        
+        {{ form.student_coordinators.label_tag }}
+        {{ form.student_coordinators }}
+        {% for err in form.student_coordinators.errors %}<span class="error">{{ err }}</span>{% endfor %}
+        
+        {{ form.num_activities.label_tag }}
+        {{ form.num_activities }}
+        {% for err in form.num_activities.errors %}<span class="error">{{ err }}</span>{% endfor %}
+        
+        <div class="input-group{% if form.faculty_incharges.errors %} has-error{% endif %}">
+    {{ form.faculty_incharges.label_tag }}
+    <select id="faculty-select" name="faculty_incharges" multiple>
+        {% for user in form.fields.faculty_incharges.queryset %}
+            {% if user.id|stringformat:"s" in form.faculty_incharges.value %}
+                <option value="{{ user.id }}" selected>
+                    {{ user.get_full_name|default:user.username }} ({{ user.email }})
+                </option>
+            {% endif %}
+        {% endfor %}
+    </select>
+    {% for err in form.faculty_incharges.errors %}
+        <span class="error">{{ err }}</span>
+    {% endfor %}
+</div>
+
+    
+    <!-- Other sections would have their form fields here when implemented -->
+    {% for field in form.visible_fields %}
+        {% if field.name not in "organization_type,organization,event_title,event_datetime,venue,target_audience,event_focus_type,academic_year,student_coordinators,num_activities,faculty_incharges" %}
+            <div id="django-field-{{ field.name }}">
+                {{ field.label_tag }}
+                {{ field }}
+                {% if field.help_text %}
+                    <small class="help-text">{{ field.help_text }}</small>
+                {% endif %}
+                {% for e in field.errors %}
+                    <span class="error">{{ e }}</span>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endfor %}
 </div>
 {% endblock %}
 
 {% block scripts %}
-  <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // Organization Type select
-      const orgTypeTS = new TomSelect('#id_organization_type');
-      // Organization select (dependent on org type)
-      const orgTS = new TomSelect('#id_organization', {
-        valueField: 'id',
-        labelField: 'text',
-        searchField: 'text',
-        create: false,
-        load: (query, callback) => {
-          const typeEl = document.querySelector('#id_organization_type');
-          const typeName = typeEl.tomselect ?
-            typeEl.tomselect.getItem(typeEl.tomselect.getValue())?.textContent :
-            typeEl.options[typeEl.selectedIndex]?.text;
-          let url = '{% url "emt:api_organizations" %}?q=' + encodeURIComponent(query || '');
-          if (typeName) url += '&org_type=' + encodeURIComponent(typeName.trim());
-          fetch(url)
-            .then(r => r.json())
-            .then(callback)
-            .catch(() => callback());
-        }
-      });
-      orgTypeTS.on('change', () => {
-        orgTS.clear();
-        orgTS.clearOptions();
-      });
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+    <script>
+        // Django integration variables
+        window.PROPOSAL_ID = "{{ proposal.id|default:'' }}";
+        window.AUTOSAVE_URL = "{% url 'emt:autosave_proposal' %}";
+        window.AUTOSAVE_CSRF = "{{ csrf_token }}";
+        
+        // API URLs from original
+        window.API_ORGANIZATIONS = "{% url 'emt:api_organizations' %}";
+        window.API_FACULTY = "{% url 'emt:api_faculty' %}";
 
-      // Faculty select (AJAX multi-select with live search)
-      new TomSelect('#faculty-select', {
-        plugins: ['remove_button'],
-        valueField: 'id',
-        labelField: 'text',
-        searchField: 'text',
-        create: false,
-        load: (query, callback) => {
-          if (!query.length) return callback();
-          fetch('{% url "emt:api_faculty" %}?q=' + encodeURIComponent(query))
-            .then(r => r.json())
-            .then(callback)
-            .catch(() => callback());
-        }
-      });
-    });
-  </script>
-  <script>
-    window.PROPOSAL_ID = "{{ proposal.id|default:'' }}";
-    window.AUTOSAVE_URL = "{% url 'emt:autosave_proposal' %}";
-    window.AUTOSAVE_CSRF = "{{ csrf_token }}";
-  </script>
-  <script src="{% static 'emt/js/autosave_draft.js' %}"></script>
+        document.addEventListener('DOMContentLoaded', () => {
+  // Org Type dropdown (no search needed)
+  const orgTypeTS = new TomSelect('#id_organization_type');
+
+  // Org dropdown — fetch based on selected org_type
+  const orgTS = new TomSelect('#id_organization', {
+  valueField: 'id',
+  labelField: 'text',
+  searchField: 'text',
+  create: false,
+  load: (query, callback) => {
+    const typeEl = document.querySelector('#id_organization_type');
+    const typeName = typeEl.tomselect ?
+      typeEl.tomselect.getItem(typeEl.tomselect.getValue())?.textContent :
+      typeEl.options[typeEl.selectedIndex]?.text;
+    let url = '{% url "emt:api_organizations" %}?q=' + encodeURIComponent(query || '');
+    if (typeName) url += '&org_type=' + encodeURIComponent(typeName.trim());
+    fetch(url)
+      .then(r => r.json())
+      .then(callback)
+      .catch(() => callback());
+  }
+});
+
+
+  // Clear org selection when org type changes
+  orgTypeTS.on('change', () => {
+    orgTS.clear();
+    orgTS.clearOptions();
+  });
+
+  // Faculty dropdown setup (already working)
+  new TomSelect('#faculty-select', {
+    plugins: ['remove_button'],
+    valueField: 'id',
+    labelField: 'text',
+    searchField: 'text',
+    create: false,
+    load: (query, callback) => {
+      if (!query.length) return callback();
+      fetch(window.API_FACULTY + '?q=' + encodeURIComponent(query))
+        .then(r => r.json())
+        .then(callback)
+        .catch(() => callback());
+    }
+  });
+});
+
+    </script>
+    <script src="{% static 'emt/js/autosave_draft.js' %}"></script>
+    <script src="{% static 'emt/js/proposal_dashboard.js' %}"></script>
 {% endblock %}
