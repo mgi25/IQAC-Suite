@@ -118,7 +118,7 @@
               </tr>
             </thead>
             <tbody>
-              {% if proposal.fest_fee_participants or proposal.fest_fee_rate or proposal.fest_fee_amount %}
+              {% if proposal.fest_fee_participants or proposal.fest_fee_rate or proposal.fest_fee_amount or proposal.fest_sponsorship_amount %}
                 <tr>
                   <td>1</td>
                   <td>Participation Fee [Fest]</td>
@@ -133,7 +133,7 @@
                   <td>{{ proposal.fest_sponsorship_amount|default:"—" }}</td>
                 </tr>
               {% endif %}
-              {% if proposal.conf_fee_participants or proposal.conf_fee_rate or proposal.conf_fee_amount %}
+              {% if proposal.conf_fee_participants or proposal.conf_fee_rate or proposal.conf_fee_amount or proposal.conf_sponsorship_amount %}
                 <tr>
                   <td>3</td>
                   <td>Participation Fee [Conference]</td>
