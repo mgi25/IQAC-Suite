@@ -79,6 +79,10 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.notifications',
             ],
+            'libraries': {
+                'dict_filters': 'core.templatetags.dict_filters',
+                'group_filters': 'core.templatetags.group_filters',
+            },
         },
     },
 ]
