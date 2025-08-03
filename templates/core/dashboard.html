@@ -42,6 +42,7 @@
       </div>
     </a>
 
+    {% if user.is_superuser or request.session.role == 'admin' %}
     <a href="{% url 'admin_reports' %}" class="material-list-tile blue-theme card">
       <div class="material-list-leading">
         <div class="material-list-icon">
@@ -56,8 +57,9 @@
         <i class="fa-solid fa-arrow-right material-list-arrow"></i>
       </div>
     </a>
+    {% endif %}
 
-    {% if user.is_superuser or user|has_group:"Faculty" %}
+    {% if user.is_superuser or request.session.role == 'faculty' or user|has_group:"Faculty" %}
     <a href="{% url 'cdl_dashboard' %}" class="material-list-tile blue-theme card">
       <div class="material-list-leading">
         <div class="material-list-icon">
