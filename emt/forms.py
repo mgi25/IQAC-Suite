@@ -100,7 +100,7 @@ class EventProposalForm(forms.ModelForm):
             'fest_fee_rate', 'fest_fee_amount', 'fest_sponsorship_amount',
             'conf_fee_participants', 'conf_fee_rate', 'conf_fee_amount', 'conf_sponsorship_amount',
         ]
-        exclude = ['submitted_by', 'created_at', 'updated_at', 'status', 'report_generated', 'needs_finance_approval', 'is_big_event']
+        exclude = ['submitted_by', 'created_at', 'updated_at', 'submitted_at', 'status', 'report_generated', 'needs_finance_approval', 'is_big_event']
 
         labels = {
             'organization_type': 'Type of Organization',
