@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static group_filters %}
 
 {% block title %}Dashboard – IQAC Suite{% endblock %}
 
@@ -57,7 +57,7 @@
       </div>
     </a>
 
-    {% if user.is_superuser or request.user.groups.filter(name='Faculty').exists %}
+    {% if user.is_superuser or user|has_group:"Faculty" %}
     <a href="{% url 'cdl_dashboard' %}" class="material-list-tile blue-theme card">
       <div class="material-list-leading">
         <div class="material-list-icon">

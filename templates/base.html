@@ -1,4 +1,4 @@
-{% load static %}
+{% load static group_filters %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -155,7 +155,7 @@
       {% endif %}
 
       <!-- CDL - Expandable (Faculty and Superuser) -->
-      {% if user.is_superuser or request.user.groups.filter(name='Faculty').exists %}
+      {% if user.is_superuser or user|has_group:"Faculty" %}
       <div class="nav-section {% if 'cdl' in request.resolver_match.url_name or '/cdl/' in request.path %}expanded{% endif %}">
         <div class="nav-section-header">
           <i class="fas fa-photo-video nav-icon"></i>
