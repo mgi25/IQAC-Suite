@@ -144,15 +144,18 @@
         </div>
       </div>
 
-      <!-- Graduate Transcript - Standalone -->
+      <!-- Graduate Transcript - Standalone (Superuser only) -->
+      {% if user.is_superuser %}
       <div class="nav-item">
         <a href="/transcript/" class="nav-link {% if request.resolver_match.namespace == 'transcript' or 'transcript' in request.resolver_match.url_name or '/transcript/' in request.path %}active{% endif %}">
           <i class="fas fa-graduation-cap nav-icon"></i>
           <span class="nav-text">Graduate Transcript</span>
         </a>
       </div>
+      {% endif %}
 
-      <!-- CDL - Expandable -->
+      <!-- CDL - Expandable (Faculty and Superuser) -->
+      {% if user.is_superuser or request.user.groups.filter(name='Faculty').exists %}
       <div class="nav-section {% if 'cdl' in request.resolver_match.url_name or '/cdl/' in request.path %}expanded{% endif %}">
         <div class="nav-section-header">
           <i class="fas fa-photo-video nav-icon"></i>
@@ -168,6 +171,7 @@
           </a>
         </div>
       </div>
+      {% endif %}
 
       <!-- User Management - Expandable (Admin Only) -->
       {% if user.is_superuser or request.session.role == 'admin' %}
