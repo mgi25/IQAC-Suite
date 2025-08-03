@@ -74,6 +74,23 @@ body {
   overflow-y: auto;
 }
 
+/* Event Proposal page layout fix */
+.event-form-wrapper {
+  margin-left: var(--sidebar-width);
+  padding: 2rem;
+}
+
+.event-form-wrapper .dashboard-container {
+  padding: 0;
+}
+
+@media (max-width: 768px) {
+  .event-form-wrapper {
+    margin-left: 0;
+    padding: 1rem;
+  }
+}
+
 /* ===== HEADER ===== */
 .dashboard-header {
   text-align: center;
