@@ -54,59 +54,73 @@ body {
   line-height: 1.5;
 }
 
-/* ===== DASHBOARD CONTAINER ===== */
-.dashboard-container {
-  max-width: none;
-  margin: 0;
-  padding: 2rem;
-  min-height: 100vh;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
+/* ===== MAIN LAYOUT FOR THE PROPOSAL PAGE ===== */
+
+/* This is the main container for the two-column view */
+.event-dashboard-container {
+    display: flex; /* 1. Use Flexbox to align children side-by-side */
+    align-items: flex-start; /* 2. Align both columns to the top */
+    gap: 2rem; /* 3. Create a healthy space between the columns */
+    padding: 2rem;
+    width: 100%;
 }
 
-.dashboard-container.split-view {
-  padding: 1rem;
-  width: 50%;
-  position: fixed;
-  left: 0;
-  top: 170px;
-  height: calc(100vh - 170px);
-  overflow-y: auto;
+/* ===== LEFT COLUMN: STEP LIST ===== */
+
+.step-list {
+    flex: 0 0 auto; /* 4. KEY: Don't grow, don't shrink, size based on content */
+    /* No max-width needed, let it be as wide as its content requires */
 }
 
-/* ===== HEADER ===== */
+/* ===== RIGHT COLUMN: FORM PANEL ===== */
+
+.form-panel {
+    display: block; /* 5. KEY: Ensure the panel is always visible */
+    flex: 1; /* 6. KEY: Allow this panel to grow and fill all remaining space */
+    background: #fff;
+    padding: 2rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* NOTE: The .form-panel.active rule is no longer necessary for this specific layout,
+   as the form is always visible. You can remove it.
+*/
+
+
+/* ===== HEADER STYLES (Unchanged) ===== */
 .dashboard-header {
-  text-align: center;
-  margin-bottom: 2.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 2.5rem 2rem;
-  border-radius: 20px;
-  position: relative;
-  overflow: hidden;
+    text-align: center;
+    margin-bottom: 2.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2.5rem 2rem;
+    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
 }
 
 .dashboard-header::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
 }
 
 .dashboard-header > * {
-  position: relative;
-  z-index: 3;
+    position: relative;
+    z-index: 3;
 }
 
 .dashboard-header h1 {
-  font-size: 2.2rem;
-  font-weight: 700;
-  margin: 0 0 1.5rem 0;
-  letter-spacing: -0.02em;
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin: 0 0 1.5rem 0;
+    letter-spacing: -0.02em;
 }
 
 /* ===== PROGRESS BAR ===== */
@@ -356,22 +370,7 @@ body {
 
 /* ===== FORM PANEL (RIGHT SIDE) ===== */
 .form-panel {
-  position: fixed;
-  top: 170px;
-  right: 0;
-  width: 50%;
-  height: calc(100vh - 170px);
-  background: white;
-  transform: translateX(100%);
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   overflow-y: auto;
-  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-}
-
-.form-panel.active {
-  transform: translateX(0);
 }
 
 .form-panel-header {
@@ -817,27 +816,25 @@ body {
       padding: 1rem;
   }
 
+  .event-dashboard-container {
+      flex-direction: column;
+      margin-left: 0;
+      padding: 1rem;
+      gap: 1rem;
+  }
+
+  .step-list,
+  .form-panel,
   .dashboard-container.split-view {
-      width: 100%;
-      position: relative;
-      top: auto;
-      height: auto;
+      max-width: 100%;
+      flex: 1 1 100%;
+      padding: 1rem;
   }
 
   .form-panel {
-      position: relative;
-      width: 100%;
-      height: auto;
-      transform: none;
-      top: auto;
-      right: auto;
       box-shadow: none;
       border-top: 1px solid #e5e7eb;
       margin-top: 2rem;
-  }
-
-  .form-panel.active {
-      transform: none;
   }
 
   .cards-stack {

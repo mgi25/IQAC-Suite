@@ -271,7 +271,7 @@ $(document).ready(function() {
                 if (orgTypeSelect.val()) {
                     orgTypeTS.setValue(orgTypeSelect.val());
                     const initialText = orgTypeOptions.find(opt => opt.value === orgTypeSelect.val())?.text?.toLowerCase().trim() || '';
-                    handleOrgTypeChange(initialText);
+                    handleOrgTypeChange(initialText, true);
                 }
             }
         }
@@ -393,17 +393,17 @@ $(document).ready(function() {
     }
 
     // Organization type change handler
-    function handleOrgTypeChange(orgType) {
+    function handleOrgTypeChange(orgType, preserveOrg = false) {
         console.log('=== ORG TYPE CHANGE DEBUG ===');
         console.log('Selected org type:', orgType);
-        
+
         let normalizedOrgType = orgType ? orgType.toString().toLowerCase().replace(/[^a-z0-9]+/g, '').trim() : '';
         console.log('Normalized org type:', normalizedOrgType);
-        
+
         $('.org-specific-field').remove();
 
         if (normalizedOrgType !== '') {
-            createOrgField(normalizedOrgType, orgType);
+            createOrgField(normalizedOrgType, preserveOrg);
             const targetFieldId = `#org-${normalizedOrgType}-field`;
             let targetField = $(targetFieldId);
             if (targetField.length) {
@@ -412,12 +412,14 @@ $(document).ready(function() {
                 console.error('FIELD NOT FOUND for org type:', normalizedOrgType);
             }
         }
-        $(`#django-basic-info [name="organization"]`).val('');
+        if (!preserveOrg) {
+            $(`#django-basic-info [name="organization"]`).val('');
+        }
         console.log('=== END ORG TYPE CHANGE DEBUG ===');
     }
 
     // Create org field with proper naming and TomSelect
-    function createOrgField(orgType) {
+    function createOrgField(orgType, preserveOrg) {
         console.log('Creating org field for:', orgType);
         const orgTypeMap = {
             department: { label: 'Department', placeholder: 'Type department name...' },
@@ -428,10 +430,10 @@ $(document).ready(function() {
         };
 
         let canonicalType = Object.keys(orgTypeMap).find(key => orgType.includes(key)) || orgType;
-        
+
         const label = orgTypeMap[canonicalType]?.label || capitalizeFirst(canonicalType);
         const placeholder = orgTypeMap[canonicalType]?.placeholder || `Type ${canonicalType} name...`;
-        
+
         const orgFieldHtml = `
             <div class="org-specific-field form-row" id="org-${canonicalType}-field" style="display: block;">
                 <div class="input-group">
@@ -440,17 +442,17 @@ $(document).ready(function() {
                 </div>
             </div>
         `;
-        
+
         const orgTypeInput = $('#org-type-modern-input');
         orgTypeInput.closest('.input-group').parent().after(orgFieldHtml);
-        
+
         console.log('Created field for:', canonicalType);
-        
+
         const newSelect = $(`#org-${canonicalType}-modern-select`);
         const hiddenField = $(`#django-basic-info [name="organization"]`);
 
         if (typeof TomSelect !== 'undefined' && newSelect.length) {
-            new TomSelect(newSelect[0], {
+            const tom = new TomSelect(newSelect[0], {
                 valueField: 'id',
                 labelField: 'text',
                 searchField: 'text',
@@ -470,6 +472,15 @@ $(document).ready(function() {
                 },
                 placeholder: placeholder,
             });
+
+            const existingValue = preserveOrg ? hiddenField.val() : '';
+            if (existingValue) {
+                const existingText = hiddenField.find(`option[value="${existingValue}"]`).text();
+                if (existingText) {
+                    tom.addOption({ id: existingValue, text: existingText });
+                    tom.setValue(existingValue);
+                }
+            }
         }
     }
 

@@ -135,7 +135,12 @@ def submit_proposal(request, pk=None):
 
     if request.method == "POST":
         post_data = request.POST.copy()
-        form = EventProposalForm(post_data, instance=proposal, selected_academic_year=request.session.get('selected_academic_year'))
+        form = EventProposalForm(
+            post_data,
+            instance=proposal,
+            selected_academic_year=request.session.get('selected_academic_year'),
+            user=request.user,
+        )
 
         # --------- FACULTY INCHARGES QUERYSET FIX ---------
         faculty_ids = post_data.getlist("faculty_incharges")
@@ -152,7 +157,11 @@ def submit_proposal(request, pk=None):
     else:
         # Always get the selected academic year from session (ensured above)
         selected_academic_year = request.session.get('selected_academic_year')
-        form = EventProposalForm(instance=proposal, selected_academic_year=selected_academic_year)
+        form = EventProposalForm(
+            instance=proposal,
+            selected_academic_year=selected_academic_year,
+            user=request.user,
+        )
         # Populate all faculty as available choices for JS search/select on GET.
         # Include already assigned faculty so their selections remain visible.
         fac_ids = list(proposal.faculty_incharges.all().values_list('id', flat=True)) if proposal else []
@@ -184,6 +193,7 @@ def submit_proposal(request, pk=None):
             proposal.submitted_at = timezone.now()
             proposal.save()
             form.save_m2m()
+            build_approval_chain(proposal)
             messages.success(
                 request,
                 f"Proposal '{proposal.event_title}' submitted.",
@@ -225,7 +235,7 @@ def autosave_proposal(request):
             id=pid, submitted_by=request.user
         ).first()
 
-    form = EventProposalForm(data, instance=proposal)
+    form = EventProposalForm(data, instance=proposal, user=request.user)
 
     if not form.is_valid():
         return JsonResponse({"success": False, "errors": form.errors}, status=400)
@@ -606,11 +616,11 @@ def review_approval_step(request, step_id):
     step = get_object_or_404(ApprovalStep, id=step_id, assigned_to=request.user)
     proposal = step.proposal
 
-    # Fetch related proposal details using the proper `related_name`
-    need_analysis = getattr(proposal, "need_analysis", None)
-    objectives = getattr(proposal, "objectives", None)
-    outcomes = getattr(proposal, "expected_outcomes", None)
-    flow = getattr(proposal, "tentative_flow", None)
+    # Fetch related proposal details using safe lookups
+    need_analysis = EventNeedAnalysis.objects.filter(proposal=proposal).first()
+    objectives = EventObjectives.objects.filter(proposal=proposal).first()
+    outcomes = EventExpectedOutcomes.objects.filter(proposal=proposal).first()
+    flow = TentativeFlow.objects.filter(proposal=proposal).first()
     speakers = SpeakerProfile.objects.filter(proposal=proposal)
     expenses = ExpenseDetail.objects.filter(proposal=proposal)
 

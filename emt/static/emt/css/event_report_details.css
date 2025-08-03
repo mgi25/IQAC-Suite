@@ -250,6 +250,7 @@ body {
   border-radius: 20px;
   border: 1px solid var(--utility-border);
   box-shadow: 0 4px 30px rgba(36,70,120,0.08);
+  -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
 
@@ -1148,6 +1149,7 @@ body {
   align-items: center;
   justify-content: center;
   background: rgba(0,0,0,0.45);
+  -webkit-backdrop-filter: blur(3px);
   backdrop-filter: blur(3px);
   z-index: 1000;
 }
