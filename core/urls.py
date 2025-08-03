@@ -113,5 +113,4 @@ urlpatterns = [
     # ────────────────────────────────────────────────
     # Optional: User Dashboard (if not admin)
     # ────────────────────────────────────────────────
-    # path('dashboard/', views.user_dashboard, name='user_dashboard'),
 ]
