@@ -21,92 +21,89 @@
   
   <!-- ZONE 1: TOP UTILITY BAR -->
   <div class="top-utility-bar">
-    <div class="utility-left">
-      <div class="app-logo">
-        <img src="{% static 'core/img/campus-logo.png' %}" alt="CHRIST University" class="logo-img">
-        <span class="app-name">IQAC Command Center</span>
-      </div>
-    </div>
-    
-    <div class="utility-center">
-      <div class="universal-search">
-        <i class="fas fa-search search-icon"></i>
-        <input type="text" id="globalSearch" placeholder="Search students, reports, proposals..." class="search-input" autocomplete="off">
-        <div class="search-shortcut">Ctrl+K</div>
-        <div class="search-results" id="searchResults"></div>
-      </div>
-    </div>
-    
-    <div class="utility-right">
-      <!-- Notification Bell -->
-      <div class="notification-section">
-        <button class="utility-btn notification-btn" id="notificationBtn" aria-label="Notifications">
-          <i class="fas fa-bell"></i>
-          {% if notifications and notifications|length > 0 %}
-          <span class="notification-badge" id="notificationBadge">{{ notifications|length }}</span>
-          {% endif %}
-        </button>
-        <div class="notification-dropdown" id="notificationDropdown">
-          <div class="notification-header">
-            <h3>Notifications</h3>
-            {% if notifications and notifications|length > 0 %}
-            <button class="mark-all-read" id="markAllRead">Mark all read</button>
-            {% endif %}
-          </div>
-          <div class="notification-list" id="notificationList">
-            {% if notifications and notifications|length > 0 %}
-              {% for notification in notifications %}
-              <div class="notification-item {% if not notification.is_read %}unread{% endif %}">
-                <div class="notification-icon">
-                  <i class="fas fa-{{ notification.icon|default:'bell' }}"></i>
-                </div>
-                <div class="notification-content">
-                  <div class="notification-title">{{ notification.title }}</div>
-                  <div class="notification-text">{{ notification.message }}</div>
-                  <div class="notification-time">{{ notification.created_at|timesince }} ago</div>
-                </div>
-              </div>
-              {% endfor %}
-            {% else %}
-            <div class="notification-item">
-              <div class="notification-content" style="text-align: center; color: #6b7280; padding: 2rem;">
-                <div class="notification-title">No notifications</div>
-                <div class="notification-text">You're all caught up!</div>
-              </div>
-            </div>
-            {% endif %}
-          </div>
-          {% if notifications and notifications|length > 0 %}
-          <div class="notification-footer">
-            <a href="/core-admin/notifications/" class="view-all-link">View all notifications</a>
-          </div>
-          {% endif %}
+    <div class="utility-bar-flex" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+      <div class="utility-left" style="display: flex; align-items: center; gap: 1rem;">
+        <div class="app-logo" style="display: flex; align-items: center; gap: 0.75rem;">
+          <img src="{% static 'core/img/campus-logo.png' %}" alt="CHRIST University" class="logo-img">
+          <span class="app-name">IQAC Command Center</span>
         </div>
       </div>
-      
-      <!-- Profile Dropdown -->
-      <div class="profile-section">
-        <button class="profile-btn" aria-label="Profile">
-          <div class="profile-avatar">
-            {{ request.user.get_full_name|default:request.user.username|slice:":1"|upper }}
-          </div>
-          <span class="profile-name">{{ request.user.get_full_name|default:request.user.username }}</span>
-          <i class="fas fa-chevron-down"></i>
-        </button>
-        <div class="profile-dropdown">
-          <div class="dropdown-header">
-            <div class="user-info">
-              <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
-              <small>{{ request.session.role|default:"User" }}</small>
+      <div class="utility-center" style="flex: 1; display: flex; justify-content: center;">
+        <div class="universal-search" style="max-width: 500px; width: 100%;">
+          <i class="fas fa-search search-icon"></i>
+          <input type="text" id="globalSearch" placeholder="Search students, reports, proposals..." class="search-input" autocomplete="off">
+          <div class="search-shortcut">Ctrl+K</div>
+          <div class="search-results" id="searchResults"></div>
+        </div>
+      </div>
+      <div class="utility-right" style="display: flex; align-items: center; gap: 1.5rem;">
+        <div class="notification-section">
+          <button class="utility-btn notification-btn" id="notificationBtn" aria-label="Notifications">
+            <i class="fas fa-bell"></i>
+            {% if notifications and notifications|length > 0 %}
+            <span class="notification-badge" id="notificationBadge">{{ notifications|length }}</span>
+            {% endif %}
+          </button>
+          <div class="notification-dropdown" id="notificationDropdown">
+            <div class="notification-header">
+              <h3>Notifications</h3>
+              {% if notifications and notifications|length > 0 %}
+              <button class="mark-all-read" id="markAllRead">Mark all read</button>
+              {% endif %}
             </div>
+            <div class="notification-list" id="notificationList">
+              {% if notifications and notifications|length > 0 %}
+                {% for notification in notifications %}
+                <div class="notification-item {% if not notification.is_read %}unread{% endif %}">
+                  <div class="notification-icon">
+                    <i class="fas fa-{{ notification.icon|default:'bell' }}"></i>
+                  </div>
+                  <div class="notification-content">
+                    <div class="notification-title">{{ notification.title }}</div>
+                    <div class="notification-text">{{ notification.message }}</div>
+                    <div class="notification-time">{{ notification.created_at|timesince }} ago</div>
+                  </div>
+                </div>
+                {% endfor %}
+              {% else %}
+              <div class="notification-item">
+                <div class="notification-content" style="text-align: center; color: #6b7280; padding: 2rem;">
+                  <div class="notification-title">No notifications</div>
+                  <div class="notification-text">You're all caught up!</div>
+                </div>
+              </div>
+              {% endif %}
+            </div>
+            {% if notifications and notifications|length > 0 %}
+            <div class="notification-footer">
+              <a href="/core-admin/notifications/" class="view-all-link">View all notifications</a>
+            </div>
+            {% endif %}
           </div>
-          <div class="dropdown-divider"></div>
-          <a href="#" class="dropdown-item">
-            <i class="fas fa-user"></i> Profile Settings
-          </a>
-          <a href="{% url 'logout' %}" class="dropdown-item">
-            <i class="fas fa-sign-out-alt"></i> Logout
-          </a>
+        </div>
+        <div class="profile-section">
+          <button class="profile-btn" aria-label="Profile">
+            <div class="profile-avatar">
+              {{ request.user.get_full_name|default:request.user.username|slice:":1"|upper }}
+            </div>
+            <span class="profile-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <div class="profile-dropdown">
+            <div class="dropdown-header">
+              <div class="user-info">
+                <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+                <small>{{ request.session.role|default:"User" }}</small>
+              </div>
+            </div>
+            <div class="dropdown-divider"></div>
+            <a href="#" class="dropdown-item">
+              <i class="fas fa-user"></i> Profile Settings
+            </a>
+            <a href="{% url 'logout' %}" class="dropdown-item">
+              <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+          </div>
         </div>
       </div>
     </div>

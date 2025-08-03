@@ -23,7 +23,9 @@
         <div class="nav-content">
             <button class="nav-tab active" data-tab="overview"><i class="fas fa-chart-line"></i> <span>Overview</span></button>
             <button class="nav-tab" data-tab="events"><i class="fas fa-calendar-alt"></i> <span>My Events</span></button>
+            {% if not request.session.role or request.session.role != 'student' %}
             <button class="nav-tab" data-tab="students"><i class="fas fa-user-graduate"></i> <span>My Students</span></button>
+            {% endif %}
             <button class="nav-tab" data-tab="profile"><i class="fas fa-user-circle"></i> <span>My Profile</span></button>
 
             {% if user.is_superuser %}
@@ -38,144 +40,70 @@
         <div id="overview" class="tab-content active">
             <!-- Quick Stats -->
             <div class="stats-grid">
-                <div class="stat-card blue">
+                <div class="stat-card blue" id="dashboardUpcomingEvents">
                     <div class="stat-content">
                         <div class="stat-text">
-                            <p class="stat-label">Next Event</p>
-                            <p class="stat-value">Tech Symposium</p>
-                            <p class="stat-subtitle">March 15, 2025</p>
+                            <p class="stat-label">Upcoming Events</p>
+                            <ul class="upcoming-events-list" style="list-style:none; margin:0; padding:0;">
+                                {% for event in user.upcoming_events %}
+                                <li>
+                                    <button class="event-link" type="button" data-action="view-event-details" data-event-id="{{ event.id }}" style="background:none; border:none; color:#2c5aa0; text-align:left; font-weight:500; cursor:pointer; padding:0;">
+                                        {{ event.event_title }} <span style="color:#888; font-size:0.95em;">({{ event.event_datetime|date:'M d, Y H:i' }})</span>
+                                    </button>
+                                </li>
+                                {% empty %}
+                                <li style="color:#888;">No upcoming events.</li>
+                                {% endfor %}
+                            </ul>
                         </div>
                         <i class="fas fa-calendar stat-icon"></i>
                     </div>
                 </div>
-                <div class="stat-card yellow">
-                    <div class="stat-content">
-                        <div class="stat-text">
-                            <p class="stat-label">Need Check-in</p>
-                            <p class="stat-value">9 Students</p>
-                            <p class="stat-subtitle">This week</p>
-                        </div>
-                        <i class="fas fa-users stat-icon"></i>
-                    </div>
-                </div>
-                <div class="stat-card green">
-                    <div class="stat-content">
-                        <div class="stat-text">
-                            <p class="stat-label">Today's Goals</p>
-                            <p class="stat-value">5 Tasks</p>
-                            <p class="stat-subtitle">3 completed</p>
-                        </div>
-                        <i class="fas fa-target stat-icon"></i>
-                    </div>
-                </div>
-                <div class="stat-card red">
-                    <div class="stat-content">
-                        <div class="stat-text">
-                            <p class="stat-label">Notifications</p>
-                            <p class="stat-value">4 New</p>
-                            <p class="stat-subtitle">Requires attention</p>
-                        </div>
-                        <i class="fas fa-bell stat-icon"></i>
-                    </div>
-                </div>
             </div>
-
-            <!-- Charts Row -->
-            <div class="charts-row">
-                <div class="chart-card">
-                    <h3>Graduate Attributes</h3>
-                    <div class="attributes-chart">
-                        <div class="attribute-item">
-                            <span>Critical Thinking</span>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: 85%"></div>
-                            </div>
-                            <span class="percentage">85%</span>
-                        </div>
-                        <div class="attribute-item">
-                            <span>Communication</span>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: 75%"></div>
-                            </div>
-                            <span class="percentage">75%</span>
-                        </div>
-                        <div class="attribute-item">
-                            <span>Leadership</span>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: 65%"></div>
-                            </div>
-                            <span class="percentage">65%</span>
-                        </div>
-                        <div class="attribute-item">
-                            <span>Teamwork</span>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: 80%"></div>
-                            </div>
-                            <span class="percentage">80%</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="chart-card">
-                    <h3>Event Contribution</h3>
-                    <div class="pie-chart">
-                        <div class="pie-chart-circle" style="background: conic-gradient(#4a90e2 0deg 241.2deg, #e0e0e0 241.2deg 360deg);">
-                            <div class="pie-chart-inner">
-                                <span class="pie-percentage">67%</span>
-                            </div>
-                        </div>
-                        <div class="pie-chart-info">
-                            <p>Total Events</p>
-                            <p class="pie-total">24</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Top Mentees -->
+            {% if not request.session.role or request.session.role != 'student' %}
+            <!-- My Top Mentees (Faculty only) -->
             <div class="mentees-section">
                 <h3>My Top Mentees</h3>
-                <div class="mentees-stats">
-                    <div class="mentee-stat blue">
-                        <div class="mentee-number">32</div>
-                        <div class="mentee-label">Total Mentees</div>
-                    </div>
-                    <div class="mentee-stat green">
-                        <div class="mentee-number">108</div>
-                        <div class="mentee-label">Total Interactions</div>
-                    </div>
-                    <div class="mentee-stat yellow">
-                        <div class="mentee-number">9</div>
-                        <div class="mentee-label">Need Check-in</div>
-                    </div>
-                </div>
                 <div class="mentees-list">
                     <div class="mentee-item">
-                        <div class="mentee-left">
-                            <div class="mentee-avatar">SD</div>
-                            <div class="mentee-info">
-                                <p class="mentee-name">S. Devkrishna</p>
-                                <p class="mentee-details">23112015 | 25 interactions</p>
-                            </div>
-                        </div>
-                        <div class="mentee-right">
-                            <p class="mentee-gpa">GPA: 8.5</p>
-                            <p class="mentee-meeting">2 days ago</p>
+                        <div class="mentee-avatar">SD</div>
+                        <div class="mentee-info">
+                            <h4>S. Devkrishna</h4>
+                            <p>GPA: 8.5 | Attendance: 92%</p>
+                            <span>Last meeting: 2 days ago</span>
                         </div>
                     </div>
                     <div class="mentee-item">
-                        <div class="mentee-left">
-                            <div class="mentee-avatar">AG</div>
-                            <div class="mentee-info">
-                                <p class="mentee-name">Arisha Gupta</p>
-                                <p class="mentee-details">23112002 | 14 interactions</p>
-                            </div>
-                        </div>
-                        <div class="mentee-right">
-                            <p class="mentee-gpa">GPA: 9.2</p>
-                            <p class="mentee-meeting">1 week ago</p>
+                        <div class="mentee-avatar">AG</div>
+                        <div class="mentee-info">
+                            <h4>Arisha Gupta</h4>
+                            <p>GPA: 9.2 | Attendance: 96%</p>
+                            <span>Last meeting: 1 week ago</span>
                         </div>
                     </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Event Contribution (Student) -->
+            <div class="charts-row">
+                <div class="chart-card">
+                    <h3>Event Contribution</h3>
+                    {% if user.role_assignments.count > 1 %}
+                        <div class="pie-chart-info">
+                            <p>Your contributions by organization:</p>
+                            <ul>
+                                {% for ra in user.role_assignments.all %}
+                                    <li><strong>{{ ra.organization.name }}</strong>: {{ ra.contribution_percent|default:'0%' }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% else %}
+                        <div class="pie-chart-info">
+                            <p>Your contribution in <strong>{{ user.role_assignments.first.organization.name }}</strong>:</p>
+                            <p class="pie-total">{{ user.role_assignments.first.contribution_percent|default:'0%' }}</p>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -184,10 +112,38 @@
         <div id="events" class="tab-content">
             <!-- Events Stats (Dynamic) -->
             <div class="stats-grid">
-                <div class="stat-card blue"><div class="stat-center"><i class="fas fa-calendar stat-icon-large"></i><div class="stat-number">{{ upcoming_events_count }}</div><div class="stat-desc">Upcoming Events</div></div></div>
-                <div class="stat-card green"><div class="stat-center"><i class="fas fa-target stat-icon-large"></i><div class="stat-number">{{ organized_events_count }}</div><div class="stat-desc">Organized Events</div></div></div>
-                <div class="stat-card purple"><div class="stat-center"><i class="fas fa-users stat-icon-large"></i><div class="stat-number">{{ students_participated }}</div><div class="stat-desc">Students Participated</div></div></div>
-                <div class="stat-card orange"><div class="stat-center"><i class="fas fa-calendar-week stat-icon-large"></i><div class="stat-number">{{ this_week_events }}</div><div class="stat-desc">This Week</div></div></div>
+                <div class="stat-card blue clickable" id="cardUpcoming">
+                    <div class="stat-center">
+                        <i class="fas fa-calendar stat-icon-large"></i>
+                        <div class="stat-label">Upcoming Events</div>
+                        <div class="stat-number">{{ upcoming_events_count }}</div>
+                        
+                    </div>
+                </div>
+                <div class="stat-card green clickable" id="cardOrganized">
+                    <div class="stat-center">
+                        <i class="fas fa-target stat-icon-large"></i>
+                        <div class="stat-label">Organized Events</div>
+                        <div class="stat-number">{{ organized_events_count }}</div>
+                        
+                    </div>
+                </div>
+                <div class="stat-card purple">
+                    <div class="stat-center">
+                        <i class="fas fa-users stat-icon-large"></i>
+                        <div class="stat-label">Students Participated</div>
+                        <div class="stat-number">{{ students_participated }}</div>
+                        
+                    </div>
+                </div>
+                <div class="stat-card orange clickable" id="cardThisWeek">
+                    <div class="stat-center">
+                        <i class="fas fa-calendar-week stat-icon-large"></i>
+                        <div class="stat-label">This Week</div>
+                        <div class="stat-number">{{ this_week_events }}</div>
+                        
+                    </div>
+                </div>
             </div>
 
             <!-- Filters -->
@@ -236,13 +192,15 @@
                 <div class="university-events-list" id="otherEventsList">
                   {% for event in other_events %}
                     <div class="university-event" data-event-type="other" data-event-role="{{ event.user_type|default:'organizer' }}" data-event-time="{{ event.event_datetime|date:'Y-m' }}">
-                        <div>
-                            <p class="event-title">{{ event.event_title }}</p>
-                            <p class="event-dept">{% if event.organization %}{{ event.organization.name }}{% else %}N/A{% endif %}</p>
-                        </div>
-                        <div class="event-date">
-                            <p>{{ event.event_datetime|date:"M d" }}</p>
-                            <button class="btn-link" type="button" data-action="view-event-details" data-event-id="{{ event.id }}">View Details</button>
+                        <div class="event-row" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                            <div style="display: flex; flex-direction: column;">
+                                <span class="event-title" style="font-weight: 600;">{{ event.event_title }}</span>
+                                <span class="event-dept" style="color: #888; font-size: 0.95em;">{% if event.organization %}{{ event.organization.name }}{% else %}N/A{% endif %}</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 1.5em;">
+                                <span style="font-size: 1em; color: #555;">{{ event.event_datetime|date:"M d" }}</span>
+                                <button class="btn-link" type="button" data-action="view-event-details" data-event-id="{{ event.id }}">View Details</button>
+                            </div>
                         </div>
                     </div>
                   {% empty %}
@@ -252,6 +210,7 @@
             </div>
         </div>
 
+        {% if not request.session.role or request.session.role != 'student' %}
         <!-- Students Tab -->
         <div id="students" class="tab-content">
             <!-- Search and Filter -->
@@ -337,6 +296,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <!-- Profile Tab -->
         <div id="profile" class="tab-content">
@@ -462,5 +422,8 @@
 {% endblock %}
 
 {% block scripts_extra %}
+<script>
+  window.USER_ORG_NAME = "{{ user.role_assignments.first.organization.name|default:'' }}";
+</script>
 <script src="{% static 'core/js/dashboard.js' %}"></script>
 {% endblock %}
