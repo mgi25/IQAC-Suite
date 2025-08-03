@@ -115,6 +115,10 @@ function renderAchievementStats(stats) { /* ... */ }
 function renderAchievementsList(achievements) { /* ... */ }
 function renderPeerAchievements(peers) { /* ... */ }
 
-document.querySelector('.graph-icon').addEventListener('click', function() {
-    window.location.href = '/dashboard/';
-});
+// Optional link back to landing page if a graph icon exists
+const graphIcon = document.querySelector('.graph-icon');
+if (graphIcon) {
+    graphIcon.addEventListener('click', function() {
+        window.location.href = '/';
+    });
+}
