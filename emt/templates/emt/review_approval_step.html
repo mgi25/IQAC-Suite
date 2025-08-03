@@ -13,24 +13,24 @@
     <div class="info-card glass">
       <h2>Event Information</h2>
       <table>
-        <tr><th>Organization</th><td>{{ step.proposal.organization.name|default:"—" }}</td></tr>
-        <tr><th>Committee(s)</th><td>{{ step.proposal.committees|default:"—" }}</td></tr>
-        <tr><th>Event Title</th><td>{{ step.proposal.event_title }}</td></tr>
-        <tr><th>No. of Activities</th><td>{{ step.proposal.num_activities|default:"—" }}</td></tr>
-        <tr><th>Date & Time</th><td>{{ step.proposal.event_datetime|date:"d M Y, H:i" }}</td></tr>
-        <tr><th>Venue</th><td>{{ step.proposal.venue|default:"—" }}</td></tr>
-        <tr><th>Academic Year</th><td>{{ step.proposal.academic_year|default:"—" }}</td></tr>
-        <tr><th>Target Audience</th><td>{{ step.proposal.target_audience|default:"—" }}</td></tr>
+        <tr><th>Organization</th><td>{{ proposal.organization.name|default:"—" }}</td></tr>
+        <tr><th>Committee(s)</th><td>{{ proposal.committees|default:"—" }}</td></tr>
+        <tr><th>Event Title</th><td>{{ proposal.event_title }}</td></tr>
+        <tr><th>No. of Activities</th><td>{{ proposal.num_activities|default:"—" }}</td></tr>
+        <tr><th>Date & Time</th><td>{{ proposal.event_datetime|date:"d M Y, H:i" }}</td></tr>
+        <tr><th>Venue</th><td>{{ proposal.venue|default:"—" }}</td></tr>
+        <tr><th>Academic Year</th><td>{{ proposal.academic_year|default:"—" }}</td></tr>
+        <tr><th>Target Audience</th><td>{{ proposal.target_audience|default:"—" }}</td></tr>
         <tr>
           <th>Faculty Incharges</th>
           <td>
-            {% for fac in step.proposal.faculty_incharges.all %}
+            {% for fac in proposal.faculty_incharges.all %}
               {{ fac.get_full_name }}{% if not forloop.last %}, {% endif %}
             {% empty %} — {% endfor %}
           </td>
         </tr>
-        <tr><th>Student Coordinators</th><td>{{ step.proposal.student_coordinators|default:"—" }}</td></tr>
-        <tr><th>Type (Focus)</th><td>{{ step.proposal.event_focus_type|default:"—" }}</td></tr>
+        <tr><th>Student Coordinators</th><td>{{ proposal.student_coordinators|default:"—" }}</td></tr>
+        <tr><th>Type (Focus)</th><td>{{ proposal.event_focus_type|default:"—" }}</td></tr>
       </table>
     </div>
   </aside>
@@ -41,7 +41,7 @@
       <h1>
         <span class="glow-text">Event Proposal Review</span>
       </h1>
-      <span class="meta">{{ step.proposal.event_title }} &middot; Submitted by {{ step.proposal.submitted_by.get_full_name }}</span>
+      <span class="meta">{{ proposal.event_title }} &middot; Submitted by {{ proposal.submitted_by.get_full_name }}</span>
     </div>
 
     <div class="fadein-card section-glass">
@@ -118,34 +118,34 @@
               </tr>
             </thead>
             <tbody>
-              {% if step.proposal.fest_fee_participants or step.proposal.fest_fee_rate or step.proposal.fest_fee_amount %}
+              {% if proposal.fest_fee_participants or proposal.fest_fee_rate or proposal.fest_fee_amount %}
                 <tr>
                   <td>1</td>
                   <td>Participation Fee [Fest]</td>
-                  <td>{{ step.proposal.fest_fee_participants|default:"—" }}</td>
-                  <td>{{ step.proposal.fest_fee_rate|default:"—" }}</td>
-                  <td>{{ step.proposal.fest_fee_amount|default:"—" }}</td>
+                  <td>{{ proposal.fest_fee_participants|default:"—" }}</td>
+                  <td>{{ proposal.fest_fee_rate|default:"—" }}</td>
+                  <td>{{ proposal.fest_fee_amount|default:"—" }}</td>
                 </tr>
                 <tr>
                   <td>2</td>
                   <td>Sponsorship [Fest]</td>
                   <td>—</td><td>—</td>
-                  <td>{{ step.proposal.fest_sponsorship_amount|default:"—" }}</td>
+                  <td>{{ proposal.fest_sponsorship_amount|default:"—" }}</td>
                 </tr>
               {% endif %}
-              {% if step.proposal.conf_fee_participants or step.proposal.conf_fee_rate or step.proposal.conf_fee_amount %}
+              {% if proposal.conf_fee_participants or proposal.conf_fee_rate or proposal.conf_fee_amount %}
                 <tr>
                   <td>3</td>
                   <td>Participation Fee [Conference]</td>
-                  <td>{{ step.proposal.conf_fee_participants|default:"—" }}</td>
-                  <td>{{ step.proposal.conf_fee_rate|default:"—" }}</td>
-                  <td>{{ step.proposal.conf_fee_amount|default:"—" }}</td>
+                  <td>{{ proposal.conf_fee_participants|default:"—" }}</td>
+                  <td>{{ proposal.conf_fee_rate|default:"—" }}</td>
+                  <td>{{ proposal.conf_fee_amount|default:"—" }}</td>
                 </tr>
                 <tr>
                   <td>4</td>
                   <td>Sponsorship [Conference]</td>
                   <td>—</td><td>—</td>
-                  <td>{{ step.proposal.conf_sponsorship_amount|default:"—" }}</td>
+                  <td>{{ proposal.conf_sponsorship_amount|default:"—" }}</td>
                 </tr>
               {% endif %}
             </tbody>
@@ -184,7 +184,7 @@
       <h3>Approval History</h3>
       <div class="approval-history-ul">
         <ul>
-          {% for hist in step.proposal.approval_steps.all|dictsort:"step_order" %}
+          {% for hist in proposal.approval_steps.all|dictsort:"step_order" %}
             <li>
               <span class="history-role">{{ hist.get_role_required_display }}</span>
               <span class="history-person">{{ hist.assigned_to.get_full_name }}</span>
