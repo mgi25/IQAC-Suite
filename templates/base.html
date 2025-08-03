@@ -199,13 +199,15 @@
       </div>
       {% endif %}
 
-      <!-- Event Proposals - Standalone -->
+      {% if user.is_superuser or request.session.role == 'admin' %}
+      <!-- Event Proposals - Standalone (Admin Only) -->
       <div class="nav-item">
         <a href="/core-admin/event-proposals/" class="nav-link {% if request.resolver_match.url_name == 'admin_event_proposals' %}active{% endif %}">
           <i class="fas fa-list nav-icon"></i>
           <span class="nav-text">Event Proposals</span>
         </a>
       </div>
+      {% endif %}
 
       <!-- Reports - Standalone (Admin Only) -->
       {% if user.is_superuser or request.session.role == 'admin' %}
