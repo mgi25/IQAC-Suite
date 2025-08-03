@@ -270,3 +270,18 @@ class EventReportAttachment(models.Model):
 
     def __str__(self):
         return f"Attachment for {self.report.proposal.event_title}"
+
+# ────────────────────────────────────────────────────────────────
+#  STUDENT PROFILE
+# ────────────────────────────────────────────────────────────────
+class Student(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student_profile')
+    mentor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='mentees')
+    events = models.ManyToManyField('EventProposal', blank=True, related_name='participants')
+    # Add any other fields you need, for example:
+    registration_number = models.CharField(max_length=50, blank=True)
+    gpa = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
+    attendance = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+
+    def __str__(self):
+        return self.user.get_full_name() or self.user.username

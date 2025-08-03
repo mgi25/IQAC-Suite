@@ -251,3 +251,16 @@ class UserEventApprovalVisibility(models.Model):
         return (
             f"{self.user.username} – {self.role} – {'Visible' if self.can_view else 'Hidden'}"
         )
+
+# ───────────────────────────────
+#  Class & Student Models
+# ───────────────────────────────
+
+class Class(models.Model):
+    name = models.CharField(max_length=100)
+    code = models.CharField(max_length=20)
+    teacher = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='classes')
+    students = models.ManyToManyField('emt.Student', blank=True, related_name='classes')
+
+    def __str__(self):
+        return f"{self.code} - {self.name}"

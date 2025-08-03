@@ -19,13 +19,14 @@ from .models import (
     Organization,
     OrganizationType,
     Report,
+    Class,
     OrganizationRole,
     RoleEventApprovalVisibility,
     UserEventApprovalVisibility,
 )
 from emt.models import (
     EventProposal, EventNeedAnalysis, EventObjectives, EventExpectedOutcomes, TentativeFlow,
-    ExpenseDetail, SpeakerProfile, ApprovalStep
+    ExpenseDetail, SpeakerProfile, ApprovalStep, Student
 )
 from django.views.decorators.http import require_GET, require_POST
 from .models import ApprovalFlowTemplate, ApprovalFlowConfig
@@ -92,22 +93,43 @@ def custom_logout(request):
 # ─────────────────────────────────────────────────────────────
 @login_required
 def dashboard(request):
-    proposals = (
-        EventProposal.objects
-        .filter(submitted_by=request.user)
-        .exclude(status="completed")
-        .order_by("-created_at")
-    )
-    other_notifications = [
-        {"type": "info",     "msg": "System update scheduled for tonight at 10 PM.", "time": "2 hours ago"},
-        {"type": "reminder", "msg": "Submit your event report before 26 June.",      "time": "1 day ago"},
-        {"type": "alert",    "msg": "One of your proposals was returned.",           "time": "5 mins ago"},
-    ]
-    return render(
-        request,
-        "core/dashboard.html",
-        {"proposals": proposals, "notifications": other_notifications},
-    )
+    # Only finalized events
+    finalized_events = EventProposal.objects.filter(status='finalized').distinct()
+    my_events = finalized_events.filter(Q(submitted_by=request.user) | Q(faculty_incharges=request.user)).distinct()
+    other_events = finalized_events.exclude(Q(submitted_by=request.user) | Q(faculty_incharges=request.user)).distinct()
+
+    # Stats for dashboard boxes
+    upcoming_events_count = finalized_events.filter(event_datetime__gte=timezone.now()).count()
+    organized_events_count = my_events.count()
+    # This week: events in current week
+    week_start = timezone.now().date() - timezone.timedelta(days=timezone.now().weekday())
+    week_end = week_start + timezone.timedelta(days=6)
+    this_week_events = finalized_events.filter(event_datetime__date__gte=week_start, event_datetime__date__lte=week_end).count()
+    # Students participated: sum fest_fee_participants + conf_fee_participants for finalized events
+    students_participated = finalized_events.aggregate(
+        total=Sum('fest_fee_participants') + Sum('conf_fee_participants')
+    )['total'] or 0
+
+    # Fetch students mentored by the user (adjust as per your model)
+    my_students = Student.objects.filter(mentor=request.user)
+    my_classes = Class.objects.filter(teacher=request.user)
+    roles = RoleAssignment.objects.filter(user=request.user).select_related('role', 'organization')
+    role_names = [ra.role.name for ra in roles]
+    other_notifications = []
+
+    context = {
+        "my_events": my_events,
+        "other_events": other_events,
+        "upcoming_events_count": upcoming_events_count,
+        "organized_events_count": organized_events_count,
+        "this_week_events": this_week_events,
+        "students_participated": students_participated,
+        "my_students": my_students,
+        "my_classes": my_classes,
+        "role_names": role_names,
+        "user": request.user,
+    }
+    return render(request, "core/dashboard.html", context)
 
 @login_required
 def propose_event(request):
@@ -161,8 +183,10 @@ def proposal_status(request, pk):
 # ─────────────────────────────────────────────────────────────
 #  Admin Dashboard and User Management
 # ─────────────────────────────────────────────────────────────
-@user_passes_test(lambda u: u.is_superuser)
 def admin_dashboard(request):
+    if not request.user.is_superuser:
+        return redirect("user_dashboard")
+
     org_stats = (
         RoleAssignment.objects
         .filter(user__is_active=True, organization__isnull=False)
@@ -1319,10 +1343,11 @@ from django.views.decorators.http import require_GET
 @login_required
 def api_auth_me(request):
     user = request.user
-    profile_role = getattr(getattr(user, "profile", None), "role", "student")
+    # Example: determine role and user info
+    role = 'faculty' if user.is_staff else 'student'
     initials = ''.join([x[0] for x in user.get_full_name().split()]) or user.username[:2].upper()
     return JsonResponse({
-        'role': profile_role,
+        'role': role,
         'name': user.get_full_name(),
         'subtitle': '',  # Add more info if needed
         'initials': initials,
