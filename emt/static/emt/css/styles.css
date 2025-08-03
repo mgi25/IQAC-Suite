@@ -64,39 +64,39 @@ body {
   position: relative;
 }
 
+/* Width adjustment when form panel is open */
 .dashboard-container.split-view {
-    padding: 1rem;
-    width: 50%;
-    position: fixed;
-    left: 260px;
-    top: 170px;
-    height: calc(100vh - 170px);
-    overflow-y: auto;
+    flex: 0 0 35%;
+    max-width: 35%;
 }
 
 /* Event Proposal page layout fix */
 .event-dashboard-container {
     display: flex;
+    align-items: flex-start;
     margin-left: 260px;
+    padding: 2rem;
     gap: 2rem;
+}
+
+.step-list {
+    flex: 1;
+    max-width: 100%;
     padding: 2rem;
 }
 
-.event-dashboard-container .dashboard-container {
-    padding: 0;
+.form-panel {
+    flex: 0 0 65%;
+    max-width: 65%;
+    background: #fff;
+    padding: 2rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    display: none;
 }
 
-@media (max-width: 768px) {
-    .dashboard-container.split-view {
-        left: 0;
-        width: 100%;
-    }
-
-    .event-dashboard-container {
-        margin-left: 0;
-        flex-direction: column;
-        padding: 1rem;
-    }
+.form-panel.active {
+    display: block;
 }
 
 /* ===== HEADER ===== */
@@ -381,22 +381,7 @@ body {
 
 /* ===== FORM PANEL (RIGHT SIDE) ===== */
 .form-panel {
-  position: fixed;
-  top: 170px;
-  right: 0;
-  width: 50%;
-  height: calc(100vh - 170px);
-  background: white;
-  transform: translateX(100%);
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   overflow-y: auto;
-  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-}
-
-.form-panel.active {
-  transform: translateX(0);
 }
 
 .form-panel-header {
@@ -842,27 +827,23 @@ body {
       padding: 1rem;
   }
 
-  .dashboard-container.split-view {
-      width: 100%;
-      position: relative;
-      top: auto;
-      height: auto;
+  .event-dashboard-container {
+      flex-direction: column;
+      margin-left: 0;
+      padding: 1rem;
+  }
+
+  .step-list,
+  .form-panel {
+      max-width: 100%;
+      flex: 1 1 100%;
+      padding: 1rem;
   }
 
   .form-panel {
-      position: relative;
-      width: 100%;
-      height: auto;
-      transform: none;
-      top: auto;
-      right: auto;
       box-shadow: none;
       border-top: 1px solid #e5e7eb;
       margin-top: 2rem;
-  }
-
-  .form-panel.active {
-      transform: none;
   }
 
   .cards-stack {
