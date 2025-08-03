@@ -210,6 +210,8 @@ $(document).ready(function() {
             setupFormFieldSync();
             if (section === 'speakers') {
                 setupSpeakerFormHandlers();
+            } else if (section === 'expenses') {
+                setupExpenseFormHandlers();
             }
 
             // Clear any existing validation errors from previous loads
@@ -711,16 +713,50 @@ $(document).ready(function() {
         `;
     }
 
-    function getExpensesForm() {
+    function expenseFormHtml(index) {
         return `
-            <div class="form-grid">
-                <div class="expenses-notice"><p>Expense management is under development.</p></div>
-                <div class="form-row full-width">
-                    <div class="save-section-container">
-                        <button type="button" class="btn-save-section">Mark as Complete</button>
+            <div class="expense-form" data-index="${index}">
+                <input type="hidden" name="form-${index}-id" id="form-${index}-id">
+                <div class="form-row">
+                    <div class="input-group">
+                        <label for="form-${index}-sl_no">Sl. No *</label>
+                        <input type="number" id="form-${index}-sl_no" name="form-${index}-sl_no" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="form-${index}-particulars">Particulars *</label>
+                        <input type="text" id="form-${index}-particulars" name="form-${index}-particulars" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="form-${index}-amount">Amount *</label>
+                        <input type="number" step="0.01" id="form-${index}-amount" name="form-${index}-amount" required>
                     </div>
                 </div>
+                <div class="form-row full-width text-right">
+                    <button type="button" class="btn-remove-expense">Remove</button>
+                </div>
             </div>
+        `;
+    }
+
+    function getExpensesForm() {
+        return `
+            <form id="expenses-form">
+                <input type="hidden" name="form-TOTAL_FORMS" value="1">
+                <input type="hidden" name="form-INITIAL_FORMS" value="0">
+                <input type="hidden" name="form-MIN_NUM_FORMS" value="0">
+                <input type="hidden" name="form-MAX_NUM_FORMS" value="1000">
+                <div id="expense-forms">
+                    ${expenseFormHtml(0)}
+                </div>
+                <div class="form-row full-width">
+                    <button type="button" id="add-expense-btn">Add Expense</button>
+                </div>
+                <div class="form-row full-width">
+                    <div class="save-section-container">
+                        <button type="button" class="btn-save-section">Save & Continue</button>
+                    </div>
+                </div>
+            </form>
         `;
     }
 
@@ -740,7 +776,8 @@ $(document).ready(function() {
             'objectives': '#objectives-form',
             'outcomes': '#outcomes-form',
             'flow': '#flow-form',
-            'speakers': '#speakers-form'
+            'speakers': '#speakers-form',
+            'expenses': '#expenses-form'
         };
 
         const urlBases = {
@@ -748,7 +785,8 @@ $(document).ready(function() {
             'objectives': '/suite/objectives/',
             'outcomes': '/suite/expected-outcomes/',
             'flow': '/suite/tentative-flow/',
-            'speakers': '/suite/speaker-profile/'
+            'speakers': '/suite/speaker-profile/',
+            'expenses': '/suite/expense-details/'
         };
 
         if (formSelectors[section] && urlBases[section]) {
@@ -758,7 +796,7 @@ $(document).ready(function() {
             }
 
             const url = urlBases[section] + window.PROPOSAL_ID + '/';
-            if (section === 'speakers') {
+            if (section === 'speakers' || section === 'expenses') {
                 const formEl = $(formSelectors[section])[0];
                 const formData = new FormData(formEl);
                 formData.append('csrfmiddlewaretoken', window.AUTOSAVE_CSRF);
@@ -874,6 +912,36 @@ $(document).ready(function() {
         });
     }
 
+    function setupExpenseFormHandlers() {
+        const form = $('#expenses-form');
+        if (!form.length) return;
+
+        const container = $('#expense-forms');
+        const totalForms = form.find('input[name="form-TOTAL_FORMS"]');
+
+        form.off('click.addExpense').on('click.addExpense', '#add-expense-btn', function(e) {
+            e.preventDefault();
+            const index = parseInt(totalForms.val());
+            container.append(expenseFormHtml(index));
+            totalForms.val(index + 1);
+        });
+
+        container.off('click.removeExpense').on('click.removeExpense', '.btn-remove-expense', function(e) {
+            e.preventDefault();
+            $(this).closest('.expense-form').remove();
+            const forms = container.children('.expense-form');
+            totalForms.val(forms.length);
+            forms.each(function(i) {
+                $(this).attr('data-index', i);
+                $(this).find('input').each(function() {
+                    const newName = $(this).attr('name').replace(/form-\d+-/, `form-${i}-`);
+                    const newId = $(this).attr('id').replace(/form-\d+-/, `form-${i}-`);
+                    $(this).attr({ name: newName, id: newId });
+                });
+            });
+        });
+    }
+
     // ===== STATUS & PROGRESS FUNCTIONS =====
     function markSectionInProgress(section) {
         const card = $(`[data-section="${section}"]`);
@@ -934,6 +1002,7 @@ $(document).ready(function() {
             case 'outcomes':
             case 'flow': return validateTextSection();
             case 'speakers': return validateSpeakers();
+            case 'expenses': return validateExpenses();
             default: return true;
         }
     }
@@ -997,6 +1066,17 @@ $(document).ready(function() {
     function validateSpeakers() {
         let isValid = true;
         $('#speakers-form').find('input[required], textarea[required]').each(function() {
+            if (!$(this).val()) {
+                showFieldError($(this), 'This field is required');
+                isValid = false;
+            }
+        });
+        return isValid;
+    }
+
+    function validateExpenses() {
+        let isValid = true;
+        $('#expenses-form').find('input[required]').each(function() {
             if (!$(this).val()) {
                 showFieldError($(this), 'This field is required');
                 isValid = false;
