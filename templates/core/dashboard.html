@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static group_filters %}
 
 {% block title %}Dashboard – IQAC Suite{% endblock %}
 
@@ -9,24 +9,10 @@
 {% endblock %}
 
 {% block content %}
-<div class="dash-wrap">
-
-  <!-- HERO -->
-  <section class="dash-hero">
-    <h2 class="dash-sub">Welcome&nbsp;to</h2>
-    <h1 class="dash-head">
-      IQAC Suite <span class="dash-and">&amp;</span> Transcript Automater
-    </h1>
-    <p class="dash-greet">
-      Welcome ({{ request.user.profile.get_role_display }})&nbsp;<strong>{{ request.user.get_full_name|default:request.user.username|upper }}</strong>!&nbsp;
-      Pick an application to get started:
-    </p>
-  </section>
-
-  <!-- APP CARDS - Material List Tiles Style (All Blue Theme) -->
+<div class="dashboard-container">
   <section class="dash-apps">
-    <!-- Card 1: IQAC Suite - Blue Theme -->
-    <a href="{% url 'emt:iqac_suite_dashboard' %}" class="material-list-tile blue-theme">
+    <!-- Always visible cards -->
+    <a href="{% url 'emt:iqac_suite_dashboard' %}" class="material-list-tile blue-theme card">
       <div class="material-list-leading">
         <div class="material-list-icon">
           <i class="fa-solid fa-file-lines"></i>
@@ -41,24 +27,40 @@
       </div>
     </a>
 
-    <!-- Card 2: Graduate Transcript - Blue Theme -->
-    <a href="{% url 'transcript:home' %}" class="material-list-tile blue-theme">
+    <a href="{% url 'admin_event_proposals' %}" class="material-list-tile blue-theme card">
       <div class="material-list-leading">
         <div class="material-list-icon">
-          <i class="fa-solid fa-graduation-cap"></i>
+          <i class="fa-solid fa-list"></i>
         </div>
       </div>
       <div class="material-list-content">
-        <div class="material-list-primary">Graduate Transcript</div>
-        <div class="material-list-secondary">Generate character strength transcript reports. For students.</div>
+        <div class="material-list-primary">Event Proposals</div>
+        <div class="material-list-secondary">View and manage your event proposals.</div>
       </div>
       <div class="material-list-trailing">
         <i class="fa-solid fa-arrow-right material-list-arrow"></i>
       </div>
     </a>
 
-    <!-- Card 3: CDL - Blue Theme -->
-    <a href="{% url 'cdl_dashboard' %}" class="material-list-tile blue-theme">
+    {% if user.is_superuser or request.session.role == 'admin' %}
+    <a href="{% url 'admin_reports' %}" class="material-list-tile blue-theme card">
+      <div class="material-list-leading">
+        <div class="material-list-icon">
+          <i class="fa-solid fa-file-alt"></i>
+        </div>
+      </div>
+      <div class="material-list-content">
+        <div class="material-list-primary">Reports</div>
+        <div class="material-list-secondary">Browse generated event reports.</div>
+      </div>
+      <div class="material-list-trailing">
+        <i class="fa-solid fa-arrow-right material-list-arrow"></i>
+      </div>
+    </a>
+    {% endif %}
+
+    {% if user.is_superuser or request.session.role == 'faculty' or user|has_group:"Faculty" %}
+    <a href="{% url 'cdl_dashboard' %}" class="material-list-tile blue-theme card">
       <div class="material-list-leading">
         <div class="material-list-icon">
           <i class="fa-solid fa-camera"></i>
@@ -66,13 +68,30 @@
       </div>
       <div class="material-list-content">
         <div class="material-list-primary">CDL</div>
-        <div class="material-list-secondary">Request media content creation and approval. For marketing and communications.</div>
+        <div class="material-list-secondary">Request media content creation and approval.</div>
       </div>
       <div class="material-list-trailing">
         <i class="fa-solid fa-arrow-right material-list-arrow"></i>
       </div>
     </a>
-  </section>
+    {% endif %}
 
+    {% if user.is_superuser %}
+    <a href="{% url 'transcript:home' %}" class="material-list-tile blue-theme card">
+      <div class="material-list-leading">
+        <div class="material-list-icon">
+          <i class="fa-solid fa-graduation-cap"></i>
+        </div>
+      </div>
+      <div class="material-list-content">
+        <div class="material-list-primary">Graduate Transcript</div>
+        <div class="material-list-secondary">Generate character strength transcript reports.</div>
+      </div>
+      <div class="material-list-trailing">
+        <i class="fa-solid fa-arrow-right material-list-arrow"></i>
+      </div>
+    </a>
+    {% endif %}
+  </section>
 </div>
 {% endblock %}
