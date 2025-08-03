@@ -28,7 +28,7 @@ class OrganizationModelTests(TestCase):
 class UserRoleAssignmentTests(TestCase):
     def test_student_role_assigned_by_email(self):
         user = User.objects.create_user(
-            username="stud", email="stud1@student.example.com", password="pass"
+            username="stud", email="stud1@dept.christuniversity.in", password="pass"
         )
         self.client.login(username="stud", password="pass")
         user.refresh_from_db()
@@ -45,7 +45,7 @@ class UserRoleAssignmentTests(TestCase):
     def test_api_auth_me_returns_profile_role(self):
         user = User.objects.create_user(
             username="stud2",
-            email="stud2@student.example.com",
+            email="stud2@dept.christuniversity.in",
             password="pass",
             first_name="Stu",
             last_name="Dent",
