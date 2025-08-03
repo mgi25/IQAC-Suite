@@ -1,6 +1,8 @@
-from django.test import TestCase
+from django.test import TestCase, RequestFactory
 from django.contrib.auth.models import User
+from django.contrib.sessions.middleware import SessionMiddleware
 from django.forms import inlineformset_factory
+from types import SimpleNamespace
 import json
 from .models import (
     OrganizationType,
@@ -8,8 +10,10 @@ from .models import (
     ApprovalFlowTemplate,
     OrganizationRole,
     RoleAssignment,
+    Profile,
 )
 from .views import RoleAssignmentForm, RoleAssignmentFormSet
+from .adapters import SchoolSocialAccountAdapter
 
 
 class OrganizationModelTests(TestCase):
@@ -20,6 +24,37 @@ class OrganizationModelTests(TestCase):
         self.assertEqual(Organization.objects.count(), 1)
         self.assertEqual(org.org_type.name, "Department")
 
+
+class UserRoleAssignmentTests(TestCase):
+    def test_student_role_assigned_by_email(self):
+        user = User.objects.create_user(
+            username="stud", email="stud1@dept.christuniversity.in", password="pass"
+        )
+        self.client.login(username="stud", password="pass")
+        user.refresh_from_db()
+        self.assertEqual(user.profile.role, "student")
+
+    def test_faculty_role_assigned_by_email(self):
+        user = User.objects.create_user(
+            username="fac", email="fac1@faculty.example.com", password="pass"
+        )
+        self.client.login(username="fac", password="pass")
+        user.refresh_from_db()
+        self.assertEqual(user.profile.role, "faculty")
+
+    def test_api_auth_me_returns_profile_role(self):
+        user = User.objects.create_user(
+            username="stud2",
+            email="stud2@dept.christuniversity.in",
+            password="pass",
+            first_name="Stu",
+            last_name="Dent",
+        )
+        self.client.login(username="stud2", password="pass")
+        resp = self.client.get("/core-admin/api/auth/me")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data["role"], "student")
 
 class ApprovalFlowViewTests(TestCase):
     def test_delete_approval_flow(self):
@@ -210,3 +245,38 @@ class ApprovalFlowTemplateDisplayTests(TestCase):
         data = resp.json()
         self.assertTrue(data["success"])
         self.assertEqual(data["steps"][0]["role_display"], "Faculty")
+
+
+class SocialLoginRoleAssignmentTests(TestCase):
+    """Verify role assignment based on email domain during social login."""
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.adapter = SchoolSocialAccountAdapter()
+
+    def _build_request(self):
+        request = self.factory.get("/")
+        middleware = SessionMiddleware(lambda req: None)
+        middleware.process_request(request)
+        request.session.save()
+        return request
+
+    def _sociallogin(self, email):
+        username = email.split("@")[0]
+        return SimpleNamespace(user=User(username=username, email=email))
+
+    def test_student_email_assigns_student_role(self):
+        request = self._build_request()
+        email = "alen.shibu@bscdsh.christuniversity.in"
+        sociallogin = self._sociallogin(email)
+        self.adapter.pre_social_login(request, sociallogin)
+        profile = Profile.objects.get(user=sociallogin.user)
+        self.assertEqual(profile.role, "student")
+
+    def test_non_christ_email_assigns_faculty_role(self):
+        request = self._build_request()
+        email = "jane.doe@example.com"
+        sociallogin = self._sociallogin(email)
+        self.adapter.pre_social_login(request, sociallogin)
+        profile = Profile.objects.get(user=sociallogin.user)
+        self.assertEqual(profile.role, "faculty")

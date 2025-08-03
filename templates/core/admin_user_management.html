@@ -62,16 +62,14 @@
                     <td>{{ user.get_full_name|default:user.username }}</td>
                     <td>{{ user.email }}</td>
                     <td>
-                        {% if user.role_assignments.exists %}
-                            {% for ra in user.role_assignments.all %}
-                                <span class="role-badge">
-                                    {{ ra.role.name }}
-                                    {% if ra.organization %}<span class="role-context">({{ ra.organization }})</span>{% endif %}
-                                </span>{% if not forloop.last %}<br>{% endif %}
-                            {% endfor %}
-                        {% else %}
-                            <span class="role-badge role-none">No Role</span>
-                        {% endif %}
+                        <span class="role-badge">{{ user.profile.get_role_display }}</span>
+                        {% if user.role_assignments.exists %}<br>{% endif %}
+                        {% for ra in user.role_assignments.all %}
+                            <span class="role-badge">
+                                {{ ra.role.name }}
+                                {% if ra.organization %}<span class="role-context">({{ ra.organization }})</span>{% endif %}
+                            </span>{% if not forloop.last %}<br>{% endif %}
+                        {% endfor %}
                     </td>
                     <td>{{ user.date_joined|date:"Y-m-d H:i" }}</td>
                     <td>
