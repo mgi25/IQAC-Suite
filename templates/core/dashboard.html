@@ -18,61 +18,11 @@
       IQAC Suite <span class="dash-and">&amp;</span> Transcript Automater
     </h1>
     <p class="dash-greet">
-      Welcome ({{ request.user.profile.get_role_display }})&nbsp;<strong>{{ request.user.get_full_name|default:request.user.username|upper }}</strong>!&nbsp;
-      Pick an application to get started:
+      Welcome ({{ request.user.profile.get_role_display }})&nbsp;<strong>{{ request.user.get_full_name|default:request.user.username|upper }}</strong>!
     </p>
   </section>
 
-  <!-- APP CARDS - Material List Tiles Style (All Blue Theme) -->
-  <section class="dash-apps">
-    <!-- Card 1: IQAC Suite - Blue Theme -->
-    <a href="{% url 'emt:iqac_suite_dashboard' %}" class="material-list-tile blue-theme">
-      <div class="material-list-leading">
-        <div class="material-list-icon">
-          <i class="fa-solid fa-file-lines"></i>
-        </div>
-      </div>
-      <div class="material-list-content">
-        <div class="material-list-primary">IQAC Suite</div>
-        <div class="material-list-secondary">Submit event proposals, track approvals, and generate reports.</div>
-      </div>
-      <div class="material-list-trailing">
-        <i class="fa-solid fa-arrow-right material-list-arrow"></i>
-      </div>
-    </a>
-
-    <!-- Card 2: Graduate Transcript - Blue Theme -->
-    <a href="{% url 'transcript:home' %}" class="material-list-tile blue-theme">
-      <div class="material-list-leading">
-        <div class="material-list-icon">
-          <i class="fa-solid fa-graduation-cap"></i>
-        </div>
-      </div>
-      <div class="material-list-content">
-        <div class="material-list-primary">Graduate Transcript</div>
-        <div class="material-list-secondary">Generate character strength transcript reports. For students.</div>
-      </div>
-      <div class="material-list-trailing">
-        <i class="fa-solid fa-arrow-right material-list-arrow"></i>
-      </div>
-    </a>
-
-    <!-- Card 3: CDL - Blue Theme -->
-    <a href="{% url 'cdl_dashboard' %}" class="material-list-tile blue-theme">
-      <div class="material-list-leading">
-        <div class="material-list-icon">
-          <i class="fa-solid fa-camera"></i>
-        </div>
-      </div>
-      <div class="material-list-content">
-        <div class="material-list-primary">CDL</div>
-        <div class="material-list-secondary">Request media content creation and approval. For marketing and communications.</div>
-      </div>
-      <div class="material-list-trailing">
-        <i class="fa-solid fa-arrow-right material-list-arrow"></i>
-      </div>
-    </a>
-  </section>
+  <!-- Application cards removed to show direct user dashboard -->
 
 </div>
 {% endblock %}
