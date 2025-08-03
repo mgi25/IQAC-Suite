@@ -621,14 +621,14 @@ def review_approval_step(request, step_id):
         .get(id=step.proposal_id)
     )
 
-    # Fetch related proposal sections safely. Using filter().first()
-    # avoids potential DoesNotExist errors and cleanly returns None when
-    # a section hasn't been filled out yet, allowing the template to
-    # display "—" for missing data instead of failing silently.
+    # Retrieve each proposal section individually. Using ``filter(...).first()``
+    # returns ``None`` if a section hasn't been filled out yet so the template
+    # can show a placeholder rather than failing with an exception.
     need_analysis = EventNeedAnalysis.objects.filter(proposal=proposal).first()
     objectives = EventObjectives.objects.filter(proposal=proposal).first()
     outcomes = EventExpectedOutcomes.objects.filter(proposal=proposal).first()
     flow = TentativeFlow.objects.filter(proposal=proposal).first()
+
     speakers = proposal.speakers.all()
     expenses = proposal.expense_details.all()
 
