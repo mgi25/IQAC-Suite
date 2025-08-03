@@ -1338,7 +1338,14 @@ def api_faculty_overview(request):
 
 @login_required
 def user_dashboard(request):
-    # Do NOT render the admin dashboard here!
+    """Render the dashboard for non-admin users.
+
+    Superusers already have a dedicated admin dashboard; if one logs in
+    and somehow hits this view, redirect them to the admin dashboard to
+    avoid showing the regular user interface.
+    """
+    if request.user.is_superuser:
+        return redirect('admin_dashboard')
     return render(request, 'core/user_dashboard.html')
 
 # --------------------- Global Search API Endpoint ----------------------
