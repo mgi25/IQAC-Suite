@@ -3,6 +3,10 @@
 
 {% block title %}Admin Dashboard - CHRIST University{% endblock %}
 
+{% block head_extra %}
+  <link rel="stylesheet" href="{% static 'core/css/admin_dashboard.css' %}">
+{% endblock %}
+
 {% block content %}
 <div class="dashboard-container">
   <!-- Dashboard Header -->
@@ -21,35 +25,104 @@
   <!-- Statistics Row -->
   <div class="dashboard-stats">
     <div class="stat-card">
-      <div class="stat-number">21</div>
+      <div class="stat-number">{{ stats.students }}</div>
       <div class="stat-label">Students</div>
     </div>
     <div class="stat-card">
-      <div class="stat-number">0</div>
+      <div class="stat-number">{{ stats.faculties }}</div>
       <div class="stat-label">Faculties</div>
     </div>
     <div class="stat-card">
-      <div class="stat-number">0</div>
+      <div class="stat-number">{{ stats.hods }}</div>
       <div class="stat-label">HODs</div>
     </div>
     <div class="stat-card">
-      <div class="stat-number">20</div>
+      <div class="stat-number">{{ stats.centers }}</div>
       <div class="stat-label">Centers</div>
     </div>
   </div>
 
-  <!-- Dynamic Organization Stats -->
+  <!-- Analytics Section -->
+  <div class="dashboard-analytics">
+    <div class="analytics-row">
+      <div class="analytics-card">
+        <h3>Event Proposals</h3>
+        <div class="analytics-content">
+          <div class="metric">
+            <span class="metric-label">Total:</span>
+            <span class="metric-value">{{ stats.total_proposals }}</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Pending:</span>
+            <span class="metric-value pending">{{ stats.pending_proposals }}</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Approved:</span>
+            <span class="metric-value approved">{{ stats.approved_proposals }}</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Rejected:</span>
+            <span class="metric-value rejected">{{ stats.rejected_proposals }}</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="analytics-card">
+        <h3>System Overview</h3>
+        <div class="analytics-content">
+          <div class="metric">
+            <span class="metric-label">Total Users:</span>
+            <span class="metric-value">{{ stats.total_users }}</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Active Users:</span>
+            <span class="metric-value">{{ stats.active_users }}</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">New This Week:</span>
+            <span class="metric-value">{{ stats.new_users_this_week }}</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Reports:</span>
+            <span class="metric-value">{{ stats.total_reports }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="analytics-card">
+        <h3>Organizations</h3>
+        <div class="analytics-content">
+          <div class="metric">
+            <span class="metric-label">Departments:</span>
+            <span class="metric-value">{{ stats.departments }}</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Clubs:</span>
+            <span class="metric-value">{{ stats.clubs }}</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Total Orgs:</span>
+            <span class="metric-value">{{ stats.centers }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dynamic Organization Stats Row (optional, show if org_stats exists) -->
+  {% if org_stats %}
   <div class="admin-dashboard-stats-row" style="margin-top:2rem;">
     {% for stat in org_stats %}
       <div class="admin-dashboard-stat">
         <div class="stat-icon stat-center"></div>
         <div class="stat-count">{{ stat.user_count }}</div>
-        <div class="stat-label">{{ stat.organization__org_type__name }}</div>
+        <div class="stat-label">{{ stat.organization_org_type_name }}</div>
       </div>
     {% empty %}
       <p>No organization data.</p>
     {% endfor %}
   </div>
+  {% endif %}
 
   <!-- Action Cards -->
   <div class="admin-dashboard-navcards" style="margin-top:2rem;">
@@ -81,6 +154,64 @@
       <div class="navcard-title">Settings</div>
       <div class="navcard-desc">Admin panel settings</div>
     </a>
+  </div>
+
+  <!-- Recent Activity Feed -->
+  {% if recent_activities %}
+  <div class="recent-activities">
+    <div class="section-header">
+      <h3>Recent Activity</h3>
+      <span class="activity-count">{{ recent_activities|length }} recent items</span>
+    </div>
+    <div class="activity-list">
+      {% for activity in recent_activities %}
+      <div class="activity-item">
+        <div class="activity-icon">
+          {% if activity.type == 'proposal' %}
+            <i class="fas fa-clipboard-list"></i>
+          {% elif activity.type == 'report' %}
+            <i class="fas fa-file-alt"></i>
+          {% elif activity.type == 'user' %}
+            <i class="fas fa-user-plus"></i>
+          {% else %}
+            <i class="fas fa-bell"></i>
+          {% endif %}
+        </div>
+        <div class="activity-content">
+          <p class="activity-description">{{ activity.description }}</p>
+          <div class="activity-meta">
+            <span class="activity-user">by {{ activity.user }}</span>
+            <span class="activity-time">{{ activity.timestamp|timesince }} ago</span>
+            <span class="status-badge status-{{ activity.status }}">{{ activity.status|title }}</span>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="activity-footer">
+      <a href="/core-admin/event-proposals/" class="view-all-link">View All Proposals →</a>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- System Status Bar -->
+  <div class="system-status">
+    <div class="status-item">
+      <div class="status-indicator {% if stats.database_status == 'Operational' %}status-green{% else %}status-red{% endif %}"></div>
+      <span>Database: {{ stats.database_status }}</span>
+    </div>
+    <div class="status-item">
+      <div class="status-indicator {% if stats.email_status == 'Active' %}status-green{% else %}status-yellow{% endif %}"></div>
+      <span>Email Service: {{ stats.email_status }}</span>
+    </div>
+    <div class="status-item">
+      <div class="status-indicator {% if '7' in stats.storage_status or '8' in stats.storage_status %}status-yellow{% else %}status-green{% endif %}"></div>
+      <span>Storage: {{ stats.storage_status }}</span>
+    </div>
+    <div class="status-item">
+      <div class="status-indicator status-green"></div>
+      <span>Last Backup: {{ stats.last_backup }}</span>
+    </div>
   </div>
 </div>
 {% endblock %}

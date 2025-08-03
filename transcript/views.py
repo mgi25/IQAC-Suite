@@ -18,20 +18,36 @@ from django.db.models import Prefetch, Prefetch, Q, F
 # HOME
 # ─────────────────────────────────────────────
 def home(request):
-    years = AcademicYear.objects.all()
+    years = AcademicYear.objects.all().order_by('year')
+    
+    # DEBUG: Print what we're sending to template
+    print("=== DEBUG: Years being sent to template ===")
+    for year in years:
+        print(f"Year: {year.year}")
+    print("=== END DEBUG ===")
+    
     students = Student.objects.select_related('academic_year', 'course__school').all().order_by('name')
-
+    
     student_data = {}
     for student in students:
-        year = str(student.academic_year.year)
-        school = student.course.school.name
-        course = student.course.name
-
-        student_data.setdefault(year, {}).setdefault(school, {}).setdefault(course, []).append({
-            'name': student.name,
-            'roll_no': student.roll_no
-        })
-
+        # Add safety checks to prevent errors
+        if student.academic_year and student.course and student.course.school:
+            year = str(student.academic_year.year)
+            school = student.course.school.name
+            course = student.course.name
+            
+            student_data.setdefault(year, {}).setdefault(school, {}).setdefault(course, []).append({
+                'name': student.name,
+                'roll_no': student.roll_no
+            })
+    
+    # DEBUG: Print student data structure
+    print("=== DEBUG: Student data keys ===")
+    print(f"Years in student_data: {list(student_data.keys())}")
+    for year_key, schools in student_data.items():
+        print(f"  {year_key}: {list(schools.keys())}")
+    print("=== END DEBUG ===")
+    
     return render(request, 'transcript_app/home.html', {
         'years': years,
         'student_data': json.dumps(student_data)
