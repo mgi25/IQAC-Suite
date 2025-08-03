@@ -135,7 +135,12 @@ def submit_proposal(request, pk=None):
 
     if request.method == "POST":
         post_data = request.POST.copy()
-        form = EventProposalForm(post_data, instance=proposal, selected_academic_year=request.session.get('selected_academic_year'))
+        form = EventProposalForm(
+            post_data,
+            instance=proposal,
+            selected_academic_year=request.session.get('selected_academic_year'),
+            user=request.user,
+        )
 
         # --------- FACULTY INCHARGES QUERYSET FIX ---------
         faculty_ids = post_data.getlist("faculty_incharges")
@@ -152,7 +157,11 @@ def submit_proposal(request, pk=None):
     else:
         # Always get the selected academic year from session (ensured above)
         selected_academic_year = request.session.get('selected_academic_year')
-        form = EventProposalForm(instance=proposal, selected_academic_year=selected_academic_year)
+        form = EventProposalForm(
+            instance=proposal,
+            selected_academic_year=selected_academic_year,
+            user=request.user,
+        )
         # Populate all faculty as available choices for JS search/select on GET.
         # Include already assigned faculty so their selections remain visible.
         fac_ids = list(proposal.faculty_incharges.all().values_list('id', flat=True)) if proposal else []
@@ -226,7 +235,7 @@ def autosave_proposal(request):
             id=pid, submitted_by=request.user
         ).first()
 
-    form = EventProposalForm(data, instance=proposal)
+    form = EventProposalForm(data, instance=proposal, user=request.user)
 
     if not form.is_valid():
         return JsonResponse({"success": False, "errors": form.errors}, status=400)

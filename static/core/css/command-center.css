@@ -684,7 +684,15 @@
       left: 0 !important;
       box-shadow: var(--shadow-lg) !important;
     }
-    
+
+    .main-content {
+      transition: margin-left 0.3s ease !important;
+    }
+
+    .left-control-panel.mobile-open + .main-content {
+      margin-left: var(--sidebar-width) !important;
+    }
+
     .utility-center {
       display: none !important;
     }
