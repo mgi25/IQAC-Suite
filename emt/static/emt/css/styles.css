@@ -67,27 +67,27 @@ body {
 /* Width adjustment when form panel is open */
 .dashboard-container.split-view {
     flex: 0 0 35%;
-    max-width: 35%;
 }
 
 /* Event Proposal page layout fix */
 .event-dashboard-container {
     display: flex;
     align-items: flex-start;
-    margin-left: 260px;
-    padding: 2rem;
-    gap: 2rem;
+    margin-left: 220px;
+    padding: 1rem 2rem;
+    gap: 1.5rem;
 }
 
 .step-list {
-    flex: 1;
-    max-width: 100%;
-    padding: 2rem;
+    flex: 0 0 35%;
+    max-width: 300px;
+    padding: 1rem;
+    align-self: flex-start;
 }
 
 .form-panel {
-    flex: 0 0 65%;
-    max-width: 65%;
+    flex: 1;
+    max-width: 100%;
     background: #fff;
     padding: 2rem;
     border-radius: 0.75rem;
@@ -831,10 +831,12 @@ body {
       flex-direction: column;
       margin-left: 0;
       padding: 1rem;
+      gap: 1rem;
   }
 
   .step-list,
-  .form-panel {
+  .form-panel,
+  .dashboard-container.split-view {
       max-width: 100%;
       flex: 1 1 100%;
       padding: 1rem;
