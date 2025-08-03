@@ -161,10 +161,8 @@ def proposal_status(request, pk):
 # ─────────────────────────────────────────────────────────────
 #  Admin Dashboard and User Management
 # ─────────────────────────────────────────────────────────────
+@user_passes_test(lambda u: u.is_superuser)
 def admin_dashboard(request):
-    if not request.user.is_superuser:
-        return redirect("dashboard")
-
     org_stats = (
         RoleAssignment.objects
         .filter(user__is_active=True, organization__isnull=False)
