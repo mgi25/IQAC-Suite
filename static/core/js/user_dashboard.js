@@ -118,3 +118,50 @@ function renderPeerAchievements(peers) { /* ... */ }
 document.querySelector('.graph-icon').addEventListener('click', function() {
     window.location.href = '/dashboard/';
 });
+
+document.addEventListener('DOMContentLoaded', function () {
+    
+    // --- Event Contribution Donut Chart ---
+    const chartCanvas = document.getElementById('eventContributionChart');
+    const percentageSpan = document.getElementById('chartPercentage');
+
+    if (chartCanvas && percentageSpan) {
+        // Get the percentage value from the span, remove the '%' and convert to a number
+        const contributionPercentage = parseFloat(percentageSpan.textContent) || 0;
+
+        new Chart(chartCanvas, {
+            type: 'doughnut',
+            data: {
+                labels: ['My Contribution', 'Other'],
+                datasets: [{
+                    label: 'Event Contribution',
+                    data: [contributionPercentage, 100 - contributionPercentage],
+                    backgroundColor: [
+                        '#007bff', // --primary-color
+                        '#e9ecef'  // A light grey for the remainder
+                    ],
+                    borderColor: [
+                        '#ffffff' // --card-bg
+                    ],
+                    borderWidth: 4,
+                    cutout: '75%'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        enabled: false
+                    }
+                }
+            }
+        });
+    }
+
+    // --- Add other interactive JS here in the future ---
+    // For example, handling tab clicks to
+});

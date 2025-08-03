@@ -1,97 +1,466 @@
 {% extends "base.html" %}
-{% load static group_filters %}
+{% load static %}
 
 {% block title %}Dashboard – IQAC Suite{% endblock %}
 
 {% block head_extra %}
-  <!-- dashboard-only stylesheet -->
   <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
-  <section class="dash-apps">
-    <!-- Always visible cards -->
-    <a href="{% url 'emt:iqac_suite_dashboard' %}" class="material-list-tile blue-theme card">
-      <div class="material-list-leading">
-        <div class="material-list-icon">
-          <i class="fa-solid fa-file-lines"></i>
+<div class="user-dashboard">
+    <!-- Welcome Banner -->
+    <div class="welcome-banner">
+        <div class="banner-content">
+            <h1>Welcome back, {{ user.first_name|default:user.username }}!</h1>
+            <p>Here's your summary for today, {% now "F j, Y" %}.</p>
         </div>
-      </div>
-      <div class="material-list-content">
-        <div class="material-list-primary">IQAC Suite</div>
-        <div class="material-list-secondary">Submit event proposals, track approvals, and generate reports.</div>
-      </div>
-      <div class="material-list-trailing">
-        <i class="fa-solid fa-arrow-right material-list-arrow"></i>
-      </div>
-    </a>
+    </div>
 
-    <a href="{% url 'admin_event_proposals' %}" class="material-list-tile blue-theme card">
-      <div class="material-list-leading">
-        <div class="material-list-icon">
-          <i class="fa-solid fa-list"></i>
-        </div>
-      </div>
-      <div class="material-list-content">
-        <div class="material-list-primary">Event Proposals</div>
-        <div class="material-list-secondary">View and manage your event proposals.</div>
-      </div>
-      <div class="material-list-trailing">
-        <i class="fa-solid fa-arrow-right material-list-arrow"></i>
-      </div>
-    </a>
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+        <div class="nav-content">
+            <button class="nav-tab active" data-tab="overview"><i class="fas fa-chart-line"></i> <span>Overview</span></button>
+            <button class="nav-tab" data-tab="events"><i class="fas fa-calendar-alt"></i> <span>My Events</span></button>
+            <button class="nav-tab" data-tab="students"><i class="fas fa-user-graduate"></i> <span>My Students</span></button>
+            <button class="nav-tab" data-tab="profile"><i class="fas fa-user-circle"></i> <span>My Profile</span></button>
 
-    {% if user.is_superuser or request.session.role == 'admin' %}
-    <a href="{% url 'admin_reports' %}" class="material-list-tile blue-theme card">
-      <div class="material-list-leading">
-        <div class="material-list-icon">
-          <i class="fa-solid fa-file-alt"></i>
+            {% if user.is_superuser %}
+            <a href="/admin/" class="nav-tab"><i class="fas fa-cogs"></i> <span>Admin</span></a>
+            {% endif %}
         </div>
-      </div>
-      <div class="material-list-content">
-        <div class="material-list-primary">Reports</div>
-        <div class="material-list-secondary">Browse generated event reports.</div>
-      </div>
-      <div class="material-list-trailing">
-        <i class="fa-solid fa-arrow-right material-list-arrow"></i>
-      </div>
-    </a>
-    {% endif %}
+    </nav>
 
-    {% if user.is_superuser or request.session.role == 'faculty' or user|has_group:"Faculty" %}
-    <a href="{% url 'cdl_dashboard' %}" class="material-list-tile blue-theme card">
-      <div class="material-list-leading">
-        <div class="material-list-icon">
-          <i class="fa-solid fa-camera"></i>
-        </div>
-      </div>
-      <div class="material-list-content">
-        <div class="material-list-primary">CDL</div>
-        <div class="material-list-secondary">Request media content creation and approval.</div>
-      </div>
-      <div class="material-list-trailing">
-        <i class="fa-solid fa-arrow-right material-list-arrow"></i>
-      </div>
-    </a>
-    {% endif %}
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Overview Tab -->
+        <div id="overview" class="tab-content active">
+            <!-- Quick Stats -->
+            <div class="stats-grid">
+                <div class="stat-card blue">
+                    <div class="stat-content">
+                        <div class="stat-text">
+                            <p class="stat-label">Next Event</p>
+                            <p class="stat-value">Tech Symposium</p>
+                            <p class="stat-subtitle">March 15, 2025</p>
+                        </div>
+                        <i class="fas fa-calendar stat-icon"></i>
+                    </div>
+                </div>
+                <div class="stat-card yellow">
+                    <div class="stat-content">
+                        <div class="stat-text">
+                            <p class="stat-label">Need Check-in</p>
+                            <p class="stat-value">9 Students</p>
+                            <p class="stat-subtitle">This week</p>
+                        </div>
+                        <i class="fas fa-users stat-icon"></i>
+                    </div>
+                </div>
+                <div class="stat-card green">
+                    <div class="stat-content">
+                        <div class="stat-text">
+                            <p class="stat-label">Today's Goals</p>
+                            <p class="stat-value">5 Tasks</p>
+                            <p class="stat-subtitle">3 completed</p>
+                        </div>
+                        <i class="fas fa-target stat-icon"></i>
+                    </div>
+                </div>
+                <div class="stat-card red">
+                    <div class="stat-content">
+                        <div class="stat-text">
+                            <p class="stat-label">Notifications</p>
+                            <p class="stat-value">4 New</p>
+                            <p class="stat-subtitle">Requires attention</p>
+                        </div>
+                        <i class="fas fa-bell stat-icon"></i>
+                    </div>
+                </div>
+            </div>
 
-    {% if user.is_superuser %}
-    <a href="{% url 'transcript:home' %}" class="material-list-tile blue-theme card">
-      <div class="material-list-leading">
-        <div class="material-list-icon">
-          <i class="fa-solid fa-graduation-cap"></i>
+            <!-- Charts Row -->
+            <div class="charts-row">
+                <div class="chart-card">
+                    <h3>Graduate Attributes</h3>
+                    <div class="attributes-chart">
+                        <div class="attribute-item">
+                            <span>Critical Thinking</span>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 85%"></div>
+                            </div>
+                            <span class="percentage">85%</span>
+                        </div>
+                        <div class="attribute-item">
+                            <span>Communication</span>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 75%"></div>
+                            </div>
+                            <span class="percentage">75%</span>
+                        </div>
+                        <div class="attribute-item">
+                            <span>Leadership</span>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 65%"></div>
+                            </div>
+                            <span class="percentage">65%</span>
+                        </div>
+                        <div class="attribute-item">
+                            <span>Teamwork</span>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 80%"></div>
+                            </div>
+                            <span class="percentage">80%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <h3>Event Contribution</h3>
+                    <div class="pie-chart">
+                        <div class="pie-chart-circle" style="background: conic-gradient(#4a90e2 0deg 241.2deg, #e0e0e0 241.2deg 360deg);">
+                            <div class="pie-chart-inner">
+                                <span class="pie-percentage">67%</span>
+                            </div>
+                        </div>
+                        <div class="pie-chart-info">
+                            <p>Total Events</p>
+                            <p class="pie-total">24</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Mentees -->
+            <div class="mentees-section">
+                <h3>My Top Mentees</h3>
+                <div class="mentees-stats">
+                    <div class="mentee-stat blue">
+                        <div class="mentee-number">32</div>
+                        <div class="mentee-label">Total Mentees</div>
+                    </div>
+                    <div class="mentee-stat green">
+                        <div class="mentee-number">108</div>
+                        <div class="mentee-label">Total Interactions</div>
+                    </div>
+                    <div class="mentee-stat yellow">
+                        <div class="mentee-number">9</div>
+                        <div class="mentee-label">Need Check-in</div>
+                    </div>
+                </div>
+                <div class="mentees-list">
+                    <div class="mentee-item">
+                        <div class="mentee-left">
+                            <div class="mentee-avatar">SD</div>
+                            <div class="mentee-info">
+                                <p class="mentee-name">S. Devkrishna</p>
+                                <p class="mentee-details">23112015 | 25 interactions</p>
+                            </div>
+                        </div>
+                        <div class="mentee-right">
+                            <p class="mentee-gpa">GPA: 8.5</p>
+                            <p class="mentee-meeting">2 days ago</p>
+                        </div>
+                    </div>
+                    <div class="mentee-item">
+                        <div class="mentee-left">
+                            <div class="mentee-avatar">AG</div>
+                            <div class="mentee-info">
+                                <p class="mentee-name">Arisha Gupta</p>
+                                <p class="mentee-details">23112002 | 14 interactions</p>
+                            </div>
+                        </div>
+                        <div class="mentee-right">
+                            <p class="mentee-gpa">GPA: 9.2</p>
+                            <p class="mentee-meeting">1 week ago</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-      <div class="material-list-content">
-        <div class="material-list-primary">Graduate Transcript</div>
-        <div class="material-list-secondary">Generate character strength transcript reports.</div>
-      </div>
-      <div class="material-list-trailing">
-        <i class="fa-solid fa-arrow-right material-list-arrow"></i>
-      </div>
-    </a>
-    {% endif %}
-  </section>
+
+        <!-- Events Tab -->
+        <div id="events" class="tab-content">
+            <!-- Events Stats (Dynamic) -->
+            <div class="stats-grid">
+                <div class="stat-card blue"><div class="stat-center"><i class="fas fa-calendar stat-icon-large"></i><div class="stat-number">{{ upcoming_events_count }}</div><div class="stat-desc">Upcoming Events</div></div></div>
+                <div class="stat-card green"><div class="stat-center"><i class="fas fa-target stat-icon-large"></i><div class="stat-number">{{ organized_events_count }}</div><div class="stat-desc">Organized Events</div></div></div>
+                <div class="stat-card purple"><div class="stat-center"><i class="fas fa-users stat-icon-large"></i><div class="stat-number">{{ students_participated }}</div><div class="stat-desc">Students Participated</div></div></div>
+                <div class="stat-card orange"><div class="stat-center"><i class="fas fa-calendar-week stat-icon-large"></i><div class="stat-number">{{ this_week_events }}</div><div class="stat-desc">This Week</div></div></div>
+            </div>
+
+            <!-- Filters -->
+            <div class="filters-section">
+                <div class="filters-content">
+                    <div class="filter-label"><i class="fas fa-filter"></i><span>Filters:</span></div>
+                    <select class="filter-select" id="eventTypeFilter"><option value="">All Events</option><option value="my">My Events</option><option value="department">Department Events</option></select>
+                    <select class="filter-select" id="eventTimeFilter"><option value="">This Month</option><option value="week">This Week</option><option value="next_month">Next Month</option></select>
+                    <select class="filter-select" id="eventRoleFilter"><option value="">All Roles</option><option value="organizer">Organizer</option><option value="coordinator">Coordinator</option><option value="faculty_advisor">Faculty Advisor</option></select>
+                </div>
+            </div>
+
+            <!-- My Events -->
+            <div class="events-section">
+                <div class="section-header">
+                    <h3>My Events</h3>
+                    <a class="btn-primary" href="/suite/submit/">
+                      <i class="fas fa-plus"></i> Create Event
+                    </a>
+                </div>
+                <div class="events-list" id="myEventsList">
+                  {% for event in my_events %}
+                    <div class="event-item" data-event-type="my" data-event-role="{{ event.user_type|default:'organizer' }}" data-event-time="{{ event.event_datetime|date:'Y-m' }}">
+                      <div class="event-content">
+                        <h4>{{ event.event_title }}</h4>
+                        <div class="event-details">
+                          <span>📍 {{ event.event_datetime|date:"M d, Y H:i" }}</span>
+                          <span>👤 {{ event.submitted_by.get_full_name }}</span>
+                          <span>👥 {{ event.fest_fee_participants|default:event.conf_fee_participants }}</span>
+                        </div>
+                      </div>
+                      <div class="event-actions">
+                        <span class="status-badge {{ event.status|lower }}">{{ event.get_status_display }}</span>
+                        <button class="btn-icon" type="button" data-action="edit-event" data-event-id="{{ event.id }}"><i class="fas fa-edit"></i></button>
+                      </div>
+                    </div>
+                  {% empty %}
+                    <div class="empty-state">No events found.</div>
+                  {% endfor %}
+                </div>
+            </div>
+
+            <!-- University Events -->
+            <div class="university-events">
+                <h3>🏛️ Other University Events</h3>
+                <div class="university-events-list" id="otherEventsList">
+                  {% for event in other_events %}
+                    <div class="university-event" data-event-type="other" data-event-role="{{ event.user_type|default:'organizer' }}" data-event-time="{{ event.event_datetime|date:'Y-m' }}">
+                        <div>
+                            <p class="event-title">{{ event.event_title }}</p>
+                            <p class="event-dept">{% if event.organization %}{{ event.organization.name }}{% else %}N/A{% endif %}</p>
+                        </div>
+                        <div class="event-date">
+                            <p>{{ event.event_datetime|date:"M d" }}</p>
+                            <button class="btn-link" type="button" data-action="view-event-details" data-event-id="{{ event.id }}">View Details</button>
+                        </div>
+                    </div>
+                  {% empty %}
+                    <div class="empty-state">No university events found.</div>
+                  {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Students Tab -->
+        <div id="students" class="tab-content">
+            <!-- Search and Filter -->
+            <div class="search-section">
+                <div class="search-content">
+                    <div class="search-input">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" placeholder="Search students..." id="studentSearch">
+                    </div>
+                    <select class="filter-select" id="studentStatusFilter"><option value="">All Students</option><option value="need_checkin">Need Check-in</option><option value="doing_well">Doing Well</option></select>
+                    <select class="filter-select" id="studentDeptFilter"><option value="">All Departments</option><option value="cs">Computer Science</option><option value="ece">Electronics</option><option value="me">Mechanical</option></select>
+                </div>
+            </div>
+
+            <!-- Students List -->
+            <div class="students-section">
+                <div class="section-header">
+                    <h3>My Students</h3>
+                    <button class="btn-primary" type="button" data-action="add-student">
+                        <i class="fas fa-plus"></i> Add Student
+                    </button>
+                </div>
+                <div class="students-list">
+                    <!-- ADDED: data-action and data-student-id for the main clickable item -->
+                    <div class="student-item" data-action="show-student-profile" data-student-id="1">
+                        <div class="student-left">
+                            <div class="student-avatar">SD</div>
+                            <div class="student-info">
+                                <h4>S. Devkrishna</h4>
+                                <p class="student-reg">23112015 | 25 interactions</p>
+                                <div class="student-stats">
+                                    <span>📊 GPA: 8.5</span>
+                                    <span>📅 Attendance: 92%</span>
+                                    <span>🎯 Last meeting: 2 days ago</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="student-actions">
+                            <span class="status-badge warning">⚠️ Needs check-in</span>
+                            <!-- REMOVED: onclick and event.stopPropagation(). ADDED: data-action attributes -->
+                            <button class="btn-icon" type="button" data-action="message-student" data-student-id="1"><i class="fas fa-comment"></i></button>
+                            <button class="btn-icon" type="button" data-action="call-student" data-student-id="1"><i class="fas fa-phone"></i></button>
+                        </div>
+                    </div>
+                    <div class="student-item" data-action="show-student-profile" data-student-id="2">
+                        <div class="student-left">
+                            <div class="student-avatar">AG</div>
+                            <div class="student-info">
+                                <h4>Arisha Gupta</h4>
+                                <p class="student-reg">23112002 | 14 interactions</p>
+                                <div class="student-stats">
+                                    <span>📊 GPA: 9.2</span>
+                                    <span>📅 Attendance: 96%</span>
+                                    <span>🎯 Last meeting: 1 week ago</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="student-actions">
+                            <span class="status-badge success">✅ Doing well</span>
+                            <button class="btn-icon" type="button" data-action="message-student" data-student-id="2"><i class="fas fa-comment"></i></button>
+                            <button class="btn-icon" type="button" data-action="call-student" data-student-id="2"><i class="fas fa-phone"></i></button>
+                        </div>
+                    </div>
+                    <div class="student-item" data-action="show-student-profile" data-student-id="3">
+                        <div class="student-left">
+                            <div class="student-avatar">RK</div>
+                            <div class="student-info">
+                                <h4>Rohit Kumar</h4>
+                                <p class="student-reg">23112025 | 18 interactions</p>
+                                <div class="student-stats">
+                                    <span>📊 GPA: 7.8</span>
+                                    <span>📅 Attendance: 88%</span>
+                                    <span>🎯 Last meeting: 5 days ago</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="student-actions">
+                            <span class="status-badge warning">⚠️ Needs attention</span>
+                            <button class="btn-icon" type="button" data-action="message-student" data-student-id="3"><i class="fas fa-comment"></i></button>
+                            <button class="btn-icon" type="button" data-action="call-student" data-student-id="3"><i class="fas fa-phone"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Tab -->
+        <div id="profile" class="tab-content">
+            <!-- Profile Header -->
+            <div class="profile-section">
+                <div class="profile-header">
+                    <div class="profile-left">
+                        <div class="profile-avatar-large">
+                            {% if user.first_name %}
+                                {{ user.first_name.0|upper }}{% if user.last_name %}{{ user.last_name.0|upper }}{% endif %}
+                            {% else %}
+                                {{ user.username.0|upper }}
+                            {% endif %}
+                        </div>
+                        <div class="profile-info">
+                            <h2>{{ user.get_full_name|default:user.username }}</h2>
+                            <p>{{ user.email }}</p>
+                            <p>Computer Science Department • Professor</p>
+                        </div>
+                    </div>
+                    <button class="btn-primary" type="button" data-action="edit-profile">
+                        <i class="fas fa-edit"></i> Edit Profile
+                    </button>
+                </div>
+            </div>
+
+            <!-- My Classes -->
+            <div class="classes-section">
+                <h3>📚 My Classes</h3>
+                <div class="classes-list">
+                    <div class="class-item">
+                        <div>
+                            <p class="class-name">CS101 - Programming Fundamentals</p>
+                            <p class="class-students">45 students</p>
+                        </div>
+                        <button class="btn-link" type="button" data-action="view-class-details" data-class-id="1">View Details</button>
+                    </div>
+                    <div class="class-item">
+                        <div>
+                            <p class="class-name">CS301 - Data Structures</p>
+                            <p class="class-students">32 students</p>
+                        </div>
+                        <button class="btn-link" type="button" data-action="view-class-details" data-class-id="2">View Details</button>
+                    </div>
+                    <div class="class-item">
+                        <div>
+                            <p class="class-name">CS401 - Database Systems</p>
+                            <p class="class-students">28 students</p>
+                        </div>
+                        <button class="btn-link" type="button" data-action="view-class-details" data-class-id="3">View Details</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Achievements and Goals -->
+            <div class="profile-grid">
+                <div class="achievements-section">
+                    <div class="section-header">
+                        <h3>🏆 My Achievements</h3>
+                        <button class="btn-icon" type="button" data-action="add-achievement"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <div class="achievements-list">
+                        <div class="achievement-item">Best Faculty Award 2024</div>
+                        <div class="achievement-item">Research Publication - AI in Education</div>
+                        <div class="achievement-item">15 years of teaching experience</div>
+                        <div class="achievement-item">Department Innovation Award</div>
+                    </div>
+                </div>
+
+                <div class="goals-section">
+                    <div class="section-header">
+                        <h3>🎯 Current Goals</h3>
+                        <button class="btn-icon" type="button" data-action="add-goal"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <div class="goals-list">
+                        <div class="goal-item">
+                            <p class="goal-text">Complete 10 LORs this month</p>
+                            <div class="goal-progress">
+                                <div class="progress-bar"><div class="progress-fill" style="width: 80%"></div></div>
+                                <span class="progress-text">80%</span>
+                            </div>
+                        </div>
+                        <div class="goal-item">
+                            <p class="goal-text">Organize Tech Symposium</p>
+                            <div class="goal-progress">
+                                <div class="progress-bar"><div class="progress-fill" style="width: 70%"></div></div>
+                                <span class="progress-text">70%</span>
+                            </div>
+                        </div>
+                        <div class="goal-item">
+                            <p class="goal-text">Publish Research Paper</p>
+                            <div class="goal-progress">
+                                <div class="progress-bar"><div class="progress-fill" style="width: 45%"></div></div>
+                                <span class="progress-text">45%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contributions Timeline -->
+            <div class="timeline-section">
+                <h3>📅 This Year's Contributions</h3>
+                <div class="timeline">
+                    <div class="timeline-item completed"><div class="timeline-dot"></div><div class="timeline-content"><h4>January</h4><p>Organized New Student Orientation</p><span class="timeline-status">completed</span></div></div>
+                    <div class="timeline-item completed"><div class="timeline-dot"></div><div class="timeline-content"><h4>February</h4><p>Research Paper Submission</p><span class="timeline-status">completed</span></div></div>
+                    <div class="timeline-item ongoing"><div class="timeline-dot"></div><div class="timeline-content"><h4>March</h4><p>Coordinating Tech Symposium</p><span class="timeline-status">ongoing</span></div></div>
+                    <div class="timeline-item planned"><div class="timeline-dot"></div><div class="timeline-content"><h4>April</h4><p>Student Career Guidance Workshop</p><span class="timeline-status">planned</span></div></div>
+                </div>
+            </div>
+        </div>
+    </main>
 </div>
+
+<!-- ADDED: Modal structure for notifications -->
+<div id="dashboardModal" class="modal-overlay">
+    <div class="modal-content">
+        <button class="modal-close" data-action="close-modal">&times;</button>
+        <h3 id="modalTitle"></h3>
+        <div id="modalBody"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script src="{% static 'core/js/dashboard.js' %}"></script>
 {% endblock %}
