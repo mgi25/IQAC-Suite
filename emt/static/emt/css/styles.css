@@ -65,30 +65,38 @@ body {
 }
 
 .dashboard-container.split-view {
-  padding: 1rem;
-  width: 50%;
-  position: fixed;
-  left: 0;
-  top: 170px;
-  height: calc(100vh - 170px);
-  overflow-y: auto;
+    padding: 1rem;
+    width: 50%;
+    position: fixed;
+    left: 260px;
+    top: 170px;
+    height: calc(100vh - 170px);
+    overflow-y: auto;
 }
 
 /* Event Proposal page layout fix */
-.event-form-wrapper {
-  margin-left: var(--sidebar-width);
-  padding: 2rem;
+.event-dashboard-container {
+    display: flex;
+    margin-left: 260px;
+    gap: 2rem;
+    padding: 2rem;
 }
 
-.event-form-wrapper .dashboard-container {
-  padding: 0;
+.event-dashboard-container .dashboard-container {
+    padding: 0;
 }
 
 @media (max-width: 768px) {
-  .event-form-wrapper {
-    margin-left: 0;
-    padding: 1rem;
-  }
+    .dashboard-container.split-view {
+        left: 0;
+        width: 100%;
+    }
+
+    .event-dashboard-container {
+        margin-left: 0;
+        flex-direction: column;
+        padding: 1rem;
+    }
 }
 
 /* ===== HEADER ===== */
