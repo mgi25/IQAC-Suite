@@ -425,7 +425,7 @@ def submit_cdl_support(request, proposal_id):
 
 
 # ──────────────────────────────
-# IQAC Suite Dashboard
+# Event Management Suite Dashboard
 # ──────────────────────────────
 @login_required
 def proposal_status_detail(request, proposal_id):

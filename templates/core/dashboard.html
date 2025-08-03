@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Dashboard – IQAC Suite{% endblock %}
+{% block title %}Dashboard – Event Management Suite{% endblock %}
 
 {% block head_extra %}
   <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
@@ -419,11 +419,78 @@
         <div id="modalBody"></div>
     </div>
 </div>
+
+<!-- Global Search Results Modal -->
+<div id="globalSearchModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+        <button class="modal-close" type="button" onclick="document.getElementById('globalSearchModal').style.display='none'">&times;</button>
+        <h3>Search Results</h3>
+        <div id="globalSearchResults"></div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts_extra %}
 <script>
   window.USER_ORG_NAME = "{{ user.role_assignments.first.organization.name|default:'' }}";
+
+  // Global Search JS
+  document.addEventListener('DOMContentLoaded', function() {
+    var input = document.getElementById('globalSearchInput');
+    var btn = document.getElementById('globalSearchBtn');
+    var modal = document.getElementById('globalSearchModal');
+    var resultsDiv = document.getElementById('globalSearchResults');
+    function showResults(results) {
+      resultsDiv.innerHTML = '';
+      if (!results.length) {
+        resultsDiv.innerHTML = '<div style="color:#888;">No results found.</div>';
+        return;
+      }
+      var html = '<ul style="list-style:none; padding:0;">';
+      results.forEach(function(item) {
+        html += '<li style="margin-bottom:12px;">' + item + '</li>';
+      });
+      html += '</ul>';
+      resultsDiv.innerHTML = html;
+    }
+    function searchAll(query) {
+      query = query.trim().toLowerCase();
+      var results = [];
+      // Search events
+      document.querySelectorAll('.event-item, .university-event').forEach(function(ev) {
+        var title = ev.querySelector('h4, .event-title');
+        if (title && title.textContent.toLowerCase().includes(query)) {
+          results.push('Event: ' + title.textContent);
+        }
+      });
+      // Search students (if faculty)
+      document.querySelectorAll('.student-item').forEach(function(st) {
+        var name = st.querySelector('h4');
+        if (name && name.textContent.toLowerCase().includes(query)) {
+          results.push('Student: ' + name.textContent);
+        }
+      });
+      // Search classes
+      document.querySelectorAll('.class-item .class-name').forEach(function(cl) {
+        if (cl.textContent.toLowerCase().includes(query)) {
+          results.push('Class: ' + cl.textContent);
+        }
+      });
+      // Add more search types as needed
+      return results;
+    }
+    function doSearch() {
+      var query = input.value;
+      if (!query) return;
+      var results = searchAll(query);
+      showResults(results);
+      modal.style.display = 'flex';
+    }
+    btn.addEventListener('click', doSearch);
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') doSearch();
+    });
+  });
 </script>
 <script src="{% static 'core/js/dashboard.js' %}"></script>
 {% endblock %}

@@ -128,11 +128,11 @@
         {% endif %}
       </div>
 
-      <!-- IQAC Suite - Expandable -->
+      <!-- Event Management Suite - Expandable -->
       <div class="nav-section {% if 'suite' in request.resolver_match.url_name or '/suite/' in request.path or request.resolver_match.namespace == 'emt' %}expanded{% endif %}">
         <div class="nav-section-header">
           <i class="fas fa-clipboard-list nav-icon"></i>
-          <span class="nav-text">IQAC Suite</span>
+          <span class="nav-text">Event Management Suite</span>
           <i class="fas fa-chevron-right expand-icon {% if 'suite' in request.resolver_match.url_name or '/suite/' in request.path or request.resolver_match.namespace == 'emt' %}rotated{% endif %}"></i>
         </div>
         <div class="nav-submenu {% if 'suite' in request.resolver_match.url_name or '/suite/' in request.path or request.resolver_match.namespace == 'emt' %}open{% endif %}">

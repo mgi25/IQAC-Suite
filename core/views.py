@@ -1358,35 +1358,54 @@ def api_global_search(request):
                 'url': f'/core-admin/users/{user.id}/'
             } for user in student_users]
 
-        # Search Event Proposals (from emt app)
+        # Search Event Proposals (from emt app), including IQAC-related
         try:
             from emt.models import EventProposal
             proposals = EventProposal.objects.filter(
-                Q(title__icontains=query) |
-                Q(faculty_incharge__first_name__icontains=query) |
-                Q(faculty_incharge__last_name__icontains=query)
-            ).select_related('faculty_incharge').order_by('-created_at')[:5]
+                Q(event_title__icontains=query) |
+                Q(submitted_by__first_name__icontains=query) |
+                Q(submitted_by__last_name__icontains=query) |
+                Q(organization__name__icontains=query) |
+                Q(event_focus_type__icontains=query)
+            ).select_related('submitted_by', 'organization').order_by('-event_datetime')[:5]
+            # If query is IQAC, prioritize IQAC-related proposals
+            if query.lower() == 'iqac':
+                proposals = EventProposal.objects.filter(
+                    Q(organization__name__icontains='iqac') |
+                    Q(event_focus_type__icontains='iqac')
+                ).select_related('submitted_by', 'organization').order_by('-event_datetime')[:5]
             results['proposals'] = [{
                 'id': proposal.id,
-                'title': proposal.title,
-                'faculty': proposal.faculty_incharge.get_full_name() if proposal.faculty_incharge else 'N/A',
+                'title': proposal.event_title,
+                'faculty': proposal.submitted_by.get_full_name() if proposal.submitted_by else 'N/A',
+                'organization': proposal.organization.name if proposal.organization else 'N/A',
                 'status': getattr(proposal, 'status', 'Unknown'),
-                'date': proposal.created_at.strftime('%Y-%m-%d') if hasattr(proposal, 'created_at') else 'N/A',
+                'date': proposal.event_datetime.strftime('%Y-%m-%d') if proposal.event_datetime else 'N/A',
                 'url': f'/core-admin/event-proposals/{proposal.id}/'
             } for proposal in proposals]
         except (ImportError, AttributeError):
             results['proposals'] = []
 
-        # Search Reports (from core app)
+        # Search Reports (from core app), including IQAC-specific
         try:
             from core.models import Report
             reports = Report.objects.filter(
-                Q(title__icontains=query)
+                Q(title__icontains=query) |
+                Q(description__icontains=query) |
+                Q(organization__name__icontains=query)
             ).order_by('-created_at')[:5]
+            # If query is IQAC, prioritize IQAC reports
+            if query.lower() == 'iqac':
+                reports = Report.objects.filter(
+                    Q(report_type__iexact='iqac') |
+                    Q(title__icontains='iqac') |
+                    Q(organization__name__icontains='iqac')
+                ).order_by('-created_at')[:5]
             results['reports'] = [{
                 'id': report.id,
                 'title': report.title,
                 'type': getattr(report, 'report_type', 'Report'),
+                'organization': report.organization.name if report.organization else 'N/A',
                 'date': report.created_at.strftime('%Y-%m-%d'),
                 'url': f'/core-admin/reports/{report.id}/'
             } for report in reports]
