@@ -23,8 +23,9 @@ function loadDashboardForRole(role, user) {
     document.querySelectorAll('.faculty-only').forEach(el => el.style.display = (role === 'faculty' ? '' : 'none'));
     document.querySelectorAll('.student-only').forEach(el => el.style.display = (role === 'student' ? '' : 'none'));
     // Set welcome message and avatar
-    document.getElementById('welcomeTitle').textContent = `Welcome, ${user.name || 'User'}!`;
-    document.getElementById('welcomeSubtitle').textContent = user.subtitle || '';
+    const prettyRole = role.charAt(0).toUpperCase() + role.slice(1);
+    document.getElementById('welcomeTitle').textContent = `Welcome (${prettyRole})`;
+    document.getElementById('welcomeSubtitle').textContent = user.name || '';
     document.getElementById('profileAvatar').textContent = user.initials || 'U';
 }
 

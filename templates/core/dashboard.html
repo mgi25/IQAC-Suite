@@ -18,7 +18,7 @@
       IQAC Suite <span class="dash-and">&amp;</span> Transcript Automater
     </h1>
     <p class="dash-greet">
-      Hi,&nbsp;<strong>{{ request.user.get_full_name|default:request.user.username|upper }}</strong>!&nbsp;
+      Welcome ({{ request.user.profile.get_role_display }})&nbsp;<strong>{{ request.user.get_full_name|default:request.user.username|upper }}</strong>!&nbsp;
       Pick an application to get started:
     </p>
   </section>

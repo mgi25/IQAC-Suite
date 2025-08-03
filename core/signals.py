@@ -1,6 +1,7 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.contrib.auth.models import User
+from django.contrib.auth.signals import user_logged_in
 from .models import Profile
 import sys
 
@@ -17,3 +18,17 @@ def create_or_update_user_profile(sender, instance, created, **kwargs):
             instance.profile.save()
         else:
             Profile.objects.create(user=instance)
+
+
+@receiver(user_logged_in)
+def assign_role_on_login(sender, user, request, **kwargs):
+    """Assign either the faculty or student role based on the email address."""
+    email = (user.email or "").lower()
+    role = "faculty"
+    if any(keyword in email for keyword in ["student", "stud."]):
+        role = "student"
+
+    profile, _ = Profile.objects.get_or_create(user=user)
+    if profile.role != role:
+        profile.role = role
+        profile.save()

@@ -1319,11 +1319,10 @@ from django.views.decorators.http import require_GET
 @login_required
 def api_auth_me(request):
     user = request.user
-    # Example: determine role and user info
-    role = 'faculty' if user.is_staff else 'student'
+    profile_role = getattr(getattr(user, "profile", None), "role", "student")
     initials = ''.join([x[0] for x in user.get_full_name().split()]) or user.username[:2].upper()
     return JsonResponse({
-        'role': role,
+        'role': profile_role,
         'name': user.get_full_name(),
         'subtitle': '',  # Add more info if needed
         'initials': initials,

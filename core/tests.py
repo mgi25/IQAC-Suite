@@ -25,6 +25,37 @@ class OrganizationModelTests(TestCase):
         self.assertEqual(org.org_type.name, "Department")
 
 
+class UserRoleAssignmentTests(TestCase):
+    def test_student_role_assigned_by_email(self):
+        user = User.objects.create_user(
+            username="stud", email="stud1@student.example.com", password="pass"
+        )
+        self.client.login(username="stud", password="pass")
+        user.refresh_from_db()
+        self.assertEqual(user.profile.role, "student")
+
+    def test_faculty_role_assigned_by_email(self):
+        user = User.objects.create_user(
+            username="fac", email="fac1@faculty.example.com", password="pass"
+        )
+        self.client.login(username="fac", password="pass")
+        user.refresh_from_db()
+        self.assertEqual(user.profile.role, "faculty")
+
+    def test_api_auth_me_returns_profile_role(self):
+        user = User.objects.create_user(
+            username="stud2",
+            email="stud2@student.example.com",
+            password="pass",
+            first_name="Stu",
+            last_name="Dent",
+        )
+        self.client.login(username="stud2", password="pass")
+        resp = self.client.get("/core-admin/api/auth/me")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data["role"], "student")
+
 class ApprovalFlowViewTests(TestCase):
     def test_delete_approval_flow(self):
         ot = OrganizationType.objects.create(name="Dept")
