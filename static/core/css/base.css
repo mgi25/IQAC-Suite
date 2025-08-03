@@ -701,7 +701,15 @@ body.command-center-layout {
     left: 0;
     box-shadow: var(--shadow-lg);
   }
-  
+
+  .main-content {
+    transition: margin-left 0.3s ease;
+  }
+
+  .left-control-panel.mobile-open + .main-content {
+    margin-left: var(--sidebar-width);
+  }
+
   .utility-center {
     display: none;
   }
