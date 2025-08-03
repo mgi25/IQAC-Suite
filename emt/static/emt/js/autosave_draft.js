@@ -12,6 +12,7 @@ try {
     const savedData = JSON.parse(localStorage.getItem(pageKey) || '{}');
     if (savedData._proposal_id && !proposalId) {
         proposalId = savedData._proposal_id;
+        window.PROPOSAL_ID = savedData._proposal_id;
     }
     fields.forEach(f => {
         if (savedData.hasOwnProperty(f.name) && !f.value) {
@@ -80,6 +81,7 @@ function autosaveDraft() {
     .then(data => {
         if (data.success && data.proposal_id) {
             proposalId = data.proposal_id;
+            window.PROPOSAL_ID = data.proposal_id;
             saveLocal(); // persist id with draft
         }
     })
