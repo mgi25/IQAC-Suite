@@ -91,30 +91,38 @@ def custom_logout(request):
 # ─────────────────────────────────────────────────────────────
 @login_required
 def dashboard(request):
-    # Only finalized events
-    finalized_events = EventProposal.objects.filter(status='finalized').distinct()
-    my_events = finalized_events.filter(Q(submitted_by=request.user) | Q(faculty_incharges=request.user)).distinct()
-    other_events = finalized_events.exclude(Q(submitted_by=request.user) | Q(faculty_incharges=request.user)).distinct()
+    # Role-based landing logic
+    user = request.user
+    roles = RoleAssignment.objects.filter(user=user).select_related('role', 'organization')
+    role_names = [ra.role.name for ra in roles]
 
-    # Stats for dashboard boxes
+    # Superuser/admin: redirect to admin dashboard
+    if user.is_superuser:
+        return redirect('admin_dashboard')
+
+    # Student: show student dashboard (core/dashboard.html)
+    if 'student' in [r.lower() for r in role_names]:
+        dashboard_template = "core/dashboard.html"
+    # Faculty: show faculty dashboard (core/dashboard.html)
+    elif 'faculty' in [r.lower() for r in role_names]:
+        dashboard_template = "core/dashboard.html"
+    # Default: show dashboard
+    else:
+        dashboard_template = "core/dashboard.html"
+
+    finalized_events = EventProposal.objects.filter(status='finalized').distinct()
+    my_events = finalized_events.filter(Q(submitted_by=user) | Q(faculty_incharges=user)).distinct()
+    other_events = finalized_events.exclude(Q(submitted_by=user) | Q(faculty_incharges=user)).distinct()
     upcoming_events_count = finalized_events.filter(event_datetime__gte=timezone.now()).count()
     organized_events_count = my_events.count()
-    # This week: events in current week
     week_start = timezone.now().date() - timezone.timedelta(days=timezone.now().weekday())
     week_end = week_start + timezone.timedelta(days=6)
     this_week_events = finalized_events.filter(event_datetime__date__gte=week_start, event_datetime__date__lte=week_end).count()
-    # Students participated: sum fest_fee_participants + conf_fee_participants for finalized events
     students_participated = finalized_events.aggregate(
         total=Sum('fest_fee_participants') + Sum('conf_fee_participants')
     )['total'] or 0
-
-    # Fetch students mentored by the user (adjust as per your model)
-    my_students = Student.objects.filter(mentor=request.user)
-    my_classes = Class.objects.filter(teacher=request.user)
-    roles = RoleAssignment.objects.filter(user=request.user).select_related('role', 'organization')
-    role_names = [ra.role.name for ra in roles]
-    other_notifications = []
-
+    my_students = Student.objects.filter(mentor=user)
+    my_classes = Class.objects.filter(teacher=user)
     context = {
         "my_events": my_events,
         "other_events": other_events,
@@ -125,9 +133,9 @@ def dashboard(request):
         "my_students": my_students,
         "my_classes": my_classes,
         "role_names": role_names,
-        "user": request.user,
+        "user": user,
     }
-    return render(request, "core/dashboard.html", context)
+    return render(request, dashboard_template, context)
 
 @login_required
 def propose_event(request):

@@ -314,12 +314,18 @@
                         <div class="profile-info">
                             <h2>{{ user.get_full_name|default:user.username }}</h2>
                             <p>{{ user.email }}</p>
-                            <p>Computer Science Department • Professor</p>
+                            {% if user.role_assignments.exists %}
+                              <p>
+                                {% for ra in user.role_assignments.all %}
+                                  {{ ra.organization.name }} &bull; {{ ra.role.name }}<br>
+                                {% endfor %}
+                              </p>
+                            {% else %}
+                              <p>No organization/role assigned.</p>
+                            {% endif %}
                         </div>
                     </div>
-                    <button class="btn-primary" type="button" data-action="edit-profile">
-                        <i class="fas fa-edit"></i> Edit Profile
-                    </button>
+                    <!-- Edit profile button removed -->
                 </div>
             </div>
 
