@@ -126,7 +126,10 @@
       </div>
     </div>
 
-    {# — Full-width Back Button — #}
+    {# — Action Buttons — #}
+    {% if proposal.status == 'rejected' %}
+      <a href="{% url 'emt:submit_proposal_with_pk' proposal.id %}" class="edit-btn">Edit Proposal →</a>
+    {% endif %}
     <a href="{% url 'emt:iqac_suite_dashboard' %}" class="back-btn">
       ← Back to Dashboard
     </a>

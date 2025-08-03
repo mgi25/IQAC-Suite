@@ -65,8 +65,11 @@ from operator import attrgetter
 # ──────────────────────────────
 # CDL DASHBOARD
 # ──────────────────────────────
-# Configure Gemini API key from environment variable
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+# Configure Gemini API key from environment variable(s)
+# Prefer `GEMINI_API_KEY`; fall back to `GOOGLE_API_KEY`
+api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+if api_key:
+    genai.configure(api_key=api_key)
 
 @login_required
 def submit_request_view(request):
@@ -150,9 +153,11 @@ def submit_proposal(request, pk=None):
         # Always get the selected academic year from session (ensured above)
         selected_academic_year = request.session.get('selected_academic_year')
         form = EventProposalForm(instance=proposal, selected_academic_year=selected_academic_year)
-        # Populate all faculty as available choices for JS search/select on GET
+        # Populate all faculty as available choices for JS search/select on GET.
+        # Include already assigned faculty so their selections remain visible.
+        fac_ids = list(proposal.faculty_incharges.all().values_list('id', flat=True)) if proposal else []
         form.fields['faculty_incharges'].queryset = User.objects.filter(
-            role_assignments__role__name=FACULTY_ROLE
+            Q(role_assignments__role__name=FACULTY_ROLE) | Q(id__in=fac_ids)
         ).distinct()
 
     # Utility to get the display name from ID
@@ -702,18 +707,23 @@ def review_approval_step(request, step_id):
                 proposal.status = 'finalized'
             proposal.save()
             messages.success(request, 'Proposal approved.')
+            return redirect('emt:my_approvals')
 
         elif action == 'reject':
-            step.status = 'rejected'
-            step.comment = comment
-            step.approved_by = request.user
-            step.approved_at = timezone.now()
-            proposal.status = 'rejected'
-            proposal.save()
-            step.save()
-            messages.error(request, 'Proposal rejected.')
-
-        return redirect('emt:my_approvals')
+            if not comment.strip():
+                messages.error(request, 'Comment is required to reject the proposal.')
+            else:
+                step.status = 'rejected'
+                step.comment = comment
+                step.approved_by = request.user
+                step.approved_at = timezone.now()
+                proposal.status = 'rejected'
+                proposal.save()
+                step.save()
+                messages.error(request, 'Proposal rejected.')
+                return redirect('emt:my_approvals')
+        else:
+            return redirect('emt:my_approvals')
 
     return render(request, 'emt/review_approval_step.html', {
         'step': step,
@@ -781,6 +791,7 @@ def suite_dashboard(request):
             status='finalized',
             updated_at__lt=now() - timedelta(days=2)
         )
+        .prefetch_related('approval_steps')
         .order_by('-updated_at')
     )
 

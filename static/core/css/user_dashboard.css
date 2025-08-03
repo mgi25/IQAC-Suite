@@ -1,0 +1,7 @@
+/* Hide role-specific content by default */
+.faculty-only, .student-only {
+    display: none;
+}
+
+/* ... (rest of the combined, de-duplicated styles from previous answer) ... */
+/* Use the CSS from the previous answer for unified dashboard styling. */

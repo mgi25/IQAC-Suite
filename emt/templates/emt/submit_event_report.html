@@ -1,15 +1,17 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block head_extra %}
+  <link rel="stylesheet" href="{% static 'emt/css/submit_event_report.css' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+{% endblock %}
+
 {% block content %}
-<link rel="stylesheet" href="{% static 'emt/css/event_report_details.css' %}">
 
-<div class="event-report-layout">
-
-  <!-- Side Info Card -->
-  <div class="event-report-side">
-    <div class="info-card glass-card">
-      <h2>EVENT INFORMATION</h2>
+<div class="report-layout">
+  <aside class="info-panel">
+    <div class="info-card">
+      <h2 class="panel-title">Event Info</h2>
       <table>
         <tr><th>Organization</th><td>{{ proposal.organization.name }}</td></tr>
         <tr><th>Title</th><td>{{ proposal.event_title }}</td></tr>
@@ -20,114 +22,120 @@
         <tr><th>Target Audience</th><td>{{ proposal.target_audience }}</td></tr>
       </table>
     </div>
-  </div>
+    {# Stepper removed - single page layout #}
+  </aside>
 
-  <!-- Main Content: Ultra Report Form -->
-  <div class="event-report-main">
-    <div class="ultra-header">
-      <h1 class="glow-text">Generate Event Report</h1>
-      <span class="meta">Fill the required fields, let AI help, and upload any supporting documents.</span>
-    </div>
+  <section class="form-wrapper">
+    <div class="form-card">
+      <h1 class="page-title">Generate Event Report</h1>
+      <p class="form-meta">Fill the required fields and attach supporting documents.</p>
+      <form method="post" enctype="multipart/form-data" class="event-report-form">
+        {% csrf_token %}
 
-    <form method="post" enctype="multipart/form-data" class="event-report-form glass-card">
-      {% csrf_token %}
-      <div class="section-glass">
-        <h3>Report Details</h3>
-        {{ form.non_field_errors }}
-        <div class="form-flex">
-          {% for field in form %}
-            <div class="form-field-block">
-              <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
-              {{ field }}
-              {% if field.help_text %}
-                <small style="color: #8399bb">{{ field.help_text }}</small>
-              {% endif %}
-              {{ field.errors }}
-            </div>
-          {% endfor %}
+        <div class="section">
+          <h3 class="section-title">Report Details</h3>
+          {{ form.non_field_errors }}
+          <div class="form-grid">
+            {% for field in form %}
+              <div class="form-group">
+                {{ field }}
+                <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+                {% if field.help_text %}<small class="help">{{ field.help_text }}</small>{% endif %}
+                {{ field.errors }}
+              </div>
+            {% endfor %}
+          </div>
         </div>
-      </div>
 
-      <div class="section-glass">
-        <h3>Upload Attachments</h3>
-        {{ formset.management_form }}
-        <div class="attachment-row">
-          {% for f in formset %}
-            <div class="attachment-block">
-              {{ f.file.label_tag }} {{ f.file }}
-              {{ f.caption.label_tag }} {{ f.caption }}
-              {% if f.instance.pk %}
-                <label>Delete:</label> {{ f.DELETE }}
-              {% endif %}
+        <div class="section">
+          <h3 class="section-title">Upload Attachments</h3>
+          {{ formset.management_form }}
+          <div id="attachment-list" class="attachment-row">
+            {% for f in formset %}
+              <div class="attachment-block" data-form-index="{{ forloop.counter0 }}" {% if f.instance.pk %}data-existing="1"{% endif %}>
+                {{ f.id }}
+                <div class="attach-upload">
+                  {% if f.instance.pk %}
+                    <img src="{{ f.instance.file.url }}" alt="attachment">
+                    <span class="attach-remove">&times;</span>
+                  {% else %}
+                    <span class="attach-add">+</span>
+                    <span class="attach-remove" style="display:none;">&times;</span>
+                  {% endif %}
+                </div>
+                {{ f.file }}
+                {{ f.caption }}
+                {% if f.instance.pk %}
+                  {{ f.DELETE }}
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+          <button type="button" id="add-attachment-btn" class="add-attachment-btn">Add Attachment</button>
+
+          <template id="attachment-template">
+            <div class="attachment-block" data-form-index="__prefix__">
+              {{ formset.empty_form.id }}
+              <div class="attach-upload">
+                <span class="attach-add">+</span>
+                <span class="attach-remove" style="display:none;">&times;</span>
+              </div>
+              {{ formset.empty_form.file }}
+              {{ formset.empty_form.caption }}
             </div>
-          {% endfor %}
+          </template>
+          <div id="imgModal" class="image-modal">
+            <span class="close-btn">&times;</span>
+            <img id="imgModalImg" src="" alt="preview">
+          </div>
         </div>
-      </div>
-    <div style="margin-top:24px; text-align:right;">
-      <button type="submit" class="btn-ultra btn-success-ultra">Save & Generate</button>
-    </div>
-    </form>
-  </div>
 
-<div id="outcomeModal" class="outcome-modal" style="display:none;">
-  <div class="modal-content glass-card">
-    <h3>Select Outcomes</h3>
-    <div id="outcomeOptions">Loading...</div>
-    <div style="margin-top:10px;text-align:right;">
-      <button type="button" id="outcomeCancel" class="btn-ultra btn-danger-ultra">Cancel</button>
-      <button type="button" id="outcomeSave" class="btn-ultra btn-success-ultra">Add</button>
+        <div class="section">
+          <h3 class="section-title">Review &amp; Submit</h3>
+          <div class="save-btn">
+            <button type="submit">Save &amp; Generate</button>
+          </div>
+        </div>
+      </form>
     </div>
-  </div>
+  </section>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-  const field = document.getElementById('id_pos_pso_mapping');
-  if(field){
-    field.addEventListener('click', openOutcomeModal);
-    field.style.cursor = 'pointer';
-    field.readOnly = true;
-  }
-});
-
-function openOutcomeModal(){
-  const modal = document.getElementById('outcomeModal');
-  const container = document.getElementById('outcomeOptions');
-  modal.style.display = 'flex';
-  container.textContent = 'Loading...';
-  fetch("{% url 'emt:api_outcomes' proposal.organization.id %}")
-    .then(r=>r.json())
-    .then(data=>{
-      if(data.success){
-        container.innerHTML='';
-        data.pos.forEach(po=>{ addOption(container,'PO: '+po.description); });
-        data.psos.forEach(pso=>{ addOption(container,'PSO: '+pso.description); });
-      } else { container.textContent='No data'; }
-    })
-    .catch(()=>{ container.textContent='Error loading'; });
-}
-
-function addOption(container,labelText){
-  const lbl=document.createElement('label');
-  const cb=document.createElement('input');
-  cb.type='checkbox';
-  cb.value=labelText;
-  lbl.appendChild(cb); lbl.appendChild(document.createTextNode(' '+labelText));
-  container.appendChild(lbl); container.appendChild(document.createElement('br'));
-}
-
-document.getElementById('outcomeCancel').onclick=function(){
-  document.getElementById('outcomeModal').style.display='none';
-};
-document.getElementById('outcomeSave').onclick=function(){
-  const modal=document.getElementById('outcomeModal');
-  const selected=Array.from(modal.querySelectorAll('input[type=checkbox]:checked')).map(c=>c.value);
-  const field=document.getElementById('id_pos_pso_mapping');
-  let existing=field.value.trim();
-  if(existing){existing+='\n';}
-  field.value=existing+selected.join('\n');
-  modal.style.display='none';
-};
-</script>
+{% if proposal.organization %}
+  {% comment %}
+    When the proposal is associated with an organization, allow the outcomes
+    modal to load Program Outcomes/Program Specific Outcomes via AJAX.
+  {% endcomment %}
+  <div id="outcomeModal" class="outcome-modal"
+       data-url="{% url 'emt:api_outcomes' proposal.organization.id %}">
+    <div class="modal-content">
+      <h3>Select Outcomes</h3>
+      <div id="outcomeOptions">Loading...</div>
+      <div class="modal-actions">
+        <button type="button" id="outcomeCancel" class="btn-cancel">Cancel</button>
+        <button type="button" id="outcomeSave" class="btn-save">Add</button>
+      </div>
+    </div>
+  </div>
+{% else %}
+  {# If no organization is set for the proposal, keep the modal in the DOM but
+     do not provide an API URL. The JS will detect this and skip showing the
+     modal. #}
+  <div id="outcomeModal" class="outcome-modal" data-url="">
+    <div class="modal-content">
+      <h3>Select Outcomes</h3>
+      <div id="outcomeOptions">No organization selected.</div>
+      <div class="modal-actions">
+        <button type="button" id="outcomeCancel" class="btn-cancel">Cancel</button>
+        <button type="button" id="outcomeSave" class="btn-save">Add</button>
+      </div>
+    </div>
+  </div>
+{% endif %}
 
 {% endblock %}
+
+{% block scripts %}
+<script src="{% static 'emt/js/submit_event_report.js' %}"></script>
+{% endblock %}
+

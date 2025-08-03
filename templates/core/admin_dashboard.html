@@ -4,7 +4,6 @@
 {% block title %}Admin Dashboard - CHRIST University{% endblock %}
 
 {% block content %}
-<!-- ADMIN DASHBOARD CONTENT -->
 <div class="dashboard-container">
   <!-- Dashboard Header -->
   <div class="dashboard-header">
@@ -13,7 +12,7 @@
     </div>
     <h1 class="dashboard-title">Admin Dashboard</h1>
   </div>
-  
+
   <!-- Welcome Message -->
   <div class="dashboard-welcome">
     <p>Welcome, <strong>{{ request.user.get_full_name|default:request.user.username }}!</strong></p>
@@ -39,46 +38,48 @@
     </div>
   </div>
 
-  <!-- Quick Action Cards -->
-  <div class="dashboard-actions">
-    <a href="/core-admin/users/" class="action-card">
-      <div class="action-icon">
-        <i class="fas fa-users"></i>
+  <!-- Dynamic Organization Stats -->
+  <div class="admin-dashboard-stats-row" style="margin-top:2rem;">
+    {% for stat in org_stats %}
+      <div class="admin-dashboard-stat">
+        <div class="stat-icon stat-center"></div>
+        <div class="stat-count">{{ stat.user_count }}</div>
+        <div class="stat-label">{{ stat.organization__org_type__name }}</div>
       </div>
-      <div class="action-content">
-        <h3>User Management</h3>
-        <p>View and manage user roles</p>
-      </div>
-    </a>
+    {% empty %}
+      <p>No organization data.</p>
+    {% endfor %}
+  </div>
 
-    <a href="/core-admin/event-proposals/" class="action-card">
-      <div class="action-icon">
-        <i class="fas fa-clipboard-list"></i>
+  <!-- Action Cards -->
+  <div class="admin-dashboard-navcards" style="margin-top:2rem;">
+    <a class="admin-navcard" href="{% url 'admin_user_panel' %}">
+      <div class="navcard-icon">
+        <i class="fa-solid fa-users"></i>
       </div>
-      <div class="action-content">
-        <h3>Event Proposals</h3>
-        <p>View all submitted proposals</p>
-      </div>
+      <div class="navcard-title">User Management</div>
+      <div class="navcard-desc">View and manage user roles</div>
     </a>
-
-    <a href="/core-admin/reports/" class="action-card">
-      <div class="action-icon">
-        <i class="fas fa-file-alt"></i>
+    <a class="admin-navcard" href="{% url 'admin_event_proposals' %}">
+      <div class="navcard-icon">
+        <i class="fa-solid fa-calendar-check"></i>
       </div>
-      <div class="action-content">
-        <h3>Reports</h3>
-        <p>Review all generated reports</p>
-      </div>
+      <div class="navcard-title">Event Proposals</div>
+      <div class="navcard-desc">View all submitted proposals</div>
     </a>
-
-    <a href="/core-admin/settings/" class="action-card">
-      <div class="action-icon">
-        <i class="fas fa-cog"></i>
+    <a class="admin-navcard" href="{% url 'admin_reports' %}">
+      <div class="navcard-icon">
+        <i class="fa-solid fa-file-lines"></i>
       </div>
-      <div class="action-content">
-        <h3>Settings</h3>
-        <p>Admin panel settings</p>
+      <div class="navcard-title">Reports</div>
+      <div class="navcard-desc">Review all generated reports</div>
+    </a>
+    <a class="admin-navcard" href="{% url 'admin_settings' %}">
+      <div class="navcard-icon">
+        <i class="fa-solid fa-gear"></i>
       </div>
+      <div class="navcard-title">Settings</div>
+      <div class="navcard-desc">Admin panel settings</div>
     </a>
   </div>
 </div>

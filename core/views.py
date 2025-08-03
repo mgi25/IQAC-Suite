@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpResponseForbidden, JsonResponse, HttpResponseRedirect
 from django.contrib.auth.models import User
 from django.contrib import messages
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Count
 from django.forms import inlineformset_factory
 from django import forms
 from django.urls import reverse
@@ -162,7 +162,18 @@ def proposal_status(request, pk):
 #  Admin Dashboard and User Management
 # ─────────────────────────────────────────────────────────────
 def admin_dashboard(request):
-    return render(request, "core/admin_dashboard.html")
+    if not request.user.is_superuser:
+        return redirect("user_dashboard")
+
+    org_stats = (
+        RoleAssignment.objects
+        .filter(user__is_active=True, organization__isnull=False)
+        .values("organization__org_type__name")
+        .annotate(user_count=Count("user", distinct=True))
+        .order_by("-user_count")
+    )
+
+    return render(request, "core/admin_dashboard.html", {"org_stats": org_stats})
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_user_panel(request):
@@ -802,7 +813,10 @@ def admin_proposal_detail(request, proposal_id):
     speakers = SpeakerProfile.objects.filter(proposal=proposal)
     expenses = ExpenseDetail.objects.filter(proposal=proposal)
     approval_steps = ApprovalStep.objects.filter(proposal=proposal).order_by('step_order')
-    budget_total = expenses.aggregate(total=Sum('total'))['total'] or 0
+    # Sum the "amount" field from each expense entry to calculate the total
+    # budget. Using "total" as the aggregate key avoids clashes with any model
+    # field names while still providing a descriptive context variable.
+    budget_total = expenses.aggregate(total=Sum("amount"))['total'] or 0
 
     context = {
         "proposal": proposal,
@@ -1298,14 +1312,39 @@ def delete_outcome(request, outcome_type, outcome_id):
 def admin_reports_view(request):
     # Your code here
     pass
-# Add this to your core/views.py file
+# ======================== API Endpoints & User Dashboard ========================
 
 from django.http import JsonResponse
-from django.db.models import Q
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
 from django.views.decorators.http import require_GET
-import json
+
+@login_required
+def api_auth_me(request):
+    user = request.user
+    # Example: determine role and user info
+    role = 'faculty' if user.is_staff else 'student'
+    initials = ''.join([x[0] for x in user.get_full_name().split()]) or user.username[:2].upper()
+    return JsonResponse({
+        'role': role,
+        'name': user.get_full_name(),
+        'subtitle': '',  # Add more info if needed
+        'initials': initials,
+    })
+
+@login_required
+def api_faculty_overview(request):
+    # Query your models for stats (implement as needed)
+    stats = [
+        # Build from your models, e.g. proposal counts, reports, etc.
+    ]
+    return JsonResponse(stats, safe=False)
+
+@login_required
+def user_dashboard(request):
+    # Do NOT render the admin dashboard here!
+    return render(request, 'core/user_dashboard.html')
+
+# --------------------- Global Search API Endpoint ----------------------
 
 @login_required
 @require_GET
@@ -1314,8 +1353,11 @@ def api_global_search(request):
     Global search API endpoint for the Central Command Center
     Searches across Students, Event Proposals, Reports, and Users
     """
+    from django.db.models import Q
+    from django.contrib.auth.models import User
+    import json
+
     query = request.GET.get('q', '').strip()
-    
     # Minimum query length check
     if len(query) < 2:
         return JsonResponse({
@@ -1327,7 +1369,7 @@ def api_global_search(request):
                 'users': []
             }
         })
-    
+
     try:
         results = {
             'students': [],
@@ -1335,7 +1377,7 @@ def api_global_search(request):
             'reports': [],
             'users': []
         }
-        
+
         # Search Students (from transcript app if available)
         try:
             from transcript.models import Student
@@ -1343,7 +1385,6 @@ def api_global_search(request):
                 Q(name__icontains=query) |
                 Q(roll_no__icontains=query)
             ).select_related('school', 'course')[:5]
-            
             results['students'] = [{
                 'id': student.id,
                 'name': student.name,
@@ -1361,7 +1402,6 @@ def api_global_search(request):
             ).filter(
                 profile__isnull=False
             )[:5]
-            
             results['students'] = [{
                 'id': user.id,
                 'name': f"{user.first_name} {user.last_name}".strip() or user.username,
@@ -1370,7 +1410,7 @@ def api_global_search(request):
                 'course': 'N/A',
                 'url': f'/core-admin/users/{user.id}/'
             } for user in student_users]
-        
+
         # Search Event Proposals (from emt app)
         try:
             from emt.models import EventProposal
@@ -1379,7 +1419,6 @@ def api_global_search(request):
                 Q(faculty_incharge__first_name__icontains=query) |
                 Q(faculty_incharge__last_name__icontains=query)
             ).select_related('faculty_incharge').order_by('-created_at')[:5]
-            
             results['proposals'] = [{
                 'id': proposal.id,
                 'title': proposal.title,
@@ -1390,14 +1429,13 @@ def api_global_search(request):
             } for proposal in proposals]
         except (ImportError, AttributeError):
             results['proposals'] = []
-        
+
         # Search Reports (from core app)
         try:
             from core.models import Report
             reports = Report.objects.filter(
                 Q(title__icontains=query)
             ).order_by('-created_at')[:5]
-            
             results['reports'] = [{
                 'id': report.id,
                 'title': report.title,
@@ -1407,7 +1445,7 @@ def api_global_search(request):
             } for report in reports]
         except (ImportError, AttributeError):
             results['reports'] = []
-        
+
         # Search Users (for admin functionality)
         if request.user.is_superuser or hasattr(request.user, 'profile'):
             users = User.objects.filter(
@@ -1416,7 +1454,6 @@ def api_global_search(request):
                 Q(username__icontains=query) |
                 Q(email__icontains=query)
             ).exclude(id=request.user.id)[:5]
-            
             results['users'] = [{
                 'id': user.id,
                 'name': f"{user.first_name} {user.last_name}".strip() or user.username,
@@ -1425,13 +1462,13 @@ def api_global_search(request):
                 'last_login': user.last_login.strftime('%Y-%m-%d') if user.last_login else 'Never',
                 'url': f'/core-admin/users/{user.id}/edit/'
             } for user in users]
-        
+
         return JsonResponse({
             'success': True,
             'results': results,
             'query': query
         })
-        
+
     except Exception as e:
         return JsonResponse({
             'success': False,
