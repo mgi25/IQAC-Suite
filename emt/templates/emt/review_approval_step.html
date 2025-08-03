@@ -46,22 +46,38 @@
 
     <div class="fadein-card section-glass">
       <h3>Need Analysis</h3>
-      <div class="detail-block">{{ need_analysis.content|linebreaksbr|default:"—" }}</div>
+      {% if need_analysis %}
+        <div class="detail-block">{{ need_analysis.content|linebreaksbr }}</div>
+      {% else %}
+        <div class="detail-block">—</div>
+      {% endif %}
     </div>
 
     <div class="fadein-card section-glass">
       <h3>Objectives</h3>
-      <div class="detail-block">{{ objectives.content|linebreaksbr|default:"—" }}</div>
+      {% if objectives %}
+        <div class="detail-block">{{ objectives.content|linebreaksbr }}</div>
+      {% else %}
+        <div class="detail-block">—</div>
+      {% endif %}
     </div>
 
     <div class="fadein-card section-glass">
       <h3>Expected Outcomes</h3>
-      <div class="detail-block">{{ outcomes.content|linebreaksbr|default:"—" }}</div>
+      {% if outcomes %}
+        <div class="detail-block">{{ outcomes.content|linebreaksbr }}</div>
+      {% else %}
+        <div class="detail-block">—</div>
+      {% endif %}
     </div>
 
     <div class="fadein-card section-glass">
       <h3>Tentative Flow</h3>
-      <div class="detail-block">{{ flow.content|linebreaksbr|default:"—" }}</div>
+      {% if flow %}
+        <div class="detail-block">{{ flow.content|linebreaksbr }}</div>
+      {% else %}
+        <div class="detail-block">—</div>
+      {% endif %}
     </div>
 
     <div class="fadein-card section-glass">
