@@ -1,4 +1,6 @@
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
+from allauth.account.adapter import DefaultAccountAdapter
+from django.urls import reverse
 from django.utils.text import slugify
 from django.contrib.auth.models import User
 from core.models import Profile
@@ -46,3 +48,13 @@ class SchoolSocialAccountAdapter(DefaultSocialAccountAdapter):
 
     def login(self, request, sociallogin):
         return super().login(request, sociallogin)
+
+
+class RoleBasedAccountAdapter(DefaultAccountAdapter):
+    """Redirect users based on their role after login."""
+
+    def get_login_redirect_url(self, request):
+        user = request.user
+        if user.is_superuser:
+            return reverse('admin_dashboard')
+        return reverse('dashboard')
