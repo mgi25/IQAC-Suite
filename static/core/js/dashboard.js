@@ -1,6 +1,71 @@
+    // Stat card click handlers for filtering events
+    const cardUpcoming = document.getElementById('cardUpcoming');
+    const cardOrganized = document.getElementById('cardOrganized');
+    const cardThisWeek = document.getElementById('cardThisWeek');
+
+    if (cardUpcoming) {
+        cardUpcoming.addEventListener('click', function() {
+            // Show all upcoming events (after today)
+            document.getElementById('eventTimeFilter').value = '';
+            document.getElementById('eventTypeFilter').value = '';
+            filterEvents();
+        });
+    }
+    if (cardOrganized) {
+        cardOrganized.addEventListener('click', function() {
+            // Show only events user proposed (My Events)
+            document.getElementById('eventTypeFilter').value = 'my';
+            document.getElementById('eventTimeFilter').value = '';
+            filterEvents();
+        });
+    }
+    if (cardThisWeek) {
+        cardThisWeek.addEventListener('click', function() {
+            // Show only events happening this week
+            document.getElementById('eventTimeFilter').value = 'week';
+            document.getElementById('eventTypeFilter').value = '';
+            filterEvents();
+        });
+    }
 console.log('Script loaded!');
 // Wait for the DOM to be fully loaded before running scripts
 document.addEventListener('DOMContentLoaded', function () {
+    // --- STAT CARD CLICK HANDLERS ---
+    const cardUpcoming = document.getElementById('cardUpcoming');
+    const cardOrganized = document.getElementById('cardOrganized');
+    const cardThisWeek = document.getElementById('cardThisWeek');
+    const eventsTab = document.querySelector('.nav-tab[data-tab="events"]');
+
+    function switchToEventsTab() {
+        if (eventsTab) {
+            activateTab(eventsTab);
+        }
+    }
+
+    if (cardUpcoming) {
+        cardUpcoming.addEventListener('click', function() {
+            switchToEventsTab();
+            document.getElementById('eventTimeFilter').value = '';
+            document.getElementById('eventTypeFilter').value = '';
+            filterEvents();
+        });
+    }
+    if (cardOrganized) {
+        cardOrganized.addEventListener('click', function() {
+            switchToEventsTab();
+            document.getElementById('eventTypeFilter').value = 'my';
+            document.getElementById('eventTimeFilter').value = '';
+            filterEvents();
+        });
+    }
+    if (cardThisWeek) {
+        cardThisWeek.addEventListener('click', function() {
+            switchToEventsTab();
+            document.getElementById('eventTimeFilter').value = 'week';
+            document.getElementById('eventTypeFilter').value = '';
+            filterEvents();
+        });
+    }
     console.log('Dashboard JavaScript loaded');
 
     // --- CACHE DOM ELEMENTS ---
@@ -24,6 +89,13 @@ document.addEventListener('DOMContentLoaded', function () {
         modalTitle.textContent = title;
         modalBody.innerHTML = body;
         modal.classList.add('visible');
+        // Attach close handler to cross button (modal-close)
+        const closeBtn = modal.querySelector('.modal-close');
+        if (closeBtn) {
+            closeBtn.onclick = function() {
+                hideModal();
+            };
+        }
     }
 
     /**
@@ -32,6 +104,9 @@ document.addEventListener('DOMContentLoaded', function () {
     function hideModal() {
         if (!modal) return;
         modal.classList.remove('visible');
+        // Optionally clear modal content
+        modalTitle.textContent = '';
+        modalBody.innerHTML = '';
     }
 
     // --- EVENT HANDLING ---
@@ -371,27 +446,56 @@ document.addEventListener('DOMContentLoaded', function () {
         const type = document.getElementById('eventTypeFilter').value;
         const time = document.getElementById('eventTimeFilter').value;
         const role = document.getElementById('eventRoleFilter').value;
+        // For department events, get user's organization name from a global JS variable (set in template)
+        const userOrg = window.USER_ORG_NAME ? window.USER_ORG_NAME.toLowerCase() : null;
 
         // Helper to check if event matches filter
         function matches(event, type, time, role) {
             let match = true;
+            // Type filter
             if (type === 'my' && event.dataset.eventType !== 'my') match = false;
-            if (type === 'department' && event.dataset.eventType !== 'other') match = false;
+            if (type === 'department') {
+                // Show only department events the user is part of (my_events)
+                if (event.dataset.eventType !== 'my') match = false;
+            }
+            // Role filter
             if (role && event.dataset.eventRole && !event.dataset.eventRole.toLowerCase().includes(role)) match = false;
+            // Time filter
             if (time) {
                 const now = new Date();
-                const eventMonth = event.dataset.eventTime;
-                if (time === 'week') {
-                    // Only show events in current week
-                    // (Assume eventMonth is YYYY-MM, not enough for week, so skip for now)
-                } else if (time === 'next_month') {
-                    const nextMonth = (now.getMonth() + 2).toString().padStart(2, '0');
-                    const nextMonthStr = `${now.getFullYear()}-${nextMonth}`;
-                    if (eventMonth !== nextMonthStr) match = false;
-                } else if (time === 'this_month') {
-                    const thisMonth = (now.getMonth() + 1).toString().padStart(2, '0');
-                    const thisMonthStr = `${now.getFullYear()}-${thisMonth}`;
-                    if (eventMonth !== thisMonthStr) match = false;
+                let eventDateStr = null;
+                // Try to get date from event-details or event-date
+                if (event.querySelector('.event-details span')) {
+                    // For My Events
+                    eventDateStr = event.querySelector('.event-details span').textContent;
+                } else if (event.querySelector('.event-date span')) {
+                    // For University Events
+                    eventDateStr = event.querySelector('.event-date span').textContent;
+                } else if (event.querySelector('.event-date')) {
+                    eventDateStr = event.querySelector('.event-date').textContent;
+                }
+                let eventDate = null;
+                if (eventDateStr) {
+                    // Try to parse date from string (format: 'M d, Y H:i' or 'M d')
+                    const parts = eventDateStr.match(/([A-Za-z]+) (\d{1,2})(, (\d{4}))?/);
+                    if (parts) {
+                        const month = parts[1];
+                        const day = parseInt(parts[2]);
+                        const year = parts[4] ? parseInt(parts[4]) : now.getFullYear();
+                        eventDate = new Date(`${month} ${day}, ${year}`);
+                    }
+                }
+                if (time === 'week' && eventDate) {
+                    // Show events in current week
+                    const weekStart = new Date(now);
+                    weekStart.setDate(now.getDate() - now.getDay());
+                    const weekEnd = new Date(weekStart);
+                    weekEnd.setDate(weekStart.getDate() + 6);
+                    if (eventDate < weekStart || eventDate > weekEnd) match = false;
+                } else if (time === 'next_month' && eventDate) {
+                    if ((eventDate.getMonth() !== (now.getMonth() + 1) % 12) || eventDate.getFullYear() !== now.getFullYear()) match = false;
+                } else if (time === 'this_month' && eventDate) {
+                    if (eventDate.getMonth() !== now.getMonth() || eventDate.getFullYear() !== now.getFullYear()) match = false;
                 }
             }
             return match;
@@ -399,7 +503,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Filter My Events
         document.querySelectorAll('#myEventsList .event-item').forEach(event => {
-            if (matches(event, type, time, role) || type === '' && role === '' && time === '') {
+            if (matches(event, type, time, role) || (type === '' && role === '' && time === '')) {
                 event.style.display = '';
             } else {
                 event.style.display = 'none';
@@ -407,7 +511,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         // Filter Other University Events
         document.querySelectorAll('#otherEventsList .university-event').forEach(event => {
-            if (matches(event, type, time, role) || type === '' && role === '' && time === '') {
+            if (matches(event, type, time, role) || (type === '' && role === '' && time === '')) {
                 event.style.display = '';
             } else {
                 event.style.display = 'none';
