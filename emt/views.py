@@ -184,12 +184,9 @@ def submit_proposal(request, pk=None):
             proposal.submitted_at = timezone.now()
             proposal.save()
             form.save_m2m()
-            # --- Notification logic (simple example) ---
-            from core.models import Notification
-            Notification.objects.create(
-                user=request.user,
-                message=f"Proposal '{proposal.event_title}' submitted.",
-                link=f"/emt/proposal/{proposal.id}/status/"
+            messages.success(
+                request,
+                f"Proposal '{proposal.event_title}' submitted.",
             )
             return redirect("emt:proposal_status_detail", proposal_id=proposal.id)
         else:
