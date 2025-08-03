@@ -208,6 +208,9 @@ $(document).ready(function() {
 
             // Setup section-specific form syncing
             setupFormFieldSync();
+            if (section === 'speakers') {
+                setupSpeakerFormHandlers();
+            }
 
             // Clear any existing validation errors from previous loads
             clearValidationErrors();
@@ -640,16 +643,71 @@ $(document).ready(function() {
         `;
     }
 
-    function getSpeakersForm() {
+    function speakerFormHtml(index) {
         return `
-            <div class="form-grid">
-                <div class="speakers-notice"><p>Speaker management is under development.</p></div>
-                <div class="form-row full-width">
-                    <div class="save-section-container">
-                        <button type="button" class="btn-save-section">Mark as Complete</button>
+            <div class="speaker-form" data-index="${index}">
+                <div class="form-row">
+                    <div class="input-group">
+                        <label for="form-${index}-full_name">Full Name *</label>
+                        <input type="text" id="form-${index}-full_name" name="form-${index}-full_name" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="form-${index}-designation">Designation *</label>
+                        <input type="text" id="form-${index}-designation" name="form-${index}-designation" required>
                     </div>
                 </div>
+                <div class="form-row">
+                    <div class="input-group">
+                        <label for="form-${index}-affiliation">Affiliation *</label>
+                        <input type="text" id="form-${index}-affiliation" name="form-${index}-affiliation" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="form-${index}-contact_email">Email *</label>
+                        <input type="email" id="form-${index}-contact_email" name="form-${index}-contact_email" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="input-group">
+                        <label for="form-${index}-contact_number">Contact Number *</label>
+                        <input type="text" id="form-${index}-contact_number" name="form-${index}-contact_number" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="form-${index}-photo">Photo</label>
+                        <input type="file" id="form-${index}-photo" name="form-${index}-photo" accept="image/*">
+                    </div>
+                </div>
+                <div class="form-row full-width">
+                    <div class="input-group">
+                        <label for="form-${index}-detailed_profile">Detailed Profile *</label>
+                        <textarea id="form-${index}-detailed_profile" name="form-${index}-detailed_profile" rows="4" required></textarea>
+                    </div>
+                </div>
+                <div class="form-row full-width text-right">
+                    <button type="button" class="btn-remove-speaker">Remove Speaker</button>
+                </div>
             </div>
+        `;
+    }
+
+    function getSpeakersForm() {
+        return `
+            <form id="speakers-form" enctype="multipart/form-data">
+                <input type="hidden" name="form-TOTAL_FORMS" value="1">
+                <input type="hidden" name="form-INITIAL_FORMS" value="0">
+                <input type="hidden" name="form-MIN_NUM_FORMS" value="0">
+                <input type="hidden" name="form-MAX_NUM_FORMS" value="1000">
+                <div id="speaker-forms">
+                    ${speakerFormHtml(0)}
+                </div>
+                <div class="form-row full-width">
+                    <button type="button" id="add-speaker-btn">Add Speaker</button>
+                </div>
+                <div class="form-row full-width">
+                    <div class="save-section-container">
+                        <button type="button" class="btn-save-section">Save & Continue</button>
+                    </div>
+                </div>
+            </form>
         `;
     }
 
@@ -681,14 +739,16 @@ $(document).ready(function() {
             'need-analysis': '#need-analysis-form',
             'objectives': '#objectives-form',
             'outcomes': '#outcomes-form',
-            'flow': '#flow-form'
+            'flow': '#flow-form',
+            'speakers': '#speakers-form'
         };
 
         const urlBases = {
             'need-analysis': '/suite/need-analysis/',
             'objectives': '/suite/objectives/',
             'outcomes': '/suite/expected-outcomes/',
-            'flow': '/suite/tentative-flow/'
+            'flow': '/suite/tentative-flow/',
+            'speakers': '/suite/speaker-profile/'
         };
 
         if (formSelectors[section] && urlBases[section]) {
@@ -698,21 +758,40 @@ $(document).ready(function() {
             }
 
             const url = urlBases[section] + window.PROPOSAL_ID + '/';
-            const contentVal = $(`${formSelectors[section]} [name="content"]`).val();
-            $.ajax({
-                url: url,
-                method: 'POST',
-                data: {
-                    content: contentVal,
-                    csrfmiddlewaretoken: window.AUTOSAVE_CSRF
-                },
-                success: function() {
-                    finalizeSectionSave(section);
-                },
-                error: function() {
-                    showNotification('Error saving section. Please try again.', 'error');
-                }
-            });
+            if (section === 'speakers') {
+                const formEl = $(formSelectors[section])[0];
+                const formData = new FormData(formEl);
+                formData.append('csrfmiddlewaretoken', window.AUTOSAVE_CSRF);
+                $.ajax({
+                    url: url,
+                    method: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function() {
+                        finalizeSectionSave(section);
+                    },
+                    error: function() {
+                        showNotification('Error saving section. Please try again.', 'error');
+                    }
+                });
+            } else {
+                const contentVal = $(`${formSelectors[section]} [name="content"]`).val();
+                $.ajax({
+                    url: url,
+                    method: 'POST',
+                    data: {
+                        content: contentVal,
+                        csrfmiddlewaretoken: window.AUTOSAVE_CSRF
+                    },
+                    success: function() {
+                        finalizeSectionSave(section);
+                    },
+                    error: function() {
+                        showNotification('Error saving section. Please try again.', 'error');
+                    }
+                });
+            }
         } else {
             if (window.AutosaveManager && window.AutosaveManager.manualSave) {
                 window.AutosaveManager.manualSave();
@@ -762,6 +841,36 @@ $(document).ready(function() {
             }
 
             clearFieldError($(this));
+        });
+    }
+
+    function setupSpeakerFormHandlers() {
+        const form = $('#speakers-form');
+        if (!form.length) return;
+
+        const container = $('#speaker-forms');
+        const totalForms = form.find('input[name="form-TOTAL_FORMS"]');
+
+        form.off('click.addSpeaker').on('click.addSpeaker', '#add-speaker-btn', function(e) {
+            e.preventDefault();
+            const index = parseInt(totalForms.val());
+            container.append(speakerFormHtml(index));
+            totalForms.val(index + 1);
+        });
+
+        container.off('click.removeSpeaker').on('click.removeSpeaker', '.btn-remove-speaker', function(e) {
+            e.preventDefault();
+            $(this).closest('.speaker-form').remove();
+            const forms = container.children('.speaker-form');
+            totalForms.val(forms.length);
+            forms.each(function(i) {
+                $(this).attr('data-index', i);
+                $(this).find('input, textarea').each(function() {
+                    const newName = $(this).attr('name').replace(/form-\d+-/, `form-${i}-`);
+                    const newId = $(this).attr('id').replace(/form-\d+-/, `form-${i}-`);
+                    $(this).attr({ name: newName, id: newId });
+                });
+            });
         });
     }
 
@@ -824,6 +933,7 @@ $(document).ready(function() {
             case 'objectives':
             case 'outcomes':
             case 'flow': return validateTextSection();
+            case 'speakers': return validateSpeakers();
             default: return true;
         }
     }
@@ -881,6 +991,17 @@ $(document).ready(function() {
             isValid = false;
         }
 
+        return isValid;
+    }
+
+    function validateSpeakers() {
+        let isValid = true;
+        $('#speakers-form').find('input[required], textarea[required]').each(function() {
+            if (!$(this).val()) {
+                showFieldError($(this), 'This field is required');
+                isValid = false;
+            }
+        });
         return isValid;
     }
 
