@@ -92,22 +92,13 @@ def custom_logout(request):
 # ─────────────────────────────────────────────────────────────
 @login_required
 def dashboard(request):
-    proposals = (
-        EventProposal.objects
-        .filter(submitted_by=request.user)
-        .exclude(status="completed")
-        .order_by("-created_at")
-    )
-    other_notifications = [
-        {"type": "info",     "msg": "System update scheduled for tonight at 10 PM.", "time": "2 hours ago"},
-        {"type": "reminder", "msg": "Submit your event report before 26 June.",      "time": "1 day ago"},
-        {"type": "alert",    "msg": "One of your proposals was returned.",           "time": "5 mins ago"},
-    ]
-    return render(
-        request,
-        "core/dashboard.html",
-        {"proposals": proposals, "notifications": other_notifications},
-    )
+    """Render the appropriate dashboard based on the user's role."""
+    role = request.session.get("role")
+    if role and role.lower() == "student":
+        template = "core/student_dashboard.html"
+    else:
+        template = "core/faculty_dashboard.html"
+    return render(request, template)
 
 @login_required
 def propose_event(request):
@@ -1336,10 +1327,6 @@ def api_faculty_overview(request):
     ]
     return JsonResponse(stats, safe=False)
 
-@login_required
-def user_dashboard(request):
-    # Do NOT render the admin dashboard here!
-    return render(request, 'core/user_dashboard.html')
 
 # --------------------- Global Search API Endpoint ----------------------
 

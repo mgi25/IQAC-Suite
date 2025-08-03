@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Dashboard - CHRIST University</title>
-    <link rel="stylesheet" href="{% static 'core/user_dashboard.css' %}">
+    <link rel="stylesheet" href="{% static 'core/css/user_dashboard.css' %}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -44,11 +44,7 @@
                 <i class="fas fa-calendar"></i>
                 <span>My Events</span>
             </button>
-            <button class="nav-tab faculty-only" data-tab="students">
-                <i class="fas fa-users"></i>
-                <span>My Students</span>
-            </button>
-            <button class="nav-tab student-only" data-tab="achievements">
+            <button class="nav-tab" data-tab="achievements">
                 <i class="fas fa-trophy"></i>
                 <span>Achievements</span>
             </button>
@@ -64,26 +60,18 @@
         <!-- Overview Tab -->
         <div id="overview" class="tab-content active">
             <div class="stats-grid" id="statsGrid"></div>
-            <div class="mentees-section faculty-only" id="menteesSection"></div>
-            <div class="attributes-section student-only" id="attributesSection"></div>
-            <div class="remarks-section student-only" id="remarksSection"></div>
+            <div class="attributes-section" id="attributesSection"></div>
+            <div class="remarks-section" id="remarksSection"></div>
         </div>
 
         <!-- Events Tab -->
         <div id="events" class="tab-content">
             <div class="filters-section" id="eventsFilters"></div>
-            <div class="events-section faculty-only" id="facultyEventsSection"></div>
-            <div class="events-section student-only" id="studentEventsSection"></div>
+            <div class="events-section" id="studentEventsSection"></div>
         </div>
 
-        <!-- Students Tab (Faculty only) -->
-        <div id="students" class="tab-content faculty-only">
-            <div class="search-section" id="studentsSearch"></div>
-            <div class="students-section" id="studentsList"></div>
-        </div>
-
-        <!-- Achievements Tab (Student only) -->
-        <div id="achievements" class="tab-content student-only">
+        <!-- Achievements Tab -->
+        <div id="achievements" class="tab-content">
             <div class="achievement-stats" id="achievementStats"></div>
             <div class="filters-section" id="achievementsFilters"></div>
             <div class="achievements-section" id="achievementsList"></div>
@@ -93,13 +81,11 @@
         <!-- Profile Tab -->
         <div id="profile" class="tab-content">
             <div class="profile-section" id="profileHeader"></div>
-            <div class="classes-section faculty-only" id="classesSection"></div>
-            <div class="contributions-section student-only" id="contributionsSection"></div>
-            <div class="clubs-section student-only" id="clubsSection"></div>
-            <div class="timeline-section student-only" id="timelineSection"></div>
-            <div class="academic-section student-only" id="academicSection"></div>
-            <div class="mentor-section student-only" id="mentorSection"></div>
-            <div class="profile-grid faculty-only" id="facultyProfileGrid"></div>
+            <div class="contributions-section" id="contributionsSection"></div>
+            <div class="clubs-section" id="clubsSection"></div>
+            <div class="timeline-section" id="timelineSection"></div>
+            <div class="academic-section" id="academicSection"></div>
+            <div class="mentor-section" id="mentorSection"></div>
         </div>
     </main>
 
@@ -123,6 +109,6 @@
         </div>
     </div>
 
-    <script src="{% static 'core/user_dashboard.js' %}"></script>
+    <script src="{% static 'core/js/user_dashboard.js' %}"></script>
 </body>
 </html>
