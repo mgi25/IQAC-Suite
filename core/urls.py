@@ -15,8 +15,7 @@ urlpatterns = [
     # ────────────────────────────────────────────────
     # General Dashboard and Proposal Views
     # ────────────────────────────────────────────────
-    # Landing page now shows the unified user dashboard for students and faculty
-    path('', views.user_dashboard, name='dashboard'),
+    path('', views.dashboard, name='dashboard'),
     path('cdl/', views.cdl_dashboard, name='cdl_dashboard'),
     path('propose-event/', views.propose_event, name='propose_event'),
     path('proposal-status/<int:pk>/', views.proposal_status, name='proposal_status'),
@@ -102,8 +101,6 @@ urlpatterns = [
     # APIs
     # ────────────────────────────────────────────────
     path('core-admin/api/auth/me', views.api_auth_me, name='api_auth_me'),
-    # Public API endpoint used by the user dashboard to fetch profile info
-    path('api/auth/me', views.api_auth_me, name='user_api_auth_me'),
     path('core-admin/api/faculty/overview', views.api_faculty_overview, name='api_faculty_overview'),
     path('core-admin/api/approval-flow/<int:org_id>/', views.api_approval_flow_steps, name='api_approval_flow_steps'),
     path('core-admin/api/search-users/', views.search_users, name='search_users'),
