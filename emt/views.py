@@ -849,8 +849,6 @@ def suite_dashboard(request):
     for ra in ras:
         role_vis = getattr(ra.role, "approval_visibility", None)
         can_view = role_vis.can_view if role_vis else True
-        if not can_view:
-            continue
         user_override = UserEventApprovalVisibility.objects.filter(
             user=request.user, role=ra.role
         ).first()
