@@ -109,7 +109,7 @@ SITE_ID = 1 # Must match ID in django_site table
 
 
 LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = 'admin_dashboard'  # This should be a URL name, not a path
+LOGIN_REDIRECT_URL = 'dashboard'  # Default redirect after login
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -122,6 +122,8 @@ ACCOUNT_EMAIL_VERIFICATION = 'none'
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_LOGOUT_REDIRECT_URL = '/accounts/login/'
 ACCOUNT_LOGOUT_ON_GET = True
+
+ACCOUNT_ADAPTER = 'core.adapters.RoleBasedAccountAdapter'
 
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
