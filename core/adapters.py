@@ -21,8 +21,12 @@ class SchoolSocialAccountAdapter(DefaultSocialAccountAdapter):
             except User.DoesNotExist:
                 pass  # No user found, so this will be a new user
 
-        # If new signup, set up default role and profile
-        role = 'student'  # You can add logic for different roles if needed
+        # If new signup, set up role and profile based on email domain.
+        # Any address ending with ``christuniversity.in`` is treated as a
+        # student; everything else defaults to a faculty account.
+        domain = email.split("@")[-1].lower() if email else ""
+        role = "student" if domain.endswith("christuniversity.in") else "faculty"
+
         user = sociallogin.user
         user.save()
         profile, _ = Profile.objects.get_or_create(user=user)
