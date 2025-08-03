@@ -671,32 +671,88 @@ $(document).ready(function() {
         console.log('Saving section:', currentExpandedCard);
         if (!currentExpandedCard) return;
 
-        if (validateCurrentSection()) {
-            markSectionComplete(currentExpandedCard);
+        if (!validateCurrentSection()) {
+            showNotification('Please complete all required fields.', 'error');
+            return;
+        }
+
+        const section = currentExpandedCard;
+        const formSelectors = {
+            'need-analysis': '#need-analysis-form',
+            'objectives': '#objectives-form',
+            'outcomes': '#outcomes-form',
+            'flow': '#flow-form'
+        };
+
+        const urlBases = {
+            'need-analysis': '/suite/need-analysis/',
+            'objectives': '/suite/objectives/',
+            'outcomes': '/suite/expected-outcomes/',
+            'flow': '/suite/tentative-flow/'
+        };
+
+        if (formSelectors[section] && urlBases[section]) {
+            if (!window.PROPOSAL_ID) {
+                showNotification('Please save Basic Information first.', 'error');
+                return;
+            }
+
+            const url = urlBases[section] + window.PROPOSAL_ID + '/';
+            const contentVal = $(`${formSelectors[section]} [name="content"]`).val();
+            $.ajax({
+                url: url,
+                method: 'POST',
+                data: {
+                    content: contentVal,
+                    csrfmiddlewaretoken: window.AUTOSAVE_CSRF
+                },
+                success: function() {
+                    finalizeSectionSave(section);
+                },
+                error: function() {
+                    showNotification('Error saving section. Please try again.', 'error');
+                }
+            });
+        } else {
             if (window.AutosaveManager && window.AutosaveManager.manualSave) {
                 window.AutosaveManager.manualSave();
             }
-            closeFormPanel();
-            showNotification('Section saved successfully!', 'success');
-            
-            const nextOrder = parseInt($(`[data-section="${currentExpandedCard}"]`).data('order')) + 1;
-            const nextCard = $(`[data-order="${nextOrder}"]`);
-            if (nextCard.length && !nextCard.hasClass('disabled')) {
-                setTimeout(() => {
-                    openFormPanel(nextCard.data('section'));
-                }, 1000);
-            }
-        } else {
-            showNotification('Please complete all required fields.', 'error');
+            finalizeSectionSave(section);
+        }
+    }
+
+    function finalizeSectionSave(section) {
+        markSectionComplete(section);
+        closeFormPanel();
+        showNotification('Section saved successfully!', 'success');
+
+        const nextOrder = parseInt($(`[data-section="${section}"]`).data('order')) + 1;
+        const nextCard = $(`[data-order="${nextOrder}"]`);
+        if (nextCard.length && !nextCard.hasClass('disabled')) {
+            setTimeout(() => {
+                openFormPanel(nextCard.data('section'));
+            }, 1000);
         }
     }
 
 
     // ===== FORM FIELD SYNC =====
     function setupFormFieldSync() {
+        const mappings = {
+            'need-analysis-modern': '#need-analysis-form [name="content"]',
+            'objectives-modern': '#objectives-form [name="content"]',
+            'outcomes-modern': '#outcomes-form [name="content"]',
+            'flow-modern': '#flow-form [name="content"]'
+        };
+
         $('#form-panel-content').on('input.sync change.sync', 'input, textarea, select', function() {
             const fieldId = $(this).attr('id');
-            if (fieldId && fieldId.endsWith('-modern')) {
+            const targetSelector = mappings[fieldId];
+
+            if (targetSelector) {
+                $(targetSelector).val($(this).val());
+                console.log(`Synced ${fieldId} -> ${targetSelector}`);
+            } else if (fieldId && fieldId.endsWith('-modern')) {
                 const baseName = fieldId.replace('-modern', '').replace(/-/g, '_');
                 const djangoField = $(`#django-forms [name="${baseName}"]`);
                 if (djangoField.length) {
@@ -704,6 +760,7 @@ $(document).ready(function() {
                     console.log(`Synced ${baseName}:`, $(this).val());
                 }
             }
+
             clearFieldError($(this));
         });
     }
