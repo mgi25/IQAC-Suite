@@ -221,13 +221,13 @@
 
       <!-- Settings - Expandable (Admin Only) -->
       {% if user.is_superuser or request.session.role == 'admin' %}
-      <div class="nav-section {% if 'settings' in request.path or 'approval' in request.path or 'pso-po' in request.path or 'master-data' in request.path or request.resolver_match.url_name == 'admin_settings' or request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'approval_box_visibility_orgs' or request.resolver_match.url_name == 'admin_pso_po_management' %}expanded{% endif %}">
+      <div class="nav-section {% if 'settings' in request.path or 'approval' in request.path or 'pso-po' in request.path or 'master-data' in request.path or request.resolver_match.url_name == 'admin_settings' or request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'admin_pso_po_management' %}expanded{% endif %}">
         <div class="nav-section-header">
           <i class="fas fa-cog nav-icon"></i>
           <span class="nav-text">Settings</span>
-          <i class="fas fa-chevron-right expand-icon {% if 'settings' in request.path or 'approval' in request.path or 'pso-po' in request.path or 'master-data' in request.path or request.resolver_match.url_name == 'admin_settings' or request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'approval_box_visibility_orgs' or request.resolver_match.url_name == 'admin_pso_po_management' %}rotated{% endif %}"></i>
+          <i class="fas fa-chevron-right expand-icon {% if 'settings' in request.path or 'approval' in request.path or 'pso-po' in request.path or 'master-data' in request.path or request.resolver_match.url_name == 'admin_settings' or request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'admin_pso_po_management' %}rotated{% endif %}"></i>
         </div>
-        <div class="nav-submenu {% if 'settings' in request.path or 'approval' in request.path or 'pso-po' in request.path or 'master-data' in request.path or request.resolver_match.url_name == 'admin_settings' or request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'approval_box_visibility_orgs' or request.resolver_match.url_name == 'admin_pso_po_management' %}open{% endif %}">
+        <div class="nav-submenu {% if 'settings' in request.path or 'approval' in request.path or 'pso-po' in request.path or 'master-data' in request.path or request.resolver_match.url_name == 'admin_settings' or request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'admin_pso_po_management' %}open{% endif %}">
           <a href="{% url 'admin_master_data' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'master_data_dashboard' %}active{% endif %}">
             <i class="fas fa-user-cog"></i> User Settings
           </a>
@@ -237,9 +237,6 @@
             </div>
             <a href="{% url 'admin_approval_flow' %}" class="nav-sublink nested {% if request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'admin_approval_flow_manage' %}active{% endif %}">
               <i class="fas fa-route"></i> Approval Flow Management
-            </a>
-            <a href="{% url 'approval_box_visibility_orgs' %}" class="nav-sublink nested {% if request.resolver_match.url_name == 'approval_box_visibility_orgs' or 'approval_box' in request.resolver_match.url_name %}active{% endif %}">
-              <i class="fas fa-eye"></i> Event Approval Box Visibility
             </a>
           </div>
           <a href="{% url 'admin_pso_po_management' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_pso_po_management' %}active{% endif %}">
