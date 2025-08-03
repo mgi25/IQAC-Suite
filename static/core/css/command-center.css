@@ -444,9 +444,9 @@
      FLASH MESSAGES
      ============================================================================= */
   .messages {
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 50 !important;
+    position: relative !important;
+    z-index: 2000 !important;
+    margin-top: var(--topbar-height);
     margin-bottom: 1rem !important;
   }
 
