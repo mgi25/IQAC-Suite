@@ -354,9 +354,20 @@ $(document).ready(function() {
             console.log('Registered Faculty TomSelect with autosave manager');
         }
 
+        function syncDjangoSelect(values) {
+            // Rebuild hidden Django select with matching <option> elements
+            djangoFacultySelect.empty();
+            (values || []).forEach(val => {
+                const optData = tomselect.options[val];
+                const label = optData ? optData.text : val;
+                djangoFacultySelect.append(new Option(label, val, true, true));
+            });
+            djangoFacultySelect.trigger('change');
+        }
+
         tomselect.on('change', function() {
             const values = tomselect.getValue();
-            djangoFacultySelect.val(values);
+            syncDjangoSelect(values);
             console.log('Faculty select changed:', values);
             clearFieldError($('#faculty-select'));
         });
@@ -364,6 +375,7 @@ $(document).ready(function() {
         const initialValues = djangoFacultySelect.val();
         if (initialValues && initialValues.length) {
             tomselect.setValue(initialValues);
+            syncDjangoSelect(initialValues);
         }
     }
 
