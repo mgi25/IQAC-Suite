@@ -30,16 +30,6 @@ FACULTY_ROLE = ApprovalStep.Role.FACULTY.value
 DEAN_ROLE = ApprovalStep.Role.DEAN.value
 ACADEMIC_COORDINATOR_ROLE = "academic_coordinator"
 
-# Roles that should appear in the faculty search API
-FACULTY_LIKE_ROLES = [
-    ApprovalStep.Role.FACULTY.value,
-    ApprovalStep.Role.FACULTY_INCHARGE.value,
-    "Faculty",
-    "Faculty In-Charge",
-]
-
-# Fallback profile roles for faculty search when no role assignments exist
-PROFILE_FACULTY_ROLES = ["faculty"]
 from django.contrib import messages
 from django.utils import timezone
 from django.db import models
@@ -583,8 +573,8 @@ def api_faculty(request):
     users = (
         User.objects
             .filter(
-                Q(role_assignments__role__name__in=FACULTY_LIKE_ROLES) |
-                Q(profile__role__in=PROFILE_FACULTY_ROLES)
+                Q(role_assignments__role__name__icontains="faculty") |
+                Q(profile__role__icontains="faculty")
             )
             .filter(
                 Q(first_name__icontains=q) |
