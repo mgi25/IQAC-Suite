@@ -14,10 +14,15 @@ try {
         proposalId = savedData._proposal_id;
     }
     fields.forEach(f => {
-        if (savedData.hasOwnProperty(f.name) && !f.value) {
+        if (savedData.hasOwnProperty(f.name)) {
             if (f.type === 'checkbox' || f.type === 'radio') {
                 f.checked = savedData[f.name];
-            } else {
+            } else if (f.multiple) {
+                const values = savedData[f.name] || [];
+                Array.from(f.options).forEach(o => {
+                    o.selected = values.includes(o.value);
+                });
+            } else if (!f.value) {
                 f.value = savedData[f.name];
             }
         }
@@ -40,6 +45,8 @@ function saveLocal() {
         if (!f.disabled && f.name) {
             if (f.type === 'checkbox' || f.type === 'radio') {
                 data[f.name] = f.checked;
+            } else if (f.multiple) {
+                data[f.name] = Array.from(f.selectedOptions).map(o => o.value);
             } else {
                 data[f.name] = f.value;
             }
@@ -62,6 +69,8 @@ function autosaveDraft() {
         if (!f.disabled && f.name) {
             if (f.type === 'checkbox' || f.type === 'radio') {
                 formData[f.name] = f.checked;
+            } else if (f.multiple) {
+                formData[f.name] = Array.from(f.selectedOptions).map(o => o.value);
             } else {
                 formData[f.name] = f.value;
             }

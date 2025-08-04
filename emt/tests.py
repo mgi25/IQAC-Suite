@@ -2,11 +2,12 @@ from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth.models import User
 
-from emt.models import ApprovalStep
+from emt.models import ApprovalStep, EventProposal
 from core.models import (
     OrganizationType, Organization, OrganizationRole, RoleAssignment,
     Program, ProgramOutcome, ProgramSpecificOutcome,
 )
+import json
 
 class FacultyAPITests(TestCase):
     def setUp(self):
@@ -85,6 +86,59 @@ class OutcomesAPITests(TestCase):
         self.assertEqual(len(data["pos"]), 1)
         self.assertEqual(len(data["psos"]), 1)
         self.assertEqual(data["pos"][0]["description"], self.po.description)
+
+
+class AutosaveProposalTests(TestCase):
+    def setUp(self):
+        self.ot = OrganizationType.objects.create(name="Dept")
+        self.org = Organization.objects.create(name="Science", org_type=self.ot)
+        self.faculty_role = OrganizationRole.objects.create(
+            organization=self.org, name=ApprovalStep.Role.FACULTY.value
+        )
+        self.submitter = User.objects.create_user("creator", password="pass")
+        self.f1 = User.objects.create(username="f1", first_name="Alpha")
+        self.f2 = User.objects.create(username="f2", first_name="Beta")
+        RoleAssignment.objects.create(
+            user=self.f1, role=self.faculty_role, organization=self.org
+        )
+        RoleAssignment.objects.create(
+            user=self.f2, role=self.faculty_role, organization=self.org
+        )
+        self.client.force_login(self.submitter)
+
+    def _payload(self):
+        return {
+            "organization_type": str(self.ot.id),
+            "organization": str(self.org.id),
+            "academic_year": "2024-2025",
+            "faculty_incharges": [str(self.f1.id), str(self.f2.id)],
+        }
+
+    def test_autosave_and_submit_retains_faculty(self):
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(self._payload()),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        pid = resp.json()["proposal_id"]
+        proposal = EventProposal.objects.get(id=pid)
+        ids = set(proposal.faculty_incharges.values_list("id", flat=True))
+        self.assertEqual(ids, {self.f1.id, self.f2.id})
+
+        get_resp = self.client.get(reverse("emt:submit_proposal_with_pk", args=[pid]))
+        content = get_resp.content.decode()
+        self.assertIn(f'value="{self.f1.id}" selected', content)
+        self.assertIn(f'value="{self.f2.id}" selected', content)
+
+        post_data = self._payload()
+        post_data["final_submit"] = "1"
+        resp2 = self.client.post(reverse("emt:submit_proposal_with_pk", args=[pid]), post_data)
+        self.assertEqual(resp2.status_code, 302)
+        proposal.refresh_from_db()
+        ids_after = set(proposal.faculty_incharges.values_list("id", flat=True))
+        self.assertEqual(ids_after, {self.f1.id, self.f2.id})
+        self.assertEqual(proposal.status, EventProposal.Status.SUBMITTED)
 
 
 class EventApprovalsNavTests(TestCase):
