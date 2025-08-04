@@ -298,21 +298,6 @@
     orgTS.clearOptions();
   });
 
-  // Faculty dropdown setup (already working)
-  new TomSelect('#faculty-select', {
-    plugins: ['remove_button'],
-    valueField: 'id',
-    labelField: 'text',
-    searchField: 'text',
-    create: false,
-    load: (query, callback) => {
-      if (!query.length) return callback();
-      fetch(window.API_FACULTY + '?q=' + encodeURIComponent(query))
-        .then(r => r.json())
-        .then(callback)
-        .catch(() => callback());
-    }
-  });
 });
 
     </script>
