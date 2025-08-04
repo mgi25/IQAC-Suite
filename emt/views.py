@@ -112,6 +112,20 @@ def generate_report_pdf(request):
         response["Content-Disposition"] = 'attachment; filename="Event_Report.pdf"'
         return response
 
+# Helper to persist text-based sections for proposals
+def _save_text_sections(proposal, data):
+    section_map = {
+        "need_analysis": EventNeedAnalysis,
+        "objectives": EventObjectives,
+        "outcomes": EventExpectedOutcomes,
+        "flow": TentativeFlow,
+    }
+    for field, model in section_map.items():
+        if field in data:
+            obj, _ = model.objects.get_or_create(proposal=proposal)
+            obj.content = data.get(field) or ""
+            obj.save()
+
 # ──────────────────────────────
 # PROPOSAL STEP 1: Proposal Submission
 # ──────────────────────────────
@@ -187,6 +201,7 @@ def submit_proposal(request, pk=None):
             proposal.submitted_at = timezone.now()
             proposal.save()
             form.save_m2m()
+            _save_text_sections(proposal, request.POST)
             build_approval_chain(proposal)
             messages.success(
                 request,
@@ -197,6 +212,7 @@ def submit_proposal(request, pk=None):
             proposal.status = "draft"
             proposal.save()
             form.save_m2m()
+            _save_text_sections(proposal, request.POST)
             return redirect("emt:submit_need_analysis", proposal_id=proposal.id)
 
     return render(request, "emt/submit_proposal.html", ctx)
@@ -239,6 +255,7 @@ def autosave_proposal(request):
     proposal.status = "draft"
     proposal.save()
     form.save_m2m()               # 🆕 keep M2M in sync
+    _save_text_sections(proposal, data)
 
     return JsonResponse({"success": True, "proposal_id": proposal.id})
 
