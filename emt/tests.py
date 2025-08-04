@@ -67,6 +67,28 @@ class FacultyAPITests(TestCase):
         ids = {item["id"] for item in data}
         self.assertIn(user4.id, ids)
 
+    def test_api_faculty_accepts_incharge_variants(self):
+        user5 = User.objects.create(
+            username="f5",
+            first_name="Epsilon",
+            email="epsilon@example.com",
+        )
+        variant_role = OrganizationRole.objects.create(
+            organization=self.org,
+            name="Faculty Incharge",
+        )
+        RoleAssignment.objects.create(
+            user=user5,
+            role=variant_role,
+            organization=self.org,
+        )
+
+        resp = self.client.get(reverse("emt:api_faculty"), {"q": "Epsilon"})
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        ids = {item["id"] for item in data}
+        self.assertIn(user5.id, ids)
+
 
 class OutcomesAPITests(TestCase):
     def setUp(self):
