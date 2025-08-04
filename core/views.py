@@ -667,20 +667,29 @@ def cdl_dashboard(request):
 
 STATUSES = ['submitted', 'under_review', 'approved', 'rejected']
 
+from emt.models import EventProposal
+
+STATUSES = ['submitted', 'under_review', 'rejected', 'finalized']  # ensure this matches your status choices
+
 def iqac_suite_dashboard(request):
     user_proposals = (
         EventProposal.objects
         .filter(submitted_by=request.user)
         .order_by("-created_at")
     )
+
     for proposal in user_proposals:
+        proposal.statuses = STATUSES
         proposal.status_index = STATUSES.index(proposal.status) if proposal.status in STATUSES else -1
+        proposal.progress_percent = ((proposal.status_index + 1) / len(STATUSES)) * 100 if proposal.status_index != -1 else 0
+        proposal.current_label = proposal.status.replace('_', ' ').title()
 
     context = {
         "user_proposals": user_proposals,
         "statuses": STATUSES,
     }
-    return render(request, "emt/iqac_suite_dashboard.html", context)
+    return render(request, "dashboard.html", context)
+
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
@@ -1312,9 +1321,34 @@ def delete_outcome(request, outcome_type, outcome_id):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from django.http import HttpResponse
+from itertools import chain
+from operator import attrgetter
+from core.models import Report  # instead of SubmittedReport
+from emt.models import EventReport
+
+@login_required
 def admin_reports_view(request):
-    # Your code here
-    pass
+    try:
+        # Use Report instead of SubmittedReport here:
+        submitted_reports = Report.objects.all()
+
+        generated_reports = EventReport.objects.select_related('proposal').all()
+
+        all_reports_list = list(chain(submitted_reports, generated_reports))
+
+        all_reports_list.sort(key=attrgetter('created_at'), reverse=True)
+
+        context = {'reports': all_reports_list}
+
+        return render(request, 'core/admin_reports.html', context)
+
+    except Exception as e:
+        print(f"Error in admin_reports_view: {e}")
+        return HttpResponse(f"An error occurred: {e}", status=500)
+
 # ======================== API Endpoints & User Dashboard ========================
 
 from django.http import JsonResponse

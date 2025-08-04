@@ -1331,3 +1331,151 @@
         font-size: 20px;
     }
 }
+.suite-right-section {
+  flex: 0.9;
+  min-width: 340px;
+  max-width: 440px;
+  background: #fff;
+  border-radius: 1.6rem;
+  box-shadow: 0 2.5px 12px rgba(33,118,210,0.10), 0 1px 4px rgba(47,56,69,0.03);
+  padding: 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.notif-heading {
+  font-size: 1.22rem;
+  font-weight: 700;
+  margin-bottom: 1.1rem;
+  padding: 0.45rem 1.2rem;
+  background: #eaf6ff;
+  color: #2176d2;
+  border-radius: 1.3rem;
+  display: inline-block;
+  letter-spacing: 0.01em;
+}
+
+.notif-box {
+  background: #f6fbff;
+  border-radius: 1rem;
+  padding: 1.15rem 1rem;
+  border: 1.5px solid #e3eaf2;
+  flex: 1;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.notif-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.notif-item {
+  background: #fff;
+  border-radius: 1.2rem;
+  box-shadow: 0 2px 8px rgba(33,118,210,0.07);
+  padding: 1.2rem 1.3rem 1.1rem 1.3rem;
+  margin-bottom: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.notif-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notif-event-title {
+  font-size: 1.13rem;
+  font-weight: 700;
+  color: #1a365d;
+}
+
+/* Badge styles */
+.notif-status {
+  display: inline-block;
+  font-size: 0.97rem;
+  font-weight: 700;
+  padding: 0.25em 1.15em;
+  border-radius: 999px;
+  box-shadow: 0 1px 4px rgba(33,118,210,0.07);
+}
+.notif-status-pending   { background: #fffbe6; color: #bfa100; border: 1px solid #ffe066; }
+.notif-status-submitted { background: #e3edff; color: #2176d2; }
+.notif-status-review    { background: #eaf1fa; color: #2176d2; }
+.notif-status-rejected  { background: #ffeaea; color: #e23c3c; }
+.notif-status-feedback  { background: #ffeaea; color: #e23c3c; }
+.notif-status-success   { background: #e8faf0; color: #22c55e; border: 1px solid #bbf7d0; }
+
+.notif-meta-badge {
+  margin: 7px 0;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.notif-date-pill, .notif-age-pill {
+  background-color: #f1f5f9;
+  border-radius: 999px;
+  padding: 4px 11px;
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+.notif-date-pill svg {
+  color: #64748b;
+}
+
+.notif-feedback {
+  background: #fef3f2;
+  color: #b91c1c;
+  border-radius: 0.7rem;
+  padding: 0.65em 1em;
+  margin: 0.5em 0 0 0;
+  font-size: 0.96rem;
+  font-weight: 500;
+  border: 1px solid #fca5a5;
+}
+
+.notif-view-btn {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 0.96rem;
+  color: #2563eb;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.18s;
+}
+.notif-view-btn:hover {
+  color: #1e40af;
+  text-decoration: underline;
+}
+.notif-edit-btn {
+  display: inline-block;
+  margin-top: 8px;
+  margin-right: 10px;
+  font-size: 0.96rem;
+  color: #d97706;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.18s;
+}
+.notif-edit-btn:hover {
+  color: #b45309;
+  text-decoration: underline;
+}
+
+.notif-empty {
+  text-align: center;
+  color: #8099bb;
+  font-size: 1.09rem;
+  padding: 2.5rem 0 1.2rem 0;
+  font-weight: 500;
+  opacity: 0.85;
+}

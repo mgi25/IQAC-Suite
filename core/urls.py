@@ -102,6 +102,8 @@ urlpatterns = [
     path('core-admin/api/org-type/<int:org_type_id>/roles/', views.api_org_type_roles, name='api_org_type_roles'),
     path('core-admin/api/organization/<int:org_id>/roles/', views.api_organization_roles, name='api_organization_roles'),
     path('core-admin/api/search/', views.api_global_search, name='api_global_search'),
+    path("dashboard/", views.iqac_suite_dashboard, name="dashboard"),
+
 
     # Additional APIs from other branch
     path('api/search/', views.api_global_search, name='api_global_search'),  # (Keep only if needed, else remove duplicate)

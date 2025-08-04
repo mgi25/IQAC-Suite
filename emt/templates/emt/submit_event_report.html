@@ -22,7 +22,6 @@
         <tr><th>Target Audience</th><td>{{ proposal.target_audience }}</td></tr>
       </table>
     </div>
-    {# Stepper removed - single page layout #}
   </aside>
 
   <section class="form-wrapper">
@@ -37,12 +36,14 @@
           {{ form.non_field_errors }}
           <div class="form-grid">
             {% for field in form %}
-              <div class="form-group">
-                {{ field }}
-                <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
-                {% if field.help_text %}<small class="help">{{ field.help_text }}</small>{% endif %}
-                {{ field.errors }}
-              </div>
+              {% if field.name != 'location' and field.name != 'external_contact_details' and field.name != 'pos_pso_mapping' and field.name != 'outcomes' and field.name != 'num_participants' and field.name != 'iqac_feedback' and field.name != 'blog_link' and field.name != 'num_student_volunteers' %}
+                <div class="form-group">
+                  {{ field }}
+                  <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+                  {% if field.help_text %}<small class="help">{{ field.help_text }}</small>{% endif %}
+                  {{ field.errors }}
+                </div>
+              {% endif %}
             {% endfor %}
           </div>
         </div>
@@ -102,10 +103,6 @@
 </div>
 
 {% if proposal.organization %}
-  {% comment %}
-    When the proposal is associated with an organization, allow the outcomes
-    modal to load Program Outcomes/Program Specific Outcomes via AJAX.
-  {% endcomment %}
   <div id="outcomeModal" class="outcome-modal"
        data-url="{% url 'emt:api_outcomes' proposal.organization.id %}">
     <div class="modal-content">
@@ -118,9 +115,6 @@
     </div>
   </div>
 {% else %}
-  {# If no organization is set for the proposal, keep the modal in the DOM but
-     do not provide an API URL. The JS will detect this and skip showing the
-     modal. #}
   <div id="outcomeModal" class="outcome-modal" data-url="">
     <div class="modal-content">
       <h3>Select Outcomes</h3>
@@ -138,4 +132,3 @@
 {% block scripts %}
 <script src="{% static 'emt/js/submit_event_report.js' %}"></script>
 {% endblock %}
-

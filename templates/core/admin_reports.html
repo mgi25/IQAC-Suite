@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+
 {% block content %}
 <link rel="stylesheet" href="{% static 'core/css/reports.css' %}">
 
@@ -26,11 +27,17 @@
                 {% for report in reports %}
                 <tr>
                     <td>{{ forloop.counter }}</td>
-                    
-                    {# Title: Handles both direct title and title from a proposal #}
-                    <td>{{ report.title|default:report.proposal.title }}</td>
 
-                    {# Type: Displays the specific type or a generic "Event Report" #}
+                    <td>
+                        {% if report.title %}
+                            {{ report.title }}
+                        {% elif report.proposal and report.proposal.event_title %}
+                            {{ report.proposal.event_title }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+
                     <td>
                         {% if report.proposal %}
                             Event Report
@@ -39,22 +46,28 @@
                         {% endif %}
                     </td>
 
-                    {# Organization: Handles both direct org and org from a proposal #}
                     <td>
-                        {{ report.organization|default:report.proposal.organization|default:"-" }}
+                        {% if report.organization %}
+                            {{ report.organization }}
+                        {% elif report.proposal and report.proposal.organization %}
+                            {{ report.proposal.organization }}
+                        {% else %}
+                            -
+                        {% endif %}
                     </td>
 
-                    {# Submitted By: Handles both direct user and user from a proposal #}
                     <td>
-                        {% with submitter=report.submitted_by|default:report.proposal.submitted_by %}
-                            {{ submitter.get_full_name|default:submitter.username }}
-                        {% endwith %}
+                        {% if report.submitted_by %}
+                            {{ report.submitted_by.get_full_name|default:report.submitted_by.username }}
+                        {% elif report.proposal and report.proposal.submitted_by %}
+                            {{ report.proposal.submitted_by.get_full_name|default:report.proposal.submitted_by.username }}
+                        {% else %}
+                            -
+                        {% endif %}
                     </td>
 
-                    {# Date: Assumes a 'created_at' field on both models for consistency #}
                     <td>{{ report.created_at|date:"Y-m-d H:i" }}</td>
 
-                    {# Status: Shows workflow status for core reports, or "Generated" for event reports #}
                     <td>
                         {% if report.proposal %}
                             <span class="status-generated">Generated</span>
@@ -71,14 +84,11 @@
                         {% endif %}
                     </td>
 
-                    {# Action Buttons: Shows different actions based on the report type #}
                     <td>
                         {% if report.proposal %}
-                            {# Actions for generated Event Reports from the 'emt' app #}
                             <a href="{% url 'emt:view_report' report.id %}" class="report-action-btn">View</a>
                             <a href="{% url 'emt:download_pdf' report.id %}" class="report-action-btn">PDF</a>
                         {% else %}
-                            {# Actions for submitted Reports from the 'core' app #}
                             {% if report.file %}
                                 <a href="{{ report.file.url }}" class="report-action-btn" download>Download</a>
                             {% endif %}

@@ -851,12 +851,10 @@ def submit_event_report(request, proposal_id):
 @login_required
 def suite_dashboard(request):
     """
-    Show all of the current user's proposals that are:
-      - Not finalized older than 2 days
-      - Sorted newest-first
-    Also compute per-proposal progress and whether to show the "Event Approvals" card.
+    Show current user's proposals excluding finalized ones older than 2 days.
+    Compute per-proposal progress for display in dashboard.html.
     """
-    # 1) Grab the proposals, excluding any finalized ones last updated more than 2 days ago
+    # 1) Get proposals excluding finalized + 2-day-old ones
     user_proposals = (
         EventProposal.objects
         .filter(submitted_by=request.user)
@@ -868,36 +866,28 @@ def suite_dashboard(request):
         .order_by('-updated_at')
     )
 
-    # 2) Define your workflow statuses in order
-    statuses_all = ['draft', 'submitted', 'under_review', 'rejected', 'finalized']
+    # 2) Prepare statuses and UI fields
     for p in user_proposals:
         db_status = (p.status or '').strip().lower()
 
         if db_status == 'rejected':
-            # Show only till rejected
             p.statuses = ['draft', 'submitted', 'under_review', 'rejected']
         else:
-            # Normal workflow (excluding rejected if not applicable)
             p.statuses = ['draft', 'submitted', 'under_review', 'finalized']
 
         p.status_index = p.statuses.index(db_status) if db_status in p.statuses else 0
-        if len(p.statuses) > 1:
-            p.progress_percent = int(p.status_index * 100 / (len(p.statuses) - 1))
-        else:
-            p.progress_percent = 100
+        p.progress_percent = int(p.status_index * 100 / (len(p.statuses) - 1)) if len(p.statuses) > 1 else 100
         p.current_label = p.statuses[p.status_index].replace('_', ' ').capitalize()
 
-    # Determine visibility of the "Event Approvals" card.
-    # Show it to all non-student users.
+    # 3) Approvals card visibility
     is_student = getattr(getattr(request.user, 'profile', None), 'role', '') == 'student'
     show_approvals_card = not is_student
 
-    # 5) Render
-    return render(request, 'emt/iqac_suite_dashboard.html', {
+    # 4) Return dashboard with user_proposals
+    return render(request, 'dashboard.html', {
         'user_proposals': user_proposals,
         'show_approvals_card': show_approvals_card,
     })
-
 @login_required
 def ai_generate_report(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id)
@@ -1120,31 +1110,23 @@ def api_organization_types(request):
 # │ NEW FUNCTION ADDED BELOW                                       │
 # ------------------------------------------------------------------
 
+
+from core.models import Report
+
 @login_required
 def admin_reports_view(request):
-    """
-    Displays a combined list of all reports for the admin dashboard.
-    This includes submitted reports from the 'core' app and generated
-    reports from the 'emt' app.
-    """
-    # 1. Get all user-submitted reports from the 'core' app
-    # Assuming the model in core.models is named 'Report'
-    submitted_reports = SubmittedReport.objects.all()
+    try:
+        submitted_reports = Report.objects.all()
+        generated_reports = EventReport.objects.select_related('proposal').all()
 
-    # 2. Get all generated event reports from the 'emt' app
-    # Using 'select_related' to efficiently fetch the related proposal details
-    generated_reports = EventReport.objects.select_related('proposal').all()
+        all_reports_list = list(chain(submitted_reports, generated_reports))
 
-    # 3. Combine the two different querysets into a single Python list
-    all_reports_list = list(chain(submitted_reports, generated_reports))
+        all_reports_list.sort(key=attrgetter('created_at'), reverse=True)
 
-    # 4. Sort the combined list by their creation date in descending order
-    # This assumes both models have a 'created_at' field. If not, you can
-    # use a @property on each model to return a common date field.
-    all_reports_list.sort(key=attrgetter('created_at'), reverse=True)
+        context = {'reports': all_reports_list}
 
-    # 5. Pass the final list to the admin reports template
-    context = {
-        'reports': all_reports_list
-    }
-    return render(request, 'core/admin_reports.html', context)
+        return render(request, 'core/admin_reports.html', context)
+
+    except Exception as e:
+        print(f"Error in admin_reports_view: {e}")
+        return HttpResponse(f"An error occurred: {e}", status=500)

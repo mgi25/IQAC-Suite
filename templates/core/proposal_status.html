@@ -1,60 +1,66 @@
-{% extends "base.html" %}
 {% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proposal Status – Event Management Suite</title>
+    <link rel="stylesheet" href="{% static 'core/css/proposal_status.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css?family=Inter:400,600,700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <main class="proposal-status-container">
+        <section class="proposal-tracker-card">
+            <h1 class="tracker-title">
+                <i class="fa-solid fa-file"></i>
+                Proposal Status
+            </h1>
+            <div class="tracker-timeline">
+                {% for step in steps %}
+                    <div class="timeline-step {% if proposal.status == step.key or steps|slice:":forloop.counter"|yesno:"active," %}{% if proposal.status == step.key %}current{% else %}active{% endif %}{% endif %}">
+                        <div class="step-dot"></div>
+                        <div class="step-label">{{ step.label }}</div>
+                    </div>
+                {% endfor %}
+            </div>
 
-{% block title %}Proposal Status – Event Management Suite{% endblock %}
+            <div class="proposal-details-card">
+                <h2>Proposal Details</h2>
+                <div class="proposal-info-row">
+                    <span class="proposal-label">Title:</span> {{ proposal.event_title }}
+                </div>
+                <div class="proposal-info-row">
+                    <span class="proposal-label">Description:</span> {{ proposal.description|default:"—" }}
+                </div>
+                <div class="proposal-info-row">
+                    <span class="proposal-label">Status:</span>
+                    <span class="proposal-status-pill status-{{ proposal.status|lower }}">{{ proposal.get_status_display }}</span>
+                </div>
+                <div class="proposal-info-row">
+                    <span class="proposal-label">Submitted On:</span>
+                    {{ proposal.created_at|date:"d M Y, H:i" }}
+                </div>
+                {% if proposal.status == "returned" and proposal.return_comment %}
+                    <div class="proposal-info-row proposal-return-comment">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        Returned Reason: {{ proposal.return_comment }}
+                    </div>
+                {% endif %}
+            </div>
 
-{% block head_extra %}
-  <link rel="stylesheet" href="{% static 'core/css/proposal_status.css' %}">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css?family=Inter:400,600,700&display=swap" rel="stylesheet">
-{% endblock %}
+            {% if proposal.id %}
+            <div style="width: 100%; display: flex; justify-content: flex-end; margin-top: 32px;">
+                <a href="{% url 'emt:proposal_status_detail' proposal.id %}" class="btn-link" style="color: #2c5aa0; font-weight: 500; text-decoration: underline; cursor: pointer; border: 2px solid #222; border-radius: 6px; padding: 16px 32px; font-size: 1.1em; background: #fff;">View Status</a>
+            </div>
+            {% endif %}
 
-{% block content %}
-<main class="proposal-status-container">
-  <section class="proposal-tracker-card">
-    <h1 class="tracker-title">
-      <i class="fa-solid fa-file"></i>
-      Proposal Progress
-    </h1>
-    <div class="tracker-timeline">
-      {% for step in steps %}
-        <div class="timeline-step {% if proposal.status == step.key or steps|slice:":forloop.counter"|yesno:"active," %}{% if proposal.status == step.key %}current{% else %}active{% endif %}{% endif %}">
-          <div class="step-dot"></div>
-          <div class="step-label">{{ step.label }}</div>
-        </div>
-      {% endfor %}
-    </div>
-
-    <div class="proposal-details-card">
-      <h2>Proposal Details</h2>
-      <div class="proposal-info-row">
-        <span class="proposal-label">Title:</span> {{ proposal.event_title }}
-      </div>
-      <div class="proposal-info-row">
-        <span class="proposal-label">Description:</span> {{ proposal.description|default:"—" }}
-      </div>
-      <div class="proposal-info-row">
-        <span class="proposal-label">Status:</span>
-        <span class="proposal-status-pill status-{{ proposal.status|lower }}">{{ proposal.get_status_display }}</span>
-      </div>
-      <div class="proposal-info-row">
-        <span class="proposal-label">Submitted On:</span>
-        {{ proposal.created_at|date:"d M Y, H:i" }}
-      </div>
-      {% if proposal.status == "returned" and proposal.return_comment %}
-        <div class="proposal-info-row proposal-return-comment">
-          <i class="fa-solid fa-rotate-left"></i>
-          Returned Reason: {{ proposal.return_comment }}
-        </div>
-      {% endif %}
-    </div>
-
-    <div class="proposal-actions-bar">
-      <a href="{% url 'dashboard' %}" class="btn-back"><i class="fa fa-arrow-left"></i> Back to Dashboard</a>
-      {% if proposal.status == 'returned' %}
-        <a href="{% url 'emt:edit_proposal' proposal.id %}" class="btn-edit"><i class="fa fa-edit"></i> Edit Proposal</a>
-      {% endif %}
-    </div>
-  </section>
-</main>
-{% endblock %}
+            <div class="proposal-actions-bar">
+                {% if proposal.status == 'returned' %}
+                    <a href="{% url 'emt:edit_proposal' proposal.id %}" class="btn-edit"><i class="fa fa-edit"></i> Edit Proposal</a>
+                {% endif %}
+            </div>
+        </section>
+    </main>
+</body>
+</html>
