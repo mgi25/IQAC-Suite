@@ -185,7 +185,7 @@
     box-shadow: var(--shadow-lg) !important;
     border: 1px solid var(--gray-200) !important;
     max-height: 400px !important;
-    overflow: hidden !important;
+    overflow-y: auto !important;
     z-index: 99999 !important;
     display: none !important;
   }
@@ -203,7 +203,8 @@
     grid-area: sidebar !important;
     background: var(--white) !important;
     border-right: 1px solid var(--gray-200) !important;
-    overflow: hidden !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
     box-shadow: var(--shadow) !important;
     position: relative !important;
     z-index: 5000 !important;
@@ -420,7 +421,7 @@
   .main-viewscreen {
     grid-area: main !important;
     background: var(--white) !important;
-    overflow: hidden !important;
+    overflow-y: auto !important;
     position: relative !important;
     z-index: 1 !important;
     height: 100% !important;
@@ -437,9 +438,6 @@
     margin: 0 !important;
     border: none !important;
     box-sizing: border-box !important;
-    background: var(--white) !important;
-    height: 100% !important;
-    overflow: hidden !important;
   }
   
   @keyframes fadeIn {
@@ -495,7 +493,6 @@
     z-index: 99999 !important;
     margin: 0 !important;
     padding: 0 !important;
-    overflow: hidden !important;
   }
   
   .notification-dropdown.active {
@@ -560,7 +557,6 @@
     padding: 0 !important;
     border: none !important;
     box-sizing: border-box !important;
-    background: var(--white) !important;
   }
   
   .dashboard-header {
@@ -573,7 +569,6 @@
     border-top: none !important;
     border-left: none !important;
     border-right: none !important;
-    background: var(--white) !important;
   }
   
   .dashboard-stats {
@@ -584,7 +579,6 @@
     margin-top: 0 !important;
     padding: 0 !important;
     border: none !important;
-    background: var(--white) !important;
   }
   
   .stat-card {
@@ -609,7 +603,6 @@
     margin: 0 !important;
     padding: 0 !important;
     border: none !important;
-    background: var(--white) !important;
   }
   
   /* =============================================================================
