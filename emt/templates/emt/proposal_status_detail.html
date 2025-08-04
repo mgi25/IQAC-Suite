@@ -18,7 +18,7 @@
         {% if proposal.association %}
           <div><span class="label">Association:</span> {{ proposal.association.name }}</div>
         {% endif %}
-        <div><span class="label">Speakers:</span> {{ proposal.speakerprofile_set.count }}</div>
+        <div><span class="label">Speakers:</span> {{ proposal.speakers.count }}</div>
         <div><span class="label">Total Budget:</span> ₹{{ budget_total }}</div>
         <div>
           <span class="label">Current Status:</span>

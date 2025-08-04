@@ -112,6 +112,20 @@ def generate_report_pdf(request):
         response["Content-Disposition"] = 'attachment; filename="Event_Report.pdf"'
         return response
 
+# Helper to persist text-based sections for proposals
+def _save_text_sections(proposal, data):
+    section_map = {
+        "need_analysis": EventNeedAnalysis,
+        "objectives": EventObjectives,
+        "outcomes": EventExpectedOutcomes,
+        "flow": TentativeFlow,
+    }
+    for field, model in section_map.items():
+        if field in data:
+            obj, _ = model.objects.get_or_create(proposal=proposal)
+            obj.content = data.get(field) or ""
+            obj.save()
+
 # ──────────────────────────────
 # PROPOSAL STEP 1: Proposal Submission
 # ──────────────────────────────
@@ -187,6 +201,7 @@ def submit_proposal(request, pk=None):
             proposal.submitted_at = timezone.now()
             proposal.save()
             form.save_m2m()
+            _save_text_sections(proposal, request.POST)
             build_approval_chain(proposal)
             messages.success(
                 request,
@@ -197,6 +212,7 @@ def submit_proposal(request, pk=None):
             proposal.status = "draft"
             proposal.save()
             form.save_m2m()
+            _save_text_sections(proposal, request.POST)
             return redirect("emt:submit_need_analysis", proposal_id=proposal.id)
 
     return render(request, "emt/submit_proposal.html", ctx)
@@ -230,6 +246,15 @@ def autosave_proposal(request):
         ).first()
 
     form = EventProposalForm(data, instance=proposal, user=request.user)
+    faculty_ids = data.get("faculty_incharges") or []
+    if faculty_ids:
+        form.fields['faculty_incharges'].queryset = User.objects.filter(
+            Q(role_assignments__role__name=FACULTY_ROLE) | Q(id__in=faculty_ids)
+        ).distinct()
+    else:
+        form.fields['faculty_incharges'].queryset = User.objects.filter(
+            role_assignments__role__name=FACULTY_ROLE
+        ).distinct()
 
     if not form.is_valid():
         return JsonResponse({"success": False, "errors": form.errors}, status=400)
@@ -239,6 +264,7 @@ def autosave_proposal(request):
     proposal.status = "draft"
     proposal.save()
     form.save_m2m()               # 🆕 keep M2M in sync
+    _save_text_sections(proposal, data)
 
     return JsonResponse({"success": True, "proposal_id": proposal.id})
 
@@ -609,15 +635,44 @@ def my_approvals(request):
 @user_passes_test(lambda u: getattr(getattr(u, 'profile', None), 'role', '') != 'student')
 def review_approval_step(request, step_id):
     step = get_object_or_404(ApprovalStep, id=step_id)
-    proposal = step.proposal
 
-    # Fetch related proposal details using safe lookups
-    need_analysis = EventNeedAnalysis.objects.filter(proposal=proposal).first()
-    objectives = EventObjectives.objects.filter(proposal=proposal).first()
-    outcomes = EventExpectedOutcomes.objects.filter(proposal=proposal).first()
-    flow = TentativeFlow.objects.filter(proposal=proposal).first()
-    speakers = SpeakerProfile.objects.filter(proposal=proposal)
-    expenses = ExpenseDetail.objects.filter(proposal=proposal)
+    # Fetch the proposal along with all related details in one go.
+    proposal = (
+        EventProposal.objects
+        .select_related(
+            "need_analysis",
+            "objectives",
+            "expected_outcomes",
+            "tentative_flow",
+        )
+        .prefetch_related("speakers", "expense_details")
+        .get(pk=step.proposal_id)
+    )
+
+    # Fetch related sections gracefully; some proposals may not have
+    # completed every part yet, so the related objects could be missing.
+    try:
+        need_analysis = proposal.need_analysis
+    except EventNeedAnalysis.DoesNotExist:
+        need_analysis = None
+
+    try:
+        objectives = proposal.objectives
+    except EventObjectives.DoesNotExist:
+        objectives = None
+
+    try:
+        outcomes = proposal.expected_outcomes
+    except EventExpectedOutcomes.DoesNotExist:
+        outcomes = None
+
+    try:
+        flow = proposal.tentative_flow
+    except TentativeFlow.DoesNotExist:
+        flow = None
+
+    speakers = proposal.speakers.all()
+    expenses = proposal.expense_details.all()
 
     GATEKEEPER_ROLES = [
         ApprovalStep.Role.HOD.value,
@@ -744,6 +799,7 @@ def review_approval_step(request, step_id):
 
     return render(request, 'emt/review_approval_step.html', {
         'step': step,
+        'proposal': proposal,
         'GATEKEEPER_ROLES': GATEKEEPER_ROLES,
         'need_analysis': need_analysis,
         'objectives': objectives,

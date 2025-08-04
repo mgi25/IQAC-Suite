@@ -285,88 +285,41 @@ $(document).ready(function() {
         copyDjangoField('academic_year');
         copyDjangoField('student_coordinators');
         copyDjangoField('num_activities');
-        
-        setupFacultyTomSelect();
+
+        const facultySelect = $('#id_faculty_incharges');
+        if (facultySelect.length && typeof TomSelect !== 'undefined') {
+            const facultyTS = new TomSelect(facultySelect[0], {
+                plugins: ['remove_button'],
+                valueField: 'id',
+                labelField: 'text',
+                searchField: 'text',
+                create: false,
+                load: function(query, callback) {
+                    if (!query.length) return callback();
+
+                    if (window.API_FACULTY) {
+                        fetch(window.API_FACULTY + '?q=' + encodeURIComponent(query))
+                            .then(response => response.json())
+                            .then(callback)
+                            .catch(() => callback());
+                    } else {
+                        callback();
+                    }
+                },
+                onChange: function() {
+                    facultySelect.trigger('change');
+                }
+            });
+
+            $('#faculty-incharges-container').append(facultyTS.$wrapper);
+
+            if (window.AutosaveManager && window.AutosaveManager.registerTomSelect) {
+                window.AutosaveManager.registerTomSelect('id_faculty_incharges', facultyTS);
+                console.log('Registered Faculty TomSelect with autosave manager');
+            }
+        }
     }
     
-    function setupFacultyTomSelect() {
-        const facultySelect = $('#faculty-select');
-        const djangoFacultySelect = $('#django-basic-info [name="faculty_incharges"]');
-
-        if (!facultySelect.length || !djangoFacultySelect.length) {
-             console.log('Faculty select fields not found.');
-             return;
-        }
-
-        const existingOptions = [];
-        djangoFacultySelect.find('option').each(function() {
-            if ($(this).val()) {
-                existingOptions.push({
-                    id: $(this).val(),
-                    text: $(this).text()
-                });
-            }
-        });
-
-        if (typeof TomSelect === 'undefined') {
-            console.log('TomSelect not available, using simple select for faculty.');
-            facultySelect.html(djangoFacultySelect.html());
-            facultySelect.prop('multiple', true);
-            facultySelect.on('change', function() {
-                djangoFacultySelect.val($(this).val());
-            });
-            return;
-        }
-
-        const tomselect = new TomSelect('#faculty-select', {
-            plugins: ['remove_button'],
-            valueField: 'id',
-            labelField: 'text',
-            searchField: 'text',
-            create: false,
-            placeholder: 'Type a faculty name…',
-            maxItems: 10,
-            options: existingOptions,
-            load: function(query, callback) {
-                if (!query.length) return callback();
-                
-                if (window.API_FACULTY) {
-                    fetch(window.API_FACULTY + '?q=' + encodeURIComponent(query))
-                        .then(response => response.json())
-                        .then(data => callback(data))
-                        .catch(() => callback());
-                } else {
-                    // Mock faculty data for testing
-                    const mockFaculty = [
-                        {id: 1, text: 'Dr. John Smith (Computer Science)'},
-                        {id: 2, text: 'Prof. Jane Doe (Mathematics)'},
-                        {id: 3, text: 'Dr. Mike Johnson (Physics)'}
-                    ].filter(item => 
-                        item.text.toLowerCase().includes(query.toLowerCase())
-                    );
-                    callback(mockFaculty);
-                }
-            }
-        });
-        
-        if (window.AutosaveManager && window.AutosaveManager.registerTomSelect) {
-            window.AutosaveManager.registerTomSelect('faculty-select', tomselect);
-            console.log('Registered Faculty TomSelect with autosave manager');
-        }
-
-        tomselect.on('change', function() {
-            const values = tomselect.getValue();
-            djangoFacultySelect.val(values);
-            console.log('Faculty select changed:', values);
-            clearFieldError($('#faculty-select'));
-        });
-
-        const initialValues = djangoFacultySelect.val();
-        if (initialValues && initialValues.length) {
-            tomselect.setValue(initialValues);
-        }
-    }
-
     function copyDjangoField(fieldName) {
         const djangoField = $(`#django-basic-info [name="${fieldName}"]`);
         const modernField = $(`#${fieldName.replace(/_/g, '-')}-modern`);
@@ -467,7 +420,7 @@ $(document).ready(function() {
                         .catch(() => callback());
                 },
                 onChange: function(value) {
-                    hiddenField.val(value);
+                    hiddenField.val(value).trigger('change');
                     clearFieldError(newSelect);
                 },
                 placeholder: placeholder,
@@ -548,9 +501,8 @@ $(document).ready(function() {
 
                 <div class="form-row full-width">
                     <div class="input-group">
-                        <label for="faculty-select">Faculty Incharges *</label>
-                        <select id="faculty-select" multiple>
-                            </select>
+                        <label for="id_faculty_incharges">Faculty Incharges *</label>
+                        <div id="faculty-incharges-container"></div>
                     </div>
                 </div>
                 
@@ -804,7 +756,7 @@ $(document).ready(function() {
             // Skip fields already handled or special cases
             const id = $(this).attr('id');
             if (
-                id === 'faculty-select' ||
+                id === 'id_faculty_incharges' ||
                 id === 'event-focus-type-modern' ||
                 $(this).closest('.org-specific-field').length ||
                 (id && id.startsWith('org-type'))
@@ -818,7 +770,7 @@ $(document).ready(function() {
         });
         
         // Special check for faculty select (TomSelect)
-        const facultyTomSelect = $('#faculty-select')[0]?.tomselect;
+        const facultyTomSelect = $('#id_faculty_incharges')[0]?.tomselect;
         if (facultyTomSelect && facultyTomSelect.getValue().length === 0) {
             showFieldError(facultyTomSelect.$wrapper, 'At least one Faculty Incharge is required.');
             isValid = false;

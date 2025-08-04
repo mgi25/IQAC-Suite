@@ -215,6 +215,11 @@
                     {% endif %}
                 {% endfor %}
             </div>
+        <!-- Hidden fields for additional sections -->
+        <textarea name="need_analysis" id="id_need_analysis"></textarea>
+        <textarea name="objectives" id="id_objectives"></textarea>
+        <textarea name="outcomes" id="id_outcomes"></textarea>
+        <textarea name="flow" id="id_flow"></textarea>
         </div>
     </form>
 </div>
@@ -293,21 +298,6 @@
     orgTS.clearOptions();
   });
 
-  // Faculty dropdown setup (already working)
-  new TomSelect('#faculty-select', {
-    plugins: ['remove_button'],
-    valueField: 'id',
-    labelField: 'text',
-    searchField: 'text',
-    create: false,
-    load: (query, callback) => {
-      if (!query.length) return callback();
-      fetch(window.API_FACULTY + '?q=' + encodeURIComponent(query))
-        .then(r => r.json())
-        .then(callback)
-        .catch(() => callback());
-    }
-  });
 });
 
     </script>

@@ -15,6 +15,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 import json
 import logging
+
+logger = logging.getLogger(__name__)
 from .forms import RoleAssignmentForm
 from .models import (
     Profile,
@@ -25,10 +27,7 @@ from .models import (
     Class,
     OrganizationRole,
 )
-from emt.models import (
-    EventProposal, EventNeedAnalysis, EventObjectives, EventExpectedOutcomes, TentativeFlow,
-    ExpenseDetail, SpeakerProfile, ApprovalStep, Student
-)
+from emt.models import EventProposal, Student
 from django.views.decorators.http import require_GET, require_POST
 from .models import ApprovalFlowTemplate, ApprovalFlowConfig
 from django.core.exceptions import PermissionDenied
@@ -899,31 +898,23 @@ def admin_master_data_delete(request, model_name, pk):
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_proposal_detail(request, proposal_id):
-    proposal = get_object_or_404(EventProposal, id=proposal_id)
-    need_analysis = EventNeedAnalysis.objects.filter(proposal=proposal).first()
-    objectives = EventObjectives.objects.filter(proposal=proposal).first()
-    outcomes = EventExpectedOutcomes.objects.filter(proposal=proposal).first()
-    flow = TentativeFlow.objects.filter(proposal=proposal).first()
-    speakers = SpeakerProfile.objects.filter(proposal=proposal)
-    expenses = ExpenseDetail.objects.filter(proposal=proposal)
-    approval_steps = ApprovalStep.objects.filter(proposal=proposal).order_by('step_order')
-    # Sum the "amount" field from each expense entry to calculate the total
-    # budget. Using "total" as the aggregate key avoids clashes with any model
-    # field names while still providing a descriptive context variable.
-    budget_total = expenses.aggregate(total=Sum("amount"))['total'] or 0
-
-    context = {
-        "proposal": proposal,
-        "need_analysis": need_analysis,
-        "objectives": objectives,
-        "outcomes": outcomes,
-        "flow": flow,
-        "speakers": speakers,
-        "expenses": expenses,
-        "approval_steps": approval_steps,
-        "budget_total": budget_total,
-    }
-    return render(request, "core/admin_proposal_detail.html", context)
+    proposal = get_object_or_404(
+        EventProposal.objects.select_related("organization").prefetch_related(
+            "faculty_incharges", "speakers", "expense_details", "approval_steps"
+        ),
+        id=proposal_id,
+    )
+    logger.debug(
+        "Loaded proposal %s '%s' (org=%s, faculty=%d, speakers=%d, expenses=%d, steps=%d)",
+        proposal.id,
+        proposal.event_title,
+        proposal.organization,
+        len(proposal.faculty_incharges.all()),
+        len(proposal.speakers.all()),
+        len(proposal.expense_details.all()),
+        len(proposal.approval_steps.all()),
+    )
+    return render(request, "core/admin_proposal_detail.html", {"proposal": proposal})
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_settings_dashboard(request):

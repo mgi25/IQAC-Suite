@@ -4,7 +4,7 @@ from django.contrib.sessions.middleware import SessionMiddleware
 from django.forms import inlineformset_factory
 from types import SimpleNamespace
 import json
-from .models import (
+from core.models import (
     OrganizationType,
     Organization,
     ApprovalFlowTemplate,
@@ -12,8 +12,8 @@ from .models import (
     RoleAssignment,
     Profile,
 )
-from .views import RoleAssignmentForm, RoleAssignmentFormSet
-from .adapters import SchoolSocialAccountAdapter
+from core.views import RoleAssignmentForm, RoleAssignmentFormSet
+from core.adapters import SchoolSocialAccountAdapter
 
 
 class OrganizationModelTests(TestCase):

@@ -46,44 +46,58 @@
 
     <div class="fadein-card section-glass">
       <h3>Need Analysis</h3>
-      <div class="detail-block">{{ need_analysis.content|linebreaksbr|default:"—" }}</div>
+      {% if proposal.need_analysis %}
+        <div class="detail-block">{{ proposal.need_analysis.content|linebreaksbr }}</div>
+      {% else %}
+        <div class="detail-block">—</div>
+      {% endif %}
     </div>
 
     <div class="fadein-card section-glass">
       <h3>Objectives</h3>
-      <div class="detail-block">{{ objectives.content|linebreaksbr|default:"—" }}</div>
+      {% if proposal.objectives %}
+        <div class="detail-block">{{ proposal.objectives.content|linebreaksbr }}</div>
+      {% else %}
+        <div class="detail-block">—</div>
+      {% endif %}
     </div>
 
     <div class="fadein-card section-glass">
       <h3>Expected Outcomes</h3>
-      <div class="detail-block">{{ outcomes.content|linebreaksbr|default:"—" }}</div>
+      {% if proposal.expected_outcomes %}
+        <div class="detail-block">{{ proposal.expected_outcomes.content|linebreaksbr }}</div>
+      {% else %}
+        <div class="detail-block">—</div>
+      {% endif %}
     </div>
 
     <div class="fadein-card section-glass">
       <h3>Tentative Flow</h3>
-      <div class="detail-block">{{ flow.content|linebreaksbr|default:"—" }}</div>
+      {% if proposal.tentative_flow %}
+        <div class="detail-block">{{ proposal.tentative_flow.content|linebreaksbr }}</div>
+      {% else %}
+        <div class="detail-block">—</div>
+      {% endif %}
     </div>
 
     <div class="fadein-card section-glass">
       <h3>Speaker Profile</h3>
-      {% if speakers %}
-        {% for sp in speakers %}
-          <div class="speaker-profile-block">
-            <div>
-              <b>{{ sp.full_name }}</b> <span class="profile-aff">{{ sp.designation }}, {{ sp.affiliation }}</span>
-              {% if sp.photo %}
-                <img src="{{ sp.photo.url }}" class="speaker-photo" alt="Speaker Photo">
-              {% endif %}
-              <div class="profile-meta">
-                <span>{{ sp.contact_email }}</span> &bull; <span>{{ sp.contact_number }}</span>
-              </div>
-              <div class="profile-desc">{{ sp.detailed_profile|default:"—" }}</div>
+      {% for sp in proposal.speakers.all %}
+        <div class="speaker-profile-block">
+          <div>
+            <b>{{ sp.full_name }}</b> <span class="profile-aff">{{ sp.designation }}, {{ sp.affiliation }}</span>
+            {% if sp.photo %}
+              <img src="{{ sp.photo.url }}" class="speaker-photo" alt="Speaker Photo">
+            {% endif %}
+            <div class="profile-meta">
+              <span>{{ sp.contact_email }}</span> &bull; <span>{{ sp.contact_number }}</span>
             </div>
+            <div class="profile-desc">{{ sp.detailed_profile|default:"—" }}</div>
           </div>
-        {% endfor %}
-      {% else %}
+        </div>
+      {% empty %}
         <div class="detail-block">—</div>
-      {% endif %}
+      {% endfor %}
     </div>
 
     <!-- INCOME & EXPENSES SIDE BY SIDE -->
@@ -146,7 +160,7 @@
               </tr>
             </thead>
             <tbody>
-              {% for exp in expenses %}
+              {% for exp in proposal.expense_details.all %}
                 <tr>
                   <td>{{ exp.sl_no }}</td>
                   <td>{{ exp.particulars }}</td>
@@ -168,7 +182,7 @@
       <h3>Approval History</h3>
       <div class="approval-history-ul">
         <ul>
-          {% for hist in approval_steps %}
+              {% for hist in proposal.approval_steps.all %}
             <li>
               <span class="history-role">{{ hist.get_role_required_display }}</span>
               <span class="history-person">
