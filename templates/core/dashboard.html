@@ -194,7 +194,89 @@
                     </div>
                 </div>
                 <div class="dashboard-events-right" style="flex: 1; min-width: 0;">
-                    {% include 'core/proposal_status.html' %}
+                   <div class="suite-right-section suite-glass">
+        <div class="notif-heading">Notifications</div>
+        <div class="notif-box">
+          {% if user_proposals %}
+          <ul class="notif-list">
+            {% for proposal in user_proposals %}
+            <li class="notif-item animate-fade-in">
+              <div class="notif-row">
+                <span class="notif-event-title">{{ proposal.event_title }}</span>
+                {% if proposal.status == 'submitted' %}
+                <span class="notif-status notif-status-pending">Submitted</span>
+                {% elif proposal.status == 'under_review' %}
+                <span class="notif-status notif-status-review">Under Review</span>
+                {% elif proposal.status == 'rejected' %}
+                <span class="notif-status notif-status-rejected">Rejected</span>
+                {% elif proposal.status == 'finalized' %}
+                <span class="notif-status notif-status-success">Finalized</span>
+                {% endif %}
+              </div>
+
+              <div class="notif-meta-badge">
+                <span class="notif-date-pill">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10m-13 6h14M4 21h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
+                  Updated: {{ proposal.updated_at|date:"M d, Y H:i" }}
+                </span>
+                <span class="notif-age-pill">{{ proposal.updated_at|timesince }} ago</span>
+              </div>
+
+
+              <!-- MODERN PROGRESS CHART -->
+              <div class="workflow-progress">
+                <div class="progress-steps">
+                  {% for status in proposal.statuses %}
+                  <div class="progress-step">
+                    <div class="progress-dot
+                      {% if forloop.counter0 < proposal.status_index %}progress-dot-past{% endif %}
+                      {% if forloop.counter0 == proposal.status_index %}progress-dot-current{% endif %}
+                      {% if forloop.counter0 > proposal.status_index %}progress-dot-future{% endif %}
+                    ">
+                      {% if forloop.counter0 < proposal.status_index %}
+                      <svg width="12" height="12" viewBox="0 0 12 12">
+                        <circle cx="6" cy="6" r="5" fill="#22c55e"/>
+                        <polyline points="4,6 6,8 9,4" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                      {% elif forloop.counter0 == proposal.status_index %}
+                      <svg width="12" height="12" viewBox="0 0 12 12">
+                        <circle cx="6" cy="6" r="5" fill="#3b82f6"/>
+                      </svg>
+                      {% else %}
+                      <svg width="12" height="12" viewBox="0 0 12 12">
+                        <circle cx="6" cy="6" r="5" fill="#cbd5e1"/>
+                      </svg>
+                      {% endif %}
+                    </div>
+                    {% if not forloop.last %}
+                    <div class="progress-step-line"></div>
+                    {% endif %}
+                    <div class="progress-step-label">{{ status|capfirst }}</div>
+                  </div>
+                  {% endfor %}
+                </div>
+
+                <div class="progress-bar-container">
+                  <div class="progress-bar-fill" style="width: {{ proposal.progress_percent }}%;"></div>
+                </div>
+                <span class="progress-bar-label">
+                  {{ proposal.progress_percent }}% complete ({{ proposal.current_label }})
+                </span>
+              </div>
+              <!-- END CHART -->
+              <a href="{% url 'emt:proposal_status_detail' proposal.id %}" class="notif-view-btn">View More Details →</a>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <div class="notif-empty">
+            <span>🎉 All clear! No proposals need your attention right now.</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
                 </div>
             </div>
         </div>

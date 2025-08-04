@@ -4,8 +4,9 @@ from . import views
 app_name = 'emt'
 
 urlpatterns = [
-    path('suite/', views.suite_dashboard, name='iqac_suite_dashboard'),
+    path("dashboard/", views.suite_dashboard, name="dashboard"),
 
+    path('suite/', views.suite_dashboard, name='iqac_suite_dashboard'),
     path('submit/', views.submit_proposal, name='submit_proposal'),
     path('submit/<int:pk>/', views.submit_proposal, name='submit_proposal_with_pk'),
     path('cdl/submit/', views.submit_request_view, name='cdl_submit'),
