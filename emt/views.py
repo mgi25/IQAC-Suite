@@ -609,15 +609,27 @@ def my_approvals(request):
 @user_passes_test(lambda u: getattr(getattr(u, 'profile', None), 'role', '') != 'student')
 def review_approval_step(request, step_id):
     step = get_object_or_404(ApprovalStep, id=step_id)
-    proposal = step.proposal
 
-    # Fetch related proposal details using safe lookups
-    need_analysis = EventNeedAnalysis.objects.filter(proposal=proposal).first()
-    objectives = EventObjectives.objects.filter(proposal=proposal).first()
-    outcomes = EventExpectedOutcomes.objects.filter(proposal=proposal).first()
-    flow = TentativeFlow.objects.filter(proposal=proposal).first()
-    speakers = SpeakerProfile.objects.filter(proposal=proposal)
-    expenses = ExpenseDetail.objects.filter(proposal=proposal)
+    # Fetch the proposal along with all related details in one go.
+    proposal = (
+        EventProposal.objects
+        .select_related(
+            "need_analysis",
+            "objectives",
+            "expected_outcomes",
+            "tentative_flow",
+        )
+        .prefetch_related("speakers", "expense_details")
+        .get(pk=step.proposal_id)
+    )
+
+    # Use related attributes directly from the prefetched proposal
+    need_analysis = getattr(proposal, "need_analysis", None)
+    objectives = getattr(proposal, "objectives", None)
+    outcomes = getattr(proposal, "expected_outcomes", None)
+    flow = getattr(proposal, "tentative_flow", None)
+    speakers = proposal.speakers.all()
+    expenses = proposal.expense_details.all()
 
     GATEKEEPER_ROLES = [
         ApprovalStep.Role.HOD.value,
@@ -744,6 +756,7 @@ def review_approval_step(request, step_id):
 
     return render(request, 'emt/review_approval_step.html', {
         'step': step,
+        'proposal': proposal,
         'GATEKEEPER_ROLES': GATEKEEPER_ROLES,
         'need_analysis': need_analysis,
         'objectives': objectives,
