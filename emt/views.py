@@ -1064,31 +1064,23 @@ def api_organization_types(request):
 # │ NEW FUNCTION ADDED BELOW                                       │
 # ------------------------------------------------------------------
 
+
+from core.models import Report
+
 @login_required
 def admin_reports_view(request):
-    """
-    Displays a combined list of all reports for the admin dashboard.
-    This includes submitted reports from the 'core' app and generated
-    reports from the 'emt' app.
-    """
-    # 1. Get all user-submitted reports from the 'core' app
-    # Assuming the model in core.models is named 'Report'
-    submitted_reports = SubmittedReport.objects.all()
+    try:
+        submitted_reports = Report.objects.all()
+        generated_reports = EventReport.objects.select_related('proposal').all()
 
-    # 2. Get all generated event reports from the 'emt' app
-    # Using 'select_related' to efficiently fetch the related proposal details
-    generated_reports = EventReport.objects.select_related('proposal').all()
+        all_reports_list = list(chain(submitted_reports, generated_reports))
 
-    # 3. Combine the two different querysets into a single Python list
-    all_reports_list = list(chain(submitted_reports, generated_reports))
+        all_reports_list.sort(key=attrgetter('created_at'), reverse=True)
 
-    # 4. Sort the combined list by their creation date in descending order
-    # This assumes both models have a 'created_at' field. If not, you can
-    # use a @property on each model to return a common date field.
-    all_reports_list.sort(key=attrgetter('created_at'), reverse=True)
+        context = {'reports': all_reports_list}
 
-    # 5. Pass the final list to the admin reports template
-    context = {
-        'reports': all_reports_list
-    }
-    return render(request, 'core/admin_reports.html', context)
+        return render(request, 'core/admin_reports.html', context)
+
+    except Exception as e:
+        print(f"Error in admin_reports_view: {e}")
+        return HttpResponse(f"An error occurred: {e}", status=500)

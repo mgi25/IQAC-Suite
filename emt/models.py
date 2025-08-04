@@ -9,6 +9,11 @@ from core.models import Organization
 class EventProposal(models.Model):
     """The central model for capturing all event proposal details."""
 
+    @property
+    def title(self):
+        if self.proposal and self.proposal.event_title:
+            return self.proposal.event_title
+        return "Untitled Event Report"
     class Status(models.TextChoices):
         DRAFT = 'draft', 'Draft'
         SUBMITTED = 'submitted', 'Submitted'
