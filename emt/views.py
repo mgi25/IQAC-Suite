@@ -246,6 +246,15 @@ def autosave_proposal(request):
         ).first()
 
     form = EventProposalForm(data, instance=proposal, user=request.user)
+    faculty_ids = data.get("faculty_incharges") or []
+    if faculty_ids:
+        form.fields['faculty_incharges'].queryset = User.objects.filter(
+            Q(role_assignments__role__name=FACULTY_ROLE) | Q(id__in=faculty_ids)
+        ).distinct()
+    else:
+        form.fields['faculty_incharges'].queryset = User.objects.filter(
+            role_assignments__role__name=FACULTY_ROLE
+        ).distinct()
 
     if not form.is_valid():
         return JsonResponse({"success": False, "errors": form.errors}, status=400)
