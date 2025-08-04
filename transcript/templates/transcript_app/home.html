@@ -7,302 +7,415 @@
 <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
+.dashboard-container {
+  padding: 64px 1.5rem;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: linear-gradient(to bottom right, #f0f6ff, #ffffff);
+  /* Initially center the content */
+  justify-content: center;
+  transition: justify-content 0.6s ease, padding 0.6s ease;
+  overflow: hidden;
+}
+
+/* When students are shown, move content to top */
+.dashboard-container.students-shown {
+  justify-content: flex-start;
+  padding-top: 0.5rem;
+  padding-bottom: 1rem;
+}
+
+.transcript-form-card {
+  width: 100%;
+  max-width: 1200px;
+  background: linear-gradient(to top right, #ffffff, #f9fbff);
+  padding: 2.5rem;
+  position: relative;
+  transition: all 0.6s ease;
+  transform: translateY(0);
+}
+
+/* Initially larger padding for centered look */
+.transcript-form-card.initial {
+  padding: 3rem 2.5rem;
+}
+
+/* Compact version when students are shown */
+.transcript-form-card.compact {
+  padding: 1rem 2rem;
+  margin-bottom: 1rem;
+}
+
+.transcript-form-header {
+  text-align: center;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #2274CB;
+  margin-bottom: 0.5rem;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+}
+
+.transcript-form-header i {
+  font-size: 1.3rem;
+  color: #2274CB;
+}
+
+.transcript-form-title {
+  font-size: 2.4rem;
+  text-align: center;
+  font-weight: 900;
+  background: linear-gradient(to right, #185a9d, #43cea2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 0.5rem;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  transition: font-size 0.6s ease;
+}
+
+/* Smaller title when compact */
+.transcript-form-card.compact .transcript-form-title {
+  font-size: 1.6rem;
+}
+
+.transcript-form-subtitle {
+  text-align: center;
+  font-size: 1.1rem;
+  color: #4b5c6b;
+  font-style: italic;
+  font-weight: 500;
+  margin-bottom: 2rem;
+  transition: font-size 0.6s ease;
+}
+
+.transcript-form-card.compact .transcript-form-subtitle {
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+}
+
+.form-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.transcript-form-card.compact .form-inline {
+  margin-bottom: 0;
+}
+
+.form-inline select,
+.form-inline button {
+  min-width: 200px;
+  padding: 0.9rem 1.2rem;
+  border-radius: 1rem;
+  font-size: 1rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.form-inline select {
+  border: 1px solid #e3eaf3;
+  background-color: #f9fafb;
+  box-shadow: 0 1px 4px rgba(34, 116, 203, 0.04);
+}
+
+.form-inline select:focus {
+  border-color: #2274CB;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(34, 116, 203, 0.10);
+}
+
+.form-inline button {
+  background-color: #3b82f6;
+  color: white;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.13);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.form-inline button:hover {
+  background-color: #2563eb;
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.18);
+}
+
+.form-inline button:disabled {
+  background-color: #94a3b8;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.student-list-container {
+  display: none;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.5s ease;
+  margin-top: 0;
+  width: 100%;
+  max-width: 1200px;
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.student-list-container.show {
+  display: flex;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.student-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e5e7eb;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.student-list-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.student-header-right {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.student-count {
+  font-size: 1rem;
+  color: #6b7280;
+  background: #e0e7ff;
+  padding: 0.3rem 0.9rem;
+  border-radius: 1rem;
+  font-weight: 600;
+}
+
+.btn-download-all {
+  background: #f59e0b;
+  color: white;
+  padding: 0.7rem 1.4rem;
+  font-size: 1rem;
+  font-weight: 700;
+  border-radius: 0.7rem;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.13);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: 0.2s ease;
+}
+
+.btn-download-all:hover {
+  background: #d97706;
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 8px 20px rgba(245, 158, 11, 0.18);
+}
+
+.search-bar-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  background: #fff;
+  border-radius: 30px;
+  border: 1px solid #e3eaf3;
+  padding: 0.5rem 1rem;
+  box-shadow: 0 1px 4px rgba(34, 116, 203, 0.04);
+  max-width: 400px;
+  margin-left: auto;
+}
+
+.search-bar-wrapper input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 1rem;
+  flex: 1;
+  padding: 0.5rem 0.5rem;
+}
+
+.search-bar-wrapper i {
+  color: #2274CB;
+  font-size: 1.1rem;
+}
+
+.student-table-wrapper {
+  overflow-x: auto;
+  margin-top: 1rem;
+}
+
+.student-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 1rem;
+  overflow: hidden;
+  font-size: 0.95rem;
+}
+
+
+.student-table thead {
+  background-color: #3b82f6;
+  color: white;
+  pointer-events: none;
+}
+
+.student-table tr {
+  transition: background 0.3s ease;
+}
+
+.student-table th,
+.student-table td {
+  padding: 1rem 1.2rem;
+  text-align: left;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.student-table td:last-child {
+  white-space: nowrap;
+}
+
+.student-table tr:hover {
+  background-color: #f9fafb;
+}
+
+.status-badge {
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.status-active {
+  background-color: #dcfce7;
+  color: #16a34a;
+}
+
+.status-inactive {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+
+.action-btn {
+  padding: 0.5rem 0.9rem;
+  font-size: 0.9rem;
+  border-radius: 0.5rem;
+  border: none;
+  cursor: pointer;
+  margin-right: 0.4rem;
+  font-weight: 600;
+  transition: transform 0.2s ease-in-out, background-color 0.2s ease-in-out;
+  text-decoration: none;
+}
+
+.btn-view {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.btn-download {
+  background-color: #10b981;
+  color: white;
+}
+
+.btn-view:hover {
+  background-color: #2563eb;
+  transform: scale(1.03);
+}
+
+.btn-download:hover {
+  background-color: #059669;
+  transform: scale(1.03);
+}
+
+.empty-state {
+  text-align: center;
+  color: #b0b8c1;
+  font-size: 1.1rem;
+  margin-top: 2rem;
+  padding: 2rem 0;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
   .dashboard-container {
-    padding: 48px 0 48px 0;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background: #f3f7fa;
+    padding: 1rem;
+  }
+
+  .dashboard-container.students-shown {
+    padding-top: 1rem;
   }
 
   .transcript-form-card {
-    width: 100%;
-    max-width: 1200px;
-    background: white;
-    border-radius: 2rem;
-    box-shadow: 0 8px 32px rgba(34, 116, 203, 0.10);
-    padding: 2.5rem 2.5rem 2rem 2.5rem;
-    margin: 0 auto;
-    position: relative;
+    padding: 1.5rem;
   }
 
-  .transcript-form-header {
-    text-align: center;
-    font-size: 1.2rem;
-    text-transform: uppercase;
-    font-weight: 700;
-    color: #2274CB;
-    margin-bottom: 0.5rem;
-    letter-spacing: 1px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.7rem;
+  .transcript-form-card.initial {
+    padding: 2rem 1.5rem;
   }
 
-  .transcript-form-header i {
-    font-size: 1.3rem;
-    color: #2274CB;
+  .transcript-form-card.compact {
+    padding: 1.5rem;
   }
 
   .transcript-form-title {
-    font-size: 2.2rem;
-    text-align: center;
-    font-weight: 900;
-    color: #185a9d;
-    margin-bottom: 0.5rem;
-    letter-spacing: 1px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.7rem;
+    font-size: 1.8rem;
   }
 
-  .transcript-form-subtitle {
-    text-align: center;
-    font-size: 1.1rem;
-    color: #4b5c6b;
-    font-weight: 500;
-    margin-bottom: 2rem;
+  .transcript-form-card.compact .transcript-form-title {
+    font-size: 1.5rem;
   }
 
   .form-inline {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 2rem;
+    flex-direction: column;
   }
 
   .form-inline select,
   .form-inline button {
-    min-width: 200px;
-    padding: 0.9rem 1.2rem;
-    border-radius: 1rem;
-    font-size: 1rem;
-  }
-
-  .form-inline select {
-    border: 1px solid #e3eaf3;
-    background-color: #f9fafb;
-    box-shadow: 0 1px 4px rgba(34, 116, 203, 0.04);
-  }
-
-  .form-inline select:focus {
-    border-color: #2274CB;
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(34, 116, 203, 0.10);
-  }
-
-  .form-inline button {
-    background-color: #3b82f6;
-    color: white;
-    font-weight: 700;
-    border: none;
-    cursor: pointer;
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.13);
-    transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .form-inline button:hover {
-    background-color: #2563eb;
-    transform: translateY(-2px) scale(1.03);
-    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.18);
-  }
-
-  .student-list-container {
-    display: none;
-    opacity: 0;
-    transform: translateY(20px);
-    transition: all 0.5s ease;
-    margin-top: 2rem;
-  }
-
-  .student-list-container.show {
-    display: block;
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  .student-list-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 2px solid #e5e7eb;
-  }
-
-  .student-list-title {
-    font-size: 1.5rem;
-    font-weight: 800;
-    color: #1f2937;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    width: 100%;
+    min-width: auto;
   }
 
   .student-header-right {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-  }
-
-  .student-count {
-    font-size: 1rem;
-    color: #6b7280;
-    background: #e0e7ff;
-    padding: 0.3rem 0.9rem;
-    border-radius: 1rem;
-    font-weight: 600;
-  }
-
-  .btn-download-all {
-    background: #f59e0b;
-    color: white;
-    padding: 0.7rem 1.4rem;
-    font-size: 1rem;
-    font-weight: 700;
-    border-radius: 0.7rem;
-    text-decoration: none;
-    border: none;
-    cursor: pointer;
-    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.13);
-    transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .btn-download-all:hover {
-    background: #d97706;
-    transform: translateY(-1px) scale(1.03);
-    box-shadow: 0 8px 20px rgba(245, 158, 11, 0.18);
+    width: 100%;
+    justify-content: space-between;
   }
 
   .search-bar-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1.5rem;
-    background: #fff;
-    border-radius: 30px;
-    border: 1px solid #e3eaf3;
-    padding: 0.5rem 1rem;
-    box-shadow: 0 1px 4px rgba(34, 116, 203, 0.04);
-    max-width: 400px;
-    margin-left: auto;
+    max-width: 100%;
+    margin-left: 0;
   }
-
-  .search-bar-wrapper input {
-    border: none;
-    outline: none;
-    background: transparent;
-    font-size: 1rem;
-    flex: 1;
-    padding: 0.5rem 0.5rem;
-  }
-
-  .search-bar-wrapper i {
-    color: #2274CB;
-    font-size: 1.1rem;
-  }
-
-  .student-table-wrapper {
-    overflow-x: auto;
-    margin-top: 1rem;
-  }
-
-  .student-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: #fff;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    border-radius: 1rem;
-    overflow: hidden;
-    font-size: 0.95rem;
-  }
-
-  .student-table thead {
-    background-color: #3b82f6;
-    color: white;
-    pointer-events: none;
-  }
-
-  .student-table th,
-  .student-table td {
-    padding: 1rem 1.2rem;
-    text-align: left;
-    border-bottom: 1px solid #f0f0f0;
-  }
-
-  .student-table td:last-child {
-    white-space: nowrap;
-  }
-
-  .student-table tr:hover {
-    background-color: #f9fafb;
-  }
-
-  .status-badge {
-    padding: 0.3rem 0.7rem;
-    border-radius: 999px;
-    font-weight: 600;
-    font-size: 0.85rem;
-  }
-
-  .status-active {
-    background-color: #dcfce7;
-    color: #16a34a;
-  }
-
-  .status-inactive {
-    background-color: #fef3c7;
-    color: #b45309;
-  }
-
-  .action-btn {
-    padding: 0.5rem 0.9rem;
-    font-size: 0.9rem;
-    border-radius: 0.5rem;
-    border: none;
-    cursor: pointer;
-    margin-right: 0.4rem;
-    font-weight: 600;
-    transition: 0.2s ease;
-    text-decoration: none;
-  }
-
-  .btn-view {
-    background-color: #3b82f6;
-    color: white;
-  }
-
-  .btn-download {
-    background-color: #10b981;
-    color: white;
-  }
-
-  .btn-view:hover {
-    background-color: #2563eb;
-  }
-
-  .btn-download:hover {
-    background-color: #059669;
-  }
-
-  .empty-state {
-    text-align: center;
-    color: #b0b8c1;
-    font-size: 1.1rem;
-    margin-top: 2rem;
-    padding: 2rem 0;
-  }
+}
 </style>
 {% endblock %}
 
