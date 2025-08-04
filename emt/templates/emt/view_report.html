@@ -2,45 +2,93 @@
 {% load static %}
 {% block content %}
 <link rel="stylesheet" href="{% static 'emt/css/iqac_view_report.css' %}">
-<link rel="stylesheet" href="{% static 'emt/css/report_styles.css' %}"> <div class="iqac-view-bg">
-    <div class="iqac-view-container">
+<link rel="stylesheet" href="{% static 'emt/css/report_styles.css' %}">
 
-        <a href="{% url 'emt:generated_reports' %}" class="iqac-back-link">← Back to All Reports</a>
-
-        <div class="iqac-view-header">
-            <span class="iqac-view-icon">📄</span>
-            <div class="iqac-header-text">
-                <span class="iqac-view-title">{{ report.proposal.title }}</span>
-                <span class="iqac-view-subtitle">Generated Event Report</span>
+<div class="page-container">
+    <!-- Header Section -->
+    <div class="page-header">
+        <div class="header-content">
+            <div class="header-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#2A4B8D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="14,2 14,8 20,8" stroke="#2A4B8D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="header-text">
+                <h1 class="page-title">Generated Reports</h1>
+                <p class="page-subtitle">View Generated Reports</p>
             </div>
         </div>
+        
+        <!-- Navigation Breadcrumb -->
+        <div class="breadcrumb">
+            <a href="{% url 'emt:generated_reports' %}" class="breadcrumb-link">← Back to All Reports</a>
+        </div>
+    </div>
 
-        <div class="report-meta">
-            <div class="meta-item">
-                <strong>Organization:</strong>
-                <span>{{ report.proposal.organization|default:"N/A" }}</span>
+    <!-- Report Card -->
+    <div class="report-grid">
+        <div class="report-card">
+            <!-- Category Badge -->
+            <div class="category-badge">
+                <span class="badge-text">Generated Event Report</span>
             </div>
-            <div class="meta-item">
-                <strong>Event Date:</strong>
-                <span>{{ report.proposal.event_datetime|date:"F j, Y" }}</span>
-            </div>
-            <div class="meta-item">
-                <strong>Report Generated:</strong>
-                <span>{{ report.created_at|date:"F j, Y, P" }}</span>
+            
+            <!-- Report Content -->
+            <div class="report-content-wrapper">
+                <div class="report-title">
+                    <h2>{{ report.proposal.title|default:"Untitled Event" }}</h2>
+                </div>
+                
+                <div class="report-meta-grid">
+                    <div class="meta-row">
+                        <span class="meta-label">Organization:</span>
+                        <span class="meta-value">{{ report.proposal.organization|default:"N/A" }}</span>
+                    </div>
+                    <div class="meta-row">
+                        <span class="meta-label">Event Date:</span>
+                        <span class="meta-value">{{ report.proposal.event_datetime|date:"M j, Y" }}</span>
+                    </div>
+                    <div class="meta-row">
+                        <span class="meta-label">Report Generated:</span>
+                        <span class="meta-value">{{ report.created_at|date:"M j, Y g:i A" }}</span>
+                    </div>
+                </div>
+
+                <!-- Report Content Preview -->
+                <div class="report-preview">
+                    {% if report.html_content %}
+                        <div class="content-preview">
+                            {{ report.html_content|safe|truncatewords:30 }}
+                        </div>
+                    {% else %}
+                        <div class="no-content">
+                            <p>No detailed report content is available.</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="report-actions">
+                    <a href="{% url 'emt:download_pdf' report.id %}" class="action-btn primary">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        Download PDF
+                    </a>
+                    <a href="#" class="action-btn secondary">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        Download Word
+                    </a>
+                </div>
             </div>
         </div>
-
-        <div class="report-content">
-            {% if report.html_content %}
-                {{ report.html_content|safe }}
-            {% else %}
-                <p>No detailed report content is available.</p>
-            {% endif %}
-        </div>
-
-        <div class="iqac-view-actions">
-            <a href="{% url 'emt:download_pdf' report.id %}" class="iqac-action-btn primary">Download PDF</a>
-            <a href="#" class="iqac-action-btn">Download Word</a> </div>
     </div>
 </div>
 {% endblock %}
