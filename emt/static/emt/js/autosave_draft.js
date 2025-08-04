@@ -30,13 +30,18 @@ try {
 } catch (e) { /* ignore JSON errors */ }
 
 fields.forEach(field => {
-    field.addEventListener('input', () => {
+    const handler = () => {
         clearTimeout(timeoutId);
         timeoutId = setTimeout(() => {
             autosaveDraft();
             saveLocal();
         }, 1000); // Save after 1 second idle
-    });
+    };
+
+    field.addEventListener('input', handler);
+    if (field.tagName === 'SELECT') {
+        field.addEventListener('change', handler);
+    }
 });
 
 function saveLocal() {

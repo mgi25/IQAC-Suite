@@ -305,6 +305,9 @@ $(document).ready(function() {
                     } else {
                         callback();
                     }
+                },
+                onChange: function() {
+                    facultySelect.trigger('change');
                 }
             });
 
@@ -417,7 +420,7 @@ $(document).ready(function() {
                         .catch(() => callback());
                 },
                 onChange: function(value) {
-                    hiddenField.val(value);
+                    hiddenField.val(value).trigger('change');
                     clearFieldError(newSelect);
                 },
                 placeholder: placeholder,
