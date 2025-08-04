@@ -15,6 +15,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 import json
 import logging
+
+logger = logging.getLogger(__name__)
 from .forms import RoleAssignmentForm
 from .models import (
     Profile,
@@ -893,7 +895,16 @@ def admin_proposal_detail(request, proposal_id):
         ),
         id=proposal_id,
     )
-
+    logger.debug(
+        "Loaded proposal %s '%s' (org=%s, faculty=%d, speakers=%d, expenses=%d, steps=%d)",
+        proposal.id,
+        proposal.event_title,
+        proposal.organization,
+        len(proposal.faculty_incharges.all()),
+        len(proposal.speakers.all()),
+        len(proposal.expense_details.all()),
+        len(proposal.approval_steps.all()),
+    )
     return render(request, "core/admin_proposal_detail.html", {"proposal": proposal})
 
 @user_passes_test(lambda u: u.is_superuser)
