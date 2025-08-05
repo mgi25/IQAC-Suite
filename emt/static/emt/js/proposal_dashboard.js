@@ -159,9 +159,9 @@ $(document).ready(function() {
 
         // We add the new field IDs to the list of fields to be synced.
         const fieldsToSync = [
-            'event_title', 'target_audience', 'event_start_date', 'event_end_date', 
-            'event_focus_type', 'academic_year', 'student_coordinators', 'num_activities', 
-            'pos_pso_input', 'location_modern'
+            'event_title', 'target_audience', 'event_start_date', 'event_end_date',
+            'event_focus_type', 'venue', 'academic_year', 'student_coordinators', 'num_activities',
+            'pos_pso'
         ];
         fieldsToSync.forEach(copyDjangoField);
         setupFacultyTomSelect();
@@ -226,7 +226,7 @@ $(document).ready(function() {
 
     function copyDjangoField(fieldName) {
         const djangoField = $(`#django-basic-info [name="${fieldName}"]`);
-        const modernId = fieldName.replace(/_/g, '-');
+        const modernId = fieldName.replace(/_/g, '-') + '-modern';
         const modernField = $(`#${modernId}`);
         if (djangoField.length && modernField.length) {
             if (djangoField.is('select')) modernField.html(djangoField.html());
