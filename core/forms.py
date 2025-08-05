@@ -34,8 +34,15 @@ class RoleAssignmentForm(forms.ModelForm):
 class RegistrationForm(forms.Form):
     """Capture registration number and multiple organization/role pairs."""
 
-    registration_number = forms.CharField(max_length=50)
+    registration_number = forms.CharField(max_length=50, required=False)
     assignments = forms.CharField(widget=forms.HiddenInput(), required=False)
+
+    def __init__(self, *args, include_regno=True, **kwargs):
+        super().__init__(*args, **kwargs)
+        if include_regno:
+            self.fields["registration_number"].required = True
+        else:
+            self.fields.pop("registration_number")
 
     def clean_assignments(self):
         data = self.cleaned_data.get("assignments", "")

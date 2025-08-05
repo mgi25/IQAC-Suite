@@ -92,28 +92,38 @@ def custom_logout(request):
 @login_required
 def registration_form(request):
     """Collect registration number and role assignments for a user."""
-    student, _ = Student.objects.get_or_create(user=request.user)
-    # Prevent already registered users from accessing the form again
-    if student.registration_number:
-        return redirect("dashboard")
+    user = request.user
+    domain = user.email.split("@")[-1].lower() if user.email else ""
+    is_student = domain.endswith("christuniversity.in")
+
+    student = None
+    if is_student:
+        student, _ = Student.objects.get_or_create(user=user)
+        if student.registration_number:
+            return redirect("dashboard")
+
+    form_kwargs = {"include_regno": is_student}
 
     if request.method == "POST":
-        form = RegistrationForm(request.POST)
+        form = RegistrationForm(request.POST, **form_kwargs)
         if form.is_valid():
-            student.registration_number = form.cleaned_data["registration_number"]
-            student.save()
+            if is_student:
+                student.registration_number = form.cleaned_data["registration_number"]
+                student.save()
             for item in form.cleaned_data["assignments"]:
                 RoleAssignment.objects.get_or_create(
-                    user=request.user,
+                    user=user,
                     organization_id=item["organization"],
                     role_id=item["role"],
                 )
             return redirect("dashboard")
     else:
-        initial = {"registration_number": student.registration_number}
-        form = RegistrationForm(initial=initial)
+        initial = {}
+        if is_student:
+            initial["registration_number"] = student.registration_number
+        form = RegistrationForm(initial=initial, **form_kwargs)
 
-    return render(request, "core/Registration_form.html", {"form": form})
+    return render(request, "core/Registration_form.html", {"form": form, "is_student": is_student})
 
 
 @require_GET
