@@ -257,7 +257,7 @@ $(document).ready(function() {
         let canonicalType = Object.keys(orgTypeMap).find(key => orgType.includes(key)) || orgType;
         const label = orgTypeMap[canonicalType] || capitalizeFirst(canonicalType);
         const orgFieldHtml = `
-            <div class="org-specific-field form-row">
+            <div class="org-specific-field form-row full-width">
                 <div class="input-group">
                     <label for="org-modern-select">${label} *</label>
                     <select id="org-modern-select" placeholder="Type ${label} name..."></select>
