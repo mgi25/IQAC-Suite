@@ -56,6 +56,31 @@ from itertools import chain
 from operator import attrgetter
 # ----------------------------------
 
+import logging
+
+# Get an instance of the logger for the 'emt' app
+logger = logging.getLogger(__name__) # __name__ will resolve to 'emt.views'
+
+def submit_proposal(request):
+    if request.method == 'POST':
+        form = EventProposalForm(request.POST)
+        if form.is_valid():
+            proposal = form.save(commit=False)
+            proposal.submitted_by = request.user
+            proposal.save()
+            
+            # Here is the logging statement
+            logger.info(
+                f"Event proposal '{proposal.title}' (ID: {proposal.id}) "
+                f"was submitted by user '{request.user.username}'."
+            )
+            
+            return redirect('emt:proposal_success')
+    else:
+        form = EventProposalForm()
+    
+    return render(request, 'emt/submit_proposal.html', {'form': form})
+
 # ──────────────────────────────
 # CDL DASHBOARD
 # ──────────────────────────────

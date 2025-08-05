@@ -4,6 +4,9 @@ from django.contrib.auth.models import User
 from django.contrib.auth.signals import user_logged_in
 from .models import Profile
 import sys
+import logging
+
+logger = logging.getLogger(__name__)
 
 @receiver(post_save, sender=User)
 def create_or_update_user_profile(sender, instance, created, **kwargs):
@@ -37,3 +40,10 @@ def assign_role_on_login(sender, user, request, **kwargs):
     # Store the role in the session for downstream views if available.
     if request is not None:
         request.session['role'] = role
+
+@receiver(user_logged_in)
+def log_user_login(sender, request, user, **kwargs):
+    """
+    Logs a message when a user logs in.
+    """
+    logger.info(f"User '{user.username}' (ID: {user.id}) logged in from IP address {request.META.get('REMOTE_ADDR')}.")
