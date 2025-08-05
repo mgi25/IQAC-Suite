@@ -220,16 +220,35 @@ $(document).ready(function() {
         }).filter(Boolean);
 
         const tomselect = new TomSelect(facultySelect[0], {
-            plugins: ['remove_button'], valueField: 'id', labelField: 'text', searchField: 'text', create: false, placeholder: 'Type a faculty name…', maxItems: 10, options: existingOptions,
+            plugins: ['remove_button'],
+            valueField: 'id',
+            labelField: 'text',
+            searchField: 'text',
+            create: false,
+            placeholder: 'Type a faculty name…',
+            maxItems: 10,
+            options: existingOptions,
             load: (query, callback) => {
                 if (!query.length) return callback();
-                fetch(`${window.API_FACULTY}?q=${encodeURIComponent(query)}`).then(r => r.json()).then(callback).catch(() => callback());
+                fetch(`${window.API_FACULTY}?q=${encodeURIComponent(query)}`)
+                    .then(r => r.json())
+                    .then(callback)
+                    .catch(() => callback());
             }
         });
+
+        // Ensure selected values are mirrored into the hidden Django field
         tomselect.on('change', () => {
-            djangoFacultySelect.val(tomselect.getValue()).trigger('change');
+            const values = tomselect.getValue();
+            djangoFacultySelect.empty();
+            values.forEach(val => {
+                const text = tomselect.options[val]?.text || val;
+                djangoFacultySelect.append(new Option(text, val, true, true));
+            });
+            djangoFacultySelect.trigger('change');
             clearFieldError(facultySelect);
         });
+
         const initialValues = djangoFacultySelect.val();
         if (initialValues && initialValues.length) {
             tomselect.setValue(initialValues);

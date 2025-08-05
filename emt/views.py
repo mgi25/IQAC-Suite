@@ -135,6 +135,7 @@ def submit_proposal(request, pk=None):
     if request.method == "POST":
         post_data = request.POST.copy()
         logger.debug("submit_proposal POST data: %s", post_data)
+        logger.debug("Faculty IDs from POST: %s", post_data.getlist("faculty_incharges"))
         form = EventProposalForm(
             post_data,
             instance=proposal,
