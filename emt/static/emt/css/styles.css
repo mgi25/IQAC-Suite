@@ -1008,3 +1008,52 @@
     transition: all 0.2s ease;
     box-shadow: 0 2px 4px rgba(38, 68, 135, 0.2);
 }
+
+/* Outcome selection modal */
+.outcome-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.outcome-modal.show {
+    display: flex;
+}
+
+.outcome-modal .modal-content {
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 500px;
+    width: 90%;
+}
+
+.modal-actions {
+    margin-top: 16px;
+    text-align: right;
+}
+
+.btn-cancel,
+.btn-save {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.btn-cancel {
+    background: var(--border-color);
+    color: var(--text-dark);
+    margin-right: 8px;
+}
+
+.btn-save {
+    background: var(--primary-blue);
+    color: #fff;
+}
