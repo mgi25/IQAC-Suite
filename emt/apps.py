@@ -8,4 +8,3 @@ class EmtConfig(AppConfig):
         """
         Import signals when the app is ready.
         """
-        import emt.signals

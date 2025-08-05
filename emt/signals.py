@@ -1,9 +1,10 @@
 # emt/signals.py
 
 import logging
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from .models import EventProposal # Make sure this import is correct for your models
+from .models import RoleAssignment 
 
 logger = logging.getLogger(__name__)
 
