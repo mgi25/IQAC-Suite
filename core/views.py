@@ -17,7 +17,7 @@ import json
 import logging
 
 logger = logging.getLogger(__name__)
-from .forms import RoleAssignmentForm
+from .forms import RoleAssignmentForm, RegistrationForm
 from .models import (
     Profile,
     RoleAssignment,
@@ -87,6 +87,54 @@ def custom_logout(request):
     logout(request)
     google_logout_url = "https://accounts.google.com/Logout"
     return redirect(f"{google_logout_url}?continue=https://appengine.google.com/_ah/logout?continue=http://127.0.0.1:8000/accounts/login/")
+
+
+@login_required
+def registration_form(request):
+    """Collect registration number and role assignments for a user."""
+    student, _ = Student.objects.get_or_create(user=request.user)
+    if request.method == "POST":
+        form = RegistrationForm(request.POST)
+        if form.is_valid():
+            student.registration_number = form.cleaned_data["registration_number"]
+            student.save()
+            for item in form.cleaned_data["assignments"]:
+                RoleAssignment.objects.get_or_create(
+                    user=request.user,
+                    organization_id=item["organization"],
+                    role_id=item["role"],
+                )
+            return redirect("dashboard")
+    else:
+        initial = {"registration_number": student.registration_number}
+        form = RegistrationForm(initial=initial)
+
+    return render(request, "core/Registration_form.html", {"form": form})
+
+
+@require_GET
+def api_organizations(request):
+    """Return active organizations for typeahead."""
+    q = request.GET.get("q", "").strip()
+    orgs = Organization.objects.filter(is_active=True)
+    if q:
+        orgs = orgs.filter(name__icontains=q)
+    data = [{"id": o.id, "text": o.name} for o in orgs.order_by("name")[:20]]
+    return JsonResponse({"organizations": data})
+
+
+@require_GET
+def api_roles(request):
+    """Return roles filtered by organization for typeahead."""
+    org_id = request.GET.get("organization")
+    q = request.GET.get("q", "").strip()
+    roles = OrganizationRole.objects.filter(is_active=True)
+    if org_id:
+        roles = roles.filter(organization_id=org_id)
+    if q:
+        roles = roles.filter(name__icontains=q)
+    data = [{"id": r.id, "text": r.name} for r in roles.order_by("name")[:20]]
+    return JsonResponse({"roles": data})
 
 # ─────────────────────────────────────────────────────────────
 #  Dashboard
@@ -276,10 +324,16 @@ def admin_role_management(request, organization_id=None):
         # Direct access to one organization's roles
         org = get_object_or_404(Organization, id=organization_id)
         roles = OrganizationRole.objects.filter(organization=org).order_by('name')
-        
+        assignments = (
+            RoleAssignment.objects.filter(organization=org)
+            .select_related("user", "role")
+            .order_by("user__username")
+        )
+
         context = {
             'selected_organization': org,
             'roles': roles,
+            'role_assignments': assignments,
             'step': 'single_org_roles'
         }
         return render(request, "core/admin_role_management.html", context)
