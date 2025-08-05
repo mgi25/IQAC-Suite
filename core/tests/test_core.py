@@ -75,6 +75,8 @@ class ApprovalFlowViewTests(TestCase):
         ot = OrganizationType.objects.create(name="Dept")
         org = Organization.objects.create(name="Math", org_type=ot)
         user = User.objects.create_user("user", "u@x.com", "pass")
+        role = OrganizationRole.objects.create(organization=org, name="Member")
+        RoleAssignment.objects.create(user=user, role=role, organization=org)
         self.client.force_login(user)
 
         resp = self.client.post(
@@ -118,6 +120,8 @@ class SaveApprovalFlowTests(TestCase):
 
     def test_save_approval_flow_forbidden_for_non_superuser(self):
         user = User.objects.create_user("user", "u@x.com", "pass")
+        role = OrganizationRole.objects.create(organization=self.org, name="Member")
+        RoleAssignment.objects.create(user=user, role=role, organization=self.org)
         self.client.force_login(user)
 
         resp = self.client.post(
