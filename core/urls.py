@@ -10,6 +10,8 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('accounts/logout/', custom_logout, name='account_logout'),
 
+    path('register/', views.registration_form, name='registration_form'),
+
     # ────────────────────────────────────────────────
     # General Dashboard and Proposal Views
     # ────────────────────────────────────────────────
@@ -106,6 +108,9 @@ urlpatterns = [
     # Additional APIs from other branch
     path('api/search/', views.api_global_search, name='api_global_search'),  # (Keep only if needed, else remove duplicate)
     path('admin-dashboard-api/', views.admin_dashboard_api, name='admin_dashboard_api'),
+
+    path('api/organizations/', views.api_organizations, name='api_organizations'),
+    path('api/roles/', views.api_roles, name='api_roles'),
 
     # ────────────────────────────────────────────────
     # Optional: User Dashboard (if not admin)

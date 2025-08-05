@@ -1,4 +1,174 @@
-    // Stat card click handlers for filtering events
+// --- Tab Navigation ---
+document.addEventListener('DOMContentLoaded', function() {
+  // Tab switching functionality
+  const tabButtons = document.querySelectorAll('.nav-tab[data-tab]');
+  const tabContents = document.querySelectorAll('.tab-content');
+
+  tabButtons.forEach(button => {
+    button.addEventListener('click', function() {
+      const targetTab = this.dataset.tab;
+      
+      // Remove active class from all tabs and contents
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      tabContents.forEach(content => content.classList.remove('active'));
+      
+      // Add active class to clicked tab and corresponding content
+      this.classList.add('active');
+      const targetContent = document.getElementById(targetTab);
+      if (targetContent) {
+        targetContent.classList.add('active');
+      }
+    });
+  });
+
+  // Calendar functionality follows below...
+});
+// Example: Replace with actual events from backend
+const EVENTS = window.DASHBOARD_EVENTS || [
+  // { date: '2025-08-16', title: 'test', id: 1 }, ...
+];
+
+function getEventsForDate(dateStr) {
+  return EVENTS.filter(ev => ev.date === dateStr);
+}
+
+function showEventsModal(dateStr, events) {
+  let modal = document.createElement('div');
+  modal.className = 'calendar-events-modal';
+  modal.innerHTML = `<div class="modal-content">
+    <button class="modal-close" onclick="this.parentNode.parentNode.remove()">&times;</button>
+    <h3>Events on ${dateStr}</h3>
+    <div class="events-list">${events.length ? events.map(ev => `
+      <div class="event-modal-item">
+        <span class="event-title">${ev.title}</span>
+        <a href="/admin/proposal/${ev.id}/" class="btn-link" target="_blank">View Details</a>
+        <button class="btn-link" onclick="window.open('https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(ev.title)}&dates=${dateStr.replace(/-/g, '')}/${dateStr.replace(/-/g, '')}', '_blank')">Remind Me</button>
+      </div>
+    `).join('') : '<div>No events.</div>'}
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
+// --- Calendar Rendering ---
+document.addEventListener('DOMContentLoaded', function() {
+  const calendarDays = document.getElementById('calendarDays');
+  const currentMonthLabel = document.getElementById('currentMonth');
+  const prevMonthBtn = document.getElementById('prevMonth');
+  const nextMonthBtn = document.getElementById('nextMonth');
+
+  if (!calendarDays || !currentMonthLabel || !prevMonthBtn || !nextMonthBtn) return;
+
+  let today = new Date();
+  let currentMonth = today.getMonth();
+  let currentYear = today.getFullYear();
+
+  function pad(n) { return n < 10 ? '0' + n : n; }
+
+  function renderCalendar(month, year) {
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    let startDay = (firstDay.getDay() + 6) % 7;
+    let daysInMonth = lastDay.getDate();
+    currentMonthLabel.textContent = firstDay.toLocaleString('default', { month: 'long', year: 'numeric' });
+    let daysHtml = '';
+    for (let i = 0; i < startDay; i++) {
+      daysHtml += '<div class="calendar-day empty"></div>';
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${year}-${pad(month+1)}-${pad(d)}`;
+      const events = getEventsForDate(dateStr);
+      const isToday = (d === today.getDate() && month === today.getMonth() && year === today.getFullYear());
+      daysHtml += `<div class="calendar-day${isToday ? ' today' : ''}${events.length ? ' has-event' : ''}" data-date="${dateStr}">
+        ${d}
+        ${events.length ? '<span class="event-dot"></span>' : ''}
+      </div>`;
+    }
+    calendarDays.innerHTML = daysHtml;
+    // Add click listeners
+    Array.from(calendarDays.querySelectorAll('.calendar-day.has-event')).forEach(day => {
+      day.addEventListener('click', function() {
+        showEventsModal(this.dataset.date, getEventsForDate(this.dataset.date));
+      });
+    });
+  }
+
+  prevMonthBtn.addEventListener('click', function() {
+    currentMonth--;
+    if (currentMonth < 0) {
+      currentMonth = 11;
+      currentYear--;
+    }
+    renderCalendar(currentMonth, currentYear);
+  });
+  nextMonthBtn.addEventListener('click', function() {
+    currentMonth++;
+    if (currentMonth > 11) {
+      currentMonth = 0;
+      currentYear++;
+    }
+    renderCalendar(currentMonth, currentYear);
+  });
+
+  renderCalendar(currentMonth, currentYear);
+});
+// Modern Calendar Rendering
+document.addEventListener('DOMContentLoaded', function() {
+  const calendarDays = document.getElementById('calendarDays');
+  const currentMonthLabel = document.getElementById('currentMonth');
+  const prevMonthBtn = document.getElementById('prevMonth');
+  const nextMonthBtn = document.getElementById('nextMonth');
+
+  if (!calendarDays || !currentMonthLabel || !prevMonthBtn || !nextMonthBtn) return;
+
+  let today = new Date();
+  let currentMonth = today.getMonth();
+  let currentYear = today.getFullYear();
+
+  function renderCalendar(month, year) {
+    // Get first day of the month
+    const firstDay = new Date(year, month, 1);
+    // Get last day of the month
+    const lastDay = new Date(year, month + 1, 0);
+    // Get weekday index (0=Sun, 1=Mon...)
+    let startDay = (firstDay.getDay() + 6) % 7; // Make Monday=0
+    let daysInMonth = lastDay.getDate();
+
+    // Set month label
+    currentMonthLabel.textContent = firstDay.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+    // Build days grid
+    let daysHtml = '';
+    for (let i = 0; i < startDay; i++) {
+      daysHtml += '<div class="calendar-day empty"></div>';
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const isToday = (d === today.getDate() && month === today.getMonth() && year === today.getFullYear());
+      daysHtml += `<div class="calendar-day${isToday ? ' today' : ''}">${d}</div>`;
+    }
+    calendarDays.innerHTML = daysHtml;
+  }
+
+  prevMonthBtn.addEventListener('click', function() {
+    currentMonth--;
+    if (currentMonth < 0) {
+      currentMonth = 11;
+      currentYear--;
+    }
+    renderCalendar(currentMonth, currentYear);
+  });
+  nextMonthBtn.addEventListener('click', function() {
+    currentMonth++;
+    if (currentMonth > 11) {
+      currentMonth = 0;
+      currentYear++;
+    }
+    renderCalendar(currentMonth, currentYear);
+  });
+
+  renderCalendar(currentMonth, currentYear);
+});
+// Stat card click handlers for filtering events
     const cardUpcoming = document.getElementById('cardUpcoming');
     const cardOrganized = document.getElementById('cardOrganized');
     const cardThisWeek = document.getElementById('cardThisWeek');
@@ -522,6 +692,166 @@ document.addEventListener('DOMContentLoaded', function () {
     filters.forEach(filter => {
         filter.addEventListener('change', filterEvents);
     });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const tabs = document.querySelectorAll('.nav-tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const calendarDaysContainer = document.querySelector('.calendar-days');
+    const monthYearElement = document.getElementById('month-year');
+    const prevMonthBtn = document.getElementById('prev-month');
+    const nextMonthBtn = document.getElementById('next-month');
+    const eventModal = document.getElementById('event-modal');
+    const eventModalClose = document.querySelector('.event-modal-close');
+    const modalBody = document.querySelector('.event-modal-body');
+    const modalTitle = document.getElementById('modal-date-title');
+
+    let currentDate = new Date();
+    let events = {}; // Cache for events: { 'YYYY-MM': [event, ...] }
+    let selectedDate = null;
+
+    // --- Tab Functionality ---
+    tabs.forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            e.preventDefault();
+            const target = tab.getAttribute('data-tab');
+
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+                if (content.id === target) {
+                    content.classList.add('active');
+                }
+            });
+        });
+    });
+
+    // --- Calendar Functionality ---
+    async function fetchCalendarEvents(year, month) {
+        const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
+        if (events[monthStr]) {
+            return events[monthStr];
+        }
+        try {
+            const response = await fetch(`/core/api/calendar-events/?month=${monthStr}`);
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const data = await response.json();
+            events[monthStr] = data.events;
+            return data.events;
+        } catch (error) {
+            console.error('Failed to fetch calendar events:', error);
+            return [];
+        }
+    }
+
+    async function renderCalendar(date) {
+        calendarDaysContainer.innerHTML = '';
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        
+        monthYearElement.textContent = `${date.toLocaleString('default', { month: 'long' })} ${year}`;
+
+        const monthEvents = await fetchCalendarEvents(year, month);
+        const eventDates = new Set(monthEvents.map(e => new Date(e.start_time).getDate()));
+
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        // Add empty placeholders for days before the 1st
+        for (let i = 0; i < firstDay; i++) {
+            calendarDaysContainer.innerHTML += `<div class="calendar-day other-month"></div>`;
+        }
+
+        // Add days of the month
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dayEl = document.createElement('div');
+            dayEl.classList.add('calendar-day');
+            dayEl.textContent = day;
+            dayEl.dataset.day = day;
+
+            const today = new Date();
+            if (year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) {
+                dayEl.classList.add('today');
+            }
+
+            if (eventDates.has(day)) {
+                dayEl.classList.add('has-event');
+            }
+            
+            dayEl.addEventListener('click', () => {
+                selectedDate = new Date(year, month, day);
+                document.querySelectorAll('.calendar-day').forEach(d => d.classList.remove('selected'));
+                dayEl.classList.add('selected');
+                if (eventDates.has(day)) {
+                    showEventsForDate(selectedDate, monthEvents);
+                }
+            });
+
+            calendarDaysContainer.appendChild(dayEl);
+        }
+    }
+
+    function showEventsForDate(date, monthEvents) {
+        modalTitle.textContent = `Events on ${date.toLocaleString('default', { month: 'long' })} ${date.getDate()}`;
+        modalBody.innerHTML = '<div class="modal-loading"></div>';
+        eventModal.style.display = 'flex';
+
+        const eventsForDay = monthEvents.filter(e => new Date(e.start_time).getDate() === date.getDate());
+
+        setTimeout(() => { // Simulate loading
+            if (eventsForDay.length > 0) {
+                modalBody.innerHTML = eventsForDay.map(event => `
+                    <div class="modal-event-item">
+                        <div class="modal-event-info">
+                            <h4>${event.title}</h4>
+                            <p class="modal-event-time">
+                                ${new Date(event.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - 
+                                ${new Date(event.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                            <p class="modal-event-description">${event.description || 'No description available.'}</p>
+                        </div>
+                        <div class="modal-event-actions">
+                            <a href="/events/${event.id}/" class="btn-modal-action btn-view-details">
+                                <i class="fas fa-eye"></i> View Details
+                            </a>
+                            <a href="${event.google_calendar_link}" target="_blank" class="btn-modal-action btn-add-google">
+                                <i class="fab fa-google"></i> Add to Google
+                            </a>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                modalBody.innerHTML = '<div class="no-events"><p>No events scheduled for this day.</p></div>';
+            }
+        }, 300);
+    }
+
+    prevMonthBtn.addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        renderCalendar(currentDate);
+    });
+
+    nextMonthBtn.addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        renderCalendar(currentDate);
+    });
+
+    eventModalClose.addEventListener('click', () => {
+        eventModal.style.display = 'none';
+    });
+
+    window.addEventListener('click', (e) => {
+        if (e.target === eventModal) {
+            eventModal.style.display = 'none';
+        }
+    });
+
+    // Initial Load
+    renderCalendar(currentDate);
 });
 
 // --- OPTIONAL: Make modal functions globally available for debugging ---
