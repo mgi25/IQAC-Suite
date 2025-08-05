@@ -3,7 +3,7 @@ from allauth.account.adapter import DefaultAccountAdapter
 from django.urls import reverse
 from django.utils.text import slugify
 from django.contrib.auth.models import User
-from core.models import Profile
+from core.models import Profile, RoleAssignment
 from emt.models import Student
 
 class SchoolSocialAccountAdapter(DefaultSocialAccountAdapter):
@@ -70,4 +70,6 @@ class RoleBasedAccountAdapter(DefaultAccountAdapter):
                 return reverse('registration_form')
             if not getattr(student, 'registration_number', ''):
                 return reverse('registration_form')
+        if not RoleAssignment.objects.filter(user=user).exists():
+            return reverse('registration_form')
         return reverse('dashboard')
