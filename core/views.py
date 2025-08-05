@@ -197,6 +197,23 @@ def dashboard(request):
     )['total'] or 0
     my_students = Student.objects.filter(mentor=user)
     my_classes = Class.objects.filter(teacher=user)
+    
+    # Prepare calendar events data for JavaScript
+    all_events = finalized_events.filter(event_datetime__isnull=False)
+    calendar_events = []
+    for event in all_events:
+        calendar_events.append({
+            'id': event.id,
+            'title': event.event_title,
+            'date': event.event_datetime.strftime('%Y-%m-%d'),
+            'datetime': event.event_datetime.strftime('%Y-%m-%d %H:%M'),
+            'venue': event.venue,
+            'organization': event.organization.name if event.organization else '',
+            'submitted_by': event.submitted_by.get_full_name() or event.submitted_by.username,
+            'participants': event.fest_fee_participants or event.conf_fee_participants or 0,
+            'is_my_event': user in [event.submitted_by] + list(event.faculty_incharges.all())
+        })
+    
     context = {
         "my_events": my_events,
         "other_events": other_events,
@@ -208,6 +225,7 @@ def dashboard(request):
         "my_classes": my_classes,
         "role_names": role_names,
         "user": user,
+        "calendar_events": json.dumps(calendar_events),
     }
     return render(request, dashboard_template, context)
 

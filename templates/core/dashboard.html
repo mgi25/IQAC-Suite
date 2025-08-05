@@ -109,6 +109,26 @@
             {% endif %}
         </div>
 
+        <!-- Event Details Modal -->
+        <div id="eventModal" class="event-modal" style="display: none;">
+            <div class="event-modal-content">
+                <div class="event-modal-header">
+                    <h3 id="eventModalTitle">Events on Selected Date</h3>
+                    <button class="event-modal-close" onclick="closeEventModal()">&times;</button>
+                </div>
+                <div class="event-modal-body">
+                    <div id="eventModalList" class="event-modal-list">
+                        <!-- Event details will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Pass calendar events data to JavaScript
+            window.DASHBOARD_EVENTS = {{ calendar_events|safe }};
+        </script>
+
         <div id="events" class="tab-content">
             <div class="stats-row" style="display: flex; gap: 24px; margin-bottom: 24px;">
                 <div class="stat-card blue clickable" id="cardUpcoming" style="flex: 1;">
