@@ -50,30 +50,6 @@ import logging
 
 # Get an instance of the logger for the 'emt' app
 logger = logging.getLogger(__name__) # __name__ will resolve to 'emt.views'
-
-def submit_proposal(request):
-    if request.method == 'POST':
-        form = EventProposalForm(request.POST)
-        if form.is_valid():
-            proposal = form.save(commit=False)
-            proposal.submitted_by = request.user
-            proposal.save()
-            
-            # Here is the logging statement
-            logger.info(
-                f"Event proposal '{proposal.title}' (ID: {proposal.id}) "
-                f"was submitted by user '{request.user.username}'."
-            )
-            
-            return redirect('emt:proposal_success')
-    else:
-        form = EventProposalForm()
-    
-    return render(request, 'emt/submit_proposal.html', {'form': form})
-
-# ──────────────────────────────
-# CDL DASHBOARD
-# ──────────────────────────────
 # Configure Gemini API key from environment variable(s)
 # Prefer `GEMINI_API_KEY`; fall back to `GOOGLE_API_KEY`
 api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
@@ -159,6 +135,7 @@ def submit_proposal(request, pk=None):
     if request.method == "POST":
         post_data = request.POST.copy()
         logger.debug("submit_proposal POST data: %s", post_data)
+        logger.debug("Faculty IDs from POST: %s", post_data.getlist("faculty_incharges"))
         form = EventProposalForm(
             post_data,
             instance=proposal,
