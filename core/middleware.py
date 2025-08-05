@@ -24,6 +24,8 @@ class RegistrationRequiredMiddleware:
             reverse('registration_form'),
             reverse('logout'),
             reverse('login'),
+            reverse('api_organizations'),
+            reverse('api_roles'),
         }
         if path in exempt_paths:
             return True
