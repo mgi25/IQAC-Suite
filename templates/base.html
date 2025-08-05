@@ -7,11 +7,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/x-icon" href="{% static 'core/img/favicon.ico' %}">
   
-  <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   
-  <!-- Styles -->
   <link rel="stylesheet" href="{% static 'core/css/base.css' %}">
   <link rel="stylesheet" href="{% static 'core/css/command-center.css' %}">
   
@@ -19,101 +17,96 @@
 </head>
 <body class="command-center-layout">
   
-  <!-- ZONE 1: TOP UTILITY BAR -->
   <div class="top-utility-bar">
-    <div class="utility-bar-flex" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-      <div class="utility-left" style="display: flex; align-items: center; gap: 1rem;">
-        <div class="app-logo" style="display: flex; align-items: center; gap: 0.75rem;">
-          <img src="{% static 'core/img/campus-logo.png' %}" alt="CHRIST University" class="logo-img">
-          <span class="app-name">IQAC Command Center</span>
-        </div>
+    <div class="utility-left">
+      <div class="app-logo">
+        <img src="{% static 'core/img/campus-logo.png' %}" alt="CHRIST University" class="logo-img">
+        <span class="app-name">IQAC Command Center</span>
       </div>
-      <div class="utility-center" style="flex: 1; display: flex; justify-content: center;">
-        <div class="universal-search" style="max-width: 500px; width: 100%;">
-          <i class="fas fa-search search-icon"></i>
-          <input type="text" id="globalSearch" placeholder="Search students, reports, proposals..." class="search-input" autocomplete="off">
-          <div class="search-shortcut">Ctrl+K</div>
-          <div class="search-results" id="searchResults"></div>
-        </div>
+    </div>
+    <div class="utility-center">
+      <div class="universal-search">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" id="globalSearch" placeholder="Search students, reports, proposals..." class="search-input" autocomplete="off">
+        <div class="search-shortcut">Ctrl+K</div>
+        <div class="search-results" id="searchResults"></div>
       </div>
-      <div class="utility-right" style="display: flex; align-items: center; gap: 1.5rem;">
-        <div class="notification-section">
-          <button class="utility-btn notification-btn" id="notificationBtn" aria-label="Notifications">
-            <i class="fas fa-bell"></i>
+    </div>
+    <div class="utility-right">
+      <div class="notification-section">
+        <button class="utility-btn notification-btn" id="notificationBtn" aria-label="Notifications">
+          <i class="fas fa-bell"></i>
+          {% if notifications and notifications|length > 0 %}
+          <span class="notification-badge" id="notificationBadge">{{ notifications|length }}</span>
+          {% endif %}
+        </button>
+        <div class="notification-dropdown" id="notificationDropdown">
+          <div class="notification-header">
+            <h3>Notifications</h3>
             {% if notifications and notifications|length > 0 %}
-            <span class="notification-badge" id="notificationBadge">{{ notifications|length }}</span>
+            <button class="mark-all-read" id="markAllRead">Mark all read</button>
             {% endif %}
-          </button>
-          <div class="notification-dropdown" id="notificationDropdown">
-            <div class="notification-header">
-              <h3>Notifications</h3>
-              {% if notifications and notifications|length > 0 %}
-              <button class="mark-all-read" id="markAllRead">Mark all read</button>
-              {% endif %}
-            </div>
-            <div class="notification-list" id="notificationList">
-              {% if notifications and notifications|length > 0 %}
-                {% for notification in notifications %}
-                <div class="notification-item {% if not notification.is_read %}unread{% endif %}">
-                  <div class="notification-icon">
-                    <i class="fas fa-{{ notification.icon|default:'bell' }}"></i>
-                  </div>
-                  <div class="notification-content">
-                    <div class="notification-title">{{ notification.title }}</div>
-                    <div class="notification-text">{{ notification.message }}</div>
-                    <div class="notification-time">{{ notification.created_at|timesince }} ago</div>
-                  </div>
+          </div>
+          <div class="notification-list" id="notificationList">
+            {% if notifications and notifications|length > 0 %}
+              {% for notification in notifications %}
+              <div class="notification-item {% if not notification.is_read %}unread{% endif %}">
+                <div class="notification-icon">
+                  <i class="fas fa-{{ notification.icon|default:'bell' }}"></i>
                 </div>
-                {% endfor %}
-              {% else %}
-              <div class="notification-item">
-                <div class="notification-content" style="text-align: center; color: #6b7280; padding: 2rem;">
-                  <div class="notification-title">No notifications</div>
-                  <div class="notification-text">You're all caught up!</div>
+                <div class="notification-content">
+                  <div class="notification-title">{{ notification.title }}</div>
+                  <div class="notification-text">{{ notification.message }}</div>
+                  <div class="notification-time">{{ notification.created_at|timesince }} ago</div>
                 </div>
               </div>
-              {% endif %}
-            </div>
-            {% if notifications and notifications|length > 0 %}
-            <div class="notification-footer">
-              <a href="/core-admin/notifications/" class="view-all-link">View all notifications</a>
+              {% endfor %}
+            {% else %}
+            <div class="notification-item">
+              <div class="notification-content" style="text-align: center; color: #6b7280; padding: 2rem;">
+                <div class="notification-title">No notifications</div>
+                <div class="notification-text">You're all caught up!</div>
+              </div>
             </div>
             {% endif %}
           </div>
-        </div>
-        <div class="profile-section">
-          <button class="profile-btn" aria-label="Profile">
-            <div class="profile-avatar">
-              {{ request.user.get_full_name|default:request.user.username|slice:":1"|upper }}
-            </div>
-            <span class="profile-name">{{ request.user.get_full_name|default:request.user.username }}</span>
-            <i class="fas fa-chevron-down"></i>
-          </button>
-          <div class="profile-dropdown">
-            <div class="dropdown-header">
-              <div class="user-info">
-                <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
-                <small>{{ request.session.role|default:"User" }}</small>
-              </div>
-            </div>
-            <div class="dropdown-divider"></div>
-            <a href="#" class="dropdown-item">
-              <i class="fas fa-user"></i> Profile Settings
-            </a>
-            <a href="{% url 'logout' %}" class="dropdown-item">
-              <i class="fas fa-sign-out-alt"></i> Logout
-            </a>
+          {% if notifications and notifications|length > 0 %}
+          <div class="notification-footer">
+            <a href="/core-admin/notifications/" class="view-all-link">View all notifications</a>
           </div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="profile-section">
+        <button class="profile-btn" aria-label="Profile">
+          <div class="profile-avatar">
+            {{ request.user.get_full_name|default:request.user.username|slice:":1"|upper }}
+          </div>
+          <span class="profile-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+          <i class="fas fa-chevron-down"></i>
+        </button>
+        <div class="profile-dropdown">
+          <div class="dropdown-header">
+            <div class="user-info">
+              <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+              <small>{{ request.session.role|default:"User" }}</small>
+            </div>
+          </div>
+          <div class="dropdown-divider"></div>
+          <a href="#" class="dropdown-item">
+            <i class="fas fa-user"></i> Profile Settings
+          </a>
+          <a href="{% url 'logout' %}" class="dropdown-item">
+            <i class="fas fa-sign-out-alt"></i> Logout
+          </a>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ZONE 2: LEFT CONTROL PANEL -->
   <div class="left-control-panel">
     <nav class="control-navigation">
       
-      <!-- Dashboard - Always Visible -->
       <div class="nav-item">
         {% if user.is_superuser or request.session.role == 'admin' %}
         <a href="{% url 'admin_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
@@ -128,7 +121,6 @@
         {% endif %}
       </div>
 
-      <!-- Event Management Suite - Expandable -->
       <div class="nav-section {% if 'suite' in request.resolver_match.url_name or '/suite/' in request.path or request.resolver_match.namespace == 'emt' %}expanded{% endif %}">
         <div class="nav-section-header">
           <i class="fas fa-clipboard-list nav-icon"></i>
@@ -153,7 +145,6 @@
         </div>
       </div>
 
-      <!-- Graduate Transcript - Standalone (Superuser only) -->
       {% if user.is_superuser %}
       <div class="nav-item">
         <a href="/transcript/" class="nav-link {% if request.resolver_match.namespace == 'transcript' or 'transcript' in request.resolver_match.url_name or '/transcript/' in request.path %}active{% endif %}">
@@ -163,7 +154,6 @@
       </div>
       {% endif %}
 
-      <!-- CDL - Expandable (Faculty and Superuser) -->
       {% if user.is_superuser or request.session.role == 'faculty' or user|has_group:"Faculty" %}
       <div class="nav-section {% if 'cdl' in request.resolver_match.url_name or '/cdl/' in request.path %}expanded{% endif %}">
         <div class="nav-section-header">
@@ -182,7 +172,6 @@
       </div>
       {% endif %}
 
-      <!-- User Management - Expandable (Admin Only) -->
       {% if user.is_superuser or request.session.role == 'admin' %}
       <div class="nav-section {% if 'users' in request.path or 'user-roles' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' %}expanded{% endif %}">
         <div class="nav-section-header">
@@ -202,7 +191,6 @@
       {% endif %}
 
       {% if user.is_superuser or request.session.role == 'admin' %}
-      <!-- Event Proposals - Standalone (Admin Only) -->
       <div class="nav-item">
         <a href="/core-admin/event-proposals/" class="nav-link {% if request.resolver_match.url_name == 'admin_event_proposals' %}active{% endif %}">
           <i class="fas fa-list nav-icon"></i>
@@ -211,7 +199,6 @@
       </div>
       {% endif %}
 
-      <!-- Reports - Standalone (Admin Only) -->
       {% if user.is_superuser or request.session.role == 'admin' %}
       <div class="nav-item">
         <a href="/core-admin/reports/" class="nav-link {% if request.resolver_match.url_name == 'admin_reports' or request.resolver_match.url_name == 'admin_reports_view' %}active{% endif %}">
@@ -221,7 +208,6 @@
       </div>
       {% endif %}
 
-      <!-- Settings - Expandable (Admin Only) -->
       {% if user.is_superuser or request.session.role == 'admin' %}
       <div class="nav-section {% if 'settings' in request.path or 'approval' in request.path or 'pso-po' in request.path or 'master-data' in request.path or request.resolver_match.url_name == 'admin_settings' or request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'admin_pso_po_management' %}expanded{% endif %}">
         <div class="nav-section-header">
@@ -251,7 +237,6 @@
     </nav>
   </div>
 
-  <!-- ZONE 3: MAIN VIEWSCREEN -->
   <div class="main-viewscreen main-content">
     <div class="viewscreen-content">
       {% block content %}
@@ -263,7 +248,6 @@
     </div>
   </div>
 
-  <!-- JavaScript for interactions -->
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       // Profile dropdown toggle
