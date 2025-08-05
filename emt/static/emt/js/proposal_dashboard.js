@@ -107,6 +107,7 @@ $(document).ready(function() {
                 setupDynamicActivitiesListener();
             }
             setupFormFieldSync();
+            setupTextSectionStorage();
             clearValidationErrors();
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
@@ -535,6 +536,29 @@ function getWhyThisEventForm() {
         });
     }
 
+    function setupTextSectionStorage() {
+        const editorMap = {
+            '#need-analysis-modern': 'section_need_analysis',
+            '#objectives-modern': 'section_objectives',
+            '#outcomes-modern': 'section_outcomes',
+            '#schedule-modern': 'section_flow'
+        };
+
+        Object.entries(editorMap).forEach(([selector, key]) => {
+            const el = document.querySelector(selector);
+            if (!el) return;
+
+            const saved = localStorage.getItem(key);
+            if (saved && !el.value) {
+                el.value = saved;
+            }
+
+            el.addEventListener('input', () => {
+                localStorage.setItem(key, el.value);
+            });
+        });
+    }
+
     // ===== STATUS & PROGRESS FUNCTIONS - PRESERVED =====
     function markSectionInProgress(section) {
         sectionProgress[section] = 'in-progress';
@@ -822,6 +846,17 @@ function getWhyThisEventForm() {
 
     // ===== FORM SUBMISSION HANDLING - PRESERVED =====
     $('#proposal-form').on('submit', function(e) {
+        // Before submit, copy any rich text content into hidden fields
+        const needAnalysisContent = localStorage.getItem('section_need_analysis') || $('#need-analysis-modern').val() || '';
+        const objectivesContent = localStorage.getItem('section_objectives') || $('#objectives-modern').val() || '';
+        const outcomesContent = localStorage.getItem('section_outcomes') || $('#outcomes-modern').val() || '';
+        const flowContent = localStorage.getItem('section_flow') || $('#schedule-modern').val() || '';
+
+        $('textarea[name="need_analysis"]').val(needAnalysisContent);
+        $('textarea[name="objectives"]').val(objectivesContent);
+        $('textarea[name="outcomes"]').val(outcomesContent);
+        $('textarea[name="flow"]').val(flowContent);
+
         // Let the form submit naturally, but ensure all sections are synced
         console.log('Form submission - ensuring all data is synced');
         
@@ -836,6 +871,10 @@ function getWhyThisEventForm() {
         if (window.clearLocal && typeof window.clearLocal === 'function') {
             window.clearLocal();
         }
+
+        ['section_need_analysis','section_objectives','section_outcomes','section_flow'].forEach(key => {
+            localStorage.removeItem(key);
+        });
 
         console.log('Form submitted successfully');
     });
