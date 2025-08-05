@@ -177,6 +177,7 @@ $(document).ready(function() {
         ];
         fieldsToSync.forEach(copyDjangoField);
         setupFacultyTomSelect();
+        setupOutcomeModal();
     }
     
     // NEW FUNCTION to handle dynamic activities
@@ -234,6 +235,74 @@ $(document).ready(function() {
         if (initialValues && initialValues.length) {
             tomselect.setValue(initialValues);
         }
+    }
+
+    function setupOutcomeModal() {
+        const posField = $('#pos-pso-modern');
+        const djangoOrgSelect = $('#django-basic-info [name="organization"]');
+        const modal = $('#outcomeModal');
+        const optionsContainer = $('#outcomeOptions');
+
+        if (!posField.length || !djangoOrgSelect.length || !modal.length) return;
+
+        posField.prop('readonly', true).css('cursor', 'pointer').on('click', openOutcomeModal);
+
+        function updateModalUrl() {
+            const orgId = djangoOrgSelect.val();
+            if (orgId) {
+                modal.attr('data-url', `${window.API_OUTCOMES_BASE}${orgId}/`);
+                optionsContainer.text('Click to load options');
+            } else {
+                modal.attr('data-url', '');
+                optionsContainer.text('No organization selected.');
+            }
+        }
+
+        updateModalUrl();
+        djangoOrgSelect.on('change', updateModalUrl);
+
+        $('#outcomeCancel').on('click', () => modal.removeClass('show'));
+        $('#outcomeSave').on('click', () => {
+            const selected = modal.find('input[type=checkbox]:checked').map((_, cb) => cb.value).get();
+            const existing = posField.val().trim();
+            const value = existing ? existing + '\n' + selected.join('\n') : selected.join('\n');
+            posField.val(value).trigger('change');
+            modal.removeClass('show');
+        });
+    }
+
+    function openOutcomeModal() {
+        const modal = $('#outcomeModal');
+        const url = modal.attr('data-url');
+        const container = $('#outcomeOptions');
+        const posField = $('#pos-pso-modern');
+        if (!url) {
+            alert('No organization selected.');
+            return;
+        }
+        modal.addClass('show');
+        container.text('Loading...');
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    container.empty();
+                    const existing = posField.val().split('\n').map(s => s.trim());
+                    data.pos.forEach(po => { addOption(container, 'PO: ' + po.description, existing); });
+                    data.psos.forEach(pso => { addOption(container, 'PSO: ' + pso.description, existing); });
+                } else {
+                    container.text('No data');
+                }
+            })
+            .catch(() => { container.text('Error loading'); });
+    }
+
+    function addOption(container, labelText, existing) {
+        const lbl = $('<label>');
+        const cb = $('<input type="checkbox">').val(labelText);
+        if (existing.includes(labelText)) cb.prop('checked', true);
+        lbl.append(cb).append(' ' + labelText);
+        container.append(lbl).append('<br>');
     }
 
     function copyDjangoField(fieldName) {

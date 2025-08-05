@@ -271,6 +271,29 @@
 <div class="autosave-indicator" id="autosave-indicator">
     <span class="indicator-text">Saved</span>
 </div>
+{% if proposal.organization %}
+<div id="outcomeModal" class="outcome-modal" data-url="{% url 'emt:api_outcomes' proposal.organization.id %}">
+    <div class="modal-content">
+        <h3>Select Outcomes</h3>
+        <div id="outcomeOptions">Loading...</div>
+        <div class="modal-actions">
+            <button type="button" id="outcomeCancel" class="btn-cancel">Cancel</button>
+            <button type="button" id="outcomeSave" class="btn-save">Add</button>
+        </div>
+    </div>
+</div>
+{% else %}
+<div id="outcomeModal" class="outcome-modal" data-url="">
+    <div class="modal-content">
+        <h3>Select Outcomes</h3>
+        <div id="outcomeOptions">No organization selected.</div>
+        <div class="modal-actions">
+            <button type="button" id="outcomeCancel" class="btn-cancel">Cancel</button>
+            <button type="button" id="outcomeSave" class="btn-save">Add</button>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -285,6 +308,7 @@
         window.AUTOSAVE_CSRF = "{{ csrf_token }}";
         window.API_ORGANIZATIONS = "{% url 'emt:api_organizations' %}";
         window.API_FACULTY = "{% url 'emt:api_faculty' %}";
+        window.API_OUTCOMES_BASE = "{% url 'emt:api_outcomes' 0 %}".replace(/0\/$/, '');
     </script>
     <script src="{% static 'emt/js/autosave_draft.js' %}"></script>
     <script src="{% static 'emt/js/proposal_dashboard.js' %}"></script>
