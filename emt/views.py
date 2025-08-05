@@ -202,10 +202,19 @@ def submit_proposal(request, pk=None):
             return ""
         return ""
 
+    need_analysis = EventNeedAnalysis.objects.filter(proposal=proposal).first() if proposal else None
+    objectives = EventObjectives.objects.filter(proposal=proposal).first() if proposal else None
+    outcomes = EventExpectedOutcomes.objects.filter(proposal=proposal).first() if proposal else None
+    flow = TentativeFlow.objects.filter(proposal=proposal).first() if proposal else None
+
     ctx = {
         "form": form,
         "proposal": proposal,
         "org_types": OrganizationType.objects.filter(is_active=True).order_by('name'),
+        "need_analysis": need_analysis,
+        "objectives": objectives,
+        "outcomes": outcomes,
+        "flow": flow,
     }
 
 
