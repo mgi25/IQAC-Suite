@@ -556,7 +556,9 @@ function getWhyThisEventForm() {
                 <div id="speakers-list"></div>
 
                 <div class="form-row full-width">
-                    <button type="button" id="add-speaker-btn" class="btn">Add Speaker</button>
+                    <div class="input-group">
+                        <button type="button" id="add-speaker-btn" class="btn-add-item">Add Speaker</button>
+                    </div>
                 </div>
 
                 <div class="form-row full-width">
@@ -575,7 +577,9 @@ function getWhyThisEventForm() {
                 <div id="expense-rows"></div>
 
                 <div class="form-row full-width">
-                    <button type="button" id="add-expense-btn" class="btn">Add Expense</button>
+                    <div class="input-group">
+                        <button type="button" id="add-expense-btn" class="btn-add-item">Add Expense</button>
+                    </div>
                 </div>
 
                 <div class="form-row full-width">
@@ -599,56 +603,69 @@ function getWhyThisEventForm() {
         function addSpeakerForm() {
             const html = `
                 <div class="speaker-form" data-index="${index}">
-                    <h3>Speaker ${index + 1}</h3>
+                    <div class="form-section-header"><h3>Speaker ${index + 1}</h3></div>
                     <div class="form-row">
                         <div class="input-group">
                             <label for="speaker_full_name_${index}">Full Name</label>
                             <input type="text" id="speaker_full_name_${index}" name="speaker_full_name_${index}" />
+                            <div class="help-text">Enter the speaker's full name</div>
                         </div>
                         <div class="input-group">
                             <label for="speaker_designation_${index}">Designation</label>
                             <input type="text" id="speaker_designation_${index}" name="speaker_designation_${index}" />
+                            <div class="help-text">Job title or role</div>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="input-group">
                             <label for="speaker_affiliation_${index}">Affiliation</label>
                             <input type="text" id="speaker_affiliation_${index}" name="speaker_affiliation_${index}" />
+                            <div class="help-text">Organization or institution</div>
                         </div>
                         <div class="input-group">
                             <label for="speaker_contact_email_${index}">Email</label>
                             <input type="email" id="speaker_contact_email_${index}" name="speaker_contact_email_${index}" />
+                            <div class="help-text">Official contact email</div>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="input-group">
                             <label for="speaker_contact_number_${index}">Contact Number</label>
                             <input type="text" id="speaker_contact_number_${index}" name="speaker_contact_number_${index}" />
+                            <div class="help-text">Phone number</div>
                         </div>
                         <div class="input-group">
                             <label for="speaker_photo_${index}">Photo</label>
                             <input type="file" id="speaker_photo_${index}" name="speaker_photo_${index}" />
+                            <div class="help-text">Upload headshot</div>
                         </div>
                     </div>
                     <div class="form-row full-width">
                         <div class="input-group full-width">
                             <label for="speaker_detailed_profile_${index}">Brief Profile / Bio</label>
                             <textarea id="speaker_detailed_profile_${index}" name="speaker_detailed_profile_${index}" rows="3"></textarea>
+                            <div class="help-text">Short description of expertise</div>
                         </div>
                     </div>
                     <div class="form-row full-width">
-                        <button type="button" class="remove-speaker-btn" data-index="${index}">Remove</button>
+                        <button type="button" class="btn-remove-item remove-speaker-btn" data-index="${index}">Remove Speaker</button>
                     </div>
-                    <hr>
                 </div>
             `;
             container.append(html);
             index++;
         }
 
+        function updateSpeakerHeaders() {
+            container.children('.speaker-form').each(function(i) {
+                $(this).find('.form-section-header h3').text(`Speaker ${i + 1}`);
+            });
+        }
+
         $('#add-speaker-btn').on('click', addSpeakerForm);
         container.on('click', '.remove-speaker-btn', function() {
             $(this).closest('.speaker-form').remove();
+            updateSpeakerHeaders();
         });
 
         addSpeakerForm();
@@ -661,29 +678,45 @@ function getWhyThisEventForm() {
         function addExpenseRow() {
             const html = `
                 <div class="expense-row" data-index="${index}">
-                    <div class="input-group">
-                        <label for="expense_sl_no_${index}">Sl. No.</label>
-                        <input type="number" id="expense_sl_no_${index}" name="expense_sl_no_${index}" />
+                    <div class="form-section-header"><h3>Expense ${index + 1}</h3></div>
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label for="expense_sl_no_${index}">Sl. No.</label>
+                            <input type="number" id="expense_sl_no_${index}" name="expense_sl_no_${index}" />
+                            <div class="help-text">Entry number</div>
+                        </div>
+                        <div class="input-group">
+                            <label for="expense_particulars_${index}">Particulars</label>
+                            <input type="text" id="expense_particulars_${index}" name="expense_particulars_${index}" />
+                            <div class="help-text">Expense item</div>
+                        </div>
                     </div>
-                    <div class="input-group">
-                        <label for="expense_particulars_${index}">Particulars</label>
-                        <input type="text" id="expense_particulars_${index}" name="expense_particulars_${index}" />
+                    <div class="form-row full-width">
+                        <div class="input-group">
+                            <label for="expense_amount_${index}">Amount</label>
+                            <input type="number" step="0.01" id="expense_amount_${index}" name="expense_amount_${index}" />
+                            <div class="help-text">Cost in INR</div>
+                        </div>
                     </div>
-                    <div class="input-group">
-                        <label for="expense_amount_${index}">Amount</label>
-                        <input type="number" step="0.01" id="expense_amount_${index}" name="expense_amount_${index}" />
+                    <div class="form-row full-width">
+                        <button type="button" class="btn-remove-item remove-expense-btn" data-index="${index}">Remove Expense</button>
                     </div>
-                    <button type="button" class="remove-expense-btn" data-index="${index}">Remove</button>
-                    <hr>
                 </div>
             `;
             container.append(html);
             index++;
         }
 
+        function updateExpenseHeaders() {
+            container.children('.expense-row').each(function(i) {
+                $(this).find('.form-section-header h3').text(`Expense ${i + 1}`);
+            });
+        }
+
         $('#add-expense-btn').on('click', addExpenseRow);
         container.on('click', '.remove-expense-btn', function() {
             $(this).closest('.expense-row').remove();
+            updateExpenseHeaders();
         });
 
         addExpenseRow();

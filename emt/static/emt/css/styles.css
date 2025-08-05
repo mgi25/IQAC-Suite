@@ -278,6 +278,40 @@
   transform: none;
 }
 
+/* Add/Remove buttons for dynamic form sections */
+.proposal-content .btn-add-item {
+  background: var(--primary-blue);
+  color: white;
+  border: none;
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.proposal-content .btn-add-item:hover {
+  background: var(--primary-blue-dark);
+  transform: translateY(-1px);
+}
+
+.proposal-content .btn-remove-item {
+  background: var(--border-color);
+  color: var(--text-dark);
+  border: none;
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.proposal-content .btn-remove-item:hover {
+  background: #d1d5db;
+}
+
 /* Updated Save Section Container */
 .proposal-content .save-section-container {
   text-align: right;
