@@ -62,10 +62,12 @@ class RoleBasedAccountAdapter(DefaultAccountAdapter):
         user = request.user
         if user.is_superuser:
             return reverse('admin_dashboard')
-        try:
-            student = user.student_profile
-        except Student.DoesNotExist:
-            return reverse('registration_form')
-        if not getattr(student, 'registration_number', ''):
-            return reverse('registration_form')
+        domain = user.email.split('@')[-1].lower() if user.email else ''
+        if domain.endswith('christuniversity.in'):
+            try:
+                student = user.student_profile
+            except Student.DoesNotExist:
+                return reverse('registration_form')
+            if not getattr(student, 'registration_number', ''):
+                return reverse('registration_form')
         return reverse('dashboard')
