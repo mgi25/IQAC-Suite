@@ -82,6 +82,7 @@ function autosaveDraft() {
         }
     });
     if (proposalId) formData['proposal_id'] = proposalId;
+    console.log('Autosave payload:', formData);
     fetch(window.AUTOSAVE_URL, {
         method: "POST",
         headers: {

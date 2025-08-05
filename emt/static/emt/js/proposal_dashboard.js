@@ -70,6 +70,17 @@ $(document).ready(function() {
         }
     }
 
+    // Basic helper to open a section and ensure the form panel is visible
+    function openFormPanel(section) {
+        activateSection(section);
+        const panel = $('#form-panel');
+        if (panel.length) {
+            $('html, body').animate({
+                scrollTop: panel.offset().top
+            }, 300);
+        }
+    }
+
     function loadFormContent(section) {
         const sectionData = getSectionData(section);
         $('#main-title').text(sectionData.title);
@@ -159,9 +170,9 @@ $(document).ready(function() {
 
         // We add the new field IDs to the list of fields to be synced.
         const fieldsToSync = [
-            'event_title', 'target_audience', 'event_start_date', 'event_end_date', 
-            'event_focus_type', 'academic_year', 'student_coordinators', 'num_activities', 
-            'pos_pso_input', 'location_modern'
+            'event_title', 'target_audience', 'event_start_date', 'event_end_date',
+            'event_focus_type', 'venue', 'academic_year', 'student_coordinators', 'num_activities',
+            'pos_pso'
         ];
         fieldsToSync.forEach(copyDjangoField);
         setupFacultyTomSelect();
@@ -226,13 +237,17 @@ $(document).ready(function() {
 
     function copyDjangoField(fieldName) {
         const djangoField = $(`#django-basic-info [name="${fieldName}"]`);
-        const modernId = fieldName.replace(/_/g, '-');
-        const modernField = $(`#${modernId}`);
+        const baseId = fieldName.replace(/_/g, '-');
+        let modernField = $(`#${baseId}-modern`);
+        if (!modernField.length) {
+            modernField = $(`#${baseId}`);
+        }
         if (djangoField.length && modernField.length) {
             if (djangoField.is('select')) modernField.html(djangoField.html());
             modernField.val(djangoField.val());
             modernField.on('input change', function() {
-                djangoField.val($(this).val()).trigger('change');
+                const value = $(this).val();
+                djangoField.val(value).trigger('change');
                 clearFieldError($(this));
             });
         }
@@ -257,7 +272,7 @@ $(document).ready(function() {
         let canonicalType = Object.keys(orgTypeMap).find(key => orgType.includes(key)) || orgType;
         const label = orgTypeMap[canonicalType] || capitalizeFirst(canonicalType);
         const orgFieldHtml = `
-            <div class="org-specific-field form-row">
+            <div class="org-specific-field form-row full-width">
                 <div class="input-group">
                     <label for="org-modern-select">${label} *</label>
                     <select id="org-modern-select" placeholder="Type ${label} name..."></select>
