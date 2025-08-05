@@ -719,3 +719,6 @@
 .notification.notification-info {
   border-left: 4px solid var(--primary-blue);
 }
+.submit-section {
+  display: none !important;
+}

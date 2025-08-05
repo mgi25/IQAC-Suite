@@ -34,15 +34,14 @@ $(document).ready(function() {
 
     // Global state management - PRESERVED FROM ORIGINAL
     let currentExpandedCard = null;
-    let sectionProgress = {
-        'basic-info': false,
-        'need-analysis': false,
-        'objectives': false,
-        'outcomes': false,
-        'flow': false,
-        'speakers': false,
-        'expenses': false
-    };
+ // 1. UPDATE the sectionProgress object (around line 38):
+let sectionProgress = {
+    'basic-info': false,
+    'why-this-event': false,  // Combined section
+    'schedule': false,        // Renamed from 'flow' 
+    'speakers': false,
+    'expenses': false
+};
 
     // Initialize dashboard - PRESERVED
     initializeDashboard();
@@ -160,17 +159,11 @@ $(document).ready(function() {
             case 'basic-info':
                 formContent = getBasicInfoForm();
                 break;
-            case 'need-analysis':
-                formContent = getNeedAnalysisForm();
+            case 'why-this-event':
+                formContent = getWhyThisEventForm(); // NEW COMBINED FORM
                 break;
-            case 'objectives':
-                formContent = getObjectivesForm();
-                break;
-            case 'outcomes':
-                formContent = getOutcomesForm();
-                break;
-            case 'flow':
-                formContent = getFlowForm();
+            case 'schedule':
+                formContent = getScheduleForm(); // RENAMED FROM FLOW
                 break;
             case 'speakers':
                 formContent = getSpeakersForm();
@@ -213,13 +206,11 @@ $(document).ready(function() {
     // ===== SECTION DATA HELPER =====
     function getSectionData(section) {
         const sections = {
-            'basic-info': { title: 'Basic Information', subtitle: 'Organization details and event basics' },
-            'need-analysis': { title: 'Need Analysis', subtitle: 'Why is this event needed?' },
-            'objectives': { title: 'Objectives', subtitle: 'What do you aim to achieve?' },
-            'outcomes': { title: 'Expected Outcomes', subtitle: 'What results do you expect?' },
-            'flow': { title: 'Tentative Flow', subtitle: 'Event timeline and schedule' },
-            'speakers': { title: 'Speaker Profiles', subtitle: 'Add speaker details' },
-            'expenses': { title: 'Expenses', subtitle: 'Event costs and expenditures' }
+            'basic-info': { title: 'Basic Information', subtitle: 'Title, dates, type, location, etc.' },
+            'why-this-event': { title: 'Why This Event?', subtitle: 'Objective, GA Relevance, Learning Outcomes' },
+            'schedule': { title: 'Schedule', subtitle: 'Event timeline, sessions, flow' },
+            'speakers': { title: 'Speaker Profiles', subtitle: 'Names, expertise, brief bio, etc.' },
+            'expenses': { title: 'Expenses', subtitle: 'Budget, funding source, justification' }
         };
         return sections[section] || { title: 'Section', subtitle: 'Complete this section' };
     }
@@ -559,14 +550,51 @@ $(document).ready(function() {
                 </div>
                 
                 <div class="form-row full-width">
-                    <div class="save-section-container">
-                        <button type="button" class="btn-save-section">Save & Continue</button>
-                        <div class="save-help-text">Complete this section to unlock the next one</div>
-                    </div>
+                <div class="save-section-container">
+                    <button type="button" class="btn-save-section">Save & Continue</button>
+                    <div class="save-help-text">Complete this section to unlock the next one</div>
                 </div>
             </div>
-        `;
-    }
+        </div>
+    `;
+}
+
+function getWhyThisEventForm() {
+    return `
+        <div class="form-grid">
+            <div class="form-row full-width">
+                <div class="input-group">
+                    <label for="need-analysis-modern">Need Analysis - Why is this event necessary? *</label>
+                    <textarea id="need-analysis-modern" rows="4" required placeholder="Explain why this event is necessary, what gap it fills, and its relevance to the target audience..."></textarea>
+                    <div class="help-text">Provide a detailed explanation of why this event is important.</div>
+                </div>
+            </div>
+            
+            <div class="form-row full-width">
+                <div class="input-group">
+                    <label for="objectives-modern">Objectives - What do you aim to achieve? *</label>
+                    <textarea id="objectives-modern" rows="4" required placeholder="• Objective 1: ...&#10;• Objective 2: ...&#10;• Objective 3: ..."></textarea>
+                    <div class="help-text">List 3-5 clear, measurable objectives.</div>
+                </div>
+            </div>
+            
+            <div class="form-row full-width">
+                <div class="input-group">
+                    <label for="outcomes-modern">Expected Learning Outcomes - What results do you expect? *</label>
+                    <textarea id="outcomes-modern" rows="4" required placeholder="What specific results, skills, or benefits will participants gain?"></textarea>
+                    <div class="help-text">Describe the tangible benefits for participants.</div>
+                </div>
+            </div>
+            
+            <div class="form-row full-width">
+                <div class="save-section-container">
+                    <button type="button" class="btn-save-section">Save & Continue</button>
+                    <div class="save-help-text">Complete this section to unlock the next one</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
 
     function getNeedAnalysisForm() {
         return `
@@ -625,19 +653,21 @@ $(document).ready(function() {
         `;
     }
 
-    function getFlowForm() {
+    function getScheduleForm() {
         return `
             <div class="form-grid">
                 <div class="form-row full-width">
                     <div class="input-group">
-                        <label for="flow-modern">Event flow and timeline *</label>
-                        <textarea id="flow-modern" rows="8" required placeholder="9:00 AM - Registration&#10;9:30 AM - Opening Ceremony..."></textarea>
+                        <label for="schedule-modern">Event timeline and schedule *</label>
+                        <textarea id="schedule-modern" rows="8" required placeholder="9:00 AM - Registration&#10;9:30 AM - Opening Ceremony..."></textarea>
                         <div class="help-text">Provide a detailed timeline for each activity.</div>
                     </div>
                 </div>
+                
                 <div class="form-row full-width">
                     <div class="save-section-container">
                         <button type="button" class="btn-save-section">Save & Continue</button>
+                        <div class="save-help-text">Complete this section to unlock the next one</div>
                     </div>
                 </div>
             </div>
@@ -648,9 +678,11 @@ $(document).ready(function() {
         return `
             <div class="form-grid">
                 <div class="speakers-notice"><p>Speaker management is under development.</p></div>
+                
                 <div class="form-row full-width">
                     <div class="save-section-container">
-                        <button type="button" class="btn-save-section">Mark as Complete</button>
+                        <button type="button" class="btn-save-section">Save & Continue</button>
+                        <div class="save-help-text">Complete this section to unlock the next one</div>
                     </div>
                 </div>
             </div>
@@ -661,15 +693,21 @@ $(document).ready(function() {
         return `
             <div class="form-grid">
                 <div class="expenses-notice"><p>Expense management is under development.</p></div>
+                
                 <div class="form-row full-width">
-                    <div class="save-section-container">
-                        <button type="button" class="btn-save-section">Mark as Complete</button>
+                    <div class="submit-section-container">
+                        <button type="submit" name="final_submit" class="btn-submit" id="submit-proposal-btn">
+                            Submit Proposal
+                        </button>
+                        <div class="submit-help-text">
+                            Review all sections before submitting
+                        </div>
                     </div>
                 </div>
             </div>
         `;
     }
-
+    
     // ===== SAVE SECTION FUNCTIONALITY - FULLY PRESERVED =====
     function saveCurrentSection() {
         console.log('Saving section:', currentExpandedCard);
@@ -696,7 +734,7 @@ $(document).ready(function() {
 
     // ===== SECTION NAVIGATION - PRESERVED =====
     function getNextSection(currentSection) {
-        const sectionOrder = ['basic-info', 'need-analysis', 'objectives', 'outcomes', 'flow', 'speakers', 'expenses'];
+        const sectionOrder = ['basic-info', 'why-this-event', 'schedule', 'speakers', 'expenses'];
         const currentIndex = sectionOrder.indexOf(currentSection);
         return currentIndex < sectionOrder.length - 1 ? sectionOrder[currentIndex + 1] : null;
     }
@@ -774,15 +812,29 @@ $(document).ready(function() {
     function validateCurrentSection() {
         if (!currentExpandedCard) return false;
         clearValidationErrors();
-
+    
         switch (currentExpandedCard) {
             case 'basic-info': return validateBasicInfo();
-            case 'need-analysis':
-            case 'objectives':
-            case 'outcomes':
-            case 'flow': return validateTextSection();
+            case 'why-this-event': return validateWhyThisEvent(); // NEW VALIDATION
+            case 'schedule': return validateTextSection();
             default: return true;
         }
+    }
+    function validateWhyThisEvent() {
+        let isValid = true;
+        const requiredTextareas = ['#need-analysis-modern', '#objectives-modern', '#outcomes-modern'];
+        
+        requiredTextareas.forEach(selector => {
+            const field = $(selector);
+            if (!field.val() || field.val().trim() === '') {
+                showFieldError(field, 'This field is required');
+                field.addClass('animate-shake');
+                setTimeout(() => field.removeClass('animate-shake'), 600);
+                isValid = false;
+            }
+        });
+        
+        return isValid;
     }
 
     function validateBasicInfo() {
