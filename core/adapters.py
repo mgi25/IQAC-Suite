@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.utils.text import slugify
 from django.contrib.auth.models import User
 from core.models import Profile
+from emt.models import Student
 
 class SchoolSocialAccountAdapter(DefaultSocialAccountAdapter):
     def pre_social_login(self, request, sociallogin):
@@ -61,4 +62,10 @@ class RoleBasedAccountAdapter(DefaultAccountAdapter):
         user = request.user
         if user.is_superuser:
             return reverse('admin_dashboard')
+        try:
+            student = user.student_profile
+        except Student.DoesNotExist:
+            return reverse('registration_form')
+        if not getattr(student, 'registration_number', ''):
+            return reverse('registration_form')
         return reverse('dashboard')
