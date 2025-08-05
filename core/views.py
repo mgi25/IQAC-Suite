@@ -93,6 +93,10 @@ def custom_logout(request):
 def registration_form(request):
     """Collect registration number and role assignments for a user."""
     student, _ = Student.objects.get_or_create(user=request.user)
+    # Prevent already registered users from accessing the form again
+    if student.registration_number:
+        return redirect("dashboard")
+
     if request.method == "POST":
         form = RegistrationForm(request.POST)
         if form.is_valid():

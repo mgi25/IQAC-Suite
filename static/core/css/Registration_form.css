@@ -10,17 +10,17 @@ body {
     background-color: #ffffff;
     color: #333;
     line-height: 1.6;
-    padding: 20px;
+    padding: 0;
     min-height: 100vh;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
 }
 
 /* Container */
 .container {
     max-width: 800px;
-    margin: 0 auto;
+    margin: 40px auto;
     background: #ffffff;
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
@@ -28,20 +28,46 @@ body {
 }
 
 /* Header */
-.header {
+/* Top Header Bar */
+.top-header {
+    background-color: #2A4B8D;
+    color: #fff;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-wrapper .logo {
+    height: 40px;
+}
+
+.logo-wrapper .app-name {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+/* Form Header */
+.form-header {
     background-color: #2A4B8D;
     color: white;
     padding: 32px 24px;
     text-align: center;
 }
 
-.header h1 {
+.form-header h1 {
     font-size: 32px;
     font-weight: 600;
     margin-bottom: 8px;
 }
 
-.header p {
+.form-header p {
     font-size: 16px;
     opacity: 0.9;
 }
@@ -276,11 +302,11 @@ input[type="text"]:hover {
         border-radius: 8px;
     }
     
-    .header {
+    .form-header {
         padding: 24px 16px;
     }
-    
-    .header h1 {
+
+    .form-header h1 {
         font-size: 24px;
     }
     
@@ -304,7 +330,7 @@ input[type="text"]:hover {
 }
 
 @media (max-width: 480px) {
-    .header h1 {
+    .form-header h1 {
         font-size: 20px;
     }
     
