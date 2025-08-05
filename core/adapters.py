@@ -3,7 +3,8 @@ from allauth.account.adapter import DefaultAccountAdapter
 from django.urls import reverse
 from django.utils.text import slugify
 from django.contrib.auth.models import User
-from core.models import Profile
+from core.models import Profile, RoleAssignment
+from emt.models import Student
 
 class SchoolSocialAccountAdapter(DefaultSocialAccountAdapter):
     def pre_social_login(self, request, sociallogin):
@@ -61,4 +62,14 @@ class RoleBasedAccountAdapter(DefaultAccountAdapter):
         user = request.user
         if user.is_superuser:
             return reverse('admin_dashboard')
+        domain = user.email.split('@')[-1].lower() if user.email else ''
+        if domain.endswith('christuniversity.in'):
+            try:
+                student = user.student_profile
+            except Student.DoesNotExist:
+                return reverse('registration_form')
+            if not getattr(student, 'registration_number', ''):
+                return reverse('registration_form')
+        if not RoleAssignment.objects.filter(user=user).exists():
+            return reverse('registration_form')
         return reverse('dashboard')

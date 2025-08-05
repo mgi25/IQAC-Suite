@@ -3,6 +3,7 @@ import shutil
 from datetime import timedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import logout
+from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpResponseForbidden, JsonResponse, HttpResponseRedirect
 from django.contrib.auth.models import User
@@ -15,9 +16,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 import json
 import logging
-
 logger = logging.getLogger(__name__)
-from .forms import RoleAssignmentForm
+from .forms import RoleAssignmentForm, RegistrationForm
 from .models import (
     Profile,
     RoleAssignment,
@@ -32,6 +32,9 @@ from django.views.decorators.http import require_GET, require_POST
 from .models import ApprovalFlowTemplate, ApprovalFlowConfig
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+
+logger = logging.getLogger(__name__)
+
 # ─────────────────────────────────────────────────────────────
 #  Helpers
 # ─────────────────────────────────────────────────────────────
@@ -75,6 +78,13 @@ class RoleAssignmentFormSet(forms.BaseInlineFormSet):
 # ─────────────────────────────────────────────────────────────
 def login_view(request):
     return render(request, "core/login.html")
+    if user is not None:
+        login(request, user)
+        
+        # Log the successful login
+        logger.info(f"User '{user.username}' logged in successfully.")
+        
+        return redirect('dashboard')
 
 def login_page(request):
     return render(request, "login.html")
@@ -87,6 +97,68 @@ def custom_logout(request):
     logout(request)
     google_logout_url = "https://accounts.google.com/Logout"
     return redirect(f"{google_logout_url}?continue=https://appengine.google.com/_ah/logout?continue=http://127.0.0.1:8000/accounts/login/")
+
+
+@login_required
+def registration_form(request):
+    """Collect registration number and role assignments for a user."""
+    user = request.user
+    domain = user.email.split("@")[-1].lower() if user.email else ""
+    is_student = domain.endswith("christuniversity.in")
+
+    student = None
+    if is_student:
+        student, _ = Student.objects.get_or_create(user=user)
+        if student.registration_number:
+            return redirect("dashboard")
+
+    form_kwargs = {"include_regno": is_student}
+
+    if request.method == "POST":
+        form = RegistrationForm(request.POST, **form_kwargs)
+        if form.is_valid():
+            if is_student:
+                student.registration_number = form.cleaned_data["registration_number"]
+                student.save()
+            for item in form.cleaned_data["assignments"]:
+                RoleAssignment.objects.get_or_create(
+                    user=user,
+                    organization_id=item["organization"],
+                    role_id=item["role"],
+                )
+            return redirect("dashboard")
+    else:
+        initial = {}
+        if is_student:
+            initial["registration_number"] = student.registration_number
+        form = RegistrationForm(initial=initial, **form_kwargs)
+
+    return render(request, "core/Registration_form.html", {"form": form, "is_student": is_student})
+
+
+@require_GET
+def api_organizations(request):
+    """Return active organizations for typeahead."""
+    q = request.GET.get("q", "").strip()
+    orgs = Organization.objects.filter(is_active=True)
+    if q:
+        orgs = orgs.filter(name__icontains=q)
+    data = [{"id": o.id, "text": o.name} for o in orgs.order_by("name")[:20]]
+    return JsonResponse({"organizations": data})
+
+
+@require_GET
+def api_roles(request):
+    """Return roles filtered by organization for typeahead."""
+    org_id = request.GET.get("organization")
+    q = request.GET.get("q", "").strip()
+    roles = OrganizationRole.objects.filter(is_active=True)
+    if org_id:
+        roles = roles.filter(organization_id=org_id)
+    if q:
+        roles = roles.filter(name__icontains=q)
+    data = [{"id": r.id, "text": r.name} for r in roles.order_by("name")[:20]]
+    return JsonResponse({"roles": data})
 
 # ─────────────────────────────────────────────────────────────
 #  Dashboard
@@ -276,10 +348,16 @@ def admin_role_management(request, organization_id=None):
         # Direct access to one organization's roles
         org = get_object_or_404(Organization, id=organization_id)
         roles = OrganizationRole.objects.filter(organization=org).order_by('name')
-        
+        assignments = (
+            RoleAssignment.objects.filter(organization=org)
+            .select_related("user", "role")
+            .order_by("user__username")
+        )
+
         context = {
             'selected_organization': org,
             'roles': roles,
+            'role_assignments': assignments,
             'step': 'single_org_roles'
         }
         return render(request, "core/admin_role_management.html", context)
