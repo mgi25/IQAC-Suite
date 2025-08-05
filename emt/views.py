@@ -46,6 +46,31 @@ from itertools import chain
 from operator import attrgetter
 # ----------------------------------
 
+import logging
+
+# Get an instance of the logger for the 'emt' app
+logger = logging.getLogger(__name__) # __name__ will resolve to 'emt.views'
+
+def submit_proposal(request):
+    if request.method == 'POST':
+        form = EventProposalForm(request.POST)
+        if form.is_valid():
+            proposal = form.save(commit=False)
+            proposal.submitted_by = request.user
+            proposal.save()
+            
+            # Here is the logging statement
+            logger.info(
+                f"Event proposal '{proposal.title}' (ID: {proposal.id}) "
+                f"was submitted by user '{request.user.username}'."
+            )
+            
+            return redirect('emt:proposal_success')
+    else:
+        form = EventProposalForm()
+    
+    return render(request, 'emt/submit_proposal.html', {'form': form})
+
 # ──────────────────────────────
 # CDL DASHBOARD
 # ──────────────────────────────
@@ -451,6 +476,35 @@ def proposal_status_detail(request, proposal_id):
         submitted_by=request.user
     )
 
+    proposal = get_object_or_404(EventProposal, id=proposal_id)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action') # Assuming you get 'approve' or 'reject' from a form
+
+        if action == 'approve':
+            proposal.status = 'Approved' # Use your actual status value
+            
+            # Add the logging statement for approval
+            logger.info(
+                f"User '{request.user.username}' APPROVED proposal '{proposal.title}' (ID: {proposal.id})."
+            )
+            
+            proposal.save()
+
+        elif action == 'reject':
+            proposal.status = 'Rejected' # Use your actual status value
+            rejection_reason = request.POST.get('reason', 'No reason provided')
+            
+            # Add the logging statement for rejection
+            logger.warning(
+                f"User '{request.user.username}' REJECTED proposal '{proposal.title}' (ID: {proposal.id}). "
+                f"Reason: {rejection_reason}"
+            )
+            
+            proposal.save()
+            
+        return redirect('some-success-url')
+
     # Get approval steps
     approval_steps = ApprovalStep.objects.filter(
         proposal=proposal
@@ -509,6 +563,26 @@ def generate_report(request, proposal_id):
     proposal.save()
     return redirect('emt:report_success', proposal_id=proposal.id)
 
+    report = EventReport.objects.get(id=report_id)
+    
+    # ... your existing logic to gather data for the AI ...
+    
+    try:
+        # Call your AI service to get the report content
+        generated_text = ai_report_service.create_summary(report)
+        report.ai_generated_report = generated_text
+        report.save()
+
+        # Add the logging statement here
+        logger.info(
+            f"User '{request.user.username}' generated an AI report for event "
+            f"'{report.event.title}' (Report ID: {report.id})."
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to generate AI report for Report ID {report.id}: {e}")
+        # Handle the error
+
 @login_required
 def report_success(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id)
@@ -524,6 +598,24 @@ def view_report(request, report_id):
     report = get_object_or_404(EventProposal, id=report_id, submitted_by=request.user, report_generated=True)
     return render(request, 'emt/view_report.html', {'report': report})
 
+    """
+    Displays the details of a single event report.
+    """
+    # Get the report object, or return a 404 error if not found
+    report = get_object_or_404(EventReport, id=report_id)
+
+    # Add the logging statement here, right after fetching the object
+    logger.info(
+        f"User '{request.user.username}' viewed the report for event "
+        f"'{report.event.title}' (Report ID: {report.id})."
+    )
+
+    # Render the template with the report data
+    context = {
+        'report': report
+    }
+    return render(request, 'emt/view_report.html', context)
+
 # ──────────────────────────────
 # FILE DOWNLOAD (PLACEHOLDER)
 # ──────────────────────────────
@@ -532,6 +624,25 @@ def view_report(request, report_id):
 def download_pdf(request, proposal_id):
     # TODO: Implement actual PDF generation and return the file
     return HttpResponse(f"PDF download for Proposal {proposal_id}", content_type='application/pdf')
+
+    report = EventReport.objects.get(id=report_id)
+    
+    # Assuming you have a utility to render a template to a PDF
+    try:
+        pdf_file = render_to_pdf('emt/pdf_template.html', {'report': report})
+
+        # Add the logging statement here
+        logger.info(
+            f"User '{request.user.username}' downloaded the PDF report for event "
+            f"'{report.event.title}' (Report ID: {report.id})."
+        )
+
+        # Return the PDF as an HTTP response
+        return HttpResponse(pdf_file, content_type='application/pdf')
+
+    except Exception as e:  
+        logger.error(f"Failed to generate PDF for Report ID {report.id}: {e}")
+        # Handle the error
 
 @login_required
 def download_word(request, proposal_id):

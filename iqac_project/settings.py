@@ -170,17 +170,67 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
+# LOGGING CONFIGURATION
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
-        }
+            'formatter': 'simple',
+        },
+        'activity_file': { # Renamed from 'file' for clarity
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': BASE_DIR / 'activity.log',
+            'maxBytes': 1024 * 1024 * 5,  # 5 MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
+        ## NEW: Handler for error logging ##
+        'error_file': {
+            'level': 'ERROR',
+            'class': 'logging.FileHandler', # No rotation needed for less frequent errors
+            'filename': BASE_DIR / 'error.log',
+            'formatter': 'verbose',
+        },
     },
-    'root': {
-        'handlers': ['console'],
-        'level': 'DEBUG' if DEBUG else 'INFO',
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        ## NEW: Logger for Django's request errors ##
+        'django.request': {
+            'handlers': ['error_file'],
+            'level': 'ERROR',
+            'propagate': True,
+        },
+        'core': {
+            'handlers': ['console', 'activity_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'emt': {
+            'handlers': ['console', 'activity_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'transcript': {
+            'handlers': ['console', 'activity_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
     },
 }
