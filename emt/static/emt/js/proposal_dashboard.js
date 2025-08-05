@@ -105,6 +105,7 @@ $(document).ready(function() {
                 setupDjangoFormIntegration();
                 // We call the new function to set up the listener for activities.
                 setupDynamicActivitiesListener();
+                setupOutcomeModal();
             }
             setupFormFieldSync();
             setupTextSectionStorage();
@@ -177,7 +178,6 @@ $(document).ready(function() {
         ];
         fieldsToSync.forEach(copyDjangoField);
         setupFacultyTomSelect();
-        setupOutcomeModal();
     }
     
     // NEW FUNCTION to handle dynamic activities
@@ -264,7 +264,8 @@ $(document).ready(function() {
 
         if (!posField.length || !djangoOrgSelect.length || !modal.length) return;
 
-        posField.prop('readonly', true).css('cursor', 'pointer').on('click', openOutcomeModal);
+        posField.prop('readonly', true).css('cursor', 'pointer');
+        $(document).off('click', '#pos-pso-modern').on('click', '#pos-pso-modern', openOutcomeModal);
 
         function updateModalUrl() {
             const orgId = djangoOrgSelect.val();
@@ -278,10 +279,10 @@ $(document).ready(function() {
         }
 
         updateModalUrl();
-        djangoOrgSelect.on('change', updateModalUrl);
+        djangoOrgSelect.off('change.outcomeModal').on('change.outcomeModal', updateModalUrl);
 
-        $('#outcomeCancel').on('click', () => modal.removeClass('show'));
-        $('#outcomeSave').on('click', () => {
+        $('#outcomeCancel').off('click').on('click', () => modal.removeClass('show'));
+        $('#outcomeSave').off('click').on('click', () => {
             const selected = modal.find('input[type=checkbox]:checked').map((_, cb) => cb.value).get();
             const existing = posField.val().trim();
             const value = existing ? existing + '\n' + selected.join('\n') : selected.join('\n');
