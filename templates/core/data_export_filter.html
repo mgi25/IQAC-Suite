@@ -1,0 +1,1427 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{% trans "Data Export & Analytics - CHRIST University" %}{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+    --primary-color: #264487; /* CHRIST University Blue */
+    --secondary-color: #1976d2; /* A lighter, vibrant blue */
+    --accent-color: #f59e0b; /* A warm accent color */
+    --background-color: #f8f9fa;
+    --card-background: #ffffff;
+    --text-primary: #212529;
+    --text-secondary: #6c757d;
+    --border-color: #dee2e6;
+    --success-color: #10b981;
+    --danger-color: #ef4444;
+    --warning-color: #f59e0b;
+    --info-color: #0ea5e9;
+    --light-blue-bg: #f1f5f9;
+}
+
+body {
+    background-color: var(--background-color);
+    font-family: 'Inter', sans-serif;
+    color: var(--text-primary);
+    line-height: 1.6;
+}
+
+.export-container {
+    max-width: 1600px;
+    margin: 2rem auto;
+    padding: 0 2rem;
+}
+
+/* --- Header Section --- */
+.export-header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    border-radius: 16px;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+    color: white;
+    box-shadow: 0 10px 30px rgba(38, 68, 135, 0.2);
+    text-align: center;
+}
+
+.export-header h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin: 0 0 0.5rem 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.export-header p {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin: 0;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* --- Filter Section --- */
+.filter-section {
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+.filter-section h3 {
+    color: var(--primary-color);
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-bottom: 2px solid var(--light-blue-bg);
+    padding-bottom: 1rem;
+}
+
+.filter-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.filter-tab {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.filter-tab.active {
+    background: var(--primary-color);
+    color: white;
+    box-shadow: 0 4px 12px rgba(38, 68, 135, 0.2);
+}
+
+.filter-tab:hover:not(.active) {
+    background: var(--light-blue-bg);
+    color: var(--primary-color);
+}
+
+.filter-group-section {
+    display: none;
+}
+
+.filter-group-section.active {
+    display: block;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.filter-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.filter-group label {
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.filter-control {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    background: #fff;
+    width: 100%;
+}
+
+.filter-control:focus {
+    outline: none;
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.15);
+}
+
+.filter-control[multiple] {
+    height: 150px;
+    padding: 0.5rem;
+}
+
+.filter-control option {
+    padding: 0.5rem;
+    margin: 0.25rem 0;
+}
+
+.range-inputs {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.range-inputs span {
+    text-align: center;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.btn {
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 0.95rem;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+
+.btn-filter {
+    background: var(--primary-color);
+    color: white;
+}
+.btn-filter:hover {
+    background: #1e3a6e;
+}
+
+.btn-clear {
+    background: #6c757d;
+    color: white;
+}
+.btn-clear:hover {
+    background: #5a6268;
+}
+
+.btn-quick-export {
+    background: var(--success-color);
+    color: white;
+}
+.btn-quick-export:hover {
+    background: #0d9488;
+}
+
+/* --- Filter Counts --- */
+.filter-counts {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--light-blue-bg);
+}
+
+.count-badge {
+    background: var(--light-blue-bg);
+    color: var(--primary-color);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+.count-badge .count-value {
+    font-weight: 700;
+    background: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+/* --- Results Section --- */
+.results-section {
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+.results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid var(--light-blue-bg);
+    padding-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.results-header h3 {
+    color: var(--primary-color);
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.results-count {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.5rem 1.25rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+/* --- Data Table --- */
+.table-container {
+    max-height: 700px;
+    overflow: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+}
+
+.data-table th {
+    background: var(--light-blue-bg);
+    color: var(--primary-color);
+    font-weight: 700;
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 2px solid var(--border-color);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.data-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.9rem;
+    vertical-align: middle;
+}
+
+.data-table tr:last-child td {
+    border-bottom: none;
+}
+
+.data-table tr:hover {
+    background: #f8fafc;
+}
+
+.status-badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    display: inline-block;
+    border: 1px solid;
+}
+
+.status-draft { background-color: #f3e8ff; color: #7c3aed; border-color: #d8b4fe; }
+.status-submitted { background-color: #dbeafe; color: #2563eb; border-color: #bfdbfe; }
+.status-under_review, .status-under-review { background-color: #fef3c7; color: #d97706; border-color: #fde68a; }
+.status-waiting { background-color: #fef3c7; color: #d97706; border-color: #fde68a; }
+.status-approved { background-color: #d1fae5; color: #059669; border-color: #a7f3d0; }
+.status-rejected { background-color: #fee2e2; color: #dc2626; border-color: #fecaca; }
+.status-finalized { background-color: #e0f2fe; color: #0284c7; border-color: #bae6fd; }
+.status-returned { background-color: #fef9c3; color: #ca8a04; border-color: #fde047; }
+.status-active { background-color: #dcfce7; color: #16a34a; border-color: #bbf7d0; }
+.status-inactive { background-color: #f3f4f6; color: #6b7280; border-color: #e5e7eb; }
+
+.data-type-badge {
+    font-weight: 600;
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+}
+.data-type-event_proposal, .data-type-event-proposal { background-color: var(--info-color); color: white; }
+.data-type-organization { background-color: var(--warning-color); color: white; }
+.data-type-user { background-color: var(--success-color); color: white; }
+.data-type-report { background-color: #8b5cf6; color: white; }
+
+/* --- Empty State --- */
+.empty-state {
+    text-align: center;
+    padding: 4rem 1rem;
+    color: var(--text-secondary);
+}
+
+.empty-state i {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+    opacity: 0.3;
+    color: var(--primary-color);
+}
+
+.empty-state h4 {
+    font-size: 1.5rem;
+    margin-bottom: 0.75rem;
+    color: var(--primary-color);
+}
+
+/* --- Download Section --- */
+.download-section {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 1px solid #bae6fd;
+    border-radius: 16px;
+    padding: 2rem;
+    text-align: center;
+}
+
+.download-section h3 {
+    color: var(--primary-color);
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+.download-options {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.btn-download {
+    background: white;
+    color: var(--primary-color);
+    border: 2px solid var(--primary-color);
+    padding: 0.8rem 1.8rem;
+    border-radius: 12px;
+}
+
+.btn-download:hover {
+    background: var(--primary-color);
+    color: white;
+    box-shadow: 0 8px 24px rgba(38, 68, 135, 0.3);
+}
+
+/* --- Loading State --- */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(5px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    flex-direction: column;
+    gap: 1rem;
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.loading-spinner {
+    width: 60px;
+    height: 60px;
+    border: 6px solid #e0f2fe;
+    border-top: 6px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* --- Responsive Design --- */
+@media (max-width: 992px) {
+    .filter-row {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .export-container {
+        padding: 0 1rem;
+    }
+    .export-header h1 {
+        font-size: 2rem;
+    }
+    .filter-row {
+        grid-template-columns: 1fr;
+    }
+    .filter-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .results-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+    .download-options {
+        flex-direction: column;
+        align-items: center;
+    }
+    .data-table {
+        font-size: 0.85rem;
+    }
+    .data-table th,
+    .data-table td {
+        padding: 0.75rem 0.5rem;
+    }
+    .filter-tabs {
+        flex-wrap: wrap;
+    }
+    .filter-counts {
+        justify-content: center;
+    }
+    .table-container {
+        max-height: 500px;
+    }
+}
+
+/* Print Styles */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .results-section, .results-section * {
+        visibility: visible;
+    }
+    .results-section {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        box-shadow: none !important;
+        border: none !important;
+    }
+    .data-table {
+        font-size: 9pt !important;
+    }
+    .status-badge {
+        border: 1px solid #ccc !important;
+        background: transparent !important;
+        color: #000 !important;
+    }
+}
+
+/* Additional improvements */
+.filter-control option:hover {
+    background-color: var(--light-blue-bg);
+}
+
+.data-table tbody tr:nth-child(even) {
+    background-color: #fdfdfd;
+}
+
+.data-table tbody tr:nth-child(odd) {
+    background-color: #ffffff;
+}
+
+.data-table tbody tr:hover {
+    background-color: #f8fafc !important;
+}
+
+.role-list {
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.role-list .role-item {
+    display: inline-block;
+    background: var(--light-blue-bg);
+    color: var(--primary-color);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    margin: 0.1rem;
+    font-size: 0.75rem;
+}
+
+.truncate {
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.no-data-message {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    color: #6c757d;
+    margin: 1rem 0;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="export-container" 
+    data-api-orgs-url="{% url 'api_organizations_by_type' %}"
+    data-api-counts-url="{% url 'api_filter_counts' %}">
+    <!-- Header Section -->
+    <header class="export-header">
+        <h1>
+            <i class="fas fa-chart-pie"></i>
+            {% trans "Data Export & Analytics" %}
+        </h1>
+        <p>{% trans "Filter, analyze, and export institutional data with a comprehensive suite of advanced filtering options. Generate reports in CSV, Excel, and PDF formats." %}</p>
+    </header>
+
+    <!-- Filter Section -->
+    <section class="filter-section">
+        <h3>
+            <i class="fas fa-filter"></i>
+            {% trans "Advanced Filters" %}
+        </h3>
+        
+        <!-- Filter Tabs -->
+        <nav class="filter-tabs">
+            <button class="filter-tab active" data-tab="basic">
+                <i class="fas fa-th-list"></i>
+                {% trans "Basic Filters" %}
+            </button>
+            <button class="filter-tab" data-tab="advanced">
+                <i class="fas fa-cogs"></i>
+                {% trans "Advanced Filters" %}
+            </button>
+        </nav>
+
+        <form id="filterForm" method="get">
+            <!-- Basic Filters -->
+            <div id="basicFilters" class="filter-group-section active">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="data_type"><i class="fas fa-database"></i>{% trans "Data Type" %}</label>
+                        <select id="data_type" name="data_type" class="filter-control">
+                            <option value="">{% trans "All Data Types" %}</option>
+                            <option value="event_proposals" {% if current_filters.data_type == 'event_proposals' %}selected{% endif %}>{% trans "Event Proposals" %}</option>
+                            <option value="organizations" {% if current_filters.data_type == 'organizations' %}selected{% endif %}>{% trans "Organizations" %}</option>
+                            <option value="users" {% if current_filters.data_type == 'users' %}selected{% endif %}>{% trans "Users" %}</option>
+                            <option value="reports" {% if current_filters.data_type == 'reports' %}selected{% endif %}>{% trans "Reports" %}</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="organization_type"><i class="fas fa-sitemap"></i>{% trans "Organization Type" %}</label>
+                        <select id="organization_type" name="organization_type" class="filter-control" onchange="loadOrganizations()">
+                            <option value="">{% trans "All Organization Types" %}</option>
+                            {% for org_type in organization_types %}
+                            <option value="{{ org_type.id }}" {% if current_filters.organization_type_id == org_type.id|stringformat:"s" %}selected{% endif %}>{{ org_type.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="organization"><i class="fas fa-building"></i>{% trans "Organization" %}</label>
+                        <select id="organization" name="organization" class="filter-control">
+                            <option value="">{% trans "All Organizations" %}</option>
+                            {% for org in organizations %}
+                            <option value="{{ org.id }}" {% if current_filters.organization_id == org.id|stringformat:"s" %}selected{% endif %}>{{ org.name }} ({{ org.org_type.name }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="date_range"><i class="fas fa-calendar-alt"></i>{% trans "Date Range (Creation/Joined)" %}</label>
+                        <div class="range-inputs">
+                            <input type="date" id="date_from" name="date_from" class="filter-control" value="{{ current_filters.date_from }}">
+                            <span>to</span>
+                            <input type="date" id="date_to" name="date_to" class="filter-control" value="{{ current_filters.date_to }}">
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="academic_year"><i class="fas fa-graduation-cap"></i>{% trans "Academic Year" %}</label>
+                        <select id="academic_year" name="academic_year" class="filter-control">
+                            <option value="">{% trans "All Academic Years" %}</option>
+                            {% for year in academic_years %}
+                            <option value="{{ year }}" {% if current_filters.academic_year == year %}selected{% endif %}>{{ year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="search"><i class="fas fa-search"></i>{% trans "Search Keywords" %}</label>
+                        <input type="text" id="search" name="search" class="filter-control" placeholder="{% trans 'Search titles, names, descriptions...' %}" value="{{ current_filters.search_query }}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced Filters -->
+            <div id="advancedFilters" class="filter-group-section">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="status"><i class="fas fa-flag"></i>{% trans "Status" %}</label>
+                        <select id="status" name="status" class="filter-control" multiple>
+                            {% for status_val, status_name in available_statuses %}
+                            <option value="{{ status_val }}" {% if status_val in current_filters.status %}selected{% endif %}>{{ status_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">{% trans "Hold Ctrl/Cmd to select multiple" %}</small>
+                    </div>
+                    <div class="filter-group">
+                        <label for="submitted_by"><i class="fas fa-user"></i>{% trans "Submitted By" %}</label>
+                        <select id="submitted_by" name="submitted_by" class="filter-control">
+                            <option value="">{% trans "All Users" %}</option>
+                            {% for user in available_users %}
+                            <option value="{{ user.id }}" {% if current_filters.submitted_by == user.id|stringformat:"s" %}selected{% endif %}>
+                                {{ user.get_full_name|default:user.username }} ({{ user.email|default:"No email" }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="role"><i class="fas fa-user-tag"></i>{% trans "User Role" %}</label>
+                        <select id="role" name="role" class="filter-control">
+                            <option value="">{% trans "All Roles" %}</option>
+                            {% for role in available_roles %}
+                            <option value="{{ role.id }}" {% if current_filters.role == role.id|stringformat:"s" %}selected{% endif %}>{{ role.name }} ({{ role.organization.name }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="venue"><i class="fas fa-map-marker-alt"></i>{% trans "Venue" %}</label>
+                        <select id="venue" name="venue" class="filter-control">
+                            <option value="">{% trans "All Venues" %}</option>
+                            {% for venue in available_venues %}
+                            <option value="{{ venue }}" {% if current_filters.venue == venue %}selected{% endif %}>{{ venue }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="report_type"><i class="fas fa-file-alt"></i>{% trans "Report Type" %}</label>
+                        <select id="report_type" name="report_type" class="filter-control">
+                            <option value="">{% trans "All Report Types" %}</option>
+                            {% for rt_val, rt_name in available_report_types %}
+                            <option value="{{ rt_val }}" {% if current_filters.report_type == rt_val %}selected{% endif %}>{{ rt_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="event_focus_type"><i class="fas fa-crosshairs"></i>{% trans "Event Focus Type" %}</label>
+                        <select id="event_focus_type" name="event_focus_type" class="filter-control">
+                            <option value="">{% trans "All Focus Types" %}</option>
+                             {% for focus_type in available_event_focus_types %}
+                            <option value="{{ focus_type }}" {% if current_filters.event_focus_type == focus_type %}selected{% endif %}>{{ focus_type }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="faculty_incharge"><i class="fas fa-chalkboard-teacher"></i>{% trans "Faculty In-Charge" %}</label>
+                        <select id="faculty_incharge" name="faculty_incharge" class="filter-control">
+                            <option value="">{% trans "All Faculty" %}</option>
+                             {% for user in faculty_users %}
+                            <option value="{{ user.id }}" {% if current_filters.faculty_incharge == user.id|stringformat:"s" %}selected{% endif %}>
+                                {{ user.get_full_name|default:user.username }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="updated_in_days"><i class="fas fa-history"></i>{% trans "Updated in Last (Days)" %}</label>
+                        <input type="number" id="updated_in_days" name="updated_in_days" class="filter-control" placeholder="{% trans 'e.g., 30' %}" value="{{ current_filters.updated_in_days }}" min="1" max="365">
+                    </div>
+                    <div class="filter-group">
+                        <label for="created_by_year"><i class="fas fa-calendar-plus"></i>{% trans "Creation Year" %}</label>
+                        <input type="number" id="created_by_year" name="created_by_year" class="filter-control" placeholder="{% trans 'e.g., 2024' %}" value="{{ current_filters.created_by_year }}" min="2020" max="2030">
+                    </div>
+                </div>
+
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="active_only"><i class="fas fa-toggle-on"></i>{% trans "Item Status (User/Org)" %}</label>
+                        <select id="active_only" name="active_only" class="filter-control">
+                            <option value="">{% trans "All" %}</option>
+                            <option value="true" {% if current_filters.active_only == 'true' %}selected{% endif %}>{% trans "Active Only" %}</option>
+                            <option value="false" {% if current_filters.active_only == 'false' %}selected{% endif %}>{% trans "Inactive Only" %}</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="has_parent"><i class="fas fa-network-wired"></i>{% trans "Organization Hierarchy" %}</label>
+                        <select id="has_parent" name="has_parent" class="filter-control">
+                            <option value="">{% trans "All Organizations" %}</option>
+                            <option value="true" {% if current_filters.has_parent == 'true' %}selected{% endif %}>{% trans "Has Parent Org" %}</option>
+                            <option value="false" {% if current_filters.has_parent == 'false' %}selected{% endif %}>{% trans "Is a Parent Org" %}</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="has_role_assignments"><i class="fas fa-users-cog"></i>{% trans "Role Assignments" %}</label>
+                        <select id="has_role_assignments" name="has_role_assignments" class="filter-control">
+                            <option value="">{% trans "Any" %}</option>
+                            <option value="true" {% if current_filters.has_role_assignments == 'true' %}selected{% endif %}>{% trans "Has Assignments" %}</option>
+                            <option value="false" {% if current_filters.has_role_assignments == 'false' %}selected{% endif %}>{% trans "No Assignments" %}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="needs_finance_approval"><i class="fas fa-rupee-sign"></i>{% trans "Needs Finance Approval" %}</label>
+                        <select id="needs_finance_approval" name="needs_finance_approval" class="filter-control">
+                            <option value="">{% trans "Any" %}</option>
+                            <option value="true" {% if current_filters.needs_finance_approval == 'true' %}selected{% endif %}>{% trans "Yes" %}</option>
+                            <option value="false" {% if current_filters.needs_finance_approval == 'false' %}selected{% endif %}>{% trans "No" %}</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="is_big_event"><i class="fas fa-star"></i>{% trans "Is a Big Event" %}</label>
+                        <select id="is_big_event" name="is_big_event" class="filter-control">
+                            <option value="">{% trans "Any" %}</option>
+                            <option value="true" {% if current_filters.is_big_event == 'true' %}selected{% endif %}>{% trans "Yes" %}</option>
+                            <option value="false" {% if current_filters.is_big_event == 'false' %}selected{% endif %}>{% trans "No" %}</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="filter-buttons">
+                <button type="submit" class="btn btn-filter">
+                    <i class="fas fa-search"></i>
+                    {% trans "Apply Filters" %}
+                </button>
+                <button type="button" class="btn btn-clear" onclick="clearFilters()">
+                    <i class="fas fa-times"></i>
+                    {% trans "Clear All" %}
+                </button>
+                <button type="button" class="btn btn-quick-export" onclick="exportData('csv')">
+                    <i class="fas fa-file-csv"></i>
+                    {% trans "Quick Export CSV" %}
+                </button>
+            </div>
+
+            <!-- Filter Counts -->
+            <div class="filter-counts" id="filterCounts">
+                <span class="count-badge">{% trans "Events" %}: <strong class="count-value" id="count-event_proposals">{{ filter_counts.event_proposals|default:"0" }}</strong></span>
+                <span class="count-badge">{% trans "Orgs" %}: <strong class="count-value" id="count-organizations">{{ filter_counts.organizations|default:"0" }}</strong></span>
+                <span class="count-badge">{% trans "Users" %}: <strong class="count-value" id="count-users">{{ filter_counts.users|default:"0" }}</strong></span>
+                <span class="count-badge">{% trans "Reports" %}: <strong class="count-value" id="count-reports">{{ filter_counts.reports|default:"0" }}</strong></span>
+                <span class="count-badge">{% trans "Total" %}: <strong class="count-value" id="count-total">{{ filter_counts.total|default:"0" }}</strong></span>
+            </div>
+        </form>
+    </section>
+
+    <!-- Results Section -->
+    <section class="results-section">
+        <div class="results-header">
+            <h3>
+                <i class="fas fa-table"></i>
+                {% trans "Filtered Results" %}
+            </h3>
+            <div class="results-count">
+                <span id="totalRecords">{{ total_records }}</span> {% trans "record(s) found" %}
+            </div>
+        </div>
+
+        {% if filtered_data %}
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        {% if not current_filters.data_type %}
+                        <th>{% trans "Type" %}</th>
+                        <th>{% trans "Title/Name" %}</th>
+                        <th>{% trans "Status" %}</th>
+                        <th>{% trans "Organization/Role" %}</th>
+                        <th>{% trans "Date" %}</th>
+                        <th>{% trans "User/Email" %}</th>
+                        {% elif current_filters.data_type == 'event_proposals' %}
+                        <th>{% trans "Title" %}</th>
+                        <th>{% trans "Organization" %}</th>
+                        <th>{% trans "Status" %}</th>
+                        <th>{% trans "Submitted By" %}</th>
+                        <th>{% trans "Date Submitted" %}</th>
+                        <th>{% trans "Academic Year" %}</th>
+                        <th>{% trans "Venue" %}</th>
+                        <th>{% trans "Finance" %}</th>
+                        <th>{% trans "Big Event" %}</th>
+                        {% elif current_filters.data_type == 'organizations' %}
+                        <th>{% trans "Name" %}</th>
+                        <th>{% trans "Type" %}</th>
+                        <th>{% trans "Status" %}</th>
+                        <th>{% trans "Parent" %}</th>
+                        <th>{% trans "Users Count" %}</th>
+                        <th>{% trans "Created" %}</th>
+                        {% elif current_filters.data_type == 'users' %}
+                        <th>{% trans "Name" %}</th>
+                        <th>{% trans "Email" %}</th>
+                        <th>{% trans "Status" %}</th>
+                        <th>{% trans "Roles" %}</th>
+                        <th>{% trans "Date Joined" %}</th>
+                        <th>{% trans "Last Login" %}</th>
+                        {% elif current_filters.data_type == 'reports' %}
+                        <th>{% trans "Title" %}</th>
+                        <th>{% trans "Type" %}</th>
+                        <th>{% trans "Organization" %}</th>
+                        <th>{% trans "Status" %}</th>
+                        <th>{% trans "Submitted By" %}</th>
+                        <th>{% trans "Created At" %}</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in filtered_data %}
+                    <tr>
+                        {% if not current_filters.data_type %}
+                        <!-- Mixed Data Display -->
+                        <td><span class="data-type-badge data-type-{{ item.data_type }}">{{ item.data_type|title }}</span></td>
+                        <td><strong class="truncate">{{ item.display_name }}</strong></td>
+                        <td><span class="status-badge status-{{ item.display_status }}">{{ item.display_status_text }}</span></td>
+                        <td class="truncate">{{ item.display_organization }}</td>
+                        <td>{{ item.display_date }}</td>
+                        <td class="truncate">{{ item.display_user }}</td>
+                        
+                        {% elif current_filters.data_type == 'event_proposals' %}
+                        <!-- Event Proposals Display -->
+                        <td><strong class="truncate">{{ item.event_title|default:"Untitled Event" }}</strong></td>
+                        <td class="truncate">{{ item.organization.name|default:"N/A" }}</td>
+                        <td><span class="status-badge status-{{ item.status|lower }}">{{ item.get_status_display }}</span></td>
+                        <td>{{ item.submitted_by.get_full_name|default:item.submitted_by.username|default:"N/A" }}</td>
+                        <td>{{ item.created_at|date:"M d, Y" }}</td>
+                        <td>{{ item.academic_year|default:"N/A" }}</td>
+                        <td class="truncate">{{ item.venue|default:"N/A" }}</td>
+                        <td>
+                            {% if item.needs_finance_approval %}
+                                <i class="fas fa-check-circle text-success" title="{% trans 'Needs Finance Approval' %}"></i>
+                            {% else %}
+                                <i class="fas fa-times-circle text-muted" title="{% trans 'No Finance Approval Needed' %}"></i>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.is_big_event %}
+                                <i class="fas fa-star text-warning" title="{% trans 'Big Event' %}"></i>
+                            {% else %}
+                                <i class="fas fa-circle text-muted" title="{% trans 'Regular Event' %}"></i>
+                            {% endif %}
+                        </td>
+                        
+                        {% elif current_filters.data_type == 'organizations' %}
+                        <!-- Organizations Display -->
+                        <td><strong>{{ item.name }}</strong></td>
+                        <td>{{ item.org_type.name }}</td>
+                        <td><span class="status-badge {% if item.is_active %}status-active{% else %}status-inactive{% endif %}">{% if item.is_active %}Active{% else %}Inactive{% endif %}</span></td>
+                        <td>{{ item.parent.name|default:"N/A" }}</td>
+                        <td>
+                            {% with role_assignments=item.role_assignments.all %}
+                                {% if role_assignments %}
+                                    {{ role_assignments.count }} {% trans "user(s)" %}
+                                {% else %}
+                                    0 {% trans "users" %}
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td>
+                            {% if item.created_at %}
+                                {{ item.created_at|date:"M d, Y" }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        
+                        {% elif current_filters.data_type == 'users' %}
+                        <!-- Users Display -->
+                        <td><strong>{{ item.get_full_name|default:item.username }}</strong></td>
+                        <td class="truncate">{{ item.email|default:"N/A" }}</td>
+                        <td><span class="status-badge {% if item.is_active %}status-active{% else %}status-inactive{% endif %}">{% if item.is_active %}Active{% else %}Inactive{% endif %}</span></td>
+                        <td>
+                            <div class="role-list">
+                                {% if item.role_assignments.all %}
+                                    {% for assignment in item.role_assignments.all|slice:":3" %}
+                                        <span class="role-item">{{ assignment.role.name }}</span>
+                                    {% endfor %}
+                                    {% if item.role_assignments.all.count > 3 %}
+                                        <span class="role-item">+{{ item.role_assignments.all.count|add:"-3" }} more</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">{% trans "No roles" %}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>{{ item.date_joined|date:"M d, Y" }}</td>
+                        <td>
+                            {% if item.last_login %}
+                                {{ item.last_login|date:"M d, Y" }}
+                            {% else %}
+                                <span class="text-muted">{% trans "Never" %}</span>
+                            {% endif %}
+                        </td>
+                        
+                        {% elif current_filters.data_type == 'reports' %}
+                        <!-- Reports Display -->
+                        <td><strong class="truncate">{{ item.title }}</strong></td>
+                        <td>
+                            {% if item.get_report_type_display %}
+                                {{ item.get_report_type_display }}
+                            {% elif item.report_type %}
+                                {{ item.report_type|title }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td class="truncate">{{ item.organization.name|default:"N/A" }}</td>
+                        <td><span class="status-badge status-{{ item.status|lower }}">{{ item.get_status_display }}</span></td>
+                        <td>{{ item.submitted_by.get_full_name|default:"System" }}</td>
+                        <td>{{ item.created_at|date:"M d, Y" }}</td>
+                        {% endif %}
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="{% if not current_filters.data_type %}6{% elif current_filters.data_type == 'event_proposals' %}9{% elif current_filters.data_type == 'organizations' %}6{% elif current_filters.data_type == 'users' %}6{% elif current_filters.data_type == 'reports' %}6{% endif %}" class="no-data-message">
+                            <i class="fas fa-search-minus"></i>
+                            <strong>{% trans "No records match your current filters" %}</strong>
+                            <br>
+                            <small>{% trans "Try adjusting your search criteria or clearing some filters." %}</small>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-search-minus"></i>
+            <h4>{% trans "No Data Found" %}</h4>
+            <p>{% trans "Try adjusting your filters to see results, or check if the data exists." %}</p>
+            <button class="btn btn-clear" onclick="clearFilters()">
+                <i class="fas fa-refresh"></i>
+                {% trans "Reset Filters" %}
+            </button>
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- Download Section -->
+    {% if filtered_data %}
+    <section class="download-section">
+        <h3>
+            <i class="fas fa-cloud-download-alt"></i>
+            {% trans "Export Options" %}
+        </h3>
+        <p>{% trans "Export your filtered data in various formats for further analysis or reporting." %}</p>
+        <div class="download-options">
+            <button class="btn btn-download" onclick="exportData('csv')" title="{% trans 'Comma-separated values format' %}">
+                <i class="fas fa-file-csv"></i>
+                {% trans "Download CSV" %}
+            </button>
+            <button class="btn btn-download" onclick="exportData('excel')" title="{% trans 'Microsoft Excel format' %}">
+                <i class="fas fa-file-excel"></i>
+                {% trans "Download Excel" %}
+            </button>
+            <button class="btn btn-download" onclick="exportData('pdf')" title="{% trans 'Portable Document Format' %}">
+                <i class="fas fa-file-pdf"></i>
+                {% trans "Download PDF" %}
+            </button>
+        </div>
+    </section>
+    {% endif %}
+</div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <p>{% trans "Processing your request..." %}</p>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- Globals ---
+    const filterForm = document.getElementById('filterForm');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const container = document.querySelector('.export-container');
+    let countUpdateTimeout;
+
+    // --- API URLs ---
+    const API_URLS = {
+        organizations: container.dataset.apiOrgsUrl,
+        filterCounts: container.dataset.apiCountsUrl
+    };
+
+    // --- Utility Functions ---
+    const showLoading = (message = 'Processing...') => {
+        const overlay = document.getElementById('loadingOverlay');
+        overlay.querySelector('p').textContent = message;
+        overlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    };
+
+    const hideLoading = () => {
+        const overlay = document.getElementById('loadingOverlay');
+        overlay.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    };
+
+    const switchFilterTab = (tabName) => {
+        if (!tabName) return;
+        
+        // Update tab buttons
+        document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+        document.querySelector(`.filter-tab[data-tab='${tabName}']`).classList.add('active');
+        
+        // Update filter sections
+        document.querySelectorAll('.filter-group-section').forEach(s => s.classList.remove('active'));
+        const targetSection = document.getElementById(tabName + 'Filters');
+        if (targetSection) {
+            targetSection.classList.add('active');
+        }
+    };
+
+    const clearFilters = () => {
+        const currentPath = window.location.pathname;
+        showLoading('Clearing filters...');
+        window.location.href = currentPath;
+    };
+
+    const getCleanedParams = () => {
+        const formData = new FormData(filterForm);
+        const params = new URLSearchParams();
+        
+        // Handle multiple select values
+        const statusSelects = document.querySelectorAll('select[name="status"] option:checked');
+        statusSelects.forEach(option => {
+            if (option.value) {
+                params.append('status', option.value);
+            }
+        });
+        
+        // Handle other form data
+        for (const [key, value] of formData.entries()) {
+            if (key === 'status') continue; // Already handled above
+            
+            if (value && value.trim() !== '') {
+                // Skip Django template variables that weren't replaced
+                if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
+                    continue;
+                }
+                params.append(key, value);
+            }
+        }
+        
+        return params;
+    };
+
+    const exportData = (format) => {
+        if (!['csv', 'excel', 'pdf'].includes(format)) {
+            alert('Invalid export format');
+            return;
+        }
+
+        showLoading(`Generating ${format.toUpperCase()} file...`);
+        
+        const params = getCleanedParams();
+        params.set('export', format);
+        
+        const downloadUrl = `${window.location.pathname}?${params.toString()}`;
+        console.log('Export URL:', downloadUrl);
+        
+        // Create a temporary link to trigger download
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        
+        // Use fetch for better error handling
+        fetch(downloadUrl)
+            .then(async response => {
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Export failed:', {
+                        url: downloadUrl,
+                        status: response.status,
+                        statusText: response.statusText,
+                        response: errorText
+                    });
+                    throw new Error(`Export failed: ${response.status} ${response.statusText}`);
+                }
+                
+                // Get filename from Content-Disposition header
+                const header = response.headers.get('Content-Disposition');
+                let filename = `export.${format}`;
+                
+                if (header) {
+                    const matches = header.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                    if (matches && matches[1]) {
+                        filename = matches[1].replace(/['"]/g, '');
+                    }
+                }
+                
+                return Promise.all([response.blob(), filename]);
+            })
+            .then(([blob, filename]) => {
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                
+                // Cleanup
+                window.URL.revokeObjectURL(url);
+                a.remove();
+                hideLoading();
+                
+                // Show success message
+                const successMessage = document.createElement('div');
+                successMessage.innerHTML = `
+                    <div style="position: fixed; top: 20px; right: 20px; background: var(--success-color); color: white; padding: 1rem; border-radius: 8px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                        <i class="fas fa-check-circle"></i> Export completed successfully!
+                    </div>
+                `;
+                document.body.appendChild(successMessage);
+                setTimeout(() => successMessage.remove(), 3000);
+            })
+            .catch(error => {
+                console.error('Error during export:', error);
+                hideLoading();
+                
+                // Show error message
+                const errorDiv = document.createElement('div');
+                errorDiv.innerHTML = `
+                    <div style="position: fixed; top: 20px; right: 20px; background: var(--danger-color); color: white; padding: 1rem; border-radius: 8px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                        <i class="fas fa-exclamation-triangle"></i> Export failed: ${error.message}
+                        <br><small>Please check your filters and try again.</small>
+                    </div>
+                `;
+                document.body.appendChild(errorDiv);
+                setTimeout(() => errorDiv.remove(), 5000);
+            })
+            .finally(() => {
+                link.remove();
+            });
+    };
+
+    const loadOrganizations = () => {
+        const orgTypeId = document.getElementById('organization_type').value;
+        const orgSelect = document.getElementById('organization');
+        const currentOrgId = '{{ current_filters.organization_id|escapejs }}';
+
+        if (!orgTypeId) {
+            orgSelect.innerHTML = '<option value="">{% trans "All Organizations" %}</option>';
+            return;
+        }
+
+        orgSelect.innerHTML = '<option value="">{% trans "Loading..." %}</option>';
+        orgSelect.disabled = true;
+
+        const url = `${API_URLS.organizations}?org_type=${encodeURIComponent(orgTypeId)}`;
+        
+        fetch(url)
+            .then(async response => {
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Failed to load organizations:', {
+                        url: url,
+                        status: response.status,
+                        response: errorText
+                    });
+                    throw new Error(`Failed to load organizations: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                orgSelect.innerHTML = '<option value="">{% trans "All Organizations" %}</option>';
+                
+                if (Array.isArray(data) && data.length > 0) {
+                    data.forEach(org => {
+                        const option = document.createElement('option');
+                        option.value = org.id;
+                        option.textContent = `${org.name}${org.org_type__name ? ' (' + org.org_type__name + ')' : ''}`;
+                        
+                        if (org.id.toString() === currentOrgId) {
+                            option.selected = true;
+                        }
+                        
+                        orgSelect.appendChild(option);
+                    });
+                } else {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = '{% trans "No organizations found" %}';
+                    orgSelect.appendChild(option);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading organizations:', error);
+                orgSelect.innerHTML = '<option value="">{% trans "Error loading organizations" %}</option>';
+            })
+            .finally(() => {
+                orgSelect.disabled = false;
+            });
+    };
+
+    const updateFilterCounts = () => {
+        const params = getCleanedParams();
+        const url = `${API_URLS.filterCounts}?${params.toString()}`;
+        
+        fetch(url)
+            .then(async response => {
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Failed to update counts:', {
+                        url: url,
+                        status: response.status,
+                        response: errorText
+                    });
+                    return {};
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Update count displays
+                const countElements = {
+                    'event_proposals': document.getElementById('count-event_proposals'),
+                    'organizations': document.getElementById('count-organizations'),
+                    'users': document.getElementById('count-users'),
+                    'reports': document.getElementById('count-reports'),
+                    'total': document.getElementById('count-total')
+                };
+                
+                Object.entries(countElements).forEach(([key, element]) => {
+                    if (element) {
+                        element.textContent = data[key] || 0;
+                    }
+                });
+                
+                // Update total records display
+                const totalRecordsElement = document.getElementById('totalRecords');
+                if (totalRecordsElement) {
+                    totalRecordsElement.textContent = data.total || 0;
+                }
+            })
+            .catch(error => {
+                console.error('Error updating filter counts:', error);
+            });
+    };
+
+    // --- Event Listeners ---
+    
+    // Filter tab switching
+    document.querySelectorAll('.filter-tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            e.preventDefault();
+            switchFilterTab(e.currentTarget.dataset.tab);
+        });
+    });
+
+    // Form submission with loading
+    filterForm.addEventListener('submit', (e) => {
+        showLoading('Applying filters...');
+    });
+
+    // Real-time filter count updates
+    const debounceCountUpdate = () => {
+        clearTimeout(countUpdateTimeout);
+        countUpdateTimeout = setTimeout(updateFilterCounts, 500);
+    };
+
+    // Add listeners to all filter controls
+    filterForm.addEventListener('change', debounceCountUpdate);
+    document.getElementById('search').addEventListener('input', debounceCountUpdate);
+
+    // Organization type change handler
+    document.getElementById('organization_type').addEventListener('change', () => {
+        loadOrganizations();
+        debounceCountUpdate();
+    });
+
+    // Make functions globally accessible
+    window.clearFilters = clearFilters;
+    window.exportData = exportData;
+    window.loadOrganizations = loadOrganizations;
+
+    // --- Initialization ---
+    
+    // Load organizations if org type is pre-selected
+    const orgTypeSelect = document.getElementById('organization_type');
+    if (orgTypeSelect && orgTypeSelect.value) {
+        loadOrganizations();
+    }
+    
+    // Initial count update
+    updateFilterCounts();
+    
+    // Enhance multiple select UX
+    const statusSelect = document.getElementById('status');
+    if (statusSelect && statusSelect.multiple) {
+        statusSelect.addEventListener('change', () => {
+            const selectedCount = statusSelect.querySelectorAll('option:checked').length;
+            const label = statusSelect.previousElementSibling;
+            if (label && selectedCount > 0) {
+                label.innerHTML = label.innerHTML.replace(/\(\d+\)/, '') + ` (${selectedCount})`;
+            }
+        });
+    }
+
+    console.log('Data Export & Analytics page initialized successfully');
+});
+</script>
+{% endblock %}

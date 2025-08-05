@@ -111,4 +111,20 @@ urlpatterns = [
     # Optional: User Dashboard (if not admin)
     # ────────────────────────────────────────────────
     # path('dashboard/', views.user_dashboard, name='user_dashboard'),
+    
+    
+    
+    path('core-admin/data-export/', views.data_export_filter_view, name='data_export_filter'),
+    
+    # ────────────────────────────────────────────────
+# API - Filter Counts (Required for Data Export page)
+# ────────────────────────────────────────────────
+path('core-admin/api/filter-counts/', views.api_filter_counts, name='api_filter_counts'),
+
+
+    
+    # ────────────────────────────────────────────────
+    # API for Dynamic Filtering
+    # ────────────────────────────────────────────────
+    path('api/organizations/', views.api_organizations_by_type, name='api_organizations_by_type'),
 ]
