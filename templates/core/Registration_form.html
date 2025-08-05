@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Onboarding Form</title>
+    <link rel="stylesheet" href="Registration_form.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Student Onboarding Form</h1>
+            <p>Complete the required fields below</p>
+        </div>
+
+        <div class="form-content">
+            <form id="studentForm">
+                <!-- Required Fields Section -->
+                <div class="section">
+                    <h2 class="section-title">Required Fields</h2>
+                    
+                    <div class="form-group">
+                        <label for="registrationNumber">Registration Number <span class="required">*</span></label>
+                        <input type="text" id="registrationNumber" name="registrationNumber" required>
+                    </div>
+                </div>
+
+                <!-- Organization Information Section -->
+                <div class="section">
+                    <h2 class="section-title">Organizations you are a part of</h2>
+                    <p class="section-description">(optional, does not have to be filled if you are not a part of any yet)</p>
+                    
+                    <div class="form-group">
+                        <label>Are you part of any organization?</label>
+                        <div class="button-group">
+                            <button type="button" id="orgYesBtn" class="choice-btn">Yes</button>
+                            <button type="button" id="orgNoBtn" class="choice-btn">No</button>
+                        </div>
+                    </div>
+
+                    <div class="conditional-field" id="organizationDetailsField" style="display: none;">
+                        <div class="form-group">
+                            <label for="organizationName">Organization Name</label>
+                            <input type="text" id="organizationName" name="organizationName" placeholder="Enter organization name">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="organizationRole">What role are you assigned in the organization</label>
+                            <input type="text" id="organizationRole" name="organizationRole" placeholder="Enter your role in the organization">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Section -->
+                <div class="submit-section">
+                    <button type="submit" class="submit-btn">Submit Application</button>
+                    <button type="reset" class="reset-btn">Clear Form</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="Registration_form.js"></script>
+</body>
+</html>
