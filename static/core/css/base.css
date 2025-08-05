@@ -742,6 +742,7 @@ body.command-center-layout {
   flex-direction: column;
   gap: 0.5rem;
   z-index: 9999;
+  pointer-events: none;
 }
 
 .toast-message {
@@ -754,6 +755,7 @@ body.command-center-layout {
   opacity: 0;
   transform: translateY(20px);
   transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: auto;
 }
 
 .toast-message.show {
