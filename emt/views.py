@@ -129,6 +129,15 @@ def generate_report_pdf(request):
 
 # Helper to persist text-based sections for proposals
 def _save_text_sections(proposal, data):
+    """Persist textarea sections like objectives/flow.
+
+    Parameters
+    ----------
+    proposal : EventProposal
+        The proposal instance to attach sections to.
+    data : dict
+        Usually ``request.POST`` or parsed JSON payload from autosave.
+    """
     section_map = {
         "need_analysis": EventNeedAnalysis,
         "objectives": EventObjectives,
@@ -140,6 +149,12 @@ def _save_text_sections(proposal, data):
             obj, _ = model.objects.get_or_create(proposal=proposal)
             obj.content = data.get(field) or ""
             obj.save()
+            logger.debug(
+                "Saved %s for proposal %s: %s",
+                field,
+                proposal.id,
+                (obj.content[:75] + "...") if len(obj.content) > 75 else obj.content,
+            )
 
 # ──────────────────────────────
 # PROPOSAL STEP 1: Proposal Submission
@@ -157,6 +172,7 @@ def submit_proposal(request, pk=None):
         )
 
     if request.method == "POST":
+        logger.debug("submit_proposal POST payload: %s", request.POST.dict())
         post_data = request.POST.copy()
         form = EventProposalForm(
             post_data,
@@ -216,6 +232,12 @@ def submit_proposal(request, pk=None):
             proposal.submitted_at = timezone.now()
             proposal.save()
             form.save_m2m()
+            logger.debug(
+                "Final submit for proposal %s by %s. Faculty: %s",
+                proposal.id,
+                request.user.username,
+                list(proposal.faculty_incharges.values_list("id", flat=True)),
+            )
             _save_text_sections(proposal, request.POST)
             build_approval_chain(proposal)
             messages.success(
@@ -227,6 +249,11 @@ def submit_proposal(request, pk=None):
             proposal.status = "draft"
             proposal.save()
             form.save_m2m()
+            logger.debug(
+                "Saved draft proposal %s. Faculty: %s",
+                proposal.id,
+                list(proposal.faculty_incharges.values_list("id", flat=True)),
+            )
             _save_text_sections(proposal, request.POST)
             return redirect("emt:submit_need_analysis", proposal_id=proposal.id)
 
@@ -243,6 +270,7 @@ def autosave_proposal(request):
         return JsonResponse({"error": "Invalid request"}, status=400)
 
     data = json.loads(request.body.decode("utf-8"))
+    logger.debug("autosave_proposal payload: %s", data)
 
     # Replace department logic with generic organization
     org_type_val = data.get("organization_type")  # You'll need to capture org type in your frontend/form!
@@ -272,6 +300,7 @@ def autosave_proposal(request):
         ).distinct()
 
     if not form.is_valid():
+        logger.debug("autosave_proposal form errors: %s", form.errors)
         return JsonResponse({"success": False, "errors": form.errors}, status=400)
 
     proposal = form.save(commit=False)
@@ -280,6 +309,11 @@ def autosave_proposal(request):
     proposal.save()
     form.save_m2m()               # 🆕 keep M2M in sync
     _save_text_sections(proposal, data)
+    logger.debug(
+        "Autosaved proposal %s by %s",
+        proposal.id,
+        request.user.username,
+    )
 
     return JsonResponse({"success": True, "proposal_id": proposal.id})
 
@@ -295,10 +329,12 @@ def submit_need_analysis(request, proposal_id):
 
     if request.method == "POST":
         form = NeedAnalysisForm(request.POST, instance=instance)
+        logger.debug("Need Analysis POST data for proposal %s: %s", proposal.id, request.POST.dict())
         if form.is_valid():
             need = form.save(commit=False)
             need.proposal = proposal
             need.save()
+            logger.debug("Saved Need Analysis for proposal %s", proposal.id)
             return redirect("emt:submit_objectives", proposal_id=proposal.id)
     else:
         form = NeedAnalysisForm(instance=instance)
@@ -315,10 +351,12 @@ def submit_objectives(request, proposal_id):
 
     if request.method == "POST":
         form = ObjectivesForm(request.POST, instance=instance)
+        logger.debug("Objectives POST data for proposal %s: %s", proposal.id, request.POST.dict())
         if form.is_valid():
             obj = form.save(commit=False)
             obj.proposal = proposal
             obj.save()
+            logger.debug("Saved Objectives for proposal %s", proposal.id)
             return redirect("emt:submit_expected_outcomes",
                             proposal_id=proposal.id)
     else:
@@ -336,10 +374,12 @@ def submit_expected_outcomes(request, proposal_id):
 
     if request.method == "POST":
         form = ExpectedOutcomesForm(request.POST, instance=instance)
+        logger.debug("Expected Outcomes POST data for proposal %s: %s", proposal.id, request.POST.dict())
         if form.is_valid():
             outcome = form.save(commit=False)
             outcome.proposal = proposal
             outcome.save()
+            logger.debug("Saved Expected Outcomes for proposal %s", proposal.id)
             return redirect("emt:submit_tentative_flow",
                             proposal_id=proposal.id)
     else:
@@ -357,10 +397,12 @@ def submit_tentative_flow(request, proposal_id):
 
     if request.method == "POST":
         form = TentativeFlowForm(request.POST, instance=instance)
+        logger.debug("Tentative Flow POST data for proposal %s: %s", proposal.id, request.POST.dict())
         if form.is_valid():
             flow = form.save(commit=False)
             flow.proposal = proposal
             flow.save()
+            logger.debug("Saved Tentative Flow for proposal %s", proposal.id)
             return redirect("emt:submit_speaker_profile",
                             proposal_id=proposal.id)
     else:
@@ -749,6 +791,7 @@ def review_approval_step(request, step_id):
         .prefetch_related("speakers", "expense_details")
         .get(pk=step.proposal_id)
     )
+    logger.debug("Loaded proposal %s for review step %s", proposal.id, step.id)
 
     # Fetch related sections gracefully; some proposals may not have
     # completed every part yet, so the related objects could be missing.
@@ -774,6 +817,13 @@ def review_approval_step(request, step_id):
 
     speakers = proposal.speakers.all()
     expenses = proposal.expense_details.all()
+    logger.debug(
+        "Review data for proposal %s - faculty: %s, objectives: %s, flow: %s",
+        proposal.id,
+        list(proposal.faculty_incharges.values_list("id", flat=True)),
+        getattr(objectives, "content", None),
+        getattr(flow, "content", None),
+    )
 
     GATEKEEPER_ROLES = [
         ApprovalStep.Role.HOD.value,
