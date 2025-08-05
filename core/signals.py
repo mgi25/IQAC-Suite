@@ -1,7 +1,7 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.contrib.auth.models import User
-from django.contrib.auth.signals import user_logged_in
+from django.contrib.auth.signals import user_logged_in, user_logged_out
 from .models import Profile
 import sys
 import logging
@@ -47,3 +47,12 @@ def log_user_login(sender, request, user, **kwargs):
     Logs a message when a user logs in.
     """
     logger.info(f"User '{user.username}' (ID: {user.id}) logged in from IP address {request.META.get('REMOTE_ADDR')}.")
+    
+@receiver(user_logged_out)
+def log_user_logout(sender, request, user, **kwargs):
+    """
+    Logs a message when a user logs out.
+    """
+    # The user object might be None if the session was destroyed before the signal was sent
+    if user:
+        logger.info(f"User '{user.username}' (ID: {user.id}) logged out.")
