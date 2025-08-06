@@ -559,7 +559,7 @@
             </div>
             
             <div class="data-type-cards">
-                <div class="data-type-card {% if current_data_type == '' %}selected{% endif %}" data-type="">
+                <div class="data-type-card {% if current_data_type == '' %}selected{% endif %}" data-type="" role="button" tabindex="0">
                     <div class="count" id="count-total">{{ filter_counts.total|default:0 }}</div>
                     <div class="icon">
                         <i class="fas fa-database"></i>
@@ -568,7 +568,7 @@
                     <div class="description">View all data types</div>
                 </div>
 
-                <div class="data-type-card {% if current_data_type == 'event_proposals' %}selected{% endif %}" data-type="event_proposals">
+                <div class="data-type-card {% if current_data_type == 'event_proposals' %}selected{% endif %}" data-type="event_proposals" role="button" tabindex="0">
                     <div class="count" id="count-event_proposals">{{ filter_counts.event_proposals|default:0 }}</div>
                     <div class="icon">
                         <i class="fas fa-calendar-check"></i>
@@ -577,7 +577,7 @@
                     <div class="description">Venue, academic year, finance, event-specific</div>
                 </div>
 
-                <div class="data-type-card {% if current_data_type == 'organizations' %}selected{% endif %}" data-type="organizations">
+                <div class="data-type-card {% if current_data_type == 'organizations' %}selected{% endif %}" data-type="organizations" role="button" tabindex="0">
                     <div class="count" id="count-organizations">{{ filter_counts.organizations|default:8 }}</div>
                     <div class="icon">
                         <i class="fas fa-building"></i>
@@ -586,7 +586,7 @@
                     <div class="description">Type, hierarchy, assignments</div>
                 </div>
 
-                <div class="data-type-card {% if current_data_type == 'users' %}selected{% endif %}" data-type="users">
+                <div class="data-type-card {% if current_data_type == 'users' %}selected{% endif %}" data-type="users" role="button" tabindex="0">
                     <div class="count" id="count-users">{{ filter_counts.users|default:5 }}</div>
                     <div class="icon">
                         <i class="fas fa-users"></i>
@@ -595,7 +595,7 @@
                     <div class="description">Roles, activity, login history</div>
                 </div>
 
-                <div class="data-type-card {% if current_data_type == 'reports' %}selected{% endif %}" data-type="reports">
+                <div class="data-type-card {% if current_data_type == 'reports' %}selected{% endif %}" data-type="reports" role="button" tabindex="0">
                     <div class="count" id="count-reports">{{ filter_counts.reports|default:0 }}</div>
                     <div class="icon">
                         <i class="fas fa-file-alt"></i>
@@ -1160,7 +1160,7 @@
 </div>
 {% endblock %}
 
-{% block extra_js %}
+{% block scripts %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
 <script>
@@ -1247,6 +1247,10 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         dataTypeCards.forEach(card => {
+            // Ensure accessibility
+            card.setAttribute('tabindex', '0');
+            card.setAttribute('role', 'button');
+
             card.addEventListener('click', function() {
                 const dataType = this.dataset.type;
                 if (typeof dataType === 'undefined') {
@@ -1268,6 +1272,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 debounceCountUpdate();
                 // Submit the form to reload results for selected data type
                 filterForm.submit();
+            });
+
+            // Keyboard accessibility
+            card.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    this.click();
+                }
             });
         });
     };
