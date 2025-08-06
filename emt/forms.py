@@ -94,8 +94,8 @@ class EventProposalForm(forms.ModelForm):
     class Meta:
         model = EventProposal
         fields = [
-            'organization_type', 'organization', 'faculty_incharges', 'event_title', 'event_datetime', 'venue',
-            'committees', 'num_activities', 'academic_year', 'student_coordinators',
+            'organization_type', 'organization', 'faculty_incharges', 'event_title', 'event_start_date', 'event_end_date', 'venue',
+            'committees', 'num_activities', 'academic_year', 'student_coordinators', 'pos_pso',
             'target_audience', 'event_focus_type', 'fest_fee_participants',
             'fest_fee_rate', 'fest_fee_amount', 'fest_sponsorship_amount',
             'conf_fee_participants', 'conf_fee_rate', 'conf_fee_amount', 'conf_sponsorship_amount',
@@ -105,13 +105,18 @@ class EventProposalForm(forms.ModelForm):
         labels = {
             'organization_type': 'Type of Organization',
             'organization': 'Organization Name',
-            'event_datetime': 'Date Time',
+            'event_start_date': 'Start Date',
+            'event_end_date': 'End Date',
+            'venue': 'Location',
+            'pos_pso': 'POS & PSO Management',
         }
         widgets = {
-            'event_datetime': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'event_start_date': forms.DateInput(attrs={'type': 'date'}),
+            'event_end_date': forms.DateInput(attrs={'type': 'date'}),
             'committees':         forms.Textarea(attrs={'rows': 2}),
             'student_coordinators': forms.Textarea(attrs={'rows': 2}),
             'target_audience':    forms.TextInput(attrs={'placeholder': 'e.g., BSc students'}),
+            'pos_pso':            forms.TextInput(attrs={'placeholder': 'e.g., PO1, PSO2'}),
         }
 
     def clean(self):

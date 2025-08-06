@@ -24,9 +24,15 @@
         <tr>
           <th>Faculty Incharges</th>
           <td>
-            {% for fac in proposal.faculty_incharges.all %}
-              {{ fac.get_full_name }}{% if not forloop.last %}, {% endif %}
-            {% empty %} — {% endfor %}
+            {% with facs=proposal.faculty_incharges.all %}
+              {% if facs %}
+                {% for fac in facs %}
+                  {{ fac.get_full_name|default:fac.username }} ({{ fac.email }}){% if not forloop.last %}, {% endif %}
+                {% endfor %}
+              {% else %}
+                —
+              {% endif %}
+            {% endwith %}
           </td>
         </tr>
         <tr><th>Student Coordinators</th><td>{{ proposal.student_coordinators|default:"—" }}</td></tr>
