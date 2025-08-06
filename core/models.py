@@ -50,7 +50,7 @@ class OrganizationRole(models.Model):
 class RoleAssignment(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='role_assignments')
     role = models.ForeignKey('OrganizationRole', on_delete=models.CASCADE, null=True)
-    organization = models.ForeignKey(Organization, null=True, blank=True, on_delete=models.SET_NULL)
+    organization = models.ForeignKey(Organization, null=True, blank=True, on_delete=models.SET_NULL,related_name='role_assignments')
 
     class Meta:
         unique_together = ("user", "role", "organization")
