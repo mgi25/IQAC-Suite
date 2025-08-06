@@ -21,6 +21,72 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
+  // Filter functionality for events
+  const eventTypeFilter = document.getElementById('eventTypeFilter');
+  const eventTimeFilter = document.getElementById('eventTimeFilter');
+  const eventStatusFilter = document.getElementById('eventStatusFilter');
+  const eventsList = document.getElementById('myEventsList');
+
+  function filterEvents() {
+    if (!eventsList) return;
+
+    const typeValue = eventTypeFilter ? eventTypeFilter.value : '';
+    const timeValue = eventTimeFilter ? eventTimeFilter.value : '';
+    const statusValue = eventStatusFilter ? eventStatusFilter.value : '';
+    
+    const eventCards = eventsList.querySelectorAll('.event-item-card');
+    
+    eventCards.forEach(card => {
+      let showCard = true;
+      
+      // Filter by type (my vs participating)
+      if (typeValue) {
+        const cardType = card.getAttribute('data-event-type');
+        if (cardType !== typeValue) {
+          showCard = false;
+        }
+      }
+      
+      // Filter by status
+      if (statusValue && showCard) {
+        const cardStatus = card.getAttribute('data-event-status');
+        if (cardStatus !== statusValue) {
+          showCard = false;
+        }
+      }
+      
+      // Filter by time
+      if (timeValue && showCard) {
+        const eventDate = card.getAttribute('data-event-date');
+        const eventDateTime = new Date(eventDate);
+        const today = new Date();
+        const weekFromNow = new Date();
+        weekFromNow.setDate(today.getDate() + 7);
+        const monthFromNow = new Date();
+        monthFromNow.setMonth(today.getMonth() + 1);
+        
+        switch (timeValue) {
+          case 'upcoming':
+            if (eventDateTime <= today) showCard = false;
+            break;
+          case 'week':
+            if (eventDateTime <= today || eventDateTime > weekFromNow) showCard = false;
+            break;
+          case 'month':
+            if (eventDateTime <= today || eventDateTime > monthFromNow) showCard = false;
+            break;
+        }
+      }
+      
+      card.style.display = showCard ? 'block' : 'none';
+    });
+  }
+
+  // Add event listeners for filters
+  if (eventTypeFilter) eventTypeFilter.addEventListener('change', filterEvents);
+  if (eventTimeFilter) eventTimeFilter.addEventListener('change', filterEvents);
+  if (eventStatusFilter) eventStatusFilter.addEventListener('change', filterEvents);
+
   // Calendar functionality follows below...
 });
 
@@ -51,31 +117,53 @@ function showEventsModal(dateStr, events) {
   if (events.length === 0) {
     list.innerHTML = '<div class="no-events">No events scheduled for this date.</div>';
   } else {
-    list.innerHTML = events.map(ev => `
-      <div class="event-modal-item ${ev.is_my_event ? 'my-event' : 'other-event'}">
-        <div class="event-modal-header">
-          <h4 class="event-modal-title">${ev.title}</h4>
-          <span class="event-modal-badge ${ev.is_my_event ? 'my-event-badge' : 'other-event-badge'}">
-            ${ev.is_my_event ? 'My Event' : 'Other Event'}
-          </span>
+    list.innerHTML = events.map(ev => {
+      // Check if event is in the past
+      const eventDate = new Date(ev.date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const isPastEvent = eventDate < today;
+      
+      return `
+      <div class="event-card ${ev.is_my_event ? 'my-event' : 'other-event'} ${isPastEvent ? 'past-event' : ''}">
+        <div class="event-card-header">
+          <div class="event-title-section">
+            <h3 class="event-title">${ev.title}</h3>
+            <div class="event-badges">
+              <span class="event-badge ${ev.is_my_event ? 'my-event-badge' : 'other-event-badge'}">
+                ${ev.is_my_event ? 'My Event' : 'Other Event'}
+              </span>
+              ${isPastEvent ? '<span class="event-badge past-badge">Completed</span>' : ''}
+            </div>
+          </div>
         </div>
-        <div class="event-modal-details">
-          <div class="event-detail"><i class="fas fa-clock"></i> ${ev.datetime}</div>
-          <div class="event-detail"><i class="fas fa-map-marker-alt"></i> ${ev.venue || 'Venue TBD'}</div>
-          <div class="event-detail"><i class="fas fa-building"></i> ${ev.organization || 'No organization'}</div>
-          <div class="event-detail"><i class="fas fa-user"></i> Organized by: ${ev.submitted_by}</div>
-          <div class="event-detail"><i class="fas fa-users"></i> Expected participants: ${ev.participants}</div>
+        <div class="event-card-body">
+          <div class="event-info">
+            <div class="event-info-item">
+              <i class="fas fa-clock"></i>
+              <span>${ev.datetime}</span>
+            </div>
+            <div class="event-info-item">
+              <i class="fas fa-map-marker-alt"></i>
+              <span>${ev.venue || 'Venue TBD'}</span>
+            </div>
+          </div>
         </div>
-        <div class="event-modal-actions">
-          <a href="/core-admin/proposal/${ev.id}/detail/" class="btn-primary" target="_blank">
-            <i class="fas fa-eye"></i> View Details
+        <div class="event-card-actions">
+          <a href="/proposal/${ev.id}/detail/" class="btn-action btn-primary" target="_blank">
+            <i class="fas fa-eye"></i>
+            <span>View Details</span>
           </a>
-          <button class="btn-secondary" onclick="addToCalendar('${ev.title}', '${ev.date}', '${ev.venue}')">
-            <i class="fas fa-calendar-plus"></i> Add to Calendar
+          ${!isPastEvent ? `
+          <button class="btn-action btn-secondary" onclick="addToCalendar('${ev.title}', '${ev.date}', '${ev.venue}')">
+            <i class="fas fa-calendar-plus"></i>
+            <span>Add to Calendar</span>
           </button>
+          ` : ''}
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
   
   modal.style.display = 'flex';
@@ -826,7 +914,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <p class="modal-event-description">${event.description || 'No description available.'}</p>
                         </div>
                         <div class="modal-event-actions">
-                            <a href="/events/${event.id}/" class="btn-modal-action btn-view-details">
+                            <a href="/proposal/${event.id}/detail/" class="btn-modal-action btn-view-details">
                                 <i class="fas fa-eye"></i> View Details
                             </a>
                             <a href="${event.google_calendar_link}" target="_blank" class="btn-modal-action btn-add-google">

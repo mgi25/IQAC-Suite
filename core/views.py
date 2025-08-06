@@ -184,11 +184,21 @@ def dashboard(request):
     else:
         dashboard_template = "core/dashboard.html"
 
+    # Get events data
     finalized_events = EventProposal.objects.filter(status='finalized').distinct()
-    my_events = finalized_events.filter(Q(submitted_by=user) | Q(faculty_incharges=user)).distinct()
+    
+    # For students, show events they are participating in or have submitted
+    # For faculty, show events they are involved with
+    if 'student' in [r.lower() for r in role_names]:
+        my_events = EventProposal.objects.filter(
+            Q(submitted_by=user) | Q(status='finalized')
+        ).distinct()
+    else:
+        my_events = finalized_events.filter(Q(submitted_by=user) | Q(faculty_incharges=user)).distinct()
+    
     other_events = finalized_events.exclude(Q(submitted_by=user) | Q(faculty_incharges=user)).distinct()
     upcoming_events_count = finalized_events.filter(event_datetime__gte=timezone.now()).count()
-    organized_events_count = my_events.count()
+    organized_events_count = EventProposal.objects.filter(submitted_by=user).count()
     week_start = timezone.now().date() - timezone.timedelta(days=timezone.now().weekday())
     week_end = week_start + timezone.timedelta(days=6)
     this_week_events = finalized_events.filter(event_datetime__date__gte=week_start, event_datetime__date__lte=week_end).count()
@@ -197,6 +207,9 @@ def dashboard(request):
     )['total'] or 0
     my_students = Student.objects.filter(mentor=user)
     my_classes = Class.objects.filter(teacher=user)
+    
+    # Get user's recent proposals for notifications
+    user_proposals = EventProposal.objects.filter(submitted_by=user).order_by('-updated_at')[:5]
     
     # Prepare calendar events data for JavaScript
     all_events = finalized_events.filter(event_datetime__isnull=False)
@@ -225,6 +238,7 @@ def dashboard(request):
         "my_classes": my_classes,
         "role_names": role_names,
         "user": user,
+        "user_proposals": user_proposals,
         "calendar_events": json.dumps(calendar_events),
     }
     return render(request, dashboard_template, context)
@@ -1002,6 +1016,27 @@ def admin_proposal_detail(request, proposal_id):
     )
     logger.debug(
         "Loaded proposal %s '%s' (org=%s, faculty=%d, speakers=%d, expenses=%d, steps=%d)",
+        proposal.id,
+        proposal.event_title,
+        proposal.organization,
+        len(proposal.faculty_incharges.all()),
+        len(proposal.speakers.all()),
+        len(proposal.expense_details.all()),
+        len(proposal.approval_steps.all()),
+    )
+    return render(request, "core/admin_proposal_detail.html", {"proposal": proposal})
+
+@login_required
+def proposal_detail(request, proposal_id):
+    """Public view for event proposal details - accessible to all logged-in users"""
+    proposal = get_object_or_404(
+        EventProposal.objects.select_related("organization").prefetch_related(
+            "faculty_incharges", "speakers", "expense_details", "approval_steps"
+        ),
+        id=proposal_id,
+    )
+    logger.debug(
+        "Loaded public proposal %s '%s' (org=%s, faculty=%d, speakers=%d, expenses=%d, steps=%d)",
         proposal.id,
         proposal.event_title,
         proposal.organization,

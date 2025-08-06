@@ -50,8 +50,9 @@
 
     <main class="main-content">
         <div id="overview" class="tab-content active">
-            {% if not request.session.role or request.session.role != 'student' %}
+            <!-- For all users, show the calendar and mentees/stats -->
             <div class="overview-top-row">
+                {% if not request.session.role or request.session.role != 'student' %}
                 <div class="mentees-section-half">
                     <h3>My Top Mentees</h3>
                     <div class="mentees-list">
@@ -73,6 +74,46 @@
                         </div>
                     </div>
                 </div>
+                {% else %}
+                <!-- Student Notifications Section -->
+                <div class="mentees-section-half">
+                    <h3>📢 My Notifications</h3>
+                    <div class="notifications-container">
+                        {% if user_proposals %}
+                            {% for proposal in user_proposals %}
+                            <div class="notification-item">
+                                <div class="notification-content">
+                                    <h4 class="notification-title">{{ proposal.event_title }}</h4>
+                                    <div class="notification-status">
+                                        {% if proposal.status == 'submitted' %}
+                                        <span class="status-badge pending">Pending</span>
+                                        {% elif proposal.status == 'under_review' %}
+                                        <span class="status-badge approved">Under Review</span>
+                                        {% elif proposal.status == 'rejected' %}
+                                        <span class="status-badge rejected">Rejected</span>
+                                        {% elif proposal.status == 'finalized' %}
+                                        <span class="status-badge approved">Approved</span>
+                                        {% elif proposal.status == 'returned' %}
+                                        <span class="status-badge pending">Returned</span>
+                                        {% else %}
+                                        <span class="status-badge">{{ proposal.get_status_display }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="notification-actions">
+                                    <a href="{% url 'proposal_status' proposal.id %}" class="btn-view-status">View Status</a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="empty-state">
+                                <p>No recent proposals found.</p>
+                                <a href="/suite/submit/" class="btn-primary">Create Your First Event</a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
                 
                 <div class="calendar-section-half">
                     <h3>📅 Event Calendar</h3>
@@ -106,7 +147,6 @@
                     </div>
                 </div>
             </div>
-            {% endif %}
         </div>
 
         <!-- Event Details Modal -->
@@ -186,9 +226,24 @@
                     <div class="filters-section">
                         <div class="filters-content">
                             <div class="filter-label"><i class="fas fa-filter"></i><span>Filters:</span></div>
-                            <select class="filter-select" id="eventTypeFilter"><option value="">All Events</option><option value="my">My Events</option><option value="department">Department Events</option></select>
-                            <select class="filter-select" id="eventTimeFilter"><option value="">This Month</option><option value="week">This Week</option><option value="next_month">Next Month</option></select>
-                            <select class="filter-select" id="eventRoleFilter"><option value="">All Roles</option><option value="organizer">Organizer</option><option value="coordinator">Coordinator</option><option value="faculty_advisor">Faculty Advisor</option></select>
+                            <select class="filter-select" id="eventTypeFilter">
+                                <option value="">All Events</option>
+                                <option value="my">My Proposed Events</option>
+                                <option value="participating">Events I'm Participating</option>
+                            </select>
+                            <select class="filter-select" id="eventTimeFilter">
+                                <option value="">All Time</option>
+                                <option value="upcoming">Upcoming</option>
+                                <option value="week">This Week</option>
+                                <option value="month">This Month</option>
+                            </select>
+                            <select class="filter-select" id="eventStatusFilter">
+                                <option value="">All Status</option>
+                                <option value="finalized">Finalized</option>
+                                <option value="under_review">Under Review</option>
+                                <option value="submitted">Submitted</option>
+                                <option value="rejected">Rejected</option>
+                            </select>
                         </div>
                     </div>
                     <div class="events-section" style="margin-top: 24px;">
@@ -200,19 +255,54 @@
                         </div>
                         <div class="events-list" id="myEventsList">
   {% for event in my_events %}
-    <div class="event-item-card">
+    <div class="event-item-card" data-event-type="{% if event.submitted_by == user %}my{% else %}participating{% endif %}" data-event-status="{{ event.status|lower }}" data-event-date="{{ event.event_datetime|date:'Y-m-d' }}">
       <div class="event-main-info">
         <h4>{{ event.event_title }}</h4>
         <div class="event-details-row">
           <span class="event-date">📍 {{ event.event_datetime|date:"M d, Y H:i" }}</span>
           <span class="event-user">👤 {{ event.submitted_by.get_full_name }}</span>
-          <span class="event-participants">👥 {{ event.fest_fee_participants|default:event.conf_fee_participants }}</span>
+          <span class="event-participants">👥 {{ event.fest_fee_participants|default:event.conf_fee_participants|default:"0" }}</span>
         </div>
       </div>
       <div class="event-actions-row">
         <span class="status-badge {{ event.status|lower }}">{{ event.get_status_display }}</span>
-        <button class="btn-icon" type="button" data-action="edit-event" data-event-id="{{ event.id }}"><i class="fas fa-edit"></i></button>
+        {% if event.submitted_by == user %}
+        <div class="event-action-buttons">
+          <a href="{% url 'emt:proposal_status_detail' event.id %}" class="btn-icon view-status" title="View Status">
+            <i class="fas fa-eye"></i>
+            <span>View Status</span>
+          </a>
+        </div>
+        {% endif %}
       </div>
+      
+      <!-- Notification Card for User's Events -->
+      {% if event.submitted_by == user %}
+      <div class="event-notification-card">
+        <div class="notification-content">
+          <div class="notification-status">
+            <div class="notification-icon status-{{ event.status|lower }}">
+              {% if event.status == 'finalized' %}
+              <i class="fas fa-check-circle"></i>
+              {% elif event.status == 'rejected' %}
+              <i class="fas fa-times-circle"></i>
+              {% elif event.status == 'under_review' %}
+              <i class="fas fa-clock"></i>
+              {% else %}
+              <i class="fas fa-file-alt"></i>
+              {% endif %}
+            </div>
+            <div class="notification-text">
+              <p><strong>Status:</strong> {{ event.get_status_display }}</p>
+              <p><small>Last updated: {{ event.updated_at|timesince }} ago</small></p>
+            </div>
+          </div>
+          <a href="{% url 'emt:proposal_status_detail' event.id %}" class="notification-action-btn">
+            <i class="fas fa-arrow-right"></i> View Details
+          </a>
+        </div>
+      </div>
+      {% endif %}
     </div>
   {% empty %}
     <div class="empty-state">No events found.</div>
@@ -221,89 +311,55 @@
                     </div>
                 </div>
                 <div class="dashboard-events-right" style="flex: 1; min-width: 0;">
-                   <div class="suite-right-section suite-glass">
-        <div class="notif-heading">Notifications</div>
-        <div class="notif-box">
-          {% if user_proposals %}
-          <ul class="notif-list">
-            {% for proposal in user_proposals %}
-            <li class="notif-item animate-fade-in">
-              <div class="notif-row">
-                <span class="notif-event-title">{{ proposal.event_title }}</span>
-                {% if proposal.status == 'submitted' %}
-                <span class="notif-status notif-status-pending">Submitted</span>
-                {% elif proposal.status == 'under_review' %}
-                <span class="notif-status notif-status-review">Under Review</span>
-                {% elif proposal.status == 'rejected' %}
-                <span class="notif-status notif-status-rejected">Rejected</span>
-                {% elif proposal.status == 'finalized' %}
-                <span class="notif-status notif-status-success">Finalized</span>
-                {% endif %}
-              </div>
-
-              <div class="notif-meta-badge">
-                <span class="notif-date-pill">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10m-13 6h14M4 21h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                  </svg>
-                  Updated: {{ proposal.updated_at|date:"M d, Y H:i" }}
-                </span>
-                <span class="notif-age-pill">{{ proposal.updated_at|timesince }} ago</span>
-              </div>
-
-
-              <!-- MODERN PROGRESS CHART -->
-              <div class="workflow-progress">
-                <div class="progress-steps">
-                  {% for status in proposal.statuses %}
-                  <div class="progress-step">
-                    <div class="progress-dot
-                      {% if forloop.counter0 < proposal.status_index %}progress-dot-past{% endif %}
-                      {% if forloop.counter0 == proposal.status_index %}progress-dot-current{% endif %}
-                      {% if forloop.counter0 > proposal.status_index %}progress-dot-future{% endif %}
-                    ">
-                      {% if forloop.counter0 < proposal.status_index %}
-                      <svg width="12" height="12" viewBox="0 0 12 12">
-                        <circle cx="6" cy="6" r="5" fill="#22c55e"/>
-                        <polyline points="4,6 6,8 9,4" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                      {% elif forloop.counter0 == proposal.status_index %}
-                      <svg width="12" height="12" viewBox="0 0 12 12">
-                        <circle cx="6" cy="6" r="5" fill="#3b82f6"/>
-                      </svg>
-                      {% else %}
-                      <svg width="12" height="12" viewBox="0 0 12 12">
-                        <circle cx="6" cy="6" r="5" fill="#cbd5e1"/>
-                      </svg>
-                      {% endif %}
+                    <!-- Proposal Status Feed -->
+                    <div class="activity-feed-card">
+                        <h3>� Proposal Status</h3>
+                        <div class="activity-list">
+                            {% if user_proposals %}
+                                {% for proposal in user_proposals|slice:":3" %}
+                                <div class="activity-item">
+                                    <div class="activity-icon status-{{ proposal.status|lower }}">
+                                        {% if proposal.status == 'finalized' %}
+                                        <i class="fas fa-check-circle"></i>
+                                        {% elif proposal.status == 'rejected' %}
+                                        <i class="fas fa-times-circle"></i>
+                                        {% elif proposal.status == 'under_review' %}
+                                        <i class="fas fa-clock"></i>
+                                        {% else %}
+                                        <i class="fas fa-file-alt"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="activity-content">
+                                        <h4>{{ proposal.event_title }}</h4>
+                                        <p>{{ proposal.get_status_display }} • {{ proposal.updated_at|timesince }} ago</p>
+                                        <a href="{% url 'emt:proposal_status_detail' proposal.id %}" class="view-status-btn">
+                                            <i class="fas fa-eye"></i> View Status
+                                        </a>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="empty-state">
+                                    <p>No proposals yet</p>
+                                </div>
+                            {% endif %}
+                        </div>
                     </div>
-                    {% if not forloop.last %}
-                    <div class="progress-step-line"></div>
-                    {% endif %}
-                    <div class="progress-step-label">{{ status|capfirst }}</div>
-                  </div>
-                  {% endfor %}
-                </div>
 
-                <div class="progress-bar-container">
-                  <div class="progress-bar-fill" style="width: {{ proposal.progress_percent|default:'0' }}%;"></div>
-                </div>
-                <span class="progress-bar-label">
-                  {{ proposal.progress_percent }}% complete ({{ proposal.current_label }})
-                </span>
-              </div>
-              <!-- END CHART -->
-              <a href="{% url 'emt:proposal_status_detail' proposal.id %}" class="notif-view-btn">View More Details →</a>
-            </li>
-            {% endfor %}
-          </ul>
-          {% else %}
-          <div class="notif-empty">
-            <span>🎉 All clear! No proposals need your attention right now.</span>
-          </div>
-          {% endif %}
-        </div>
-      </div>
+                    <!-- Quick Actions -->
+                    <div class="quick-actions-card">
+                        <h3>⚡ Quick Actions</h3>
+                        <div class="action-buttons">
+                            <a href="/suite/submit/" class="action-btn primary">
+                                <i class="fas fa-plus"></i>
+                                <span>Create Event</span>
+                            </a>
+                            <a href="{% url 'dashboard' %}?tab=events" class="action-btn secondary">
+                                <i class="fas fa-list"></i>
+                                <span>View All Events</span>
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
