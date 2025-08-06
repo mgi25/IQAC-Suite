@@ -123,11 +123,16 @@ urlpatterns = [
     path('core-admin/data-export/', views.data_export_filter_view, name='data_export_filter'),
     
     # ────────────────────────────────────────────────
-# API - Filter Counts (Required for Data Export page)
-# ────────────────────────────────────────────────
-path('core-admin/api/filter-counts/', views.api_filter_counts, name='api_filter_counts'),
+    # API - Filter Counts (Required for Data Export page)
+    # ────────────────────────────────────────────────
+    path('core-admin/api/filter-counts/', views.api_filter_counts, name='api_filter_counts'),
 
-
+    # ------------------------------------------------
+    #             Switch View (Admin)
+    # ------------------------------------------------
+    path('admin/switch-user/', views.switch_user_view, name='switch_user'),
+    path('admin/impersonate/', views.impersonate_user, name='impersonate_user'),
+    path('stop-impersonation/', views.stop_impersonation, name='stop_impersonation'),
     
     # ────────────────────────────────────────────────
     # API for Dynamic Filtering

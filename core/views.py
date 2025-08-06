@@ -2410,3 +2410,73 @@ def api_users_by_role(request):
         })
 
     return JsonResponse(users, safe=False)
+
+# ---------------------------------------------
+#           Switch View (Admin)
+# ---------------------------------------------
+
+def is_admin(user):
+    """Check if user is admin or superuser"""
+    return user.is_staff or user.is_superuser
+
+@login_required
+@user_passes_test(is_admin)
+def switch_user_view(request):
+    """Display the switch user interface"""
+    users = User.objects.filter(is_active=True).select_related().order_by('username')
+    
+    # Get current impersonated user if any
+    impersonated_user = None
+    if 'impersonate_user_id' in request.session:
+        try:
+            impersonated_user = User.objects.get(id=request.session['impersonate_user_id'])
+        except User.DoesNotExist:
+            # Clean up invalid session data
+            del request.session['impersonate_user_id']
+    
+    context = {
+        'users': users,
+        'impersonated_user': impersonated_user,
+        'original_user': request.user,
+    }
+    return render(request, 'core/switch_user.html', context)
+
+@login_required
+@user_passes_test(is_admin)
+@require_POST
+def impersonate_user(request):
+    """Start impersonating a user"""
+    try:
+        data = json.loads(request.body)
+        user_id = data.get('user_id')
+        
+        if not user_id:
+            return JsonResponse({'success': False, 'error': 'User ID is required'})
+        
+        target_user = get_object_or_404(User, id=user_id, is_active=True)
+        
+        # Store the impersonation in session
+        request.session['impersonate_user_id'] = target_user.id
+        request.session['original_user_id'] = request.user.id
+        
+        messages.success(request, f'Now viewing as: {target_user.get_full_name() or target_user.username}')
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Now impersonating {target_user.get_full_name() or target_user.username}',
+            'redirect_url': '/core-admin/'  # Adjust to your dashboard URL
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+def stop_impersonation(request):
+    """Stop impersonating and return to original user"""
+    if 'impersonate_user_id' in request.session:
+        del request.session['impersonate_user_id']
+        if 'original_user_id' in request.session:
+            del request.session['original_user_id']
+        messages.success(request, 'Stopped impersonation')
+    
+    return redirect('core-admin')  # Adjust to your dashboard URL
