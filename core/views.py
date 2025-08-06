@@ -184,11 +184,21 @@ def dashboard(request):
     else:
         dashboard_template = "core/dashboard.html"
 
+    # Get events data
     finalized_events = EventProposal.objects.filter(status='finalized').distinct()
-    my_events = finalized_events.filter(Q(submitted_by=user) | Q(faculty_incharges=user)).distinct()
+    
+    # For students, show events they are participating in or have submitted
+    # For faculty, show events they are involved with
+    if 'student' in [r.lower() for r in role_names]:
+        my_events = EventProposal.objects.filter(
+            Q(submitted_by=user) | Q(status='finalized')
+        ).distinct()
+    else:
+        my_events = finalized_events.filter(Q(submitted_by=user) | Q(faculty_incharges=user)).distinct()
+    
     other_events = finalized_events.exclude(Q(submitted_by=user) | Q(faculty_incharges=user)).distinct()
     upcoming_events_count = finalized_events.filter(event_datetime__gte=timezone.now()).count()
-    organized_events_count = my_events.count()
+    organized_events_count = EventProposal.objects.filter(submitted_by=user).count()
     week_start = timezone.now().date() - timezone.timedelta(days=timezone.now().weekday())
     week_end = week_start + timezone.timedelta(days=6)
     this_week_events = finalized_events.filter(event_datetime__date__gte=week_start, event_datetime__date__lte=week_end).count()
@@ -197,6 +207,26 @@ def dashboard(request):
     )['total'] or 0
     my_students = Student.objects.filter(mentor=user)
     my_classes = Class.objects.filter(teacher=user)
+    
+    # Get user's recent proposals for notifications
+    user_proposals = EventProposal.objects.filter(submitted_by=user).order_by('-updated_at')[:5]
+    
+    # Prepare calendar events data for JavaScript
+    all_events = finalized_events.filter(event_datetime__isnull=False)
+    calendar_events = []
+    for event in all_events:
+        calendar_events.append({
+            'id': event.id,
+            'title': event.event_title,
+            'date': event.event_datetime.strftime('%Y-%m-%d'),
+            'datetime': event.event_datetime.strftime('%Y-%m-%d %H:%M'),
+            'venue': event.venue,
+            'organization': event.organization.name if event.organization else '',
+            'submitted_by': event.submitted_by.get_full_name() or event.submitted_by.username,
+            'participants': event.fest_fee_participants or event.conf_fee_participants or 0,
+            'is_my_event': user in [event.submitted_by] + list(event.faculty_incharges.all())
+        })
+    
     context = {
         "my_events": my_events,
         "other_events": other_events,
@@ -208,6 +238,8 @@ def dashboard(request):
         "my_classes": my_classes,
         "role_names": role_names,
         "user": user,
+        "user_proposals": user_proposals,
+        "calendar_events": json.dumps(calendar_events),
     }
     return render(request, dashboard_template, context)
 
@@ -984,6 +1016,27 @@ def admin_proposal_detail(request, proposal_id):
     )
     logger.debug(
         "Loaded proposal %s '%s' (org=%s, faculty=%d, speakers=%d, expenses=%d, steps=%d)",
+        proposal.id,
+        proposal.event_title,
+        proposal.organization,
+        len(proposal.faculty_incharges.all()),
+        len(proposal.speakers.all()),
+        len(proposal.expense_details.all()),
+        len(proposal.approval_steps.all()),
+    )
+    return render(request, "core/admin_proposal_detail.html", {"proposal": proposal})
+
+@login_required
+def proposal_detail(request, proposal_id):
+    """Public view for event proposal details - accessible to all logged-in users"""
+    proposal = get_object_or_404(
+        EventProposal.objects.select_related("organization").prefetch_related(
+            "faculty_incharges", "speakers", "expense_details", "approval_steps"
+        ),
+        id=proposal_id,
+    )
+    logger.debug(
+        "Loaded public proposal %s '%s' (org=%s, faculty=%d, speakers=%d, expenses=%d, steps=%d)",
         proposal.id,
         proposal.event_title,
         proposal.organization,
@@ -2766,3 +2819,72 @@ def api_search_suggestions(request):
                 })
     
     return JsonResponse({'suggestions': suggestions})
+# ---------------------------------------------
+#           Switch View (Admin)
+# ---------------------------------------------
+
+def is_admin(user):
+    """Check if user is admin or superuser"""
+    return user.is_staff or user.is_superuser
+
+@login_required
+@user_passes_test(is_admin)
+def switch_user_view(request):
+    """Display the switch user interface"""
+    users = User.objects.filter(is_active=True).select_related().order_by('username')
+    
+    # Get current impersonated user if any
+    impersonated_user = None
+    if 'impersonate_user_id' in request.session:
+        try:
+            impersonated_user = User.objects.get(id=request.session['impersonate_user_id'])
+        except User.DoesNotExist:
+            # Clean up invalid session data
+            del request.session['impersonate_user_id']
+    
+    context = {
+        'users': users,
+        'impersonated_user': impersonated_user,
+        'original_user': request.user,
+    }
+    return render(request, 'core/switch_user.html', context)
+
+@login_required
+@user_passes_test(is_admin)
+@require_POST
+def impersonate_user(request):
+    """Start impersonating a user"""
+    try:
+        data = json.loads(request.body)
+        user_id = data.get('user_id')
+        
+        if not user_id:
+            return JsonResponse({'success': False, 'error': 'User ID is required'})
+        
+        target_user = get_object_or_404(User, id=user_id, is_active=True)
+        
+        # Store the impersonation in session
+        request.session['impersonate_user_id'] = target_user.id
+        request.session['original_user_id'] = request.user.id
+        
+        messages.success(request, f'Now viewing as: {target_user.get_full_name() or target_user.username}')
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Now impersonating {target_user.get_full_name() or target_user.username}',
+            'redirect_url': '/core-admin/'  # Adjust to your dashboard URL
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+def stop_impersonation(request):
+    """Stop impersonating and return to original user"""
+    if 'impersonate_user_id' in request.session:
+        del request.session['impersonate_user_id']
+        if 'original_user_id' in request.session:
+            del request.session['original_user_id']
+        messages.success(request, 'Stopped impersonation')
+    
+    return redirect('core-admin')  # Adjust to your dashboard URL

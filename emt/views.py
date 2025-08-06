@@ -50,30 +50,6 @@ import logging
 
 # Get an instance of the logger for the 'emt' app
 logger = logging.getLogger(__name__) # __name__ will resolve to 'emt.views'
-
-def submit_proposal(request):
-    if request.method == 'POST':
-        form = EventProposalForm(request.POST)
-        if form.is_valid():
-            proposal = form.save(commit=False)
-            proposal.submitted_by = request.user
-            proposal.save()
-            
-            # Here is the logging statement
-            logger.info(
-                f"Event proposal '{proposal.title}' (ID: {proposal.id}) "
-                f"was submitted by user '{request.user.username}'."
-            )
-            
-            return redirect('emt:proposal_success')
-    else:
-        form = EventProposalForm()
-    
-    return render(request, 'emt/submit_proposal.html', {'form': form})
-
-# ──────────────────────────────
-# CDL DASHBOARD
-# ──────────────────────────────
 # Configure Gemini API key from environment variable(s)
 # Prefer `GEMINI_API_KEY`; fall back to `GOOGLE_API_KEY`
 api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
@@ -158,6 +134,8 @@ def submit_proposal(request, pk=None):
 
     if request.method == "POST":
         post_data = request.POST.copy()
+        logger.debug("submit_proposal POST data: %s", post_data)
+        logger.debug("Faculty IDs from POST: %s", post_data.getlist("faculty_incharges"))
         form = EventProposalForm(
             post_data,
             instance=proposal,
@@ -201,10 +179,19 @@ def submit_proposal(request, pk=None):
             return ""
         return ""
 
+    need_analysis = EventNeedAnalysis.objects.filter(proposal=proposal).first() if proposal else None
+    objectives = EventObjectives.objects.filter(proposal=proposal).first() if proposal else None
+    outcomes = EventExpectedOutcomes.objects.filter(proposal=proposal).first() if proposal else None
+    flow = TentativeFlow.objects.filter(proposal=proposal).first() if proposal else None
+
     ctx = {
         "form": form,
         "proposal": proposal,
         "org_types": OrganizationType.objects.filter(is_active=True).order_by('name'),
+        "need_analysis": need_analysis,
+        "objectives": objectives,
+        "outcomes": outcomes,
+        "flow": flow,
     }
 
 
@@ -217,6 +204,11 @@ def submit_proposal(request, pk=None):
             proposal.save()
             form.save_m2m()
             _save_text_sections(proposal, request.POST)
+            logger.debug(
+                "Proposal %s saved with faculty %s",
+                proposal.id,
+                list(proposal.faculty_incharges.values_list("id", flat=True)),
+            )
             build_approval_chain(proposal)
             messages.success(
                 request,
@@ -228,6 +220,11 @@ def submit_proposal(request, pk=None):
             proposal.save()
             form.save_m2m()
             _save_text_sections(proposal, request.POST)
+            logger.debug(
+                "Draft proposal %s saved with faculty %s",
+                proposal.id,
+                list(proposal.faculty_incharges.values_list("id", flat=True)),
+            )
             return redirect("emt:submit_need_analysis", proposal_id=proposal.id)
 
     return render(request, "emt/submit_proposal.html", ctx)
@@ -243,6 +240,7 @@ def autosave_proposal(request):
         return JsonResponse({"error": "Invalid request"}, status=400)
 
     data = json.loads(request.body.decode("utf-8"))
+    logger.debug("autosave_proposal payload: %s", data)
 
     # Replace department logic with generic organization
     org_type_val = data.get("organization_type")  # You'll need to capture org type in your frontend/form!
@@ -272,6 +270,7 @@ def autosave_proposal(request):
         ).distinct()
 
     if not form.is_valid():
+        logger.debug("autosave_proposal form errors: %s", form.errors)
         return JsonResponse({"success": False, "errors": form.errors}, status=400)
 
     proposal = form.save(commit=False)
@@ -280,6 +279,11 @@ def autosave_proposal(request):
     proposal.save()
     form.save_m2m()               # 🆕 keep M2M in sync
     _save_text_sections(proposal, data)
+    logger.debug(
+        "Autosaved proposal %s with faculty %s",
+        proposal.id,
+        list(proposal.faculty_incharges.values_list("id", flat=True)),
+    )
 
     return JsonResponse({"success": True, "proposal_id": proposal.id})
 
@@ -295,10 +299,12 @@ def submit_need_analysis(request, proposal_id):
 
     if request.method == "POST":
         form = NeedAnalysisForm(request.POST, instance=instance)
+        logger.debug("NeedAnalysis POST data: %s", request.POST)
         if form.is_valid():
             need = form.save(commit=False)
             need.proposal = proposal
             need.save()
+            logger.debug("NeedAnalysis saved for proposal %s", proposal.id)
             return redirect("emt:submit_objectives", proposal_id=proposal.id)
     else:
         form = NeedAnalysisForm(instance=instance)
@@ -315,10 +321,12 @@ def submit_objectives(request, proposal_id):
 
     if request.method == "POST":
         form = ObjectivesForm(request.POST, instance=instance)
+        logger.debug("Objectives POST data: %s", request.POST)
         if form.is_valid():
             obj = form.save(commit=False)
             obj.proposal = proposal
             obj.save()
+            logger.debug("Objectives saved for proposal %s", proposal.id)
             return redirect("emt:submit_expected_outcomes",
                             proposal_id=proposal.id)
     else:
@@ -336,10 +344,12 @@ def submit_expected_outcomes(request, proposal_id):
 
     if request.method == "POST":
         form = ExpectedOutcomesForm(request.POST, instance=instance)
+        logger.debug("ExpectedOutcomes POST data: %s", request.POST)
         if form.is_valid():
             outcome = form.save(commit=False)
             outcome.proposal = proposal
             outcome.save()
+            logger.debug("ExpectedOutcomes saved for proposal %s", proposal.id)
             return redirect("emt:submit_tentative_flow",
                             proposal_id=proposal.id)
     else:
@@ -357,10 +367,12 @@ def submit_tentative_flow(request, proposal_id):
 
     if request.method == "POST":
         form = TentativeFlowForm(request.POST, instance=instance)
+        logger.debug("TentativeFlow POST data: %s", request.POST)
         if form.is_valid():
             flow = form.save(commit=False)
             flow.proposal = proposal
             flow.save()
+            logger.debug("TentativeFlow saved for proposal %s", proposal.id)
             return redirect("emt:submit_speaker_profile",
                             proposal_id=proposal.id)
     else:
@@ -746,7 +758,7 @@ def review_approval_step(request, step_id):
             "expected_outcomes",
             "tentative_flow",
         )
-        .prefetch_related("speakers", "expense_details")
+        .prefetch_related("speakers", "expense_details", "faculty_incharges")
         .get(pk=step.proposal_id)
     )
 
@@ -774,6 +786,14 @@ def review_approval_step(request, step_id):
 
     speakers = proposal.speakers.all()
     expenses = proposal.expense_details.all()
+    logger.debug(
+        "Reviewing proposal %s: faculty %s, objectives=%s, outcomes=%s, flow=%s",
+        proposal.id,
+        list(proposal.faculty_incharges.values_list("id", flat=True)),
+        getattr(objectives, "content", None),
+        getattr(outcomes, "content", None),
+        getattr(flow, "content", None),
+    )
 
     GATEKEEPER_ROLES = [
         ApprovalStep.Role.HOD.value,
