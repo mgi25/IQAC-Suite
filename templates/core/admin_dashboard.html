@@ -262,19 +262,17 @@ function searchUsers() {
     
     usersList.innerHTML = '<div class="loading">Searching...</div>';
     
+    // Try the simple GET method first
     searchTimeout = setTimeout(() => {
-        fetch('/api/search-users/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            },
-            body: JSON.stringify({
-                search: searchTerm
-            })
+        fetch(`/api/search-users-simple/?search=${encodeURIComponent(searchTerm)}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
         })
-        .then(response => response.json())
         .then(data => {
+            console.log('Search results:', data); // Debug log
             if (data.users && data.users.length > 0) {
                 usersList.innerHTML = data.users.map(user => `
                     <div class="user-item">
@@ -292,33 +290,38 @@ function searchUsers() {
             }
         })
         .catch(error => {
-            usersList.innerHTML = '<div class="loading">Error searching users</div>';
+            console.error('Search error:', error); // Debug log
+            usersList.innerHTML = '<div class="error">Error searching users. Check console for details.</div>';
         });
     }, 300);
 }
 
 function impersonateUser(userId) {
-    fetch('{% url "impersonate_user" %}', {
+    // Get CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    // Create form data
+    const formData = new FormData();
+    formData.append('user_id', userId);
+    formData.append('csrfmiddlewaretoken', csrfToken);
+    
+    fetch('/api/impersonate-simple/', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-        },
-        body: JSON.stringify({
-            user_id: userId
-        })
+        body: formData
     })
     .then(response => response.json())
     .then(data => {
+        console.log('Impersonate result:', data); // Debug log
         if (data.success) {
             closeSwitchModal();
             window.location.reload();
         } else {
-            alert('Error: ' + data.error);
+            alert('Error: ' + (data.error || 'Unknown error'));
         }
     })
     .catch(error => {
-        alert('Error switching user');
+        console.error('Impersonation error:', error); // Debug log
+        alert('Error switching user. Check console for details.');
     });
 }
 
