@@ -1203,6 +1203,7 @@ def get_approval_flow(request, org_id):
             'role_display': step.get_role_required_display(),
             'user_id': step.user.id if step.user else None,
             'user_name': step.user.get_full_name() if step.user else '',
+            'optional': step.optional,
         } for step in steps
     ]
     return JsonResponse({'success': True, 'steps': data,
@@ -1224,7 +1225,8 @@ def save_approval_flow(request, org_id):
             organization=org,
             step_order=idx,
             role_required=step['role_required'],
-            user_id=step.get('user_id')
+            user_id=step.get('user_id'),
+            optional=step.get('optional', False)
         )
 
     config, _ = ApprovalFlowConfig.objects.get_or_create(organization=org)
@@ -1235,7 +1237,7 @@ def save_approval_flow(request, org_id):
 def api_approval_flow_steps(request, org_id):
     steps = list(
         ApprovalFlowTemplate.objects.filter(organization_id=org_id).order_by('step_order').values(
-            'id', 'step_order', 'role_required', 'user_id'
+            'id', 'step_order', 'role_required', 'user_id', 'optional'
         )
     )
     return JsonResponse({'success': True, 'steps': steps})
