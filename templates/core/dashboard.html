@@ -6,6 +6,8 @@
 {% block head_extra %}
   <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}" id="dashboardCss">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <!-- Chart.js for event contribution chart -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
   <style>
     /* Fallback style if CSS fails to load */
     #dashboardCss[disabled] ~ .user-dashboard {
@@ -205,24 +207,43 @@
                 <div class="dashboard-events-left" style="flex: 1; min-width: 0;">
                     <!-- Event Contribution Card -->
                     <div class="chart-card" style="margin-bottom: 24px;">
-                        <h3>Event Contribution</h3>
-                        {% if user.role_assignments.count > 1 %}
-                            <div class="pie-chart-info">
-                                <p>Your contributions by organization:</p>
-                                <ul>
-                                    {% for ra in user.role_assignments.all %}
-                                        <li><strong>{{ ra.organization.name }}</strong>: {{ ra.contribution_percent|default:'0%' }}</li>
-                                    {% endfor %}
-                                </ul>
+                        <div class="chart-header">
+                            <h3>Event Contribution</h3>
+                            <div class="chart-controls">
+                                <select id="organizationSelect" class="form-select form-select-sm">
+                                    <option value="all">All Organizations</option>
+                                    <!-- Options will be populated by JavaScript -->
+                                </select>
                             </div>
-                        {% else %}
-                            <div class="pie-chart-info">
-                                <p>Your contribution in <strong>{{ user.role_assignments.first.organization.name }}</strong>:</p>
-                                <p class="pie-total">{{ user.role_assignments.first.contribution_percent|default:'0%' }}</p>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <div class="donut-chart-wrapper">
+                                <canvas id="contributionChart" width="300" height="300"></canvas>
+                                <div class="chart-center-info">
+                                    <div class="center-number" id="centerNumber">0</div>
+                                    <div class="center-label" id="centerLabel">Total Events</div>
+                                </div>
                             </div>
-                        {% endif %}
+                            
+                            <div class="chart-legend" id="chartLegend">
+                                <!-- Legend will be populated by JavaScript -->
+                            </div>
+                        </div>
+                        
+                        <div class="chart-details" id="chartDetails">
+                            <div class="detail-item">
+                                <span class="detail-label">Your Participation:</span>
+                                <span class="detail-value" id="userParticipation">0 events</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Contribution Rate:</span>
+                                <span class="detail-value" id="contributionRate">0%</span>
+                            </div>
+                        </div>
                     </div>
 
+                    <!-- Filters Section -->
                     <div class="filters-section">
                         <div class="filters-content">
                             <div class="filter-label"><i class="fas fa-filter"></i><span>Filters:</span></div>
@@ -246,14 +267,17 @@
                             </select>
                         </div>
                     </div>
-                    <div class="events-section" style="margin-top: 24px;">
-                        <div class="section-header">
-                            <h3>My Events</h3>
+
+                    <!-- My Events Card -->
+                    <div class="events-card">
+                        <div class="events-card-header">
+                            <h3><i class="fas fa-calendar-alt"></i> My Events</h3>
                             <a class="btn-primary" href="/suite/submit/">
                               <i class="fas fa-plus"></i> Create Event
                             </a>
                         </div>
-                        <div class="events-list" id="myEventsList">
+                        <div class="events-card-body">
+                            <div class="events-list-scrollable" id="myEventsList">
   {% for event in my_events %}
     <div class="event-item-card" data-event-type="{% if event.submitted_by == user %}my{% else %}participating{% endif %}" data-event-status="{{ event.status|lower }}" data-event-date="{{ event.event_datetime|date:'Y-m-d' }}">
       <div class="event-main-info">
@@ -266,98 +290,93 @@
       </div>
       <div class="event-actions-row">
         <span class="status-badge {{ event.status|lower }}">{{ event.get_status_display }}</span>
-        {% if event.submitted_by == user %}
         <div class="event-action-buttons">
-          <a href="{% url 'emt:proposal_status_detail' event.id %}" class="btn-icon view-status" title="View Status">
+          <a href="{% url 'admin_proposal_detail' event.id %}" class="btn-icon view-details" title="View Details">
             <i class="fas fa-eye"></i>
-            <span>View Status</span>
-          </a>
-        </div>
-        {% endif %}
-      </div>
-      
-      <!-- Notification Card for User's Events -->
-      {% if event.submitted_by == user %}
-      <div class="event-notification-card">
-        <div class="notification-content">
-          <div class="notification-status">
-            <div class="notification-icon status-{{ event.status|lower }}">
-              {% if event.status == 'finalized' %}
-              <i class="fas fa-check-circle"></i>
-              {% elif event.status == 'rejected' %}
-              <i class="fas fa-times-circle"></i>
-              {% elif event.status == 'under_review' %}
-              <i class="fas fa-clock"></i>
-              {% else %}
-              <i class="fas fa-file-alt"></i>
-              {% endif %}
-            </div>
-            <div class="notification-text">
-              <p><strong>Status:</strong> {{ event.get_status_display }}</p>
-              <p><small>Last updated: {{ event.updated_at|timesince }} ago</small></p>
-            </div>
-          </div>
-          <a href="{% url 'emt:proposal_status_detail' event.id %}" class="notification-action-btn">
-            <i class="fas fa-arrow-right"></i> View Details
+            <span>View Details</span>
           </a>
         </div>
       </div>
-      {% endif %}
     </div>
   {% empty %}
-    <div class="empty-state">No events found.</div>
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <i class="fas fa-calendar-times"></i>
+        </div>
+        <h4>No events found</h4>
+        <p>You haven't created or participated in any events yet.</p>
+        <a href="/suite/submit/" class="btn-primary">
+            <i class="fas fa-plus"></i> Create Your First Event
+        </a>
+    </div>
   {% endfor %}
+                            </div>
                         </div>
                     </div>
                 </div>
                 <div class="dashboard-events-right" style="flex: 1; min-width: 0;">
-                    <!-- Proposal Status Feed -->
-                    <div class="activity-feed-card">
-                        <h3>� Proposal Status</h3>
-                        <div class="activity-list">
-                            {% if user_proposals %}
-                                {% for proposal in user_proposals|slice:":3" %}
-                                <div class="activity-item">
-                                    <div class="activity-icon status-{{ proposal.status|lower }}">
-                                        {% if proposal.status == 'finalized' %}
-                                        <i class="fas fa-check-circle"></i>
-                                        {% elif proposal.status == 'rejected' %}
-                                        <i class="fas fa-times-circle"></i>
-                                        {% elif proposal.status == 'under_review' %}
-                                        <i class="fas fa-clock"></i>
-                                        {% else %}
-                                        <i class="fas fa-file-alt"></i>
-                                        {% endif %}
+                    <!-- Proposal Status Card -->
+                    <div class="proposal-status-card">
+                        <div class="proposal-status-header">
+                            <h3><i class="fas fa-clipboard-list"></i> Proposal Status</h3>
+                        </div>
+                        <div class="proposal-status-body">
+                            <div class="activity-list-scrollable">
+                                {% if user_proposals %}
+                                    {% for proposal in user_proposals|slice:":10" %}
+                                    <div class="activity-item">
+                                        <div class="activity-icon status-{{ proposal.status|lower }}">
+                                            {% if proposal.status == 'finalized' %}
+                                            <i class="fas fa-check-circle"></i>
+                                            {% elif proposal.status == 'rejected' %}
+                                            <i class="fas fa-times-circle"></i>
+                                            {% elif proposal.status == 'under_review' %}
+                                            <i class="fas fa-clock"></i>
+                                            {% else %}
+                                            <i class="fas fa-file-alt"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div class="activity-content">
+                                            <h4>{{ proposal.event_title }}</h4>
+                                            <p>{{ proposal.get_status_display }} • {{ proposal.updated_at|timesince }} ago</p>
+                                            <a href="{% url 'emt:proposal_status_detail' proposal.id %}" class="view-status-btn">
+                                                <i class="fas fa-eye"></i> View Status
+                                            </a>
+                                        </div>
                                     </div>
-                                    <div class="activity-content">
-                                        <h4>{{ proposal.event_title }}</h4>
-                                        <p>{{ proposal.get_status_display }} • {{ proposal.updated_at|timesince }} ago</p>
-                                        <a href="{% url 'emt:proposal_status_detail' proposal.id %}" class="view-status-btn">
-                                            <i class="fas fa-eye"></i> View Status
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="empty-state">
+                                        <div class="empty-state-icon">
+                                            <i class="fas fa-clipboard"></i>
+                                        </div>
+                                        <h4>No proposals yet</h4>
+                                        <p>You haven't submitted any event proposals yet.</p>
+                                        <a href="/suite/submit/" class="btn-primary">
+                                            <i class="fas fa-plus"></i> Submit Your First Proposal
                                         </a>
                                     </div>
-                                </div>
-                                {% endfor %}
-                            {% else %}
-                                <div class="empty-state">
-                                    <p>No proposals yet</p>
-                                </div>
-                            {% endif %}
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Quick Actions -->
+                    <!-- Quick Actions Card -->
                     <div class="quick-actions-card">
-                        <h3>⚡ Quick Actions</h3>
-                        <div class="action-buttons">
-                            <a href="/suite/submit/" class="action-btn primary">
-                                <i class="fas fa-plus"></i>
-                                <span>Create Event</span>
-                            </a>
-                            <a href="{% url 'dashboard' %}?tab=events" class="action-btn secondary">
-                                <i class="fas fa-list"></i>
-                                <span>View All Events</span>
-                            </a>
+                        <div class="quick-actions-header">
+                            <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+                        </div>
+                        <div class="quick-actions-body">
+                            <div class="action-buttons">
+                                <a href="/suite/submit/" class="action-btn primary">
+                                    <i class="fas fa-plus"></i>
+                                    <span>Create Event</span>
+                                </a>
+                                <a href="{% url 'dashboard' %}?tab=events" class="action-btn secondary">
+                                    <i class="fas fa-list"></i>
+                                    <span>View All Events</span>
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>

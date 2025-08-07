@@ -140,4 +140,6 @@ urlpatterns = [
     # API for Dynamic Filtering
     # ────────────────────────────────────────────────
     path('api/organizations/', views.api_organizations_by_type, name='api_organizations_by_type'),
+
+    path('api/event-contribution/', views.event_contribution_data, name='event_contribution_data'),
 ]

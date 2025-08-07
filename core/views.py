@@ -244,6 +244,78 @@ def dashboard(request):
     return render(request, dashboard_template, context)
 
 @login_required
+def event_contribution_data(request):
+    """API endpoint for event contribution chart data"""
+    user = request.user
+    organization_id = request.GET.get('organization_id', None)
+    
+    # Get user's organizations
+    user_organizations = user.role_assignments.all()
+    
+    if organization_id and organization_id != 'all':
+        try:
+            # Filter by specific organization
+            selected_org = Organization.objects.get(id=organization_id)
+            organizations = user_organizations.filter(organization=selected_org)
+        except Organization.DoesNotExist:
+            return JsonResponse({'error': 'Organization not found'}, status=404)
+    else:
+        # Get all user's organizations
+        organizations = user_organizations
+    
+    chart_data = []
+    total_events = 0
+    total_user_events = 0
+    
+    for role_assignment in organizations:
+        org = role_assignment.organization
+        if not org:
+            continue
+            
+        # Count total events in this organization
+        org_total_events = EventProposal.objects.filter(organization=org).count()
+        
+        # Count events user participated in, organized, or was faculty in-charge of
+        user_events_query = Q(organization=org) & (
+            Q(submitted_by=user) |  # User is the proposer
+            Q(faculty_incharges=user) |  # User is faculty in-charge
+            Q(participants__user=user)  # User is a participant through Student profile
+        )
+        
+        user_events_count = EventProposal.objects.filter(user_events_query).distinct().count()
+        
+        if org_total_events > 0:
+            contribution_percent = (user_events_count / org_total_events) * 100
+        else:
+            contribution_percent = 0
+            
+        chart_data.append({
+            'organization': org.name,
+            'organization_id': org.id,
+            'total_events': org_total_events,
+            'user_events': user_events_count,
+            'percentage': round(contribution_percent, 1),
+            'role': role_assignment.role.name if role_assignment.role else 'Unknown'
+        })
+        
+        total_events += org_total_events
+        total_user_events += user_events_count
+    
+    # Calculate overall contribution
+    overall_percentage = (total_user_events / total_events * 100) if total_events > 0 else 0
+    
+    return JsonResponse({
+        'chart_data': chart_data,
+        'total_events': total_events,
+        'total_user_events': total_user_events,
+        'overall_percentage': round(overall_percentage, 1),
+        'organizations': [
+            {'id': ra.organization.id, 'name': ra.organization.name} 
+            for ra in user.role_assignments.all() if ra.organization
+        ]
+    })
+
+@login_required
 def propose_event(request):
     """
     This is the *old* quick proposal form. If you want to keep it, now use Organization instead of Department.
@@ -1639,7 +1711,7 @@ def api_global_search(request):
         }, status=500)
 
 @login_required
-@require_GET
+@user_passes_test(lambda u: u.is_superuser)
 def admin_dashboard_api(request):
     """
     API endpoint for dashboard analytics - useful for real-time updates.
@@ -2031,7 +2103,7 @@ def filter_users(filters):
         queryset = queryset.filter(
             role_assignments__organization_id=filters['organization']
         ).distinct()
-    
+
     if filters.get('role') or filters.get('user_role'):
         role_id = filters.get('role') or filters.get('user_role')
         queryset = queryset.filter(role_assignments__role_id=role_id).distinct()
