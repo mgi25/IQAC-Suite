@@ -18,24 +18,25 @@
     <form method="post">
       {% csrf_token %}
       {{ formset.management_form }}
-      
+
       <div class="section">
         <h3>Expense List</h3>
-        <div class="formset-table">
-          {% for form in formset %}
-            <div class="expense-row">
-              <div class="input-group">{{ form.sl_no.label_tag }} {{ form.sl_no }}</div>
-              <div class="input-group">{{ form.particulars.label_tag }} {{ form.particulars }}</div>
-              <div class="input-group">{{ form.amount.label_tag }} {{ form.amount }}</div>
-              <div class="input-group">{{ form.DELETE.label_tag }} {{ form.DELETE }}</div>
-            </div>
-            <hr>
-          {% endfor %}
-        </div>
+        {% for form in formset %}
+          <div class="section expense-form">
+            <h4>Expense {{ forloop.counter }}</h4>
+            <div class="input-group">{{ form.sl_no.label_tag }} {{ form.sl_no }}</div>
+            <div class="input-group">{{ form.particulars.label_tag }} {{ form.particulars }}</div>
+            <div class="input-group">{{ form.amount.label_tag }} {{ form.amount }}</div>
+            {% if form.DELETE %}
+              <div class="input-group">{{ form.DELETE }} Remove this expense</div>
+            {% endif %}
+          </div>
+          <hr>
+        {% endfor %}
       </div>
 
       <div class="input-group">
-        <button type="submit" class="btn">Submit</button>
+        <button type="submit" class="btn">Save &amp; Continue</button>
       </div>
     </form>
   </div>

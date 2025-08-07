@@ -56,7 +56,9 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.middleware.ImpersonationMiddleware',
     'allauth.account.middleware.AccountMiddleware',  # ← allauth middleware
+    'core.middleware.RegistrationRequiredMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -78,6 +80,7 @@ TEMPLATES = [
                 'django.template.context_processors.csrf',
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.notifications',
+                'core.context_processors.impersonation_context',
             ],
             'libraries': {
                 'dict_filters': 'core.templatetags.dict_filters',
@@ -175,7 +178,7 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
-            'format': '{levelname} {asctime} {module} {message}',
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
             'style': '{',
         },
         'simple': {
@@ -188,12 +191,19 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
         },
-        'file': {
+        'activity_file': { # Renamed from 'file' for clarity
             'level': 'INFO',
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'activity.log', # Your existing activity.log file
+            'filename': BASE_DIR / 'activity.log',
             'maxBytes': 1024 * 1024 * 5,  # 5 MB
             'backupCount': 5,
+            'formatter': 'verbose',
+        },
+        ## NEW: Handler for error logging ##
+        'error_file': {
+            'level': 'ERROR',
+            'class': 'logging.FileHandler', # No rotation needed for less frequent errors
+            'filename': BASE_DIR / 'error.log',
             'formatter': 'verbose',
         },
     },
@@ -203,19 +213,24 @@ LOGGING = {
             'level': 'INFO',
             'propagate': True,
         },
-        # Logger for your specific apps
+        ## NEW: Logger for Django's request errors ##
+        'django.request': {
+            'handlers': ['error_file'],
+            'level': 'ERROR',
+            'propagate': True,
+        },
         'core': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console', 'activity_file'],
             'level': 'INFO',
             'propagate': False,
         },
         'emt': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console', 'activity_file'],
             'level': 'INFO',
             'propagate': False,
         },
         'transcript': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console', 'activity_file'],
             'level': 'INFO',
             'propagate': False,
         },

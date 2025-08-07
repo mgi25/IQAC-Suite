@@ -67,6 +67,28 @@ class FacultyAPITests(TestCase):
         ids = {item["id"] for item in data}
         self.assertIn(user4.id, ids)
 
+    def test_api_faculty_accepts_incharge_variants(self):
+        user5 = User.objects.create(
+            username="f5",
+            first_name="Epsilon",
+            email="epsilon@example.com",
+        )
+        variant_role = OrganizationRole.objects.create(
+            organization=self.org,
+            name="Faculty Incharge",
+        )
+        RoleAssignment.objects.create(
+            user=user5,
+            role=variant_role,
+            organization=self.org,
+        )
+
+        resp = self.client.get(reverse("emt:api_faculty"), {"q": "Epsilon"})
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        ids = {item["id"] for item in data}
+        self.assertIn(user5.id, ids)
+
 
 class OutcomesAPITests(TestCase):
     def setUp(self):
@@ -76,6 +98,13 @@ class OutcomesAPITests(TestCase):
         self.po = ProgramOutcome.objects.create(program=program, description="PO1")
         self.pso = ProgramSpecificOutcome.objects.create(program=program, description="PSO1")
         self.user = User.objects.create(username="user")
+        RoleAssignment.objects.create(
+            user=self.user,
+            role=OrganizationRole.objects.create(
+                organization=self.org, name="Member"
+            ),
+            organization=self.org,
+        )
         self.client.force_login(self.user)
 
     def test_api_outcomes_returns_outcomes(self):
@@ -103,6 +132,9 @@ class AutosaveProposalTests(TestCase):
         )
         RoleAssignment.objects.create(
             user=self.f2, role=self.faculty_role, organization=self.org
+        )
+        RoleAssignment.objects.create(
+            user=self.submitter, role=self.faculty_role, organization=self.org
         )
         self.client.force_login(self.submitter)
 
@@ -145,6 +177,20 @@ class EventApprovalsNavTests(TestCase):
     def setUp(self):
         self.faculty = User.objects.create_user("faculty", password="pass")
         self.student = User.objects.create_user("student", password="pass")
+        ot = OrganizationType.objects.create(name="Dept")
+        org = Organization.objects.create(name="Science", org_type=ot)
+        fac_role = OrganizationRole.objects.create(
+            organization=org, name=ApprovalStep.Role.FACULTY.value
+        )
+        student_role = OrganizationRole.objects.create(
+            organization=org, name="Student"
+        )
+        RoleAssignment.objects.create(
+            user=self.faculty, role=fac_role, organization=org
+        )
+        RoleAssignment.objects.create(
+            user=self.student, role=student_role, organization=org
+        )
 
     def _set_role(self, role):
         session = self.client.session

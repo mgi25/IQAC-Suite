@@ -113,6 +113,7 @@ body.command-center-layout {
   color: var(--white);
   font-size: 0.95rem;
   transition: var(--transition);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
 
@@ -350,6 +351,7 @@ body.command-center-layout {
   font-size: 0.875rem;
   cursor: pointer;
   transition: var(--transition);
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -733,21 +735,52 @@ body.command-center-layout {
   }
 }
 
-
-/* Ensure dropdowns are hidden by default with high specificity */
-body.command-center-layout .top-utility-bar .profile-dropdown,
-body.command-center-layout .top-utility-bar .notification-dropdown {
-  opacity: 0 !important;
-  visibility: hidden !important;
-  transform: translateY(-10px) !important;
-  pointer-events: none !important;
+/* Toast messages */
+.toast-container {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  z-index: 9999;
+  pointer-events: none;
 }
 
-/* Ensure they are visible ONLY when the 'active' class is present */
-body.command-center-layout .top-utility-bar .profile-dropdown.active,
-body.command-center-layout .top-utility-bar .notification-dropdown.active {
-  opacity: 1 !important;
-  visibility: visible !important;
-  transform: translateY(0) !important;
-  pointer-events: auto !important;
+.toast-message {
+  min-width: 240px;
+  background: var(--gray-800);
+  color: var(--white);
+  padding: 0.75rem 1rem;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: auto;
+}
+
+.toast-message.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toast-message.hide {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.toast-message.success {
+  background: #e6f4ea;
+  color: #267f42;
+}
+
+.toast-message.error {
+  background: #ffe6e6;
+  color: #b91c1c;
+}
+
+.toast-message.warning {
+  background: #fff4e5;
+  color: #b45309;
 }

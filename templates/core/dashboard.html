@@ -4,8 +4,24 @@
 {% block title %}Dashboard – Event Management Suite{% endblock %}
 
 {% block head_extra %}
-  <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
+  <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}" id="dashboardCss">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <style>
+    /* Fallback style if CSS fails to load */
+    #dashboardCss[disabled] ~ .user-dashboard {
+      background: #f8f9fa;
+      color: #222;
+    }
+  </style>
+  <script>
+    // Fallback: If CSS fails to load, disable the link and show fallback
+    window.addEventListener('DOMContentLoaded', function() {
+      var css = document.getElementById('dashboardCss');
+      if (css && css.sheet && css.sheet.cssRules.length === 0) {
+        css.disabled = true;
+      }
+    });
+  </script>
 {% endblock %}
 
 {% block content %}
@@ -34,72 +50,124 @@
 
     <main class="main-content">
         <div id="overview" class="tab-content active">
-            <div class="stats-grid">
-                <div class="stat-card blue" id="dashboardUpcomingEvents">
-                    <div class="stat-content">
-                        <div class="stat-text">
-                            <p class="stat-label">Upcoming Events</p>
-                            <ul class="upcoming-events-list" style="list-style:none; margin:0; padding:0;">
-                                {% for event in user.upcoming_events %}
-                                <li>
-                                    <button class="event-link" type="button" data-action="view-event-details" data-event-id="{{ event.id }}" style="background:none; border:none; color:#2c5aa0; text-align:left; font-weight:500; cursor:pointer; padding:0;">
-                                        {{ event.event_title }} <span style="color:#888; font-size:0.95em;">({{ event.event_datetime|date:'M d, Y H:i' }})</span>
-                                    </button>
-                                </li>
-                                {% empty %}
-                                <li style="color:#888;">No upcoming events.</li>
-                                {% endfor %}
-                            </ul>
+            <!-- For all users, show the calendar and mentees/stats -->
+            <div class="overview-top-row">
+                {% if not request.session.role or request.session.role != 'student' %}
+                <div class="mentees-section-half">
+                    <h3>My Top Mentees</h3>
+                    <div class="mentees-list">
+                        <div class="mentee-item">
+                            <div class="mentee-avatar">SD</div>
+                            <div class="mentee-info">
+                                <h4>S. Devkrishna</h4>
+                                <p>GPA: 8.5 | Attendance: 92%</p>
+                                <span>Last meeting: 2 days ago</span>
+                            </div>
                         </div>
-                        <i class="fas fa-calendar stat-icon"></i>
-                    </div>
-                </div>
-            </div>
-            {% if not request.session.role or request.session.role != 'student' %}
-            <div class="mentees-section">
-                <h3>My Top Mentees</h3>
-                <div class="mentees-list">
-                    <div class="mentee-item">
-                        <div class="mentee-avatar">SD</div>
-                        <div class="mentee-info">
-                            <h4>S. Devkrishna</h4>
-                            <p>GPA: 8.5 | Attendance: 92%</p>
-                            <span>Last meeting: 2 days ago</span>
-                        </div>
-                    </div>
-                    <div class="mentee-item">
-                        <div class="mentee-avatar">AG</div>
-                        <div class="mentee-info">
-                            <h4>Arisha Gupta</h4>
-                            <p>GPA: 9.2 | Attendance: 96%</p>
-                            <span>Last meeting: 1 week ago</span>
+                        <div class="mentee-item">
+                            <div class="mentee-avatar">AG</div>
+                            <div class="mentee-info">
+                                <h4>Arisha Gupta</h4>
+                                <p>GPA: 9.2 | Attendance: 96%</p>
+                                <span>Last meeting: 1 week ago</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            {% endif %}
-
-            <div class="charts-row">
-                <div class="chart-card">
-                    <h3>Event Contribution</h3>
-                    {% if user.role_assignments.count > 1 %}
-                        <div class="pie-chart-info">
-                            <p>Your contributions by organization:</p>
-                            <ul>
-                                {% for ra in user.role_assignments.all %}
-                                    <li><strong>{{ ra.organization.name }}</strong>: {{ ra.contribution_percent|default:'0%' }}</li>
-                                {% endfor %}
-                            </ul>
+                {% else %}
+                <!-- Student Notifications Section -->
+                <div class="mentees-section-half">
+                    <h3>📢 My Notifications</h3>
+                    <div class="notifications-container">
+                        {% if user_proposals %}
+                            {% for proposal in user_proposals %}
+                            <div class="notification-item">
+                                <div class="notification-content">
+                                    <h4 class="notification-title">{{ proposal.event_title }}</h4>
+                                    <div class="notification-status">
+                                        {% if proposal.status == 'submitted' %}
+                                        <span class="status-badge pending">Pending</span>
+                                        {% elif proposal.status == 'under_review' %}
+                                        <span class="status-badge approved">Under Review</span>
+                                        {% elif proposal.status == 'rejected' %}
+                                        <span class="status-badge rejected">Rejected</span>
+                                        {% elif proposal.status == 'finalized' %}
+                                        <span class="status-badge approved">Approved</span>
+                                        {% elif proposal.status == 'returned' %}
+                                        <span class="status-badge pending">Returned</span>
+                                        {% else %}
+                                        <span class="status-badge">{{ proposal.get_status_display }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="notification-actions">
+                                    <a href="{% url 'proposal_status' proposal.id %}" class="btn-view-status">View Status</a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="empty-state">
+                                <p>No recent proposals found.</p>
+                                <a href="/suite/submit/" class="btn-primary">Create Your First Event</a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="calendar-section-half">
+                    <h3>📅 Event Calendar</h3>
+                    <div class="modern-calendar">
+                        <div class="calendar-header">
+                            <button id="prevMonth" class="calendar-nav-btn">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <h4 id="currentMonth"></h4>
+                            <button id="nextMonth" class="calendar-nav-btn">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
                         </div>
-                    {% else %}
-                        <div class="pie-chart-info">
-                            <p>Your contribution in <strong>{{ user.role_assignments.first.organization.name }}</strong>:</p>
-                            <p class="pie-total">{{ user.role_assignments.first.contribution_percent|default:'0%' }}</p>
+                        <div class="calendar-container">
+                            <div class="calendar-days-header">
+                                <div class="calendar-day-header">Mo</div>
+                                <div class="calendar-day-header">Tu</div>
+                                <div class="calendar-day-header">We</div>
+                                <div class="calendar-day-header">Th</div>
+                                <div class="calendar-day-header">Fr</div>
+                                <div class="calendar-day-header">Sa</div>
+                                <div class="calendar-day-header">Su</div>
+                            </div>
+                            <div class="calendar-days" id="calendarDays">
+                                <!-- Calendar days will be generated by JavaScript -->
+                            </div>
                         </div>
-                    {% endif %}
+                        <div class="calendar-footer">
+                            <button class="calendar-done-btn" id="calendarDone">Done</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- Event Details Modal -->
+        <div id="eventModal" class="event-modal" style="display: none;">
+            <div class="event-modal-content">
+                <div class="event-modal-header">
+                    <h3 id="eventModalTitle">Events on Selected Date</h3>
+                    <button class="event-modal-close" onclick="closeEventModal()">&times;</button>
+                </div>
+                <div class="event-modal-body">
+                    <div id="eventModalList" class="event-modal-list">
+                        <!-- Event details will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Pass calendar events data to JavaScript
+            window.DASHBOARD_EVENTS = {{ calendar_events|safe }};
+        </script>
 
         <div id="events" class="tab-content">
             <div class="stats-row" style="display: flex; gap: 24px; margin-bottom: 24px;">
@@ -133,14 +201,49 @@
                 </div>
             </div>
             
-            <div class="dashboard-events-bottom" style="display: flex; gap: 32px; align-items: flex-start; margin-top: 24px;">
+            <div class="dashboard-events-bottom" style="display: flex; gap: 32px; align-items: stretch; margin-top: 24px; min-height: 500px;">
                 <div class="dashboard-events-left" style="flex: 1; min-width: 0;">
+                    <!-- Event Contribution Card -->
+                    <div class="chart-card" style="margin-bottom: 24px;">
+                        <h3>Event Contribution</h3>
+                        {% if user.role_assignments.count > 1 %}
+                            <div class="pie-chart-info">
+                                <p>Your contributions by organization:</p>
+                                <ul>
+                                    {% for ra in user.role_assignments.all %}
+                                        <li><strong>{{ ra.organization.name }}</strong>: {{ ra.contribution_percent|default:'0%' }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% else %}
+                            <div class="pie-chart-info">
+                                <p>Your contribution in <strong>{{ user.role_assignments.first.organization.name }}</strong>:</p>
+                                <p class="pie-total">{{ user.role_assignments.first.contribution_percent|default:'0%' }}</p>
+                            </div>
+                        {% endif %}
+                    </div>
+
                     <div class="filters-section">
                         <div class="filters-content">
                             <div class="filter-label"><i class="fas fa-filter"></i><span>Filters:</span></div>
-                            <select class="filter-select" id="eventTypeFilter"><option value="">All Events</option><option value="my">My Events</option><option value="department">Department Events</option></select>
-                            <select class="filter-select" id="eventTimeFilter"><option value="">This Month</option><option value="week">This Week</option><option value="next_month">Next Month</option></select>
-                            <select class="filter-select" id="eventRoleFilter"><option value="">All Roles</option><option value="organizer">Organizer</option><option value="coordinator">Coordinator</option><option value="faculty_advisor">Faculty Advisor</option></select>
+                            <select class="filter-select" id="eventTypeFilter">
+                                <option value="">All Events</option>
+                                <option value="my">My Proposed Events</option>
+                                <option value="participating">Events I'm Participating</option>
+                            </select>
+                            <select class="filter-select" id="eventTimeFilter">
+                                <option value="">All Time</option>
+                                <option value="upcoming">Upcoming</option>
+                                <option value="week">This Week</option>
+                                <option value="month">This Month</option>
+                            </select>
+                            <select class="filter-select" id="eventStatusFilter">
+                                <option value="">All Status</option>
+                                <option value="finalized">Finalized</option>
+                                <option value="under_review">Under Review</option>
+                                <option value="submitted">Submitted</option>
+                                <option value="rejected">Rejected</option>
+                            </select>
                         </div>
                     </div>
                     <div class="events-section" style="margin-top: 24px;">
@@ -151,132 +254,112 @@
                             </a>
                         </div>
                         <div class="events-list" id="myEventsList">
-                          {% for event in my_events %}
-                            <div class="event-item" data-event-type="my" data-event-role="{{ event.user_type|default:'organizer' }}" data-event-time="{{ event.event_datetime|date:'Y-m' }}">
-                                <div class="event-content">
-                                    <h4>{{ event.event_title }}</h4>
-                                    <div class="event-details">
-                                        <span>📍 {{ event.event_datetime|date:"M d, Y H:i" }}</span>
-                                        <span>👤 {{ event.submitted_by.get_full_name }}</span>
-                                        <span>👥 {{ event.fest_fee_participants|default:event.conf_fee_participants }}</span>
-                                    </div>
-                                </div>
-                                <div class="event-actions">
-                                    <span class="status-badge {{ event.status|lower }}">{{ event.get_status_display }}</span>
-                                    <button class="btn-icon" type="button" data-action="edit-event" data-event-id="{{ event.id }}"><i class="fas fa-edit"></i></button>
-                                </div>
-                            </div>
-                          {% empty %}
-                            <div class="empty-state">No events found.</div>
-                          {% endfor %}
-                        </div>
-                    </div>
-                    <div class="university-events" style="margin-top: 24px;">
-                        <h3>🏛️ Other University Events</h3>
-                        <div class="university-events-list" id="otherEventsList">
-                          {% for event in other_events %}
-                            <div class="university-event" data-event-type="other" data-event-role="{{ event.user_type|default:'organizer' }}" data-event-time="{{ event.event_datetime|date:'Y-m' }}">
-                                <div class="event-row" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                                    <div style="display: flex; flex-direction: column;">
-                                        <span class="event-title" style="font-weight: 600;">{{ event.event_title }}</span>
-                                        <span class="event-dept" style="color: #888; font-size: 0.95em;">{% if event.organization %}{{ event.organization.name }}{% else %}N/A{% endif %}</span>
-                                    </div>
-                                    <div style="display: flex; align-items: center; gap: 1.5em;">
-                                        <span style="font-size: 1em; color: #555;">{{ event.event_datetime|date:"M d" }}</span>
-                                        <button class="btn-link" type="button" data-action="view-event-details" data-event-id="{{ event.id }}">View Details</button>
-                                    </div>
-                                </div>
-                            </div>
-                          {% empty %}
-                            <div class="empty-state">No university events found.</div>
-                          {% endfor %}
+  {% for event in my_events %}
+    <div class="event-item-card" data-event-type="{% if event.submitted_by == user %}my{% else %}participating{% endif %}" data-event-status="{{ event.status|lower }}" data-event-date="{{ event.event_datetime|date:'Y-m-d' }}">
+      <div class="event-main-info">
+        <h4>{{ event.event_title }}</h4>
+        <div class="event-details-row">
+          <span class="event-date">📍 {{ event.event_datetime|date:"M d, Y H:i" }}</span>
+          <span class="event-user">👤 {{ event.submitted_by.get_full_name }}</span>
+          <span class="event-participants">👥 {{ event.fest_fee_participants|default:event.conf_fee_participants|default:"0" }}</span>
+        </div>
+      </div>
+      <div class="event-actions-row">
+        <span class="status-badge {{ event.status|lower }}">{{ event.get_status_display }}</span>
+        {% if event.submitted_by == user %}
+        <div class="event-action-buttons">
+          <a href="{% url 'emt:proposal_status_detail' event.id %}" class="btn-icon view-status" title="View Status">
+            <i class="fas fa-eye"></i>
+            <span>View Status</span>
+          </a>
+        </div>
+        {% endif %}
+      </div>
+      
+      <!-- Notification Card for User's Events -->
+      {% if event.submitted_by == user %}
+      <div class="event-notification-card">
+        <div class="notification-content">
+          <div class="notification-status">
+            <div class="notification-icon status-{{ event.status|lower }}">
+              {% if event.status == 'finalized' %}
+              <i class="fas fa-check-circle"></i>
+              {% elif event.status == 'rejected' %}
+              <i class="fas fa-times-circle"></i>
+              {% elif event.status == 'under_review' %}
+              <i class="fas fa-clock"></i>
+              {% else %}
+              <i class="fas fa-file-alt"></i>
+              {% endif %}
+            </div>
+            <div class="notification-text">
+              <p><strong>Status:</strong> {{ event.get_status_display }}</p>
+              <p><small>Last updated: {{ event.updated_at|timesince }} ago</small></p>
+            </div>
+          </div>
+          <a href="{% url 'emt:proposal_status_detail' event.id %}" class="notification-action-btn">
+            <i class="fas fa-arrow-right"></i> View Details
+          </a>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  {% empty %}
+    <div class="empty-state">No events found.</div>
+  {% endfor %}
                         </div>
                     </div>
                 </div>
                 <div class="dashboard-events-right" style="flex: 1; min-width: 0;">
-                   <div class="suite-right-section suite-glass">
-        <div class="notif-heading">Notifications</div>
-        <div class="notif-box">
-          {% if user_proposals %}
-          <ul class="notif-list">
-            {% for proposal in user_proposals %}
-            <li class="notif-item animate-fade-in">
-              <div class="notif-row">
-                <span class="notif-event-title">{{ proposal.event_title }}</span>
-                {% if proposal.status == 'submitted' %}
-                <span class="notif-status notif-status-pending">Submitted</span>
-                {% elif proposal.status == 'under_review' %}
-                <span class="notif-status notif-status-review">Under Review</span>
-                {% elif proposal.status == 'rejected' %}
-                <span class="notif-status notif-status-rejected">Rejected</span>
-                {% elif proposal.status == 'finalized' %}
-                <span class="notif-status notif-status-success">Finalized</span>
-                {% endif %}
-              </div>
-
-              <div class="notif-meta-badge">
-                <span class="notif-date-pill">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10m-13 6h14M4 21h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                  </svg>
-                  Updated: {{ proposal.updated_at|date:"M d, Y H:i" }}
-                </span>
-                <span class="notif-age-pill">{{ proposal.updated_at|timesince }} ago</span>
-              </div>
-
-
-              <!-- MODERN PROGRESS CHART -->
-              <div class="workflow-progress">
-                <div class="progress-steps">
-                  {% for status in proposal.statuses %}
-                  <div class="progress-step">
-                    <div class="progress-dot
-                      {% if forloop.counter0 < proposal.status_index %}progress-dot-past{% endif %}
-                      {% if forloop.counter0 == proposal.status_index %}progress-dot-current{% endif %}
-                      {% if forloop.counter0 > proposal.status_index %}progress-dot-future{% endif %}
-                    ">
-                      {% if forloop.counter0 < proposal.status_index %}
-                      <svg width="12" height="12" viewBox="0 0 12 12">
-                        <circle cx="6" cy="6" r="5" fill="#22c55e"/>
-                        <polyline points="4,6 6,8 9,4" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                      {% elif forloop.counter0 == proposal.status_index %}
-                      <svg width="12" height="12" viewBox="0 0 12 12">
-                        <circle cx="6" cy="6" r="5" fill="#3b82f6"/>
-                      </svg>
-                      {% else %}
-                      <svg width="12" height="12" viewBox="0 0 12 12">
-                        <circle cx="6" cy="6" r="5" fill="#cbd5e1"/>
-                      </svg>
-                      {% endif %}
+                    <!-- Proposal Status Feed -->
+                    <div class="activity-feed-card">
+                        <h3>� Proposal Status</h3>
+                        <div class="activity-list">
+                            {% if user_proposals %}
+                                {% for proposal in user_proposals|slice:":3" %}
+                                <div class="activity-item">
+                                    <div class="activity-icon status-{{ proposal.status|lower }}">
+                                        {% if proposal.status == 'finalized' %}
+                                        <i class="fas fa-check-circle"></i>
+                                        {% elif proposal.status == 'rejected' %}
+                                        <i class="fas fa-times-circle"></i>
+                                        {% elif proposal.status == 'under_review' %}
+                                        <i class="fas fa-clock"></i>
+                                        {% else %}
+                                        <i class="fas fa-file-alt"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="activity-content">
+                                        <h4>{{ proposal.event_title }}</h4>
+                                        <p>{{ proposal.get_status_display }} • {{ proposal.updated_at|timesince }} ago</p>
+                                        <a href="{% url 'emt:proposal_status_detail' proposal.id %}" class="view-status-btn">
+                                            <i class="fas fa-eye"></i> View Status
+                                        </a>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="empty-state">
+                                    <p>No proposals yet</p>
+                                </div>
+                            {% endif %}
+                        </div>
                     </div>
-                    {% if not forloop.last %}
-                    <div class="progress-step-line"></div>
-                    {% endif %}
-                    <div class="progress-step-label">{{ status|capfirst }}</div>
-                  </div>
-                  {% endfor %}
-                </div>
 
-                <div class="progress-bar-container">
-                  <div class="progress-bar-fill" style="width: {{ proposal.progress_percent }}%;"></div>
-                </div>
-                <span class="progress-bar-label">
-                  {{ proposal.progress_percent }}% complete ({{ proposal.current_label }})
-                </span>
-              </div>
-              <!-- END CHART -->
-              <a href="{% url 'emt:proposal_status_detail' proposal.id %}" class="notif-view-btn">View More Details →</a>
-            </li>
-            {% endfor %}
-          </ul>
-          {% else %}
-          <div class="notif-empty">
-            <span>🎉 All clear! No proposals need your attention right now.</span>
-          </div>
-          {% endif %}
-        </div>
-      </div>
+                    <!-- Quick Actions -->
+                    <div class="quick-actions-card">
+                        <h3>⚡ Quick Actions</h3>
+                        <div class="action-buttons">
+                            <a href="/suite/submit/" class="action-btn primary">
+                                <i class="fas fa-plus"></i>
+                                <span>Create Event</span>
+                            </a>
+                            <a href="{% url 'dashboard' %}?tab=events" class="action-btn secondary">
+                                <i class="fas fa-list"></i>
+                                <span>View All Events</span>
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -389,7 +472,7 @@
                             {% endif %}
                         </div>
                     </div>
-                    </div>
+                </div>
             </div>
 
             <div class="classes-section">
@@ -420,7 +503,7 @@
             </div>
 
             <div class="profile-grid">
-                <div class="achievements-section">
+                <div class="achievements-section card">
                     <div class="section-header">
                         <h3>🏆 My Achievements</h3>
                         <button class="btn-icon" type="button" data-action="add-achievement"><i class="fas fa-plus"></i></button>
@@ -433,7 +516,7 @@
                     </div>
                 </div>
 
-                <div class="goals-section">
+                <div class="goals-section card">
                     <div class="section-header">
                         <h3>🎯 Current Goals</h3>
                         <button class="btn-icon" type="button" data-action="add-goal"><i class="fas fa-plus"></i></button>
@@ -464,97 +547,22 @@
                 </div>
             </div>
 
-            <div class="timeline-section">
-                <h3>📅 This Year's Contributions</h3>
-                <div class="timeline">
-                    <div class="timeline-item completed"><div class="timeline-dot"></div><div class="timeline-content"><h4>January</h4><p>Organized New Student Orientation</p><span class="timeline-status">completed</span></div></div>
-                    <div class="timeline-item completed"><div class="timeline-dot"></div><div class="timeline-content"><h4>February</h4><p>Research Paper Submission</p><span class="timeline-status">completed</span></div></div>
-                    <div class="timeline-item ongoing"><div class="timeline-dot"></div><div class="timeline-content"><h4>March</h4><p>Coordinating Tech Symposium</p><span class="timeline-status">ongoing</span></div></div>
-                    <div class="timeline-item planned"><div class="timeline-dot"></div><div class="timeline-content"><h4>April</h4><p>Student Career Guidance Workshop</p><span class="timeline-status">planned</span></div></div>
-                </div>
-            </div>
+<div class="timeline-section">
+    <h3>📅 This Year's Contributions</h3>
+    <div class="timeline">
+        <div class="timeline-item completed"><div class="timeline-dot"></div><div class="timeline-content"><h4>January</h4><p>Organized New Student Orientation</p><span class="timeline-status">completed</span></div></div>
+        <div class="timeline-item completed"><div class="timeline-dot"></div><div class="timeline-content"><h4>February</h4><p>Research Paper Submission</p><span class="timeline-status">completed</span></div></div>
+        <div class="timeline-item ongoing"><div class="timeline-dot"></div><div class="timeline-content"><h4>March</h4><p>Coordinating Tech Symposium</p><span class="timeline-status">ongoing</span></div></div>
+        <div class="timeline-item planned"><div class="timeline-dot"></div><div class="timeline-content"><h4>April</h4><p>Student Career Guidance Workshop</p><span class="timeline-status">planned</span></div></div>
+    </div>
+</div>
         </div>
     </main>
 </div>
 
-<div id="dashboardModal" class="modal-overlay">
-    <div class="modal-content">
-        <button class="modal-close" data-action="close-modal">&times;</button>
-        <h3 id="modalTitle"></h3>
-        <div id="modalBody"></div>
-    </div>
-</div>
-
-<div id="globalSearchModal" class="modal-overlay" style="display:none;">
-    <div class="modal-content">
-        <button class="modal-close" type="button" onclick="document.getElementById('globalSearchModal').style.display='none'">&times;</button>
-        <h3>Search Results</h3>
-        <div id="globalSearchResults"></div>
-    </div>
-</div>
+<!-- Removed unwanted line at the bottom (if any element like <hr> or border div existed, it would be removed here) -->
 {% endblock %}
 
 {% block scripts_extra %}
-<script>
-  window.USER_ORG_NAME = "{{ user.role_assignments.first.organization.name|default:'' }}";
-
-  // Global Search JS
-  document.addEventListener('DOMContentLoaded', function() {
-    var input = document.getElementById('globalSearchInput');
-    var btn = document.getElementById('globalSearchBtn');
-    var modal = document.getElementById('globalSearchModal');
-    var resultsDiv = document.getElementById('globalSearchResults');
-    function showResults(results) {
-      resultsDiv.innerHTML = '';
-      if (!results.length) {
-        resultsDiv.innerHTML = '<div style="color:#888;">No results found.</div>';
-        return;
-      }
-      var html = '<ul style="list-style:none; padding:0;">';
-      results.forEach(function(item) {
-        html += '<li style="margin-bottom:12px;">' + item + '</li>';
-      });
-      html += '</ul>';
-      resultsDiv.innerHTML = html;
-    }
-    function searchAll(query) {
-      query = query.trim().toLowerCase();
-      var results = [];
-      // Search events
-      document.querySelectorAll('.event-item, .university-event').forEach(function(ev) {
-        var title = ev.querySelector('h4, .event-title');
-        if (title && title.textContent.toLowerCase().includes(query)) {
-          results.push('Event: ' + title.textContent);
-        }
-      });
-      // Search students (if faculty)
-      document.querySelectorAll('.student-item').forEach(function(st) {
-        var name = st.querySelector('h4');
-        if (name && name.textContent.toLowerCase().includes(query)) {
-          results.push('Student: ' + name.textContent);
-        }
-      });
-      // Search classes
-      document.querySelectorAll('.class-item .class-name').forEach(function(cl) {
-        if (cl.textContent.toLowerCase().includes(query)) {
-          results.push('Class: ' + cl.textContent);
-        }
-      });
-      // Add more search types as needed
-      return results;
-    }
-    function doSearch() {
-      var query = input.value;
-      if (!query) return;
-      var results = searchAll(query);
-      showResults(results);
-      modal.style.display = 'flex';
-    }
-    btn.addEventListener('click', doSearch);
-    input.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') doSearch();
-    });
-  });
-</script>
 <script src="{% static 'core/js/dashboard.js' %}"></script>
 {% endblock %}

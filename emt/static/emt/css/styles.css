@@ -278,6 +278,40 @@
   transform: none;
 }
 
+/* Add/Remove buttons for dynamic form sections */
+.proposal-content .btn-add-item {
+  background: var(--primary-blue);
+  color: white;
+  border: none;
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.proposal-content .btn-add-item:hover {
+  background: var(--primary-blue-dark);
+  transform: translateY(-1px);
+}
+
+.proposal-content .btn-remove-item {
+  background: var(--border-color);
+  color: var(--text-dark);
+  border: none;
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.proposal-content .btn-remove-item:hover {
+  background: #d1d5db;
+}
+
 /* Updated Save Section Container */
 .proposal-content .save-section-container {
   text-align: right;
@@ -721,4 +755,339 @@
 }
 .submit-section {
   display: none !important;
+}
+
+/* ### MODIFICATION: Styles for New Dynamic Section Appended ### */
+#dynamic-activities-section {
+  margin-top: 1rem;
+  background: #f9f9f9;
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.dynamic-activity-group {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.dynamic-activity-group:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.dynamic-activity-group label {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  display: block;
+  font-size: 0.8rem; /* Smaller for nested items */
+  color: var(--text-dark);
+}
+
+/* All existing styles from the original file are preserved here... */
+:root {
+  --primary-blue: #264487;
+  /* ...etc */
+}
+.proposal-layout {
+  display: flex;
+  /* ...etc */
+}
+/* ... All other existing styles ... */
+.submit-section {
+  display: none !important;
+}
+
+/* ### MODIFICATION: Styles for New Dynamic Section Appended ### */
+#dynamic-activities-section {
+  grid-column: 1 / -1; /* This makes the container span full width in the grid */
+  margin-top: 1rem;
+  background: #f8fafc;
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+#dynamic-activities-section:empty {
+    display: none; /* Hide the container if it has no activities inside */
+}
+
+.dynamic-activity-group {
+  /* This class now uses the same grid as other form rows for consistency */
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.dynamic-activity-group:last-child {
+  padding-bottom: 0;
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+/* All existing styles from your original file are preserved here... */
+:root {
+  --primary-blue: #264487;
+  /* ...etc... */
+}
+.proposal-layout {
+  display: flex;
+  /* ...etc... */
+}
+/* ... All other existing styles from your provided file ... */
+.submit-section {
+  display: none !important;
+}
+
+/* ### MODIFICATION: Styles for New Dynamic Section Appended ### */
+#dynamic-activities-section {
+  grid-column: 1 / -1; /* This makes the container span full width in the grid */
+  margin-top: 1rem;
+  background: #f8fafc;
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+#dynamic-activities-section:empty {
+    display: none; /* Hide the container if it has no activities inside */
+}
+
+.dynamic-activity-group {
+  /* This class now uses the same grid as other form rows for consistency */
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.dynamic-activity-group:last-child {
+  padding-bottom: 0;
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+/* Form Section Headers */
+.form-section-header {
+    grid-column: 1 / -1;
+    margin: 2rem 0 1rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.form-section-header:first-child {
+    margin-top: 0;
+}
+
+.form-section-header h3 {
+    color: #1f2937;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+.form-section-header h3::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 20px;
+    background: linear-gradient(135deg, #264487, #4f46e5);
+    border-radius: 2px;
+    margin-right: 0.75rem;
+}
+
+/* Enhanced Form Grid */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    padding: 1rem 0;
+}
+
+.form-row {
+    display: contents;
+}
+
+.form-row.full-width {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.form-row.full-width .input-group:only-child {
+    grid-column: 1 / -1;
+}
+
+/* Enhanced Input Groups */
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.input-group label {
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.input-group label::after {
+    content: attr(data-required);
+    color: #ef4444;
+    font-weight: 500;
+}
+
+/* Help Text */
+.help-text {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+    line-height: 1.4;
+}
+
+/* Enhanced Input Styling */
+.input-group input,
+.input-group select,
+.input-group textarea {
+    padding: 0.75rem 1rem;
+    border: 1.5px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    background: #ffffff;
+}
+
+.input-group input:focus,
+.input-group select:focus,
+.input-group textarea:focus {
+    outline: none;
+    border-color: #264487;
+    box-shadow: 0 0 0 3px rgba(38, 68, 135, 0.1);
+    background: #fefefe;
+}
+
+/* Tom Select Styling Integration */
+.ts-control {
+    border: 1.5px solid #d1d5db !important;
+    border-radius: 8px !important;
+    padding: 0.5rem 0.75rem !important;
+    min-height: 42px !important;
+    background: #ffffff !important;
+    transition: all 0.2s ease !important;
+}
+
+.ts-control:focus,
+.ts-control.focus {
+    border-color: #264487 !important;
+    box-shadow: 0 0 0 3px rgba(38, 68, 135, 0.1) !important;
+}
+
+.ts-control .ts-input {
+    font-size: 0.875rem !important;
+}
+
+.ts-dropdown {
+    border: 1px solid #d1d5db !important;
+    border-radius: 8px !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Dynamic Activities Styling */
+.dynamic-activity-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    padding: 1rem;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.dynamic-activity-group:last-child {
+    margin-bottom: 0;
+}
+
+/* Save Section Styling */
+.save-section-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 2rem 0 1rem 0;
+    border-top: 1px solid #e5e7eb;
+    margin-top: 1rem;
+}
+
+.btn-save-section {
+    background: linear-gradient(135deg, #264487, #4f46e5);
+    color: white;
+    border: none;
+    padding: 0.875rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(38, 68, 135, 0.2);
+}
+
+/* Outcome selection modal */
+.outcome-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.outcome-modal.show {
+    display: flex;
+}
+
+.outcome-modal .modal-content {
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 500px;
+    width: 90%;
+}
+
+.modal-actions {
+    margin-top: 16px;
+    text-align: right;
+}
+
+.btn-cancel,
+.btn-save {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.btn-cancel {
+    background: var(--border-color);
+    color: var(--text-dark);
+    margin-right: 8px;
+}
+
+.btn-save {
+    background: var(--primary-blue);
+    color: #fff;
 }

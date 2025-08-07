@@ -1,4 +1,273 @@
-    // Stat card click handlers for filtering events
+// --- Tab Navigation ---
+document.addEventListener('DOMContentLoaded', function() {
+  // Tab switching functionality
+  const tabButtons = document.querySelectorAll('.nav-tab[data-tab]');
+  const tabContents = document.querySelectorAll('.tab-content');
+
+  tabButtons.forEach(button => {
+    button.addEventListener('click', function() {
+      const targetTab = this.dataset.tab;
+      
+      // Remove active class from all tabs and contents
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      tabContents.forEach(content => content.classList.remove('active'));
+      
+      // Add active class to clicked tab and corresponding content
+      this.classList.add('active');
+      const targetContent = document.getElementById(targetTab);
+      if (targetContent) {
+        targetContent.classList.add('active');
+      }
+    });
+  });
+
+  // Filter functionality for events
+  const eventTypeFilter = document.getElementById('eventTypeFilter');
+  const eventTimeFilter = document.getElementById('eventTimeFilter');
+  const eventStatusFilter = document.getElementById('eventStatusFilter');
+  const eventsList = document.getElementById('myEventsList');
+
+  function filterEvents() {
+    if (!eventsList) return;
+
+    const typeValue = eventTypeFilter ? eventTypeFilter.value : '';
+    const timeValue = eventTimeFilter ? eventTimeFilter.value : '';
+    const statusValue = eventStatusFilter ? eventStatusFilter.value : '';
+    
+    const eventCards = eventsList.querySelectorAll('.event-item-card');
+    
+    eventCards.forEach(card => {
+      let showCard = true;
+      
+      // Filter by type (my vs participating)
+      if (typeValue) {
+        const cardType = card.getAttribute('data-event-type');
+        if (cardType !== typeValue) {
+          showCard = false;
+        }
+      }
+      
+      // Filter by status
+      if (statusValue && showCard) {
+        const cardStatus = card.getAttribute('data-event-status');
+        if (cardStatus !== statusValue) {
+          showCard = false;
+        }
+      }
+      
+      // Filter by time
+      if (timeValue && showCard) {
+        const eventDate = card.getAttribute('data-event-date');
+        const eventDateTime = new Date(eventDate);
+        const today = new Date();
+        const weekFromNow = new Date();
+        weekFromNow.setDate(today.getDate() + 7);
+        const monthFromNow = new Date();
+        monthFromNow.setMonth(today.getMonth() + 1);
+        
+        switch (timeValue) {
+          case 'upcoming':
+            if (eventDateTime <= today) showCard = false;
+            break;
+          case 'week':
+            if (eventDateTime <= today || eventDateTime > weekFromNow) showCard = false;
+            break;
+          case 'month':
+            if (eventDateTime <= today || eventDateTime > monthFromNow) showCard = false;
+            break;
+        }
+      }
+      
+      card.style.display = showCard ? 'block' : 'none';
+    });
+  }
+
+  // Add event listeners for filters
+  if (eventTypeFilter) eventTypeFilter.addEventListener('change', filterEvents);
+  if (eventTimeFilter) eventTimeFilter.addEventListener('change', filterEvents);
+  if (eventStatusFilter) eventStatusFilter.addEventListener('change', filterEvents);
+
+  // Calendar functionality follows below...
+});
+
+// Get events data from window variable or use empty array as fallback
+const EVENTS = window.DASHBOARD_EVENTS || [];
+
+function getEventsForDate(dateStr) {
+  return EVENTS.filter(ev => ev.date === dateStr);
+}
+
+function formatDate(dateStr) {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+}
+
+function showEventsModal(dateStr, events) {
+  const modal = document.getElementById('eventModal');
+  const title = document.getElementById('eventModalTitle');
+  const list = document.getElementById('eventModalList');
+  
+  title.textContent = `Events on ${formatDate(dateStr)}`;
+  
+  if (events.length === 0) {
+    list.innerHTML = '<div class="no-events">No events scheduled for this date.</div>';
+  } else {
+    list.innerHTML = events.map(ev => {
+      // Check if event is in the past
+      const eventDate = new Date(ev.date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const isPastEvent = eventDate < today;
+      
+      return `
+      <div class="event-card ${ev.is_my_event ? 'my-event' : 'other-event'} ${isPastEvent ? 'past-event' : ''}">
+        <div class="event-card-header">
+          <div class="event-title-section">
+            <h3 class="event-title">${ev.title}</h3>
+            <div class="event-badges">
+              <span class="event-badge ${ev.is_my_event ? 'my-event-badge' : 'other-event-badge'}">
+                ${ev.is_my_event ? 'My Event' : 'Other Event'}
+              </span>
+              ${isPastEvent ? '<span class="event-badge past-badge">Completed</span>' : ''}
+            </div>
+          </div>
+        </div>
+        <div class="event-card-body">
+          <div class="event-info">
+            <div class="event-info-item">
+              <i class="fas fa-clock"></i>
+              <span>${ev.datetime}</span>
+            </div>
+            <div class="event-info-item">
+              <i class="fas fa-map-marker-alt"></i>
+              <span>${ev.venue || 'Venue TBD'}</span>
+            </div>
+          </div>
+        </div>
+        <div class="event-card-actions">
+          <a href="/proposal/${ev.id}/detail/" class="btn-action btn-primary" target="_blank">
+            <i class="fas fa-eye"></i>
+            <span>View Details</span>
+          </a>
+          ${!isPastEvent ? `
+          <button class="btn-action btn-secondary" onclick="addToCalendar('${ev.title}', '${ev.date}', '${ev.venue}')">
+            <i class="fas fa-calendar-plus"></i>
+            <span>Add to Calendar</span>
+          </button>
+          ` : ''}
+        </div>
+      </div>
+    `;
+    }).join('');
+  }
+  
+  modal.style.display = 'flex';
+}
+
+function closeEventModal() {
+  const modal = document.getElementById('eventModal');
+  modal.style.display = 'none';
+}
+
+function addToCalendar(title, date, venue) {
+  // Create Google Calendar URL
+  const startDate = date.replace(/-/g, '');
+  const endDate = startDate; // Same day event
+  const details = venue ? `Venue: ${venue}` : '';
+  
+  const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${startDate}/${startDate}&details=${encodeURIComponent(details)}`;
+  
+  window.open(googleCalendarUrl, '_blank');
+}
+
+// --- Calendar Rendering ---
+document.addEventListener('DOMContentLoaded', function() {
+  const calendarDays = document.getElementById('calendarDays');
+  const currentMonthLabel = document.getElementById('currentMonth');
+  const prevMonthBtn = document.getElementById('prevMonth');
+  const nextMonthBtn = document.getElementById('nextMonth');
+
+  if (!calendarDays || !currentMonthLabel || !prevMonthBtn || !nextMonthBtn) return;
+
+  let today = new Date();
+  let currentMonth = today.getMonth();
+  let currentYear = today.getFullYear();
+
+  function pad(n) { return n < 10 ? '0' + n : n; }
+
+  function renderCalendar(month, year) {
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    let startDay = (firstDay.getDay() + 6) % 7; // Make Monday=0
+    let daysInMonth = lastDay.getDate();
+    
+    currentMonthLabel.textContent = firstDay.toLocaleString('default', { month: 'long', year: 'numeric' });
+    
+    let daysHtml = '';
+    // Empty days from previous month
+    for (let i = 0; i < startDay; i++) {
+      daysHtml += '<div class="calendar-day empty"></div>';
+    }
+    
+    // Days of current month
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${year}-${pad(month+1)}-${pad(d)}`;
+      const events = getEventsForDate(dateStr);
+      const isToday = (d === today.getDate() && month === today.getMonth() && year === today.getFullYear());
+      const hasEvents = events.length > 0;
+      
+      daysHtml += `
+        <div class="calendar-day${isToday ? ' today' : ''}${hasEvents ? ' has-event' : ''}" 
+             data-date="${dateStr}" 
+             ${hasEvents ? 'onclick="showEventsModal(\'' + dateStr + '\', getEventsForDate(\'' + dateStr + '\'))"' : ''}>
+          <span class="calendar-day-number">${d}</span>
+          ${hasEvents ? `<div class="event-indicators">
+            ${events.slice(0, 3).map(ev => 
+              `<div class="event-dot ${ev.is_my_event ? 'my-event-dot' : 'other-event-dot'}" 
+                    title="${ev.title}"></div>`
+            ).join('')}
+            ${events.length > 3 ? `<div class="event-dot more-events" title="+${events.length - 3} more">+${events.length - 3}</div>` : ''}
+          </div>` : ''}
+        </div>
+      `;
+    }
+    calendarDays.innerHTML = daysHtml;
+  }
+
+  prevMonthBtn.addEventListener('click', function() {
+    currentMonth--;
+    if (currentMonth < 0) {
+      currentMonth = 11;
+      currentYear--;
+    }
+    renderCalendar(currentMonth, currentYear);
+  });
+  
+  nextMonthBtn.addEventListener('click', function() {
+    currentMonth++;
+    if (currentMonth > 11) {
+      currentMonth = 0;
+      currentYear++;
+    }
+    renderCalendar(currentMonth, currentYear);
+  });
+
+  renderCalendar(currentMonth, currentYear);
+
+  // Add click outside modal to close
+  window.addEventListener('click', function(e) {
+    const modal = document.getElementById('eventModal');
+    if (e.target === modal) {
+      closeEventModal();
+    }
+  });
+});
+// Stat card click handlers for filtering events
     const cardUpcoming = document.getElementById('cardUpcoming');
     const cardOrganized = document.getElementById('cardOrganized');
     const cardThisWeek = document.getElementById('cardThisWeek');
@@ -522,6 +791,166 @@ document.addEventListener('DOMContentLoaded', function () {
     filters.forEach(filter => {
         filter.addEventListener('change', filterEvents);
     });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const tabs = document.querySelectorAll('.nav-tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const calendarDaysContainer = document.querySelector('.calendar-days');
+    const monthYearElement = document.getElementById('month-year');
+    const prevMonthBtn = document.getElementById('prev-month');
+    const nextMonthBtn = document.getElementById('next-month');
+    const eventModal = document.getElementById('event-modal');
+    const eventModalClose = document.querySelector('.event-modal-close');
+    const modalBody = document.querySelector('.event-modal-body');
+    const modalTitle = document.getElementById('modal-date-title');
+
+    let currentDate = new Date();
+    let events = {}; // Cache for events: { 'YYYY-MM': [event, ...] }
+    let selectedDate = null;
+
+    // --- Tab Functionality ---
+    tabs.forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            e.preventDefault();
+            const target = tab.getAttribute('data-tab');
+
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+                if (content.id === target) {
+                    content.classList.add('active');
+                }
+            });
+        });
+    });
+
+    // --- Calendar Functionality ---
+    async function fetchCalendarEvents(year, month) {
+        const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
+        if (events[monthStr]) {
+            return events[monthStr];
+        }
+        try {
+            const response = await fetch(`/core/api/calendar-events/?month=${monthStr}`);
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const data = await response.json();
+            events[monthStr] = data.events;
+            return data.events;
+        } catch (error) {
+            console.error('Failed to fetch calendar events:', error);
+            return [];
+        }
+    }
+
+    async function renderCalendar(date) {
+        calendarDaysContainer.innerHTML = '';
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        
+        monthYearElement.textContent = `${date.toLocaleString('default', { month: 'long' })} ${year}`;
+
+        const monthEvents = await fetchCalendarEvents(year, month);
+        const eventDates = new Set(monthEvents.map(e => new Date(e.start_time).getDate()));
+
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        // Add empty placeholders for days before the 1st
+        for (let i = 0; i < firstDay; i++) {
+            calendarDaysContainer.innerHTML += `<div class="calendar-day other-month"></div>`;
+        }
+
+        // Add days of the month
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dayEl = document.createElement('div');
+            dayEl.classList.add('calendar-day');
+            dayEl.textContent = day;
+            dayEl.dataset.day = day;
+
+            const today = new Date();
+            if (year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) {
+                dayEl.classList.add('today');
+            }
+
+            if (eventDates.has(day)) {
+                dayEl.classList.add('has-event');
+            }
+            
+            dayEl.addEventListener('click', () => {
+                selectedDate = new Date(year, month, day);
+                document.querySelectorAll('.calendar-day').forEach(d => d.classList.remove('selected'));
+                dayEl.classList.add('selected');
+                if (eventDates.has(day)) {
+                    showEventsForDate(selectedDate, monthEvents);
+                }
+            });
+
+            calendarDaysContainer.appendChild(dayEl);
+        }
+    }
+
+    function showEventsForDate(date, monthEvents) {
+        modalTitle.textContent = `Events on ${date.toLocaleString('default', { month: 'long' })} ${date.getDate()}`;
+        modalBody.innerHTML = '<div class="modal-loading"></div>';
+        eventModal.style.display = 'flex';
+
+        const eventsForDay = monthEvents.filter(e => new Date(e.start_time).getDate() === date.getDate());
+
+        setTimeout(() => { // Simulate loading
+            if (eventsForDay.length > 0) {
+                modalBody.innerHTML = eventsForDay.map(event => `
+                    <div class="modal-event-item">
+                        <div class="modal-event-info">
+                            <h4>${event.title}</h4>
+                            <p class="modal-event-time">
+                                ${new Date(event.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - 
+                                ${new Date(event.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                            <p class="modal-event-description">${event.description || 'No description available.'}</p>
+                        </div>
+                        <div class="modal-event-actions">
+                            <a href="/proposal/${event.id}/detail/" class="btn-modal-action btn-view-details">
+                                <i class="fas fa-eye"></i> View Details
+                            </a>
+                            <a href="${event.google_calendar_link}" target="_blank" class="btn-modal-action btn-add-google">
+                                <i class="fab fa-google"></i> Add to Google
+                            </a>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                modalBody.innerHTML = '<div class="no-events"><p>No events scheduled for this day.</p></div>';
+            }
+        }, 300);
+    }
+
+    prevMonthBtn.addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        renderCalendar(currentDate);
+    });
+
+    nextMonthBtn.addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        renderCalendar(currentDate);
+    });
+
+    eventModalClose.addEventListener('click', () => {
+        eventModal.style.display = 'none';
+    });
+
+    window.addEventListener('click', (e) => {
+        if (e.target === eventModal) {
+            eventModal.style.display = 'none';
+        }
+    });
+
+    // Initial Load
+    renderCalendar(currentDate);
 });
 
 // --- OPTIONAL: Make modal functions globally available for debugging ---

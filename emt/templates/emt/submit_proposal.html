@@ -10,78 +10,66 @@
 
 {% block content %}
 <div class="proposal-layout">
-    <!-- Left Navigation Panel -->
     <nav class="proposal-nav">
         <div class="nav-header">
             <h2 class="nav-title">Event Proposal</h2>
             <p class="nav-subtitle">Complete all sections to submit</p>
         </div>
-        
-        <!-- ONLY UPDATE THE NAVIGATION SECTION IN YOUR HTML FILE -->
-<!-- Replace the <ul class="nav-items"> section with this: -->
-
-<ul class="nav-items">
-    <li class="nav-item">
-        <a href="#" class="nav-link active" data-section="basic-info" data-order="1">
-            <span class="nav-number">1</span>
-            <div class="nav-content">
-                <div class="nav-item-title">Basic Info</div>
-                <div class="nav-item-subtitle">Title, dates, type, location, etc.</div>
-            </div>
-        </a>
-    </li>
-    
-    <li class="nav-item">
-        <a href="#" class="nav-link disabled" data-section="why-this-event" data-order="2">
-            <span class="nav-number">2</span>
-            <div class="nav-content">
-                <div class="nav-item-title">Why This Event?</div>
-                <div class="nav-item-subtitle">Objective, GA Relevance, Learning Outcomes</div>
-            </div>
-        </a>
-    </li>
-    
-    <li class="nav-item">
-        <a href="#" class="nav-link disabled" data-section="schedule" data-order="3">
-            <span class="nav-number">3</span>
-            <div class="nav-content">
-                <div class="nav-item-title">Schedule</div>
-                <div class="nav-item-subtitle">Event timeline, sessions, flow</div>
-            </div>
-        </a>
-    </li>
-    
-    <li class="nav-item">
-        <a href="#" class="nav-link disabled" data-section="speakers" data-order="4">
-            <span class="nav-number">4</span>
-            <div class="nav-content">
-                <div class="nav-item-title">Speakers</div>
-                <div class="nav-item-subtitle">Names, expertise, brief bio, etc.</div>
-            </div>
-        </a>
-    </li>
-    
-    <li class="nav-item">
-        <a href="#" class="nav-link disabled" data-section="expenses" data-order="5">
-            <span class="nav-number">5</span>
-            <div class="nav-content">
-                <div class="nav-item-title">Expenses</div>
-                <div class="nav-item-subtitle">Budget, funding source, justification</div>
-            </div>
-        </a>
-    </li>
-</ul>
+        <ul class="nav-items">
+            <li class="nav-item">
+                <a href="#" class="nav-link active" data-section="basic-info" data-order="1">
+                    <span class="nav-number">1</span>
+                    <div class="nav-content">
+                        <div class="nav-item-title">Basic Info</div>
+                        <div class="nav-item-subtitle">Title, dates, type, location, etc.</div>
+                    </div>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link disabled" data-section="why-this-event" data-order="2">
+                    <span class="nav-number">2</span>
+                    <div class="nav-content">
+                        <div class="nav-item-title">Why This Event?</div>
+                        <div class="nav-item-subtitle">Objective, GA Relevance, Learning Outcomes</div>
+                    </div>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link disabled" data-section="schedule" data-order="3">
+                    <span class="nav-number">3</span>
+                    <div class="nav-content">
+                        <div class="nav-item-title">Schedule</div>
+                        <div class="nav-item-subtitle">Event timeline, sessions, flow</div>
+                    </div>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link disabled" data-section="speakers" data-order="4">
+                    <span class="nav-number">4</span>
+                    <div class="nav-content">
+                        <div class="nav-item-title">Speakers</div>
+                        <div class="nav-item-subtitle">Names, expertise, brief bio, etc.</div>
+                    </div>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link disabled" data-section="expenses" data-order="5">
+                    <span class="nav-number">5</span>
+                    <div class="nav-content">
+                        <div class="nav-item-title">Expenses</div>
+                        <div class="nav-item-subtitle">Budget, funding source, justification</div>
+                    </div>
+                </a>
+            </li>
+        </ul>
     </nav>
 
-    <!-- Main Content Area -->
-    <main class="proposal-content")>
-        <!-- Content Header -->
+    <main class="proposal-content">
         <div class="content-header">
             <h1 class="content-title" id="main-title">Basic Information</h1>
             <p class="content-subtitle" id="main-subtitle">Organization details and event basics</p>
         </div>
 
-        <!-- Display form errors -->
         {% if form.errors %}
             <div class="form-errors-banner">
                 <strong>Please fix the following errors:</strong>
@@ -97,42 +85,46 @@
 
         <form method="post" enctype="multipart/form-data" id="proposal-form" autocomplete="off">
             {% csrf_token %}
-            
-            <!-- Form Panel -->
+            <textarea name="need_analysis" hidden>{{ need_analysis.content|default_if_none:'' }}</textarea>
+            <textarea name="objectives" hidden>{{ objectives.content|default_if_none:'' }}</textarea>
+            <textarea name="outcomes" hidden>{{ outcomes.content|default_if_none:'' }}</textarea>
+            <textarea name="flow" hidden>{{ flow.content|default_if_none:'' }}</textarea>
+
             <div class="form-panel" id="form-panel">
                 <div class="form-panel-content" id="form-panel-content">
-                    <!-- Dynamic form content will be loaded here -->
                     <div class="form-grid">
-                        <div class="form-row">
+                        <!-- Organization Information Section -->
+                        <div class="form-section-header">
+                            <h3>Organization Details</h3>
+                        </div>
+                        
+                        <div class="form-row full-width">
                             <div class="input-group">
                                 <label for="org-type-modern-input">Type of Organisation *</label>
                                 <div id="org-type-modern">
-                                    <select required>
-                                        <option value="">Select Organization Type</option>
-                                    </select>
+                                    <select required><option value="">Select Organization Type</option></select>
                                 </div>
+                                <div class="help-text">Choose the type of organization hosting this event</div>
                             </div>
+                        </div>
+
+                        <!-- Dynamic organization field will be inserted here -->
+                        
+                        <!-- Event Information Section -->
+                        <div class="form-section-header">
+                            <h3>Event Information</h3>
                         </div>
 
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="event-title-modern">Event Title *</label>
-                                <input type="text" id="event-title-modern" required>
-                            </div>
-                            <div class="input-group">
-                                <label for="event-datetime-modern">Date & Time *</label>
-                                <input type="datetime-local" id="event-datetime-modern" required>
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="input-group">
-                                <label for="venue-modern">Venue *</label>
-                                <input type="text" id="venue-modern" required>
+                                <input type="text" id="event-title-modern" required placeholder="Enter a descriptive event title">
+                                <div class="help-text">Provide a clear and engaging title for your event</div>
                             </div>
                             <div class="input-group">
                                 <label for="target-audience-modern">Target Audience *</label>
-                                <input type="text" id="target-audience-modern" required>
+                                <input type="text" id="target-audience-modern" required placeholder="e.g., Final year students, Faculty members">
+                                <div class="help-text">Specify who this event is intended for</div>
                             </div>
                         </div>
 
@@ -142,31 +134,81 @@
                                 <select id="event-focus-type-modern">
                                     <option value="">Select Focus Type</option>
                                 </select>
+                                <div class="help-text">Choose the primary focus of your event</div>
                             </div>
                             <div class="input-group">
-                                <label for="academic-year-modern">Academic Year *</label>
-                                <input type="text" id="academic-year-modern" placeholder="2024-2025" required>
+                                <label for="venue-modern">Location</label>
+                                <input type="text" id="venue-modern" placeholder="e.g., Main Auditorium, Online">
+                                <div class="help-text">Specify where the event will take place</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Date and Academic Information Section -->
+                        <div class="form-section-header">
+                            <h3>Schedule & Academic Information</h3>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label for="event-start-date">Start Date *</label>
+                                <input type="date" id="event-start-date" required>
+                                <div class="help-text">When does your event begin?</div>
+                            </div>
+                            <div class="input-group">
+                                <label for="event-end-date">End Date *</label>
+                                <input type="date" id="event-end-date" required>
+                                <div class="help-text">When does your event end?</div>
                             </div>
                         </div>
 
                         <div class="form-row">
                             <div class="input-group">
-                                <label for="student-coordinators-modern">Student Coordinators</label>
-                                <input type="text" id="student-coordinators-modern">
+                                <label for="academic-year-modern">Academic Year *</label>
+                                <input type="text" id="academic-year-modern" placeholder="2024-2025" required>
+                                <div class="help-text">Academic year for which this event is planned</div>
                             </div>
                             <div class="input-group">
-                                <label for="num-activities-modern">Number of Activities</label>
-                                <input type="number" id="num-activities-modern" min="1">
+                                <label for="pos-pso-modern">POS & PSO Management</label>
+                                <input type="text" id="pos-pso-modern" placeholder="e.g., PO1, PSO2">
+                                <div class="help-text">Program outcomes and specific outcomes addressed</div>
                             </div>
+                        </div>
+
+                        <!-- Activities Section -->
+                        <div class="form-section-header">
+                            <h3>Activities Planning</h3>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label for="num-activities-modern">Number of Activities</label>
+                                <input type="number" id="num-activities-modern" min="1" max="50" placeholder="Enter number of activities">
+                                <div class="help-text">How many activities will your event include?</div>
+                            </div>
+                            <div class="input-group">
+                                <label for="student-coordinators-modern">Student Coordinators</label>
+                                <input type="text" id="student-coordinators-modern" placeholder="Names of student coordinators">
+                                <div class="help-text">List the names of student coordinators</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Dynamic activities section -->
+                        <div id="dynamic-activities-section" class="full-width"></div>
+
+                        <!-- Faculty Section -->
+                        <div class="form-section-header">
+                            <h3>Faculty Information</h3>
                         </div>
 
                         <div class="form-row full-width">
                             <div class="input-group">
                                 <label for="faculty-select">Faculty Incharges *</label>
                                 <select id="faculty-select" multiple></select>
+                                <div class="help-text">Select faculty members who will be in charge of this event</div>
                             </div>
                         </div>
                         
+                        <!-- Save Section -->
                         <div class="form-row full-width">
                             <div class="save-section-container">
                                 <button type="button" class="btn-save-section">Save & Continue</button>
@@ -177,80 +219,46 @@
                 </div>
             </div>
 
-            <!-- Submit Section -->
             <div class="submit-section">
-                <button type="submit" name="final_submit" class="btn-submit" id="submit-proposal-btn" disabled>
-                    Submit Proposal
-                </button>
-                <div class="submit-help-text">
-                    Complete all sections above to enable submission
-                </div>
+                <button type="submit" name="final_submit" class="btn-submit" id="submit-proposal-btn" disabled>Submit Proposal</button>
+                <div class="submit-help-text">Complete all sections above to enable submission</div>
             </div>
 
-            <!-- Hidden Django Form Fields -->
             <div style="display: none;" id="django-forms">
-                <!-- Basic Info Fields -->
                 <div id="django-basic-info">
                     {{ form.organization_type.label_tag }}
                     {{ form.organization_type }}
-                    {% for err in form.organization_type.errors %}<span class="error">{{ err }}</span>{% endfor %}
-
                     {{ form.organization.label_tag }}
                     {{ form.organization }}
-                    {% for err in form.organization.errors %}<span class="error">{{ err }}</span>{% endfor %}
-
                     {{ form.event_title.label_tag }}
                     {{ form.event_title }}
-                    {% for err in form.event_title.errors %}<span class="error">{{ err }}</span>{% endfor %}
-
-                    {{ form.event_datetime.label_tag }}
-                    {{ form.event_datetime }}
-                    {% for err in form.event_datetime.errors %}<span class="error">{{ err }}</span>{% endfor %}
-
+                    {{ form.event_start_date.label_tag }}
+                    {{ form.event_start_date }}
+                    {{ form.event_end_date.label_tag }}
+                    {{ form.event_end_date }}
                     {{ form.venue.label_tag }}
                     {{ form.venue }}
-                    {% for err in form.venue.errors %}<span class="error">{{ err }}</span>{% endfor %}
-
                     {{ form.target_audience.label_tag }}
                     {{ form.target_audience }}
-                    {% for err in form.target_audience.errors %}<span class="error">{{ err }}</span>{% endfor %}
-
                     {{ form.event_focus_type.label_tag }}
                     {{ form.event_focus_type }}
-                    {% for err in form.event_focus_type.errors %}<span class="error">{{ err }}</span>{% endfor %}
-
+                    {{ form.pos_pso.label_tag }}
+                    {{ form.pos_pso }}
                     {{ form.academic_year.label_tag }}
                     {{ form.academic_year }}
-                    {% for err in form.academic_year.errors %}<span class="error">{{ err }}</span>{% endfor %}
-
                     {{ form.student_coordinators.label_tag }}
                     {{ form.student_coordinators }}
-                    {% for err in form.student_coordinators.errors %}<span class="error">{{ err }}</span>{% endfor %}
-
                     {{ form.num_activities.label_tag }}
                     {{ form.num_activities }}
-                    {% for err in form.num_activities.errors %}<span class="error">{{ err }}</span>{% endfor %}
-
-                    <div class="input-group{% if form.faculty_incharges.errors %} has-error{% endif %}">
+                    <div class="input-group">
                         {{ form.faculty_incharges.label_tag }}
                         {{ form.faculty_incharges }}
-                        {% for err in form.faculty_incharges.errors %}
-                            <span class="error">{{ err }}</span>
-                        {% endfor %}
                     </div>
-
-                    <!-- Other sections would have their form fields here when implemented -->
                     {% for field in form.visible_fields %}
-                        {% if field.name not in "organization_type,organization,event_title,event_datetime,venue,target_audience,event_focus_type,academic_year,student_coordinators,num_activities,faculty_incharges" %}
+                        {% if field.name not in "organization_type,organization,event_title,event_start_date,event_end_date,venue,target_audience,event_focus_type,academic_year,student_coordinators,num_activities,faculty_incharges,pos_pso" %}
                             <div id="django-field-{{ field.name }}">
                                 {{ field.label_tag }}
                                 {{ field }}
-                                {% if field.help_text %}
-                                    <small class="help-text">{{ field.help_text }}</small>
-                                {% endif %}
-                                {% for e in field.errors %}
-                                    <span class="error">{{ e }}</span>
-                                {% endfor %}
                             </div>
                         {% endif %}
                     {% endfor %}
@@ -260,77 +268,47 @@
     </main>
 </div>
 
-<!-- Auto-save indicator -->
 <div class="autosave-indicator" id="autosave-indicator">
     <span class="indicator-text">Saved</span>
 </div>
-
+{% if proposal.organization %}
+<div id="outcomeModal" class="outcome-modal" data-url="{% url 'emt:api_outcomes' proposal.organization.id %}">
+    <div class="modal-content">
+        <h3>Select Outcomes</h3>
+        <div id="outcomeOptions">Loading...</div>
+        <div class="modal-actions">
+            <button type="button" id="outcomeCancel" class="btn-cancel">Cancel</button>
+            <button type="button" id="outcomeSave" class="btn-save">Add</button>
+        </div>
+    </div>
+</div>
+{% else %}
+<div id="outcomeModal" class="outcome-modal" data-url="">
+    <div class="modal-content">
+        <h3>Select Outcomes</h3>
+        <div id="outcomeOptions">No organization selected.</div>
+        <div class="modal-actions">
+            <button type="button" id="outcomeCancel" class="btn-cancel">Cancel</button>
+            <button type="button" id="outcomeSave" class="btn-save">Add</button>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
     <script>
-        if (!window.jQuery) {
-            document.write("<script src='{% static 'emt/js/jquery-3.7.1.min.js' %}'><\/script>");
-        }
+        if (!window.jQuery) { document.write("<script src='{% static 'emt/js/jquery-3.7.1.min.js' %}'><\/script>"); }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
     <script>
-        // Django integration variables
         window.PROPOSAL_ID = "{{ proposal.id|default:'' }}";
         window.AUTOSAVE_URL = "{% url 'emt:autosave_proposal' %}";
         window.AUTOSAVE_CSRF = "{{ csrf_token }}";
-        
-        // API URLs from original
         window.API_ORGANIZATIONS = "{% url 'emt:api_organizations' %}";
         window.API_FACULTY = "{% url 'emt:api_faculty' %}";
-
-        document.addEventListener('DOMContentLoaded', () => {
-            // Org Type dropdown (no search needed)
-            const orgTypeTS = new TomSelect('#id_organization_type');
-
-            // Org dropdown — fetch based on selected org_type
-            const orgTS = new TomSelect('#id_organization', {
-                valueField: 'id',
-                labelField: 'text',
-                searchField: 'text',
-                create: false,
-                load: (query, callback) => {
-                    const typeEl = document.querySelector('#id_organization_type');
-                    const typeName = typeEl.tomselect ?
-                        typeEl.tomselect.getItem(typeEl.tomselect.getValue())?.textContent :
-                        typeEl.options[typeEl.selectedIndex]?.text;
-                    let url = '{% url "emt:api_organizations" %}?q=' + encodeURIComponent(query || '');
-                    if (typeName) url += '&org_type=' + encodeURIComponent(typeName.trim());
-                    fetch(url)
-                        .then(r => r.json())
-                        .then(callback)
-                        .catch(() => callback());
-                }
-            });
-
-            // Clear org selection when org type changes
-            orgTypeTS.on('change', () => {
-                orgTS.clear();
-                orgTS.clearOptions();
-            });
-
-            // Faculty dropdown setup (already working)
-            new TomSelect('#faculty-select', {
-                plugins: ['remove_button'],
-                valueField: 'id',
-                labelField: 'text',
-                searchField: 'text',
-                create: false,
-                load: (query, callback) => {
-                    if (!query.length) return callback();
-                    fetch(window.API_FACULTY + '?q=' + encodeURIComponent(query))
-                        .then(r => r.json())
-                        .then(callback)
-                        .catch(() => callback());
-                }
-            });
-        });
+        window.API_OUTCOMES_BASE = "{% url 'emt:api_outcomes' 0 %}".replace(/0\/$/, '');
     </script>
     <script src="{% static 'emt/js/autosave_draft.js' %}"></script>
     <script src="{% static 'emt/js/proposal_dashboard.js' %}"></script>

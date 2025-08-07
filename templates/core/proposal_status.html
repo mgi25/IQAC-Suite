@@ -50,8 +50,11 @@
             </div>
 
             {% if proposal.id %}
-            <div style="width: 100%; display: flex; justify-content: flex-end; margin-top: 32px;">
-                <a href="{% url 'emt:proposal_status_detail' proposal.id %}" class="btn-link" style="color: #2c5aa0; font-weight: 500; text-decoration: underline; cursor: pointer; border: 2px solid #222; border-radius: 6px; padding: 16px 32px; font-size: 1.1em; background: #fff;">View Status</a>
+            <div class="proposal-actions-section">
+                <a href="{% url 'proposal_status' proposal.id %}" class="btn-view-status">
+                    <i class="fas fa-eye"></i>
+                    View Status
+                </a>
             </div>
             {% endif %}
 

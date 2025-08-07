@@ -18,24 +18,27 @@
     <form method="post" enctype="multipart/form-data">
       {% csrf_token %}
       {{ formset.management_form }}
-      {% for form in formset %}
-        <div class="section speaker-form">
-          <h3>Speaker {{ forloop.counter }}</h3>
-          <div class="input-group">{{ form.full_name.label_tag }} {{ form.full_name }}</div>
-          <div class="input-group">{{ form.designation.label_tag }} {{ form.designation }}</div>
-          <div class="input-group">{{ form.affiliation.label_tag }} {{ form.affiliation }}</div>
-          <div class="input-group">{{ form.contact_email.label_tag }} {{ form.contact_email }}</div>
-          <div class="input-group">{{ form.contact_number.label_tag }} {{ form.contact_number }}</div>
-          <div class="input-group">{{ form.photo.label_tag }} {{ form.photo }}</div>
-          <div class="input-group">{{ form.detailed_profile.label_tag }} {{ form.detailed_profile }}</div>
-          {% if form.DELETE %}
-            <div class="input-group">{{ form.DELETE }} Remove this speaker</div>
-          {% endif %}
-        </div>
-        <hr>
-      {% endfor %}
+      <div class="section">
+        <h3>Speaker Profiles</h3>
+        {% for form in formset %}
+          <div class="section speaker-form">
+            <h4>Speaker {{ forloop.counter }}</h4>
+            <div class="input-group">{{ form.full_name.label_tag }} {{ form.full_name }}</div>
+            <div class="input-group">{{ form.designation.label_tag }} {{ form.designation }}</div>
+            <div class="input-group">{{ form.affiliation.label_tag }} {{ form.affiliation }}</div>
+            <div class="input-group">{{ form.contact_email.label_tag }} {{ form.contact_email }}</div>
+            <div class="input-group">{{ form.contact_number.label_tag }} {{ form.contact_number }}</div>
+            <div class="input-group">{{ form.photo.label_tag }} {{ form.photo }}</div>
+            <div class="input-group">{{ form.detailed_profile.label_tag }} {{ form.detailed_profile }}</div>
+            {% if form.DELETE %}
+              <div class="input-group">{{ form.DELETE }} Remove this speaker</div>
+            {% endif %}
+          </div>
+          <hr>
+        {% endfor %}
+      </div>
       <div class="input-group">
-        <button type="submit" class="btn">Save & Continue</button>
+        <button type="submit" class="btn">Save &amp; Continue</button>
       </div>
     </form>
   </div>

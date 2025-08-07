@@ -30,16 +30,6 @@ FACULTY_ROLE = ApprovalStep.Role.FACULTY.value
 DEAN_ROLE = ApprovalStep.Role.DEAN.value
 ACADEMIC_COORDINATOR_ROLE = "academic_coordinator"
 
-# Roles that should appear in the faculty search API
-FACULTY_LIKE_ROLES = [
-    ApprovalStep.Role.FACULTY.value,
-    ApprovalStep.Role.FACULTY_INCHARGE.value,
-    "Faculty",
-    "Faculty In-Charge",
-]
-
-# Fallback profile roles for faculty search when no role assignments exist
-PROFILE_FACULTY_ROLES = ["faculty"]
 from django.contrib import messages
 from django.utils import timezone
 from django.db import models
@@ -60,30 +50,6 @@ import logging
 
 # Get an instance of the logger for the 'emt' app
 logger = logging.getLogger(__name__) # __name__ will resolve to 'emt.views'
-
-def submit_proposal(request):
-    if request.method == 'POST':
-        form = EventProposalForm(request.POST)
-        if form.is_valid():
-            proposal = form.save(commit=False)
-            proposal.submitted_by = request.user
-            proposal.save()
-            
-            # Here is the logging statement
-            logger.info(
-                f"Event proposal '{proposal.title}' (ID: {proposal.id}) "
-                f"was submitted by user '{request.user.username}'."
-            )
-            
-            return redirect('emt:proposal_success')
-    else:
-        form = EventProposalForm()
-    
-    return render(request, 'emt/submit_proposal.html', {'form': form})
-
-# ──────────────────────────────
-# CDL DASHBOARD
-# ──────────────────────────────
 # Configure Gemini API key from environment variable(s)
 # Prefer `GEMINI_API_KEY`; fall back to `GOOGLE_API_KEY`
 api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
@@ -168,6 +134,8 @@ def submit_proposal(request, pk=None):
 
     if request.method == "POST":
         post_data = request.POST.copy()
+        logger.debug("submit_proposal POST data: %s", post_data)
+        logger.debug("Faculty IDs from POST: %s", post_data.getlist("faculty_incharges"))
         form = EventProposalForm(
             post_data,
             instance=proposal,
@@ -211,10 +179,19 @@ def submit_proposal(request, pk=None):
             return ""
         return ""
 
+    need_analysis = EventNeedAnalysis.objects.filter(proposal=proposal).first() if proposal else None
+    objectives = EventObjectives.objects.filter(proposal=proposal).first() if proposal else None
+    outcomes = EventExpectedOutcomes.objects.filter(proposal=proposal).first() if proposal else None
+    flow = TentativeFlow.objects.filter(proposal=proposal).first() if proposal else None
+
     ctx = {
         "form": form,
         "proposal": proposal,
         "org_types": OrganizationType.objects.filter(is_active=True).order_by('name'),
+        "need_analysis": need_analysis,
+        "objectives": objectives,
+        "outcomes": outcomes,
+        "flow": flow,
     }
 
 
@@ -227,6 +204,11 @@ def submit_proposal(request, pk=None):
             proposal.save()
             form.save_m2m()
             _save_text_sections(proposal, request.POST)
+            logger.debug(
+                "Proposal %s saved with faculty %s",
+                proposal.id,
+                list(proposal.faculty_incharges.values_list("id", flat=True)),
+            )
             build_approval_chain(proposal)
             messages.success(
                 request,
@@ -238,6 +220,11 @@ def submit_proposal(request, pk=None):
             proposal.save()
             form.save_m2m()
             _save_text_sections(proposal, request.POST)
+            logger.debug(
+                "Draft proposal %s saved with faculty %s",
+                proposal.id,
+                list(proposal.faculty_incharges.values_list("id", flat=True)),
+            )
             return redirect("emt:submit_need_analysis", proposal_id=proposal.id)
 
     return render(request, "emt/submit_proposal.html", ctx)
@@ -253,6 +240,7 @@ def autosave_proposal(request):
         return JsonResponse({"error": "Invalid request"}, status=400)
 
     data = json.loads(request.body.decode("utf-8"))
+    logger.debug("autosave_proposal payload: %s", data)
 
     # Replace department logic with generic organization
     org_type_val = data.get("organization_type")  # You'll need to capture org type in your frontend/form!
@@ -282,6 +270,7 @@ def autosave_proposal(request):
         ).distinct()
 
     if not form.is_valid():
+        logger.debug("autosave_proposal form errors: %s", form.errors)
         return JsonResponse({"success": False, "errors": form.errors}, status=400)
 
     proposal = form.save(commit=False)
@@ -290,6 +279,11 @@ def autosave_proposal(request):
     proposal.save()
     form.save_m2m()               # 🆕 keep M2M in sync
     _save_text_sections(proposal, data)
+    logger.debug(
+        "Autosaved proposal %s with faculty %s",
+        proposal.id,
+        list(proposal.faculty_incharges.values_list("id", flat=True)),
+    )
 
     return JsonResponse({"success": True, "proposal_id": proposal.id})
 
@@ -305,10 +299,12 @@ def submit_need_analysis(request, proposal_id):
 
     if request.method == "POST":
         form = NeedAnalysisForm(request.POST, instance=instance)
+        logger.debug("NeedAnalysis POST data: %s", request.POST)
         if form.is_valid():
             need = form.save(commit=False)
             need.proposal = proposal
             need.save()
+            logger.debug("NeedAnalysis saved for proposal %s", proposal.id)
             return redirect("emt:submit_objectives", proposal_id=proposal.id)
     else:
         form = NeedAnalysisForm(instance=instance)
@@ -325,10 +321,12 @@ def submit_objectives(request, proposal_id):
 
     if request.method == "POST":
         form = ObjectivesForm(request.POST, instance=instance)
+        logger.debug("Objectives POST data: %s", request.POST)
         if form.is_valid():
             obj = form.save(commit=False)
             obj.proposal = proposal
             obj.save()
+            logger.debug("Objectives saved for proposal %s", proposal.id)
             return redirect("emt:submit_expected_outcomes",
                             proposal_id=proposal.id)
     else:
@@ -346,10 +344,12 @@ def submit_expected_outcomes(request, proposal_id):
 
     if request.method == "POST":
         form = ExpectedOutcomesForm(request.POST, instance=instance)
+        logger.debug("ExpectedOutcomes POST data: %s", request.POST)
         if form.is_valid():
             outcome = form.save(commit=False)
             outcome.proposal = proposal
             outcome.save()
+            logger.debug("ExpectedOutcomes saved for proposal %s", proposal.id)
             return redirect("emt:submit_tentative_flow",
                             proposal_id=proposal.id)
     else:
@@ -367,10 +367,12 @@ def submit_tentative_flow(request, proposal_id):
 
     if request.method == "POST":
         form = TentativeFlowForm(request.POST, instance=instance)
+        logger.debug("TentativeFlow POST data: %s", request.POST)
         if form.is_valid():
             flow = form.save(commit=False)
             flow.proposal = proposal
             flow.save()
+            logger.debug("TentativeFlow saved for proposal %s", proposal.id)
             return redirect("emt:submit_speaker_profile",
                             proposal_id=proposal.id)
     else:
@@ -486,6 +488,35 @@ def proposal_status_detail(request, proposal_id):
         submitted_by=request.user
     )
 
+    proposal = get_object_or_404(EventProposal, id=proposal_id)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action') # Assuming you get 'approve' or 'reject' from a form
+
+        if action == 'approve':
+            proposal.status = 'Approved' # Use your actual status value
+            
+            # Add the logging statement for approval
+            logger.info(
+                f"User '{request.user.username}' APPROVED proposal '{proposal.title}' (ID: {proposal.id})."
+            )
+            
+            proposal.save()
+
+        elif action == 'reject':
+            proposal.status = 'Rejected' # Use your actual status value
+            rejection_reason = request.POST.get('reason', 'No reason provided')
+            
+            # Add the logging statement for rejection
+            logger.warning(
+                f"User '{request.user.username}' REJECTED proposal '{proposal.title}' (ID: {proposal.id}). "
+                f"Reason: {rejection_reason}"
+            )
+            
+            proposal.save()
+            
+        return redirect('some-success-url')
+
     # Get approval steps
     approval_steps = ApprovalStep.objects.filter(
         proposal=proposal
@@ -544,6 +575,26 @@ def generate_report(request, proposal_id):
     proposal.save()
     return redirect('emt:report_success', proposal_id=proposal.id)
 
+    report = EventReport.objects.get(id=report_id)
+    
+    # ... your existing logic to gather data for the AI ...
+    
+    try:
+        # Call your AI service to get the report content
+        generated_text = ai_report_service.create_summary(report)
+        report.ai_generated_report = generated_text
+        report.save()
+
+        # Add the logging statement here
+        logger.info(
+            f"User '{request.user.username}' generated an AI report for event "
+            f"'{report.event.title}' (Report ID: {report.id})."
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to generate AI report for Report ID {report.id}: {e}")
+        # Handle the error
+
 @login_required
 def report_success(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id)
@@ -559,6 +610,24 @@ def view_report(request, report_id):
     report = get_object_or_404(EventProposal, id=report_id, submitted_by=request.user, report_generated=True)
     return render(request, 'emt/view_report.html', {'report': report})
 
+    """
+    Displays the details of a single event report.
+    """
+    # Get the report object, or return a 404 error if not found
+    report = get_object_or_404(EventReport, id=report_id)
+
+    # Add the logging statement here, right after fetching the object
+    logger.info(
+        f"User '{request.user.username}' viewed the report for event "
+        f"'{report.event.title}' (Report ID: {report.id})."
+    )
+
+    # Render the template with the report data
+    context = {
+        'report': report
+    }
+    return render(request, 'emt/view_report.html', context)
+
 # ──────────────────────────────
 # FILE DOWNLOAD (PLACEHOLDER)
 # ──────────────────────────────
@@ -567,6 +636,25 @@ def view_report(request, report_id):
 def download_pdf(request, proposal_id):
     # TODO: Implement actual PDF generation and return the file
     return HttpResponse(f"PDF download for Proposal {proposal_id}", content_type='application/pdf')
+
+    report = EventReport.objects.get(id=report_id)
+    
+    # Assuming you have a utility to render a template to a PDF
+    try:
+        pdf_file = render_to_pdf('emt/pdf_template.html', {'report': report})
+
+        # Add the logging statement here
+        logger.info(
+            f"User '{request.user.username}' downloaded the PDF report for event "
+            f"'{report.event.title}' (Report ID: {report.id})."
+        )
+
+        # Return the PDF as an HTTP response
+        return HttpResponse(pdf_file, content_type='application/pdf')
+
+    except Exception as e:  
+        logger.error(f"Failed to generate PDF for Report ID {report.id}: {e}")
+        # Handle the error
 
 @login_required
 def download_word(request, proposal_id):
@@ -608,8 +696,8 @@ def api_faculty(request):
     users = (
         User.objects
             .filter(
-                Q(role_assignments__role__name__in=FACULTY_LIKE_ROLES) |
-                Q(profile__role__in=PROFILE_FACULTY_ROLES)
+                Q(role_assignments__role__name__icontains="faculty") |
+                Q(profile__role__icontains="faculty")
             )
             .filter(
                 Q(first_name__icontains=q) |
@@ -670,7 +758,7 @@ def review_approval_step(request, step_id):
             "expected_outcomes",
             "tentative_flow",
         )
-        .prefetch_related("speakers", "expense_details")
+        .prefetch_related("speakers", "expense_details", "faculty_incharges")
         .get(pk=step.proposal_id)
     )
 
@@ -698,6 +786,14 @@ def review_approval_step(request, step_id):
 
     speakers = proposal.speakers.all()
     expenses = proposal.expense_details.all()
+    logger.debug(
+        "Reviewing proposal %s: faculty %s, objectives=%s, outcomes=%s, flow=%s",
+        proposal.id,
+        list(proposal.faculty_incharges.values_list("id", flat=True)),
+        getattr(objectives, "content", None),
+        getattr(outcomes, "content", None),
+        getattr(flow, "content", None),
+    )
 
     GATEKEEPER_ROLES = [
         ApprovalStep.Role.HOD.value,
