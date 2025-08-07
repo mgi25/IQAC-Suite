@@ -35,7 +35,7 @@
     {% if existing_steps %}
       <ol id="currentFlowList" class="flow-list">
         {% for step in existing_steps %}
-          <li>{{ step.step_order }}. {{ step.get_role_required_display }} – {{ step.user.get_full_name|default:'Unassigned' }}</li>
+          <li>{{ step.step_order }}. {{ step.get_role_required_display }}{% if step.optional %} (Optional){% endif %} – {{ step.user.get_full_name|default:'Unassigned' }}</li>
         {% endfor %}
       </ol>
       <button class="btn btn-primary" type="button" onclick="openApprovalFlowEditor()">Edit Flow</button>

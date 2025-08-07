@@ -95,7 +95,7 @@ class EventProposalForm(forms.ModelForm):
         model = EventProposal
         fields = [
             'organization_type', 'organization', 'faculty_incharges', 'event_title', 'event_start_date', 'event_end_date', 'venue',
-            'committees', 'num_activities', 'academic_year', 'student_coordinators', 'pos_pso',
+            'committees', 'committees_collaborations', 'aligned_sdg_goals', 'num_activities', 'academic_year', 'student_coordinators', 'pos_pso',
             'target_audience', 'event_focus_type', 'fest_fee_participants',
             'fest_fee_rate', 'fest_fee_amount', 'fest_sponsorship_amount',
             'conf_fee_participants', 'conf_fee_rate', 'conf_fee_amount', 'conf_sponsorship_amount',
@@ -109,11 +109,15 @@ class EventProposalForm(forms.ModelForm):
             'event_end_date': 'End Date',
             'venue': 'Location',
             'pos_pso': 'POS & PSO Management',
+            'aligned_sdg_goals': 'Aligned SDG Goals',
+            'committees_collaborations': 'Committees & Collaborations',
         }
         widgets = {
             'event_start_date': forms.DateInput(attrs={'type': 'date'}),
             'event_end_date': forms.DateInput(attrs={'type': 'date'}),
             'committees':         forms.Textarea(attrs={'rows': 2}),
+            'committees_collaborations': forms.Textarea(attrs={'rows': 3, 'placeholder': 'List committees and collaborations involved'}),
+            'aligned_sdg_goals': forms.Textarea(attrs={'rows': 3, 'placeholder': 'List the SDG goals aligned with this event'}),
             'student_coordinators': forms.Textarea(attrs={'rows': 2}),
             'target_audience':    forms.TextInput(attrs={'placeholder': 'e.g., BSc students'}),
             'pos_pso':            forms.TextInput(attrs={'placeholder': 'e.g., PO1, PSO2'}),
@@ -183,7 +187,7 @@ class SpeakerProfileForm(forms.ModelForm):
         model   = SpeakerProfile
         fields  = [
             'full_name', 'designation', 'affiliation',
-            'contact_email', 'contact_number', 'photo', 'detailed_profile'
+            'contact_email', 'contact_number', 'linkedin_url', 'photo', 'detailed_profile'
         ]
         labels = {
             'full_name':       'Full Name',
@@ -191,11 +195,13 @@ class SpeakerProfileForm(forms.ModelForm):
             'affiliation':     'Affiliation / Organization',
             'contact_email':   'Email',
             'contact_number':  'Contact Number',
+            'linkedin_url':    'LinkedIn Profile',
             'photo':           'Speaker Photo',
             'detailed_profile':'Brief Profile / Bio'
         }
         widgets = {
-            'detailed_profile': forms.Textarea(attrs={'rows': 5})
+            'detailed_profile': forms.Textarea(attrs={'rows': 5}),
+            'linkedin_url': forms.URLInput(attrs={'placeholder': 'https://linkedin.com/in/username'})
         }
 
 class ExpenseDetailForm(forms.ModelForm):
