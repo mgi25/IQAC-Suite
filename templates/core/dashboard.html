@@ -168,7 +168,7 @@
 
         <script>
             // Pass calendar events data to JavaScript
-            window.DASHBOARD_EVENTS = {{ calendar_events|safe }};
+            window.DASHBOARD_EVENTS = JSON.parse(document.getElementById('calendarEventsJson').textContent);
         </script>
 
         <div id="events" class="tab-content">
@@ -357,25 +357,6 @@
                                         </a>
                                     </div>
                                 {% endif %}
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Quick Actions Card -->
-                    <div class="quick-actions-card">
-                        <div class="quick-actions-header">
-                            <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
-                        </div>
-                        <div class="quick-actions-body">
-                            <div class="action-buttons">
-                                <a href="/suite/submit/" class="action-btn primary">
-                                    <i class="fas fa-plus"></i>
-                                    <span>Create Event</span>
-                                </a>
-                                <a href="{% url 'dashboard' %}?tab=events" class="action-btn secondary">
-                                    <i class="fas fa-list"></i>
-                                    <span>View All Events</span>
-                                </a>
                             </div>
                         </div>
                     </div>

@@ -2660,18 +2660,36 @@ h4 {
 
 /* Quick Actions Styles */
 .quick-actions-card {
-    background: var(--card-background);
-    border-radius: 16px;
-    padding: 24px;
-    border: 1px solid var(--border-color);
-    box-shadow: var(--shadow);
+    background: #ffffff !important;
+    border-radius: 12px !important;
+    padding: 24px !important;
+    border: 1px solid #e5e7eb !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    margin-top: 24px !important;
+    display: block !important;
+    width: 100% !important;
 }
 
-.quick-actions-card h3 {
-    margin: 0 0 20px 0;
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--text-primary);
+.quick-actions-header {
+    margin-bottom: 20px !important;
+}
+
+.quick-actions-header h3 {
+    margin: 0 !important;
+    font-size: 1.25rem !important;
+    font-weight: 600 !important;
+    color: #1f2937 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.quick-actions-header h3 i {
+    color: #4a90e2 !important;
+}
+
+.quick-actions-body {
+    padding: 0 !important;
 }
 
 .action-buttons {
@@ -2920,43 +2938,46 @@ h4 {
 
 /* Events Card Container */
 .events-card {
-    background: var(--card-background, #ffffff);
-    border-radius: var(--border-radius, 12px);
-    padding: 0;
-    box-shadow: var(--shadow, 0 4px 12px rgba(0, 0, 0, 0.05));
-    border: 1px solid var(--border-color, #e5e7eb);
-    overflow: hidden;
-    margin-top: 24px;
+    background: #ffffff !important;
+    border-radius: 12px !important;
+    padding: 0 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    border: 1px solid #e5e7eb !important;
+    overflow: hidden !important;
+    margin-top: 24px !important;
+    display: block !important;
+    width: 100% !important;
 }
 
 .events-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 24px;
-    border-bottom: 1px solid var(--border-light, #f3f4f6);
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 20px 24px !important;
+    border-bottom: 1px solid #f3f4f6 !important;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
 }
 
 .events-card-header h3 {
-    margin: 0;
-    color: var(--text-primary, #1f2937);
-    font-size: 1.25rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    margin: 0 !important;
+    color: #1f2937 !important;
+    font-size: 1.25rem !important;
+    font-weight: 600 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
 }
 
 .events-card-header h3 i {
-    color: var(--primary-color, #4a90e2);
+    color: #4a90e2 !important;
 }
 
 .events-card-body {
-    padding: 0;
-    max-height: 500px;
-    overflow-y: auto;
-    position: relative;
+    padding: 0 !important;
+    max-height: 500px !important;
+    overflow-y: auto !important;
+    position: relative !important;
+    background: #ffffff !important;
 }
 
 /* Custom Scrollbar for Events List */
@@ -2999,6 +3020,104 @@ h4 {
 
 .events-list-scrollable .event-item-card:last-child {
     border-bottom: none;
+}
+
+/* Enhanced Event Item Card Styling */
+.events-list-scrollable {
+    max-height: 500px !important;
+    overflow-y: auto !important;
+    padding: 16px !important;
+    background: #ffffff !important;
+}
+
+.event-item-card {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    padding: 16px !important;
+    margin-bottom: 12px !important;
+    transition: all 0.2s ease !important;
+    display: block !important;
+    width: calc(100% - 32px) !important;
+}
+
+.event-item-card:hover {
+    background: #f1f5f9 !important;
+    border-color: #cbd5e1 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+}
+
+.event-main-info h4 {
+    margin: 0 0 8px 0 !important;
+    color: #1e293b !important;
+    font-size: 1.1rem !important;
+    font-weight: 600 !important;
+}
+
+.event-details-row {
+    display: flex !important;
+    gap: 16px !important;
+    margin-bottom: 12px !important;
+    flex-wrap: wrap !important;
+}
+
+.event-details-row span {
+    font-size: 0.875rem !important;
+    color: #64748b !important;
+    white-space: nowrap !important;
+}
+
+.event-actions-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+}
+
+.status-badge {
+    padding: 4px 12px !important;
+    border-radius: 20px !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+}
+
+.status-badge.finalized {
+    background: #dcfce7 !important;
+    color: #166534 !important;
+}
+
+.status-badge.submitted {
+    background: #fef3c7 !important;
+    color: #d97706 !important;
+}
+
+.status-badge.under_review {
+    background: #e0e7ff !important;
+    color: #4338ca !important;
+}
+
+.status-badge.rejected {
+    background: #fecaca !important;
+    color: #dc2626 !important;
+}
+
+.event-action-buttons .btn-icon {
+    background: #3b82f6 !important;
+    color: white !important;
+    padding: 8px 16px !important;
+    border-radius: 6px !important;
+    text-decoration: none !important;
+    font-size: 0.875rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    transition: all 0.2s ease !important;
+}
+
+.event-action-buttons .btn-icon:hover {
+    background: #2563eb !important;
+    transform: translateY(-1px) !important;
 }
 
 /* Empty State within Events Card */
@@ -3083,13 +3202,15 @@ h4 {
 
 /* Proposal Status Card Container */
 .proposal-status-card {
-    background: var(--card-background, #ffffff);
-    border-radius: var(--border-radius, 12px);
-    padding: 0;
-    box-shadow: var(--shadow, 0 4px 12px rgba(0, 0, 0, 0.05));
-    border: 1px solid var(--border-color, #e5e7eb);
-    overflow: hidden;
-    margin-bottom: 24px;
+    background: #ffffff !important;
+    border-radius: 12px !important;
+    padding: 0 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    border: 1px solid #e5e7eb !important;
+    overflow: hidden !important;
+    margin-bottom: 24px !important;
+    display: block !important;
+    width: 100% !important;
 }
 
 .proposal-status-header {
@@ -3746,4 +3867,6 @@ h4 {
     .center-label {
         font-size: 0.8rem;
     }
+}
+/* Add missing closing bracket for @media (max-width: 480px) */
 }

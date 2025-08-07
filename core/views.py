@@ -1,6 +1,6 @@
 import os
 import shutil
-from datetime import timedelta
+from datetime import timedelta, datetime
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import logout
 from django.contrib.auth import login
@@ -650,18 +650,22 @@ def delete_org_role(request, role_id):
 @user_passes_test(lambda u: u.is_superuser)
 def admin_user_management(request):
     """
-    Manages and displays a paginated list of users with filtering capabilities.
+    Manages and displays a paginated list of users with enhanced filtering capabilities.
     """
     users_list = User.objects.select_related('profile').prefetch_related(
         'role_assignments__organization', 
-        'role_assignments__role'
+        'role_assignments__role',
+        'role_assignments__organization__org_type'
     ).order_by('-date_joined')
 
+    # Filter parameters
     q = request.GET.get('q', '').strip()
     role_id = request.GET.get('role')
     org_id = request.GET.get('organization')
+    org_type_id = request.GET.get('org_type')
     status = request.GET.get('status')
-
+    
+    # Apply filters
     if q:
         users_list = users_list.filter(
             Q(email__icontains=q) |
@@ -675,12 +679,16 @@ def admin_user_management(request):
     
     if org_id:
         users_list = users_list.filter(role_assignments__organization_id=org_id)
+        
+    if org_type_id:
+        users_list = users_list.filter(role_assignments__organization__org_type_id=org_type_id)
 
     if status in ['active', 'inactive']:
         users_list = users_list.filter(is_active=(status == 'active'))
 
     users_list = users_list.distinct()
 
+    # Pagination
     paginator = Paginator(users_list, 25)
     page_number = request.GET.get('page')
     try:
@@ -690,8 +698,10 @@ def admin_user_management(request):
     except EmptyPage:
         users = paginator.page(paginator.num_pages)
 
+    # Filter options data
     all_roles = OrganizationRole.objects.filter(is_active=True).order_by('name')
     all_organizations = Organization.objects.filter(is_active=True).order_by('name')
+    all_org_types = OrganizationType.objects.filter(is_active=True).order_by('name')
 
     query_params = request.GET.copy()
     if 'page' in query_params:
@@ -701,13 +711,16 @@ def admin_user_management(request):
         'users': users,
         'all_roles': all_roles,
         'all_organizations': all_organizations,
+        'all_org_types': all_org_types,
         'current_filters': {
             'q': q,
             'role': int(role_id) if role_id and role_id.isdigit() else None,
             'organization': int(org_id) if org_id and org_id.isdigit() else None,
+            'org_type': int(org_type_id) if org_type_id and org_type_id.isdigit() else None,
             'status': status,
         },
         'query_params': query_params.urlencode(),
+        'total_users': users_list.count(),
     }
     
     return render(request, "core/admin_user_management.html", context)
