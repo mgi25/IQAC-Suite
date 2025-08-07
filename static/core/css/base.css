@@ -113,6 +113,7 @@ body.command-center-layout {
   color: var(--white);
   font-size: 0.95rem;
   transition: var(--transition);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
 
@@ -350,6 +351,7 @@ body.command-center-layout {
   font-size: 0.875rem;
   cursor: pointer;
   transition: var(--transition);
+  -webkit-user-select: none;
   user-select: none;
 }
 
