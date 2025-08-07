@@ -189,4 +189,146 @@
 <a href="{% url 'data_export_filter' %}" class="fixed-download-btn" title="Export Data">
   <i class="fas fa-download"></i>
 </a>
+
+<div class="admin-switch-section">
+    {% if is_impersonating %}
+        <!-- Currently impersonating -->
+        <div class="impersonation-card">
+            <div class="impersonation-info">
+                <h4>🎭 Currently Viewing As</h4>
+                <p><strong>{{ user.get_full_name|default:user.username }}</strong></p>
+                <p>{{ user.email }}</p>
+            </div>
+            <a href="{% url 'stop_impersonation' %}" class="btn-stop-impersonation">
+                Stop Impersonation
+            </a>
+        </div>
+    {% else %}
+        <!-- Switch user button -->
+        <div class="switch-user-card">
+            <h4>👤 Switch User View</h4>
+            <p>View the website as any user</p>
+            <button class="btn-switch-user" onclick="openSwitchModal()">
+                Switch User
+            </button>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Simple Switch Modal -->
+<div class="switch-modal" id="switchModal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Switch User</h3>
+            <button class="close-btn" onclick="closeSwitchModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="text" 
+                   id="userSearch" 
+                   placeholder="Search by name or email..." 
+                   onkeyup="searchUsers()">
+            
+            <div class="users-list" id="usersList">
+                <div class="loading">Type to search users...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openSwitchModal() {
+    document.getElementById('switchModal').style.display = 'flex';
+    document.getElementById('userSearch').focus();
+}
+
+function closeSwitchModal() {
+    document.getElementById('switchModal').style.display = 'none';
+    document.getElementById('usersList').innerHTML = '<div class="loading">Type to search users...</div>';
+    document.getElementById('userSearch').value = '';
+}
+
+let searchTimeout;
+
+function searchUsers() {
+    const searchTerm = document.getElementById('userSearch').value;
+    const usersList = document.getElementById('usersList');
+    
+    clearTimeout(searchTimeout);
+    
+    if (searchTerm.length < 2) {
+        usersList.innerHTML = '<div class="loading">Type to search users...</div>';
+        return;
+    }
+    
+    usersList.innerHTML = '<div class="loading">Searching...</div>';
+    
+    searchTimeout = setTimeout(() => {
+        fetch('/api/search-users/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                search: searchTerm
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.users && data.users.length > 0) {
+                usersList.innerHTML = data.users.map(user => `
+                    <div class="user-item">
+                        <div class="user-info">
+                            <h5>${user.full_name || user.username}</h5>
+                            <small>${user.email}</small>
+                        </div>
+                        <button class="btn-impersonate" onclick="impersonateUser(${user.id})">
+                            Switch
+                        </button>
+                    </div>
+                `).join('');
+            } else {
+                usersList.innerHTML = '<div class="loading">No users found</div>';
+            }
+        })
+        .catch(error => {
+            usersList.innerHTML = '<div class="loading">Error searching users</div>';
+        });
+    }, 300);
+}
+
+function impersonateUser(userId) {
+    fetch('{% url "impersonate_user" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+            user_id: userId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeSwitchModal();
+            window.location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error switching user');
+    });
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('switchModal');
+    if (event.target === modal) {
+        closeSwitchModal();
+    }
+});
+</script>
+
 {% endblock %}

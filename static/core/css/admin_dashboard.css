@@ -757,3 +757,174 @@
     display: none;
   }
 }
+
+.admin-switch-section {
+    margin: 20px 0;
+}
+
+.switch-user-card, .impersonation-card {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.impersonation-card {
+    background: #fff3cd;
+    border-color: #ffeaa7;
+}
+
+.switch-user-card h4, .impersonation-card h4 {
+    margin: 0 0 10px 0;
+    color: #333;
+}
+
+.switch-user-card p, .impersonation-card p {
+    margin: 5px 0;
+    color: #666;
+}
+
+.btn-switch-user {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    margin-top: 10px;
+}
+
+.btn-switch-user:hover {
+    background: #0056b3;
+}
+
+.btn-stop-impersonation {
+    background: #dc3545;
+    color: white;
+    text-decoration: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 500;
+    margin-top: 10px;
+    display: inline-block;
+}
+
+.btn-stop-impersonation:hover {
+    background: #c82333;
+    text-decoration: none;
+}
+
+/* Modal Styles */
+.switch-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 600px;
+    overflow: hidden;
+}
+
+.modal-header {
+    background: #f8f9fa;
+    padding: 15px 20px;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #333;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+#userSearch {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 16px;
+    margin-bottom: 15px;
+}
+
+#userSearch:focus {
+    outline: none;
+    border-color: #007bff;
+}
+
+.users-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.user-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+}
+
+.user-item:last-child {
+    border-bottom: none;
+}
+
+.user-info h5 {
+    margin: 0;
+    color: #333;
+}
+
+.user-info small {
+    color: #666;
+}
+
+.btn-impersonate {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-impersonate:hover {
+    background: #218838;
+}
+
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    font-style: italic;
+}
