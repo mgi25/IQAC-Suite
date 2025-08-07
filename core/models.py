@@ -206,6 +206,7 @@ class ApprovalFlowTemplate(models.Model):
     step_order = models.PositiveIntegerField()
     role_required = models.CharField(max_length=50)  # e.g., "faculty", "hod"
     user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)  # Optional: Fix to a specific user
+    optional = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ('organization', 'step_order')

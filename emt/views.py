@@ -18,6 +18,7 @@ from core.models import (
     Organization,
     OrganizationType,
     Report as SubmittedReport,
+    ApprovalFlowTemplate,
 )
 from django.contrib.auth.models import User
 from emt.utils import build_approval_chain
@@ -803,12 +804,28 @@ def review_approval_step(request, step_id):
         "cell_head",
     ]
 
+    optional_templates = ApprovalFlowTemplate.objects.filter(
+        organization=proposal.organization,
+        optional=True
+    ).order_by('step_order')
+
+    optional_roles = []
+    for tmpl in optional_templates:
+        if not proposal.approval_steps.filter(
+            role_required=tmpl.role_required,
+            status__in=['pending', 'approved', 'waiting']
+        ).exists():
+            optional_roles.append(
+                {
+                    'role': tmpl.role_required,
+                    'display': tmpl.get_role_required_display(),
+                }
+            )
+
     if request.method == 'POST':
         action = request.POST.get('action')
         comment = request.POST.get('comment', '')
-
-        needs_academic_coord_approval = bool(request.POST.get('needs_academic_coord_approval'))
-        needs_dean_approval = bool(request.POST.get('needs_dean_approval'))
+        selected_optional_roles = request.POST.getlist('optional_roles')
 
         if action == 'approve':
             step.status = 'approved'
@@ -817,7 +834,7 @@ def review_approval_step(request, step_id):
             step.comment = comment
             step.save()
 
-            # Escalation logic unchanged (add AC/Dean steps if needed)
+            # Handle optional escalations
             next_step_order = (
                 ApprovalStep.objects.filter(proposal=proposal).aggregate(max_order=models.Max('step_order'))['max_order'] or 0
             ) + 1
@@ -830,51 +847,18 @@ def review_approval_step(request, step_id):
                     status__in=['pending', 'approved', 'waiting']
                 ).exists()
 
-            if step.role_required in GATEKEEPER_ROLES:
-                if needs_academic_coord_approval and not approval_exists(ACADEMIC_COORDINATOR_ROLE):
-                    acad_coord = User.objects.filter(
-                        role_assignments__role__name=ACADEMIC_COORDINATOR_ROLE
+            for role in selected_optional_roles:
+                if not approval_exists(role):
+                    user = User.objects.filter(
+                        role_assignments__role__name=role
                     ).first()
-                    if acad_coord:
+                    if user:
                         additional_steps.append(
                             ApprovalStep(
                                 proposal=proposal,
                                 step_order=next_step_order,
-                                role_required=ACADEMIC_COORDINATOR_ROLE,
-                                assigned_to=acad_coord,
-                                status='waiting'
-                            )
-                        )
-                        next_step_order += 1
-
-                if needs_dean_approval and not approval_exists(DEAN_ROLE):
-                    dean = User.objects.filter(
-                        role_assignments__role__name=DEAN_ROLE
-                    ).first()
-                    if dean:
-                        additional_steps.append(
-                            ApprovalStep(
-                                proposal=proposal,
-                                step_order=next_step_order,
-                                role_required=DEAN_ROLE,
-                                assigned_to=dean,
-                                status='waiting'
-                            )
-                        )
-                        next_step_order += 1
-
-            if step.role_required == ACADEMIC_COORDINATOR_ROLE:
-                if needs_dean_approval and not approval_exists(DEAN_ROLE):
-                    dean = User.objects.filter(
-                        role_assignments__role__name=DEAN_ROLE
-                    ).first()
-                    if dean:
-                        additional_steps.append(
-                            ApprovalStep(
-                                proposal=proposal,
-                                step_order=next_step_order,
-                                role_required=DEAN_ROLE,
-                                assigned_to=dean,
+                                role_required=role,
+                                assigned_to=user,
                                 status='waiting'
                             )
                         )
@@ -922,6 +906,7 @@ def review_approval_step(request, step_id):
         'step': step,
         'proposal': proposal,
         'GATEKEEPER_ROLES': GATEKEEPER_ROLES,
+        'optional_roles': optional_roles,
         'need_analysis': need_analysis,
         'objectives': objectives,
         'outcomes': outcomes,

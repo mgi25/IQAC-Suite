@@ -218,21 +218,13 @@
             <label>Comment / Remarks: <small class="text-muted">(required when rejecting)</small></label>
             <textarea name="comment" class="form-control"></textarea>
           </div>
-          {% if step.role_required in GATEKEEPER_ROLES %}
+          {% if optional_roles and (step.role_required in GATEKEEPER_ROLES or step.role_required == "academic_coordinator") %}
             <div class="form-group gatekeeper">
-              <label>
-                <input type="checkbox" name="needs_academic_coord_approval"> Escalate to Academic Coordinator
-              </label>
-              <label>
-                <input type="checkbox" name="needs_dean_approval"> Escalate to Dean
-              </label>
-            </div>
-          {% endif %}
-          {% if step.role_required == "academic_coordinator" %}
-            <div class="form-group gatekeeper">
-              <label>
-                <input type="checkbox" name="needs_dean_approval"> Escalate to Dean
-              </label>
+              {% for opt in optional_roles %}
+                <label>
+                  <input type="checkbox" name="optional_roles" value="{{ opt.role }}"> Escalate to {{ opt.display }}
+                </label>
+              {% endfor %}
             </div>
           {% endif %}
           <div class="review-actions">
