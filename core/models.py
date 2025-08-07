@@ -291,3 +291,52 @@ class Class(models.Model):
 
     def __str__(self):
         return f"{self.code} - {self.name}"
+    
+class ImpersonationLog(models.Model):
+    """Track user impersonation history"""
+    original_user = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='impersonations_made'
+    )
+    impersonated_user = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='impersonations_received'
+    )
+    started_at = models.DateTimeField(auto_now_add=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-started_at']
+        
+    def __str__(self):
+        return f"{self.original_user} -> {self.impersonated_user} at {self.started_at}"
+
+# Enhanced views with logging
+def log_impersonation_start(request, target_user):
+    """Log when impersonation starts"""
+    ImpersonationLog.objects.create(
+        original_user=request.user,
+        impersonated_user=target_user,
+        ip_address=request.META.get('REMOTE_ADDR'),
+        user_agent=request.META.get('HTTP_USER_AGENT', '')
+    )
+
+def log_impersonation_end(request):
+    """Log when impersonation ends"""
+    if 'impersonate_user_id' in request.session:
+        try:
+            log_entry = ImpersonationLog.objects.filter(
+                original_user_id=request.session.get('original_user_id'),
+                impersonated_user_id=request.session['impersonate_user_id'],
+                ended_at__isnull=True
+            ).first()
+            
+            if log_entry:
+                log_entry.ended_at = timezone.now()
+                log_entry.save()
+        except Exception:
+            pass  # Handle gracefully

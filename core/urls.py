@@ -118,9 +118,8 @@ urlpatterns = [
     # ────────────────────────────────────────────────
     # path('dashboard/', views.user_dashboard, name='user_dashboard'),
     
-    
-    
-    
+    path('api/search-users/', views.search_users_api, name='search_users_api'),
+    path('api/recent-users/', views.get_recent_users_api, name='recent_users_api'),
     
     path('core-admin/data-export/', views.data_export_filter_view, name='data_export_filter'),
     

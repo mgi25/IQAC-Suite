@@ -40,6 +40,8 @@ class EventProposal(models.Model):
     )
 
     committees = models.TextField(blank=True, help_text="List of committees involved.")
+    aligned_sdg_goals = models.TextField(blank=True, help_text="Aligned SDG Goals for this event.")
+    committees_collaborations = models.TextField(blank=True, help_text="Committees and collaborations involved.")
     event_title = models.CharField(max_length=200, blank=True)
     num_activities = models.PositiveIntegerField(null=True, blank=True)
     event_datetime = models.DateTimeField(null=True, blank=True)
@@ -128,6 +130,7 @@ class SpeakerProfile(models.Model):
     affiliation = models.CharField(max_length=100)
     contact_email = models.EmailField()
     contact_number = models.CharField(max_length=15)
+    linkedin_url = models.URLField(blank=True, null=True, help_text="LinkedIn profile URL")
     photo = models.ImageField(upload_to='speakers/', blank=True, null=True)
     detailed_profile = models.TextField()
 
