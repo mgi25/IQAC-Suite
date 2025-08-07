@@ -3,6 +3,7 @@ import shutil
 from datetime import timedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import logout
+from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpResponseForbidden, JsonResponse, HttpResponseRedirect
 from django.contrib.auth.models import User
@@ -15,8 +16,6 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 import json
 import logging
-
-logger = logging.getLogger(__name__)
 from .forms import RoleAssignmentForm
 from .models import (
     Profile,
@@ -32,6 +31,9 @@ from django.views.decorators.http import require_GET, require_POST
 from .models import ApprovalFlowTemplate, ApprovalFlowConfig
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+
+logger = logging.getLogger(__name__)
+
 # ─────────────────────────────────────────────────────────────
 #  Helpers
 # ─────────────────────────────────────────────────────────────
@@ -75,6 +77,13 @@ class RoleAssignmentFormSet(forms.BaseInlineFormSet):
 # ─────────────────────────────────────────────────────────────
 def login_view(request):
     return render(request, "core/login.html")
+    if user is not None:
+        login(request, user)
+        
+        # Log the successful login
+        logger.info(f"User '{user.username}' logged in successfully.")
+        
+        return redirect('dashboard')
 
 def login_page(request):
     return render(request, "login.html")
