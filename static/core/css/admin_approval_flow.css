@@ -208,6 +208,10 @@ body {
   overflow: hidden;
   transform: translateY(-10px);
   transition: transform var(--transition);
+  /* Override Bootstrap modal defaults so our custom modal is visible */
+  display: block;
+  position: relative;
+  height: auto;
 }
 
 .modal-overlay.show .modal {
