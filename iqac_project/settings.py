@@ -80,7 +80,6 @@ TEMPLATES = [
                 'django.template.context_processors.csrf',
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.notifications',
-                'core.context_processors.impersonation_context',
             ],
             'libraries': {
                 'dict_filters': 'core.templatetags.dict_filters',
