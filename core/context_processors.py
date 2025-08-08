@@ -4,7 +4,6 @@ from django.db.models import Q
 from datetime import timedelta
 from emt.models import EventProposal
 
-
 def notifications(request):
     """Return proposal-related notifications for the logged-in user."""
     if not request.user.is_authenticated:
@@ -42,8 +41,4 @@ def impersonation_context(request):
         'is_impersonating': getattr(request, 'is_impersonating', False),
         'original_user': getattr(request, 'original_user', None),
     }
-    
-    if hasattr(request, 'is_impersonating') and request.is_impersonating:
-        context['impersonated_user'] = request.user
-        
     return context

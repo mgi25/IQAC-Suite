@@ -85,6 +85,11 @@
     background: #0056b3;
 }
 
+.btn-impersonate:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+}
+
 .btn-stop {
     background: #dc3545;
     color: white;
@@ -98,11 +103,59 @@
 
 .btn-stop:hover {
     background: #c82333;
+    color: white;
+    text-decoration: none;
 }
 
 .loading {
     opacity: 0.6;
     pointer-events: none;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25em 0.4em;
+    font-size: 75%;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.25rem;
+}
+
+.badge-danger {
+    color: #fff;
+    background-color: #dc3545;
+}
+
+.badge-warning {
+    color: #212529;
+    background-color: #ffc107;
+}
+
+.badge-info {
+    color: #fff;
+    background-color: #17a2b8;
+}
+
+.alert {
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1rem;
+    border: 1px solid transparent;
+    border-radius: 0.25rem;
+}
+
+.alert-success {
+    color: #155724;
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+}
+
+.alert-error {
+    color: #721c24;
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
 }
 </style>
 {% endblock %}
@@ -110,6 +163,17 @@
 {% block content %}
 <div class="switch-user-container">
     <h1>Switch User View</h1>
+    
+    <!-- Messages -->
+    <div id="messages">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
     
     <div class="current-status {% if impersonated_user %}impersonating{% endif %}">
         {% if impersonated_user %}
@@ -120,8 +184,8 @@
             <a href="{% url 'stop_impersonation' %}" class="btn-stop">Stop Impersonation</a>
         {% else %}
             <h3>👤 Current Status</h3>
-            <p><strong>Logged in as:</strong> {{ original_user.get_full_name|default:original_user.username }}</p>
-            <p><strong>Role:</strong> {% if original_user.is_superuser %}Super Admin{% elif original_user.is_staff %}Staff{% else %}Regular User{% endif %}</p>
+            <p><strong>Logged in as:</strong> {{ user.get_full_name|default:user.username }}</p>
+            <p><strong>Role:</strong> {% if user.is_superuser %}Super Admin{% elif user.is_staff %}Staff{% else %}Regular User{% endif %}</p>
         {% endif %}
     </div>
 
@@ -130,15 +194,15 @@
     </div>
 
     <div class="users-grid" id="usersGrid">
-        {% for user in users %}
-        <div class="user-card" data-user-name="{{ user.get_full_name|default:user.username|lower }}" data-user-email="{{ user.email|lower }}">
+        {% for user_item in users %}
+        <div class="user-card" data-user-name="{{ user_item.get_full_name|default:user_item.username|lower }}" data-user-email="{{ user_item.email|lower }}">
             <div class="user-info">
-                <h4>{{ user.get_full_name|default:user.username }}</h4>
-                <p>{{ user.email }}</p>
+                <h4>{{ user_item.get_full_name|default:user_item.username }}</h4>
+                <p>{{ user_item.email }}</p>
                 <p>
-                    {% if user.is_superuser %}
+                    {% if user_item.is_superuser %}
                         <span class="badge badge-danger">Super Admin</span>
-                    {% elif user.is_staff %}
+                    {% elif user_item.is_staff %}
                         <span class="badge badge-warning">Staff</span>
                     {% else %}
                         <span class="badge badge-info">User</span>
@@ -146,8 +210,8 @@
                 </p>
             </div>
             <div class="user-actions">
-                {% if user != original_user %}
-                    <button class="btn-impersonate" onclick="impersonateUser({{ user.id }})">
+                {% if user_item.id != original_user.id|default:user.id %}
+                    <button class="btn-impersonate" onclick="impersonateUser({{ user_item.id }})">
                         Impersonate
                     </button>
                 {% else %}
@@ -158,16 +222,39 @@
         {% endfor %}
     </div>
 </div>
+
+<!-- CSRF Token (FIXED) -->
+<form style="display: none;">
+    {% csrf_token %}
+</form>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+function showMessage(message, type = 'success') {
+    const messagesDiv = document.getElementById('messages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `alert alert-${type}`;
+    messageDiv.textContent = message;
+    messagesDiv.appendChild(messageDiv);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        messageDiv.remove();
+    }, 5000);
+}
+
 function impersonateUser(userId) {
     if (!confirm('Are you sure you want to impersonate this user?')) {
         return;
     }
 
     const button = event.target;
+    const originalText = button.textContent;
     button.textContent = 'Loading...';
     button.disabled = true;
 
@@ -175,7 +262,7 @@ function impersonateUser(userId) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            'X-CSRFToken': getCsrfToken()
         },
         body: JSON.stringify({
             user_id: userId
@@ -184,17 +271,21 @@ function impersonateUser(userId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            window.location.href = data.redirect_url;
+            showMessage(data.message, 'success');
+            // Redirect to admin dashboard or refresh page
+            setTimeout(() => {
+                window.location.href = data.redirect_url || '{% url "admin_dashboard" %}';
+            }, 1000);
         } else {
-            alert('Error: ' + data.error);
-            button.textContent = 'Impersonate';
+            showMessage('Error: ' + data.error, 'error');
+            button.textContent = originalText;
             button.disabled = false;
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('An error occurred');
-        button.textContent = 'Impersonate';
+        showMessage('An error occurred while impersonating user', 'error');
+        button.textContent = originalText;
         button.disabled = false;
     });
 }
@@ -215,24 +306,16 @@ document.getElementById('userSearch').addEventListener('input', function() {
         }
     });
 });
+
+// Auto-remove messages after page load
+document.addEventListener('DOMContentLoaded', function() {
+    const alerts = document.querySelectorAll('.alert');
+    alerts.forEach(alert => {
+        setTimeout(() => {
+            alert.style.opacity = '0';
+            setTimeout(() => alert.remove(), 300);
+        }, 5000);
+    });
+});
 </script>
 {% endblock %}
-
-<!-- templates/core/partials/impersonation_banner.html -->
-{% if is_impersonating %}
-<div style="background: #fff3cd; border-bottom: 2px solid #ffeaa7; padding: 10px 0; text-align: center; position: sticky; top: 0; z-index: 1000;">
-    <div class="container">
-        <span style="color: #856404; font-weight: bold;">
-            🎭 You are impersonating: {{ impersonated_user.get_full_name|default:impersonated_user.username }}
-        </span>
-        <span style="margin: 0 15px;">|</span>
-        <span style="color: #856404;">
-            Original user: {{ original_user.get_full_name|default:original_user.username }}
-        </span>
-        <span style="margin: 0 15px;">|</span>
-        <a href="{% url 'stop_impersonation' %}" style="color: #721c24; text-decoration: underline;">
-            Stop Impersonation
-        </a>
-    </div>
-</div>
-{% endif %}

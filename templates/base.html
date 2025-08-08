@@ -20,6 +20,8 @@
   {% block head_extra %}{% endblock %}
 </head>
 <body class="command-center-layout">
+  {% include 'core/partials/impersonation_banner.html' %}
+  
   {% if messages %}
   <div class="toast-container" aria-live="polite" aria-atomic="true">
     {% for message in messages %}

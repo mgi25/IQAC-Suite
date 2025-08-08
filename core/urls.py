@@ -88,57 +88,55 @@ urlpatterns = [
     path('core-admin/pso-po/delete/<str:outcome_type>/<int:outcome_id>/', views.delete_outcome, name='delete_outcome'),
 
     # ────────────────────────────────────────────────
+    # Admin - Switch User / Impersonation (FIXED)
+    # ────────────────────────────────────────────────
+    path('core-admin/switch-user/', views.switch_user_view, name='switch_user'),
+    path('core-admin/impersonate/', views.impersonate_user, name='impersonate_user'),
+    path('core-admin/stop-impersonation/', views.stop_impersonation, name='stop_impersonation'),
+
+    # ────────────────────────────────────────────────
     # AJAX - Academic Year
     # ────────────────────────────────────────────────
     path('core-admin/set-academic-year/', views.set_academic_year, name='set_academic_year'),
     path('core-admin/add-academic-year/', views.add_academic_year, name='add_academic_year'),
 
     # ────────────────────────────────────────────────
-    # APIs (All endpoints included and de-duplicated)
+    # Core APIs (Admin Dashboard)
     # ────────────────────────────────────────────────
     path('core-admin/api/auth/me', views.api_auth_me, name='api_auth_me'),
     path('core-admin/api/faculty/overview', views.api_faculty_overview, name='api_faculty_overview'),
     path('core-admin/api/approval-flow/<int:org_id>/', views.api_approval_flow_steps, name='api_approval_flow_steps'),
-    path('core-admin/api/search-users/', views.search_users, name='search_users'),
     path('core-admin/api/org-users/<int:org_id>/', views.organization_users, name='organization_users'),
     path('core-admin/api/org-type/<int:org_type_id>/organizations/', views.api_org_type_organizations, name='api_org_type_organizations'),
     path('core-admin/api/org-type/<int:org_type_id>/roles/', views.api_org_type_roles, name='api_org_type_roles'),
     path('core-admin/api/organization/<int:org_id>/roles/', views.api_organization_roles, name='api_organization_roles'),
     path('core-admin/api/search/', views.api_global_search, name='api_global_search'),
+    path('core-admin/api/filter-counts/', views.api_filter_counts, name='api_filter_counts'),
+    path('core-admin/api/organizations/', views.api_organizations_by_type, name='api_organizations_by_type'),
 
-    # Additional APIs from other branch
-    path('api/search/', views.api_global_search, name='api_global_search'),  # (Keep only if needed, else remove duplicate)
+    # ────────────────────────────────────────────────
+    # Admin Dashboard API
+    # ────────────────────────────────────────────────
     path('admin-dashboard-api/', views.admin_dashboard_api, name='admin_dashboard_api'),
 
+    # ────────────────────────────────────────────────
+    # Switch User APIs (FIXED - consistent with core-admin prefix)
+    # ────────────────────────────────────────────────
+    path('core-admin/api/search-users/', views.search_users_api, name='search_users_api'),
+    path('core-admin/api/recent-users/', views.get_recent_users_api, name='recent_users_api'),
+    path('core-admin/api/users-by-role/', views.api_users_by_role, name='api_users_by_role'),
+    path('core-admin/api/search-suggestions/', views.api_search_suggestions, name='api_search_suggestions'),
+
+    # ────────────────────────────────────────────────
+    # Data Export
+    # ────────────────────────────────────────────────
+    path('core-admin/data-export/', views.data_export_filter_view, name='data_export_filter'),
+
+    # ────────────────────────────────────────────────
+    # General APIs (Public/Non-Admin)
+    # ────────────────────────────────────────────────
     path('api/organizations/', views.api_organizations, name='api_organizations'),
     path('api/roles/', views.api_roles, name='api_roles'),
-
-    # ────────────────────────────────────────────────
-    # Optional: User Dashboard (if not admin)
-    # ────────────────────────────────────────────────
-    # path('dashboard/', views.user_dashboard, name='user_dashboard'),
-    
-    path('api/search-users/', views.search_users_api, name='search_users_api'),
-    path('api/recent-users/', views.get_recent_users_api, name='recent_users_api'),
-    
-    path('core-admin/data-export/', views.data_export_filter_view, name='data_export_filter'),
-    
-    # ────────────────────────────────────────────────
-    # API - Filter Counts (Required for Data Export page)
-    # ────────────────────────────────────────────────
-    path('core-admin/api/filter-counts/', views.api_filter_counts, name='api_filter_counts'),
-
-    # ------------------------------------------------
-    #             Switch View (Admin)
-    # ------------------------------------------------
-    path('admin/switch-user/', views.switch_user_view, name='switch_user'),
-    path('admin/impersonate/', views.impersonate_user, name='impersonate_user'),
-    path('stop-impersonation/', views.stop_impersonation, name='stop_impersonation'),
-    
-    # ────────────────────────────────────────────────
-    # API for Dynamic Filtering
-    # ────────────────────────────────────────────────
-    path('api/organizations/', views.api_organizations_by_type, name='api_organizations_by_type'),
-
     path('api/event-contribution/', views.event_contribution_data, name='event_contribution_data'),
+
 ]
