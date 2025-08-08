@@ -33,6 +33,11 @@ urlpatterns = [
 
     # Faculty remains as is
     path("api/faculty/", views.api_faculty, name="api_faculty"),
+    
+    # Report assignment APIs
+    path('api/event-participants/<int:proposal_id>/', views.api_event_participants, name='api_event_participants'),
+    path('api/assign-report/<int:proposal_id>/', views.assign_report_task, name='assign_report_task'),
+    path('api/unassign-report/<int:proposal_id>/', views.unassign_report_task, name='unassign_report_task'),
 
     # Approval workflow
     path("suite/my-approvals/", views.my_approvals, name="my_approvals"),

@@ -218,7 +218,7 @@
             <label>Comment / Remarks: <small class="text-muted">(required when rejecting)</small></label>
             <textarea name="comment" class="form-control"></textarea>
           </div>
-          {% if optional_roles and (step.role_required in GATEKEEPER_ROLES or step.role_required == "academic_coordinator") %}
+          {% if optional_roles and is_gatekeeper_step %}
             <div class="form-group gatekeeper">
               {% for opt in optional_roles %}
                 <label>

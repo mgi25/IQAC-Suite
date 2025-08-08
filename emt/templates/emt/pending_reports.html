@@ -51,10 +51,23 @@
                     </div>
                   </td>
                   <td class="iqac-td-status">
-                    <span class="iqac-status-badge">Submitted by you</span>
+                    {% if proposal.report_assigned_to %}
+                      <span class="iqac-status-badge assigned">Assigned to {{ proposal.report_assigned_to.get_full_name }}</span>
+                    {% else %}
+                      <span class="iqac-status-badge">Submitted by you</span>
+                    {% endif %}
                   </td>
                   <td class="iqac-td-actions">
-                    <a href="{% url 'emt:submit_event_report' proposal.id %}" class="iqac-generate-btn">Generate Report</a>
+                    <div class="iqac-action-buttons">
+                      <a href="{% url 'emt:submit_event_report' proposal.id %}" class="iqac-generate-btn">Generate Report</a>
+                      <button class="iqac-assign-btn" data-proposal-id="{{ proposal.id }}" data-event-title="{{ proposal.event_title }}">
+                        {% if proposal.report_assigned_to %}
+                          Reassign
+                        {% else %}
+                          Assign to
+                        {% endif %}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               {% endfor %}
@@ -70,4 +83,46 @@
     </div>
   </div>
 </div>
+
+<!-- Assignment Modal -->
+<div id="assignModal" class="assign-modal" style="display: none;">
+  <div class="assign-modal-content">
+    <div class="assign-modal-header">
+      <h3>Assign Report Generation</h3>
+      <span class="assign-modal-close">&times;</span>
+    </div>
+    <div class="assign-modal-body">
+      <p id="assignEventTitle"></p>
+      
+      <div class="assign-search-section">
+        <label for="participantSearch">Search Participants:</label>
+        <input type="text" id="participantSearch" placeholder="Type name, email, or username..." />
+        <div class="search-help">Only event participants (submitter and faculty incharges) can be assigned.</div>
+      </div>
+      
+      <div id="participantsList" class="participants-list">
+        <!-- Participants will be loaded here -->
+      </div>
+      
+      <div id="selectedParticipant" class="selected-participant" style="display: none;">
+        <h4>Selected Participant:</h4>
+        <div class="participant-card selected">
+          <div class="participant-info">
+            <span class="participant-name" id="selectedName"></span>
+            <span class="participant-role" id="selectedRole"></span>
+            <span class="participant-email" id="selectedEmail"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="assign-modal-footer">
+      <button id="confirmAssignBtn" class="btn-assign-confirm" disabled>Confirm Assignment</button>
+      <button id="cancelAssignBtn" class="btn-assign-cancel">Cancel</button>
+      <button id="unassignBtn" class="btn-unassign" style="display: none;">Remove Assignment</button>
+    </div>
+  </div>
+</div>
+
+<script src="{% static 'emt/js/pending_reports_assignment.js' %}"></script>
 {% endblock %}

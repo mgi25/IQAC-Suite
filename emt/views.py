@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 import json
 from django.db.models import Q
 from .models import (
@@ -564,8 +565,130 @@ def pending_reports(request):
         submitted_by=request.user,
         status__in=['approved', 'finalized'],
         report_generated=False
-    )
+    ).select_related('report_assigned_to')
     return render(request, 'emt/pending_reports.html', {'proposals': proposals})
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_event_participants(request, proposal_id):
+    """API endpoint to search for participants of a specific event"""
+    try:
+        proposal = get_object_or_404(EventProposal, id=proposal_id)
+        
+        # Check if user has permission to view this proposal
+        if proposal.submitted_by != request.user and request.user not in proposal.faculty_incharges.all():
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        
+        query = request.GET.get('q', '').strip()
+        
+        # Get all participants for this event (faculty incharges + submitted_by)
+        participants = set()
+        
+        # Add the submitter
+        participants.add(proposal.submitted_by)
+        
+        # Add faculty incharges
+        for faculty in proposal.faculty_incharges.all():
+            participants.add(faculty)
+        
+        # Filter participants based on search query
+        if query:
+            filtered_participants = [
+                user for user in participants 
+                if query.lower() in user.get_full_name().lower() or 
+                   query.lower() in user.username.lower() or
+                   query.lower() in user.email.lower()
+            ]
+        else:
+            filtered_participants = list(participants)
+        
+        # Format response
+        results = []
+        for user in filtered_participants:
+            # Determine role
+            role = "Submitter" if user == proposal.submitted_by else "Faculty Incharge"
+            
+            results.append({
+                'id': user.id,
+                'name': user.get_full_name() or user.username,
+                'email': user.email,
+                'role': role,
+                'username': user.username
+            })
+        
+        return JsonResponse({'participants': results})
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def assign_report_task(request, proposal_id):
+    """API endpoint to assign report generation task to a user"""
+    try:
+        proposal = get_object_or_404(EventProposal, id=proposal_id)
+        
+        # Check if user has permission to assign (only submitter can assign)
+        if proposal.submitted_by != request.user:
+            return JsonResponse({'error': 'Only the event submitter can assign report tasks'}, status=403)
+        
+        data = json.loads(request.body)
+        assigned_user_id = data.get('assigned_user_id')
+        
+        if not assigned_user_id:
+            return JsonResponse({'error': 'assigned_user_id is required'}, status=400)
+        
+        # Verify the assigned user is a participant of this event
+        assigned_user = get_object_or_404(User, id=assigned_user_id)
+        
+        # Check if assigned user is either submitter or faculty incharge
+        if (assigned_user != proposal.submitted_by and 
+            assigned_user not in proposal.faculty_incharges.all()):
+            return JsonResponse({'error': 'Can only assign to event participants'}, status=400)
+        
+        # Update assignment
+        proposal.report_assigned_to = assigned_user
+        proposal.report_assigned_at = timezone.now()
+        proposal.save()
+        
+        return JsonResponse({
+            'success': True,
+            'assigned_to': {
+                'id': assigned_user.id,
+                'name': assigned_user.get_full_name() or assigned_user.username,
+                'email': assigned_user.email
+            },
+            'assigned_at': proposal.report_assigned_at.isoformat()
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def unassign_report_task(request, proposal_id):
+    """API endpoint to remove report generation assignment"""
+    try:
+        proposal = get_object_or_404(EventProposal, id=proposal_id)
+        
+        # Check if user has permission to unassign (only submitter can unassign)
+        if proposal.submitted_by != request.user:
+            return JsonResponse({'error': 'Only the event submitter can unassign report tasks'}, status=403)
+        
+        # Remove assignment
+        proposal.report_assigned_to = None
+        proposal.report_assigned_at = None
+        proposal.save()
+        
+        return JsonResponse({'success': True})
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 @login_required

@@ -61,6 +61,14 @@ class EventProposal(models.Model):
     event_focus_type = models.CharField(max_length=200, blank=True)
     report_generated = models.BooleanField(default=False)
 
+    # Report assignment field
+    report_assigned_to = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, 
+        related_name="assigned_report_tasks",
+        help_text="User assigned to generate the report for this event"
+    )
+    report_assigned_at = models.DateTimeField(null=True, blank=True)
+    
     # Income fields
     fest_fee_participants = models.PositiveIntegerField(null=True, blank=True)
     fest_fee_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
