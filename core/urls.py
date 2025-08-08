@@ -113,14 +113,6 @@ urlpatterns = [
     path('admin-dashboard-api/', views.admin_dashboard_api, name='admin_dashboard_api'),
 
     # ────────────────────────────────────────────────
-    # Switch User APIs (FIXED - consistent with core-admin prefix)
-    # ────────────────────────────────────────────────
-    path('core-admin/api/search-users/', views.search_users_api, name='search_users_api'),
-    path('core-admin/api/recent-users/', views.get_recent_users_api, name='recent_users_api'),
-    path('core-admin/api/users-by-role/', views.api_users_by_role, name='api_users_by_role'),
-    path('core-admin/api/search-suggestions/', views.api_search_suggestions, name='api_search_suggestions'),
-
-    # ────────────────────────────────────────────────
     # Data Export
     # ────────────────────────────────────────────────
     path('core-admin/data-export/', views.data_export_filter_view, name='data_export_filter'),
