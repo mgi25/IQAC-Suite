@@ -99,7 +99,7 @@ class SaveApprovalFlowTests(TestCase):
 
         steps = [
             {"role_required": "faculty"},
-            {"role_required": "hod", "user_id": user1.id},
+            {"role_required": "hod", "user_id": user1.id, "optional": True},
         ]
 
         resp = self.client.post(
@@ -114,9 +114,11 @@ class SaveApprovalFlowTests(TestCase):
         self.assertEqual(templates[0].step_order, 1)
         self.assertEqual(templates[0].role_required, "faculty")
         self.assertIsNone(templates[0].user)
+        self.assertFalse(templates[0].optional)
         self.assertEqual(templates[1].step_order, 2)
         self.assertEqual(templates[1].role_required, "hod")
         self.assertEqual(templates[1].user, user1)
+        self.assertTrue(templates[1].optional)
 
     def test_save_approval_flow_forbidden_for_non_superuser(self):
         user = User.objects.create_user("user", "u@x.com", "pass")
@@ -249,6 +251,7 @@ class ApprovalFlowTemplateDisplayTests(TestCase):
         data = resp.json()
         self.assertTrue(data["success"])
         self.assertEqual(data["steps"][0]["role_display"], "Faculty")
+        self.assertIn("optional", data["steps"][0])
 
 
 class SocialLoginRoleAssignmentTests(TestCase):

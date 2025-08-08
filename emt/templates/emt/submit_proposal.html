@@ -174,6 +174,27 @@
                             </div>
                         </div>
 
+                        <!-- SDG Goals and Collaborations Section -->
+                        <div class="form-section-header">
+                            <h3>SDG Goals & Collaborations</h3>
+                        </div>
+
+                        <div class="form-row full-width">
+                            <div class="input-group">
+                                <label for="aligned-sdg-goals-modern">Aligned SDG Goals</label>
+                                <textarea id="aligned-sdg-goals-modern" rows="3" placeholder="List the SDG goals aligned with this event (e.g., Quality Education, Gender Equality, etc.)"></textarea>
+                                <div class="help-text">Specify which Sustainable Development Goals this event addresses</div>
+                            </div>
+                        </div>
+
+                        <div class="form-row full-width">
+                            <div class="input-group">
+                                <label for="committees-collaborations-modern">Committees & Collaborations</label>
+                                <textarea id="committees-collaborations-modern" rows="3" placeholder="List committees and external collaborations involved in organizing this event"></textarea>
+                                <div class="help-text">Mention internal committees and external partners involved</div>
+                            </div>
+                        </div>
+
                         <!-- Activities Section -->
                         <div class="form-section-header">
                             <h3>Activities Planning</h3>
@@ -244,6 +265,10 @@
                     {{ form.event_focus_type }}
                     {{ form.pos_pso.label_tag }}
                     {{ form.pos_pso }}
+                    {{ form.aligned_sdg_goals.label_tag }}
+                    {{ form.aligned_sdg_goals }}
+                    {{ form.committees_collaborations.label_tag }}
+                    {{ form.committees_collaborations }}
                     {{ form.academic_year.label_tag }}
                     {{ form.academic_year }}
                     {{ form.student_coordinators.label_tag }}
@@ -255,7 +280,7 @@
                         {{ form.faculty_incharges }}
                     </div>
                     {% for field in form.visible_fields %}
-                        {% if field.name not in "organization_type,organization,event_title,event_start_date,event_end_date,venue,target_audience,event_focus_type,academic_year,student_coordinators,num_activities,faculty_incharges,pos_pso" %}
+                        {% if field.name not in "organization_type,organization,event_title,event_start_date,event_end_date,venue,target_audience,event_focus_type,academic_year,student_coordinators,num_activities,faculty_incharges,pos_pso,aligned_sdg_goals,committees_collaborations" %}
                             <div id="django-field-{{ field.name }}">
                                 {{ field.label_tag }}
                                 {{ field }}

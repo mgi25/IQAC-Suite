@@ -335,9 +335,3 @@ Pune Lavasa Campus – Infotech R&D Team
 Email: infotech.lavasa@christuniversity.in  
 GitHub: [CHRISTInfotech](https://github.com/CHRISTInfotech)  
 Website: https://christuniversity.in/lavasa
-
----
-
-## Disclaimer
-
-This software is intended for educational and institutional use within CHRIST University. Distribution, modification, or deployment outside this scope should be authorized by the R&D administrators.

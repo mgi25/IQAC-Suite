@@ -1,16 +1,3 @@
-// ===== MINIMAL TEXT SECTION VALIDATION =====
-function validateTextSection() {
-    const textarea = $('#form-panel-content textarea[required]').first();
-    if (!textarea.length) return true;
-    if (!textarea.val() || textarea.val().trim() === '') {
-        showNotification('Please fill out the required field.', 'error');
-        textarea.addClass('animate-shake');
-        setTimeout(() => textarea.removeClass('animate-shake'), 600);
-        return false;
-    }
-    return true;
-}
-
 $(document).ready(function() {
     console.log('Initializing dashboard...');
     addAnimationStyles();
@@ -31,10 +18,34 @@ $(document).ready(function() {
         updateProgressBar();
         loadExistingData();
         checkForExistingErrors();
+        enablePreviouslyVisitedSections();
         if (!$('.form-errors-banner').length) {
             setTimeout(() => {
                 activateSection('basic-info');
             }, 250);
+        }
+    }
+
+    function enablePreviouslyVisitedSections() {
+        // Always enable basic-info section
+        $(`.nav-link[data-section="basic-info"]`).removeClass('disabled');
+        
+        // Enable any sections that have been completed or are in progress
+        Object.keys(sectionProgress).forEach(section => {
+            if (sectionProgress[section] === true || sectionProgress[section] === 'in-progress') {
+                $(`.nav-link[data-section="${section}"]`).removeClass('disabled');
+            }
+        });
+        
+        // Enable the next section only if the previous section is completed
+        const sectionOrder = ['basic-info', 'why-this-event', 'schedule', 'speakers', 'expenses'];
+        for (let i = 0; i < sectionOrder.length - 1; i++) {
+            const currentSection = sectionOrder[i];
+            const nextSection = sectionOrder[i + 1];
+            
+            if (sectionProgress[currentSection] === true) {
+                $(`.nav-link[data-section="${nextSection}"]`).removeClass('disabled');
+            }
         }
     }
 
@@ -45,13 +56,54 @@ $(document).ready(function() {
     }
 
     function setupFormHandling() {
-        $('.nav-link:not(.disabled)').on('click', function(e) {
+        // Allow navigation with proper validation
+        $('.nav-link').on('click', function(e) {
             e.preventDefault();
             const section = $(this).data('section');
-            if (!$(this).hasClass('disabled')) {
+            const currentOrder = parseInt($(`.nav-link[data-section="${currentExpandedCard}"]`).data('order')) || 0;
+            const targetOrder = parseInt($(this).data('order')) || 0;
+            
+            // Always allow navigation to basic-info
+            if (section === 'basic-info') {
+                $(this).removeClass('disabled');
                 activateSection(section);
+                return;
+            }
+            
+            // Check section status
+            const sectionStatus = sectionProgress[section];
+            
+            // Allow navigation if:
+            // 1. Going backwards to a previously completed/started section
+            // 2. Section has been completed or is in progress
+            // 3. Moving to the immediate next section if current section is valid
+            const canNavigate = 
+                targetOrder < currentOrder || // Going backwards
+                sectionStatus === true || // Section completed
+                sectionStatus === 'in-progress' || // Section in progress
+                (targetOrder === currentOrder + 1 && validateCurrentSection()); // Next section + current valid
+            
+            if (canNavigate) {
+                // If moving forward to a new section, validate current section first
+                if (targetOrder > currentOrder && currentExpandedCard) {
+                    if (!validateCurrentSection()) {
+                        showNotification('Please complete all required fields in the current section first.', 'error');
+                        return;
+                    }
+                }
+                
+                $(this).removeClass('disabled');
+                activateSection(section);
+            } else {
+                // Show helpful message based on the situation
+                if (targetOrder > currentOrder + 1) {
+                    showNotification('Please complete the previous sections first.', 'info');
+                } else {
+                    showNotification('Please complete all required fields in the current section first.', 'error');
+                }
             }
         });
+        
         $(document).on('click', '.btn-save-section', function(e) {
             e.preventDefault();
             e.stopPropagation();
@@ -61,13 +113,19 @@ $(document).ready(function() {
 
     function activateSection(section) {
         if (currentExpandedCard === section) return;
+        
         $('.nav-link').removeClass('active');
         $(`.nav-link[data-section="${section}"]`).addClass('active');
         loadFormContent(section);
         currentExpandedCard = section;
+        
+        // Mark section as in-progress if it hasn't been started yet
         if (!sectionProgress[section]) {
             markSectionInProgress(section);
         }
+        
+        // Remove disabled class from current section
+        $(`.nav-link[data-section="${section}"]`).removeClass('disabled');
     }
 
     // Basic helper to open a section and ensure the form panel is visible
@@ -180,7 +238,7 @@ $(document).ready(function() {
         const fieldsToSync = [
             'event_title', 'target_audience', 'event_start_date', 'event_end_date',
             'event_focus_type', 'venue', 'academic_year', 'student_coordinators', 'num_activities',
-            'pos_pso'
+            'pos_pso', 'aligned_sdg_goals', 'committees_collaborations'
         ];
         fieldsToSync.forEach(copyDjangoField);
         setupFacultyTomSelect();
@@ -552,12 +610,15 @@ function getWhyThisEventForm() {
 
     function getSpeakersForm() {
         return `
-            <div class="form-grid">
-                <div id="speakers-list"></div>
+            <div class="speakers-section">
+                <div id="speakers-list" class="speakers-container"></div>
 
-                <div class="form-row full-width">
-                    <div class="input-group">
-                        <button type="button" id="add-speaker-btn" class="btn-add-item">Add Speaker</button>
+                <div class="add-speaker-section">
+                    <button type="button" id="add-speaker-btn" class="btn-add-speaker">
+                        Add Another Speaker
+                    </button>
+                    <div class="help-text" style="text-align: center; margin-top: 0.5rem;">
+                        Add all speakers who will be presenting at your event
                     </div>
                 </div>
 
@@ -573,12 +634,15 @@ function getWhyThisEventForm() {
 
     function getExpensesForm() {
         return `
-            <div class="form-grid">
-                <div id="expense-rows"></div>
+            <div class="expenses-section">
+                <div id="expense-rows" class="expenses-container"></div>
 
-                <div class="form-row full-width">
-                    <div class="input-group">
-                        <button type="button" id="add-expense-btn" class="btn-add-item">Add Expense</button>
+                <div class="add-expense-section">
+                    <button type="button" id="add-expense-btn" class="btn-add-expense">
+                        Add Another Expense
+                    </button>
+                    <div class="help-text" style="text-align: center; margin-top: 0.5rem;">
+                        Add all expense items for your event
                     </div>
                 </div>
 
@@ -602,53 +666,60 @@ function getWhyThisEventForm() {
 
         function addSpeakerForm() {
             const html = `
-                <div class="speaker-form" data-index="${index}">
-                    <div class="form-section-header"><h3>Speaker ${index + 1}</h3></div>
-                    <div class="form-row">
-                        <div class="input-group">
-                            <label for="speaker_full_name_${index}">Full Name</label>
-                            <input type="text" id="speaker_full_name_${index}" name="speaker_full_name_${index}" />
-                            <div class="help-text">Enter the speaker's full name</div>
+                <div class="speaker-form-container" data-index="${index}">
+                    <div class="speaker-form-card">
+                        <div class="speaker-form-header">
+                            <h3 class="speaker-title">Speaker ${index + 1}</h3>
+                            <button type="button" class="btn-remove-speaker remove-speaker-btn" data-index="${index}" title="Remove Speaker">
+                                <i class="fas fa-times"></i>
+                            </button>
                         </div>
-                        <div class="input-group">
-                            <label for="speaker_designation_${index}">Designation</label>
-                            <input type="text" id="speaker_designation_${index}" name="speaker_designation_${index}" />
-                            <div class="help-text">Job title or role</div>
+                        
+                        <div class="speaker-form-content">
+                            <div class="speaker-form-grid">
+                                <div class="input-group">
+                                    <label for="speaker_full_name_${index}">Full Name *</label>
+                                    <input type="text" id="speaker_full_name_${index}" name="speaker_full_name_${index}" required />
+                                    <div class="help-text">Enter the speaker's full name</div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="speaker_designation_${index}">Designation *</label>
+                                    <input type="text" id="speaker_designation_${index}" name="speaker_designation_${index}" required />
+                                    <div class="help-text">Job title or role</div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="speaker_affiliation_${index}">Affiliation *</label>
+                                    <input type="text" id="speaker_affiliation_${index}" name="speaker_affiliation_${index}" required />
+                                    <div class="help-text">Organization or institution</div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="speaker_contact_email_${index}">Email *</label>
+                                    <input type="email" id="speaker_contact_email_${index}" name="speaker_contact_email_${index}" required />
+                                    <div class="help-text">Official contact email</div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="speaker_contact_number_${index}">Contact Number</label>
+                                    <input type="text" id="speaker_contact_number_${index}" name="speaker_contact_number_${index}" />
+                                    <div class="help-text">Phone number</div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="speaker_linkedin_url_${index}">LinkedIn Profile</label>
+                                    <input type="url" id="speaker_linkedin_url_${index}" name="speaker_linkedin_url_${index}" placeholder="https://linkedin.com/in/username" />
+                                    <div class="help-text">LinkedIn profile URL (optional)</div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="speaker_photo_${index}">Photo</label>
+                                    <input type="file" id="speaker_photo_${index}" name="speaker_photo_${index}" accept="image/*" />
+                                    <div class="help-text">Upload headshot (JPG, PNG)</div>
+                                </div>
+                            </div>
+                            
+                            <div class="input-group bio-section">
+                                <label for="speaker_detailed_profile_${index}">Brief Profile / Bio *</label>
+                                <textarea id="speaker_detailed_profile_${index}" name="speaker_detailed_profile_${index}" rows="4" required placeholder="Brief description of speaker's expertise, background, and qualifications..."></textarea>
+                                <div class="help-text">Provide a concise professional biography</div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="input-group">
-                            <label for="speaker_affiliation_${index}">Affiliation</label>
-                            <input type="text" id="speaker_affiliation_${index}" name="speaker_affiliation_${index}" />
-                            <div class="help-text">Organization or institution</div>
-                        </div>
-                        <div class="input-group">
-                            <label for="speaker_contact_email_${index}">Email</label>
-                            <input type="email" id="speaker_contact_email_${index}" name="speaker_contact_email_${index}" />
-                            <div class="help-text">Official contact email</div>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="input-group">
-                            <label for="speaker_contact_number_${index}">Contact Number</label>
-                            <input type="text" id="speaker_contact_number_${index}" name="speaker_contact_number_${index}" />
-                            <div class="help-text">Phone number</div>
-                        </div>
-                        <div class="input-group">
-                            <label for="speaker_photo_${index}">Photo</label>
-                            <input type="file" id="speaker_photo_${index}" name="speaker_photo_${index}" />
-                            <div class="help-text">Upload headshot</div>
-                        </div>
-                    </div>
-                    <div class="form-row full-width">
-                        <div class="input-group full-width">
-                            <label for="speaker_detailed_profile_${index}">Brief Profile / Bio</label>
-                            <textarea id="speaker_detailed_profile_${index}" name="speaker_detailed_profile_${index}" rows="3"></textarea>
-                            <div class="help-text">Short description of expertise</div>
-                        </div>
-                    </div>
-                    <div class="form-row full-width">
-                        <button type="button" class="btn-remove-item remove-speaker-btn" data-index="${index}">Remove Speaker</button>
                     </div>
                 </div>
             `;
@@ -657,18 +728,40 @@ function getWhyThisEventForm() {
         }
 
         function updateSpeakerHeaders() {
-            container.children('.speaker-form').each(function(i) {
-                $(this).find('.form-section-header h3').text(`Speaker ${i + 1}`);
+            container.children('.speaker-form-container').each(function(i) {
+                $(this).find('.speaker-title').text(`Speaker ${i + 1}`);
+                $(this).attr('data-index', i);
+                $(this).find('.remove-speaker-btn').attr('data-index', i);
             });
         }
 
-        $('#add-speaker-btn').on('click', addSpeakerForm);
+        function showEmptyState() {
+            if (container.children('.speaker-form-container').length === 0) {
+                container.html(`
+                    <div class="speakers-empty-state">
+                        <div class="empty-state-icon">🎤</div>
+                        <h4>No speakers added yet</h4>
+                        <p>Add speakers who will be presenting at your event</p>
+                    </div>
+                `);
+            } else {
+                container.find('.speakers-empty-state').remove();
+            }
+        }
+
+        $('#add-speaker-btn').on('click', function() {
+            addSpeakerForm();
+            showEmptyState();
+        });
+        
         container.on('click', '.remove-speaker-btn', function() {
-            $(this).closest('.speaker-form').remove();
+            $(this).closest('.speaker-form-container').remove();
             updateSpeakerHeaders();
+            showEmptyState();
         });
 
-        addSpeakerForm();
+        // Show empty state initially
+        showEmptyState();
     }
 
     function setupExpensesSection() {
@@ -677,29 +770,34 @@ function getWhyThisEventForm() {
 
         function addExpenseRow() {
             const html = `
-                <div class="expense-row" data-index="${index}">
-                    <div class="form-section-header"><h3>Expense ${index + 1}</h3></div>
-                    <div class="form-row">
-                        <div class="input-group">
-                            <label for="expense_sl_no_${index}">Sl. No.</label>
-                            <input type="number" id="expense_sl_no_${index}" name="expense_sl_no_${index}" />
-                            <div class="help-text">Entry number</div>
+                <div class="expense-form-container" data-index="${index}">
+                    <div class="expense-form-card">
+                        <div class="expense-form-header">
+                            <h3 class="expense-title">Expense ${index + 1}</h3>
+                            <button type="button" class="btn-remove-expense remove-expense-btn" data-index="${index}" title="Remove Expense">
+                                <i class="fas fa-times"></i>
+                            </button>
                         </div>
-                        <div class="input-group">
-                            <label for="expense_particulars_${index}">Particulars</label>
-                            <input type="text" id="expense_particulars_${index}" name="expense_particulars_${index}" />
-                            <div class="help-text">Expense item</div>
+                        
+                        <div class="expense-form-content">
+                            <div class="expense-form-grid">
+                                <div class="input-group">
+                                    <label for="expense_sl_no_${index}">Sl. No.</label>
+                                    <input type="number" id="expense_sl_no_${index}" name="expense_sl_no_${index}" />
+                                    <div class="help-text">Entry number</div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="expense_particulars_${index}">Particulars *</label>
+                                    <input type="text" id="expense_particulars_${index}" name="expense_particulars_${index}" required />
+                                    <div class="help-text">Expense item description</div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="expense_amount_${index}">Amount (₹) *</label>
+                                    <input type="number" step="0.01" id="expense_amount_${index}" name="expense_amount_${index}" required />
+                                    <div class="help-text">Cost in Indian Rupees</div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="form-row full-width">
-                        <div class="input-group">
-                            <label for="expense_amount_${index}">Amount</label>
-                            <input type="number" step="0.01" id="expense_amount_${index}" name="expense_amount_${index}" />
-                            <div class="help-text">Cost in INR</div>
-                        </div>
-                    </div>
-                    <div class="form-row full-width">
-                        <button type="button" class="btn-remove-item remove-expense-btn" data-index="${index}">Remove Expense</button>
                     </div>
                 </div>
             `;
@@ -708,18 +806,40 @@ function getWhyThisEventForm() {
         }
 
         function updateExpenseHeaders() {
-            container.children('.expense-row').each(function(i) {
-                $(this).find('.form-section-header h3').text(`Expense ${i + 1}`);
+            container.children('.expense-form-container').each(function(i) {
+                $(this).find('.expense-title').text(`Expense ${i + 1}`);
+                $(this).attr('data-index', i);
+                $(this).find('.remove-expense-btn').attr('data-index', i);
             });
         }
 
-        $('#add-expense-btn').on('click', addExpenseRow);
+        function showEmptyState() {
+            if (container.children('.expense-form-container').length === 0) {
+                container.html(`
+                    <div class="expenses-empty-state">
+                        <div class="empty-state-icon">💰</div>
+                        <h4>No expenses added yet</h4>
+                        <p>Add expense items for your event budget</p>
+                    </div>
+                `);
+            } else {
+                container.find('.expenses-empty-state').remove();
+            }
+        }
+
+        $('#add-expense-btn').on('click', function() {
+            addExpenseRow();
+            showEmptyState();
+        });
+        
         container.on('click', '.remove-expense-btn', function() {
-            $(this).closest('.expense-row').remove();
+            $(this).closest('.expense-form-container').remove();
             updateExpenseHeaders();
+            showEmptyState();
         });
 
-        addExpenseRow();
+        // Show empty state initially
+        showEmptyState();
     }
     
     // ===== SAVE SECTION FUNCTIONALITY - FULLY PRESERVED =====
@@ -734,9 +854,11 @@ function getWhyThisEventForm() {
             }
             showNotification('Section saved successfully!', 'success');
             
-            const nextOrder = parseInt($(`[data-section="${currentExpandedCard}"]`).data('order')) + 1;
             const nextSection = getNextSection(currentExpandedCard);
             if (nextSection) {
+                // Enable the next section since current section is now complete
+                $(`.nav-link[data-section="${nextSection}"]`).removeClass('disabled');
+                
                 setTimeout(() => {
                     openFormPanel(nextSection);
                 }, 1000);
@@ -796,15 +918,19 @@ function getWhyThisEventForm() {
     function markSectionInProgress(section) {
         sectionProgress[section] = 'in-progress';
         const navLink = $(`.nav-link[data-section="${section}"]`);
-        navLink.addClass('in-progress').removeClass('completed');
+        navLink.addClass('in-progress').removeClass('completed disabled');
         console.log(`Section ${section} marked as in progress`);
     }
 
     function markSectionComplete(section) {
         sectionProgress[section] = true;
         const navLink = $(`.nav-link[data-section="${section}"]`);
-        navLink.addClass('completed').removeClass('in-progress');
+        navLink.addClass('completed').removeClass('in-progress disabled');
         unlockNextSection(section);
+        
+        // Also enable navigation to all previously completed sections
+        enablePreviouslyVisitedSections();
+        
         console.log(`Section ${section} marked as complete`);
         updateProgressBar();
         updateSubmitButton();
@@ -852,10 +978,71 @@ function getWhyThisEventForm() {
     
         switch (currentExpandedCard) {
             case 'basic-info': return validateBasicInfo();
-            case 'why-this-event': return validateWhyThisEvent(); // NEW VALIDATION
-            case 'schedule': return validateTextSection();
+            case 'why-this-event': return validateWhyThisEvent();
+            case 'schedule': return validateSchedule();
+            case 'speakers': return validateSpeakers();
+            case 'expenses': return validateExpenses();
             default: return true;
         }
+    }
+    
+    function validateSchedule() {
+        const scheduleField = $('#schedule-modern');
+        if (!scheduleField.val() || scheduleField.val().trim() === '') {
+            showFieldError(scheduleField, 'Schedule is required');
+            scheduleField.addClass('animate-shake');
+            setTimeout(() => scheduleField.removeClass('animate-shake'), 600);
+            return false;
+        }
+        return true;
+    }
+    
+    function validateSpeakers() {
+        const speakerContainers = $('.speaker-form-container');
+        if (speakerContainers.length === 0) {
+            showNotification('Please add at least one speaker.', 'error');
+            return false;
+        }
+        
+        let isValid = true;
+        speakerContainers.each(function() {
+            const container = $(this);
+            const requiredFields = container.find('input[required], textarea[required]');
+            
+            requiredFields.each(function() {
+                if (!$(this).val() || $(this).val().trim() === '') {
+                    const fieldName = $(this).closest('.input-group').find('label').text().replace(' *', '');
+                    showFieldError($(this), `${fieldName} is required`);
+                    isValid = false;
+                }
+            });
+        });
+        
+        return isValid;
+    }
+    
+    function validateExpenses() {
+        const expenseContainers = $('.expense-form-container');
+        if (expenseContainers.length === 0) {
+            showNotification('Please add at least one expense item.', 'error');
+            return false;
+        }
+        
+        let isValid = true;
+        expenseContainers.each(function() {
+            const container = $(this);
+            const requiredFields = container.find('input[required]');
+            
+            requiredFields.each(function() {
+                if (!$(this).val() || $(this).val().trim() === '') {
+                    const fieldName = $(this).closest('.input-group').find('label').text().replace(' *', '');
+                    showFieldError($(this), `${fieldName} is required`);
+                    isValid = false;
+                }
+            });
+        });
+        
+        return isValid;
     }
     function validateWhyThisEvent() {
         let isValid = true;

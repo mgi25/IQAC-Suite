@@ -402,7 +402,8 @@ window.loadApprovalFlow = async function() {
     if (data.success && data.steps.length > 0) {
       approvalSteps = data.steps.map(s => ({
         role: s.role_required,
-        user: s.user_id ? {id: s.user_id, name: s.user_name || `User: ${s.user_id}`} : null
+        user: s.user_id ? {id: s.user_id, name: s.user_name || `User: ${s.user_id}`} : null,
+        optional: s.optional
       }));
       renderApprovalSteps();
     } else {
@@ -461,7 +462,7 @@ async function loadRoles() {
 window.addApprovalStep = function() {
   const stepsDiv = document.getElementById('approvalFlowSteps');
   const idx = approvalSteps.length + 1;
-  approvalSteps.push({ role: '', user: null });
+  approvalSteps.push({ role: '', user: null, optional: false });
   renderApprovalSteps();
 };
 
@@ -481,6 +482,7 @@ function renderApprovalSteps() {
         <input class="user-search-input" type="text" placeholder="Search user..."
                value="${step.user ? step.user.name : ''}" data-idx="${i}">
       </div>
+      <label class="optional-toggle"><input type="checkbox" ${step.optional ? 'checked' : ''} onchange="toggleOptional(${i}, this.checked)"> Optional</label>
       <button onclick="removeStep(${i})" class="btn btn-danger btn-sm">Delete</button>
     </div>
   `).join('');
@@ -528,6 +530,10 @@ function initUserSearchInputs() {
 
 window.updateStepRole = function(idx, value) {
   approvalSteps[idx].role = value;
+};
+
+window.toggleOptional = function(idx, val) {
+  approvalSteps[idx].optional = val;
 };
 
 function searchUserForStep(idx, q) {
@@ -587,7 +593,8 @@ window.removeStep = function(idx) {
   // Map your frontend data to the backend format!
   const payloadSteps = approvalSteps.map(s => ({
     role_required: s.role,
-    user_id: s.user ? s.user.id : null
+    user_id: s.user ? s.user.id : null,
+    optional: s.optional
   }));
   const requireFic = document.getElementById('facultyFirstToggle');
   const requireFlag = requireFic ? requireFic.checked : false;
@@ -674,7 +681,7 @@ window.loadCurrentFlow = async function() {
     if (data.steps.length === 0) {
       container.innerHTML = '<li>No approval flow defined.</li>';
     } else {
-      container.innerHTML = data.steps.map(s => `<li>${s.step_order}. ${s.role_display || s.role_required} – ${s.user_name || 'Unassigned'}</li>`).join('');
+      container.innerHTML = data.steps.map(s => `<li>${s.step_order}. ${s.role_display || s.role_required}${s.optional ? ' (Optional)' : ''} – ${s.user_name || 'Unassigned'}</li>`).join('');
       if (typeof data.require_faculty_incharge_first !== 'undefined') {
         const toggle = document.getElementById('facultyFirstToggle');
         if (toggle) toggle.checked = data.require_faculty_incharge_first;
