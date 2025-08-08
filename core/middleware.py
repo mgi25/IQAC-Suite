@@ -51,31 +51,3 @@ class RegistrationRequiredMiddleware:
             if not student.registration_number:
                 return False
         return RoleAssignment.objects.filter(user=user).exists()
-
-class ImpersonationMiddleware:
-    def __init__(self, get_response):
-        self.get_response = get_response
-
-    def __call__(self, request):
-        if hasattr(request, 'user') and request.user.is_authenticated:
-            if 'impersonate_user_id' in request.session:
-                try:
-                    from django.contrib.auth import get_user_model
-                    User = get_user_model()
-                    impersonated_user = User.objects.get(
-                        id=request.session['impersonate_user_id'], 
-                        is_active=True
-                    )
-                    request.original_user = request.user
-                    request.user = impersonated_user
-                    request.is_impersonating = True
-                except User.DoesNotExist:
-                    # Clean up invalid session
-                    del request.session['impersonate_user_id']
-                    if 'original_user_id' in request.session:
-                        del request.session['original_user_id']
-            else:
-                request.is_impersonating = False
-        
-        response = self.get_response(request)
-        return response

@@ -34,11 +34,3 @@ def notifications(request):
         notif_list.append({'type': n_type, 'msg': message, 'time': time_label})
 
     return {'notifications': notif_list}
-
-def impersonation_context(request):
-    """Add impersonation context to all templates"""
-    context = {
-        'is_impersonating': getattr(request, 'is_impersonating', False),
-        'original_user': getattr(request, 'original_user', None),
-    }
-    return context

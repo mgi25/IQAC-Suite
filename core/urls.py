@@ -88,13 +88,6 @@ urlpatterns = [
     path('core-admin/pso-po/delete/<str:outcome_type>/<int:outcome_id>/', views.delete_outcome, name='delete_outcome'),
 
     # ────────────────────────────────────────────────
-    # Admin - Switch User / Impersonation (FIXED)
-    # ────────────────────────────────────────────────
-    path('core-admin/switch-user/', views.switch_user_view, name='switch_user'),
-    path('core-admin/impersonate/', views.impersonate_user, name='impersonate_user'),
-    path('core-admin/stop-impersonation/', views.stop_impersonation, name='stop_impersonation'),
-
-    # ────────────────────────────────────────────────
     # AJAX - Academic Year
     # ────────────────────────────────────────────────
     path('core-admin/set-academic-year/', views.set_academic_year, name='set_academic_year'),
@@ -119,11 +112,6 @@ urlpatterns = [
 
 
     # ────────────────────────────────────────────────
-    # Switch User APIs (FIXED - consistent with core-admin prefix)
-    # ────────────────────────────────────────────────
-    path('core-admin/api/search-users/', views.search_users_api, name='search_users_api'),
-    path('core-admin/api/recent-users/', views.get_recent_users_api, name='recent_users_api'),
-
 
     # ────────────────────────────────────────────────
     # General APIs (Public/Non-Admin)

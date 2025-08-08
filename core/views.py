@@ -2841,6 +2841,7 @@ def process_filters_extended(filters, logic='AND'):
         
         all_results.append(results)
     
+
     # Combine results based on logic (same as before)
     if logic == 'OR':
         combined_results = []
@@ -3010,3 +3011,5 @@ def impersonate_user(request):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+    return JsonResponse({'suggestions': suggestions})
