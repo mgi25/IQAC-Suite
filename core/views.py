@@ -410,7 +410,7 @@ def admin_dashboard(request):
     }
     # Recent activity feed (proposals and reports)
     recent_activities = []
-    recent_proposals = EventProposal.objects.select_related('submitted_by').order_by('-created_at')[:5]
+    recent_proposals = EventProposal.objects.select_related('submitted_by').order_by('-date_submitted')[:5]
     for proposal in recent_proposals:
         recent_activities.append({
             'type': 'proposal',
@@ -1750,1162 +1750,1126 @@ def admin_dashboard_api(request):
         ).count(),
     }
     return JsonResponse({'success': True, 'stats': stats})
+
+
+#======================== Data Export and Filter View =======================
+# views.py - Add these views to your core app views
+import json
+import csv
+from datetime import datetime, timedelta
 from django.shortcuts import render
+from django.http import JsonResponse, HttpResponse
+from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
-from django.db.models import Q, Count, Prefetch
-from django.http import JsonResponse, HttpResponse
-from datetime import datetime, timedelta
+from django.db.models import Q, Count
 from django.utils import timezone
-import csv
-import json
-from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from openpyxl.utils import get_column_letter
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter, A4, landscape
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
+from io import StringIO, BytesIO
+import xlsxwriter
 
-# Import your models
-from core.models import (
-    Organization, OrganizationType, RoleAssignment, OrganizationRole,
-    Report
+from .models import (
+    Organization, OrganizationType, OrganizationRole, RoleAssignment,
+    Profile, EventProposal, Report, Program, ProgramOutcome, 
+    ProgramSpecificOutcome, ApprovalFlowTemplate
 )
-from emt.models import EventProposal
+from emt.models import (
+    EventProposal as EMTEventProposal, ApprovalStep, EventReport,
+    Student, MediaRequest, CDLSupport
+)
+
+
+def is_admin(user):
+    """Check if user is admin"""
+    return user.is_superuser or (hasattr(user, 'profile') and user.profile.role == 'admin')
+
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser or u.is_staff)
+@user_passes_test(is_admin)
 def data_export_filter_view(request):
-    """Main data export and filter view with dynamic data type selection"""
-    
-    # Extract all filters from request
-    filters = {
-        'data_type': request.GET.get('data_type', ''),
-        'status': request.GET.getlist('status'),
-        'organization_type': request.GET.get('organization_type', ''),
-        'organization': request.GET.get('organization', ''),
-        'date_from': request.GET.get('date_from', ''),
-        'date_to': request.GET.get('date_to', ''),
-        'academic_year': request.GET.get('academic_year', ''),
-        'search': request.GET.get('search', ''),
-        'submitted_by': request.GET.get('submitted_by', ''),
-        'role': request.GET.get('role', ''),
-        'active_only': request.GET.get('active_only', ''),
-        'has_parent': request.GET.get('has_parent', ''),
-        'venue': request.GET.get('venue', ''),
-        'report_type': request.GET.get('report_type', ''),
-        'priority': request.GET.get('priority', ''),
-        'needs_finance_approval': request.GET.get('needs_finance_approval', ''),
-        'is_big_event': request.GET.get('is_big_event', ''),
-        'has_role_assignments': request.GET.get('has_role_assignments', ''),
-        'faculty_incharge': request.GET.get('faculty_incharge', ''),
-        'event_focus_type': request.GET.get('event_focus_type', ''),
-        'created_by_year': request.GET.get('created_by_year', ''),
-        'updated_in_days': request.GET.get('updated_in_days', ''),
-        
-        # Event Proposal specific filters
-        'event_title': request.GET.get('event_title', ''),
-        'student_coordinators': request.GET.get('student_coordinators', ''),
-        'target_audience': request.GET.get('target_audience', ''),
-        'committees': request.GET.get('committees', ''),
-        'event_date_from': request.GET.get('event_date_from', ''),
-        'event_date_to': request.GET.get('event_date_to', ''),
-        'fest_fee_min': request.GET.get('fest_fee_min', ''),
-        'fest_fee_max': request.GET.get('fest_fee_max', ''),
-        
-        # Organization specific filters
-        'org_name': request.GET.get('org_name', ''),
-        'parent_organization': request.GET.get('parent_organization', ''),
-        
-        # User specific filters
-        'username': request.GET.get('username', ''),
-        'email': request.GET.get('email', ''),
-        'first_name': request.GET.get('first_name', ''),
-        'last_name': request.GET.get('last_name', ''),
-        'user_role': request.GET.get('user_role', ''),
-        
-        # Report specific filters
-        'report_title': request.GET.get('report_title', ''),
-        'report_description': request.GET.get('report_description', ''),
-    }
+    """Main data export filter page"""
+    return render(request, 'core/data_export_filter.html')
 
-    # Handle export request
-    export_format = request.GET.get('export')
-    if export_format:
-        return handle_data_export(request, filters, export_format)
-
-    # Get filtered data based on data type
-    filtered_data = apply_data_type_filters(filters)
-    filter_counts = get_comprehensive_filter_counts(filters)
-    
-    # Prepare context for template
-    context = {
-        # Data type information
-        'data_types': get_data_type_configs(),
-        'current_data_type': filters['data_type'],
-        
-        # Filter options
-        'organization_types': OrganizationType.objects.filter(is_active=True).order_by('name'),
-        'organizations': get_filtered_organizations(filters.get('organization_type')),
-        'academic_years': get_available_academic_years(),
-        'available_statuses': get_available_statuses(),
-        'available_users': get_available_users(),
-        'available_roles': get_available_roles(),
-        'available_venues': get_available_venues(),
-        'available_report_types': get_available_report_types(),
-        'available_event_focus_types': get_available_event_focus_types(),
-        'faculty_users': get_faculty_users(),
-        
-        # Results and counts
-        'filtered_data': filtered_data,
-        'filter_counts': filter_counts,
-        'total_records': len(filtered_data) if hasattr(filtered_data, '__len__') else filtered_data.count(),
-        
-        # Current filter values (for form persistence)
-        'current_filters': filters,
-        
-        # API URLs
-        'api_orgs_url': '/api/organizations-by-type/',
-        'api_counts_url': '/api/filter-counts/',
-    }
-
-    return render(request, 'core/data_export_filter.html', context)
-
-def get_data_type_configs():
-    """Return configuration for each data type including counts and descriptions"""
-    return {
-        '': {
-            'name': 'All Data',
-            'icon': 'fa-database',
-            'description': 'View all data types with common filters',
-            'color': 'primary'
-        },
-        'event_proposals': {
-            'name': 'Event Proposals',
-            'icon': 'fa-calendar-check',
-            'description': 'Venue, academic year, finance filters',
-            'color': 'info'
-        },
-        'organizations': {
-            'name': 'Organizations',
-            'icon': 'fa-building',
-            'description': 'Type, hierarchy, assignment filters',
-            'color': 'warning'
-        },
-        'users': {
-            'name': 'Users',
-            'icon': 'fa-users',
-            'description': 'Roles, activity, login history',
-            'color': 'success'
-        },
-        'reports': {
-            'name': 'Reports',
-            'icon': 'fa-file-alt',
-            'description': 'Type, status, submission date',
-            'color': 'secondary'
-        }
-    }
-
-def apply_data_type_filters(filters):
-    """Apply filters based on selected data type"""
-    data_type = filters.get('data_type', '')
-    
-    if data_type == 'event_proposals':
-        return filter_event_proposals(filters)
-    elif data_type == 'organizations':
-        return filter_organizations(filters)
-    elif data_type == 'users':
-        return filter_users(filters)
-    elif data_type == 'reports':
-        return filter_reports(filters)
-    else:
-        # Return mixed data when no specific type is selected
-        return filter_mixed_data(filters)
-
-def filter_event_proposals(filters):
-    """Enhanced filtering for event proposals with all specific filters"""
-    queryset = EventProposal.objects.select_related(
-        'submitted_by', 'organization', 'organization__org_type'
-    ).prefetch_related('faculty_incharges').order_by('-created_at')
-
-    # Common filters
-    if filters.get('status'):
-        queryset = queryset.filter(status__in=filters['status'])
-    
-    if filters.get('organization_type'):
-        queryset = queryset.filter(organization__org_type_id=filters['organization_type'])
-    
-    if filters.get('organization'):
-        queryset = queryset.filter(organization_id=filters['organization'])
-    
-    if filters.get('submitted_by'):
-        queryset = queryset.filter(submitted_by_id=filters['submitted_by'])
-
-    # Date filters
-    if filters.get('date_from'):
-        try:
-            date_from = datetime.strptime(filters['date_from'], '%Y-%m-%d').date()
-            queryset = queryset.filter(created_at__date__gte=date_from)
-        except ValueError:
-            pass
-    
-    if filters.get('date_to'):
-        try:
-            date_to = datetime.strptime(filters['date_to'], '%Y-%m-%d').date()
-            queryset = queryset.filter(created_at__date__lte=date_to)
-        except ValueError:
-            pass
-
-    # Event Proposal specific filters
-    if filters.get('event_title'):
-        queryset = queryset.filter(event_title__icontains=filters['event_title'])
-    
-    if filters.get('academic_year'):
-        queryset = queryset.filter(academic_year=filters['academic_year'])
-    
-    if filters.get('venue'):
-        queryset = queryset.filter(venue__icontains=filters['venue'])
-    
-    if filters.get('faculty_incharge'):
-        queryset = queryset.filter(faculty_incharges=filters['faculty_incharge'])
-    
-    if filters.get('event_focus_type'):
-        queryset = queryset.filter(event_focus_type__icontains=filters['event_focus_type'])
-    
-    if filters.get('student_coordinators'):
-        queryset = queryset.filter(student_coordinators__icontains=filters['student_coordinators'])
-    
-    if filters.get('target_audience'):
-        queryset = queryset.filter(target_audience__icontains=filters['target_audience'])
-    
-    if filters.get('committees'):
-        queryset = queryset.filter(committees__icontains=filters['committees'])
-
-    # Boolean filters
-    if filters.get('needs_finance_approval') == 'true':
-        queryset = queryset.filter(needs_finance_approval=True)
-    elif filters.get('needs_finance_approval') == 'false':
-        queryset = queryset.filter(needs_finance_approval=False)
-    
-    if filters.get('is_big_event') == 'true':
-        queryset = queryset.filter(is_big_event=True)
-    elif filters.get('is_big_event') == 'false':
-        queryset = queryset.filter(is_big_event=False)
-
-    # Event date range filters
-    if filters.get('event_date_from'):
-        try:
-            event_date_from = datetime.strptime(filters['event_date_from'], '%Y-%m-%d')
-            queryset = queryset.filter(event_datetime__date__gte=event_date_from.date())
-        except ValueError:
-            pass
-    
-    if filters.get('event_date_to'):
-        try:
-            event_date_to = datetime.strptime(filters['event_date_to'], '%Y-%m-%d')
-            queryset = queryset.filter(event_datetime__date__lte=event_date_to.date())
-        except ValueError:
-            pass
-
-    # Fee range filters
-    if filters.get('fest_fee_min'):
-        try:
-            queryset = queryset.filter(fest_fee_participants__gte=int(filters['fest_fee_min']))
-        except (ValueError, TypeError):
-            pass
-    
-    if filters.get('fest_fee_max'):
-        try:
-            queryset = queryset.filter(fest_fee_participants__lte=int(filters['fest_fee_max']))
-        except (ValueError, TypeError):
-            pass
-
-    # Time-based filters
-    if filters.get('updated_in_days'):
-        try:
-            days = int(filters['updated_in_days'])
-            cutoff_date = timezone.now() - timedelta(days=days)
-            queryset = queryset.filter(updated_at__gte=cutoff_date)
-        except (ValueError, TypeError):
-            pass
-
-    if filters.get('created_by_year'):
-        try:
-            year = int(filters['created_by_year'])
-            queryset = queryset.filter(created_at__year=year)
-        except (ValueError, TypeError):
-            pass
-
-    # Search across multiple fields
-    if filters.get('search'):
-        search_query = filters['search']
-        queryset = queryset.filter(
-            Q(event_title__icontains=search_query) |
-            Q(submitted_by__first_name__icontains=search_query) |
-            Q(submitted_by__last_name__icontains=search_query) |
-            Q(submitted_by__username__icontains=search_query) |
-            Q(submitted_by__email__icontains=search_query) |
-            Q(organization__name__icontains=search_query) |
-            Q(venue__icontains=search_query) |
-            Q(committees__icontains=search_query) |
-            Q(target_audience__icontains=search_query) |
-            Q(event_focus_type__icontains=search_query) |
-            Q(student_coordinators__icontains=search_query)
-        )
-
-    return queryset
-
-def filter_organizations(filters):
-    """Enhanced filtering for organizations"""
-    queryset = Organization.objects.select_related(
-        'org_type', 'parent'
-    ).prefetch_related('role_assignments').order_by('org_type__name', 'name')
-
-    # Common filters
-    if filters.get('organization_type'):
-        queryset = queryset.filter(org_type_id=filters['organization_type'])
-
-    # Organization specific filters
-    if filters.get('org_name'):
-        queryset = queryset.filter(name__icontains=filters['org_name'])
-    
-    if filters.get('parent_organization'):
-        queryset = queryset.filter(parent_id=filters['parent_organization'])
-
-    # Boolean filters
-    if filters.get('active_only') == 'true':
-        queryset = queryset.filter(is_active=True)
-    elif filters.get('active_only') == 'false':
-        queryset = queryset.filter(is_active=False)
-    
-    if filters.get('has_parent') == 'true':
-        queryset = queryset.filter(parent__isnull=False)
-    elif filters.get('has_parent') == 'false':
-        queryset = queryset.filter(parent__isnull=True)
-    
-    if filters.get('has_role_assignments') == 'true':
-        queryset = queryset.annotate(num_assignments=Count('role_assignments')).filter(num_assignments__gt=0)
-    elif filters.get('has_role_assignments') == 'false':
-        queryset = queryset.annotate(num_assignments=Count('role_assignments')).filter(num_assignments=0)
-
-    # Search
-    if filters.get('search'):
-        search_query = filters['search']
-        queryset = queryset.filter(
-            Q(name__icontains=search_query) |
-            Q(org_type__name__icontains=search_query) |
-            Q(parent__name__icontains=search_query)
-        )
-
-    return queryset
-
-def filter_users(filters):
-    """Enhanced filtering for users"""
-    queryset = User.objects.prefetch_related(
-        Prefetch('role_assignments', 
-                queryset=RoleAssignment.objects.select_related('role', 'organization__org_type'))
-    ).order_by('first_name', 'last_name', 'username')
-
-    # Common filters
-    if filters.get('organization_type'):
-        queryset = queryset.filter(
-            role_assignments__organization__org_type_id=filters['organization_type']
-        ).distinct()
-    
-    if filters.get('organization'):
-        queryset = queryset.filter(
-            role_assignments__organization_id=filters['organization']
-        ).distinct()
-
-    if filters.get('role') or filters.get('user_role'):
-        role_id = filters.get('role') or filters.get('user_role')
-        queryset = queryset.filter(role_assignments__role_id=role_id).distinct()
-
-    # User specific filters
-    if filters.get('username'):
-        queryset = queryset.filter(username__icontains=filters['username'])
-    
-    if filters.get('email'):
-        queryset = queryset.filter(email__icontains=filters['email'])
-    
-    if filters.get('first_name'):
-        queryset = queryset.filter(first_name__icontains=filters['first_name'])
-    
-    if filters.get('last_name'):
-        queryset = queryset.filter(last_name__icontains=filters['last_name'])
-
-    # Boolean filters
-    if filters.get('active_only') == 'true':
-        queryset = queryset.filter(is_active=True)
-    elif filters.get('active_only') == 'false':
-        queryset = queryset.filter(is_active=False)
-    
-    if filters.get('has_role_assignments') == 'true':
-        queryset = queryset.annotate(num_assignments=Count('role_assignments')).filter(num_assignments__gt=0)
-    elif filters.get('has_role_assignments') == 'false':
-        queryset = queryset.annotate(num_assignments=Count('role_assignments')).filter(num_assignments=0)
-
-    # Date filters
-    if filters.get('date_from'):
-        try:
-            date_from = datetime.strptime(filters['date_from'], '%Y-%m-%d').date()
-            queryset = queryset.filter(date_joined__date__gte=date_from)
-        except ValueError:
-            pass
-    
-    if filters.get('date_to'):
-        try:
-            date_to = datetime.strptime(filters['date_to'], '%Y-%m-%d').date()
-            queryset = queryset.filter(date_joined__date__lte=date_to)
-        except ValueError:
-            pass
-
-    # Time-based filters
-    if filters.get('created_by_year'):
-        try:
-            year = int(filters['created_by_year'])
-            queryset = queryset.filter(date_joined__year=year)
-        except (ValueError, TypeError):
-            pass
-
-    # Search
-    if filters.get('search'):
-        search_query = filters['search']
-        queryset = queryset.filter(
-            Q(first_name__icontains=search_query) |
-            Q(last_name__icontains=search_query) |
-            Q(username__icontains=search_query) |
-            Q(email__icontains=search_query) |
-            Q(role_assignments__role__name__icontains=search_query) |
-            Q(role_assignments__organization__name__icontains=search_query)
-        ).distinct()
-
-    return queryset
-
-def filter_reports(filters):
-    """Enhanced filtering for reports"""
-    queryset = Report.objects.select_related(
-        'submitted_by', 'organization', 'organization__org_type'
-    ).order_by('-created_at')
-
-    # Common filters
-    if filters.get('status'):
-        queryset = queryset.filter(status__in=filters['status'])
-    
-    if filters.get('organization_type'):
-        queryset = queryset.filter(organization__org_type_id=filters['organization_type'])
-    
-    if filters.get('organization'):
-        queryset = queryset.filter(organization_id=filters['organization'])
-    
-    if filters.get('submitted_by'):
-        queryset = queryset.filter(submitted_by_id=filters['submitted_by'])
-
-    # Report specific filters
-    if filters.get('report_title'):
-        queryset = queryset.filter(title__icontains=filters['report_title'])
-    
-    if filters.get('report_description'):
-        queryset = queryset.filter(description__icontains=filters['report_description'])
-    
-    if filters.get('report_type'):
-        queryset = queryset.filter(report_type=filters['report_type'])
-
-    # Date filters
-    if filters.get('date_from'):
-        try:
-            date_from = datetime.strptime(filters['date_from'], '%Y-%m-%d').date()
-            queryset = queryset.filter(created_at__date__gte=date_from)
-        except ValueError:
-            pass
-    
-    if filters.get('date_to'):
-        try:
-            date_to = datetime.strptime(filters['date_to'], '%Y-%m-%d').date()
-            queryset = queryset.filter(created_at__date__lte=date_to)
-        except ValueError:
-            pass
-
-    # Time-based filters
-    if filters.get('updated_in_days'):
-        try:
-            days = int(filters['updated_in_days'])
-            cutoff_date = timezone.now() - timedelta(days=days)
-            queryset = queryset.filter(updated_at__gte=cutoff_date)
-        except (ValueError, TypeError):
-            pass
-
-    if filters.get('created_by_year'):
-        try:
-            year = int(filters['created_by_year'])
-            queryset = queryset.filter(created_at__year=year)
-        except (ValueError, TypeError):
-            pass
-
-    # Search
-    if filters.get('search'):
-        search_query = filters['search']
-        queryset = queryset.filter(
-            Q(title__icontains=search_query) |
-            Q(description__icontains=search_query) |
-            Q(submitted_by__first_name__icontains=search_query) |
-            Q(submitted_by__last_name__icontains=search_query) |
-            Q(submitted_by__username__icontains=search_query) |
-            Q(submitted_by__email__icontains=search_query) |
-            Q(organization__name__icontains=search_query)
-        )
-
-    return queryset
-
-def filter_mixed_data(filters):
-    """Filter mixed data when no specific data type is selected"""
-    mixed_data = []
-    limit_per_type = 25
-
-    # Get limited data from each type
-    event_proposals = filter_event_proposals(filters)[:limit_per_type]
-    organizations = filter_organizations(filters)[:limit_per_type]
-    users = filter_users(filters)[:limit_per_type]
-    reports = filter_reports(filters)[:limit_per_type]
-
-    # Format event proposals
-    for proposal in event_proposals:
-        mixed_data.append({
-            'data_type': 'event_proposal',
-            'display_name': proposal.event_title or 'Untitled Event',
-            'display_status': proposal.status,
-            'display_status_text': proposal.get_status_display() if hasattr(proposal, 'get_status_display') else proposal.status.title(),
-            'display_organization': proposal.organization.name if proposal.organization else 'N/A',
-            'display_date': proposal.created_at.strftime('%b %d, %Y'),
-            'display_user': proposal.submitted_by.get_full_name() if proposal.submitted_by else 'N/A',
-            'original_object': proposal
-        })
-
-    # Format organizations
-    for org in organizations:
-        mixed_data.append({
-            'data_type': 'organization',
-            'display_name': org.name,
-            'display_status': 'active' if org.is_active else 'inactive',
-            'display_status_text': 'Active' if org.is_active else 'Inactive',
-            'display_organization': org.org_type.name if org.org_type else 'N/A',
-            'display_date': getattr(org, 'created_at', timezone.now()).strftime('%b %d, %Y'),
-            'display_user': 'System',
-            'original_object': org
-        })
-
-    # Format users
-    for user in users:
-        roles_list = [ra.role.name for ra in user.role_assignments.all()[:3]]
-        mixed_data.append({
-            'data_type': 'user',
-            'display_name': user.get_full_name() or user.username,
-            'display_status': 'active' if user.is_active else 'inactive',
-            'display_status_text': 'Active' if user.is_active else 'Inactive',
-            'display_organization': ', '.join(roles_list) if roles_list else 'No roles',
-            'display_date': user.date_joined.strftime('%b %d, %Y'),
-            'display_user': user.email or 'N/A',
-            'original_object': user
-        })
-
-    # Format reports
-    for report in reports:
-        mixed_data.append({
-            'data_type': 'report',
-            'display_name': report.title,
-            'display_status': report.status,
-            'display_status_text': report.get_status_display() if hasattr(report, 'get_status_display') else report.status.title(),
-            'display_organization': report.organization.name if report.organization else 'N/A',
-            'display_date': report.created_at.strftime('%b %d, %Y'),
-            'display_user': report.submitted_by.get_full_name() if report.submitted_by else 'System',
-            'original_object': report
-        })
-
-    # Sort mixed data by priority and date
-    def sort_key(item):
-        type_priority = {'event_proposal': 1, 'report': 2, 'user': 3, 'organization': 4}
-        priority = type_priority.get(item['data_type'], 5)
-        date_attr = getattr(item['original_object'], 'created_at', getattr(item['original_object'], 'date_joined', None))
-        date_score = date_attr.timestamp() if date_attr else 0
-        return (priority, -date_score)
-
-    mixed_data.sort(key=sort_key)
-    return mixed_data
-
-def get_comprehensive_filter_counts(filters):
-    """Get counts for each data type with current filters"""
-    counts = {}
-    
-    # Create a copy of filters without data_type to get counts for all types
-    count_filters = {k: v for k, v in filters.items() if k != 'data_type'}
-    
-    try:
-        counts['event_proposals'] = filter_event_proposals(count_filters).count()
-    except Exception as e:
-        print(f"Error counting event proposals: {e}")
-        counts['event_proposals'] = 0
-    
-    try:
-        counts['organizations'] = filter_organizations(count_filters).count()
-    except Exception as e:
-        print(f"Error counting organizations: {e}")
-        counts['organizations'] = 0
-    
-    try:
-        counts['users'] = filter_users(count_filters).count()
-    except Exception as e:
-        print(f"Error counting users: {e}")
-        counts['users'] = 0
-    
-    try:
-        counts['reports'] = filter_reports(count_filters).count()
-    except Exception as e:
-        print(f"Error counting reports: {e}")
-        counts['reports'] = 0
-
-    counts['total'] = sum(counts.values())
-    return counts
-
-# Keep all your existing helper functions
-def get_filtered_organizations(org_type_id=None):
-    queryset = Organization.objects.filter(is_active=True).select_related('org_type', 'parent')
-    if org_type_id:
-        try:
-            queryset = queryset.filter(org_type_id=int(org_type_id))
-        except (ValueError, TypeError):
-            pass
-    return queryset.order_by('org_type__name', 'name')
-
-def get_available_users():
-    return User.objects.filter(is_active=True).prefetch_related(
-        'role_assignments__role',
-        'role_assignments__organization'
-    ).order_by('first_name', 'last_name', 'username')
-
-def get_faculty_users():
-    return User.objects.filter(
-        Q(role_assignments__role__name__icontains='faculty') |
-        Q(groups__name__icontains='faculty')
-    ).distinct().order_by('first_name', 'last_name', 'username')
-
-def get_available_roles():
-    return OrganizationRole.objects.filter(is_active=True).order_by('name')
-
-def get_available_venues():
-    venues = EventProposal.objects.exclude(
-        venue__isnull=True
-    ).exclude(
-        venue__exact=''
-    ).values_list('venue', flat=True).distinct()
-    return sorted(set(filter(None, venues)))
-
-def get_available_event_focus_types():
-    focus_types = EventProposal.objects.exclude(
-        event_focus_type__isnull=True
-    ).exclude(
-        event_focus_type__exact=''
-    ).values_list('event_focus_type', flat=True).distinct()
-    return sorted(set(filter(None, focus_types)))
-
-def get_available_report_types():
-    try:
-        return Report.REPORT_TYPE_CHOICES
-    except AttributeError:
-        report_types = Report.objects.exclude(
-            report_type__isnull=True
-        ).exclude(
-            report_type__exact=''
-        ).values_list('report_type', flat=True).distinct()
-        return [(rt, rt.replace('_', ' ').title()) for rt in report_types if rt]
-
-def get_available_academic_years():
-    years = set()
-    emt_years = EventProposal.objects.exclude(
-        academic_year__isnull=True
-    ).exclude(
-        academic_year__exact=''
-    ).values_list('academic_year', flat=True).distinct()
-    years.update(emt_years)
-
-    if not years:
-        current_year = timezone.now().year
-        for i in range(10):
-            start_year = current_year - i
-            years.add(f"{start_year}-{start_year + 1}")
-
-    return sorted(years, reverse=True)
-
-def get_available_statuses():
-    statuses = set()
-    
-    # Get EventProposal statuses
-    try:
-        if hasattr(EventProposal, 'Status'):
-            statuses.update(EventProposal.Status.choices)
-        else:
-            emt_statuses = EventProposal.objects.exclude(
-                status__isnull=True
-            ).values_list('status', flat=True).distinct()
-            statuses.update([(s, s.replace('_', ' ').title()) for s in emt_statuses])
-    except AttributeError:
-        pass
-
-    # Get Report statuses
-    try:
-        if hasattr(Report, 'STATUS_CHOICES'):
-            statuses.update(Report.STATUS_CHOICES)
-    except AttributeError:
-        pass
-
-    unique_statuses = list(set(statuses))
-    return sorted(unique_statuses, key=lambda x: x[1] if isinstance(x, tuple) else str(x))
-
-def handle_data_export(request, filters, export_format):
-    """Handle data export in various formats"""
-    data_type = filters.get('data_type', 'mixed')
-    filtered_data = apply_data_type_filters(filters)
-
-    # Generate filename
-    timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
-    filename_parts = [data_type.replace('_', '-') if data_type else 'all-data']
-
-    if filters.get('organization'):
-        try:
-            org = Organization.objects.get(id=filters['organization'])
-            filename_parts.append(org.name.replace(' ', '-').lower())
-        except:
-            pass
-
-    if filters.get('academic_year'):
-        filename_parts.append(filters['academic_year'].replace('-', ''))
-
-    filename_parts.append(timestamp)
-    filename = '_'.join(filename_parts)
-
-    if export_format == 'csv':
-        return export_to_csv(filtered_data, data_type, filename, filters)
-    elif export_format == 'excel':
-        return export_to_excel(filtered_data, data_type, filename, filters)
-    elif export_format == 'pdf':
-        return export_to_pdf(filtered_data, data_type, filename, filters)
-    else:
-        return JsonResponse({'error': 'Invalid export format'}, status=400)
-
-def export_to_csv(data, data_type, filename, filters):
-    """Export data to CSV format"""
-    response = HttpResponse(content_type='text/csv; charset=utf-8')
-    response['Content-Disposition'] = f'attachment; filename="{filename}.csv"'
-    
-    # Add BOM for proper Excel UTF-8 support
-    response.write('\ufeff')
-    writer = csv.writer(response)
-
-    # Write metadata
-    writer.writerow([f'# Export Generated: {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'])
-    writer.writerow([f'# Data Type: {data_type.replace("_", " ").title()}'])
-    writer.writerow([f'# Total Records: {len(data) if hasattr(data, "__len__") else "Unknown"}'])
-    writer.writerow([])
-
-    if data_type == 'event_proposals':
-        headers = [
-            'ID', 'Title', 'Organization', 'Organization Type', 'Status', 'Submitted By',
-            'Submitted By Email', 'Date Submitted', 'Last Updated', 'Academic Year',
-            'Venue', 'Event Focus Type', 'Target Audience', 'Faculty In-Charges',
-            'Student Coordinators', 'Needs Finance Approval', 'Is Big Event',
-            'Committees', 'Event Date/Time', 'Fest Fee Participants'
-        ]
-        writer.writerow(headers)
-
-        for item in data:
-            faculty_names = ', '.join([f.get_full_name() or f.username for f in item.faculty_incharges.all()])
-            writer.writerow([
-                item.id,
-                item.event_title or 'N/A',
-                item.organization.name if item.organization else 'N/A',
-                item.organization.org_type.name if item.organization and item.organization.org_type else 'N/A',
-                item.get_status_display() if hasattr(item, 'get_status_display') else item.status,
-                item.submitted_by.get_full_name() if item.submitted_by else 'N/A',
-                item.submitted_by.email if item.submitted_by else 'N/A',
-                item.created_at.strftime('%Y-%m-%d %H:%M') if item.created_at else 'N/A',
-                item.updated_at.strftime('%Y-%m-%d %H:%M') if item.updated_at else 'N/A',
-                item.academic_year or 'N/A',
-                item.venue or 'N/A',
-                item.event_focus_type or 'N/A',
-                item.target_audience or 'N/A',
-                faculty_names or 'N/A',
-                item.student_coordinators or 'N/A',
-                'Yes' if getattr(item, 'needs_finance_approval', False) else 'No',
-                'Yes' if getattr(item, 'is_big_event', False) else 'No',
-                getattr(item, 'committees', '') or 'N/A',
-                item.event_datetime.strftime('%Y-%m-%d %H:%M') if hasattr(item, 'event_datetime') and item.event_datetime else 'N/A',
-                getattr(item, 'fest_fee_participants', '') or 'N/A'
-            ])
-
-    elif data_type == 'organizations':
-        headers = [
-            'ID', 'Name', 'Organization Type', 'Parent Organization', 'Is Active',
-            'Created At', 'Role Assignments Count'
-        ]
-        writer.writerow(headers)
-
-        for item in data:
-            role_count = item.role_assignments.count() if hasattr(item, 'role_assignments') else 0
-            writer.writerow([
-                item.id,
-                item.name,
-                item.org_type.name if item.org_type else 'N/A',
-                item.parent.name if item.parent else 'N/A',
-                'Yes' if item.is_active else 'No',
-                getattr(item, 'created_at', timezone.now()).strftime('%Y-%m-%d %H:%M'),
-                role_count
-            ])
-
-    elif data_type == 'users':
-        headers = [
-            'ID', 'Username', 'First Name', 'Last Name', 'Email', 'Is Active',
-            'Date Joined', 'Last Login', 'Roles', 'Organizations'
-        ]
-        writer.writerow(headers)
-
-        for item in data:
-            roles = [ra.role.name for ra in item.role_assignments.all()]
-            organizations = [ra.organization.name for ra in item.role_assignments.all()]
-            writer.writerow([
-                item.id,
-                item.username,
-                item.first_name or 'N/A',
-                item.last_name or 'N/A',
-                item.email or 'N/A',
-                'Yes' if item.is_active else 'No',
-                item.date_joined.strftime('%Y-%m-%d %H:%M'),
-                item.last_login.strftime('%Y-%m-%d %H:%M') if item.last_login else 'Never',
-                ', '.join(roles) or 'No roles',
-                ', '.join(organizations) or 'No organizations'
-            ])
-
-    elif data_type == 'reports':
-        headers = [
-            'ID', 'Title', 'Description', 'Organization', 'Status', 'Report Type',
-            'Submitted By', 'Created At', 'Updated At'
-        ]
-        writer.writerow(headers)
-
-        for item in data:
-            writer.writerow([
-                item.id,
-                item.title,
-                (item.description[:100] + '...' if len(item.description) > 100 else item.description) if hasattr(item, 'description') and item.description else 'N/A',
-                item.organization.name if item.organization else 'N/A',
-                item.get_status_display() if hasattr(item, 'get_status_display') else getattr(item, 'status', 'N/A'),
-                getattr(item, 'report_type', 'N/A') or 'N/A',
-                item.submitted_by.get_full_name() if item.submitted_by else 'N/A',
-                item.created_at.strftime('%Y-%m-%d %H:%M') if item.created_at else 'N/A',
-                item.updated_at.strftime('%Y-%m-%d %H:%M') if hasattr(item, 'updated_at') and item.updated_at else 'N/A'
-            ])
-
-    else:  # Mixed data
-        headers = [
-            'Data Type', 'Name', 'Status', 'Organization', 'Date', 'User'
-        ]
-        writer.writerow(headers)
-
-        for item in data:
-            writer.writerow([
-                item['data_type'].replace('_', ' ').title(),
-                item['display_name'],
-                item['display_status_text'],
-                item['display_organization'],
-                item['display_date'],
-                item['display_user']
-            ])
-
-    return response
-
-def export_to_excel(data, data_type, filename, filters):
-    """Export data to Excel format with formatting"""
-    wb = Workbook()
-    ws = wb.active
-    ws.title = data_type.replace('_', ' ').title()[:31]  # Excel sheet name limit
-
-    # Header styling
-    header_font = Font(bold=True, color='FFFFFF')
-    header_fill = PatternFill(start_color='4472C4', end_color='4472C4', fill_type='solid')
-    header_alignment = Alignment(horizontal='center', vertical='center')
-
-    # Write metadata
-    ws.append([f"Export Generated: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}"])
-    ws.append([f"Data Type: {data_type.replace('_', ' ').title()}"])
-    ws.append([f"Total Records: {len(data) if hasattr(data, '__len__') else 'Unknown'}"])
-    ws.append([])
-
-    start_row = 5
-
-    if data_type == 'event_proposals':
-        headers = [
-            'ID', 'Title', 'Organization', 'Organization Type', 'Status', 'Submitted By',
-            'Submitted By Email', 'Date Submitted', 'Last Updated', 'Academic Year',
-            'Venue', 'Event Focus Type', 'Target Audience', 'Faculty In-Charges',
-            'Student Coordinators', 'Needs Finance Approval', 'Is Big Event',
-            'Committees', 'Event Date/Time', 'Fest Fee Participants'
-        ]
-        ws.append(headers)
-
-        # Apply header formatting
-        for cell in ws[start_row]:
-            cell.font = header_font
-            cell.fill = header_fill
-            cell.alignment = header_alignment
-
-        for row_num, item in enumerate(data, start=start_row + 1):
-            faculty_names = ', '.join([f.get_full_name() or f.username for f in item.faculty_incharges.all()])
-            row_data = [
-                item.id,
-                item.event_title or 'N/A',
-                item.organization.name if item.organization else 'N/A',
-                item.organization.org_type.name if item.organization and item.organization.org_type else 'N/A',
-                item.get_status_display() if hasattr(item, 'get_status_display') else item.status,
-                item.submitted_by.get_full_name() if item.submitted_by else 'N/A',
-                item.submitted_by.email if item.submitted_by else 'N/A',
-                item.created_at if item.created_at else 'N/A',
-                item.updated_at if item.updated_at else 'N/A',
-                item.academic_year or 'N/A',
-                item.venue or 'N/A',
-                item.event_focus_type or 'N/A',
-                item.target_audience or 'N/A',
-                faculty_names or 'N/A',
-                item.student_coordinators or 'N/A',
-                'Yes' if getattr(item, 'needs_finance_approval', False) else 'No',
-                'Yes' if getattr(item, 'is_big_event', False) else 'No',
-                getattr(item, 'committees', '') or 'N/A',
-                item.event_datetime if hasattr(item, 'event_datetime') and item.event_datetime else 'N/A',
-                getattr(item, 'fest_fee_participants', '') or 'N/A'
-            ]
-            ws.append(row_data)
-
-    # Auto-adjust column widths
-    for column in ws.columns:
-        max_length = 0
-        column_letter = get_column_letter(column[0].column)
-        for cell in column:
-            try:
-                if len(str(cell.value)) > max_length:
-                    max_length = len(str(cell.value))
-            except:
-                pass
-        adjusted_width = min(max_length + 2, 50)
-        ws.column_dimensions[column_letter].width = adjusted_width
-
-    response = HttpResponse(
-        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
-    response['Content-Disposition'] = f'attachment; filename="{filename}.xlsx"'
-    wb.save(response)
-    return response
-
-def export_to_pdf(data, data_type, filename, filters):
-    """Export data to PDF format"""
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="{filename}.pdf"'
-
-    doc = SimpleDocTemplate(response, pagesize=landscape(A4), topMargin=0.5*inch)
-    styles = getSampleStyleSheet()
-    elements = []
-
-    # Title
-    title_style = ParagraphStyle(
-        'CustomTitle',
-        parent=styles['Heading1'],
-        fontSize=16,
-        spaceAfter=20,
-        alignment=1  # Center alignment
-    )
-    
-    elements.append(Paragraph(f"Data Export Report - {data_type.replace('_', ' ').title()}", title_style))
-    elements.append(Paragraph(f"Generated: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
-    elements.append(Spacer(1, 20))
-
-    if data_type == 'event_proposals':
-        table_data = [['Title', 'Organization', 'Status', 'Submitted By', 'Date', 'Academic Year', 'Venue']]
-
-        for item in data:
-            table_data.append([
-                (item.event_title or 'N/A')[:30] + ('...' if len(item.event_title or '') > 30 else ''),
-                (item.organization.name if item.organization else 'N/A')[:20] + ('...' if len(item.organization.name if item.organization else '') > 20 else ''),
-                item.get_status_display() if hasattr(item, 'get_status_display') else item.status,
-                (item.submitted_by.get_full_name() if item.submitted_by else 'N/A')[:20],
-                item.created_at.strftime('%Y-%m-%d') if item.created_at else 'N/A',
-                item.academic_year or 'N/A',
-                (item.venue or 'N/A')[:20] + ('...' if len(item.venue or '') > 20 else '')
-            ])
-
-    elif data_type == 'organizations':
-        table_data = [['Name', 'Type', 'Parent', 'Active', 'Role Assignments']]
-
-        for item in data:
-            role_count = item.role_assignments.count() if hasattr(item, 'role_assignments') else 0
-            table_data.append([
-                item.name[:30] + ('...' if len(item.name) > 30 else ''),
-                item.org_type.name if item.org_type else 'N/A',
-                item.parent.name[:20] if item.parent else 'N/A',
-                'Yes' if item.is_active else 'No',
-                str(role_count)
-            ])
-
-    elif data_type == 'users':
-        table_data = [['Name', 'Username', 'Email', 'Active', 'Date Joined', 'Roles']]
-
-        for item in data:
-            roles = [ra.role.name for ra in item.role_assignments.all()[:2]]  # Limit to 2 roles for PDF
-            table_data.append([
-                (item.get_full_name() or item.username)[:25],
-                item.username[:20],
-                item.email[:25] if item.email else 'N/A',
-                'Yes' if item.is_active else 'No',
-                item.date_joined.strftime('%Y-%m-%d'),
-                ', '.join(roles)[:30] if roles else 'No roles'
-            ])
-
-    else:  # Mixed or other data types
-        table_data = [['Type', 'Name', 'Status', 'Organization', 'Date']]
-
-        for item in data:
-            table_data.append([
-                item['data_type'].replace('_', ' ').title(),
-                item['display_name'][:30],
-                item['display_status_text'],
-                item['display_organization'][:25],
-                item['display_date']
-            ])
-
-    # Create and style the table
-    table = Table(table_data, repeatRows=1)
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 8),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('TOPPADDING', (0, 0), (-1, 0), 12),
-        ('GRID', (0, 0), (-1, -1), 0.25, colors.black),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-    ]))
-    
-    elements.append(table)
-    doc.build(elements)
-    return response
-
-# API endpoints for AJAX requests
-@login_required
-def api_organizations_by_type(request):
-    """API endpoint to get organizations filtered by type"""
-    org_type_id = request.GET.get('org_type', '')
-    queryset = Organization.objects.filter(is_active=True).select_related('org_type', 'parent')
-
-    if org_type_id:
-        try:
-            queryset = queryset.filter(org_type_id=int(org_type_id))
-        except (ValueError, TypeError):
-            pass
-
-    organizations = []
-    for org in queryset.order_by('name')[:100]:  # Limit results for performance
-        organizations.append({
-            'id': org.id,
-            'name': org.name,
-            'org_type__name': org.org_type.name if org.org_type else 'N/A',
-        })
-
-    return JsonResponse(organizations, safe=False)
 
 @login_required
-def api_filter_counts(request):
-    """API endpoint to get real-time filter counts"""
-    try:
-        filters = {}
-        for key in request.GET:
-            if key == 'status':
-                filters[key] = request.GET.getlist(key)
-            else:
-                filters[key] = request.GET.get(key)
-
-        counts = get_comprehensive_filter_counts(filters)
-        return JsonResponse({
-            **counts,
-            'last_updated': timezone.now().isoformat(),
-            'success': True
-        })
-    except Exception as e:
-        return JsonResponse({
-            'error': str(e),
-            'success': False
-        }, status=500)
-
-@login_required
-def api_users_by_role(request):
-    """API endpoint to get users filtered by role"""
-    role_id = request.GET.get('role', '')
-    queryset = User.objects.filter(is_active=True).prefetch_related('role_assignments__role')
-
-    if role_id:
-        try:
-            queryset = queryset.filter(role_assignments__role_id=int(role_id)).distinct()
-        except (ValueError, TypeError):
-            pass
-
-    users = []
-    for user in queryset.order_by('first_name', 'last_name', 'username')[:100]:
-        users.append({
-            'id': user.id,
-            'name': user.get_full_name() or user.username,
-            'email': user.email or '',
-        })
-
-    return JsonResponse(users, safe=False)
-
-@login_required
-def api_search_suggestions(request):
-    """API endpoint for search suggestions based on data type"""
-    data_type = request.GET.get('data_type', '')
-    query = request.GET.get('q', '').strip()
+@user_passes_test(is_admin)
+def filter_suggestions_api(request):
+    """API endpoint to get filter suggestions"""
+    
+    # Get dynamic organization types
+    org_types = OrganizationType.objects.filter(is_active=True)
+    organizations = Organization.objects.filter(is_active=True).select_related('org_type')
+    roles = OrganizationRole.objects.filter(is_active=True).select_related('organization')
     
     suggestions = []
     
-    if len(query) >= 2:  # Only search if query is at least 2 characters
-        if data_type == 'event_proposals':
-            # Search in event titles
-            events = EventProposal.objects.filter(
-                event_title__icontains=query
-            ).values_list('event_title', flat=True)[:10]
-            suggestions.extend([{'type': 'event_title', 'value': title} for title in events if title])
-            
-        elif data_type == 'organizations':
-            # Search in organization names
-            orgs = Organization.objects.filter(
-                name__icontains=query,
-                is_active=True
-            ).values_list('name', flat=True)[:10]
-            suggestions.extend([{'type': 'organization', 'value': name} for name in orgs])
-            
-        elif data_type == 'users':
-            # Search in user names and usernames
-            users = User.objects.filter(
-                Q(first_name__icontains=query) |
-                Q(last_name__icontains=query) |
-                Q(username__icontains=query),
-                is_active=True
-            ).values('first_name', 'last_name', 'username')[:10]
-            
-            for user in users:
-                full_name = f"{user['first_name']} {user['last_name']}".strip()
-                suggestions.append({
-                    'type': 'user', 
-                    'value': full_name if full_name else user['username']
-                })
+    # User Profile Filters
+    profile_choices = Profile.ROLE_CHOICES
+    for choice_value, choice_display in profile_choices:
+        suggestions.append({
+            'category': 'Users',
+            'label': f'{choice_display}s',
+            'filter': f'profile_role:{choice_value}',
+            'description': f'All users with {choice_display} role'
+        })
     
-    return JsonResponse({'suggestions': suggestions})
+    # Organization Type Filters
+    for org_type in org_types:
+        suggestions.append({
+            'category': 'Organization Types',
+            'label': org_type.name,
+            'filter': f'organization_type:{org_type.id}',
+            'description': f'Organizations of type {org_type.name}'
+        })
+    
+    # Specific Organizations
+    for org in organizations:
+        suggestions.append({
+            'category': f'{org.org_type.name}s',
+            'label': org.name,
+            'filter': f'organization:{org.id}',
+            'description': f'{org.name} ({org.org_type.name})'
+        })
+    
+    # Organization Roles
+    for role in roles:
+        suggestions.append({
+            'category': 'Roles',
+            'label': f'{role.name} - {role.organization.name}',
+            'filter': f'organization_role:{role.id}',
+            'description': f'{role.name} role in {role.organization.name}'
+        })
+    
+    # Event Proposal Status Filters (EMT)
+    emt_status_choices = EMTEventProposal.Status.choices
+    for choice_value, choice_display in emt_status_choices:
+        suggestions.append({
+            'category': 'Event Status',
+            'label': f'{choice_display} Events',
+            'filter': f'emt_proposal_status:{choice_value}',
+            'description': f'Events with {choice_display} status'
+        })
+    
+    # Core Event Proposal Status Filters
+    core_status_choices = [
+        ('draft', 'Draft'),
+        ('submitted', 'Submitted'),
+        ('under_review', 'Under Review'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('returned', 'Returned for Revision'),
+    ]
+    for choice_value, choice_display in core_status_choices:
+        suggestions.append({
+            'category': 'Core Event Status',
+            'label': f'{choice_display} Proposals',
+            'filter': f'core_proposal_status:{choice_value}',
+            'description': f'Core proposals with {choice_display} status'
+        })
+    
+    # Report Type Filters
+    report_choices = Report.REPORT_TYPE_CHOICES
+    for choice_value, choice_display in report_choices:
+        suggestions.append({
+            'category': 'Reports',
+            'label': f'{choice_display} Reports',
+            'filter': f'report_type:{choice_value}',
+            'description': f'{choice_display} type reports'
+        })
+    
+    # Report Status Filters
+    report_status_choices = Report.STATUS_CHOICES
+    for choice_value, choice_display in report_status_choices:
+        suggestions.append({
+            'category': 'Report Status',
+            'label': f'{choice_display} Reports',
+            'filter': f'report_status:{choice_value}',
+            'description': f'Reports with {choice_display} status'
+        })
+    
+    # Special Filters
+    suggestions.extend([
+        # Active/Inactive Filters
+        {'category': 'Status', 'label': 'Active Organizations', 'filter': 'organization_active:true', 'description': 'Currently active organizations'},
+        {'category': 'Status', 'label': 'Inactive Organizations', 'filter': 'organization_active:false', 'description': 'Inactive organizations'},
+        {'category': 'Status', 'label': 'Active Roles', 'filter': 'role_active:true', 'description': 'Currently active organization roles'},
+        
+        # Event Special Filters
+        {'category': 'Event Flags', 'label': 'Big Events', 'filter': 'emt_big_event:true', 'description': 'Events marked as big events'},
+        {'category': 'Event Flags', 'label': 'Finance Approval Needed', 'filter': 'emt_finance_approval:true', 'description': 'Events requiring finance approval'},
+        {'category': 'Event Flags', 'label': 'Report Generated', 'filter': 'emt_report_generated:true', 'description': 'Events with generated reports'},
+        
+        # User Assignment Filters
+        {'category': 'Assignments', 'label': 'Users with Role Assignments', 'filter': 'has_role_assignment:true', 'description': 'Users assigned to organization roles'},
+        {'category': 'Assignments', 'label': 'Users without Role Assignments', 'filter': 'has_role_assignment:false', 'description': 'Users not assigned to any organization role'},
+        
+        # Date Range Filters
+        {'category': 'Date Range', 'label': 'This Academic Year', 'filter': 'date_range:academic_year', 'description': 'Data from current academic year'},
+        {'category': 'Date Range', 'label': 'Last 30 Days', 'filter': 'date_range:30_days', 'description': 'Data from last 30 days'},
+        {'category': 'Date Range', 'label': 'Last 7 Days', 'filter': 'date_range:7_days', 'description': 'Data from last 7 days'},
+        {'category': 'Date Range', 'label': 'This Month', 'filter': 'date_range:this_month', 'description': 'Data from current month'},
+        {'category': 'Date Range', 'label': 'This Year', 'filter': 'date_range:this_year', 'description': 'Data from current calendar year'},
+        
+        # Program Filters
+        {'category': 'Programs', 'label': 'Programs with Outcomes', 'filter': 'program_has_outcomes:true', 'description': 'Programs with defined outcomes'},
+        {'category': 'Programs', 'label': 'Programs with PSOs', 'filter': 'program_has_pso:true', 'description': 'Programs with program-specific outcomes'},
+    ])
+    
+    return JsonResponse(suggestions, safe=False)
+
+
+@csrf_exempt
+@login_required
+@user_passes_test(is_admin)
+def execute_filter_api(request):
+    """API endpoint to execute filters and return results"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST method required'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        filters = data.get('filters', [])
+        logic = data.get('logic', 'AND')
+        
+        results = process_filters(filters, logic)
+        
+        return JsonResponse({
+            'results': results,
+            'count': len(results)
+        })
+    
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def process_filters(filters, logic='AND'):
+    """Process filters and return combined results"""
+    if not filters:
+        return []
+    
+    all_results = []
+    
+    for filter_item in filters:
+        filter_type = filter_item['type']
+        filter_value = filter_item['value']
+        
+        # Process each filter type
+        if filter_type == 'profile_role':
+            results = get_users_by_profile_role(filter_value)
+        elif filter_type == 'organization_type':
+            results = get_users_by_organization_type(filter_value)
+        elif filter_type == 'organization':
+            results = get_users_by_organization(filter_value)
+        elif filter_type == 'organization_role':
+            results = get_users_by_organization_role(filter_value)
+        elif filter_type == 'emt_proposal_status':
+            results = get_emt_proposals_by_status(filter_value)
+        elif filter_type == 'core_proposal_status':
+            results = get_core_proposals_by_status(filter_value)
+        elif filter_type == 'report_type':
+            results = get_reports_by_type(filter_value)
+        elif filter_type == 'report_status':
+            results = get_reports_by_status(filter_value)
+        elif filter_type == 'organization_active':
+            results = get_organizations_by_active_status(filter_value == 'true')
+        elif filter_type == 'emt_big_event':
+            results = get_emt_events_by_big_event(filter_value == 'true')
+        elif filter_type == 'emt_finance_approval':
+            results = get_emt_events_by_finance_approval(filter_value == 'true')
+        elif filter_type == 'has_role_assignment':
+            results = get_users_by_role_assignment_status(filter_value == 'true')
+        elif filter_type == 'date_range':
+            results = get_data_by_date_range(filter_value)
+        elif filter_type == 'search':
+            results = perform_global_search(filter_value)
+        else:
+            results = []
+        
+        all_results.append(results)
+    
+    # Combine results based on logic
+    if logic == 'OR':
+        # Union of all results
+        combined_results = []
+        seen_ids = set()
+        
+        for result_set in all_results:
+            for item in result_set:
+                item_id = f"{item.get('type', '')}_{item.get('id', '')}"
+                if item_id not in seen_ids:
+                    combined_results.append(item)
+                    seen_ids.add(item_id)
+        
+        return combined_results
+    
+    else:  # AND logic
+        # Intersection of all results
+        if not all_results:
+            return []
+        
+        combined_results = all_results[0]
+        
+        for result_set in all_results[1:]:
+            # Find intersection
+            result_ids = {f"{item.get('type', '')}_{item.get('id', '')}" for item in result_set}
+            combined_results = [
+                item for item in combined_results 
+                if f"{item.get('type', '')}_{item.get('id', '')}" in result_ids
+            ]
+        
+        return combined_results
+
+
+# Filter processing functions
+def get_users_by_profile_role(role):
+    """Get users by profile role"""
+    users = User.objects.filter(profile__role=role).select_related('profile')
+    return [
+        {
+            'type': 'user',
+            'id': user.id,
+            'username': user.username,
+            'full_name': user.get_full_name(),
+            'email': user.email,
+            'role': user.profile.role if hasattr(user, 'profile') else 'N/A',
+            'date_joined': user.date_joined.strftime('%Y-%m-%d'),
+            'is_active': user.is_active
+        }
+        for user in users
+    ]
+
+
+def get_users_by_organization_type(org_type_id):
+    """Get users by organization type"""
+    users = User.objects.filter(
+        role_assignments__organization__org_type_id=org_type_id
+    ).distinct().select_related('profile')
+    
+    return [
+        {
+            'type': 'user',
+            'id': user.id,
+            'username': user.username,
+            'full_name': user.get_full_name(),
+            'email': user.email,
+            'role': user.profile.role if hasattr(user, 'profile') else 'N/A',
+            'organization_type': user.role_assignments.first().organization.org_type.name if user.role_assignments.exists() else 'N/A',
+            'date_joined': user.date_joined.strftime('%Y-%m-%d')
+        }
+        for user in users
+    ]
+
+
+def get_users_by_organization(org_id):
+    """Get users by specific organization"""
+    users = User.objects.filter(
+        role_assignments__organization_id=org_id
+    ).distinct().select_related('profile')
+    
+    return [
+        {
+            'type': 'user',
+            'id': user.id,
+            'username': user.username,
+            'full_name': user.get_full_name(),
+            'email': user.email,
+            'role': user.profile.role if hasattr(user, 'profile') else 'N/A',
+            'organization': user.role_assignments.first().organization.name if user.role_assignments.exists() else 'N/A',
+            'date_joined': user.date_joined.strftime('%Y-%m-%d')
+        }
+        for user in users
+    ]
+
+
+def get_users_by_organization_role(role_id):
+    """Get users by organization role"""
+    users = User.objects.filter(
+        role_assignments__role_id=role_id
+    ).distinct().select_related('profile')
+    
+    return [
+        {
+            'type': 'user',
+            'id': user.id,
+            'username': user.username,
+            'full_name': user.get_full_name(),
+            'email': user.email,
+            'profile_role': user.profile.role if hasattr(user, 'profile') else 'N/A',
+            'organization_role': user.role_assignments.first().role.name if user.role_assignments.exists() else 'N/A',
+            'organization': user.role_assignments.first().organization.name if user.role_assignments.exists() else 'N/A',
+            'date_joined': user.date_joined.strftime('%Y-%m-%d')
+        }
+        for user in users
+    ]
+
+
+def get_emt_proposals_by_status(status):
+    """Get EMT event proposals by status"""
+    proposals = EMTEventProposal.objects.filter(status=status).select_related('submitted_by', 'organization')
+    
+    return [
+        {
+            'type': 'emt_proposal',
+            'id': proposal.id,
+            'title': proposal.event_title or 'Untitled',
+            'status': proposal.get_status_display(),
+            'submitted_by': proposal.submitted_by.get_full_name() or proposal.submitted_by.username,
+            'organization': proposal.organization.name if proposal.organization else 'N/A',
+            'start_date': proposal.event_start_date.strftime('%Y-%m-%d') if proposal.event_start_date else 'N/A',
+            'created_at': proposal.created_at.strftime('%Y-%m-%d %H:%M'),
+            'needs_finance_approval': proposal.needs_finance_approval,
+            'is_big_event': proposal.is_big_event
+        }
+        for proposal in proposals
+    ]
+
+
+def get_core_proposals_by_status(status):
+    """Get core event proposals by status"""
+    proposals = EventProposal.objects.filter(status=status).select_related('submitted_by', 'organization')
+    
+    return [
+        {
+            'type': 'core_proposal',
+            'id': proposal.id,
+            'title': proposal.title,
+            'status': proposal.get_status_display(),
+            'submitted_by': proposal.submitted_by.get_full_name() or proposal.submitted_by.username,
+            'organization': proposal.organization.name if proposal.organization else 'N/A',
+            'date_submitted': proposal.date_submitted.strftime('%Y-%m-%d %H:%M'),
+            'user_type': proposal.user_type
+        }
+        for proposal in proposals
+    ]
+
+
+def get_reports_by_type(report_type):
+    """Get reports by type"""
+    reports = Report.objects.filter(report_type=report_type).select_related('submitted_by', 'organization')
+    
+    return [
+        {
+            'type': 'report',
+            'id': report.id,
+            'title': report.title,
+            'report_type': report.get_report_type_display(),
+            'status': report.get_status_display(),
+            'submitted_by': report.submitted_by.get_full_name() if report.submitted_by else 'N/A',
+            'organization': report.organization.name if report.organization else 'N/A',
+            'date_created': getattr(report, 'date_submitted', getattr(report, 'created_at', 'N/A')).strftime('%Y-%m-%d %H:%M') if getattr(report, 'date_submitted', getattr(report, 'created_at', None)) else 'N/A'
+        }
+        for report in reports
+    ]
+
+
+def get_reports_by_status(status):
+    """Get reports by status"""
+    reports = Report.objects.filter(status=status).select_related('submitted_by', 'organization')
+    
+    return [
+        {
+            'type': 'report',
+            'id': report.id,
+            'title': report.title,
+            'report_type': report.get_report_type_display(),
+            'status': report.get_status_display(),
+            'submitted_by': report.submitted_by.get_full_name() if report.submitted_by else 'N/A',
+            'organization': report.organization.name if report.organization else 'N/A',
+            'date_created': getattr(report, 'date_submitted', getattr(report, 'created_at', 'N/A')).strftime('%Y-%m-%d %H:%M') if getattr(report, 'date_submitted', getattr(report, 'created_at', None)) else 'N/A'
+        }
+        for report in reports
+    ]
+
+
+def get_organizations_by_active_status(is_active):
+    """Get organizations by active status"""
+    organizations = Organization.objects.filter(is_active=is_active).select_related('org_type')
+    
+    return [
+        {
+            'type': 'organization',
+            'id': org.id,
+            'name': org.name,
+            'org_type': org.org_type.name,
+            'is_active': org.is_active,
+            'parent': org.parent.name if org.parent else 'N/A'
+        }
+        for org in organizations
+    ]
+
+
+def get_emt_events_by_big_event(is_big):
+    """Get EMT events by big event flag"""
+    proposals = EMTEventProposal.objects.filter(is_big_event=is_big).select_related('submitted_by', 'organization')
+    
+    return [
+        {
+            'type': 'emt_proposal',
+            'id': proposal.id,
+            'title': proposal.event_title or 'Untitled',
+            'status': proposal.get_status_display(),
+            'submitted_by': proposal.submitted_by.get_full_name() or proposal.submitted_by.username,
+            'organization': proposal.organization.name if proposal.organization else 'N/A',
+            'is_big_event': proposal.is_big_event,
+            'needs_finance_approval': proposal.needs_finance_approval,
+            'created_at': proposal.created_at.strftime('%Y-%m-%d %H:%M')
+        }
+        for proposal in proposals
+    ]
+
+
+def get_emt_events_by_finance_approval(needs_approval):
+    """Get EMT events by finance approval requirement"""
+    proposals = EMTEventProposal.objects.filter(needs_finance_approval=needs_approval).select_related('submitted_by', 'organization')
+    
+    return [
+        {
+            'type': 'emt_proposal',
+            'id': proposal.id,
+            'title': proposal.event_title or 'Untitled',
+            'status': proposal.get_status_display(),
+            'submitted_by': proposal.submitted_by.get_full_name() or proposal.submitted_by.username,
+            'organization': proposal.organization.name if proposal.organization else 'N/A',
+            'needs_finance_approval': proposal.needs_finance_approval,
+            'is_big_event': proposal.is_big_event,
+            'created_at': proposal.created_at.strftime('%Y-%m-%d %H:%M')
+        }
+        for proposal in proposals
+    ]
+
+
+def get_users_by_role_assignment_status(has_assignment):
+    """Get users by role assignment status"""
+    if has_assignment:
+        users = User.objects.filter(role_assignments__isnull=False).distinct().select_related('profile')
+    else:
+        users = User.objects.filter(role_assignments__isnull=True).select_related('profile')
+    
+    return [
+        {
+            'type': 'user',
+            'id': user.id,
+            'username': user.username,
+            'full_name': user.get_full_name(),
+            'email': user.email,
+            'role': user.profile.role if hasattr(user, 'profile') else 'N/A',
+            'has_role_assignment': user.role_assignments.exists(),
+            'date_joined': user.date_joined.strftime('%Y-%m-%d')
+        }
+        for user in users
+    ]
+
+
+def get_data_by_date_range(date_range):
+    """Get data by date range"""
+    today = timezone.now().date()
+    
+    if date_range == '7_days':
+        start_date = today - timedelta(days=7)
+    elif date_range == '30_days':
+        start_date = today - timedelta(days=30)
+    elif date_range == 'this_month':
+        start_date = today.replace(day=1)
+    elif date_range == 'this_year':
+        start_date = today.replace(month=1, day=1)
+    elif date_range == 'academic_year':
+        # Assuming academic year starts in June
+        if today.month >= 6:
+            start_date = today.replace(month=6, day=1)
+        else:
+            start_date = today.replace(year=today.year-1, month=6, day=1)
+    else:
+        start_date = today - timedelta(days=30)  # Default to 30 days
+    
+    # Get various data types within date range
+    results = []
+    
+    # EMT Proposals
+    emt_proposals = EMTEventProposal.objects.filter(
+        created_at__date__gte=start_date
+    ).select_related('submitted_by', 'organization')
+    
+    for proposal in emt_proposals:
+        results.append({
+            'type': 'emt_proposal',
+            'id': proposal.id,
+            'title': proposal.event_title or 'Untitled',
+            'status': proposal.get_status_display(),
+            'submitted_by': proposal.submitted_by.get_full_name() or proposal.submitted_by.username,
+            'organization': proposal.organization.name if proposal.organization else 'N/A',
+            'created_at': proposal.created_at.strftime('%Y-%m-%d %H:%M')
+        })
+    
+    # Core Proposals
+    core_proposals = EventProposal.objects.filter(
+        date_submitted__date__gte=start_date
+    ).select_related('submitted_by', 'organization')
+    
+    for proposal in core_proposals:
+        results.append({
+            'type': 'core_proposal',
+            'id': proposal.id,
+            'title': proposal.title,
+            'status': proposal.get_status_display(),
+            'submitted_by': proposal.submitted_by.get_full_name() or proposal.submitted_by.username,
+            'organization': proposal.organization.name if proposal.organization else 'N/A',
+            'date_submitted': proposal.date_submitted.strftime('%Y-%m-%d %H:%M')
+        })
+    
+    # Reports - Use appropriate date field
+    try:
+        # Try to determine the correct date field for Report model
+        report_date_field = 'date_submitted'
+        # Check if the field exists by attempting a simple query
+        Report.objects.filter(**{f'{report_date_field}__isnull': False}).exists()
+    except:
+        try:
+            report_date_field = 'created_at'
+            Report.objects.filter(**{f'{report_date_field}__isnull': False}).exists()
+        except:
+            report_date_field = None
+    
+    if report_date_field:
+        reports = Report.objects.filter(
+            **{f'{report_date_field}__date__gte': start_date}
+        ).select_related('submitted_by', 'organization')
+        
+        for report in reports:
+            date_value = getattr(report, report_date_field, None)
+            results.append({
+                'type': 'report',
+                'id': report.id,
+                'title': report.title,
+                'report_type': report.get_report_type_display(),
+                'status': report.get_status_display(),
+                'submitted_by': report.submitted_by.get_full_name() if report.submitted_by else 'N/A',
+                'organization': report.organization.name if report.organization else 'N/A',
+                'date_created': date_value.strftime('%Y-%m-%d %H:%M') if date_value else 'N/A'
+            })
+    
+    # New Users
+    new_users = User.objects.filter(
+        date_joined__date__gte=start_date
+    ).select_related('profile')
+    
+    for user in new_users:
+        results.append({
+            'type': 'user',
+            'id': user.id,
+            'username': user.username,
+            'full_name': user.get_full_name(),
+            'email': user.email,
+            'role': user.profile.role if hasattr(user, 'profile') else 'N/A',
+            'date_joined': user.date_joined.strftime('%Y-%m-%d %H:%M')
+        })
+    
+    return results
+
+
+def perform_global_search(query):
+    """Perform global search across multiple models"""
+    results = []
+    query = query.lower()
+    
+    # Search Users
+    users = User.objects.filter(
+        Q(username__icontains=query) |
+        Q(first_name__icontains=query) |
+        Q(last_name__icontains=query) |
+        Q(email__icontains=query)
+    ).select_related('profile')[:20]
+    
+    for user in users:
+        results.append({
+            'type': 'user',
+            'id': user.id,
+            'username': user.username,
+            'full_name': user.get_full_name(),
+            'email': user.email,
+            'role': user.profile.role if hasattr(user, 'profile') else 'N/A',
+            'date_joined': user.date_joined.strftime('%Y-%m-%d')
+        })
+    
+    # Search Organizations
+    organizations = Organization.objects.filter(
+        name__icontains=query
+    ).select_related('org_type')[:20]
+    
+    for org in organizations:
+        results.append({
+            'type': 'organization',
+            'id': org.id,
+            'name': org.name,
+            'org_type': org.org_type.name,
+            'is_active': org.is_active
+        })
+    
+    # Search EMT Proposals
+    emt_proposals = EMTEventProposal.objects.filter(
+        event_title__icontains=query
+    ).select_related('submitted_by', 'organization')[:20]
+    
+    for proposal in emt_proposals:
+        results.append({
+            'type': 'emt_proposal',
+            'id': proposal.id,
+            'title': proposal.event_title or 'Untitled',
+            'status': proposal.get_status_display(),
+            'submitted_by': proposal.submitted_by.get_full_name() or proposal.submitted_by.username,
+            'organization': proposal.organization.name if proposal.organization else 'N/A',
+            'created_at': proposal.created_at.strftime('%Y-%m-%d %H:%M')
+        })
+    
+    # Search Core Proposals
+    core_proposals = EventProposal.objects.filter(
+        title__icontains=query
+    ).select_related('submitted_by', 'organization')[:20]
+    
+    for proposal in core_proposals:
+        results.append({
+            'type': 'core_proposal',
+            'id': proposal.id,
+            'title': proposal.title,
+            'status': proposal.get_status_display(),
+            'submitted_by': proposal.submitted_by.get_full_name() or proposal.submitted_by.username,
+            'organization': proposal.organization.name if proposal.organization else 'N/A',
+            'date_submitted': proposal.date_submitted.strftime('%Y-%m-%d %H:%M')
+        })
+    
+    # Search Reports
+    reports = Report.objects.filter(
+        title__icontains=query
+    ).select_related('submitted_by', 'organization')[:20]
+    
+    for report in reports:
+        # Get the appropriate date field
+        date_field = getattr(report, 'date_submitted', getattr(report, 'created_at', None))
+        results.append({
+            'type': 'report',
+            'id': report.id,
+            'title': report.title,
+            'report_type': report.get_report_type_display(),
+            'status': report.get_status_display(),
+            'submitted_by': report.submitted_by.get_full_name() if report.submitted_by else 'N/A',
+            'organization': report.organization.name if report.organization else 'N/A',
+            'date_created': date_field.strftime('%Y-%m-%d %H:%M') if date_field else 'N/A'
+        })
+    
+    return results
+
+
+@csrf_exempt
+@login_required
+@user_passes_test(is_admin)
+def export_data_csv(request):
+    """Export filtered data as CSV"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST method required'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        filters = data.get('filters', [])
+        logic = data.get('logic', 'AND')
+        
+        results = process_filters(filters, logic)
+        
+        # Create CSV response
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+        
+        if not results:
+            response.write('No data found')
+            return response
+        
+        # Get all unique field names
+        fieldnames = set()
+        for item in results:
+            fieldnames.update(item.keys())
+        fieldnames = sorted(list(fieldnames))
+        
+        writer = csv.DictWriter(response, fieldnames=fieldnames)
+        writer.writeheader()
+        
+        for item in results:
+            # Ensure all fields exist in the row
+            row = {field: item.get(field, '') for field in fieldnames}
+            writer.writerow(row)
+        
+        return response
+    
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required
+@user_passes_test(is_admin)
+def export_data_excel(request):
+    """Export filtered data as Excel"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST method required'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        filters = data.get('filters', [])
+        logic = data.get('logic', 'AND')
+        
+        results = process_filters(filters, logic)
+        
+        # Create Excel file in memory
+        output = BytesIO()
+        workbook = xlsxwriter.Workbook(output, {'in_memory': True})
+        
+        if not results:
+            worksheet = workbook.add_worksheet('No Data')
+            worksheet.write('A1', 'No data found for the selected filters')
+            workbook.close()
+            output.seek(0)
+            
+            response = HttpResponse(
+                output.getvalue(),
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            response['Content-Disposition'] = f'attachment; filename="export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx"'
+            return response
+        
+        # Group results by type
+        grouped_results = {}
+        for item in results:
+            item_type = item.get('type', 'Unknown')
+            if item_type not in grouped_results:
+                grouped_results[item_type] = []
+            grouped_results[item_type].append(item)
+        
+        # Create worksheets for each data type
+        header_format = workbook.add_format({
+            'bold': True,
+            'bg_color': '#D7E4BC',
+            'border': 1
+        })
+        
+        cell_format = workbook.add_format({'border': 1})
+        
+        for data_type, items in grouped_results.items():
+            worksheet_name = data_type.replace('_', ' ').title()[:31]  # Excel sheet name limit
+            worksheet = workbook.add_worksheet(worksheet_name)
+            
+            if not items:
+                continue
+            
+            # Get all unique field names for this type
+            fieldnames = set()
+            for item in items:
+                fieldnames.update(item.keys())
+            fieldnames = sorted([f for f in fieldnames if f != 'type'])
+            
+            # Write headers
+            for col, header in enumerate(fieldnames):
+                worksheet.write(0, col, header.replace('_', ' ').title(), header_format)
+                worksheet.set_column(col, col, 15)  # Set column width
+            
+            # Write data
+            for row, item in enumerate(items, start=1):
+                for col, field in enumerate(fieldnames):
+                    value = item.get(field, '')
+                    worksheet.write(row, col, str(value), cell_format)
+        
+        # Create summary worksheet
+        summary_worksheet = workbook.add_worksheet('Summary')
+        summary_worksheet.write('A1', 'Export Summary', header_format)
+        summary_worksheet.write('A3', 'Generated:', cell_format)
+        summary_worksheet.write('B3', datetime.now().strftime('%Y-%m-%d %H:%M:%S'), cell_format)
+        summary_worksheet.write('A4', 'Total Records:', cell_format)
+        summary_worksheet.write('B4', len(results), cell_format)
+        summary_worksheet.write('A5', 'Filter Logic:', cell_format)
+        summary_worksheet.write('B5', logic, cell_format)
+        
+        row = 7
+        summary_worksheet.write(f'A{row}', 'Applied Filters:', header_format)
+        row += 1
+        
+        for filter_item in filters:
+            summary_worksheet.write(f'A{row}', f"• {filter_item.get('label', 'Unknown Filter')}", cell_format)
+            row += 1
+        
+        row += 1
+        summary_worksheet.write(f'A{row}', 'Data Types:', header_format)
+        row += 1
+        
+        for data_type, items in grouped_results.items():
+            summary_worksheet.write(f'A{row}', f"• {data_type.replace('_', ' ').title()}: {len(items)} records", cell_format)
+            row += 1
+        
+        # Set column widths for summary
+        summary_worksheet.set_column(0, 0, 20)
+        summary_worksheet.set_column(1, 1, 30)
+        
+        workbook.close()
+        output.seek(0)
+        
+        response = HttpResponse(
+            output.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx"'
+        
+        return response
+    
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@user_passes_test(is_admin)
+def search_suggestions_api(request):
+    """API endpoint to provide smart search suggestions"""
+    query = request.GET.get('q', '').lower()
+    
+    if not query or len(query) < 2:
+        return JsonResponse([], safe=False)
+    
+    suggestions = []
+    
+    # Get all filter suggestions
+    all_filters = filter_suggestions_api(request)
+    if isinstance(all_filters, JsonResponse):
+        filter_data = json.loads(all_filters.content)
+        
+        # Search through filter labels and descriptions
+        for filter_item in filter_data:
+            label = filter_item['label'].lower()
+            description = filter_item['description'].lower()
+            
+            if query in label or query in description:
+                # Parse filter string to get type and value
+                filter_parts = filter_item['filter'].split(':', 1)
+                if len(filter_parts) == 2:
+                    suggestions.append({
+                        'label': filter_item['label'],
+                        'description': filter_item['description'],
+                        'category': filter_item['category'],
+                        'type': filter_parts[0],
+                        'value': filter_parts[1],
+                        'filter': filter_item['filter']
+                    })
+    
+    # Add global search option
+    suggestions.append({
+        'label': f'Search for "{query}"',
+        'description': f'Global search across all data for "{query}"',
+        'category': 'Search',
+        'type': 'search',
+        'value': query,
+        'filter': f'search:{query}'
+    })
+    
+    # Limit to top 10 suggestions
+    return JsonResponse(suggestions[:10], safe=False)
+
+
+@login_required
+@user_passes_test(is_admin)
+def get_filter_counts(request):
+    """API endpoint to get counts for different filter types"""
+    counts = {}
+    
+    try:
+        # User counts by role
+        profile_counts = {}
+        if hasattr(Profile, 'ROLE_CHOICES'):
+            for choice_value, choice_display in Profile.ROLE_CHOICES:
+                count = User.objects.filter(profile__role=choice_value).count()
+                profile_counts[choice_display] = count
+        counts['users_by_role'] = profile_counts
+        
+        # Organization counts
+        org_type_counts = {}
+        org_types = OrganizationType.objects.filter(is_active=True)
+        for org_type in org_types:
+            count = Organization.objects.filter(org_type=org_type, is_active=True).count()
+            org_type_counts[org_type.name] = count
+        counts['organizations_by_type'] = org_type_counts
+        
+        # Event proposal counts
+        emt_status_counts = {}
+        if hasattr(EMTEventProposal, 'Status') and hasattr(EMTEventProposal.Status, 'choices'):
+            for choice_value, choice_display in EMTEventProposal.Status.choices:
+                count = EMTEventProposal.objects.filter(status=choice_value).count()
+                emt_status_counts[choice_display] = count
+        counts['emt_proposals_by_status'] = emt_status_counts
+        
+        # Report counts
+        report_type_counts = {}
+        if hasattr(Report, 'REPORT_TYPE_CHOICES'):
+            for choice_value, choice_display in Report.REPORT_TYPE_CHOICES:
+                count = Report.objects.filter(report_type=choice_value).count()
+                report_type_counts[choice_display] = count
+        counts['reports_by_type'] = report_type_counts
+        
+        # Total counts
+        counts['totals'] = {
+            'users': User.objects.count(),
+            'organizations': Organization.objects.count(),
+            'emt_proposals': EMTEventProposal.objects.count(),
+            'core_proposals': EventProposal.objects.count(),
+            'reports': Report.objects.count(),
+        }
+        
+        return JsonResponse(counts)
+    
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+# Additional helper functions for advanced filtering
+
+def get_programs_with_outcomes(has_outcomes):
+    """Get programs based on whether they have outcomes"""
+    if has_outcomes:
+        programs = Program.objects.filter(programoutcome__isnull=False).distinct()
+    else:
+        programs = Program.objects.filter(programoutcome__isnull=True)
+    
+    return [
+        {
+            'type': 'program',
+            'id': program.id,
+            'name': program.name,
+            'code': program.code if hasattr(program, 'code') else 'N/A',
+            'has_outcomes': program.programoutcome_set.exists()
+        }
+        for program in programs
+    ]
+
+
+def get_programs_with_pso(has_pso):
+    """Get programs based on whether they have PSOs"""
+    if has_pso:
+        programs = Program.objects.filter(programspecificoutcome__isnull=False).distinct()
+    else:
+        programs = Program.objects.filter(programspecificoutcome__isnull=True)
+    
+    return [
+        {
+            'type': 'program',
+            'id': program.id,
+            'name': program.name,
+            'code': program.code if hasattr(program, 'code') else 'N/A',
+            'has_pso': program.programspecificoutcome_set.exists()
+        }
+        for program in programs
+    ]
+
+
+def get_events_with_reports(has_reports):
+    """Get events based on whether they have reports generated"""
+    if has_reports:
+        # Get EMT events that have reports
+        emt_proposals = EMTEventProposal.objects.filter(
+            eventreport__isnull=False
+        ).distinct().select_related('submitted_by', 'organization')
+    else:
+        # Get EMT events without reports
+        emt_proposals = EMTEventProposal.objects.filter(
+            eventreport__isnull=True
+        ).select_related('submitted_by', 'organization')
+    
+    return [
+        {
+            'type': 'emt_proposal',
+            'id': proposal.id,
+            'title': proposal.event_title or 'Untitled',
+            'status': proposal.get_status_display(),
+            'submitted_by': proposal.submitted_by.get_full_name() or proposal.submitted_by.username,
+            'organization': proposal.organization.name if proposal.organization else 'N/A',
+            'has_report': hasattr(proposal, 'eventreport'),
+            'created_at': proposal.created_at.strftime('%Y-%m-%d %H:%M')
+        }
+        for proposal in emt_proposals
+    ]
+
+
+# Update process_filters function to include new filter types
+def process_filters_extended(filters, logic='AND'):
+    """Extended process_filters function with additional filter types"""
+    if not filters:
+        return []
+    
+    all_results = []
+    
+    for filter_item in filters:
+        filter_type = filter_item['type']
+        filter_value = filter_item['value']
+        
+        # Process each filter type (existing filters)
+        if filter_type == 'profile_role':
+            results = get_users_by_profile_role(filter_value)
+        elif filter_type == 'organization_type':
+            results = get_users_by_organization_type(filter_value)
+        elif filter_type == 'organization':
+            results = get_users_by_organization(filter_value)
+        elif filter_type == 'organization_role':
+            results = get_users_by_organization_role(filter_value)
+        elif filter_type == 'emt_proposal_status':
+            results = get_emt_proposals_by_status(filter_value)
+        elif filter_type == 'core_proposal_status':
+            results = get_core_proposals_by_status(filter_value)
+        elif filter_type == 'report_type':
+            results = get_reports_by_type(filter_value)
+        elif filter_type == 'report_status':
+            results = get_reports_by_status(filter_value)
+        elif filter_type == 'organization_active':
+            results = get_organizations_by_active_status(filter_value == 'true')
+        elif filter_type == 'emt_big_event':
+            results = get_emt_events_by_big_event(filter_value == 'true')
+        elif filter_type == 'emt_finance_approval':
+            results = get_emt_events_by_finance_approval(filter_value == 'true')
+        elif filter_type == 'has_role_assignment':
+            results = get_users_by_role_assignment_status(filter_value == 'true')
+        elif filter_type == 'date_range':
+            results = get_data_by_date_range(filter_value)
+        elif filter_type == 'search':
+            results = perform_global_search(filter_value)
+        # New filter types
+        elif filter_type == 'program_has_outcomes':
+            results = get_programs_with_outcomes(filter_value == 'true')
+        elif filter_type == 'program_has_pso':
+            results = get_programs_with_pso(filter_value == 'true')
+        elif filter_type == 'emt_report_generated':
+            results = get_events_with_reports(filter_value == 'true')
+        else:
+            results = []
+        
+        all_results.append(results)
+    
+
+    # Combine results based on logic (same as before)
+    if logic == 'OR':
+        combined_results = []
+        seen_ids = set()
+        
+        for result_set in all_results:
+            for item in result_set:
+                item_id = f"{item.get('type', '')}_{item.get('id', '')}"
+                if item_id not in seen_ids:
+                    combined_results.append(item)
+                    seen_ids.add(item_id)
+        
+        return combined_results
+    
+    else:  # AND logic
+        if not all_results:
+            return []
+        
+        combined_results = all_results[0]
+        
+        for result_set in all_results[1:]:
+            result_ids = {f"{item.get('type', '')}_{item.get('id', '')}" for item in result_set}
+            combined_results = [
+                item for item in combined_results 
+                if f"{item.get('type', '')}_{item.get('id', '')}" in result_ids
+            ]
+        
+        return combined_results
 # ---------------------------------------------
 #           Switch View (Admin)
 # ---------------------------------------------
@@ -2913,57 +2877,6 @@ def api_search_suggestions(request):
 def is_admin(user):
     """Check if user is admin or superuser"""
     return user.is_staff or user.is_superuser
-
-@login_required
-@user_passes_test(is_admin)
-def switch_user_view(request):
-    """Display the switch user interface"""
-    users = User.objects.filter(is_active=True).select_related().order_by('username')
-    
-    # Get current impersonated user if any
-    impersonated_user = None
-    if 'impersonate_user_id' in request.session:
-        try:
-            impersonated_user = User.objects.get(id=request.session['impersonate_user_id'])
-        except User.DoesNotExist:
-            # Clean up invalid session data
-            del request.session['impersonate_user_id']
-    
-    context = {
-        'users': users,
-        'impersonated_user': impersonated_user,
-        'original_user': request.user,
-    }
-    return render(request, 'core/switch_user.html', context)
-
-@login_required
-@user_passes_test(is_admin)
-@require_POST
-def impersonate_user(request):
-    """Start impersonating a user"""
-    try:
-        data = json.loads(request.body)
-        user_id = data.get('user_id')
-        
-        if not user_id:
-            return JsonResponse({'success': False, 'error': 'User ID is required'})
-        
-        target_user = get_object_or_404(User, id=user_id, is_active=True)
-        
-        # Store the impersonation in session
-        request.session['impersonate_user_id'] = target_user.id
-        request.session['original_user_id'] = request.user.id
-        
-        messages.success(request, f'Now viewing as: {target_user.get_full_name() or target_user.username}')
-        
-        return JsonResponse({
-            'success': True,
-            'message': f'Now impersonating {target_user.get_full_name() or target_user.username}',
-            'redirect_url': '/core-admin/'  # Adjust to your dashboard URL
-        })
-        
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
 
 @login_required
 def stop_impersonation(request):
@@ -2974,46 +2887,7 @@ def stop_impersonation(request):
             del request.session['original_user_id']
         messages.success(request, 'Stopped impersonation')
     
-    return redirect('core-admin')  # Adjust to your dashboard URL
-
-@login_required
-@user_passes_test(is_admin)
-@require_POST
-def search_users_api(request):
-    """API endpoint for quick user search"""
-    try:
-        data = json.loads(request.body)
-        search_term = data.get('search', '').strip()
-        
-        if len(search_term) < 2:
-            return JsonResponse({'users': []})
-        
-        # Search users by name, username, or email
-        users = User.objects.filter(
-            Q(username__icontains=search_term) |
-            Q(first_name__icontains=search_term) |
-            Q(last_name__icontains=search_term) |
-            Q(email__icontains=search_term),
-            is_active=True
-        ).exclude(
-            id=request.user.id  # Don't include current user
-        ).order_by('first_name', 'last_name', 'username')[:10]  # Limit to 10 results
-        
-        users_data = []
-        for user in users:
-            users_data.append({
-                'id': user.id,
-                'username': user.username,
-                'full_name': user.get_full_name(),
-                'email': user.email,
-                'is_staff': user.is_staff,
-                'is_superuser': user.is_superuser
-            })
-        
-        return JsonResponse({'users': users_data})
-        
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+    return redirect('admin_dashboard') 
 
 @login_required
 @user_passes_test(is_admin)
@@ -3036,45 +2910,6 @@ def get_recent_users_api(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-# Enhanced impersonate_user view with recent users tracking
-@login_required
-@user_passes_test(is_admin)
-@require_POST
-def impersonate_user(request):
-    """Start impersonating a user (enhanced with recent users tracking)"""
-    try:
-        data = json.loads(request.body)
-        user_id = data.get('user_id')
-        
-        if not user_id:
-            return JsonResponse({'success': False, 'error': 'User ID is required'})
-        
-        target_user = get_object_or_404(User, id=user_id, is_active=True)
-        
-        # Optional: Prevent impersonating superusers (uncomment if needed)
-        # if target_user.is_superuser and not request.user.is_superuser:
-        #     return JsonResponse({'success': False, 'error': 'Cannot impersonate superusers'})
-        
-        # Store the impersonation in session
-        request.session['impersonate_user_id'] = target_user.id
-        request.session['original_user_id'] = request.user.id
-        
-        # Store in recent users (in localStorage via JavaScript, or you could use a model)
-        messages.success(request, f'Now viewing as: {target_user.get_full_name() or target_user.username}')
-        
-        return JsonResponse({
-            'success': True,
-            'message': f'Now impersonating {target_user.get_full_name() or target_user.username}',
-            'user': {
-                'id': target_user.id,
-                'username': target_user.username,
-                'full_name': target_user.get_full_name(),
-                'email': target_user.email
-            }
-        })
-        
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
     
 def is_admin(user):
     """Check if user is admin or superuser"""
@@ -3177,13 +3012,4 @@ def impersonate_user(request):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
-@login_required
-def stop_impersonation(request):
-    """Stop impersonating and return to original user"""
-    if 'impersonate_user_id' in request.session:
-        del request.session['impersonate_user_id']
-        if 'original_user_id' in request.session:
-            del request.session['original_user_id']
-        messages.success(request, 'Stopped impersonation')
-    
-    return redirect('admin_dashboard')
+    return JsonResponse({'suggestions': suggestions})
