@@ -104,18 +104,14 @@ urlpatterns = [
     path('core-admin/api/org-type/<int:org_type_id>/roles/', views.api_org_type_roles, name='api_org_type_roles'),
     path('core-admin/api/organization/<int:org_id>/roles/', views.api_organization_roles, name='api_organization_roles'),
     path('core-admin/api/search/', views.api_global_search, name='api_global_search'),
-    path('core-admin/api/filter-counts/', views.api_filter_counts, name='api_filter_counts'),
-    path('core-admin/api/organizations/', views.api_organizations_by_type, name='api_organizations_by_type'),
 
     # ────────────────────────────────────────────────
     # Admin Dashboard API
     # ────────────────────────────────────────────────
     path('admin-dashboard-api/', views.admin_dashboard_api, name='admin_dashboard_api'),
 
+
     # ────────────────────────────────────────────────
-    # Data Export
-    # ────────────────────────────────────────────────
-    path('core-admin/data-export/', views.data_export_filter_view, name='data_export_filter'),
 
     # ────────────────────────────────────────────────
     # General APIs (Public/Non-Admin)
@@ -123,5 +119,16 @@ urlpatterns = [
     path('api/organizations/', views.api_organizations, name='api_organizations'),
     path('api/roles/', views.api_roles, name='api_roles'),
     path('api/event-contribution/', views.event_contribution_data, name='event_contribution_data'),
+    
+    
+    
+    
+        
+    # Data Export URLs
+    path('data-export-filter/', views.data_export_filter_view, name='data_export_filter'),
+    path('api/filter-suggestions/', views.filter_suggestions_api, name='filter_suggestions_api'),
+    path('api/execute-filter/', views.execute_filter_api, name='execute_filter_api'),
+    path('api/export-data/csv/', views.export_data_csv, name='export_data_csv'),
+    path('api/export-data/excel/', views.export_data_excel, name='export_data_excel'),
 
 ]
