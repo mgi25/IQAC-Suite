@@ -160,8 +160,12 @@ def submit_proposal(request, pk=None):
     else:
         # Always get the selected academic year from session (ensured above)
         selected_academic_year = request.session.get('selected_academic_year')
+        
+        # Only pre-populate form with existing data if it's still a draft
+        form_instance = proposal if (proposal and proposal.status == 'draft') else None
+        
         form = EventProposalForm(
-            instance=proposal,
+            instance=form_instance,
             selected_academic_year=selected_academic_year,
             user=request.user,
         )
@@ -259,6 +263,10 @@ def autosave_proposal(request):
         proposal = EventProposal.objects.filter(
             id=pid, submitted_by=request.user
         ).first()
+        
+        # Don't autosave if proposal is already submitted
+        if proposal and proposal.status != "draft":
+            return JsonResponse({"success": False, "error": "Cannot modify submitted proposal"}, status=400)
 
     form = EventProposalForm(data, instance=proposal, user=request.user)
     faculty_ids = data.get("faculty_incharges") or []

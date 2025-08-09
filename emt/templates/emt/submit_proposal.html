@@ -231,17 +231,20 @@
                         
                         <!-- Save Section -->
                         <div class="form-row full-width">
-                            <div class="save-section-container">
-                                <button type="button" class="btn-save-section">Save & Continue</button>
-                                <div class="save-help-text">Complete this section to unlock the next one</div>
+                            <div class="save-section-container" style="display: flex; flex-direction: column; align-items: center;">
+                                <button type="button" class="btn-save-section" style="margin-bottom: 0.5rem;">Save & Continue</button>
+                                <button type="submit" name="save_draft" class="btn-draft-section">Save as Draft</button>
+                                <div class="save-help-text" style="margin-top: 0.75rem;">Complete this section to unlock the next one</div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
+
             <div class="submit-section">
                 <button type="submit" name="final_submit" class="btn-submit" id="submit-proposal-btn" disabled>Submit Proposal</button>
+                <button type="submit" name="save_draft" class="btn-draft" id="save-draft-btn">Save as Draft</button>
                 <div class="submit-help-text">Complete all sections above to enable submission</div>
             </div>
 
@@ -329,6 +332,7 @@
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
     <script>
         window.PROPOSAL_ID = "{{ proposal.id|default:'' }}";
+        window.PROPOSAL_STATUS = "{{ proposal.status|default:'draft' }}";
         window.AUTOSAVE_URL = "{% url 'emt:autosave_proposal' %}";
         window.AUTOSAVE_CSRF = "{{ csrf_token }}";
         window.API_ORGANIZATIONS = "{% url 'emt:api_organizations' %}";
