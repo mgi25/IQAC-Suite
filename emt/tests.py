@@ -3,9 +3,11 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 
 from emt.models import ApprovalStep, EventProposal
+from emt.utils import build_approval_chain
 from core.models import (
     OrganizationType, Organization, OrganizationRole, RoleAssignment,
     Program, ProgramOutcome, ProgramSpecificOutcome,
+    ApprovalFlowTemplate, ApprovalFlowConfig,
 )
 import json
 
@@ -211,3 +213,99 @@ class EventApprovalsNavTests(TestCase):
         self._set_role("student")
         resp = self.client.get(reverse("dashboard"))
         self.assertNotContains(resp, "Event Approvals")
+
+
+class ApprovalLogicTests(TestCase):
+    def test_faculty_incharge_auto_skips_duplicate_approval(self):
+        ot = OrganizationType.objects.create(name="Dept")
+        org = Organization.objects.create(name="Sci", org_type=ot)
+
+        fic_role = OrganizationRole.objects.create(
+            organization=org, name=ApprovalStep.Role.FACULTY_INCHARGE.value
+        )
+        hod_role = OrganizationRole.objects.create(
+            organization=org, name=ApprovalStep.Role.HOD.value
+        )
+
+        user = User.objects.create_user("u1", password="pass")
+        RoleAssignment.objects.create(user=user, role=fic_role, organization=org)
+        RoleAssignment.objects.create(user=user, role=hod_role, organization=org)
+
+        ApprovalFlowConfig.objects.create(
+            organization=org, require_faculty_incharge_first=True
+        )
+        ApprovalFlowTemplate.objects.create(
+            organization=org,
+            step_order=1,
+            role_required=ApprovalStep.Role.HOD.value,
+            user=user,
+        )
+
+        proposal = EventProposal.objects.create(
+            submitted_by=user,
+            organization=org,
+            status=EventProposal.Status.SUBMITTED,
+        )
+        proposal.faculty_incharges.add(user)
+
+        build_approval_chain(proposal)
+        step1 = proposal.approval_steps.get(step_order=1)
+        step2 = proposal.approval_steps.get(step_order=2)
+
+        self.client.force_login(user)
+        resp = self.client.post(
+            reverse("emt:review_approval_step", args=[step1.id]),
+            {"action": "approve"},
+        )
+        self.assertRedirects(resp, reverse("emt:my_approvals"))
+
+        step2.refresh_from_db()
+        self.assertEqual(step2.status, ApprovalStep.Status.SKIPPED)
+
+    def test_optional_role_checkbox_display(self):
+        ot = OrganizationType.objects.create(name="Dept")
+        org = Organization.objects.create(name="Sci", org_type=ot)
+
+        hod_role = OrganizationRole.objects.create(
+            organization=org, name=ApprovalStep.Role.HOD.value
+        )
+        director_role = OrganizationRole.objects.create(
+            organization=org, name=ApprovalStep.Role.DIRECTOR.value
+        )
+
+        hod = User.objects.create_user("hod", password="pass")
+        director = User.objects.create_user("director", password="pass")
+        RoleAssignment.objects.create(user=hod, role=hod_role, organization=org)
+        RoleAssignment.objects.create(user=director, role=director_role, organization=org)
+
+        ApprovalFlowTemplate.objects.create(
+            organization=org,
+            step_order=1,
+            role_required=ApprovalStep.Role.HOD.value,
+            user=hod,
+        )
+        ApprovalFlowTemplate.objects.create(
+            organization=org,
+            step_order=2,
+            role_required=ApprovalStep.Role.DIRECTOR.value,
+            user=director,
+            optional=True,
+        )
+
+        proposal = EventProposal.objects.create(
+            submitted_by=hod,
+            organization=org,
+            status=EventProposal.Status.SUBMITTED,
+        )
+        build_approval_chain(proposal)
+        self.assertEqual(proposal.approval_steps.count(), 1)
+        step = proposal.approval_steps.get(role_required=ApprovalStep.Role.HOD)
+
+        self.client.force_login(hod)
+        resp = self.client.get(
+            reverse("emt:review_approval_step", args=[step.id])
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(
+            any(o['role'] == ApprovalStep.Role.DIRECTOR.value for o in resp.context['optional_roles'])
+        )

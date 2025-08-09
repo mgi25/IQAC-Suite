@@ -39,6 +39,8 @@ def build_approval_chain(proposal):
             idx += 1
 
     for tmpl in flow:
+        if getattr(tmpl, 'optional', False):
+            continue
         # Skip duplicate faculty in-charge steps if they're already added above
         if fic_first and tmpl.role_required == ApprovalStep.Role.FACULTY_INCHARGE:
             continue
