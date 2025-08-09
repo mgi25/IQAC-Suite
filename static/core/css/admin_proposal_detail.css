@@ -362,3 +362,55 @@ body {
 /* -------- Clean Scrollbar -------- */
 ::-webkit-scrollbar { width: 8px; background: #f3f3fb;}
 ::-webkit-scrollbar-thumb { background: #dde3f2; border-radius: 8px;}
+
+/* -------- View Details Button -------- */
+.header-actions {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.btn-view-details {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  text-decoration: none;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+  border: none;
+  cursor: pointer;
+}
+
+.btn-view-details:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+  color: white;
+  text-decoration: none;
+}
+
+.btn-view-details:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.btn-view-details i {
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .header-actions {
+    justify-content: center;
+  }
+  
+  .btn-view-details {
+    width: 100%;
+    justify-content: center;
+  }
+}

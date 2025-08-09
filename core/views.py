@@ -220,12 +220,17 @@ def dashboard(request):
             'title': event.event_title,
             'date': event.event_datetime.strftime('%Y-%m-%d'),
             'datetime': event.event_datetime.strftime('%Y-%m-%d %H:%M'),
-            'venue': event.venue,
+            'venue': event.venue or '',
             'organization': event.organization.name if event.organization else '',
             'submitted_by': event.submitted_by.get_full_name() or event.submitted_by.username,
             'participants': event.fest_fee_participants or event.conf_fee_participants or 0,
             'is_my_event': user in [event.submitted_by] + list(event.faculty_incharges.all())
         })
+    
+    # Debug: Print calendar events to console
+    print(f"Calendar events for user {user.username}: {len(calendar_events)} events")
+    for event in calendar_events[:3]:  # Print first 3 events for debugging
+        print(f"  - {event['title']} on {event['date']}")
     
     context = {
         "my_events": my_events,
@@ -239,7 +244,7 @@ def dashboard(request):
         "role_names": role_names,
         "user": user,
         "user_proposals": user_proposals,
-        "calendar_events": json.dumps(calendar_events),
+        "calendar_events": calendar_events,  # Pass as Python list, not JSON
     }
     return render(request, dashboard_template, context)
 
@@ -3367,3 +3372,30 @@ def impersonate_user(request):
         return JsonResponse({'success': False, 'error': str(e)})
 
     return JsonResponse({'suggestions': suggestions})
+
+# ─────────────────────────────────────────────────────────────
+#  Student Event Details View
+# ─────────────────────────────────────────────────────────────
+@login_required
+def student_event_details(request, proposal_id):
+    """Display event details in student-friendly format"""
+    proposal = get_object_or_404(EventProposal, id=proposal_id)
+    
+    # Check if user has permission to view this proposal
+    # Allow if: user is the submitter, faculty in charge, or superuser
+    user_can_view = (
+        request.user == proposal.submitted_by or
+        request.user in proposal.faculty_incharges.all() or
+        request.user.is_superuser or
+        proposal.status == 'finalized'  # Anyone can view finalized events
+    )
+    
+    if not user_can_view:
+        messages.error(request, "You don't have permission to view this event.")
+        return redirect('dashboard')
+    
+    context = {
+        'proposal': proposal,
+    }
+    
+    return render(request, 'core/student_event_details.html', context)

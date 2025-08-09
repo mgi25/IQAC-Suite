@@ -175,97 +175,257 @@ function closeEventModal() {
 }
 
 function addToCalendar(title, date, venue) {
+  // Create Google Calendar URL with proper date formatting
+  const eventDate = new Date(date);
+  
+  // Format date for Google Calendar (YYYYMMDD)
+  const year = eventDate.getFullYear();
+  const month = String(eventDate.getMonth() + 1).padStart(2, '0');
+  const day = String(eventDate.getDate()).padStart(2, '0');
+  const startDate = `${year}${month}${day}`;
+  
+  // For all-day events, use the same date for start and end
+  const endDate = startDate;
+  
+  // Prepare event details
+  const details = [
+    venue ? `Venue: ${venue}` : '',
+    'Event from IQAC Suite'
+  ].filter(Boolean).join('\n');
+  
   // Create Google Calendar URL
-  const startDate = date.replace(/-/g, '');
-  const endDate = startDate; // Same day event
-  const details = venue ? `Venue: ${venue}` : '';
+  const googleCalendarUrl = `https://calendar.google.com/calendar/render?` +
+    `action=TEMPLATE` +
+    `&text=${encodeURIComponent(title)}` +
+    `&dates=${startDate}/${endDate}` +
+    `&details=${encodeURIComponent(details)}` +
+    `&sf=true&output=xml`;
   
-  const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${startDate}/${startDate}&details=${encodeURIComponent(details)}`;
-  
+  // Open in new tab
   window.open(googleCalendarUrl, '_blank');
 }
 
 // --- Calendar Rendering ---
+// Simple Calendar Implementation
 document.addEventListener('DOMContentLoaded', function() {
+  console.log('🗓️ Initializing calendar...');
+  
+  // Get calendar elements
   const calendarDays = document.getElementById('calendarDays');
   const currentMonthLabel = document.getElementById('currentMonth');
   const prevMonthBtn = document.getElementById('prevMonth');
   const nextMonthBtn = document.getElementById('nextMonth');
 
-  if (!calendarDays || !currentMonthLabel || !prevMonthBtn || !nextMonthBtn) return;
+  if (!calendarDays) {
+    console.error('❌ Calendar container not found!');
+    return;
+  }
 
-  let today = new Date();
+  // Calendar state
+  const today = new Date();
   let currentMonth = today.getMonth();
   let currentYear = today.getFullYear();
+  
+  // Get events data
+  const events = window.DASHBOARD_EVENTS || [];
+  console.log('📅 Events loaded:', events.length);
 
-  function pad(n) { return n < 10 ? '0' + n : n; }
+  // Helper function to pad numbers
+  function pad(n) {
+    return n < 10 ? '0' + n : n;
+  }
 
-  function renderCalendar(month, year) {
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    let startDay = (firstDay.getDay() + 6) % 7; // Make Monday=0
-    let daysInMonth = lastDay.getDate();
+  // Get events for a specific date
+  function getEventsForDate(dateStr) {
+    const dayEvents = events.filter(event => event.date === dateStr);
+    console.log(`📍 Events for ${dateStr}:`, dayEvents.length);
+    return dayEvents;
+  }
+
+  // Render calendar
+  function renderCalendar() {
+    console.log(`🗓️ Rendering calendar for ${currentMonth + 1}/${currentYear}`);
     
-    currentMonthLabel.textContent = firstDay.toLocaleString('default', { month: 'long', year: 'numeric' });
+    const firstDay = new Date(currentYear, currentMonth, 1);
+    const lastDay = new Date(currentYear, currentMonth + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startDay = (firstDay.getDay() + 6) % 7; // Monday = 0
     
-    let daysHtml = '';
-    // Empty days from previous month
-    for (let i = 0; i < startDay; i++) {
-      daysHtml += '<div class="calendar-day empty"></div>';
+    // Update month label
+    if (currentMonthLabel) {
+      currentMonthLabel.textContent = firstDay.toLocaleString('default', { 
+        month: 'long', 
+        year: 'numeric' 
+      });
     }
     
-    // Days of current month
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dateStr = `${year}-${pad(month+1)}-${pad(d)}`;
-      const events = getEventsForDate(dateStr);
-      const isToday = (d === today.getDate() && month === today.getMonth() && year === today.getFullYear());
-      const hasEvents = events.length > 0;
+    let html = '';
+    
+    // Add empty cells for days before month starts
+    for (let i = 0; i < startDay; i++) {
+      html += '<div class="calendar-day empty"></div>';
+    }
+    
+    // Add days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${currentYear}-${pad(currentMonth + 1)}-${pad(day)}`;
+      const dayEvents = getEventsForDate(dateStr);
+      const isToday = (
+        day === today.getDate() && 
+        currentMonth === today.getMonth() && 
+        currentYear === today.getFullYear()
+      );
       
-      daysHtml += `
-        <div class="calendar-day${isToday ? ' today' : ''}${hasEvents ? ' has-event' : ''}" 
-             data-date="${dateStr}" 
-             ${hasEvents ? 'onclick="showEventsModal(\'' + dateStr + '\', getEventsForDate(\'' + dateStr + '\'))"' : ''}>
-          <span class="calendar-day-number">${d}</span>
-          ${hasEvents ? `<div class="event-indicators">
-            ${events.slice(0, 3).map(ev => 
-              `<div class="event-dot ${ev.is_my_event ? 'my-event-dot' : 'other-event-dot'}" 
-                    title="${ev.title}"></div>`
-            ).join('')}
-            ${events.length > 3 ? `<div class="event-dot more-events" title="+${events.length - 3} more">+${events.length - 3}</div>` : ''}
-          </div>` : ''}
+      let classes = ['calendar-day'];
+      if (isToday) classes.push('today');
+      if (dayEvents.length > 0) classes.push('has-event');
+      
+      html += `
+        <div class="${classes.join(' ')}" data-date="${dateStr}" onclick="showEventModal('${dateStr}')">
+          <span class="calendar-day-number">${day}</span>
+          ${dayEvents.length > 0 ? '<div class="event-dot"></div>' : ''}
         </div>
       `;
     }
-    calendarDays.innerHTML = daysHtml;
+    
+    calendarDays.innerHTML = html;
+    console.log('✅ Calendar rendered successfully');
   }
 
-  prevMonthBtn.addEventListener('click', function() {
-    currentMonth--;
-    if (currentMonth < 0) {
-      currentMonth = 11;
-      currentYear--;
-    }
-    renderCalendar(currentMonth, currentYear);
-  });
+  // Navigation event listeners
+  if (prevMonthBtn) {
+    prevMonthBtn.addEventListener('click', function() {
+      currentMonth--;
+      if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+      }
+      renderCalendar();
+    });
+  }
+
+  if (nextMonthBtn) {
+    nextMonthBtn.addEventListener('click', function() {
+      currentMonth++;
+      if (currentMonth > 11) {
+        currentMonth = 0;
+        currentYear++;
+      }
+      renderCalendar();
+    });
+  }
+
+  // Initial render
+  renderCalendar();
+});
+
+// Modal functionality
+function showEventModal(dateStr) {
+  const events = window.DASHBOARD_EVENTS || [];
+  const dayEvents = events.filter(event => event.date === dateStr);
   
-  nextMonthBtn.addEventListener('click', function() {
-    currentMonth++;
-    if (currentMonth > 11) {
-      currentMonth = 0;
-      currentYear++;
-    }
-    renderCalendar(currentMonth, currentYear);
-  });
+  const modal = document.getElementById('eventModal');
+  const title = document.getElementById('eventModalTitle');
+  const list = document.getElementById('eventModalList');
+  
+  if (!modal || !title || !list) return;
+  
+  const date = new Date(dateStr);
+  title.textContent = `Events on ${date.toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  })}`;
+  
+  if (dayEvents.length === 0) {
+    list.innerHTML = '<div class="no-events">No events scheduled for this date.</div>';
+  } else {
+    list.innerHTML = dayEvents.map(event => `
+      <div class="event-card ${event.is_my_event ? 'my-event' : 'other-event'}">
+        <div class="event-card-header">
+          <div class="event-title-section">
+            <h4 class="event-title">${event.title}</h4>
+            <div class="event-badges">
+              <span class="event-badge ${event.is_my_event ? 'my-event-badge' : 'other-event-badge'}">
+                ${event.is_my_event ? 'My Event' : 'Other Event'}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="event-card-body">
+          <div class="event-info">
+            <div class="event-info-item">
+              <i class="fas fa-clock"></i>
+              <span>${event.datetime}</span>
+            </div>
+            ${event.venue ? `
+              <div class="event-info-item">
+                <i class="fas fa-map-marker-alt"></i>
+                <span>${event.venue}</span>
+              </div>
+            ` : ''}
+            ${event.organization ? `
+              <div class="event-info-item">
+                <i class="fas fa-building"></i>
+                <span>${event.organization}</span>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+        <div class="event-card-actions">
+          <a href="/event/${event.id}/details/" class="btn-action btn-primary">
+            <i class="fas fa-eye"></i>
+            <span>View Details</span>
+          </a>
+          <button class="btn-action btn-secondary" onclick="addToCalendar('${event.title}', '${event.date}', '${event.venue || ''}')">
+            <i class="fas fa-calendar-plus"></i>
+            <span>Add to Google Calendar</span>
+          </button>
+        </div>
+      </div>
+    `).join('');
+  }
+  
+  modal.style.display = 'flex';
+}
 
-  renderCalendar(currentMonth, currentYear);
+function closeEventModal() {
+  const modal = document.getElementById('eventModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
 
-  // Add click outside modal to close
-  window.addEventListener('click', function(e) {
-    const modal = document.getElementById('eventModal');
-    if (e.target === modal) {
-      closeEventModal();
-    }
-  });
+// Add to calendar function
+function addToCalendar(title, date, venue) {
+  const eventDate = new Date(date);
+  const year = eventDate.getFullYear();
+  const month = String(eventDate.getMonth() + 1).padStart(2, '0');
+  const day = String(eventDate.getDate()).padStart(2, '0');
+  const startDate = `${year}${month}${day}`;
+  
+  const details = [
+    venue ? `Venue: ${venue}` : '',
+    'Event from IQAC Suite'
+  ].filter(Boolean).join('\\n');
+  
+  const googleCalendarUrl = `https://calendar.google.com/calendar/render?` +
+    `action=TEMPLATE` +
+    `&text=${encodeURIComponent(title)}` +
+    `&dates=${startDate}/${startDate}` +
+    `&details=${encodeURIComponent(details)}` +
+    `&sf=true&output=xml`;
+  
+  window.open(googleCalendarUrl, '_blank');
+}
+
+// Click outside modal to close
+window.addEventListener('click', function(e) {
+  const modal = document.getElementById('eventModal');
+  if (e.target === modal) {
+    closeEventModal();
+  }
 });
 // Stat card click handlers for filtering events
     const cardUpcoming = document.getElementById('cardUpcoming');
