@@ -3,47 +3,28 @@
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'core/css/admin_settings_dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'core/css/outcomes_sdg.css' %}?v=1.0">
 
-<div class="admin-settings-dashboard-bg">
-  <div class="admin-settings-dashboard-container">
-    <div class="admin-settings-header">
-      <div class="admin-settings-icon">
-        <i class="fa-solid fa-graduation-cap"></i>
+<div class="outcomes-page">
+  <div class="outcomes-title"><span class="icon">🎓</span> PO, PSO &amp; SDG Management</div>
+  <div class="tile-grid">
+    <a class="tile-card" href="{% url 'admin_pso_po_management' %}">
+      <div class="tile-icon">📋</div>
+      <div>
+        <h3>PO &amp; PSO Management</h3>
+        <p>Add or update programme outcomes</p>
       </div>
-      <h1 class="admin-settings-title">PO, PSO &amp; SDG Management</h1>
-    </div>
+      <div class="chev">➜</div>
+    </a>
 
-    <div class="admin-settings-cards">
-      <a href="{% url 'admin_pso_po_management' %}" class="admin-settings-card">
-        <div class="admin-settings-card-content">
-          <div class="admin-settings-card-icon">
-            <i class="fa-solid fa-clipboard-list"></i>
-          </div>
-          <div class="admin-settings-card-info">
-            <div class="admin-settings-card-title">PO &amp; PSO Management</div>
-            <div class="admin-settings-card-desc">Add or update programme outcomes</div>
-          </div>
-        </div>
-        <div class="admin-settings-card-arrow">
-          <i class="fa-solid fa-chevron-right"></i>
-        </div>
-      </a>
-
-      <a href="{% url 'admin_sdg_management' %}" class="admin-settings-card">
-        <div class="admin-settings-card-content">
-          <div class="admin-settings-card-icon">
-            <i class="fa-solid fa-globe"></i>
-          </div>
-          <div class="admin-settings-card-info">
-            <div class="admin-settings-card-title">SDG Goals Management</div>
-            <div class="admin-settings-card-desc">Add or remove SDG goals</div>
-          </div>
-        </div>
-        <div class="admin-settings-card-arrow">
-          <i class="fa-solid fa-chevron-right"></i>
-        </div>
-      </a>
-    </div>
+    <a class="tile-card" href="{% url 'admin_sdg_management' %}">
+      <div class="tile-icon">🌍</div>
+      <div>
+        <h3>SDG Goals Management</h3>
+        <p>Add or remove SDG goals</p>
+      </div>
+      <div class="chev">➜</div>
+    </a>
   </div>
 </div>
 
