@@ -104,6 +104,11 @@ urlpatterns = [
     path('core-admin/api/org-type/<int:org_type_id>/roles/', views.api_org_type_roles, name='api_org_type_roles'),
     path('core-admin/api/organization/<int:org_id>/roles/', views.api_organization_roles, name='api_organization_roles'),
     path('core-admin/api/search/', views.api_global_search, name='api_global_search'),
+    
+    # Multi-select filter APIs
+    path('core-admin/api/filter/organizations/', views.api_filter_organizations, name='api_filter_organizations'),
+    path('core-admin/api/filter/roles/', views.api_filter_roles, name='api_filter_roles'),
+    path('core-admin/api/search/org-types/', views.api_search_org_types, name='api_search_org_types'),
 
     # ────────────────────────────────────────────────
     # Admin Dashboard API
