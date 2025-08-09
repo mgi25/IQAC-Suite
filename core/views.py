@@ -1754,6 +1754,7 @@ def admin_dashboard_api(request):
 
 #======================== Data Export and Filter View =======================
 # views.py - Add these views to your core app views
+# views.py (merged full version with new org-type / org-name filters and expanded search)
 import json
 import csv
 from datetime import datetime, timedelta
@@ -1766,6 +1767,9 @@ from django.db.models import Q, Count
 from django.utils import timezone
 from io import StringIO, BytesIO
 import xlsxwriter
+
+from itertools import chain
+from operator import attrgetter
 
 from .models import (
     Organization, OrganizationType, OrganizationRole, RoleAssignment,
@@ -1820,6 +1824,20 @@ def filter_suggestions_api(request):
             'filter': f'organization_type:{org_type.id}',
             'description': f'Organizations of type {org_type.name}'
         })
+        # NEW: Events by organization type suggestion
+        suggestions.append({
+            'category': 'Events by Org Type',
+            'label': f'Events – {org_type.name}',
+            'filter': f'emt_org_type:{org_type.id}',
+            'description': f'All events submitted under {org_type.name} org type'
+        })
+        # NEW: Reports by organization type suggestion
+        suggestions.append({
+            'category': 'Reports by Org Type',
+            'label': f'Reports – {org_type.name}',
+            'filter': f'reports_by_org_type:{org_type.id}',
+            'description': f'All reports for organizations of type {org_type.name}'
+        })
     
     # Specific Organizations
     for org in organizations:
@@ -1828,6 +1846,20 @@ def filter_suggestions_api(request):
             'label': org.name,
             'filter': f'organization:{org.id}',
             'description': f'{org.name} ({org.org_type.name})'
+        })
+        # NEW: Events by organization name suggestion
+        suggestions.append({
+            'category': 'Events by Org Name',
+            'label': f'Events – {org.name}',
+            'filter': f'emt_org_name:{org.name}',
+            'description': f'All events submitted under organization {org.name}'
+        })
+        # NEW: Reports by organization name suggestion
+        suggestions.append({
+            'category': 'Reports by Org Name',
+            'label': f'Reports – {org.name}',
+            'filter': f'reports_by_org_name:{org.name}',
+            'description': f'All reports for organization {org.name}'
         })
     
     # Organization Roles
@@ -1866,25 +1898,32 @@ def filter_suggestions_api(request):
             'description': f'Core proposals with {choice_display} status'
         })
     
-    # Report Type Filters
-    report_choices = Report.REPORT_TYPE_CHOICES
-    for choice_value, choice_display in report_choices:
-        suggestions.append({
-            'category': 'Reports',
-            'label': f'{choice_display} Reports',
-            'filter': f'report_type:{choice_value}',
-            'description': f'{choice_display} type reports'
-        })
+    # Report Type Filters (core Report model)
+    try:
+        report_choices = Report.REPORT_TYPE_CHOICES
+        for choice_value, choice_display in report_choices:
+            suggestions.append({
+                'category': 'Reports',
+                'label': f'{choice_display} Reports',
+                'filter': f'report_type:{choice_value}',
+                'description': f'{choice_display} type reports'
+            })
+    except Exception:
+        # If Report model doesn't have choices or isn't loaded, ignore
+        pass
     
     # Report Status Filters
-    report_status_choices = Report.STATUS_CHOICES
-    for choice_value, choice_display in report_status_choices:
-        suggestions.append({
-            'category': 'Report Status',
-            'label': f'{choice_display} Reports',
-            'filter': f'report_status:{choice_value}',
-            'description': f'Reports with {choice_display} status'
-        })
+    try:
+        report_status_choices = Report.STATUS_CHOICES
+        for choice_value, choice_display in report_status_choices:
+            suggestions.append({
+                'category': 'Report Status',
+                'label': f'{choice_display} Reports',
+                'filter': f'report_status:{choice_value}',
+                'description': f'Reports with {choice_display} status'
+            })
+    except Exception:
+        pass
     
     # Special Filters
     suggestions.extend([
@@ -1965,10 +2004,85 @@ def process_filters(filters, logic='AND'):
             results = get_emt_proposals_by_status(filter_value)
         elif filter_type == 'core_proposal_status':
             results = get_core_proposals_by_status(filter_value)
+        # REPORT HANDLING (NEW unified approach)
+        elif filter_type == 'all_reports':
+            results = get_all_reports()
+        elif filter_type == 'reports_by_org_type':
+            try:
+                results = get_reports_by_org_type(int(filter_value))
+            except Exception:
+                results = []
+        elif filter_type == 'reports_by_org_name':
+            results = get_reports_by_org_name(filter_value)
         elif filter_type == 'report_type':
+            # Filter core Report by type and also include EventReports for type 'event' if requested
             results = get_reports_by_type(filter_value)
         elif filter_type == 'report_status':
             results = get_reports_by_status(filter_value)
+        elif filter_type == 'report_search':
+            # generic free-text search across reports
+            results = search_reports_text(filter_value)
+        elif filter_type == 'report_generated':
+            # backward compatibility: map to emt_report_generated
+            results = get_events_with_reports(filter_value == 'true')
+        elif filter_type == 'report_id':
+            # fetch specific report id (could be core Report or EventReport)
+            results = get_report_by_id(filter_value)
+        elif filter_type == 'report_organization':
+            # filter by organization id for reports
+            try:
+                org_id = int(filter_value)
+                results = get_reports_by_org_id(org_id)
+            except Exception:
+                results = []
+        elif filter_type == 'report_date_range':
+            results = get_reports_by_date_range(filter_value)
+        elif filter_type == 'report_has_file':
+            results = get_reports_with_or_without_file(filter_value == 'true')
+        elif filter_type == 'report_proposal_event':
+            # filter EventReports by matching proposal title or id
+            results = get_event_reports_by_proposal(filter_value)
+        elif filter_type == 'report_core_or_event':
+            # value "core" or "event" to select only core Reports or only EventReports
+            if filter_value == 'core':
+                results = get_core_reports_only()
+            elif filter_value == 'event':
+                results = get_event_reports_only()
+            else:
+                results = []
+        elif filter_type == 'report_generated_by_emt':
+            # alias for emt_report_generated
+            results = get_events_with_reports(filter_value == 'true')
+        elif filter_type == 'report_organization_type_or_name':
+            # Accepts either id or name, try int first
+            try:
+                results = get_reports_by_org_type(int(filter_value))
+            except Exception:
+                results = get_reports_by_org_name(filter_value)
+        elif filter_type == 'report_combined_search':
+            # combined search: uses global search but returns only report-like results
+            results = [r for r in perform_global_search(filter_value) if r.get('type') in ('report', 'emt_proposal', 'core_proposal')]
+        elif filter_type == 'report_custom':
+            # placeholder for custom client-side report filters (keeps backward compat)
+            results = []
+        elif filter_type == 'report_recent':
+            # default: last N days where value is N (int)
+            try:
+                n = int(filter_value)
+                results = get_reports_by_date_range(f'{n}_days')
+            except Exception:
+                results = []
+        elif filter_type == 'report_author':
+            # find reports by submitted_by username or name
+            results = get_reports_by_author(filter_value)
+        elif filter_type == 'search':
+            results = perform_global_search(filter_value)
+        elif filter_type == 'report_from_export':
+            # support when export asks specifically for reports
+            results = get_all_reports()
+        elif filter_type == 'report_summary':
+            # placeholder for summarized reports
+            results = []
         elif filter_type == 'organization_active':
             results = get_organizations_by_active_status(filter_value == 'true')
         elif filter_type == 'emt_big_event':
@@ -1979,8 +2093,6 @@ def process_filters(filters, logic='AND'):
             results = get_users_by_role_assignment_status(filter_value == 'true')
         elif filter_type == 'date_range':
             results = get_data_by_date_range(filter_value)
-        elif filter_type == 'search':
-            results = perform_global_search(filter_value)
         else:
             results = []
         
@@ -2142,42 +2254,67 @@ def get_core_proposals_by_status(status):
     ]
 
 
+# Note: get_reports_by_type and get_reports_by_status previously existed in your file.
+# We'll keep helper functions but make them robust and integrate them into the unified report layer below.
+
+
 def get_reports_by_type(report_type):
-    """Get reports by type"""
-    reports = Report.objects.filter(report_type=report_type).select_related('submitted_by', 'organization')
-    
-    return [
-        {
-            'type': 'report',
-            'id': report.id,
-            'title': report.title,
-            'report_type': report.get_report_type_display(),
-            'status': report.get_status_display(),
-            'submitted_by': report.submitted_by.get_full_name() if report.submitted_by else 'N/A',
-            'organization': report.organization.name if report.organization else 'N/A',
-            'date_created': getattr(report, 'date_submitted', getattr(report, 'created_at', 'N/A')).strftime('%Y-%m-%d %H:%M') if getattr(report, 'date_submitted', getattr(report, 'created_at', None)) else 'N/A'
-        }
-        for report in reports
-    ]
+    """
+    Return core Reports matching report_type and include EventReports only if report_type == 'event' or similar alias.
+    """
+    results = []
+
+    # Core Reports filtered by report_type
+    core_reports = Report.objects.filter(report_type=report_type).select_related('organization', 'submitted_by')
+    for r in core_reports:
+        date_field = getattr(r, 'date_submitted', getattr(r, 'created_at', None))
+        results.append({
+            'type': 'report',  # core report
+            'id': r.id,
+            'title': r.title,
+            'report_type': r.get_report_type_display() if hasattr(r, 'get_report_type_display') else getattr(r, 'report_type', 'N/A'),
+            'status': r.get_status_display() if hasattr(r, 'get_status_display') else getattr(r, 'status', 'N/A'),
+            'submitted_by': r.submitted_by.get_full_name() if r.submitted_by else 'N/A',
+            'organization': r.organization.name if r.organization else 'N/A',
+            'date_created': date_field.strftime('%Y-%m-%d %H:%M') if date_field else 'N/A'
+        })
+
+    # Optionally include EventReport (generated reports) if caller asked for events via type 'event' or 'generated'
+    if report_type in ('event', 'generated', 'emt'):
+        gen_reports = EventReport.objects.select_related('proposal', 'proposal__organization', 'proposal__submitted_by').all()
+        for gr in gen_reports:
+            results.append({
+                'type': 'event_report',
+                'id': gr.id,
+                'title': gr.proposal.event_title if getattr(gr, 'proposal', None) else getattr(gr, 'title', 'Untitled'),
+                'report_type': 'Event Report',
+                'status': 'Generated',
+                'submitted_by': gr.proposal.submitted_by.get_full_name() if getattr(gr, 'proposal', None) and gr.proposal.submitted_by else 'N/A',
+                'organization': gr.proposal.organization.name if getattr(gr, 'proposal', None) and gr.proposal.organization else 'N/A',
+                'date_created': gr.created_at.strftime('%Y-%m-%d %H:%M') if getattr(gr, 'created_at', None) else 'N/A'
+            })
+
+    return results
 
 
 def get_reports_by_status(status):
-    """Get reports by status"""
-    reports = Report.objects.filter(status=status).select_related('submitted_by', 'organization')
-    
-    return [
-        {
+    """Return core Reports filtered by status (EventReports are generated and may not have status)."""
+    results = []
+    core_reports = Report.objects.filter(status=status).select_related('organization', 'submitted_by')
+    for r in core_reports:
+        date_field = getattr(r, 'date_submitted', getattr(r, 'created_at', None))
+        results.append({
             'type': 'report',
-            'id': report.id,
-            'title': report.title,
-            'report_type': report.get_report_type_display(),
-            'status': report.get_status_display(),
-            'submitted_by': report.submitted_by.get_full_name() if report.submitted_by else 'N/A',
-            'organization': report.organization.name if report.organization else 'N/A',
-            'date_created': getattr(report, 'date_submitted', getattr(report, 'created_at', 'N/A')).strftime('%Y-%m-%d %H:%M') if getattr(report, 'date_submitted', getattr(report, 'created_at', None)) else 'N/A'
-        }
-        for report in reports
-    ]
+            'id': r.id,
+            'title': r.title,
+            'report_type': r.get_report_type_display() if hasattr(r, 'get_report_type_display') else getattr(r, 'report_type', 'N/A'),
+            'status': r.get_status_display() if hasattr(r, 'get_status_display') else getattr(r, 'status', 'N/A'),
+            'submitted_by': r.submitted_by.get_full_name() if r.submitted_by else 'N/A',
+            'organization': r.organization.name if r.organization else 'N/A',
+            'date_created': date_field.strftime('%Y-%m-%d %H:%M') if date_field else 'N/A'
+        })
+    # EventReport doesn't have status field in your model; skip including them here.
+    return results
 
 
 def get_organizations_by_active_status(is_active):
@@ -2263,9 +2400,9 @@ def get_data_by_date_range(date_range):
     """Get data by date range"""
     today = timezone.now().date()
     
-    if date_range == '7_days':
+    if date_range == '7_days' or date_range == '7':
         start_date = today - timedelta(days=7)
-    elif date_range == '30_days':
+    elif date_range == '30_days' or date_range == '30':
         start_date = today - timedelta(days=30)
     elif date_range == 'this_month':
         start_date = today.replace(day=1)
@@ -2277,6 +2414,12 @@ def get_data_by_date_range(date_range):
             start_date = today.replace(month=6, day=1)
         else:
             start_date = today.replace(year=today.year-1, month=6, day=1)
+    elif isinstance(date_range, str) and date_range.endswith('_days'):
+        try:
+            n = int(date_range.split('_')[0])
+            start_date = today - timedelta(days=n)
+        except Exception:
+            start_date = today - timedelta(days=30)
     else:
         start_date = today - timedelta(days=30)  # Default to 30 days
     
@@ -2457,6 +2600,378 @@ def perform_global_search(query):
     return results
 
 
+# ────────────────────────────────────────────────
+# NEW: Unified report helpers (submitted core Reports + EMT EventReports)
+# ────────────────────────────────────────────────
+
+def _core_report_to_dict(r):
+    date_field = getattr(r, 'date_submitted', getattr(r, 'created_at', None))
+    return {
+        'type': 'report',
+        'id': r.id,
+        'title': r.title,
+        'report_type': r.get_report_type_display() if hasattr(r, 'get_report_type_display') else getattr(r, 'report_type', 'N/A'),
+        'status': r.get_status_display() if hasattr(r, 'get_status_display') else getattr(r, 'status', 'N/A'),
+        'submitted_by': r.submitted_by.get_full_name() if r.submitted_by else 'N/A',
+        'organization': r.organization.name if r.organization else 'N/A',
+        'created_at': date_field.strftime('%Y-%m-%d %H:%M') if date_field else 'N/A'
+    }
+
+
+def _event_report_to_dict(er):
+    # EventReport linked to proposal
+    title = er.proposal.event_title if getattr(er, 'proposal', None) and getattr(er.proposal, 'event_title', None) else getattr(er, 'title', 'Untitled')
+    submitted_by = er.proposal.submitted_by.get_full_name() if getattr(er, 'proposal', None) and getattr(er.proposal, 'submitted_by', None) else 'N/A'
+    org_name = er.proposal.organization.name if getattr(er, 'proposal', None) and getattr(er.proposal.organization, 'name', None) else 'N/A'
+    return {
+        'type': 'event_report',
+        'id': er.id,
+        'title': title,
+        'report_type': 'Event Report',
+        'status': 'Generated',
+        'submitted_by': submitted_by,
+        'organization': org_name,
+        'created_at': er.created_at.strftime('%Y-%m-%d %H:%M') if getattr(er, 'created_at', None) else 'N/A'
+    }
+
+
+def get_all_reports():
+    """Return all core Reports and EMT-generated EventReports combined, newest first."""
+    core_qs = Report.objects.select_related('organization', 'submitted_by').all()
+    event_qs = EventReport.objects.select_related('proposal', 'proposal__organization', 'proposal__submitted_by').all()
+
+    combined = [ _core_report_to_dict(r) for r in core_qs ] + [ _event_report_to_dict(e) for e in event_qs ]
+    # Sort by created_at descending (string dates parseable in format)
+    combined.sort(key=lambda x: x.get('created_at') or '', reverse=True)
+    return combined
+
+
+def get_reports_by_org_type(org_type_id):
+    """Return combined reports where the organization (core) or proposal.organization (event) has org_type_id."""
+    core_qs = Report.objects.filter(organization__org_type_id=org_type_id).select_related('organization', 'submitted_by')
+    event_qs = EventReport.objects.filter(proposal__organization__org_type_id=org_type_id).select_related('proposal', 'proposal__organization', 'proposal__submitted_by')
+
+    combined = [ _core_report_to_dict(r) for r in core_qs ] + [ _event_report_to_dict(e) for e in event_qs ]
+    combined.sort(key=lambda x: x.get('created_at') or '', reverse=True)
+    return combined
+
+
+def get_reports_by_org_name(name_query):
+    """Return combined reports where organization name contains name_query (case-insensitive)."""
+    core_qs = Report.objects.filter(organization__name__icontains=name_query).select_related('organization', 'submitted_by')
+    event_qs = EventReport.objects.filter(proposal__organization__name__icontains=name_query).select_related('proposal', 'proposal__organization', 'proposal__submitted_by')
+
+    combined = [ _core_report_to_dict(r) for r in core_qs ] + [ _event_report_to_dict(e) for e in event_qs ]
+    combined.sort(key=lambda x: x.get('created_at') or '', reverse=True)
+    return combined
+
+
+def get_report_by_id(id_value):
+    """Fetch a single report by id; check core Report first, then EventReport."""
+    results = []
+    try:
+        rid = int(id_value)
+    except Exception:
+        rid = None
+
+    if rid:
+        core = Report.objects.filter(id=rid).select_related('organization', 'submitted_by').first()
+        if core:
+            results.append(_core_report_to_dict(core))
+            return results
+
+        ev = EventReport.objects.filter(id=rid).select_related('proposal', 'proposal__organization', 'proposal__submitted_by').first()
+        if ev:
+            results.append(_event_report_to_dict(ev))
+            return results
+
+    return results
+
+
+def get_reports_by_org_id(org_id):
+    """Get reports by organization id (core reports) and proposal.organization (event reports)."""
+    core_qs = Report.objects.filter(organization_id=org_id).select_related('organization', 'submitted_by')
+    event_qs = EventReport.objects.filter(proposal__organization_id=org_id).select_related('proposal', 'proposal__organization', 'proposal__submitted_by')
+    combined = [ _core_report_to_dict(r) for r in core_qs ] + [ _event_report_to_dict(e) for e in event_qs ]
+    combined.sort(key=lambda x: x.get('created_at') or '', reverse=True)
+    return combined
+
+
+def get_reports_by_date_range(date_range):
+    """Get reports within a date range. date_range can be '7_days', '30_days', 'this_month', etc."""
+    today = timezone.now().date()
+    if date_range == '7_days':
+        start_date = today - timedelta(days=7)
+    elif date_range == '30_days':
+        start_date = today - timedelta(days=30)
+    elif date_range == 'this_month':
+        start_date = today.replace(day=1)
+    elif date_range == 'this_year':
+        start_date = today.replace(month=1, day=1)
+    elif isinstance(date_range, str) and date_range.endswith('_days'):
+        try:
+            n = int(date_range.split('_')[0])
+            start_date = today - timedelta(days=n)
+        except Exception:
+            start_date = today - timedelta(days=30)
+    else:
+        start_date = today - timedelta(days=30)
+
+    # core reports
+    core_qs = Report.objects.filter(created_at__date__gte=start_date).select_related('organization', 'submitted_by')
+    # event reports
+    event_qs = EventReport.objects.filter(created_at__date__gte=start_date).select_related('proposal', 'proposal__organization', 'proposal__submitted_by')
+    combined = [ _core_report_to_dict(r) for r in core_qs ] + [ _event_report_to_dict(e) for e in event_qs ]
+    combined.sort(key=lambda x: x.get('created_at') or '', reverse=True)
+    return combined
+
+
+def get_reports_with_or_without_file(has_file):
+    """Return core Reports that have file or not, and include EventReports always (they may have no file field)."""
+    core_qs = Report.objects.filter(file__isnull=not has_file) if has_file else Report.objects.filter(file__isnull=True)
+    core_qs = core_qs.select_related('organization', 'submitted_by')
+    event_qs = EventReport.objects.select_related('proposal', 'proposal__organization', 'proposal__submitted_by').all()
+    combined = [ _core_report_to_dict(r) for r in core_qs ] + [ _event_report_to_dict(e) for e in event_qs ]
+    combined.sort(key=lambda x: x.get('created_at') or '', reverse=True)
+    return combined
+
+
+def get_event_reports_by_proposal(query):
+    """Find EventReports by proposal title or id."""
+    results = []
+    try:
+        pid = int(query)
+    except Exception:
+        pid = None
+
+    if pid:
+        event_qs = EventReport.objects.filter(proposal_id=pid).select_related('proposal', 'proposal__organization', 'proposal__submitted_by')
+    else:
+        event_qs = EventReport.objects.filter(proposal__event_title__icontains=query).select_related('proposal', 'proposal__organization', 'proposal__submitted_by')
+    results = [ _event_report_to_dict(e) for e in event_qs ]
+    return results
+
+
+def get_core_reports_only():
+    qs = Report.objects.select_related('organization', 'submitted_by').all()
+    return [ _core_report_to_dict(r) for r in qs ]
+
+
+def get_event_reports_only():
+    qs = EventReport.objects.select_related('proposal', 'proposal__organization', 'proposal__submitted_by').all()
+    return [ _event_report_to_dict(e) for e in qs ]
+
+
+def search_reports_text(text_query):
+    """Free-text search across core Report title and EventReport proposal title."""
+    results = []
+    core_qs = Report.objects.filter(title__icontains=text_query).select_related('organization', 'submitted_by')
+    event_qs = EventReport.objects.filter(proposal__event_title__icontains=text_query).select_related('proposal', 'proposal__organization', 'proposal__submitted_by')
+    results = [ _core_report_to_dict(r) for r in core_qs ] + [ _event_report_to_dict(e) for e in event_qs ]
+    results.sort(key=lambda x: x.get('created_at') or '', reverse=True)
+    return results
+
+
+def get_reports_by_author(author_query):
+    """Return reports submitted by a user matching username or name or id."""
+    results = []
+    # try username or name
+    users = User.objects.filter(Q(username__icontains=author_query) | Q(first_name__icontains=author_query) | Q(last_name__icontains=author_query))
+    if users.exists():
+        core_qs = Report.objects.filter(submitted_by__in=users).select_related('organization', 'submitted_by')
+        event_qs = EventReport.objects.filter(proposal__submitted_by__in=users).select_related('proposal', 'proposal__organization', 'proposal__submitted_by')
+        results = [ _core_report_to_dict(r) for r in core_qs ] + [ _event_report_to_dict(e) for e in event_qs ]
+    else:
+        # fallback: maybe author_query is user id
+        try:
+            uid = int(author_query)
+            core_qs = Report.objects.filter(submitted_by_id=uid).select_related('organization', 'submitted_by')
+            event_qs = EventReport.objects.filter(proposal__submitted_by_id=uid).select_related('proposal', 'proposal__organization', 'proposal__submitted_by')
+            results = [ _core_report_to_dict(r) for r in core_qs ] + [ _event_report_to_dict(e) for e in event_qs ]
+        except Exception:
+            results = []
+    results.sort(key=lambda x: x.get('created_at') or '', reverse=True)
+    return results
+
+
+# Additional helper functions for advanced filtering (unchanged)
+def get_programs_with_outcomes(has_outcomes):
+    """Get programs based on whether they have outcomes"""
+    if has_outcomes:
+        programs = Program.objects.filter(programoutcome__isnull=False).distinct()
+    else:
+        programs = Program.objects.filter(programoutcome__isnull=True)
+    
+    return [
+        {
+            'type': 'program',
+            'id': program.id,
+            'name': program.name,
+            'code': program.code if hasattr(program, 'code') else 'N/A',
+            'has_outcomes': program.programoutcome_set.exists()
+        }
+        for program in programs
+    ]
+
+
+def get_programs_with_pso(has_pso):
+    """Get programs based on whether they have PSOs"""
+    if has_pso:
+        programs = Program.objects.filter(programspecificoutcome__isnull=False).distinct()
+    else:
+        programs = Program.objects.filter(programspecificoutcome__isnull=True)
+    
+    return [
+        {
+            'type': 'program',
+            'id': program.id,
+            'name': program.name,
+            'code': program.code if hasattr(program, 'code') else 'N/A',
+            'has_pso': program.programspecificoutcome_set.exists()
+        }
+        for program in programs
+    ]
+
+
+def get_events_with_reports(has_reports):
+    """Get events based on whether they have reports generated"""
+    if has_reports:
+        # Get EMT events that have reports
+        emt_proposals = EMTEventProposal.objects.filter(
+            eventreport__isnull=False
+        ).distinct().select_related('submitted_by', 'organization')
+    else:
+        # Get EMT events without reports
+        emt_proposals = EMTEventProposal.objects.filter(
+            eventreport__isnull=True
+        ).select_related('submitted_by', 'organization')
+    
+    return [
+        {
+            'type': 'emt_proposal',
+            'id': proposal.id,
+            'title': proposal.event_title or 'Untitled',
+            'status': proposal.get_status_display(),
+            'submitted_by': proposal.submitted_by.get_full_name() or proposal.submitted_by.username,
+            'organization': proposal.organization.name if proposal.organization else 'N/A',
+            'has_report': hasattr(proposal, 'eventreport'),
+            'created_at': proposal.created_at.strftime('%Y-%m-%d %H:%M')
+        }
+        for proposal in emt_proposals
+    ]
+
+
+# Update process_filters function to include new report filter types: (This is the extended processor)
+def process_filters_extended(filters, logic='AND'):
+    """Extended process_filters function with additional filter types"""
+    if not filters:
+        return []
+    
+    all_results = []
+    
+    for filter_item in filters:
+        filter_type = filter_item['type']
+        filter_value = filter_item['value']
+        
+        # Process each filter type (existing filters)
+        if filter_type == 'profile_role':
+            results = get_users_by_profile_role(filter_value)
+        elif filter_type == 'organization_type':
+            results = get_users_by_organization_type(filter_value)
+        elif filter_type == 'organization':
+            results = get_users_by_organization(filter_value)
+        elif filter_type == 'organization_role':
+            results = get_users_by_organization_role(filter_value)
+        elif filter_type == 'emt_proposal_status':
+            results = get_emt_proposals_by_status(filter_value)
+        elif filter_type == 'core_proposal_status':
+            results = get_core_proposals_by_status(filter_value)
+        # Reports: use unified handlers (replacing older broken sections)
+        elif filter_type == 'all_reports':
+            results = get_all_reports()
+        elif filter_type == 'reports_by_org_type':
+            try:
+                results = get_reports_by_org_type(int(filter_value))
+            except Exception:
+                results = []
+        elif filter_type == 'reports_by_org_name':
+            results = get_reports_by_org_name(filter_value)
+        elif filter_type == 'report_type':
+            results = get_reports_by_type(filter_value)
+        elif filter_type == 'report_status':
+            results = get_reports_by_status(filter_value)
+        elif filter_type == 'report_search':
+            results = search_reports_text(filter_value)
+        elif filter_type == 'report_date_range':
+            results = get_reports_by_date_range(filter_value)
+        elif filter_type == 'report_author':
+            results = get_reports_by_author(filter_value)
+        # existing non-report filters preserved
+        elif filter_type == 'report_generated':
+            results = get_events_with_reports(filter_value == 'true')
+        elif filter_type == 'report_proposal_event':
+            results = get_event_reports_by_proposal(filter_value)
+        elif filter_type == 'report_core_or_event':
+            if filter_value == 'core':
+                results = get_core_reports_only()
+            elif filter_value == 'event':
+                results = get_event_reports_only()
+            else:
+                results = []
+        elif filter_type == 'report_combined_search':
+            results = [r for r in perform_global_search(filter_value) if r.get('type') in ('report', 'event_report', 'emt_proposal', 'core_proposal')]
+        elif filter_type == 'program_has_outcomes':
+            results = get_programs_with_outcomes(filter_value == 'true')
+        elif filter_type == 'program_has_pso':
+            results = get_programs_with_pso(filter_value == 'true')
+        elif filter_type == 'emt_report_generated':
+            results = get_events_with_reports(filter_value == 'true')
+        elif filter_type == 'organization_active':
+            results = get_organizations_by_active_status(filter_value == 'true')
+        elif filter_type == 'emt_big_event':
+            results = get_emt_events_by_big_event(filter_value == 'true')
+        elif filter_type == 'emt_finance_approval':
+            results = get_emt_events_by_finance_approval(filter_value == 'true')
+        elif filter_type == 'has_role_assignment':
+            results = get_users_by_role_assignment_status(filter_value == 'true')
+        elif filter_type == 'date_range':
+            results = get_data_by_date_range(filter_value)
+        elif filter_type == 'search':
+            results = perform_global_search(filter_value)
+        else:
+            results = []
+        
+        all_results.append(results)
+    
+
+    # Combine results based on logic (same as before)
+    if logic == 'OR':
+        combined_results = []
+        seen_ids = set()
+        
+        for result_set in all_results:
+            for item in result_set:
+                item_id = f"{item.get('type', '')}_{item.get('id', '')}"
+                if item_id not in seen_ids:
+                    combined_results.append(item)
+                    seen_ids.add(item_id)
+        
+        return combined_results
+    
+    else:  # AND logic
+        if not all_results:
+            return []
+        
+        combined_results = all_results[0]
+        
+        for result_set in all_results[1:]:
+            result_ids = {f"{item.get('type', '')}_{item.get('id', '')}" for item in result_set}
+            combined_results = [
+                item for item in combined_results 
+                if f"{item.get('type', '')}_{item.get('id', '')}" in result_ids
+            ]
+        
+        return combined_results
 @csrf_exempt
 @login_required
 @user_passes_test(is_admin)
@@ -2618,258 +3133,6 @@ def export_data_excel(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-@login_required
-@user_passes_test(is_admin)
-def search_suggestions_api(request):
-    """API endpoint to provide smart search suggestions"""
-    query = request.GET.get('q', '').lower()
-    
-    if not query or len(query) < 2:
-        return JsonResponse([], safe=False)
-    
-    suggestions = []
-    
-    # Get all filter suggestions
-    all_filters = filter_suggestions_api(request)
-    if isinstance(all_filters, JsonResponse):
-        filter_data = json.loads(all_filters.content)
-        
-        # Search through filter labels and descriptions
-        for filter_item in filter_data:
-            label = filter_item['label'].lower()
-            description = filter_item['description'].lower()
-            
-            if query in label or query in description:
-                # Parse filter string to get type and value
-                filter_parts = filter_item['filter'].split(':', 1)
-                if len(filter_parts) == 2:
-                    suggestions.append({
-                        'label': filter_item['label'],
-                        'description': filter_item['description'],
-                        'category': filter_item['category'],
-                        'type': filter_parts[0],
-                        'value': filter_parts[1],
-                        'filter': filter_item['filter']
-                    })
-    
-    # Add global search option
-    suggestions.append({
-        'label': f'Search for "{query}"',
-        'description': f'Global search across all data for "{query}"',
-        'category': 'Search',
-        'type': 'search',
-        'value': query,
-        'filter': f'search:{query}'
-    })
-    
-    # Limit to top 10 suggestions
-    return JsonResponse(suggestions[:10], safe=False)
-
-
-@login_required
-@user_passes_test(is_admin)
-def get_filter_counts(request):
-    """API endpoint to get counts for different filter types"""
-    counts = {}
-    
-    try:
-        # User counts by role
-        profile_counts = {}
-        if hasattr(Profile, 'ROLE_CHOICES'):
-            for choice_value, choice_display in Profile.ROLE_CHOICES:
-                count = User.objects.filter(profile__role=choice_value).count()
-                profile_counts[choice_display] = count
-        counts['users_by_role'] = profile_counts
-        
-        # Organization counts
-        org_type_counts = {}
-        org_types = OrganizationType.objects.filter(is_active=True)
-        for org_type in org_types:
-            count = Organization.objects.filter(org_type=org_type, is_active=True).count()
-            org_type_counts[org_type.name] = count
-        counts['organizations_by_type'] = org_type_counts
-        
-        # Event proposal counts
-        emt_status_counts = {}
-        if hasattr(EMTEventProposal, 'Status') and hasattr(EMTEventProposal.Status, 'choices'):
-            for choice_value, choice_display in EMTEventProposal.Status.choices:
-                count = EMTEventProposal.objects.filter(status=choice_value).count()
-                emt_status_counts[choice_display] = count
-        counts['emt_proposals_by_status'] = emt_status_counts
-        
-        # Report counts
-        report_type_counts = {}
-        if hasattr(Report, 'REPORT_TYPE_CHOICES'):
-            for choice_value, choice_display in Report.REPORT_TYPE_CHOICES:
-                count = Report.objects.filter(report_type=choice_value).count()
-                report_type_counts[choice_display] = count
-        counts['reports_by_type'] = report_type_counts
-        
-        # Total counts
-        counts['totals'] = {
-            'users': User.objects.count(),
-            'organizations': Organization.objects.count(),
-            'emt_proposals': EMTEventProposal.objects.count(),
-            'core_proposals': EventProposal.objects.count(),
-            'reports': Report.objects.count(),
-        }
-        
-        return JsonResponse(counts)
-    
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
-
-
-# Additional helper functions for advanced filtering
-
-def get_programs_with_outcomes(has_outcomes):
-    """Get programs based on whether they have outcomes"""
-    if has_outcomes:
-        programs = Program.objects.filter(programoutcome__isnull=False).distinct()
-    else:
-        programs = Program.objects.filter(programoutcome__isnull=True)
-    
-    return [
-        {
-            'type': 'program',
-            'id': program.id,
-            'name': program.name,
-            'code': program.code if hasattr(program, 'code') else 'N/A',
-            'has_outcomes': program.programoutcome_set.exists()
-        }
-        for program in programs
-    ]
-
-
-def get_programs_with_pso(has_pso):
-    """Get programs based on whether they have PSOs"""
-    if has_pso:
-        programs = Program.objects.filter(programspecificoutcome__isnull=False).distinct()
-    else:
-        programs = Program.objects.filter(programspecificoutcome__isnull=True)
-    
-    return [
-        {
-            'type': 'program',
-            'id': program.id,
-            'name': program.name,
-            'code': program.code if hasattr(program, 'code') else 'N/A',
-            'has_pso': program.programspecificoutcome_set.exists()
-        }
-        for program in programs
-    ]
-
-
-def get_events_with_reports(has_reports):
-    """Get events based on whether they have reports generated"""
-    if has_reports:
-        # Get EMT events that have reports
-        emt_proposals = EMTEventProposal.objects.filter(
-            eventreport__isnull=False
-        ).distinct().select_related('submitted_by', 'organization')
-    else:
-        # Get EMT events without reports
-        emt_proposals = EMTEventProposal.objects.filter(
-            eventreport__isnull=True
-        ).select_related('submitted_by', 'organization')
-    
-    return [
-        {
-            'type': 'emt_proposal',
-            'id': proposal.id,
-            'title': proposal.event_title or 'Untitled',
-            'status': proposal.get_status_display(),
-            'submitted_by': proposal.submitted_by.get_full_name() or proposal.submitted_by.username,
-            'organization': proposal.organization.name if proposal.organization else 'N/A',
-            'has_report': hasattr(proposal, 'eventreport'),
-            'created_at': proposal.created_at.strftime('%Y-%m-%d %H:%M')
-        }
-        for proposal in emt_proposals
-    ]
-
-
-# Update process_filters function to include new filter types
-def process_filters_extended(filters, logic='AND'):
-    """Extended process_filters function with additional filter types"""
-    if not filters:
-        return []
-    
-    all_results = []
-    
-    for filter_item in filters:
-        filter_type = filter_item['type']
-        filter_value = filter_item['value']
-        
-        # Process each filter type (existing filters)
-        if filter_type == 'profile_role':
-            results = get_users_by_profile_role(filter_value)
-        elif filter_type == 'organization_type':
-            results = get_users_by_organization_type(filter_value)
-        elif filter_type == 'organization':
-            results = get_users_by_organization(filter_value)
-        elif filter_type == 'organization_role':
-            results = get_users_by_organization_role(filter_value)
-        elif filter_type == 'emt_proposal_status':
-            results = get_emt_proposals_by_status(filter_value)
-        elif filter_type == 'core_proposal_status':
-            results = get_core_proposals_by_status(filter_value)
-        elif filter_type == 'report_type':
-            results = get_reports_by_type(filter_value)
-        elif filter_type == 'report_status':
-            results = get_reports_by_status(filter_value)
-        elif filter_type == 'organization_active':
-            results = get_organizations_by_active_status(filter_value == 'true')
-        elif filter_type == 'emt_big_event':
-            results = get_emt_events_by_big_event(filter_value == 'true')
-        elif filter_type == 'emt_finance_approval':
-            results = get_emt_events_by_finance_approval(filter_value == 'true')
-        elif filter_type == 'has_role_assignment':
-            results = get_users_by_role_assignment_status(filter_value == 'true')
-        elif filter_type == 'date_range':
-            results = get_data_by_date_range(filter_value)
-        elif filter_type == 'search':
-            results = perform_global_search(filter_value)
-        # New filter types
-        elif filter_type == 'program_has_outcomes':
-            results = get_programs_with_outcomes(filter_value == 'true')
-        elif filter_type == 'program_has_pso':
-            results = get_programs_with_pso(filter_value == 'true')
-        elif filter_type == 'emt_report_generated':
-            results = get_events_with_reports(filter_value == 'true')
-        else:
-            results = []
-        
-        all_results.append(results)
-    
-
-    # Combine results based on logic (same as before)
-    if logic == 'OR':
-        combined_results = []
-        seen_ids = set()
-        
-        for result_set in all_results:
-            for item in result_set:
-                item_id = f"{item.get('type', '')}_{item.get('id', '')}"
-                if item_id not in seen_ids:
-                    combined_results.append(item)
-                    seen_ids.add(item_id)
-        
-        return combined_results
-    
-    else:  # AND logic
-        if not all_results:
-            return []
-        
-        combined_results = all_results[0]
-        
-        for result_set in all_results[1:]:
-            result_ids = {f"{item.get('type', '')}_{item.get('id', '')}" for item in result_set}
-            combined_results = [
-                item for item in combined_results 
-                if f"{item.get('type', '')}_{item.get('id', '')}" in result_ids
-            ]
-        
-        return combined_results
 # ---------------------------------------------
 #           Switch View (Admin)
 # ---------------------------------------------
