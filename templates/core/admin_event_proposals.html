@@ -35,7 +35,7 @@
                 <tr>
                     <td>{{ forloop.counter }}</td>
                     <td>
-                        <a href="#" class="proposal-title-link" data-id="{{ p.id }}" onclick="showProposalModal({{ p.id }})">
+                        <a href="#" class="proposal-title-link" data-id="{{ p.id }}" onclick="showProposalModal('{{ p.id }}')">
                             {{ p.event_title|truncatechars:30 }}
                         </a>
                     </td>

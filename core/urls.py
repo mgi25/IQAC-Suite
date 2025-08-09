@@ -20,6 +20,7 @@ urlpatterns = [
     path('propose-event/', views.propose_event, name='propose_event'),
     path('proposal-status/<int:pk>/', views.proposal_status, name='proposal_status'),
     path('proposal/<int:proposal_id>/detail/', views.proposal_detail, name='proposal_detail'),
+    path('event/<int:proposal_id>/details/', views.student_event_details, name='student_event_details'),
 
     # ────────────────────────────────────────────────
     # Admin - User Management

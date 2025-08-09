@@ -166,9 +166,17 @@
             </div>
         </div>
 
+        <!-- Calendar Events Data -->
+        {{ calendar_events|json_script:"calendarEventsJson" }}
         <script>
             // Pass calendar events data to JavaScript
-            window.DASHBOARD_EVENTS = JSON.parse(document.getElementById('calendarEventsJson').textContent);
+            try {
+                window.DASHBOARD_EVENTS = JSON.parse(document.getElementById('calendarEventsJson').textContent);
+                console.log('Calendar events loaded:', window.DASHBOARD_EVENTS.length, 'events');
+            } catch (e) {
+                console.error('Error parsing calendar events:', e);
+                window.DASHBOARD_EVENTS = [];
+            }
         </script>
 
         <div id="events" class="tab-content">
