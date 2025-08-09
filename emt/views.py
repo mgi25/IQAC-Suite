@@ -534,9 +534,10 @@ def proposal_status_detail(request, proposal_id):
         return redirect('some-success-url')
 
     # Get approval steps
-    approval_steps = ApprovalStep.objects.filter(
-        proposal=proposal
-    ).order_by('step_order')
+    all_steps = (
+        ApprovalStep.objects.filter(proposal=proposal).order_by("order_index")
+    )
+    visible_steps = all_steps.visible_for_status()
 
     # Total budget calculation
     budget_total = ExpenseDetail.objects.filter(
@@ -561,7 +562,8 @@ def proposal_status_detail(request, proposal_id):
 
     return render(request, 'emt/proposal_status_detail.html', {
         'proposal': proposal,
-        'approval_steps': approval_steps,
+        'steps': visible_steps,
+        'all_steps': all_steps,
         'budget_total': budget_total,
         'statuses': statuses,
         'status_index': status_index,
@@ -942,11 +944,7 @@ def review_approval_step(request, step_id):
         optional_candidates = list(get_downstream_optional_candidates(step))
         show_optional_picker = len(optional_candidates) > 0
 
-    history_steps = proposal.approval_steps.filter(
-        Q(is_optional=False)
-        | Q(optional_unlocked=True)
-        | Q(status__in=[ApprovalStep.Status.APPROVED, ApprovalStep.Status.REJECTED])
-    ).order_by("order_index")
+    history_steps = proposal.approval_steps.visible_for_status().order_by("order_index")
 
     if request.method == 'POST':
         action = request.POST.get('action')
