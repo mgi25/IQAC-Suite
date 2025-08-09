@@ -1,1392 +1,737 @@
-{% extends 'base.html' %}
+{# templates/core/data_export_filter.html #}
+{% extends "base.html" %}
 {% load static %}
 
-{% block title %}Data Export - CHRIST University{% endblock %}
+{% block title %}Advanced Data Export & Filter - IQAC Suite{% endblock %}
 
 {% block head_extra %}
+<!-- DataTables CSS + Buttons (CDN) -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+
 <style>
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
+/* ---------- Layout & Theme ---------- */
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { height:100%; }
 body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
-    color: #2d3748;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+  color:#2d3748;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
 }
 
+/* Container */
 .export-container {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 2rem;
-    min-height: 100vh;
+  max-width:1400px;
+  margin: 28px auto;
+  padding: 20px;
 }
 
+/* Header */
 .export-header {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #2d3748;
-    padding: 3rem 2.5rem;
-    border-radius: 20px;
-    margin-bottom: 2rem;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s ease;
+  background: rgba(255,255,255,0.96);
+  border-radius:16px;
+  padding: 28px;
+  position:relative;
+  overflow:hidden;
+  box-shadow: 0 18px 40px rgba(0,0,0,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
 }
-
 .export-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #667eea, #764ba2, #f093fb, #f5576c);
-    background-size: 300% 300%;
-    animation: gradientShift 3s ease infinite;
+  content: "";
+  position:absolute;
+  left:0;right:0;top:0;height:6px;
+  background: linear-gradient(90deg,#667eea,#764ba2,#f093fb,#f5576c);
+  background-size:200% 100%;
+  mix-blend-mode:screen;
+  opacity:0.95;
 }
-
-@keyframes gradientShift {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-}
-
-.export-header:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 25px 50px rgba(0,0,0,0.15);
-}
-
 .export-title {
-    margin: 0;
-    font-size: 2.5rem;
-    font-weight: 700;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
+  font-size: 1.95rem;
+  font-weight: 800;
+  display:flex;
+  gap:12px;
+  align-items:center;
+  color: #1a202c;
+  letter-spacing: -0.02em;
 }
+.export-title i { font-size: 1.25rem; color: #667eea; }
+.export-subtitle { margin-top:8px; color:#485058; opacity:0.95; }
 
-.export-title i {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.export-subtitle {
-    margin: 1rem 0 0 0;
-    opacity: 0.8;
-    font-size: 1.1rem;
-    font-weight: 400;
-    line-height: 1.6;
-}
-
+/* Filter card */
 .filter-section {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 20px;
-    padding: 2.5rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.08);
-    transition: all 0.3s ease;
+  margin-top:18px;
+  background: rgba(255,255,255,0.96);
+  padding:16px;
+  border-radius:12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+  border: 1px solid rgba(255,255,255,0.06);
 }
+.section-title { font-size:1.15rem; font-weight:700; display:flex;gap:10px;align-items:center;color:#293241;margin-bottom:12px; }
 
-.filter-section:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 25px 50px rgba(0,0,0,0.12);
+/* Quick filters */
+.quick-filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+.quick-filter-btn {
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid rgba(102,126,234,0.12);
+  background: rgba(102,126,234,0.06);
+  color:#1f2937;
+  cursor:pointer;
+  font-weight:700;
+  font-size:0.92rem;
+  display:inline-flex;
+  gap:8px;
+  align-items:center;
+  transition: transform .12s ease, box-shadow .12s ease;
 }
+.quick-filter-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(102,126,234,0.08); }
+.quick-filter-btn.active { background: linear-gradient(135deg,#667eea,#764ba2); color:white; border:none; }
 
-.section-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin-bottom: 2rem;
-    color: #2d3748;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    position: relative;
-}
-
-.section-title::after {
-    content: '';
-    position: absolute;
-    bottom: -0.5rem;
-    left: 0;
-    width: 60px;
-    height: 3px;
-    background: linear-gradient(90deg, #667eea, #764ba2);
-    border-radius: 2px;
-}
-
-.search-container {
-    position: relative;
-    margin-bottom: 2rem;
-}
-
+/* Search input & suggestions */
+.search-container { position:relative; margin-bottom:12px; }
 .search-input {
-    width: 100%;
-    padding: 1.25rem 1.25rem 1.25rem 3.5rem;
-    border: 2px solid #e2e8f0;
-    border-radius: 16px;
-    font-size: 1.1rem;
-    transition: all 0.3s ease;
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(10px);
-    font-weight: 500;
+  width:100%;
+  padding:12px 14px 12px 44px;
+  border-radius:12px;
+  border:1px solid #e6eef8;
+  font-size:1rem;
+  background:rgba(255,255,255,0.96);
+  box-shadow: inset 0 1px 0 rgba(0,0,0,0.02);
 }
-
-.search-input:focus {
-    outline: none;
-    border-color: #667eea;
-    background: rgba(255, 255, 255, 0.95);
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1), 0 10px 25px rgba(0,0,0,0.08);
-    transform: translateY(-1px);
-}
-
-.search-input::placeholder {
-    color: #a0aec0;
-    font-weight: 400;
-}
-
-.search-icon {
-    position: absolute;
-    left: 1.25rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #667eea;
-    font-size: 1.25rem;
-    z-index: 2;
-}
-
+.search-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:#667eea; font-size:14px; }
 .suggestions-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 16px;
-    max-height: 400px;
-    overflow-y: auto;
-    z-index: 1000;
-    display: none;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-    margin-top: 0.5rem;
+  position:absolute;
+  left:0; right:0;
+  top: calc(100% + 8px);
+  background:white;
+  border-radius:10px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.12);
+  max-height:280px;
+  overflow:auto;
+  z-index:1200;
+  display:none;
+  padding:8px;
 }
+.suggestion-item { padding:10px 12px; cursor:pointer; border-radius:8px; }
+.suggestion-item:hover { background:#f3f6ff; }
+.suggestion-category { font-size:0.72rem; color:#4c66d6; font-weight:800; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.06em; }
+.suggestion-label { font-weight:700; color:#222; }
 
-.suggestions-dropdown::-webkit-scrollbar {
-    width: 6px;
-}
-
-.suggestions-dropdown::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.suggestions-dropdown::-webkit-scrollbar-thumb {
-    background: #cbd5e0;
-    border-radius: 3px;
-}
-
-.suggestions-dropdown::-webkit-scrollbar-thumb:hover {
-    background: #a0aec0;
-}
-
-.suggestion-item {
-    padding: 1rem 1.25rem;
-    cursor: pointer;
-    border-bottom: 1px solid rgba(226, 232, 240, 0.3);
-    transition: all 0.2s ease;
-    position: relative;
-}
-
-.suggestion-item:hover {
-    background: rgba(102, 126, 234, 0.08);
-    transform: translateX(4px);
-}
-
-.suggestion-item:last-child {
-    border-bottom: none;
-}
-
-.suggestion-category {
-    font-weight: 700;
-    color: #667eea;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: 0.25rem;
-}
-
-.suggestion-label {
-    color: #2d3748;
-    font-weight: 600;
-    font-size: 1rem;
-}
-
-.suggestion-description {
-    color: #718096;
-    font-size: 0.9rem;
-    margin-top: 0.25rem;
-    line-height: 1.4;
-}
-
-.active-filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-bottom: 2rem;
-    min-height: 3rem;
-    align-items: center;
-}
-
+/* Active filters chips */
+.active-filters { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; margin-bottom:6px; align-items:center; min-height:42px;}
 .filter-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1.25rem;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    border-radius: 25px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
+  background: linear-gradient(135deg,#667eea,#764ba2);
+  color:white;
+  padding:8px 10px;
+  border-radius:999px;
+  font-weight:700;
+  display:inline-flex;
+  gap:8px;
+  align-items:center;
+  font-size:0.9rem;
 }
+.filter-chip .remove-filter { background: rgba(255,255,255,0.15); border:none; color:white; width:22px; height:22px; border-radius:50%; cursor:pointer; font-weight:700; }
 
-.filter-chip::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-    transition: left 0.5s ease;
-}
-
-.filter-chip:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 25px rgba(102, 126, 234, 0.4);
-}
-
-.filter-chip:hover::before {
-    left: 100%;
-}
-
-.filter-chip .remove-filter {
-    background: rgba(255,255,255,0.2);
-    border: none;
-    color: white;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 0.8rem;
-    transition: all 0.3s ease;
-}
-
-.filter-chip .remove-filter:hover {
-    background: rgba(255,255,255,0.35);
-    transform: scale(1.1);
-}
-
-.empty-filters {
-    color: #a0aec0;
-    font-style: italic;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-size: 1rem;
-    padding: 1rem;
-    background: rgba(160, 174, 192, 0.1);
-    border-radius: 12px;
-    border: 2px dashed rgba(160, 174, 192, 0.3);
-    width: 100%;
-    justify-content: center;
-}
-
-.results-section {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 20px;
-    padding: 2.5rem;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.08);
-    transition: all 0.3s ease;
-}
-
-.results-section:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 25px 50px rgba(0,0,0,0.12);
-}
-
-.results-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-    flex-wrap: wrap;
-    gap: 1rem;
-}
-
-.results-count {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: #2d3748;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.results-count i {
-    color: #667eea;
-}
-
-.export-controls {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-}
+/* Results */
+.results-section { margin-top:14px; background: rgba(255,255,255,0.96); padding:12px; border-radius:12px; box-shadow: 0 10px 30px rgba(0,0,0,0.06); border:1px solid rgba(255,255,255,0.06); }
+.results-header { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:8px; }
+.results-count { font-weight:800; color:#1f2937; display:flex; gap:8px; align-items:center; }
+.export-controls { display:flex; gap:8px; align-items:center; }
 
 .export-btn {
-    background: linear-gradient(135deg, #48bb78, #38a169);
-    color: white;
-    border: none;
-    padding: 1rem 1.75rem;
-    border-radius: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    text-decoration: none;
-    font-size: 1rem;
-    position: relative;
-    overflow: hidden;
+  padding:8px 12px;
+  border-radius:10px;
+  border:none;
+  color:white;
+  cursor:pointer;
+  font-weight:700;
+  display:inline-flex;
+  gap:8px;
+  align-items:center;
+}
+.dataTables_scrollBody {
+    overflow-y: auto !important;
+    overflow-x: auto !important;
 }
 
-.export-btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-    transition: left 0.5s ease;
-}
-
-.export-btn:hover::before {
-    left: 100%;
-}
-
-.export-btn:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 25px rgba(72, 187, 120, 0.4);
-}
-
-.export-btn:disabled {
-    background: #e2e8f0;
-    color: #a0aec0;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
-
-.export-btn:disabled:hover {
-    transform: none;
-    box-shadow: none;
-}
-
-.export-btn.csv {
-    background: linear-gradient(135deg, #4299e1, #3182ce);
-}
-
-.export-btn.csv:hover {
-    box-shadow: 0 12px 25px rgba(66, 153, 225, 0.4);
-}
-
-.results-preview {
-    background: rgba(247, 250, 252, 0.5);
-    border-radius: 16px;
-    padding: 1.5rem;
-    max-height: 600px;
-    overflow: auto;
-    border: 1px solid rgba(226, 232, 240, 0.5);
-}
-
-.results-preview::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-.results-preview::-webkit-scrollbar-track {
-    background: rgba(226, 232, 240, 0.3);
-    border-radius: 4px;
-}
-
-.results-preview::-webkit-scrollbar-thumb {
-    background: #cbd5e0;
-    border-radius: 4px;
-}
-
-.results-preview::-webkit-scrollbar-thumb:hover {
-    background: #a0aec0;
-}
-
-.preview-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
+.dataTables_scrollHead {
     background: white;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-}
-
-.preview-table th,
-.preview-table td {
-    padding: 1rem;
-    text-align: left;
-    border-bottom: 1px solid #f1f5f9;
-    transition: all 0.2s ease;
-}
-
-.preview-table th {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-size: 0.8rem;
     position: sticky;
     top: 0;
-    z-index: 10;
+    z-index: 5;
 }
 
-.preview-table tbody tr:hover {
-    background: rgba(102, 126, 234, 0.05);
-    transform: scale(1.01);
+.dataTables_scrollBody::-webkit-scrollbar {
+    height: 8px;
+    background-color: #f1f1f1;
 }
 
-.preview-table tbody tr:hover td {
-    border-color: rgba(102, 126, 234, 0.2);
+.dataTables_scrollBody::-webkit-scrollbar-thumb {
+    background-color: #2c5aa0;
+    border-radius: 4px;
 }
 
-.loading-indicator {
-    display: none;
-    text-align: center;
-    padding: 3rem;
-    color: #718096;
+.export-btn.csv { background:#2563eb; } /* blue */
+.export-btn.excel { background:#16a34a; } /* green */
+
+/* Loading and empty */
+.loading-indicator { text-align:center; padding:16px; display:none; color:#475569; }
+.empty-state { text-align:center; padding:28px; color:#60708a; }
+
+/* Results preview area */
+.results-preview { background: rgba(247,250,252,0.72); border-radius:10px; padding:10px; overflow:auto; }
+
+/* Small responsive tweaks */
+@media (max-width:900px) {
+  .export-header { padding:16px; }
+  .export-title { font-size:1.4rem; }
+  .quick-filter-btn { font-size:0.88rem; padding:6px 10px; }
 }
 
-.loading-spinner {
-    border: 4px solid rgba(102, 126, 234, 0.1);
-    border-top: 4px solid #667eea;
-    border-radius: 50%;
-    width: 50px;
-    height: 50px;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 1.5rem;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.quick-filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-bottom: 2rem;
-}
-
-.quick-filter-btn {
-    padding: 0.75rem 1.5rem;
-    background: rgba(102, 126, 234, 0.1);
-    color: #667eea;
-    border: 2px solid rgba(102, 126, 234, 0.2);
-    border-radius: 25px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 0.9rem;
-    font-weight: 600;
-    position: relative;
-    overflow: hidden;
-}
-
-.quick-filter-btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
-    transition: left 0.5s ease;
-}
-
-.quick-filter-btn:hover {
-    background: rgba(102, 126, 234, 0.15);
-    border-color: #667eea;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
-}
-
-.quick-filter-btn:hover::before {
-    left: 100%;
-}
-
-.filter-logic {
-    display: flex;
-    gap: 0.75rem;
-    margin-bottom: 1.5rem;
-    align-items: center;
-}
-
-.filter-logic-label {
-    font-size: 1rem;
-    color: #4a5568;
-    font-weight: 600;
-    margin-right: 0.5rem;
-}
-
-.logic-btn {
-    padding: 0.5rem 1.25rem;
-    border: 2px solid #e2e8f0;
-    background: white;
-    cursor: pointer;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    transition: all 0.3s ease;
-    letter-spacing: 0.05em;
-}
-
-.logic-btn:hover {
-    border-color: #667eea;
-    transform: translateY(-1px);
-}
-
-.logic-btn.active {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    border-color: #667eea;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.empty-state {
-    text-align: center;
-    color: #718096;
-    padding: 4rem 2rem;
-}
-
-.empty-state i {
-    font-size: 4rem;
-    opacity: 0.3;
-    display: block;
-    margin-bottom: 1.5rem;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.empty-state h3 {
-    font-size: 1.25rem;
-    margin-bottom: 0.5rem;
-    color: #4a5568;
-}
-
-.empty-state p {
-    font-size: 1rem;
-    line-height: 1.6;
-}
-
-.results-info {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-    padding: 1rem;
-    background: rgba(102, 126, 234, 0.05);
-    border-radius: 12px;
-    border-left: 4px solid #667eea;
-}
-
-.results-info-text {
-    font-size: 0.95rem;
-    color: #4a5568;
-    font-weight: 500;
-}
-
-.pagination-info {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 1rem;
-    margin-top: 1.5rem;
-    padding: 1rem;
-    background: rgba(247, 250, 252, 0.5);
-    border-radius: 12px;
-    font-size: 0.9rem;
-    color: #4a5568;
-}
-
-@media (max-width: 768px) {
-    .export-container {
-        padding: 1rem;
-    }
-    
-    .export-title {
-        font-size: 2rem;
-    }
-    
-    .results-header {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .export-controls {
-        justify-content: center;
-    }
-    
-    .quick-filters {
-        gap: 0.5rem;
-    }
-    
-    .quick-filter-btn {
-        font-size: 0.8rem;
-        padding: 0.5rem 1rem;
-    }
-}
-
-.fade-in {
-    animation: fadeIn 0.5s ease-out;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.scale-in {
-    animation: scaleIn 0.3s ease-out;
-}
-
-@keyframes scaleIn {
-    from {
-        opacity: 0;
-        transform: scale(0.9);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
+/* DataTables tweaks */
+.dataTables_wrapper .dt-buttons { margin-bottom: 8px; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="export-container">
-  <div class="export-header fade-in">
-    <h1 class="export-title">
-      <i class="fas fa-filter"></i>
-      Advanced Data Export & Analytics
-    </h1>
-    <p class="export-subtitle">Powerful search, intelligent filtering, and seamless data export with unlimited results</p>
-  </div>
-
-  <!-- Search and Filter Section -->
-  <div class="filter-section fade-in">
-    <h3 class="section-title">
-      <i class="fas fa-search"></i>
-      Smart Search & Filtering
-    </h3>
-
-    <!-- Quick Filters -->
-    <div class="quick-filters">
-      <button class="quick-filter-btn" data-filter="profile_role:faculty">
-        <i class="fas fa-chalkboard-teacher"></i> Faculty Members
-      </button>
-      <button class="quick-filter-btn" data-filter="proposal_status:pending">
-        <i class="fas fa-clock"></i> Pending Proposals
-      </button>
-      <button class="quick-filter-btn" data-filter="profile_role:student">
-        <i class="fas fa-user-graduate"></i> Students
-      </button>
-      <button class="quick-filter-btn" data-filter="organization_type:Department">
-        <i class="fas fa-building"></i> Departments
-      </button>
-      <button class="quick-filter-btn" data-filter="proposal_status:approved">
-        <i class="fas fa-check-circle"></i> Approved Events
-      </button>
-      <button class="quick-filter-btn" data-filter="report_type:annual">
-        <i class="fas fa-chart-line"></i> Annual Reports
-      </button>
-    </div>
-
-    <!-- Main Search Input -->
-    <div class="search-container">
-      <i class="fas fa-search search-icon"></i>
-      <input 
-        type="text" 
-        class="search-input" 
-        id="mainSearch"
-        placeholder="Search anything... (faculty, departments, events, reports, etc.)"
-        autocomplete="off"
-      >
-      <div class="suggestions-dropdown" id="suggestionsDropdown"></div>
-    </div>
-
-    <!-- Filter Logic -->
-    <div class="filter-logic">
-      <span class="filter-logic-label">Filter Logic:</span>
-      <button class="logic-btn active" data-logic="AND">AND</button>
-      <button class="logic-btn" data-logic="OR">OR</button>
-    </div>
-
-    <!-- Active Filters -->
-    <div class="active-filters" id="activeFilters">
-      <div class="empty-filters">
-        <i class="fas fa-info-circle"></i>
-        No filters applied. Start typing or use quick filters to begin.
+  <div class="export-header">
+    <div style="display:flex; gap:12px; align-items:center; justify-content:space-between;">
+      <div>
+        <h1 class="export-title"><i class="fas fa-filter" aria-hidden="true"></i> Advanced Data Export & Analytics</h1>
+        <div class="export-subtitle">Powerful search, intelligent filtering, and seamless data export — results shown below and available for export.</div>
+      </div>
+      <div style="display:flex; gap:12px; align-items:center;">
+        {# Optional action icons could go here #}
+        <img src="{% static 'core/img/logo-small.png' %}" alt="logo" style="height:38px; opacity:0.9;">
       </div>
     </div>
   </div>
 
-  <!-- Results Section -->
-  <div class="results-section fade-in">
+  <div class="filter-section" role="region" aria-label="Filters">
+    <h3 class="section-title"><i class="fas fa-search" aria-hidden="true"></i> Smart Search & Filtering</h3>
+
+    <div class="quick-filters" id="quickFilters" aria-hidden="false">
+      <!-- kept only working/validated quick filters -->
+      <button class="quick-filter-btn" data-filter="profile_role:faculty"><i class="fas fa-chalkboard-teacher" aria-hidden="true"></i> Faculty Members</button>
+      <button class="quick-filter-btn" data-filter="profile_role:student"><i class="fas fa-user-graduate" aria-hidden="true"></i> Students</button>
+      <button class="quick-filter-btn" data-filter="date_range:30_days"><i class="fas fa-clock" aria-hidden="true"></i> Last 30 Days</button>
+      <button class="quick-filter-btn" data-filter="date_range:academic_year"><i class="fas fa-school" aria-hidden="true"></i> This Academic Year</button>
+    </div>
+
+    <div class="search-container" role="search" aria-label="Global search">
+      <i class="fas fa-search search-icon" aria-hidden="true"></i>
+      <input id="mainSearch" class="search-input" type="text" placeholder="Search anything (name, org, event, report) — Press Enter to search" aria-label="Search input">
+      <div id="suggestionsDropdown" class="suggestions-dropdown" role="listbox" aria-hidden="true"></div>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+      <div style="font-weight:700; color:#3b4252;">Filter Logic:</div>
+      <button class="logic-btn" data-logic="AND" style="padding:6px 10px; border-radius:8px; border:1px solid #e6eef8; background:#fff; font-weight:800;">AND</button>
+      <button class="logic-btn" data-logic="OR" style="padding:6px 10px; border-radius:8px; border:1px solid #e6eef8; background:#fff; font-weight:800;">OR</button>
+      <div style="margin-left:auto; font-size:0.9rem; color:#475569;">Tip: press <kbd>Enter</kbd> to search text globally</div>
+    </div>
+
+    <div class="active-filters" id="activeFilters" aria-live="polite">
+      <div class="empty-filters" style="padding:8px; background:rgba(160,174,192,0.06); border-radius:8px;">
+        <i class="fas fa-info-circle" aria-hidden="true"></i> No filters applied. Use quick filters or search.
+      </div>
+    </div>
+  </div>
+
+  <div class="results-section" role="region" aria-label="Results">
     <div class="results-header">
-      <div class="results-count" id="resultsCount">
-        <i class="fas fa-database"></i>
-        Ready to search
-      </div>
+      <div class="results-count" id="resultsCount"><i class="fas fa-database" style="color:#667eea;"></i> Ready to search</div>
       <div class="export-controls">
-        <button class="export-btn csv" id="exportCsv" disabled>
-          <i class="fas fa-file-csv"></i>
-          Export CSV
-        </button>
-        <button class="export-btn" id="exportExcel" disabled>
-          <i class="fas fa-file-excel"></i>
-          Export Excel
-        </button>
+        <button id="exportCsvBackend" class="export-btn csv" title="Export CSV (server)" aria-label="Export CSV">Export CSV (Server)</button>
+        <button id="exportExcelBackend" class="export-btn excel" title="Export Excel (server)" aria-label="Export Excel">Export Excel (Server)</button>
       </div>
     </div>
 
-    <!-- Results Info -->
-    <div class="results-info" id="resultsInfo" style="display: none;">
-      <div class="results-info-text">
-        <i class="fas fa-info-circle"></i>
-        Showing all results - no pagination limits applied
-      </div>
+    <div id="loadingIndicator" class="loading-indicator" role="status" aria-hidden="true">
+      <div style="width:40px;height:40px;border:4px solid rgba(102,126,234,0.12);border-top:4px solid #667eea;border-radius:50%;margin:0 auto 10px; animation:spin 1s linear infinite;"></div>
+      <div><strong>Searching — fetching results...</strong></div>
     </div>
 
-    <!-- Loading Indicator -->
-    <div class="loading-indicator" id="loadingIndicator">
-      <div class="loading-spinner"></div>
-      <p><strong>Searching through all data...</strong></p>
-      <p style="opacity: 0.7; margin-top: 0.5rem;">Please wait while we fetch unlimited results</p>
-    </div>
-
-    <!-- Results Preview -->
-    <div class="results-preview" id="resultsPreview">
+    <div class="results-preview" id="resultsPreview" aria-live="polite">
       <div class="empty-state">
-        <i class="fas fa-search"></i>
+        <i class="fas fa-search" style="font-size:40px;color:#667eea;display:block;margin-bottom:8px;"></i>
         <h3>Ready to Explore Data</h3>
-        <p>Apply filters or use the search bar to discover insights from your data.<br>All results will be shown without any limits.</p>
+        <p>Apply filters or use the search bar to discover insights — results will appear here and be interactive.</p>
       </div>
     </div>
   </div>
 </div>
 
+{# CSRF token is included as hidden input so JS can read it if needed #}
+<form style="display:none;">{% csrf_token %}</form>
+
+<!-- jQuery + DataTables + Buttons CDN -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.11.0/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
 <script>
-class DataExportFilter {
-  constructor() {
-    this.filters = [];
-    this.currentLogic = 'AND';
-    this.searchCache = {};
-    this.suggestions = [];
-    this.currentResults = [];
-    
-    this.initializeElements();
-    this.loadSuggestions();
-    this.bindEvents();
-    this.initAnimations();
-  }
+/* eslint-disable no-undef */
+(function () {
+  // DOM elements
+  const searchInput = document.getElementById('mainSearch');
+  const suggestionsDropdown = document.getElementById('suggestionsDropdown');
+  const quickFilterBtns = document.querySelectorAll('.quick-filter-btn');
+  const activeFiltersContainer = document.getElementById('activeFilters');
+  const resultsPreview = document.getElementById('resultsPreview');
+  const resultsCountElt = document.getElementById('resultsCount');
+  const loadingIndicator = document.getElementById('loadingIndicator');
+  const exportCsvBackend = document.getElementById('exportCsvBackend');
+  const exportExcelBackend = document.getElementById('exportExcelBackend');
+  const logicButtons = document.querySelectorAll('.logic-btn');
 
-  initializeElements() {
-    this.searchInput = document.getElementById('mainSearch');
-    this.suggestionsDropdown = document.getElementById('suggestionsDropdown');
-    this.activeFiltersContainer = document.getElementById('activeFilters');
-    this.resultsCount = document.getElementById('resultsCount');
-    this.resultsPreview = document.getElementById('resultsPreview');
-    this.resultsInfo = document.getElementById('resultsInfo');
-    this.loadingIndicator = document.getElementById('loadingIndicator');
-    this.exportCsvBtn = document.getElementById('exportCsv');
-    this.exportExcelBtn = document.getElementById('exportExcel');
-  }
+  // State
+  let suggestions = [];
+  let filters = []; // { raw, type, value, label }
+  let filterLogic = 'AND';
+  let currentDataTable = null;
 
-  initAnimations() {
-    // Add staggered animation to quick filter buttons
-    const quickFilters = document.querySelectorAll('.quick-filter-btn');
-    quickFilters.forEach((btn, index) => {
-      btn.style.animationDelay = `${index * 0.1}s`;
-      btn.classList.add('fade-in');
-    });
+  // CSRF helper (tries hidden form token then cookie)
+  function getCSRF() {
+    // first try the hidden input
+    const tokenInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    if (tokenInput && tokenInput.value) return tokenInput.value;
+    // fallback to cookie
+    const name = 'csrftoken';
+    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return match ? match[2] : '';
   }
+  const CSRF = getCSRF();
 
-  async loadSuggestions() {
+  // Init
+  fetchSuggestions();
+  bindQuickFilters();
+  bindSearch();
+  bindLogicButtons();
+  bindBackendExports();
+
+  // ---------- fetch suggestions ----------
+  async function fetchSuggestions() {
     try {
-      const response = await fetch('/api/filter-suggestions/');
-      if (response.ok) {
-        this.suggestions = await response.json();
-      } else {
-        this.suggestions = this.getDefaultSuggestions();
-      }
-    } catch (error) {
-      console.error('Failed to load suggestions:', error);
-      this.suggestions = this.getDefaultSuggestions();
+      const resp = await fetch('/api/filter-suggestions/');
+      if (!resp.ok) throw new Error('Failed fetching suggestions');
+      suggestions = await resp.json();
+    } catch (err) {
+      // fallback small set
+      suggestions = [
+        { category: 'Users', label: 'Faculty Members', filter: 'profile_role:faculty', description: 'All faculty members' },
+        { category: 'Users', label: 'Students', filter: 'profile_role:student', description: 'All students' },
+        { category: 'Date Range', label: 'Last 30 Days', filter: 'date_range:30_days', description: 'Data from last 30 days' },
+        { category: 'Date Range', label: 'This Academic Year', filter: 'date_range:academic_year', description: 'This academic year' },
+      ];
     }
   }
 
-  getDefaultSuggestions() {
-    return [
-      // User Profile Filters
-      {category: 'User Profiles', label: 'Faculty Members', filter: 'profile_role:faculty', description: 'All faculty members in the system'},
-      {category: 'User Profiles', label: 'Students', filter: 'profile_role:student', description: 'All registered students'},
-      {category: 'User Profiles', label: 'HODs', filter: 'profile_role:hod', description: 'Heads of Departments'},
-      {category: 'User Profiles', label: 'System Admins', filter: 'profile_role:admin', description: 'System administrators'},
-      {category: 'User Profiles', label: 'Active Users', filter: 'user_status:active', description: 'Currently active users'},
-      
-      // Organization Filters
-      {category: 'Organizations', label: 'Academic Departments', filter: 'organization_type:Department', description: 'All academic departments'},
-      {category: 'Organizations', label: 'Student Clubs', filter: 'organization_type:Club', description: 'Registered student clubs'},
-      {category: 'Organizations', label: 'Research Centers', filter: 'organization_type:Research', description: 'Research centers and labs'},
-      {category: 'Organizations', label: 'Active Organizations', filter: 'organization_active:true', description: 'Currently active organizations'},
-      
-      // Event Proposal Filters
-      {category: 'Event Proposals', label: 'Pending Approval', filter: 'proposal_status:submitted', description: 'Proposals awaiting approval'},
-      {category: 'Event Proposals', label: 'Approved Events', filter: 'proposal_status:approved', description: 'Approved event proposals'},
-      {category: 'Event Proposals', label: 'Rejected Proposals', filter: 'proposal_status:rejected', description: 'Rejected event proposals'},
-      {category: 'Event Proposals', label: 'Big Events', filter: 'proposal_big_event:true', description: 'Major/flagship events'},
-      {category: 'Event Proposals', label: 'Finance Approval Needed', filter: 'proposal_finance_approval:true', description: 'Events requiring financial approval'},
-      {category: 'Event Proposals', label: 'Completed Events', filter: 'proposal_status:completed', description: 'Successfully completed events'},
-      
-      // Report Filters
-      {category: 'Reports & Analytics', label: 'Annual Reports', filter: 'report_type:annual', description: 'Yearly performance reports'},
-      {category: 'Reports & Analytics', label: 'Event Reports', filter: 'report_type:event', description: 'Event-specific reports'},
-      {category: 'Reports & Analytics', label: 'IQAC Reports', filter: 'report_type:iqac', description: 'Internal Quality Assurance Cell reports'},
-      {category: 'Reports & Analytics', label: 'Financial Reports', filter: 'report_type:financial', description: 'Budget and expenditure reports'},
-      {category: 'Reports & Analytics', label: 'Academic Reports', filter: 'report_type:academic', description: 'Academic performance reports'},
-      
-      // Date Filters
-      {category: 'Time Periods', label: 'Current Academic Year', filter: 'date_range:academic_year', description: 'Current academic year data'},
-      {category: 'Time Periods', label: 'Last 30 Days', filter: 'date_range:30_days', description: 'Recent activity from last month'},
-      {category: 'Time Periods', label: 'This Semester', filter: 'date_range:this_semester', description: 'Current semester data'},
-      {category: 'Time Periods', label: 'Last Quarter', filter: 'date_range:last_quarter', description: 'Previous quarter data'},
-      {category: 'Time Periods', label: 'This Year', filter: 'date_range:this_year', description: 'Current calendar year'},
-      
-      // Status Filters
-      {category: 'Status & Priority', label: 'High Priority', filter: 'priority:high', description: 'High priority items'},
-      {category: 'Status & Priority', label: 'Urgent Items', filter: 'status:urgent', description: 'Items requiring immediate attention'},
-      {category: 'Status & Priority', label: 'In Progress', filter: 'status:in_progress', description: 'Currently ongoing activities'},
-      {category: 'Status & Priority', label: 'Completed Tasks', filter: 'status:completed', description: 'Successfully finished items'},
-    ];
+  // ---------- Quick filters ----------
+  function bindQuickFilters() {
+    quickFilterBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const raw = btn.dataset.filter;
+        // toggle active appearance
+        btn.classList.toggle('active');
+        if (filters.some(f => f.raw === raw)) {
+          // remove filter
+          filters = filters.filter(f => f.raw !== raw);
+        } else {
+          addFilterFromRaw(raw, /*noRender*/ true);
+        }
+        renderActiveFilters();
+        executeSearch();
+      });
+    });
   }
 
-  bindEvents() {
-    // Search input events
-    this.searchInput.addEventListener('input', (e) => this.handleSearchInput(e));
-    this.searchInput.addEventListener('keydown', (e) => {
+  function addFilterFromRaw(raw, skipDuplicateToast) {
+    if (!raw) return;
+    if (filters.some(f => f.raw === raw)) {
+      if (!skipDuplicateToast) showToast('Filter already applied', 'info');
+      return;
+    }
+    const [type, ...rest] = raw.split(':');
+    const value = rest.join(':') || 'true';
+    const match = suggestions.find(s => s.filter === raw);
+    const label = match ? match.label : `${type}: ${value}`;
+    filters.push({ raw, type, value: String(value), label });
+    renderActiveFilters();
+  }
+
+  // ---------- Search & suggestions ----------
+  function bindSearch() {
+    searchInput.addEventListener('input', (e) => {
+      handleSearchInput(e.target.value);
+    });
+
+    searchInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
-        this.handleSearchSubmit();
+        const q = searchInput.value.trim();
+        if (!q) return;
+        addSearchFilter(q);
+        searchInput.value = '';
+        hideSuggestions();
       } else if (e.key === 'Escape') {
-        this.hideSuggestions();
+        hideSuggestions();
       }
     });
 
-    // Click outside to hide suggestions
     document.addEventListener('click', (e) => {
-      if (!this.searchInput.contains(e.target) && !this.suggestionsDropdown.contains(e.target)) {
-        this.hideSuggestions();
+      if (!searchInput.contains(e.target) && !suggestionsDropdown.contains(e.target)) {
+        hideSuggestions();
       }
     });
-
-    // Quick filter buttons
-    document.querySelectorAll('.quick-filter-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const filterData = e.target.closest('.quick-filter-btn').dataset.filter;
-        this.addFilter(filterData);
-        
-        // Add visual feedback
-        e.target.style.transform = 'scale(0.95)';
-        setTimeout(() => {
-          e.target.style.transform = '';
-        }, 150);
-      });
-    });
-
-    // Logic buttons
-    document.querySelectorAll('.logic-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        this.setFilterLogic(e.target.dataset.logic);
-      });
-    });
-
-    // Export buttons
-    this.exportCsvBtn.addEventListener('click', () => this.exportData('csv'));
-    this.exportExcelBtn.addEventListener('click', () => this.exportData('excel'));
   }
 
-  handleSearchInput(e) {
-    const query = e.target.value.toLowerCase().trim();
-    
-    if (query.length < 2) {
-      this.hideSuggestions();
+  function handleSearchInput(text) {
+    const q = (text || '').trim().toLowerCase();
+    if (q.length < 2) {
+      hideSuggestions();
       return;
     }
+    const list = suggestions.filter(s =>
+      (s.label || '').toLowerCase().includes(q) ||
+      (s.description || '').toLowerCase().includes(q) ||
+      (s.category || '').toLowerCase().includes(q) ||
+      (s.filter || '').toLowerCase().includes(q)
+    ).slice(0, 12);
 
-    const filteredSuggestions = this.suggestions.filter(item => 
-      item.label.toLowerCase().includes(query) ||
-      item.description.toLowerCase().includes(query) ||
-      item.category.toLowerCase().includes(query) ||
-      item.filter.toLowerCase().includes(query)
-    );
-
-    this.showSuggestions(filteredSuggestions, query);
+    showSuggestions(list, q);
   }
 
-  showSuggestions(suggestions, query = '') {
-    if (suggestions.length === 0) {
-      this.hideSuggestions();
+  function showSuggestions(list, q) {
+    if (!list.length) {
+      suggestionsDropdown.style.display = 'none';
+      suggestionsDropdown.innerHTML = '';
       return;
     }
-
     let html = '';
     let currentCategory = '';
-
-    suggestions.forEach(item => {
+    list.forEach(item => {
       if (item.category !== currentCategory) {
-        if (currentCategory !== '') html += '<hr style="margin: 0.5rem 0; border: 1px solid rgba(226, 232, 240, 0.5);">';
-        html += `<div class="suggestion-item" style="background: rgba(102, 126, 234, 0.05); cursor: default;">
-          <div class="suggestion-category">${item.category}</div>
-        </div>`;
+        html += `<div class="suggestion-item" style="background:transparent; cursor:default;"><div class="suggestion-category">${escapeHtml(item.category)}</div></div>`;
         currentCategory = item.category;
       }
-
-      // Highlight matching text
-      let highlightedLabel = item.label;
-      let highlightedDescription = item.description;
-      
-      if (query) {
-        const regex = new RegExp(`(${query})`, 'gi');
-        highlightedLabel = item.label.replace(regex, '<mark style="background: #667eea; color: white; padding: 2px 4px; border-radius: 3px;">$1</mark>');
-        highlightedDescription = item.description.replace(regex, '<mark style="background: #667eea; color: white; padding: 2px 4px; border-radius: 3px;">$1</mark>');
-      }
-
-      html += `
-        <div class="suggestion-item" data-filter="${item.filter}">
-          <div class="suggestion-label">${highlightedLabel}</div>
-          <div class="suggestion-description">${highlightedDescription}</div>
-        </div>
-      `;
+      html += `<div class="suggestion-item" role="option" data-filter="${escapeHtml(item.filter)}"><div class="suggestion-label">${highlight(item.label || '', q)}</div><div style="font-size:.85rem;color:#6b7280;margin-top:6px;">${highlight(item.description || '', q)}</div></div>`;
     });
+    html += `<div class="suggestion-item" data-filter="search:__raw__${encodeURIComponent(q)}" style="font-style:italic;color:#4b5563;">Search for "<strong>${escapeHtml(q)}</strong>" across all data</div>`;
+    suggestionsDropdown.innerHTML = html;
+    suggestionsDropdown.style.display = 'block';
+    suggestionsDropdown.setAttribute('aria-hidden', 'false');
 
-    this.suggestionsDropdown.innerHTML = html;
-    this.suggestionsDropdown.style.display = 'block';
-    this.suggestionsDropdown.classList.add('scale-in');
-
-    // Bind click events to suggestions
-    this.suggestionsDropdown.querySelectorAll('.suggestion-item[data-filter]').forEach(item => {
-      item.addEventListener('click', (e) => {
-        const filterData = e.target.closest('[data-filter]').dataset.filter;
-        this.addFilter(filterData);
-        this.searchInput.value = '';
-        this.hideSuggestions();
+    suggestionsDropdown.querySelectorAll('.suggestion-item[data-filter]').forEach(el => {
+      el.addEventListener('click', () => {
+        const raw = el.dataset.filter;
+        if (raw.startsWith('search:__raw__')) {
+          const qterm = decodeURIComponent(raw.replace('search:__raw__', ''));
+          addSearchFilter(qterm);
+        } else {
+          addFilterFromRaw(raw);
+        }
+        searchInput.value = '';
+        hideSuggestions();
+        executeSearch();
       });
     });
   }
 
-  hideSuggestions() {
-    this.suggestionsDropdown.style.display = 'none';
-    this.suggestionsDropdown.classList.remove('scale-in');
+  function hideSuggestions() {
+    suggestionsDropdown.style.display = 'none';
+    suggestionsDropdown.innerHTML = '';
+    suggestionsDropdown.setAttribute('aria-hidden', 'true');
   }
 
-  handleSearchSubmit() {
-    const query = this.searchInput.value.trim();
-    if (query) {
-      // Create a generic search filter
-      this.addFilter(`search:${query}`);
-      this.searchInput.value = '';
-      this.hideSuggestions();
-    }
+  function addSearchFilter(query) {
+    const raw = `search:${query}`;
+    if (filters.some(f => f.raw === raw)) { showToast('Filter already applied', 'info'); return; }
+    filters.push({ raw, type: 'search', value: query, label: `Search: ${query}` });
+    renderActiveFilters();
+    executeSearch();
   }
 
-  addFilter(filterString) {
-    // Avoid duplicate filters
-    if (this.filters.some(f => f.raw === filterString)) {
-      this.showNotification('Filter already applied', 'warning');
+  // ---------- Active filters UI ----------
+  function renderActiveFilters() {
+    if (!filters.length) {
+      activeFiltersContainer.innerHTML = `<div class="empty-filters" style="padding:8px;background:rgba(160,174,192,0.06);border-radius:8px;"><i class="fas fa-info-circle"></i> No filters applied. Use quick filters or search.</div>`;
+      // remove quick filter active class if none selected
+      quickFilterBtns.forEach(b => {
+        if (filters.every(f => !b.dataset.filter || !filters.some(x => x.raw === b.dataset.filter))) {
+          b.classList.remove('active');
+        }
+      });
       return;
     }
-
-    const filter = this.parseFilter(filterString);
-    this.filters.push(filter);
-    this.updateActiveFiltersDisplay();
-    this.executeSearch();
-    this.showNotification('Filter added successfully', 'success');
-  }
-
-  parseFilter(filterString) {
-    const [type, value] = filterString.split(':');
-    const suggestion = this.suggestions.find(s => s.filter === filterString);
-    
-    return {
-      raw: filterString,
-      type: type,
-      value: value,
-      label: suggestion ? suggestion.label : `${type}: ${value}`,
-      description: suggestion ? suggestion.description : ''
-    };
-  }
-
-  removeFilter(index) {
-    const removedFilter = this.filters[index];
-    this.filters.splice(index, 1);
-    this.updateActiveFiltersDisplay();
-    this.executeSearch();
-    this.showNotification(`Removed: ${removedFilter.label}`, 'info');
-  }
-
-  updateActiveFiltersDisplay() {
-    if (this.filters.length === 0) {
-      this.activeFiltersContainer.innerHTML = `
-        <div class="empty-filters">
-          <i class="fas fa-info-circle"></i>
-          No filters applied. Start typing or use quick filters to begin.
-        </div>
-      `;
-      return;
-    }
-
-    const filtersHtml = this.filters.map((filter, index) => `
-      <div class="filter-chip scale-in">
-        <span><strong>${filter.label}</strong></span>
-        <button class="remove-filter" onclick="dataExportFilter.removeFilter(${index})" title="Remove filter">
-          <i class="fas fa-times"></i>
-        </button>
+    activeFiltersContainer.innerHTML = filters.map((f, idx) => `
+      <div class="filter-chip" title="${escapeHtml(f.raw)}">
+        <span>${escapeHtml(f.label)}</span>
+        <button class="remove-filter" title="Remove" data-idx="${idx}">&times;</button>
       </div>
     `).join('');
-
-    this.activeFiltersContainer.innerHTML = filtersHtml;
-  }
-
-  setFilterLogic(logic) {
-    this.currentLogic = logic;
-    document.querySelectorAll('.logic-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.logic === logic);
+    activeFiltersContainer.querySelectorAll('.remove-filter').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = Number(e.currentTarget.dataset.idx);
+        const raw = filters[idx] && filters[idx].raw;
+        filters.splice(idx, 1);
+        // also remove matching quick-filter active if any
+        quickFilterBtns.forEach(b => { if (b.dataset.filter === raw) b.classList.remove('active'); });
+        renderActiveFilters();
+        executeSearch();
+      });
     });
-    
-    if (this.filters.length > 1) {
-      this.executeSearch();
-      this.showNotification(`Filter logic changed to ${logic}`, 'info');
-    }
   }
 
-  async executeSearch() {
-    if (this.filters.length === 0) {
-      this.currentResults = [];
-      this.updateResultsDisplay();
+  // ---------- Logic buttons ----------
+  function bindLogicButtons() {
+    logicButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        logicButtons.forEach(b => b.style.background = '#fff');
+        e.currentTarget.style.background = 'linear-gradient(135deg,#667eea,#764ba2)';
+        filterLogic = e.currentTarget.dataset.logic || 'AND';
+        if (filters.length) executeSearch();
+      });
+    });
+    // set default AND style
+    const defaultBtn = document.querySelector('.logic-btn[data-logic="AND"]');
+    if (defaultBtn) defaultBtn.style.background = 'linear-gradient(135deg,#667eea,#764ba2)';
+  }
+
+  // ---------- Execute search (backend) ----------
+  async function executeSearch() {
+    if (!filters.length) {
+      clearResultsPreview();
       return;
     }
 
-    this.showLoading();
+    showLoading(true);
+
+    const payloadFilters = filters.map(f => ({ type: f.type, value: String(f.value), label: f.label || f.raw }));
 
     try {
-      const response = await fetch('/api/execute-filter/', {
+      const resp = await fetch('/api/execute-filter/', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': this.getCsrfToken()
-        },
-        body: JSON.stringify({
-          filters: this.filters,
-          logic: this.currentLogic,
-          unlimited: true  // Request all results without pagination
-        })
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({ filters: payloadFilters, logic: filterLogic, unlimited: true })
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!resp.ok) {
+        const text = await resp.text();
+        throw new Error('Server returned ' + resp.status + ' - ' + text);
       }
-
-      const data = await response.json();
-      this.currentResults = data.results || [];
-      this.updateResultsDisplay();
-      
-      if (this.currentResults.length > 0) {
-        this.showNotification(`Found ${this.currentResults.length} records`, 'success');
-      } else {
-        this.showNotification('No results found for current filters', 'warning');
-      }
-    } catch (error) {
-      console.error('Search failed:', error);
-      this.showError('Search failed. Please check your connection and try again.');
-      this.showNotification('Search failed', 'error');
+      const data = await resp.json();
+      const results = Array.isArray(data.results) ? data.results : (data.results || []);
+      renderResultsTable(results);
+      showToast(`Found ${results.length} records`, 'success');
+    } catch (err) {
+      console.error('Search error:', err);
+      showToast('Search failed. Check console for details.', 'error');
+      clearResultsPreview();
     } finally {
-      this.hideLoading();
+      showLoading(false);
     }
   }
 
-  updateResultsDisplay() {
-    const count = this.currentResults.length;
-    this.resultsCount.innerHTML = `<i class="fas fa-database"></i> ${count.toLocaleString()} record${count !== 1 ? 's' : ''} found`;
-
-    // Show/hide results info
-    if (count > 0) {
-      this.resultsInfo.style.display = 'flex';
-      this.resultsInfo.querySelector('.results-info-text').innerHTML = 
-        `<i class="fas fa-info-circle"></i> Displaying all ${count.toLocaleString()} results - no pagination limits applied`;
-    } else {
-      this.resultsInfo.style.display = 'none';
-    }
-
-    // Enable/disable export buttons
-    const hasResults = count > 0;
-    this.exportCsvBtn.disabled = !hasResults;
-    this.exportExcelBtn.disabled = !hasResults;
-
-    if (count === 0) {
-      this.resultsPreview.innerHTML = `
-        <div class="empty-state">
-          <i class="fas fa-search-minus"></i>
-          <h3>No Results Found</h3>
-          <p>Try adjusting your filters or search terms.<br>All data sources are being searched without limits.</p>
-        </div>
-      `;
+  // ---------- DataTable rendering ----------
+  function renderResultsTable(rows) {
+    resultsPreview.innerHTML = '';
+    if (!rows || !rows.length) {
+      resultsCountElt.innerHTML = `<i class="fas fa-database" style="color:#667eea;"></i> 0 records found`;
+      resultsPreview.innerHTML = `<div class="empty-state"><i class="fas fa-search-minus" style="font-size:36px;color:#667eea;"></i><h3>No Results Found</h3><p>Try different filters or search terms.</p></div>`;
+      destroyDataTable();
       return;
     }
 
-    // Show all results in table
-    this.renderFullResultsTable();
-  }
+    // collect header order deterministically
+    const headersSet = new Set();
+    rows.forEach(r => Object.keys(r).forEach(k => headersSet.add(k)));
+    const headers = Array.from(headersSet);
 
-  renderFullResultsTable() {
-    if (this.currentResults.length === 0) return;
-
-    const headers = Object.keys(this.currentResults[0]);
-    
-    let tableHtml = `
-      <table class="preview-table">
-        <thead>
-          <tr>${headers.map(h => `<th>${this.formatHeader(h)}</th>`).join('')}</tr>
-        </thead>
-        <tbody>
-    `;
-
-    // Render ALL results (no limit)
-    this.currentResults.forEach((row, index) => {
-      tableHtml += `<tr>${headers.map(h => `<td>${this.formatCellValue(row[h]) || '-'}</td>`).join('')}</tr>`;
-    });
-
-    tableHtml += `
-        </tbody>
-      </table>
-    `;
-
-    // Add results summary
-    const summaryHtml = `
-      <div class="pagination-info">
-        <i class="fas fa-check-circle" style="color: #48bb78;"></i>
-        <strong>All ${this.currentResults.length.toLocaleString()} records displayed</strong>
-        <span style="opacity: 0.7;">• No pagination limits • Complete dataset</span>
-      </div>
-    `;
-
-    this.resultsPreview.innerHTML = tableHtml + summaryHtml;
-  }
-
-  formatHeader(header) {
-    return header
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, l => l.toUpperCase())
-      .trim();
-  }
-
-  formatCellValue(value) {
-    if (value === null || value === undefined) return '';
-    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-    if (typeof value === 'string' && value.length > 50) {
-      return value.substring(0, 50) + '...';
-    }
-    return String(value);
-  }
-
-  showLoading() {
-    this.loadingIndicator.style.display = 'block';
-    this.resultsPreview.style.display = 'none';
-    this.resultsInfo.style.display = 'none';
-  }
-
-  hideLoading() {
-    this.loadingIndicator.style.display = 'none';
-    this.resultsPreview.style.display = 'block';
-  }
-
-  showError(message) {
-    this.resultsPreview.innerHTML = `
-      <div class="empty-state">
-        <i class="fas fa-exclamation-triangle" style="color: #e53e3e;"></i>
-        <h3>Error Occurred</h3>
-        <p>${message}</p>
-      </div>
-    `;
-  }
-
-  showNotification(message, type = 'info') {
-    // Create notification element
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      padding: 12px 20px;
-      border-radius: 8px;
-      color: white;
-      font-weight: 500;
-      z-index: 9999;
-      transform: translateX(100%);
-      transition: transform 0.3s ease;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-    `;
-
-    // Set background color based on type
-    const colors = {
-      success: '#48bb78',
-      error: '#e53e3e',
-      warning: '#ed8936',
-      info: '#4299e1'
-    };
-    notification.style.background = colors[type] || colors.info;
-
-    // Add icon
-    const icons = {
-      success: 'check-circle',
-      error: 'exclamation-triangle',
-      warning: 'exclamation-circle',
-      info: 'info-circle'
-    };
-    notification.innerHTML = `<i class="fas fa-${icons[type] || icons.info}"></i> ${message}`;
-
-    document.body.appendChild(notification);
-
-    // Animate in
-    setTimeout(() => {
-      notification.style.transform = 'translateX(0)';
-    }, 100);
-
-    // Remove after 3 seconds
-    setTimeout(() => {
-      notification.style.transform = 'translateX(100%)';
-      setTimeout(() => {
-        if (notification.parentNode) {
-          notification.parentNode.removeChild(notification);
-        }
-      }, 300);
-    }, 3000);
-  }
-
-  async exportData(format) {
-    if (this.currentResults.length === 0) {
-      this.showNotification('No data to export', 'warning');
-      return;
-    }
-
-    const exportBtn = format === 'csv' ? this.exportCsvBtn : this.exportExcelBtn;
-    const originalText = exportBtn.innerHTML;
-    
-    // Show loading state
-    exportBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Exporting...`;
-    exportBtn.disabled = true;
-
-    try {
-      const response = await fetch(`/api/export-data/${format}/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': this.getCsrfToken()
-        },
-        body: JSON.stringify({
-          filters: this.filters,
-          logic: this.currentLogic,
-          unlimited: true  // Export all results
-        })
+    const tableId = 'dynamicResultsTable';
+    let html = `<table id="${tableId}" class="display nowrap" style="width:100%"><thead><tr>`;
+    headers.forEach(h => html += `<th>${formatHeader(h)}</th>`);
+    html += `</tr></thead><tbody>`;
+    rows.forEach(r => {
+      html += '<tr>';
+      headers.forEach(h => {
+        let cell = (r[h] === null || r[h] === undefined) ? '' : r[h];
+        // basic string conversion
+        html += `<td>${escapeHtml(String(cell))}</td>`;
       });
+      html += '</tr>';
+    });
+    html += `</tbody></table>`;
+    resultsPreview.innerHTML = html;
 
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
+    resultsCountElt.innerHTML = `<i class="fas fa-database" style="color:#667eea;"></i> ${rows.length.toLocaleString()} records found`;
+    // init datatable
+    setTimeout(() => initDataTable('#' + tableId), 10);
+  }
+
+  function formatHeader(h) {
+    return h.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  }
+
+  function destroyDataTable() {
+    if (currentDataTable) {
+      try { currentDataTable.destroy(true); } catch (e) { /* ignore */ }
+      currentDataTable = null;
+      // remove table DOM left-over classes
+      const existing = document.querySelector('.dataTables_wrapper');
+      if (existing && existing.parentNode && existing.parentNode.id === 'resultsPreview') {
+        // leave as is; initialization will recreate wrapper
+      }
+    }
+  }
+
+  function initDataTable(selector) {
+    destroyDataTable();
+    // eslint-disable-next-line no-undef
+    currentDataTable = $(selector).DataTable({
+      scrollX: true,
+      responsive: true,
+      dom: 'Bflrtip',
+      buttons: [
+        { extend: 'copyHtml5', text: 'Copy' },
+        { extend: 'csvHtml5', text: 'CSV' },
+        { extend: 'excelHtml5', text: 'Excel' },
+        { extend: 'pdfHtml5', text: 'PDF' },
+        { extend: 'print', text: 'Print' }
+      ],
+      pageLength: 25,
+      lengthMenu: [10, 25, 50, 100, 250],
+      order: []
+    });
+  }
+
+  // ---------- Backend export (uses same filter payload) ----------
+  function bindBackendExports() {
+    exportCsvBackend.addEventListener('click', async () => {
+      if (!filters.length) { showToast('No filters applied.', 'warning'); return; }
+      const payload = filters.map(f => ({ type: f.type, value: String(f.value), label: f.label || f.raw }));
+      try {
+        const resp = await fetch('/api/export-data/csv/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+          body: JSON.stringify({ filters: payload, logic: filterLogic })
+        });
+        if (!resp.ok) throw new Error('Export failed: ' + resp.status);
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.style.display = 'none';
         a.href = url;
-        a.download = `data_export_${new Date().toISOString().split('T')[0]}_${this.currentResults.length}_records.${format}`;
+        a.download = `export_${new Date().toISOString().slice(0,10)}.csv`;
         document.body.appendChild(a);
         a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        
-        this.showNotification(`Successfully exported ${this.currentResults.length.toLocaleString()} records`, 'success');
-      } else {
-        throw new Error(`Export failed with status: ${response.status}`);
+        a.remove();
+        URL.revokeObjectURL(url);
+        showToast('CSV exported (server)', 'success');
+      } catch (err) {
+        console.error(err);
+        showToast('Backend CSV export failed', 'error');
       }
-    } catch (error) {
-      console.error('Export failed:', error);
-      this.showNotification('Export failed. Please try again.', 'error');
-    } finally {
-      // Restore button state
-      exportBtn.innerHTML = originalText;
-      exportBtn.disabled = false;
+    });
+
+    exportExcelBackend.addEventListener('click', async () => {
+      if (!filters.length) { showToast('No filters applied.', 'warning'); return; }
+      const payload = filters.map(f => ({ type: f.type, value: String(f.value), label: f.label || f.raw }));
+      try {
+        const resp = await fetch('/api/export-data/excel/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+          body: JSON.stringify({ filters: payload, logic: filterLogic })
+        });
+        if (!resp.ok) throw new Error('Export failed: ' + resp.status);
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `export_${new Date().toISOString().slice(0,10)}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        showToast('Excel exported (server)', 'success');
+      } catch (err) {
+        console.error(err);
+        showToast('Backend Excel export failed', 'error');
+      }
+    });
+
+
+  }
+
+  // ---------- Helpers ----------
+  function clearResultsPreview() {
+    resultsPreview.innerHTML = `<div class="empty-state"><i class="fas fa-search" style="font-size:40px;color:#667eea;display:block;margin-bottom:8px;"></i><h3>Ready to Explore Data</h3><p>Apply filters or use the search bar to discover insights from your datasets. Results will appear here and be interactive.</p></div>`;
+    resultsCountElt.innerHTML = `<i class="fas fa-database" style="color:#667eea;"></i> Ready to search`;
+    destroyDataTable();
+  }
+
+  function showLoading(state) {
+    loadingIndicator.style.display = state ? 'block' : 'none';
+    if (state) {
+      resultsPreview.style.opacity = '0.4';
+      resultsPreview.setAttribute('aria-busy', 'true');
+    } else {
+      resultsPreview.style.opacity = '1';
+      resultsPreview.setAttribute('aria-busy', 'false');
     }
   }
 
-  getCsrfToken() {
-    return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
-           document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/[&<>"'`=\/]/g, function (s) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '/': '&#x2F;', '`': '&#x60;', '=': '&#x3D;' })[s];
+    });
   }
-}
 
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-  window.dataExportFilter = new DataExportFilter();
-});
+  function highlight(text, q) {
+    if (!q) return escapeHtml(text);
+    try {
+      const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig');
+      return escapeHtml(text).replace(re, '<mark style="background:#667eea;color:#fff;padding:0 4px;border-radius:3px;">$1</mark>');
+    } catch (err) {
+      return escapeHtml(text);
+    }
+  }
+
+  function showToast(message, type = 'info') {
+    const colors = { success: '#16a34a', error: '#e53e3e', warning: '#f97316', info: '#2563eb' };
+    const icon = { success: 'check-circle', error: 'exclamation-circle', warning: 'exclamation-triangle', info: 'info-circle' };
+    const el = document.createElement('div');
+    el.style.position = 'fixed';
+    el.style.right = '20px';
+    el.style.top = '20px';
+    el.style.padding = '10px 14px';
+    el.style.borderRadius = '8px';
+    el.style.color = '#fff';
+    el.style.zIndex = 99999;
+    el.style.background = colors[type] || colors.info;
+    el.style.boxShadow = '0 8px 20px rgba(0,0,0,0.12)';
+    el.style.fontWeight = '700';
+    el.innerHTML = `<i class="fas fa-${icon[type] || 'info-circle'}" style="margin-right:8px;"></i> ${escapeHtml(message)}`;
+    document.body.appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3000);
+  }
+  $('#resultsTable').DataTable({
+        dom: 'Bfrtip',
+        buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],
+        scrollY: "60vh",
+        scrollX: true,
+        scrollCollapse: true,
+        fixedHeader: true,
+        paging: true,
+        responsive: false
+    });
+
+})();
 </script>
-
-<!-- Add CSRF Token -->
-{% csrf_token %}
-
 {% endblock %}
