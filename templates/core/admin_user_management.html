@@ -15,11 +15,234 @@
 
 <!-- Custom CSS -->
 <link rel="stylesheet" href="{% static 'core/css/admin_user_management.css' %}">
+
+<style>
+.filters-section {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.filters-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.filters-header h5 {
+    margin: 0;
+    color: #495057;
+    font-weight: 600;
+}
+
+.filter-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.filter-group label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #6c757d;
+    margin-bottom: 5px;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 15px;
+}
+
+.results-summary {
+    background: #e9ecef;
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    font-size: 0.95rem;
+    color: #495057;
+}
+
+.active-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.filter-tag {
+    background: #007bff;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.filter-tag .remove-filter {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 0;
+    font-size: 0.9rem;
+}
+
+.toggle-filters {
+    background: none;
+    border: none;
+    color: #007bff;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.filters-collapsed .filter-content {
+    display: none;
+}
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="user-mgmt-container">
     <h1 class="mgmt-title">User Management</h1>
+    
+    <!-- Enhanced Filters Section -->
+    <div class="filters-section" id="filtersSection">
+        <div class="filters-header">
+            <h5><i class="fas fa-filter"></i> Advanced Filters</h5>
+            <button type="button" class="toggle-filters" onclick="toggleFilters()">
+                <span id="filterToggleText">Collapse</span>
+                <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
+            </button>
+        </div>
+        
+        <div class="filter-content">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="q">Search Users</label>
+                    <input type="text" class="form-control" id="q" name="q" value="{{ current_filters.q }}" 
+                           placeholder="Name, email, username...">
+                </div>
+                
+                <div class="filter-group">
+                    <label for="status">Account Status</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="">All Status</option>
+                        <option value="active" {% if current_filters.status == 'active' %}selected{% endif %}>Active</option>
+                        <option value="inactive" {% if current_filters.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="org_type">Organization Type</label>
+                    <select class="form-select" id="org_type" name="org_type">
+                        <option value="">All Organization Types</option>
+                        {% for org_type in all_org_types %}
+                            <option value="{{ org_type.id }}" {% if current_filters.org_type == org_type.id %}selected{% endif %}>
+                                {{ org_type.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="organization">Organization</label>
+                    <select class="form-select" id="organization" name="organization">
+                        <option value="">All Organizations</option>
+                        {% for org in all_organizations %}
+                            <option value="{{ org.id }}" {% if current_filters.organization == org.id %}selected{% endif %}>
+                                {{ org.name }} ({{ org.org_type.name }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="role">Organization Role</label>
+                    <select class="form-select" id="role" name="role">
+                        <option value="">All Organization Roles</option>
+                        {% for role in all_roles %}
+                            <option value="{{ role.id }}" {% if current_filters.role == role.id %}selected{% endif %}>
+                                {{ role.name }} ({{ role.organization.name }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <button type="button" class="btn btn-outline-secondary w-100" onclick="clearFilters()" style="margin-top: 32px;">
+                        <i class="fas fa-times"></i> Clear All Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Active Filters Display -->
+        {% if current_filters.q or current_filters.role or current_filters.organization or current_filters.org_type or current_filters.status %}
+        <div class="active-filters">
+            <strong>Active Filters:</strong>
+            {% if current_filters.q %}
+                <span class="filter-tag">
+                    Search: "{{ current_filters.q }}"
+                    <button type="button" class="remove-filter" onclick="removeFilter('q')">&times;</button>
+                </span>
+            {% endif %}
+            {% if current_filters.status %}
+                <span class="filter-tag">
+                    Status: {{ current_filters.status|title }}
+                    <button type="button" class="remove-filter" onclick="removeFilter('status')">&times;</button>
+                </span>
+            {% endif %}
+            {% if current_filters.org_type %}
+                <span class="filter-tag">
+                    Org Type: {% for ot in all_org_types %}{% if ot.id == current_filters.org_type %}{{ ot.name }}{% endif %}{% endfor %}
+                    <button type="button" class="remove-filter" onclick="removeFilter('org_type')">&times;</button>
+                </span>
+            {% endif %}
+            {% if current_filters.organization %}
+                <span class="filter-tag">
+                    Organization: {% for org in all_organizations %}{% if org.id == current_filters.organization %}{{ org.name }}{% endif %}{% endfor %}
+                    <button type="button" class="remove-filter" onclick="removeFilter('organization')">&times;</button>
+                </span>
+            {% endif %}
+            {% if current_filters.role %}
+                <span class="filter-tag">
+                    Role: {% for role in all_roles %}{% if role.id == current_filters.role %}{{ role.name }}{% endif %}{% endfor %}
+                    <button type="button" class="remove-filter" onclick="removeFilter('role')">&times;</button>
+                </span>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Results Summary -->
+    {% if total_users is not None %}
+    <div class="results-summary">
+        <i class="fas fa-info-circle"></i>
+        Showing {{ users|length }} of {{ total_users }} users
+        {% if total_users != users|length %}
+            (filtered from {{ total_users }} total)
+        {% endif %}
+    </div>
+    {% endif %}
+
     <div class="table-responsive">
         <table id="myTable" class="admin-users-table display nowrap" style="width:100%">
             <thead>
@@ -27,31 +250,10 @@
                     <th>#</th>
                     <th>Name</th>
                     <th>Email</th>
-                    <th>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                          Roles
-                          <select id="roleFilterSelect" class="form-select form-select-sm" style="width: auto;">
-                            <option value="">All Roles</option>
-                            <option value="Student">Student</option>
-                            <option value="Faculty">Faculty</option>
-                            <option value="HOD">HOD</option>
-                            <option value="Department IQAC Coordinator">Department IQAC Coordinator</option>
-                            <option value="Club Head">Club Head</option>
-                            <option value="University Club Head">University Club Head</option>
-                            <option value="Center Head">Center Head</option>
-                            <option value="Cell Head">Cell Head</option>
-                            <option value="Association Head">Association Head</option>
-                            <option value="Dean">Dean</option>
-                            <option value="Director">Director</option>
-                            <option value="CDL">CDL</option>
-                            <option value="University IQAC Coordinator">University IQAC Coordinator</option>
-                            <option value="Admin">Admin</option>
-                            <option value="Academic Coordinator">Academic Coordinator</option>
-                          </select>
-                          <button class="btn btn-primary btn-sm" id="roleFilterBtn" type="button">Filter</button>
-                        </div>
-                    </th>
+                    <th>Roles</th>
+                    <th>Organization</th>
                     <th>Date Joined</th>
+                    <th>Status</th>
                     <th>Action</th>
                 </tr>
             </thead>
@@ -59,26 +261,63 @@
                 {% for user in users %}
                 <tr>
                     <td>{{ forloop.counter }}</td>
-                    <td>{{ user.get_full_name|default:user.username }}</td>
-                    <td>{{ user.email }}</td>
                     <td>
-                        <span class="role-badge">{{ user.profile.get_role_display }}</span>
-                        {% if user.role_assignments.exists %}<br>{% endif %}
+                        <div class="user-info">
+                            <strong>{{ user.get_full_name|default:user.username }}</strong>
+                            <small class="text-muted d-block">@{{ user.username }}</small>
+                        </div>
+                    </td>
+                    <td>
+                        {% if user.email %}
+                            <a href="mailto:{{ user.email }}">{{ user.email }}</a>
+                        {% else %}
+                            <span class="text-muted">No email</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.profile %}
+                            <span class="badge bg-primary">{{ user.profile.get_role_display }}</span>
+                        {% endif %}
                         {% for ra in user.role_assignments.all %}
-                            <span class="role-badge">
-                                {{ ra.role.name }}
-                                {% if ra.organization %}<span class="role-context">({{ ra.organization }})</span>{% endif %}
-                            </span>{% if not forloop.last %}<br>{% endif %}
+                            <div class="mt-1">
+                                <span class="badge bg-secondary">{{ ra.role.name }}</span>
+                            </div>
                         {% endfor %}
                     </td>
-                    <td>{{ user.date_joined|date:"Y-m-d H:i" }}</td>
                     <td>
-                        <a href="{% url 'admin_user_edit' user.id %}" class="edit-btn">Edit</a>
+                        {% for ra in user.role_assignments.all %}
+                            <div>
+                                {% if ra.organization %}
+                                    {{ ra.organization.name }}
+                                    <small class="text-muted">({{ ra.organization.org_type.name }})</small>
+                                {% else %}
+                                    <span class="text-muted">No organization</span>
+                                {% endif %}
+                            </div>
+                        {% empty %}
+                            <span class="text-muted">No assignments</span>
+                        {% endfor %}
+                    </td>
+                    <td>{{ user.date_joined|date:"M d, Y H:i" }}</td>
+                    <td>
+                        {% if user.is_active %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-danger">Inactive</span>
+                        {% endif %}
+                        {% if user.is_superuser %}
+                            <span class="badge bg-warning">Admin</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'admin_user_edit' user.id %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" style="text-align:center;">No users found.</td>
+                    <td colspan="8" style="text-align:center;">No users found matching the current filters.</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -112,102 +351,162 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 
 <script>
-  $(document).ready(function () {
+$(document).ready(function () {
     const table = $('#myTable').DataTable({
-      dom: '<"dt-toolbar d-flex justify-content-between align-items-center flex-wrap mb-3"lBf>rtip',
-      responsive: true,
-      pagingType: 'simple_numbers',
-      lengthMenu: [
-        [5, 10, 25, 50, -1],
-        [5, 10, 25, 50, "All"]
-      ],
-      pageLength: 10,
-      columnDefs: [
-        { targets: 3, orderable: false }, // Roles column
-        { targets: 5, orderable: false }  // Action column
-      ],
-      buttons: [
-        {
-          extend: 'colvis',
-          text: '<i class="fa fa-eye"></i> Columns',
-          className: 'btn btn-secondary btn-sm'
-        },
-        {
-          extend: 'copyHtml5',
-          text: '<i class="fa fa-copy"></i> Copy',
-          className: 'btn btn-info btn-sm',
-          exportOptions: { 
-            columns: ':visible:not(:last-child)' // Exclude action column
-          }
-        },
-        {
-          extend: 'excelHtml5',
-          text: '<i class="fa fa-file-excel"></i> Excel',
-          className: 'btn btn-success btn-sm',
-          exportOptions: { 
-            columns: ':visible:not(:last-child)' // Exclude action column
-          },
-          title: 'User Management Report'
-        },
-        {
-          extend: 'pdfHtml5',
-          text: '<i class="fa fa-file-pdf"></i> PDF',
-          className: 'btn btn-danger btn-sm',
-          exportOptions: { 
-            columns: ':visible:not(:last-child)' // Exclude action column
-          },
-          title: 'User Management Report',
-          orientation: 'landscape',
-          pageSize: 'A4'
-        },
-        {
-          extend: 'print',
-          text: '<i class="fa fa-print"></i> Print',
-          className: 'btn btn-primary btn-sm',
-          exportOptions: { 
-            columns: ':visible:not(:last-child)' // Exclude action column
-          },
-          title: 'User Management Report'
+        dom: '<"dt-toolbar d-flex justify-content-between align-items-center flex-wrap mb-3"lBf>rtip',
+        responsive: true,
+        pagingType: 'simple_numbers',
+        lengthMenu: [
+            [10, 25, 50, 100, -1],
+            [10, 25, 50, 100, "All"]
+        ],
+        pageLength: 25,
+        columnDefs: [
+            { targets: [3, 4, 7], orderable: false }, // Roles, Organization, Action columns
+        ],
+        buttons: [
+            {
+                extend: 'colvis',
+                text: '<i class="fa fa-eye"></i> Columns',
+                className: 'btn btn-secondary btn-sm'
+            },
+            {
+                extend: 'copyHtml5',
+                text: '<i class="fa fa-copy"></i> Copy',
+                className: 'btn btn-info btn-sm',
+                exportOptions: { 
+                    columns: ':visible:not(:last-child)' // Exclude action column
+                }
+            },
+            {
+                extend: 'excelHtml5',
+                text: '<i class="fa fa-file-excel"></i> Excel',
+                className: 'btn btn-success btn-sm',
+                exportOptions: { 
+                    columns: ':visible:not(:last-child)' // Exclude action column
+                },
+                title: 'User Management Report'
+            },
+            {
+                extend: 'pdfHtml5',
+                text: '<i class="fa fa-file-pdf"></i> PDF',
+                className: 'btn btn-danger btn-sm',
+                exportOptions: { 
+                    columns: ':visible:not(:last-child)' // Exclude action column
+                },
+                title: 'User Management Report',
+                orientation: 'landscape',
+                pageSize: 'A4'
+            },
+            {
+                extend: 'print',
+                text: '<i class="fa fa-print"></i> Print',
+                className: 'btn btn-primary btn-sm',
+                exportOptions: { 
+                    columns: ':visible:not(:last-child)' // Exclude action column
+                },
+                title: 'User Management Report'
+            }
+        ],
+        order: [[5, 'desc']], // Order by Date Joined descending
+        language: {
+            search: "Search in table:",
+            lengthMenu: "Show _MENU_ entries",
+            info: "Showing _START_ to _END_ of _TOTAL_ users",
+            paginate: {
+                first: "First",
+                last: "Last",
+                next: "Next",
+                previous: "Previous"
+            }
         }
-      ],
-      order: [[0, 'asc']],
-      language: {
-        search: "Search users:",
-        lengthMenu: "Show _MENU_ entries",
-        info: "Showing _START_ to _END_ of _TOTAL_ users",
-        paginate: {
-          first: "First",
-          last: "Last",
-          next: "Next",
-          previous: "Previous"
-        }
-      }
-    });
-
-    // Role filter functionality
-    $('#roleFilterBtn').on('click', function() {
-      var selectedRole = $('#roleFilterSelect').val();
-      if (selectedRole === '') {
-        // Clear the search filter
-        table.column(3).search('').draw();
-      } else {
-        // Apply the role filter
-        table.column(3).search(selectedRole, true, false).draw();
-      }
-    });
-
-    // Clear filter when "All Roles" is selected
-    $('#roleFilterSelect').on('change', function() {
-      if ($(this).val() === '') {
-        table.column(3).search('').draw();
-      }
     });
 
     // Add some custom styling for buttons
     $('.dt-buttons .btn').css({
-      'margin-right': '5px',
-      'margin-bottom': '5px'
+        'margin-right': '5px',
+        'margin-bottom': '5px'
     });
-  });
+
+    // Dynamic filtering - apply filters on change
+    $('#status, #org_type, #organization, #role').on('change', function() {
+        applyFilters(); // Immediate for dropdowns
+    });
+    
+    // Debounced search for text input
+    $('#q').on('input keyup', function() {
+        debounceFilter();
+    });
+
+    // Debounce function to avoid too many requests for search
+    let filterTimeout;
+    function debounceFilter() {
+        clearTimeout(filterTimeout);
+        filterTimeout = setTimeout(applyFilters, 800); // Wait 800ms after user stops typing
+    }
+
+    function applyFilters() {
+        const params = new URLSearchParams();
+        
+        // Get all filter values
+        const q = $('#q').val().trim();
+        const status = $('#status').val();
+        const orgType = $('#org_type').val();
+        const organization = $('#organization').val();
+        const role = $('#role').val();
+        
+        // Add non-empty parameters
+        if (q) params.append('q', q);
+        if (status) params.append('status', status);
+        if (orgType) params.append('org_type', orgType);
+        if (organization) params.append('organization', organization);
+        if (role) params.append('role', role);
+        
+        // Update URL and reload page with new filters
+        const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+        window.location.href = newUrl;
+    }
+
+    // Simple cascade filtering - reload organization options when org type changes
+    $('#org_type').on('change', function() {
+        // For now, we'll let the server-side filtering handle this
+        // You could enhance this with AJAX calls if needed
+    });
+});
+
+// Filter management functions
+function toggleFilters() {
+    const section = document.getElementById('filtersSection');
+    const icon = document.getElementById('filterToggleIcon');
+    const text = document.getElementById('filterToggleText');
+    
+    section.classList.toggle('filters-collapsed');
+    
+    if (section.classList.contains('filters-collapsed')) {
+        icon.className = 'fas fa-chevron-down';
+        text.textContent = 'Expand';
+    } else {
+        icon.className = 'fas fa-chevron-up';
+        text.textContent = 'Collapse';
+    }
+}
+
+function clearFilters() {
+    // Clear all filter inputs
+    $('#q').val('');
+    $('#status').val('');
+    $('#org_type').val('');
+    $('#organization').val('');
+    $('#role').val('');
+    
+    // Redirect to clear URL parameters
+    window.location.href = window.location.pathname;
+}
+
+function removeFilter(filterName) {
+    const url = new URL(window.location);
+    url.searchParams.delete(filterName);
+    window.location.href = url.toString();
+}
 </script>
 {% endblock %}

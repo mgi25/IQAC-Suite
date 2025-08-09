@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
+from django.utils import timezone
 
 # ───────────────────────────────
 #  New Generic Organization Models
@@ -58,8 +59,35 @@ class RoleAssignment(models.Model):
     def __str__(self):
         parts = [self.role.name]  # Use the OrganizationRole name
         if self.organization:
-            parts.append(f"of {self.organization}")
+                parts.append(f"of {self.organization}")
         return f"{self.user.username} – {' '.join(parts)}"
+
+    def get_contribution_percentage(self):
+        """Calculate user's contribution percentage in this organization"""
+        from django.db.models import Q
+        from emt.models import EventProposal
+        
+        # Get total events in organization
+        total_events = EventProposal.objects.filter(
+            organization=self.organization
+        ).count()
+        
+        if total_events == 0:
+            return 0
+            
+        # Get user's events - count events where user is:
+        # 1. The proposer (submitted_by)
+        # 2. A faculty in-charge
+        # 3. A participant (through Student profile)
+        user_events_query = Q(organization=self.organization) & (
+            Q(submitted_by=self.user) |  # User is the proposer
+            Q(faculty_incharges=self.user) |  # User is faculty in-charge
+            Q(participants__user=self.user)  # User is a participant through Student profile
+        )
+        
+        user_events = EventProposal.objects.filter(user_events_query).distinct().count()
+        
+        return round((user_events / total_events) * 100, 1)
 
 # ───────────────────────────────
 #  User Profile (unchanged)

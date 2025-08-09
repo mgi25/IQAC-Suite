@@ -56,7 +56,6 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'core.middleware.ImpersonationMiddleware',
     'allauth.account.middleware.AccountMiddleware',  # ← allauth middleware
     'core.middleware.RegistrationRequiredMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -80,7 +79,6 @@ TEMPLATES = [
                 'django.template.context_processors.csrf',
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.notifications',
-                'core.context_processors.impersonation_context',
             ],
             'libraries': {
                 'dict_filters': 'core.templatetags.dict_filters',

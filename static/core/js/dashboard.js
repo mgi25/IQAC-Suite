@@ -953,5 +953,233 @@ document.addEventListener('DOMContentLoaded', function() {
     renderCalendar(currentDate);
 });
 
-// --- OPTIONAL: Make modal functions globally available for debugging ---
-window.showModal = window.hideModal = undefined;
+// Event Contribution Chart
+class EventContributionChart {
+    constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+        this.chart = null;
+        this.data = null;
+        this.colors = [
+            '#3498db', '#e74c3c', '#2ecc71', '#f39c12', 
+            '#9b59b6', '#1abc9c', '#34495e', '#e67e22'
+        ];
+        this.init();
+    }
+
+    async init() {
+        await this.loadChartLibrary();
+        await this.fetchData();
+        this.setupEventListeners();
+    }
+
+    async loadChartLibrary() {
+        // Chart.js is already loaded via HTML script tag
+        return Promise.resolve();
+    }
+
+    async fetchData(organizationId = 'all') {
+        try {
+            const url = organizationId === 'all' 
+                ? '/api/event-contribution/' 
+                : `/api/event-contribution/?organization_id=${organizationId}`;
+                
+            const response = await fetch(url);
+            this.data = await response.json();
+            
+            this.populateOrganizationSelect();
+            this.renderChart();
+            this.updateDetails();
+        } catch (error) {
+            console.error('Error fetching chart data:', error);
+        }
+    }
+
+    populateOrganizationSelect() {
+        const select = document.getElementById('organizationSelect');
+        if (!select || !this.data.organizations) return;
+
+        // Clear existing options except "All Organizations"
+        while (select.children.length > 1) {
+            select.removeChild(select.lastChild);
+        }
+
+        // Add organization options
+        this.data.organizations.forEach(org => {
+            const option = document.createElement('option');
+            option.value = org.id;
+            option.textContent = org.name;
+            select.appendChild(option);
+        });
+    }
+
+    renderChart() {
+        if (this.chart) {
+            this.chart.destroy();
+        }
+
+        const chartData = this.data.chart_data;
+        
+        if (!chartData || chartData.length === 0) {
+            this.renderEmptyState();
+            return;
+        }
+
+        const data = {
+            labels: chartData.map(item => item.organization),
+            datasets: [{
+                data: chartData.map(item => item.percentage),
+                backgroundColor: this.colors.slice(0, chartData.length),
+                borderWidth: 0,
+                cutout: '70%'
+            }]
+        };
+
+        const config = {
+            type: 'doughnut',
+            data: data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                const item = chartData[context.dataIndex];
+                                return [
+                                    `${item.organization}: ${item.percentage}%`,
+                                    `Events: ${item.user_events}/${item.total_events}`,
+                                    `Role: ${item.role}`
+                                ];
+                            }
+                        }
+                    }
+                },
+                onHover: (event, activeElements) => {
+                    this.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
+                },
+                onClick: (event, activeElements) => {
+                    if (activeElements.length > 0) {
+                        const index = activeElements[0].index;
+                        const orgData = chartData[index];
+                        this.showOrganizationDetails(orgData);
+                    }
+                }
+            }
+        };
+
+        this.chart = new Chart(this.ctx, config);
+        this.renderLegend();
+        this.updateCenterInfo();
+    }
+
+    renderEmptyState() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.fillStyle = '#6c757d';
+        this.ctx.font = '16px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('No data available', this.canvas.width / 2, this.canvas.height / 2);
+        
+        document.getElementById('chartLegend').innerHTML = '<p class="text-muted">No organizations found</p>';
+    }
+
+    renderLegend() {
+        const legendContainer = document.getElementById('chartLegend');
+        if (!legendContainer) return;
+
+        const chartData = this.data.chart_data;
+        
+        legendContainer.innerHTML = chartData.map((item, index) => `
+            <div class="legend-item" data-index="${index}">
+                <div class="legend-color" style="background-color: ${this.colors[index]}"></div>
+                <div class="legend-text">
+                    <div class="legend-org">${item.organization}</div>
+                    <div class="legend-stats">${item.user_events}/${item.total_events} events • ${item.role}</div>
+                </div>
+                <div class="legend-percentage">${item.percentage}%</div>
+            </div>
+        `).join('');
+
+        // Add hover effects for legend items
+        legendContainer.querySelectorAll('.legend-item').forEach((item, index) => {
+            item.addEventListener('mouseenter', () => {
+                if (this.chart) {
+                    this.chart.setActiveElements([{datasetIndex: 0, index: index}]);
+                    this.chart.update('none');
+                }
+            });
+
+            item.addEventListener('mouseleave', () => {
+                if (this.chart) {
+                    this.chart.setActiveElements([]);
+                    this.chart.update('none');
+                }
+            });
+
+            item.addEventListener('click', () => {
+                this.showOrganizationDetails(chartData[index]);
+            });
+        });
+    }
+
+    updateCenterInfo() {
+        const centerNumber = document.getElementById('centerNumber');
+        const centerLabel = document.getElementById('centerLabel');
+        
+        if (centerNumber && centerLabel) {
+            centerNumber.textContent = this.data.total_events;
+            centerLabel.textContent = 'Total Events';
+        }
+    }
+
+    updateDetails() {
+        const userParticipation = document.getElementById('userParticipation');
+        const contributionRate = document.getElementById('contributionRate');
+        
+        if (userParticipation) {
+            userParticipation.textContent = `${this.data.total_user_events} events`;
+        }
+        
+        if (contributionRate) {
+            contributionRate.textContent = `${this.data.overall_percentage}%`;
+        }
+    }
+
+    setupEventListeners() {
+        const organizationSelect = document.getElementById('organizationSelect');
+        if (organizationSelect) {
+            organizationSelect.addEventListener('change', (e) => {
+                this.fetchData(e.target.value);
+            });
+        }
+    }
+
+    showOrganizationDetails(orgData) {
+        // You can implement a modal or detailed view here
+        console.log('Organization Details:', orgData);
+        
+        // For now, let's update the center info to show selected org
+        const centerNumber = document.getElementById('centerNumber');
+        const centerLabel = document.getElementById('centerLabel');
+        
+        if (centerNumber && centerLabel) {
+            centerNumber.textContent = orgData.user_events;
+            centerLabel.textContent = orgData.organization;
+        }
+        
+        // Reset after 3 seconds
+        setTimeout(() => {
+            this.updateCenterInfo();
+        }, 3000);
+    }
+}
+
+// Initialize the chart when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('contributionChart')) {
+        new EventContributionChart('contributionChart');
+    }
+});
