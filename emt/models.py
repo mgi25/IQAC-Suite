@@ -161,12 +161,19 @@ class ExpenseDetail(models.Model):
 #  Approval Steps
 # ────────────────────────────────────────────────────────────────
 class ApprovalStepQuerySet(models.QuerySet):
-    def visible_for_status(self):
+    def visible_for_ui(self):
+        """Hide optional steps that were never forwarded for display."""
         return self.exclude(
-            is_optional=True, optional_unlocked=False, status="pending"
+            is_optional=True,
+            optional_unlocked=False,
+            status=ApprovalStep.Status.PENDING,
         ).exclude(
-            is_optional=True, status="skipped"
+            is_optional=True,
+            status=ApprovalStep.Status.SKIPPED,
         )
+
+    # Backwards compatibility with previous helper name
+    visible_for_status = visible_for_ui
 
 class ApprovalStep(models.Model):
     """Represents a single step in the approval workflow for a proposal."""
