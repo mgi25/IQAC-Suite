@@ -935,6 +935,8 @@ def review_approval_step(request, step_id):
         "cell_head",
     ]
 
+    is_gatekeeper_step = step.role_required in GATEKEEPER_ROLES
+
     optional_templates = ApprovalFlowTemplate.objects.filter(
         organization=proposal.organization,
         optional=True
@@ -944,7 +946,7 @@ def review_approval_step(request, step_id):
     for tmpl in optional_templates:
         if not proposal.approval_steps.filter(
             role_required=tmpl.role_required,
-            status__in=['pending', 'approved', 'waiting']
+            status__in=['pending', 'approved', 'waiting', 'skipped']
         ).exists():
             optional_roles.append(
                 {
@@ -975,7 +977,7 @@ def review_approval_step(request, step_id):
                 return ApprovalStep.objects.filter(
                     proposal=proposal,
                     role_required=role,
-                    status__in=['pending', 'approved', 'waiting']
+                    status__in=['pending', 'approved', 'waiting', 'skipped']
                 ).exists()
 
             for role in selected_optional_roles:
@@ -998,15 +1000,26 @@ def review_approval_step(request, step_id):
             if additional_steps:
                 ApprovalStep.objects.bulk_create(additional_steps)
 
-            # Sequential activation: set next step's status to 'pending'
-            next_step = ApprovalStep.objects.filter(
-                proposal=proposal,
-                step_order=step.step_order + 1,
-                status='waiting'
-            ).first()
-            if next_step:
-                next_step.status = 'pending'
-                next_step.save()
+            def activate_next(current_order):
+                next_step = ApprovalStep.objects.filter(
+                    proposal=proposal,
+                    step_order=current_order + 1,
+                ).first()
+                if not next_step:
+                    return
+                if next_step.status == 'waiting':
+                    if next_step.assigned_to == request.user:
+                        next_step.status = ApprovalStep.Status.SKIPPED
+                        next_step.approved_by = request.user
+                        next_step.approved_at = timezone.now()
+                        next_step.comment = 'Automatically skipped duplicate approval.'
+                        next_step.save()
+                        activate_next(next_step.step_order)
+                    else:
+                        next_step.status = 'pending'
+                        next_step.save()
+
+            activate_next(step.step_order)
 
             # Proposal status logic
             if ApprovalStep.objects.filter(proposal=proposal, status='pending').exists():
@@ -1038,6 +1051,7 @@ def review_approval_step(request, step_id):
         'proposal': proposal,
         'GATEKEEPER_ROLES': GATEKEEPER_ROLES,
         'optional_roles': optional_roles,
+        'is_gatekeeper_step': is_gatekeeper_step,
         'need_analysis': need_analysis,
         'objectives': objectives,
         'outcomes': outcomes,

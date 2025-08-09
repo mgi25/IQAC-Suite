@@ -103,6 +103,7 @@ urlpatterns = [
     path('core-admin/api/org-type/<int:org_type_id>/organizations/', views.api_org_type_organizations, name='api_org_type_organizations'),
     path('core-admin/api/org-type/<int:org_type_id>/roles/', views.api_org_type_roles, name='api_org_type_roles'),
     path('core-admin/api/organization/<int:org_id>/roles/', views.api_organization_roles, name='api_organization_roles'),
+    path('core-admin/api/search-users/', views.search_users, name='search_users'),
     path('core-admin/api/search/', views.api_global_search, name='api_global_search'),
 
     # ────────────────────────────────────────────────
