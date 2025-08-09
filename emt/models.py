@@ -160,6 +160,14 @@ class ExpenseDetail(models.Model):
 # ────────────────────────────────────────────────────────────────
 #  Approval Steps
 # ────────────────────────────────────────────────────────────────
+class ApprovalStepQuerySet(models.QuerySet):
+    def visible_for_status(self):
+        return self.exclude(
+            is_optional=True, optional_unlocked=False, status="pending"
+        ).exclude(
+            is_optional=True, status="skipped"
+        )
+
 class ApprovalStep(models.Model):
     """Represents a single step in the approval workflow for a proposal."""
     class Status(models.TextChoices):
@@ -201,6 +209,8 @@ class ApprovalStep(models.Model):
     decided_at = models.DateTimeField(null=True, blank=True)
     note = models.TextField(blank=True)
     comment = models.TextField(blank=True)
+
+    objects = ApprovalStepQuerySet.as_manager()
 
     class Meta:
         ordering = ['order_index']
