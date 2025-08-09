@@ -22,7 +22,13 @@ from core.models import (
     ApprovalFlowTemplate,
 )
 from django.contrib.auth.models import User
-from emt.utils import build_approval_chain
+from emt.utils import (
+    build_approval_chain,
+    auto_approve_non_optional_duplicates,
+    unlock_optionals_after,
+    skip_all_downstream_optionals,
+    get_downstream_optional_candidates,
+)
 from emt.models import ApprovalStep
 
 # ---------------------------------------------------------------------------
@@ -867,13 +873,16 @@ def api_outcomes(request, org_id):
 
 @login_required
 def my_approvals(request):
-    pending_steps = ApprovalStep.objects.filter(
-        assigned_to=request.user,
-        status='pending'
-    ).select_related('proposal').order_by('step_order')
-    return render(request, "emt/my_approvals.html", {
-        "pending_steps": pending_steps
-    })
+    pending_steps = (
+        ApprovalStep.objects.filter(
+            assigned_to=request.user,
+            status=ApprovalStep.Status.PENDING,
+        )
+        .filter(Q(is_optional=False) | Q(optional_unlocked=True))
+        .select_related("proposal")
+        .order_by("order_index")
+    )
+    return render(request, "emt/my_approvals.html", {"pending_steps": pending_steps})
 
 
 @login_required
@@ -927,101 +936,59 @@ def review_approval_step(request, step_id):
         getattr(flow, "content", None),
     )
 
-    GATEKEEPER_ROLES = [
-        ApprovalStep.Role.HOD.value,
-        "uni_iqac",
-        "university_club_head",
-        "center_head",
-        "cell_head",
-    ]
+    optional_candidates = []
+    show_optional_picker = False
+    if step.assigned_to_id == request.user.id and step.status == ApprovalStep.Status.PENDING:
+        optional_candidates = list(get_downstream_optional_candidates(step))
+        show_optional_picker = len(optional_candidates) > 0
 
-    is_gatekeeper_step = step.role_required in GATEKEEPER_ROLES
-
-    optional_templates = ApprovalFlowTemplate.objects.filter(
-        organization=proposal.organization,
-        optional=True
-    ).order_by('step_order')
-
-    optional_roles = []
-    for tmpl in optional_templates:
-        if not proposal.approval_steps.filter(
-            role_required=tmpl.role_required,
-            status__in=['pending', 'approved', 'waiting', 'skipped']
-        ).exists():
-            optional_roles.append(
-                {
-                    'role': tmpl.role_required,
-                    'display': tmpl.get_role_required_display(),
-                }
-            )
+    history_steps = proposal.approval_steps.filter(
+        Q(is_optional=False)
+        | Q(optional_unlocked=True)
+        | Q(status__in=[ApprovalStep.Status.APPROVED, ApprovalStep.Status.REJECTED])
+    ).order_by("order_index")
 
     if request.method == 'POST':
         action = request.POST.get('action')
         comment = request.POST.get('comment', '')
-        selected_optional_roles = request.POST.getlist('optional_roles')
+        forward_flag = bool(request.POST.get("forward_to_optionals"))
+        selected_optionals = request.POST.getlist("optional_step_ids")
 
         if action == 'approve':
-            step.status = 'approved'
+            step.status = ApprovalStep.Status.APPROVED
             step.approved_by = request.user
             step.approved_at = timezone.now()
+            step.decided_by = request.user
+            step.decided_at = step.approved_at
             step.comment = comment
             step.save()
 
-            # Handle optional escalations
-            next_step_order = (
-                ApprovalStep.objects.filter(proposal=proposal).aggregate(max_order=models.Max('step_order'))['max_order'] or 0
-            ) + 1
-            additional_steps = []
+            auto_approve_non_optional_duplicates(step.proposal, request.user, request.user)
 
-            def approval_exists(role):
-                return ApprovalStep.objects.filter(
-                    proposal=proposal,
-                    role_required=role,
-                    status__in=['pending', 'approved', 'waiting', 'skipped']
-                ).exists()
-
-            for role in selected_optional_roles:
-                if not approval_exists(role):
-                    user = User.objects.filter(
-                        role_assignments__role__name=role
-                    ).first()
-                    if user:
-                        additional_steps.append(
-                            ApprovalStep(
-                                proposal=proposal,
-                                step_order=next_step_order,
-                                role_required=role,
-                                assigned_to=user,
-                                status='waiting'
-                            )
-                        )
-                        next_step_order += 1
-
-            if additional_steps:
-                ApprovalStep.objects.bulk_create(additional_steps)
+            if forward_flag and selected_optionals:
+                unlock_optionals_after(step, selected_optionals)
+            else:
+                skip_all_downstream_optionals(step)
 
             def activate_next(current_order):
-                next_step = ApprovalStep.objects.filter(
-                    proposal=proposal,
-                    step_order=current_order + 1,
-                ).first()
+                next_step = (
+                    ApprovalStep.objects.filter(
+                        proposal=proposal,
+                        step_order__gt=current_order,
+                    )
+                    .order_by("step_order")
+                    .first()
+                )
                 if not next_step:
                     return
                 if next_step.status == 'waiting':
-                    if next_step.assigned_to == request.user:
-                        next_step.status = ApprovalStep.Status.SKIPPED
-                        next_step.approved_by = request.user
-                        next_step.approved_at = timezone.now()
-                        next_step.comment = 'Automatically skipped duplicate approval.'
-                        next_step.save()
-                        activate_next(next_step.step_order)
-                    else:
-                        next_step.status = 'pending'
-                        next_step.save()
+                    next_step.status = 'pending'
+                    next_step.save()
+                else:
+                    activate_next(next_step.step_order)
 
             activate_next(step.step_order)
 
-            # Proposal status logic
             if ApprovalStep.objects.filter(proposal=proposal, status='pending').exists():
                 proposal.status = 'under_review'
             else:
@@ -1034,10 +1001,12 @@ def review_approval_step(request, step_id):
             if not comment.strip():
                 messages.error(request, 'Comment is required to reject the proposal.')
             else:
-                step.status = 'rejected'
+                step.status = ApprovalStep.Status.REJECTED
                 step.comment = comment
                 step.approved_by = request.user
                 step.approved_at = timezone.now()
+                step.decided_by = request.user
+                step.decided_at = step.approved_at
                 proposal.status = 'rejected'
                 proposal.save()
                 step.save()
@@ -1046,19 +1015,23 @@ def review_approval_step(request, step_id):
         else:
             return redirect('emt:my_approvals')
 
-    return render(request, 'emt/review_approval_step.html', {
-        'step': step,
-        'proposal': proposal,
-        'GATEKEEPER_ROLES': GATEKEEPER_ROLES,
-        'optional_roles': optional_roles,
-        'is_gatekeeper_step': is_gatekeeper_step,
-        'need_analysis': need_analysis,
-        'objectives': objectives,
-        'outcomes': outcomes,
-        'flow': flow,
-        'speakers': speakers,
-        'expenses': expenses,
-    })
+    return render(
+        request,
+        'emt/review_approval_step.html',
+        {
+            'step': step,
+            'proposal': proposal,
+            'need_analysis': need_analysis,
+            'objectives': objectives,
+            'outcomes': outcomes,
+            'flow': flow,
+            'speakers': speakers,
+            'expenses': expenses,
+            'optional_candidates': optional_candidates,
+            'show_optional_picker': show_optional_picker,
+            'history_steps': history_steps,
+        },
+    )
 
 @login_required
 def submit_event_report(request, proposal_id):

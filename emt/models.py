@@ -179,15 +179,31 @@ class ApprovalStep(models.Model):
 
     proposal = models.ForeignKey(EventProposal, on_delete=models.CASCADE, related_name="approval_steps")
     step_order = models.PositiveIntegerField(null=True, blank=True)
+    order_index = models.PositiveIntegerField(default=0)
     role_required = models.CharField(max_length=50, choices=Role.choices, null=True, blank=True)
-    assigned_to = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="assigned_approvals")
-    approved_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="completed_approvals")
+    assigned_to = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="assigned_approvals"
+    )
+    approved_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="completed_approvals"
+    )
     approved_at = models.DateTimeField(null=True, blank=True)
+    is_optional = models.BooleanField(default=False)
+    optional_unlocked = models.BooleanField(default=False)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    decided_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="decided_steps",
+    )
+    decided_at = models.DateTimeField(null=True, blank=True)
+    note = models.TextField(blank=True)
     comment = models.TextField(blank=True)
 
     class Meta:
-        ordering = ['step_order']
+        ordering = ['order_index']
         verbose_name = "Approval Step"
         verbose_name_plural = "Approval Steps"
 

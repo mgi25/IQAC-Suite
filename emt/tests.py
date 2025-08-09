@@ -3,7 +3,12 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 
 from emt.models import ApprovalStep, EventProposal
-from emt.utils import build_approval_chain
+from emt.utils import (
+    build_approval_chain,
+    auto_approve_non_optional_duplicates,
+    unlock_optionals_after,
+    skip_all_downstream_optionals,
+)
 from core.models import (
     OrganizationType, Organization, OrganizationRole, RoleAssignment,
     Program, ProgramOutcome, ProgramSpecificOutcome,
@@ -257,12 +262,16 @@ class ApprovalLogicTests(TestCase):
             reverse("emt:review_approval_step", args=[step1.id]),
             {"action": "approve"},
         )
-        self.assertRedirects(resp, reverse("emt:my_approvals"))
+        self.assertEqual(resp.status_code, 302)
 
         step2.refresh_from_db()
-        self.assertEqual(step2.status, ApprovalStep.Status.SKIPPED)
+        self.assertEqual(step2.status, ApprovalStep.Status.APPROVED)
+        self.assertEqual(
+            step2.note,
+            "Auto-approved (duplicate non-optional step for same approver).",
+        )
 
-    def test_optional_role_checkbox_display(self):
+    def test_optional_picker_display(self):
         ot = OrganizationType.objects.create(name="Dept")
         org = Organization.objects.create(name="Sci", org_type=ot)
 
@@ -298,14 +307,162 @@ class ApprovalLogicTests(TestCase):
             status=EventProposal.Status.SUBMITTED,
         )
         build_approval_chain(proposal)
-        self.assertEqual(proposal.approval_steps.count(), 1)
+        self.assertEqual(proposal.approval_steps.count(), 2)
         step = proposal.approval_steps.get(role_required=ApprovalStep.Role.HOD)
 
         self.client.force_login(hod)
-        resp = self.client.get(
-            reverse("emt:review_approval_step", args=[step.id])
-        )
+        resp = self.client.get(reverse("emt:review_approval_step", args=[step.id]))
         self.assertEqual(resp.status_code, 200)
-        self.assertTrue(
-            any(o['role'] == ApprovalStep.Role.DIRECTOR.value for o in resp.context['optional_roles'])
+        self.assertTrue(resp.context["show_optional_picker"])
+        ids = [s.id for s in resp.context["optional_candidates"]]
+        self.assertIn(
+            proposal.approval_steps.get(role_required=ApprovalStep.Role.DIRECTOR).id,
+            ids,
         )
+
+
+class ForwardingFlowTests(TestCase):
+    def setUp(self):
+        self.ot = OrganizationType.objects.create(name="Dept")
+        self.org = Organization.objects.create(name="Sci", org_type=self.ot)
+        self.user = User.objects.create_user("u", password="pass")
+        self.user_b = User.objects.create_user("b", password="pass")
+        self.user_c = User.objects.create_user("c", password="pass")
+        for u in (self.user, self.user_b, self.user_c):
+            if hasattr(u, "profile"):
+                u.profile.role = "faculty"
+                u.profile.save()
+
+    def _create_proposal(self):
+        return EventProposal.objects.create(
+            submitted_by=self.user,
+            organization=self.org,
+            status=EventProposal.Status.SUBMITTED,
+        )
+
+    def test_auto_approve_duplicate_non_optional(self):
+        proposal = self._create_proposal()
+        step1 = ApprovalStep.objects.create(
+            proposal=proposal,
+            step_order=1,
+            order_index=1,
+            assigned_to=self.user,
+            status=ApprovalStep.Status.PENDING,
+        )
+        step2 = ApprovalStep.objects.create(
+            proposal=proposal,
+            step_order=2,
+            order_index=2,
+            assigned_to=self.user,
+            status="waiting",
+        )
+        auto_approve_non_optional_duplicates(proposal, self.user, self.user)
+        step2.refresh_from_db()
+        self.assertEqual(step2.status, ApprovalStep.Status.APPROVED)
+        self.assertEqual(
+            step2.note,
+            "Auto-approved (duplicate non-optional step for same approver).",
+        )
+
+    def test_optional_step_skipped_without_forward(self):
+        proposal = self._create_proposal()
+        step1 = ApprovalStep.objects.create(
+            proposal=proposal,
+            step_order=1,
+            order_index=1,
+            assigned_to=self.user,
+            status=ApprovalStep.Status.PENDING,
+        )
+        step2 = ApprovalStep.objects.create(
+            proposal=proposal,
+            step_order=2,
+            order_index=2,
+            assigned_to=self.user,
+            is_optional=True,
+            status=ApprovalStep.Status.PENDING,
+        )
+        skip_all_downstream_optionals(step1)
+        step2.refresh_from_db()
+        self.assertEqual(step2.status, ApprovalStep.Status.SKIPPED)
+
+    def test_optional_step_unlocked_with_forward(self):
+        proposal = self._create_proposal()
+        step1 = ApprovalStep.objects.create(
+            proposal=proposal,
+            step_order=1,
+            order_index=1,
+            assigned_to=self.user,
+            status=ApprovalStep.Status.PENDING,
+        )
+        step2 = ApprovalStep.objects.create(
+            proposal=proposal,
+            step_order=2,
+            order_index=2,
+            assigned_to=self.user,
+            is_optional=True,
+            status=ApprovalStep.Status.PENDING,
+        )
+        unlock_optionals_after(step1, [step2.id])
+        step2.refresh_from_db()
+        self.assertEqual(step2.status, ApprovalStep.Status.PENDING)
+        self.assertTrue(step2.optional_unlocked)
+
+    def test_optional_chain_forwarding(self):
+        proposal = self._create_proposal()
+        step1 = ApprovalStep.objects.create(
+            proposal=proposal,
+            step_order=1,
+            order_index=1,
+            assigned_to=self.user,
+            status=ApprovalStep.Status.PENDING,
+        )
+        step2 = ApprovalStep.objects.create(
+            proposal=proposal,
+            step_order=2,
+            order_index=2,
+            assigned_to=self.user_b,
+            is_optional=True,
+            status=ApprovalStep.Status.PENDING,
+        )
+        step3 = ApprovalStep.objects.create(
+            proposal=proposal,
+            step_order=3,
+            order_index=3,
+            assigned_to=self.user_c,
+            is_optional=True,
+            status=ApprovalStep.Status.PENDING,
+        )
+        unlock_optionals_after(step1, [step2.id])
+        skip_all_downstream_optionals(step2)
+        step3.refresh_from_db()
+        self.assertEqual(step3.status, ApprovalStep.Status.SKIPPED)
+
+        proposal2 = self._create_proposal()
+        s1 = ApprovalStep.objects.create(
+            proposal=proposal2,
+            step_order=1,
+            order_index=1,
+            assigned_to=self.user,
+            status=ApprovalStep.Status.PENDING,
+        )
+        s2 = ApprovalStep.objects.create(
+            proposal=proposal2,
+            step_order=2,
+            order_index=2,
+            assigned_to=self.user_b,
+            is_optional=True,
+            status=ApprovalStep.Status.PENDING,
+        )
+        s3 = ApprovalStep.objects.create(
+            proposal=proposal2,
+            step_order=3,
+            order_index=3,
+            assigned_to=self.user_c,
+            is_optional=True,
+            status=ApprovalStep.Status.PENDING,
+        )
+        unlock_optionals_after(s1, [s2.id])
+        unlock_optionals_after(s2, [s3.id])
+        s3.refresh_from_db()
+        self.assertEqual(s3.status, ApprovalStep.Status.PENDING)
+        self.assertTrue(s3.optional_unlocked)
