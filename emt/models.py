@@ -40,7 +40,6 @@ class EventProposal(models.Model):
     )
 
     committees = models.TextField(blank=True, help_text="List of committees involved.")
-    aligned_sdg_goals = models.TextField(blank=True, help_text="Aligned SDG Goals for this event.")
     sdg_goals = models.ManyToManyField(SDGGoal, blank=True, related_name="event_proposals")
     committees_collaborations = models.TextField(blank=True, help_text="Committees and collaborations involved.")
     event_title = models.CharField(max_length=200, blank=True)
