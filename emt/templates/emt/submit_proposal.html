@@ -109,7 +109,15 @@
                         </div>
 
                         <!-- Dynamic organization field will be inserted here -->
-                        
+
+                        <div class="form-row full-width">
+                            <div class="input-group">
+                                <label for="committees-collaborations-modern">Committees & Collaborations</label>
+                                <textarea id="committees-collaborations-modern" rows="3" placeholder="List committees and external collaborations involved in organizing this event"></textarea>
+                                <div class="help-text">Mention internal committees and external partners involved</div>
+                            </div>
+                        </div>
+
                         <!-- Event Information Section -->
                         <div class="form-section-header">
                             <h3>Event Information</h3>
@@ -174,32 +182,16 @@
                             </div>
                         </div>
 
-                        <!-- SDG Goals and Collaborations Section -->
+                        <!-- SDG Goals Section -->
                         <div class="form-section-header">
-                            <h3>SDG Goals & Collaborations</h3>
+                            <h3>SDG Goals</h3>
                         </div>
 
                         <div class="form-row full-width">
                             <div class="input-group">
-                                <label>Aligned SDG Goals</label>
-                                <div id="sdg-goals-modern"></div>
+                                <label for="sdg-goals-modern">Aligned SDG Goals</label>
+                                <input type="text" id="sdg-goals-modern" placeholder="Select SDG goals">
                                 <div class="help-text">Specify which Sustainable Development Goals this event addresses</div>
-                            </div>
-                        </div>
-
-                        <div class="form-row full-width">
-                            <div class="input-group">
-                                <label for="committees-modern">Committees</label>
-                                <textarea id="committees-modern" rows="2" placeholder="List committees involved"></textarea>
-                                <div class="help-text">List internal committees involved</div>
-                            </div>
-                        </div>
-
-                        <div class="form-row full-width">
-                            <div class="input-group">
-                                <label for="committees-collaborations-modern">Committees & Collaborations</label>
-                                <textarea id="committees-collaborations-modern" rows="3" placeholder="List committees and external collaborations involved in organizing this event"></textarea>
-                                <div class="help-text">Mention internal committees and external partners involved</div>
                             </div>
                         </div>
 
@@ -276,8 +268,6 @@
                     {{ form.event_focus_type }}
                     {{ form.pos_pso.label_tag }}
                     {{ form.pos_pso }}
-                    {{ form.committees.label_tag }}
-                    {{ form.committees }}
                     {{ form.committees_collaborations.label_tag }}
                     {{ form.committees_collaborations }}
                     {{ form.sdg_goals.label_tag }}
@@ -293,7 +283,7 @@
                         {{ form.faculty_incharges }}
                     </div>
                     {% for field in form.visible_fields %}
-                        {% if field.name not in "organization_type,organization,event_title,event_start_date,event_end_date,venue,target_audience,event_focus_type,academic_year,student_coordinators,num_activities,faculty_incharges,pos_pso,sdg_goals,committees,committees_collaborations" %}
+                        {% if field.name not in "organization_type,organization,event_title,event_start_date,event_end_date,venue,target_audience,event_focus_type,academic_year,student_coordinators,num_activities,faculty_incharges,pos_pso,sdg_goals,committees_collaborations" %}
                             <div id="django-field-{{ field.name }}">
                                 {{ field.label_tag }}
                                 {{ field }}
@@ -332,6 +322,16 @@
     </div>
 </div>
 {% endif %}
+<div id="sdgModal" class="outcome-modal">
+    <div class="modal-content">
+        <h3>Select SDG Goals</h3>
+        <div id="sdgOptions">No goals available.</div>
+        <div class="modal-actions">
+            <button type="button" id="sdgCancel" class="btn-cancel">Cancel</button>
+            <button type="button" id="sdgSave" class="btn-save">Add</button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
