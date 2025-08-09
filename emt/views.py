@@ -537,7 +537,7 @@ def proposal_status_detail(request, proposal_id):
     all_steps = (
         ApprovalStep.objects.filter(proposal=proposal).order_by("order_index")
     )
-    visible_steps = all_steps.visible_for_status()
+    visible_steps = all_steps.visible_for_ui()
 
     # Total budget calculation
     budget_total = ExpenseDetail.objects.filter(
@@ -944,7 +944,7 @@ def review_approval_step(request, step_id):
         optional_candidates = list(get_downstream_optional_candidates(step))
         show_optional_picker = len(optional_candidates) > 0
 
-    history_steps = proposal.approval_steps.visible_for_status().order_by("order_index")
+    history_steps = proposal.approval_steps.visible_for_ui().order_by("order_index")
 
     if request.method == 'POST':
         action = request.POST.get('action')

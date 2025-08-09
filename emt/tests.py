@@ -466,3 +466,46 @@ class ForwardingFlowTests(TestCase):
         s3.refresh_from_db()
         self.assertEqual(s3.status, ApprovalStep.Status.PENDING)
         self.assertTrue(s3.optional_unlocked)
+
+    def test_visible_for_ui_hides_locked_optional_steps(self):
+        proposal = self._create_proposal()
+        base = ApprovalStep.objects.create(
+            proposal=proposal,
+            step_order=1,
+            order_index=1,
+            assigned_to=self.user,
+            status=ApprovalStep.Status.PENDING,
+        )
+        opt = ApprovalStep.objects.create(
+            proposal=proposal,
+            step_order=2,
+            order_index=2,
+            assigned_to=self.user_b,
+            is_optional=True,
+            status=ApprovalStep.Status.PENDING,
+        )
+
+        qs = (
+            ApprovalStep.objects.filter(proposal=proposal)
+            .order_by("order_index")
+            .visible_for_ui()
+        )
+        self.assertEqual(list(qs), [base])
+
+        opt.optional_unlocked = True
+        opt.save()
+        qs2 = (
+            ApprovalStep.objects.filter(proposal=proposal)
+            .order_by("order_index")
+            .visible_for_ui()
+        )
+        self.assertEqual(list(qs2), [base, opt])
+
+        opt.status = ApprovalStep.Status.SKIPPED
+        opt.save()
+        qs3 = (
+            ApprovalStep.objects.filter(proposal=proposal)
+            .order_by("order_index")
+            .visible_for_ui()
+        )
+        self.assertEqual(list(qs3), [base])
