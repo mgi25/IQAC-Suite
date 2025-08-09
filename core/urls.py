@@ -83,7 +83,9 @@ urlpatterns = [
     # ────────────────────────────────────────────────
     # Admin - PSO/PO Management
     # ────────────────────────────────────────────────
+    path('core-admin/outcomes/', views.admin_outcome_dashboard, name='admin_outcome_dashboard'),
     path('core-admin/pso-po/', views.admin_pso_po_management, name='admin_pso_po_management'),
+    path('core-admin/sdg-goals/', views.admin_sdg_management, name='admin_sdg_management'),
     path('core-admin/pso-po/data/<str:org_type>/<int:org_id>/', views.get_pso_po_data, name='get_pso_po_data'),
     path('core-admin/pso-po/add/<str:outcome_type>/', views.add_outcome, name='add_outcome'),
     path('core-admin/pso-po/delete/<str:outcome_type>/<int:outcome_id>/', views.delete_outcome, name='delete_outcome'),
@@ -104,6 +106,7 @@ urlpatterns = [
     path('core-admin/api/org-type/<int:org_type_id>/organizations/', views.api_org_type_organizations, name='api_org_type_organizations'),
     path('core-admin/api/org-type/<int:org_type_id>/roles/', views.api_org_type_roles, name='api_org_type_roles'),
     path('core-admin/api/organization/<int:org_id>/roles/', views.api_organization_roles, name='api_organization_roles'),
+    path('core-admin/api/search-users/', views.search_users, name='search_users'),
     path('core-admin/api/search/', views.api_global_search, name='api_global_search'),
     
     # Multi-select filter APIs

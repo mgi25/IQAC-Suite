@@ -190,7 +190,7 @@
       <h3>Approval History</h3>
       <div class="approval-history-ul">
         <ul>
-          {% for hist in proposal.approval_steps.all|dictsort:"step_order" %}
+          {% for hist in history_steps %}
             <li>
               <span class="history-role">{{ hist.get_role_required_display }}</span>
               <span class="history-person">{{ hist.assigned_to.get_full_name }}</span>
@@ -218,14 +218,24 @@
             <label>Comment / Remarks: <small class="text-muted">(required when rejecting)</small></label>
             <textarea name="comment" class="form-control"></textarea>
           </div>
-          {% if optional_roles and is_gatekeeper_step %}
-            <div class="form-group gatekeeper">
-              {% for opt in optional_roles %}
-                <label>
-                  <input type="checkbox" name="optional_roles" value="{{ opt.role }}"> Escalate to {{ opt.display }}
+          {% if show_optional_picker %}
+          <div class="card">
+            <label class="h2">Forward to optional approver(s)?</label>
+            <label class="checkbox">
+              <input type="checkbox" name="forward_to_optionals" value="1" id="forwardBox"
+                     onchange="document.getElementById('optionalBlock').style.display=this.checked?'block':'none'">
+              Yes, forward
+            </label>
+            <div id="optionalBlock" style="display:none; margin-top:8px;">
+              <p>Select optional approver(s):</p>
+              {% for s in optional_candidates %}
+                <label class="checkbox">
+                  <input type="checkbox" name="optional_step_ids" value="{{ s.id }}">
+                  {{ s.assigned_to.get_full_name|default:s.assigned_to.username }}
                 </label>
               {% endfor %}
             </div>
+          </div>
           {% endif %}
           <div class="review-actions">
             <button type="submit" name="action" value="approve" class="btn-ultra btn-success-ultra">Approve</button>

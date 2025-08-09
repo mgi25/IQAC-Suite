@@ -6,7 +6,7 @@ import json
 from django.db.models import Q
 from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
-    EventExpectedOutcomes, TentativeFlow,
+    EventExpectedOutcomes, TentativeFlow, EventActivity,
     ExpenseDetail, SpeakerProfile,EventReport, EventReportAttachment, CDLSupport
 )
 from .forms import (
@@ -20,9 +20,16 @@ from core.models import (
     OrganizationType,
     Report as SubmittedReport,
     ApprovalFlowTemplate,
+    SDGGoal,
 )
 from django.contrib.auth.models import User
-from emt.utils import build_approval_chain
+from emt.utils import (
+    build_approval_chain,
+    auto_approve_non_optional_duplicates,
+    unlock_optionals_after,
+    skip_all_downstream_optionals,
+    get_downstream_optional_candidates,
+)
 from emt.models import ApprovalStep
 
 # ---------------------------------------------------------------------------
@@ -119,6 +126,56 @@ def _save_text_sections(proposal, data):
             obj.content = data.get(field) or ""
             obj.save()
 
+
+def _save_activities(proposal, data):
+    proposal.activities.all().delete()
+    index = 1
+    while True:
+        name = data.get(f"activity_name_{index}")
+        date = data.get(f"activity_date_{index}")
+        if not name and not date:
+            break
+        if name and date:
+            EventActivity.objects.create(proposal=proposal, name=name, date=date)
+        index += 1
+
+
+def _save_speakers(proposal, data, files):
+    proposal.speakers.all().delete()
+    index = 0
+    while f"speaker_full_name_{index}" in data:
+        full_name = data.get(f"speaker_full_name_{index}")
+        if full_name:
+            SpeakerProfile.objects.create(
+                proposal=proposal,
+                full_name=full_name,
+                designation=data.get(f"speaker_designation_{index}", ""),
+                affiliation=data.get(f"speaker_affiliation_{index}", ""),
+                contact_email=data.get(f"speaker_contact_email_{index}", ""),
+                contact_number=data.get(f"speaker_contact_number_{index}", ""),
+                linkedin_url=data.get(f"speaker_linkedin_url_{index}", ""),
+                photo=files.get(f"speaker_photo_{index}"),
+                detailed_profile=data.get(f"speaker_detailed_profile_{index}", ""),
+            )
+        index += 1
+
+
+def _save_expenses(proposal, data):
+    proposal.expense_details.all().delete()
+    index = 0
+    while f"expense_particulars_{index}" in data or f"expense_amount_{index}" in data:
+        particulars = data.get(f"expense_particulars_{index}")
+        amount = data.get(f"expense_amount_{index}")
+        if particulars and amount:
+            sl_no = data.get(f"expense_sl_no_{index}") or 0
+            ExpenseDetail.objects.create(
+                proposal=proposal,
+                sl_no=sl_no or 0,
+                particulars=particulars,
+                amount=amount,
+            )
+        index += 1
+
 # ──────────────────────────────
 # PROPOSAL STEP 1: Proposal Submission
 # ──────────────────────────────
@@ -189,6 +246,9 @@ def submit_proposal(request, pk=None):
     objectives = EventObjectives.objects.filter(proposal=proposal).first() if proposal else None
     outcomes = EventExpectedOutcomes.objects.filter(proposal=proposal).first() if proposal else None
     flow = TentativeFlow.objects.filter(proposal=proposal).first() if proposal else None
+    activities = list(proposal.activities.values('name', 'date')) if proposal else []
+    speakers = list(proposal.speakers.values('full_name','designation','affiliation','contact_email','contact_number','linkedin_url','detailed_profile')) if proposal else []
+    expenses = list(proposal.expense_details.values('sl_no','particulars','amount')) if proposal else []
 
     ctx = {
         "form": form,
@@ -198,6 +258,10 @@ def submit_proposal(request, pk=None):
         "objectives": objectives,
         "outcomes": outcomes,
         "flow": flow,
+        "sdg_goals_list": json.dumps(list(SDGGoal.objects.values('id','name'))),
+        "activities_json": json.dumps(activities),
+        "speakers_json": json.dumps(speakers),
+        "expenses_json": json.dumps(expenses),
     }
 
 
@@ -210,6 +274,9 @@ def submit_proposal(request, pk=None):
             proposal.save()
             form.save_m2m()
             _save_text_sections(proposal, request.POST)
+            _save_activities(proposal, request.POST)
+            _save_speakers(proposal, request.POST, request.FILES)
+            _save_expenses(proposal, request.POST)
             logger.debug(
                 "Proposal %s saved with faculty %s",
                 proposal.id,
@@ -226,6 +293,9 @@ def submit_proposal(request, pk=None):
             proposal.save()
             form.save_m2m()
             _save_text_sections(proposal, request.POST)
+            _save_activities(proposal, request.POST)
+            _save_speakers(proposal, request.POST, request.FILES)
+            _save_expenses(proposal, request.POST)
             logger.debug(
                 "Draft proposal %s saved with faculty %s",
                 proposal.id,
@@ -528,9 +598,10 @@ def proposal_status_detail(request, proposal_id):
         return redirect('some-success-url')
 
     # Get approval steps
-    approval_steps = ApprovalStep.objects.filter(
-        proposal=proposal
-    ).order_by('step_order')
+    all_steps = (
+        ApprovalStep.objects.filter(proposal=proposal).order_by("order_index")
+    )
+    visible_steps = all_steps.visible_for_ui()
 
     # Total budget calculation
     budget_total = ExpenseDetail.objects.filter(
@@ -555,7 +626,8 @@ def proposal_status_detail(request, proposal_id):
 
     return render(request, 'emt/proposal_status_detail.html', {
         'proposal': proposal,
-        'approval_steps': approval_steps,
+        'steps': visible_steps,
+        'all_steps': all_steps,
         'budget_total': budget_total,
         'statuses': statuses,
         'status_index': status_index,
@@ -867,13 +939,16 @@ def api_outcomes(request, org_id):
 
 @login_required
 def my_approvals(request):
-    pending_steps = ApprovalStep.objects.filter(
-        assigned_to=request.user,
-        status='pending'
-    ).select_related('proposal').order_by('step_order')
-    return render(request, "emt/my_approvals.html", {
-        "pending_steps": pending_steps
-    })
+    pending_steps = (
+        ApprovalStep.objects.filter(
+            assigned_to=request.user,
+            status=ApprovalStep.Status.PENDING,
+        )
+        .filter(Q(is_optional=False) | Q(optional_unlocked=True))
+        .select_related("proposal")
+        .order_by("order_index")
+    )
+    return render(request, "emt/my_approvals.html", {"pending_steps": pending_steps})
 
 
 @login_required
@@ -927,88 +1002,55 @@ def review_approval_step(request, step_id):
         getattr(flow, "content", None),
     )
 
-    GATEKEEPER_ROLES = [
-        ApprovalStep.Role.HOD.value,
-        "uni_iqac",
-        "university_club_head",
-        "center_head",
-        "cell_head",
-    ]
+    optional_candidates = []
+    show_optional_picker = False
+    if step.assigned_to_id == request.user.id and step.status == ApprovalStep.Status.PENDING:
+        optional_candidates = list(get_downstream_optional_candidates(step))
+        show_optional_picker = len(optional_candidates) > 0
 
-    optional_templates = ApprovalFlowTemplate.objects.filter(
-        organization=proposal.organization,
-        optional=True
-    ).order_by('step_order')
-
-    optional_roles = []
-    for tmpl in optional_templates:
-        if not proposal.approval_steps.filter(
-            role_required=tmpl.role_required,
-            status__in=['pending', 'approved', 'waiting']
-        ).exists():
-            optional_roles.append(
-                {
-                    'role': tmpl.role_required,
-                    'display': tmpl.get_role_required_display(),
-                }
-            )
+    history_steps = proposal.approval_steps.visible_for_ui().order_by("order_index")
 
     if request.method == 'POST':
         action = request.POST.get('action')
         comment = request.POST.get('comment', '')
-        selected_optional_roles = request.POST.getlist('optional_roles')
+        forward_flag = bool(request.POST.get("forward_to_optionals"))
+        selected_optionals = request.POST.getlist("optional_step_ids")
 
         if action == 'approve':
-            step.status = 'approved'
+            step.status = ApprovalStep.Status.APPROVED
             step.approved_by = request.user
             step.approved_at = timezone.now()
+            step.decided_by = request.user
+            step.decided_at = step.approved_at
             step.comment = comment
             step.save()
 
-            # Handle optional escalations
-            next_step_order = (
-                ApprovalStep.objects.filter(proposal=proposal).aggregate(max_order=models.Max('step_order'))['max_order'] or 0
-            ) + 1
-            additional_steps = []
+            auto_approve_non_optional_duplicates(step.proposal, request.user, request.user)
 
-            def approval_exists(role):
-                return ApprovalStep.objects.filter(
-                    proposal=proposal,
-                    role_required=role,
-                    status__in=['pending', 'approved', 'waiting']
-                ).exists()
+            if forward_flag and selected_optionals:
+                unlock_optionals_after(step, selected_optionals)
+            else:
+                skip_all_downstream_optionals(step)
 
-            for role in selected_optional_roles:
-                if not approval_exists(role):
-                    user = User.objects.filter(
-                        role_assignments__role__name=role
-                    ).first()
-                    if user:
-                        additional_steps.append(
-                            ApprovalStep(
-                                proposal=proposal,
-                                step_order=next_step_order,
-                                role_required=role,
-                                assigned_to=user,
-                                status='waiting'
-                            )
-                        )
-                        next_step_order += 1
+            def activate_next(current_order):
+                next_step = (
+                    ApprovalStep.objects.filter(
+                        proposal=proposal,
+                        step_order__gt=current_order,
+                    )
+                    .order_by("step_order")
+                    .first()
+                )
+                if not next_step:
+                    return
+                if next_step.status == 'waiting':
+                    next_step.status = 'pending'
+                    next_step.save()
+                else:
+                    activate_next(next_step.step_order)
 
-            if additional_steps:
-                ApprovalStep.objects.bulk_create(additional_steps)
+            activate_next(step.step_order)
 
-            # Sequential activation: set next step's status to 'pending'
-            next_step = ApprovalStep.objects.filter(
-                proposal=proposal,
-                step_order=step.step_order + 1,
-                status='waiting'
-            ).first()
-            if next_step:
-                next_step.status = 'pending'
-                next_step.save()
-
-            # Proposal status logic
             if ApprovalStep.objects.filter(proposal=proposal, status='pending').exists():
                 proposal.status = 'under_review'
             else:
@@ -1021,10 +1063,12 @@ def review_approval_step(request, step_id):
             if not comment.strip():
                 messages.error(request, 'Comment is required to reject the proposal.')
             else:
-                step.status = 'rejected'
+                step.status = ApprovalStep.Status.REJECTED
                 step.comment = comment
                 step.approved_by = request.user
                 step.approved_at = timezone.now()
+                step.decided_by = request.user
+                step.decided_at = step.approved_at
                 proposal.status = 'rejected'
                 proposal.save()
                 step.save()
@@ -1033,18 +1077,23 @@ def review_approval_step(request, step_id):
         else:
             return redirect('emt:my_approvals')
 
-    return render(request, 'emt/review_approval_step.html', {
-        'step': step,
-        'proposal': proposal,
-        'GATEKEEPER_ROLES': GATEKEEPER_ROLES,
-        'optional_roles': optional_roles,
-        'need_analysis': need_analysis,
-        'objectives': objectives,
-        'outcomes': outcomes,
-        'flow': flow,
-        'speakers': speakers,
-        'expenses': expenses,
-    })
+    return render(
+        request,
+        'emt/review_approval_step.html',
+        {
+            'step': step,
+            'proposal': proposal,
+            'need_analysis': need_analysis,
+            'objectives': objectives,
+            'outcomes': outcomes,
+            'flow': flow,
+            'speakers': speakers,
+            'expenses': expenses,
+            'optional_candidates': optional_candidates,
+            'show_optional_picker': show_optional_picker,
+            'history_steps': history_steps,
+        },
+    )
 
 @login_required
 def submit_event_report(request, proposal_id):

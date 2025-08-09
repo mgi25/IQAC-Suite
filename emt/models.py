@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
-from core.models import Organization
+from core.models import Organization, SDGGoal
 
 # ────────────────────────────────────────────────────────────────
 #  MAIN PROPOSAL
@@ -40,7 +40,7 @@ class EventProposal(models.Model):
     )
 
     committees = models.TextField(blank=True, help_text="List of committees involved.")
-    aligned_sdg_goals = models.TextField(blank=True, help_text="Aligned SDG Goals for this event.")
+    sdg_goals = models.ManyToManyField(SDGGoal, blank=True, related_name="event_proposals")
     committees_collaborations = models.TextField(blank=True, help_text="Committees and collaborations involved.")
     event_title = models.CharField(max_length=200, blank=True)
     num_activities = models.PositiveIntegerField(null=True, blank=True)
@@ -127,6 +127,15 @@ class TentativeFlow(models.Model):
     proposal = models.OneToOneField(EventProposal, on_delete=models.CASCADE, related_name='tentative_flow')
     content = models.TextField()
 
+class EventActivity(models.Model):
+    """Represents a planned activity within an event proposal."""
+    proposal = models.ForeignKey(EventProposal, on_delete=models.CASCADE, related_name='activities')
+    name = models.CharField(max_length=255)
+    date = models.DateField()
+
+    class Meta:
+        ordering = ['date', 'id']
+
 # ────────────────────────────────────────────────────────────────
 #  Speaker & Expense
 # ────────────────────────────────────────────────────────────────
@@ -160,6 +169,23 @@ class ExpenseDetail(models.Model):
 # ────────────────────────────────────────────────────────────────
 #  Approval Steps
 # ────────────────────────────────────────────────────────────────
+class ApprovalStepQuerySet(models.QuerySet):
+    def visible_for_ui(self):
+        """Hide optional steps that were never forwarded for display."""
+        return (
+            self.exclude(
+                is_optional=True,
+                optional_unlocked=False,
+            )
+            .exclude(
+                is_optional=True,
+                status=ApprovalStep.Status.SKIPPED,
+            )
+        )
+
+    # Backwards compatibility with previous helper name
+    visible_for_status = visible_for_ui
+
 class ApprovalStep(models.Model):
     """Represents a single step in the approval workflow for a proposal."""
     class Status(models.TextChoices):
@@ -179,15 +205,33 @@ class ApprovalStep(models.Model):
 
     proposal = models.ForeignKey(EventProposal, on_delete=models.CASCADE, related_name="approval_steps")
     step_order = models.PositiveIntegerField(null=True, blank=True)
+    order_index = models.PositiveIntegerField(default=0)
     role_required = models.CharField(max_length=50, choices=Role.choices, null=True, blank=True)
-    assigned_to = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="assigned_approvals")
-    approved_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="completed_approvals")
+    assigned_to = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="assigned_approvals"
+    )
+    approved_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="completed_approvals"
+    )
     approved_at = models.DateTimeField(null=True, blank=True)
+    is_optional = models.BooleanField(default=False)
+    optional_unlocked = models.BooleanField(default=False)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    decided_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="decided_steps",
+    )
+    decided_at = models.DateTimeField(null=True, blank=True)
+    note = models.TextField(blank=True)
     comment = models.TextField(blank=True)
 
+    objects = ApprovalStepQuerySet.as_manager()
+
     class Meta:
-        ordering = ['step_order']
+        ordering = ['order_index']
         verbose_name = "Approval Step"
         verbose_name_plural = "Approval Steps"
 
