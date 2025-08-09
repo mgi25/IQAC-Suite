@@ -651,6 +651,7 @@ def delete_org_role(request, role_id):
 def admin_user_management(request):
     """
     Manages and displays a paginated list of users with enhanced filtering capabilities.
+    Supports multi-select filtering for organization types, organizations, and roles.
     """
     users_list = User.objects.select_related('profile').prefetch_related(
         'role_assignments__organization', 
@@ -658,12 +659,17 @@ def admin_user_management(request):
         'role_assignments__organization__org_type'
     ).order_by('-date_joined')
 
-    # Filter parameters
+    # Filter parameters - support both single and multiple values
     q = request.GET.get('q', '').strip()
-    role_id = request.GET.get('role')
-    org_id = request.GET.get('organization')
-    org_type_id = request.GET.get('org_type')
+    role_ids = request.GET.getlist('role[]') or ([request.GET.get('role')] if request.GET.get('role') else [])
+    org_ids = request.GET.getlist('organization[]') or ([request.GET.get('organization')] if request.GET.get('organization') else [])
+    org_type_ids = request.GET.getlist('org_type[]') or ([request.GET.get('org_type')] if request.GET.get('org_type') else [])
     status = request.GET.get('status')
+    
+    # Clean empty values
+    role_ids = [r for r in role_ids if r and r.strip()]
+    org_ids = [o for o in org_ids if o and o.strip()]
+    org_type_ids = [ot for ot in org_type_ids if ot and ot.strip()]
     
     # Apply filters
     if q:
@@ -674,14 +680,14 @@ def admin_user_management(request):
             Q(username__icontains=q)
         )
     
-    if role_id:
-        users_list = users_list.filter(role_assignments__role_id=role_id)
+    if role_ids:
+        users_list = users_list.filter(role_assignments__role_id__in=role_ids)
     
-    if org_id:
-        users_list = users_list.filter(role_assignments__organization_id=org_id)
+    if org_ids:
+        users_list = users_list.filter(role_assignments__organization_id__in=org_ids)
         
-    if org_type_id:
-        users_list = users_list.filter(role_assignments__organization__org_type_id=org_type_id)
+    if org_type_ids:
+        users_list = users_list.filter(role_assignments__organization__org_type_id__in=org_type_ids)
 
     if status in ['active', 'inactive']:
         users_list = users_list.filter(is_active=(status == 'active'))
@@ -714,9 +720,9 @@ def admin_user_management(request):
         'all_org_types': all_org_types,
         'current_filters': {
             'q': q,
-            'role': int(role_id) if role_id and role_id.isdigit() else None,
-            'organization': int(org_id) if org_id and org_id.isdigit() else None,
-            'org_type': int(org_type_id) if org_type_id and org_type_id.isdigit() else None,
+            'role': role_ids,
+            'organization': org_ids,
+            'org_type': org_type_ids,
             'status': status,
         },
         'query_params': query_params.urlencode(),
@@ -1447,6 +1453,67 @@ def api_organization_roles(request, org_id):
     )
     data = list(roles)
     return JsonResponse({"success": True, "roles": data})
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def api_filter_organizations(request):
+    """Return organizations filtered by org_type_ids with search support."""
+    org_type_ids = request.GET.getlist('org_type_ids[]')
+    search = request.GET.get('search', '').strip()
+    
+    orgs = Organization.objects.filter(is_active=True)
+    
+    if org_type_ids:
+        orgs = orgs.filter(org_type_id__in=org_type_ids)
+    
+    if search:
+        orgs = orgs.filter(name__icontains=search)
+    
+    orgs = orgs.select_related('org_type').order_by('name')[:50]  # Limit for performance
+    
+    data = [{"id": o.id, "name": o.name, "org_type": o.org_type.name} for o in orgs]
+    return JsonResponse({"success": True, "organizations": data})
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def api_filter_roles(request):
+    """Return roles filtered by organization_ids with search support."""
+    organization_ids = request.GET.getlist('organization_ids[]')
+    search = request.GET.get('search', '').strip()
+    
+    roles = OrganizationRole.objects.filter(is_active=True)
+    
+    if organization_ids:
+        roles = roles.filter(organization_id__in=organization_ids)
+    
+    if search:
+        roles = roles.filter(name__icontains=search)
+    
+    roles = roles.select_related('organization').order_by('name')[:50]  # Limit for performance
+    
+    data = [{"id": r.id, "name": r.name, "organization": r.organization.name} for r in roles]
+    return JsonResponse({"success": True, "roles": data})
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def api_search_org_types(request):
+    """Return organization types with search support."""
+    search = request.GET.get('search', '').strip()
+    
+    org_types = OrganizationType.objects.filter(is_active=True)
+    
+    if search:
+        org_types = org_types.filter(name__icontains=search)
+    
+    org_types = org_types.order_by('name')[:50]  # Limit for performance
+    
+    data = [{"id": ot.id, "name": ot.name} for ot in org_types]
+    return JsonResponse({"success": True, "org_types": data})
+
+
 # PSO/PO Management API endpoints
 from django.views.decorators.http import require_GET, require_POST
 

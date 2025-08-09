@@ -8,6 +8,10 @@
 <!-- Bootstrap CSS -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+
 <!-- DataTables CSS -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
@@ -114,6 +118,72 @@
 .filters-collapsed .filter-content {
     display: none;
 }
+
+/* Select2 Bootstrap 5 theme customizations */
+.select2-container--bootstrap-5 .select2-selection {
+    min-height: 38px;
+}
+
+.select2-container--bootstrap-5 .select2-selection--multiple {
+    min-height: 38px;
+}
+
+.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: #fff;
+    padding: 2px 8px;
+    margin: 2px;
+    border-radius: 12px;
+}
+
+.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice__remove {
+    color: #fff;
+    margin-right: 5px;
+}
+
+.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice__remove:hover {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+}
+
+/* Loading spinner for Select2 */
+.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__rendered .select2-search--inline .select2-search__field:focus {
+    outline: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .filter-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .active-filters {
+        margin-top: 15px;
+    }
+    
+    .filters-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+}
+
+/* Custom Select2 dropdown styling */
+.select2-container--bootstrap-5 .select2-dropdown {
+    border-color: #ced4da;
+}
+
+.select2-container--bootstrap-5 .select2-search--dropdown .select2-search__field {
+    border-color: #ced4da;
+}
+
+.select2-container--bootstrap-5 .select2-results__option--highlighted[aria-selected] {
+    background-color: #007bff;
+    color: #fff;
+}
 </style>
 {% endblock %}
 
@@ -150,10 +220,10 @@
                 
                 <div class="filter-group">
                     <label for="org_type">Organization Type</label>
-                    <select class="form-select" id="org_type" name="org_type">
-                        <option value="">All Organization Types</option>
+                    <select class="form-select" id="org_type" name="org_type[]" multiple>
                         {% for org_type in all_org_types %}
-                            <option value="{{ org_type.id }}" {% if current_filters.org_type == org_type.id %}selected{% endif %}>
+                            <option value="{{ org_type.id }}" 
+                                {% if org_type.id|stringformat:"s" in current_filters.org_type %}selected{% endif %}>
                                 {{ org_type.name }}
                             </option>
                         {% endfor %}
@@ -162,10 +232,10 @@
                 
                 <div class="filter-group">
                     <label for="organization">Organization</label>
-                    <select class="form-select" id="organization" name="organization">
-                        <option value="">All Organizations</option>
+                    <select class="form-select" id="organization" name="organization[]" multiple>
                         {% for org in all_organizations %}
-                            <option value="{{ org.id }}" {% if current_filters.organization == org.id %}selected{% endif %}>
+                            <option value="{{ org.id }}" 
+                                {% if org.id|stringformat:"s" in current_filters.organization %}selected{% endif %}>
                                 {{ org.name }} ({{ org.org_type.name }})
                             </option>
                         {% endfor %}
@@ -176,10 +246,10 @@
             <div class="filter-row">
                 <div class="filter-group">
                     <label for="role">Organization Role</label>
-                    <select class="form-select" id="role" name="role">
-                        <option value="">All Organization Roles</option>
+                    <select class="form-select" id="role" name="role[]" multiple>
                         {% for role in all_roles %}
-                            <option value="{{ role.id }}" {% if current_filters.role == role.id %}selected{% endif %}>
+                            <option value="{{ role.id }}" 
+                                {% if role.id|stringformat:"s" in current_filters.role %}selected{% endif %}>
                                 {{ role.name }} ({{ role.organization.name }})
                             </option>
                         {% endfor %}
@@ -211,22 +281,40 @@
                 </span>
             {% endif %}
             {% if current_filters.org_type %}
-                <span class="filter-tag">
-                    Org Type: {% for ot in all_org_types %}{% if ot.id == current_filters.org_type %}{{ ot.name }}{% endif %}{% endfor %}
-                    <button type="button" class="remove-filter" onclick="removeFilter('org_type')">&times;</button>
-                </span>
+                {% for ot_id in current_filters.org_type %}
+                    {% for ot in all_org_types %}
+                        {% if ot.id|stringformat:"s" == ot_id %}
+                            <span class="filter-tag">
+                                Org Type: {{ ot.name }}
+                                <button type="button" class="remove-filter" onclick="removeFilterValue('org_type', '{{ ot.id }}')">&times;</button>
+                            </span>
+                        {% endif %}
+                    {% endfor %}
+                {% endfor %}
             {% endif %}
             {% if current_filters.organization %}
-                <span class="filter-tag">
-                    Organization: {% for org in all_organizations %}{% if org.id == current_filters.organization %}{{ org.name }}{% endif %}{% endfor %}
-                    <button type="button" class="remove-filter" onclick="removeFilter('organization')">&times;</button>
-                </span>
+                {% for org_id in current_filters.organization %}
+                    {% for org in all_organizations %}
+                        {% if org.id|stringformat:"s" == org_id %}
+                            <span class="filter-tag">
+                                Organization: {{ org.name }}
+                                <button type="button" class="remove-filter" onclick="removeFilterValue('organization', '{{ org.id }}')">&times;</button>
+                            </span>
+                        {% endif %}
+                    {% endfor %}
+                {% endfor %}
             {% endif %}
             {% if current_filters.role %}
-                <span class="filter-tag">
-                    Role: {% for role in all_roles %}{% if role.id == current_filters.role %}{{ role.name }}{% endif %}{% endfor %}
-                    <button type="button" class="remove-filter" onclick="removeFilter('role')">&times;</button>
-                </span>
+                {% for role_id in current_filters.role %}
+                    {% for role in all_roles %}
+                        {% if role.id|stringformat:"s" == role_id %}
+                            <span class="filter-tag">
+                                Role: {{ role.name }}
+                                <button type="button" class="remove-filter" onclick="removeFilterValue('role', '{{ role.id }}')">&times;</button>
+                            </span>
+                        {% endif %}
+                    {% endfor %}
+                {% endfor %}
             {% endif %}
         </div>
         {% endif %}
@@ -247,7 +335,7 @@
         <table id="myTable" class="admin-users-table display nowrap" style="width:100%">
             <thead>
                 <tr>
-                    <th>#</th>
+                    <th>S.NO</th>
                     <th>Name</th>
                     <th>Email</th>
                     <th>Roles</th>
@@ -330,6 +418,9 @@
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 <!-- DataTables JS -->
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
@@ -352,6 +443,10 @@
 
 <script>
 $(document).ready(function () {
+    // Global variables for debouncing
+    let filterTimeout;
+    
+    // Initialize DataTable
     const table = $('#myTable').DataTable({
         dom: '<"dt-toolbar d-flex justify-content-between align-items-center flex-wrap mb-3"lBf>rtip',
         responsive: true,
@@ -428,53 +523,271 @@ $(document).ready(function () {
         'margin-bottom': '5px'
     });
 
-    // Dynamic filtering - apply filters on change
-    $('#status, #org_type, #organization, #role').on('change', function() {
-        applyFilters(); // Immediate for dropdowns
-    });
+    // Initialize filter persistence and UI
+    window.filterManager = new FilterManager();
+    window.filterManager.initializeFilters();
+    window.filterManager.setupEventListeners();
     
-    // Debounced search for text input
-    $('#q').on('input keyup', function() {
-        debounceFilter();
-    });
+    // Load saved filters on page load
+    window.filterManager.loadSavedFilters();
+});
 
-    // Debounce function to avoid too many requests for search
-    let filterTimeout;
-    function debounceFilter() {
-        clearTimeout(filterTimeout);
-        filterTimeout = setTimeout(applyFilters, 800); // Wait 800ms after user stops typing
+/**
+ * FilterManager class to handle all filter-related functionality
+ */
+class FilterManager {
+    constructor() {
+        this.filterTimeouts = {};
+        this.filterCache = new Map();
+        this.STORAGE_KEY = 'userMgmt_filters';
     }
 
-    function applyFilters() {
+    /**
+     * Initialize all filter dropdowns with Select2
+     */
+    initializeFilters() {
+        // Initialize multi-select dropdowns with Select2
+        $('#org_type').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'All Organization Types',
+            allowClear: true,
+            ajax: {
+                url: '/core-admin/api/search/org-types/',
+                dataType: 'json',
+                delay: 300,
+                data: function (params) {
+                    return {
+                        search: params.term || ''
+                    };
+                },
+                processResults: function (data) {
+                    return {
+                        results: data.org_types.map(item => ({
+                            id: item.id,
+                            text: item.name
+                        }))
+                    };
+                },
+                cache: true
+            }
+        });
+
+        $('#organization').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'All Organizations',
+            allowClear: true,
+            ajax: {
+                url: '/core-admin/api/filter/organizations/',
+                dataType: 'json',
+                delay: 300,
+                data: function (params) {
+                    const orgTypeIds = $('#org_type').val() || [];
+                    return {
+                        'org_type_ids[]': orgTypeIds,
+                        search: params.term || ''
+                    };
+                },
+                processResults: function (data) {
+                    return {
+                        results: data.organizations.map(item => ({
+                            id: item.id,
+                            text: `${item.name} (${item.org_type})`
+                        }))
+                    };
+                },
+                cache: false // Don't cache as it depends on org_type selection
+            }
+        });
+
+        $('#role').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'All Organization Roles',
+            allowClear: true,
+            ajax: {
+                url: '/core-admin/api/filter/roles/',
+                dataType: 'json',
+                delay: 300,
+                data: function (params) {
+                    const organizationIds = $('#organization').val() || [];
+                    return {
+                        'organization_ids[]': organizationIds,
+                        search: params.term || ''
+                    };
+                },
+                processResults: function (data) {
+                    return {
+                        results: data.roles.map(item => ({
+                            id: item.id,
+                            text: `${item.name} (${item.organization})`
+                        }))
+                    };
+                },
+                cache: false // Don't cache as it depends on organization selection
+            }
+        });
+    }
+
+    /**
+     * Setup event listeners for filter changes
+     */
+    setupEventListeners() {
+        // Dynamic filtering - apply filters on change
+        $('#status').on('change', () => {
+            this.debounceFilter('status');
+        });
+        
+        $('#org_type').on('change', () => {
+            this.refreshDependentDropdowns();
+            this.debounceFilter('org_type');
+        });
+        
+        $('#organization').on('change', () => {
+            this.refreshRolesDropdown();
+            this.debounceFilter('organization');
+        });
+        
+        $('#role').on('change', () => {
+            this.debounceFilter('role');
+        });
+        
+        // Debounced search for text input
+        $('#q').on('input keyup', () => {
+            this.debounceFilter('q', 800); // Longer delay for text input
+        });
+    }
+
+    /**
+     * Refresh dependent dropdowns when parent filters change
+     */
+    refreshDependentDropdowns() {
+        // Clear and refresh organization dropdown when org_type changes
+        $('#organization').val(null).trigger('change');
+        $('#role').val(null).trigger('change');
+    }
+
+    /**
+     * Refresh roles dropdown when organization changes
+     */
+    refreshRolesDropdown() {
+        // Clear and refresh role dropdown when organization changes
+        $('#role').val(null).trigger('change');
+    }
+
+    /**
+     * Debounce filter application to avoid too many requests
+     */
+    debounceFilter(filterType, delay = 300) {
+        clearTimeout(this.filterTimeouts[filterType]);
+        this.filterTimeouts[filterType] = setTimeout(() => {
+            this.applyFilters();
+        }, delay);
+    }
+
+    /**
+     * Apply all current filters
+     */
+    applyFilters() {
         const params = new URLSearchParams();
         
         // Get all filter values
         const q = $('#q').val().trim();
         const status = $('#status').val();
-        const orgType = $('#org_type').val();
-        const organization = $('#organization').val();
-        const role = $('#role').val();
+        const orgTypes = $('#org_type').val() || [];
+        const organizations = $('#organization').val() || [];
+        const roles = $('#role').val() || [];
         
         // Add non-empty parameters
         if (q) params.append('q', q);
         if (status) params.append('status', status);
-        if (orgType) params.append('org_type', orgType);
-        if (organization) params.append('organization', organization);
-        if (role) params.append('role', role);
+        
+        // Add multi-select parameters
+        orgTypes.forEach(id => params.append('org_type[]', id));
+        organizations.forEach(id => params.append('organization[]', id));
+        roles.forEach(id => params.append('role[]', id));
+        
+        // Save filters to localStorage for persistence
+        this.saveFilters({
+            q, status, orgTypes, organizations, roles
+        });
         
         // Update URL and reload page with new filters
         const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
         window.location.href = newUrl;
     }
 
-    // Simple cascade filtering - reload organization options when org type changes
-    $('#org_type').on('change', function() {
-        // For now, we'll let the server-side filtering handle this
-        // You could enhance this with AJAX calls if needed
-    });
-});
+    /**
+     * Save current filter state to localStorage
+     */
+    saveFilters(filters) {
+        try {
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(filters));
+        } catch (e) {
+            console.warn('Failed to save filters to localStorage:', e);
+        }
+    }
 
-// Filter management functions
+    /**
+     * Load saved filters from localStorage
+     */
+    loadSavedFilters() {
+        // Only load saved filters if there are no URL parameters
+        if (window.location.search) {
+            return; // URL parameters take precedence
+        }
+
+        try {
+            const saved = localStorage.getItem(this.STORAGE_KEY);
+            if (saved) {
+                const filters = JSON.parse(saved);
+                
+                // Apply saved filters to form elements
+                if (filters.q) $('#q').val(filters.q);
+                if (filters.status) $('#status').val(filters.status);
+                
+                // For Select2 dropdowns, we need to create options and trigger change
+                if (filters.orgTypes && filters.orgTypes.length) {
+                    // Add options for org types and set values
+                    // Note: This assumes the options are already in the DOM or will be loaded by Select2
+                    $('#org_type').val(filters.orgTypes).trigger('change');
+                }
+                
+                if (filters.organizations && filters.organizations.length) {
+                    $('#organization').val(filters.organizations).trigger('change');
+                }
+                
+                if (filters.roles && filters.roles.length) {
+                    $('#role').val(filters.roles).trigger('change');
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to load saved filters:', e);
+        }
+    }
+
+    /**
+     * Clear all filters
+     */
+    clearAllFilters() {
+        // Clear all filter inputs
+        $('#q').val('');
+        $('#status').val('');
+        $('#org_type').val(null).trigger('change');
+        $('#organization').val(null).trigger('change');
+        $('#role').val(null).trigger('change');
+        
+        // Clear saved filters
+        try {
+            localStorage.removeItem(this.STORAGE_KEY);
+        } catch (e) {
+            console.warn('Failed to clear saved filters:', e);
+        }
+        
+        // Redirect to clear URL parameters
+        window.location.href = window.location.pathname;
+    }
+}
+
+// Filter management functions (global for onclick handlers)
 function toggleFilters() {
     const section = document.getElementById('filtersSection');
     const icon = document.getElementById('filterToggleIcon');
@@ -492,20 +805,63 @@ function toggleFilters() {
 }
 
 function clearFilters() {
-    // Clear all filter inputs
-    $('#q').val('');
-    $('#status').val('');
-    $('#org_type').val('');
-    $('#organization').val('');
-    $('#role').val('');
-    
-    // Redirect to clear URL parameters
-    window.location.href = window.location.pathname;
+    if (window.filterManager) {
+        window.filterManager.clearAllFilters();
+    } else {
+        // Fallback if filterManager is not available
+        window.location.href = window.location.pathname;
+    }
 }
 
 function removeFilter(filterName) {
     const url = new URL(window.location);
     url.searchParams.delete(filterName);
+    
+    // Also clear from localStorage
+    try {
+        const saved = localStorage.getItem('userMgmt_filters');
+        if (saved) {
+            const filters = JSON.parse(saved);
+            delete filters[filterName];
+            localStorage.setItem('userMgmt_filters', JSON.stringify(filters));
+        }
+    } catch (e) {
+        console.warn('Failed to update saved filters:', e);
+    }
+    
+    window.location.href = url.toString();
+}
+
+function removeFilterValue(filterName, value) {
+    const url = new URL(window.location);
+    const params = url.searchParams;
+    
+    // Get all values for this filter
+    const currentValues = params.getAll(filterName + '[]');
+    
+    // Remove the specific value
+    params.delete(filterName + '[]');
+    currentValues.forEach(val => {
+        if (val !== value) {
+            params.append(filterName + '[]', val);
+        }
+    });
+    
+    // Also update localStorage
+    try {
+        const saved = localStorage.getItem('userMgmt_filters');
+        if (saved) {
+            const filters = JSON.parse(saved);
+            const filterKey = filterName + 's'; // Convert to plural for consistency
+            if (filters[filterKey] && Array.isArray(filters[filterKey])) {
+                filters[filterKey] = filters[filterKey].filter(v => v !== value);
+                localStorage.setItem('userMgmt_filters', JSON.stringify(filters));
+            }
+        }
+    } catch (e) {
+        console.warn('Failed to update saved filters:', e);
+    }
+    
     window.location.href = url.toString();
 }
 </script>
