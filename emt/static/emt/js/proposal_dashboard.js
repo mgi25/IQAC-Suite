@@ -236,10 +236,10 @@ $(document).ready(function() {
         const fieldsToSync = [
             'event_title', 'target_audience', 'event_start_date', 'event_end_date',
             'event_focus_type', 'venue', 'academic_year', 'student_coordinators', 'num_activities',
-            'pos_pso', 'committees', 'committees_collaborations'
+            'pos_pso', 'committees_collaborations'
         ];
         fieldsToSync.forEach(copyDjangoField);
-        setupSDGGoalsSync();
+        setupSDGModal();
         setupFacultyTomSelect();
     }
     
@@ -420,30 +420,45 @@ $(document).ready(function() {
         }
     }
 
-    function setupSDGGoalsSync() {
+    function setupSDGModal() {
         const hidden = $('#django-basic-info [name="sdg_goals"]');
-        const container = $('#sdg-goals-modern');
-        if (!hidden.length || !container.length) return;
+        const input = $('#sdg-goals-modern');
+        const modal = $('#sdgModal');
+        const container = $('#sdgOptions');
+        if (!hidden.length || !input.length || !modal.length) return;
+
         if (container.children().length === 0 && window.SDG_GOALS) {
             let html = '';
             window.SDG_GOALS.forEach(goal => {
-                html += `<label><input type="checkbox" class="sdg-goal-checkbox" value="${goal.id}"> ${goal.name}</label>`;
+                html += `<label><input type="checkbox" value="${goal.id}"> ${goal.name}</label><br>`;
             });
             container.html(html);
         }
-        const map = {};
-        hidden.each(function(){ map[$(this).val()] = $(this); });
-        container.find('input.sdg-goal-checkbox').each(function(){
-            const val = $(this).val();
-            if (map[val]) {
-                $(this).prop('checked', map[val].prop('checked'));
-            }
-            $(this).on('change', function(){
-                if (map[val]) {
-                    map[val].prop('checked', $(this).is(':checked'));
-                    hidden.trigger('change');
-                }
+
+        const hiddenMap = {};
+        hidden.each(function(){ hiddenMap[$(this).val()] = $(this); });
+
+        const existing = Object.keys(hiddenMap).filter(id => hiddenMap[id].prop('checked'));
+        if (existing.length) {
+            const names = window.SDG_GOALS.filter(g => existing.includes(String(g.id))).map(g => g.name);
+            input.val(names.join(', '));
+            container.find('input[type=checkbox]').each(function(){
+                if (existing.includes($(this).val())) $(this).prop('checked', true);
             });
+        }
+
+        input.prop('readonly', true).css('cursor', 'pointer');
+        input.off('click').on('click', () => modal.addClass('show'));
+        $('#sdgCancel').off('click').on('click', () => modal.removeClass('show'));
+        $('#sdgSave').off('click').on('click', () => {
+            const selected = container.find('input[type=checkbox]:checked').map((_, cb) => cb.value).get();
+            Object.entries(hiddenMap).forEach(([id, el]) => {
+                el.prop('checked', selected.includes(id));
+            });
+            hidden.first().trigger('change');
+            const names = window.SDG_GOALS.filter(g => selected.includes(String(g.id))).map(g => g.name);
+            input.val(names.join(', '));
+            modal.removeClass('show');
         });
     }
 
@@ -545,7 +560,15 @@ $(document).ready(function() {
                 </div>
 
                 <!-- Dynamic organization field will be inserted here -->
-                
+
+                <div class="form-row full-width">
+                    <div class="input-group">
+                        <label for="committees-collaborations-modern">Committees & Collaborations</label>
+                        <textarea id="committees-collaborations-modern" rows="3" placeholder="List committees and external collaborations involved in organizing this event"></textarea>
+                        <div class="help-text">Mention internal committees and external partners involved</div>
+                    </div>
+                </div>
+
                 <!-- Event Information Section -->
                 <div class="form-section-header">
                     <h3>Event Information</h3>
@@ -610,32 +633,16 @@ $(document).ready(function() {
                     </div>
                 </div>
 
-                <!-- SDG Goals and Collaborations Section -->
+                <!-- SDG Goals Section -->
                 <div class="form-section-header">
-                    <h3>SDG Goals & Collaborations</h3>
+                    <h3>SDG Goals</h3>
                 </div>
 
                 <div class="form-row full-width">
                     <div class="input-group">
-                        <label>Aligned SDG Goals</label>
-                        <div id="sdg-goals-modern"></div>
+                        <label for="sdg-goals-modern">Aligned SDG Goals</label>
+                        <input type="text" id="sdg-goals-modern" placeholder="Select SDG goals">
                         <div class="help-text">Specify which Sustainable Development Goals this event addresses</div>
-                    </div>
-                </div>
-
-                <div class="form-row full-width">
-                    <div class="input-group">
-                        <label for="committees-modern">Committees</label>
-                        <textarea id="committees-modern" rows="2" placeholder="List committees involved"></textarea>
-                        <div class="help-text">List internal committees involved</div>
-                    </div>
-                </div>
-
-                <div class="form-row full-width">
-                    <div class="input-group">
-                        <label for="committees-collaborations-modern">Committees & Collaborations</label>
-                        <textarea id="committees-collaborations-modern" rows="3" placeholder="List committees and external collaborations involved in organizing this event"></textarea>
-                        <div class="help-text">Mention internal committees and external partners involved</div>
                     </div>
                 </div>
 

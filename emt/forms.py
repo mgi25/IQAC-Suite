@@ -102,7 +102,7 @@ class EventProposalForm(forms.ModelForm):
         model = EventProposal
         fields = [
             'organization_type', 'organization', 'faculty_incharges', 'event_title', 'event_start_date', 'event_end_date', 'venue',
-            'committees', 'committees_collaborations', 'sdg_goals', 'num_activities', 'academic_year', 'student_coordinators', 'pos_pso',
+            'committees_collaborations', 'sdg_goals', 'num_activities', 'academic_year', 'student_coordinators', 'pos_pso',
             'target_audience', 'event_focus_type', 'fest_fee_participants',
             'fest_fee_rate', 'fest_fee_amount', 'fest_sponsorship_amount',
             'conf_fee_participants', 'conf_fee_rate', 'conf_fee_amount', 'conf_sponsorship_amount',
@@ -122,7 +122,6 @@ class EventProposalForm(forms.ModelForm):
         widgets = {
             'event_start_date': forms.DateInput(attrs={'type': 'date'}),
             'event_end_date': forms.DateInput(attrs={'type': 'date'}),
-            'committees':         forms.Textarea(attrs={'rows': 2}),
             'committees_collaborations': forms.Textarea(attrs={'rows': 3, 'placeholder': 'List committees and collaborations involved'}),
 
             'student_coordinators': forms.Textarea(attrs={'rows': 2}),
