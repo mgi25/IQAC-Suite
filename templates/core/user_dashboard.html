@@ -8,8 +8,6 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
-    <div class="app-shell">
-        <main class="app-content page-offset-top">
     <!-- Header -->
     <header class="header">
         <div class="header-content">
@@ -62,7 +60,7 @@
     </nav>
 
     <!-- Main Content -->
-    <div class="main-content">
+    <main class="main-content">
         <!-- Overview Tab -->
         <div id="overview" class="tab-content active">
             <div class="stats-grid" id="statsGrid"></div>
@@ -103,7 +101,7 @@
             <div class="mentor-section student-only" id="mentorSection"></div>
             <div class="profile-grid faculty-only" id="facultyProfileGrid"></div>
         </div>
-    </div>
+    </main>
 
     <!-- Floating Action Button -->
     <div class="fab">
@@ -123,9 +121,6 @@
             </div>
             <div class="notification-list" id="notificationList"></div>
         </div>
-    </div>
-
-        </main>
     </div>
 
     <script src="{% static 'core/user_dashboard.js' %}"></script>
