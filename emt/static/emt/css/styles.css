@@ -1,3 +1,38 @@
+/* Save as Draft button styling - matches Save & Continue */
+.btn-draft-section, .btn-draft {
+  background: var(--primary-blue);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(38,68,135,0.08);
+  transition: background 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+.btn-draft-section:hover, .btn-draft:hover {
+  background: var(--primary-blue-dark);
+  box-shadow: 0 2px 8px rgba(38,68,135,0.12);
+}
+.btn-draft-section:disabled, .btn-draft:disabled {
+  background: #cbd5e1;
+  color: #fff;
+  cursor: not-allowed;
+}
+
+/* Ensure consistent font size for Save & Continue button */
+.btn-save-section {
+  font-size: 1rem !important;
+}
+
+/* Save section container alignment */
+.save-section-container {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  text-align: center !important;
+}
 /* ===========================================
    SUBMIT PROPOSAL PAGE STYLES - ADD TO EXISTING styles.css
    Add these styles to the END of your existing styles.css file

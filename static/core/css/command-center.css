@@ -477,9 +477,9 @@
   }
   
   .notification-dropdown {
-  position: absolute !important;
-  top: calc(100% + 0.5rem) !important;
-  right: 0 !important;
+  position: fixed !important;
+  top: 60px !important;
+  right: 1rem !important;
   background: var(--white) !important;
   border-radius: var(--border-radius-lg) !important;
   box-shadow: var(--shadow-lg) !important;
@@ -491,7 +491,7 @@
   visibility: hidden !important;
   transform: translateY(-10px) !important;
   transition: var(--transition) !important;
-  z-index: 99999 !important;
+  z-index: 100000 !important;
   margin: 0 !important;
   padding: 0 !important;
 }
@@ -506,14 +506,14 @@
   @media (max-width: 768px) {
     .notification-dropdown {
       width: 280px !important;
-      right: -1rem !important;
+      right: 1rem !important;
     }
   }
 
   @media (max-width: 480px) {
     .notification-dropdown {
       width: calc(100vw - 2rem) !important;
-      right: -1rem !important;
+      right: 1rem !important;
       left: 1rem !important;
     }
   }
