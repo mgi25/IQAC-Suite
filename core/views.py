@@ -410,7 +410,7 @@ def admin_dashboard(request):
     }
     # Recent activity feed (proposals and reports)
     recent_activities = []
-    recent_proposals = EventProposal.objects.select_related('submitted_by').order_by('-date_submitted')[:5]
+    recent_proposals = EventProposal.objects.select_related('submitted_by').order_by('-created_at')[:5]
     for proposal in recent_proposals:
         recent_activities.append({
             'type': 'proposal',
@@ -801,13 +801,13 @@ def admin_event_proposals(request):
 def event_proposal_json(request, proposal_id):
     p = get_object_or_404(EventProposal, id=proposal_id)
     return JsonResponse({
-        "title": p.title,
-        "description": p.description,
+        "title": getattr(p, 'event_title', getattr(p, 'title', 'Untitled Event')),
+        "description": getattr(p, 'description', ''),
         "organization": str(p.organization) if p.organization else None,
-        "user_type": p.user_type,
+        "user_type": getattr(p, 'user_type', ''),
         "status": p.status,
         "status_display": p.get_status_display(),
-        "date_submitted": p.date_submitted.strftime("%Y-%m-%d %H:%M"),
+        "date_submitted": p.created_at.strftime("%Y-%m-%d %H:%M"),
         "submitted_by": p.submitted_by.get_full_name() or p.submitted_by.username,
     })
 
@@ -2243,12 +2243,12 @@ def get_core_proposals_by_status(status):
         {
             'type': 'core_proposal',
             'id': proposal.id,
-            'title': proposal.title,
+            'title': getattr(proposal, 'event_title', getattr(proposal, 'title', 'Untitled Event')),
             'status': proposal.get_status_display(),
             'submitted_by': proposal.submitted_by.get_full_name() or proposal.submitted_by.username,
             'organization': proposal.organization.name if proposal.organization else 'N/A',
-            'date_submitted': proposal.date_submitted.strftime('%Y-%m-%d %H:%M'),
-            'user_type': proposal.user_type
+            'date_submitted': proposal.created_at.strftime('%Y-%m-%d %H:%M'),
+            'user_type': getattr(proposal, 'user_type', '')
         }
         for proposal in proposals
     ]
@@ -2444,18 +2444,18 @@ def get_data_by_date_range(date_range):
     
     # Core Proposals
     core_proposals = EventProposal.objects.filter(
-        date_submitted__date__gte=start_date
+        created_at__date__gte=start_date
     ).select_related('submitted_by', 'organization')
     
     for proposal in core_proposals:
         results.append({
             'type': 'core_proposal',
             'id': proposal.id,
-            'title': proposal.title,
+            'title': getattr(proposal, 'event_title', getattr(proposal, 'title', 'Untitled Event')),
             'status': proposal.get_status_display(),
             'submitted_by': proposal.submitted_by.get_full_name() or proposal.submitted_by.username,
             'organization': proposal.organization.name if proposal.organization else 'N/A',
-            'date_submitted': proposal.date_submitted.strftime('%Y-%m-%d %H:%M')
+            'date_submitted': proposal.created_at.strftime('%Y-%m-%d %H:%M')
         })
     
     # Reports - Use appropriate date field
@@ -2571,11 +2571,11 @@ def perform_global_search(query):
         results.append({
             'type': 'core_proposal',
             'id': proposal.id,
-            'title': proposal.title,
+            'title': getattr(proposal, 'event_title', getattr(proposal, 'title', 'Untitled Event')),
             'status': proposal.get_status_display(),
             'submitted_by': proposal.submitted_by.get_full_name() or proposal.submitted_by.username,
             'organization': proposal.organization.name if proposal.organization else 'N/A',
-            'date_submitted': proposal.date_submitted.strftime('%Y-%m-%d %H:%M')
+            'date_submitted': proposal.created_at.strftime('%Y-%m-%d %H:%M')
         })
     
     # Search Reports
