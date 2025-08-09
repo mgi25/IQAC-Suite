@@ -5,6 +5,9 @@ from django.urls import path
 from django.shortcuts import redirect
 from django.contrib import messages
 
+from .models import SDGGoal
+
+
 class ImpersonationUserAdmin(BaseUserAdmin):
     """Extended UserAdmin with impersonation functionality"""
     
@@ -24,7 +27,7 @@ class ImpersonationUserAdmin(BaseUserAdmin):
         if not request.user.is_superuser:
             messages.error(request, "Only superusers can impersonate users")
             return redirect('admin:auth_user_changelist')
-            
+
         try:
             target_user = User.objects.get(id=user_id, is_active=True)
             request.session['impersonate_user_id'] = target_user.id
@@ -34,3 +37,7 @@ class ImpersonationUserAdmin(BaseUserAdmin):
         except User.DoesNotExist:
             messages.error(request, "User not found or inactive")
             return redirect('admin:auth_user_changelist')
+
+admin.site.unregister(User)
+admin.site.register(User, ImpersonationUserAdmin)
+admin.site.register(SDGGoal)
