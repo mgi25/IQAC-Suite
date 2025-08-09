@@ -825,10 +825,19 @@ h4 {
     font-size: 14px;
 }
 
+.calendar-container {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
 .calendar-days {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 8px;
+    width: 100%;
+    min-height: 240px; /* Ensure calendar has enough height */
 }
 
 .calendar-day {
@@ -836,22 +845,40 @@ h4 {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    height: 40px;
+    height: 48px;
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s;
     position: relative;
-    padding: 2px;
+    padding: 4px;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    color: #374151;
+    min-width: 40px;
+    box-sizing: border-box;
 }
 
 .calendar-day-number {
-    font-size: 14px;
-    font-weight: 500;
+    font-size: 16px;
+    font-weight: 600;
     line-height: 1;
+    color: #374151;
+    display: block;
+    text-align: center;
+    z-index: 2;
 }
 
 .calendar-day.other-month {
     color: #9ca3af;
+}
+
+.calendar-day.empty {
+    background: transparent;
+    cursor: default;
+}
+
+.calendar-day.empty:hover {
+    background: transparent;
 }
 
 .calendar-day:not(.other-month):hover {
@@ -865,13 +892,15 @@ h4 {
 }
 
 .calendar-day.has-event {
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-    border: 1px solid #93c5fd;
+    background: #ffffff;
+    border: 2px solid #3b82f6;
     cursor: pointer;
+    position: relative;
 }
 
 .calendar-day.has-event:hover {
-    background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
+    background: #f8faff;
+    border-color: #2563eb;
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(59, 130, 246, 0.15);
 }
@@ -886,28 +915,15 @@ h4 {
     color: white;
 }
 
-.event-indicators {
-    display: flex;
-    gap: 2px;
-    margin-top: 2px;
-    flex-wrap: wrap;
-    justify-content: center;
-    max-width: 100%;
-}
-
 .event-dot {
-    width: 6px;
-    height: 6px;
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
-    flex-shrink: 0;
-}
-
-.my-event-dot {
-    background: #10b981;
-}
-
-.other-event-dot {
-    background: #f59e0b;
+    background: #ef4444;
+    z-index: 3;
 }
 
 .more-events {

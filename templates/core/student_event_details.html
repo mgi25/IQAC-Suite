@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Event Details - {{ proposal.event_title }}{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{% static 'core/css/student_event_details.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="event-container">
+    <!-- Left Column -->
+    <aside class="event-info">
+        <div class="info-card">
+            <h2>Event Information</h2>
+            <table>
+                <tr>
+                    <th>Organization</th>
+                    <td>{{ proposal.organization|default:"—" }}</td>
+                </tr>
+                <tr>
+                    <th>Committee(s)</th>
+                    <td>{{ proposal.committees|default:"—" }}</td>
+                </tr>
+                <tr>
+                    <th>Event Title</th>
+                    <td>{{ proposal.event_title }}</td>
+                </tr>
+                <tr>
+                    <th>No. of Activities</th>
+                    <td>{{ proposal.num_activities|default:"—" }}</td>
+                </tr>
+                <tr>
+                    <th>Date & Time</th>
+                    <td>{{ proposal.event_datetime|date:"d M Y, H:i A"|default:"—" }}</td>
+                </tr>
+                <tr>
+                    <th>Venue</th>
+                    <td>{{ proposal.venue|default:"—" }}</td>
+                </tr>
+                <tr>
+                    <th>Academic Year</th>
+                    <td>{{ proposal.academic_year|default:"—" }}</td>
+                </tr>
+                <tr>
+                    <th>Type (Focus)</th>
+                    <td>{{ proposal.event_focus_type|default:"—" }}</td>
+                </tr>
+            </table>
+        </div>
+    </aside>
+
+    <!-- Right Column -->
+    <main class="event-details">
+        <div class="detail-card">
+            <h3>Objectives</h3>
+            {% if proposal.objectives %}
+                <p>{{ proposal.objectives.content|linebreaksbr }}</p>
+            {% else %}
+                <p>No objectives provided.</p>
+            {% endif %}
+        </div>
+
+        <div class="detail-card">
+            <h3>Tentative Flow</h3>
+            {% if proposal.tentative_flow %}
+                <p>{{ proposal.tentative_flow.content|linebreaksbr }}</p>
+            {% else %}
+                <p>No tentative flow provided.</p>
+            {% endif %}
+        </div>
+
+        {% if proposal.speakers.exists %}
+        <div class="detail-card">
+            <h3>Speaker Profile</h3>
+            {% for speaker in proposal.speakers.all %}
+            <div class="speaker-profile">
+                {% if speaker.photo %}
+                    <img src="{{ speaker.photo.url }}" alt="Speaker Photo">
+                {% else %}
+                    <img src="https://via.placeholder.com/80" alt="Speaker Photo">
+                {% endif %}
+                <div>
+                    <b>{{ speaker.full_name }}</b><br>
+                    <span>{{ speaker.designation }}{% if speaker.affiliation %}, {{ speaker.affiliation }}{% endif %}</span><br>
+                    {% if speaker.contact_email %}
+                        <small>Email: {{ speaker.contact_email }}</small><br>
+                    {% endif %}
+                    {% if speaker.contact_number %}
+                        <small>Phone: {{ speaker.contact_number }}</small>
+                    {% endif %}
+                    {% if speaker.detailed_profile %}
+                        <p>{{ speaker.detailed_profile|linebreaksbr }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% if not forloop.last %}<hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">{% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Back Button -->
+        <div class="detail-card">
+            <div class="action-buttons">
+                <a href="javascript:history.back()" class="btn-back">← Back to Details</a>
+                {% if user.is_authenticated %}
+                    <a href="{% url 'dashboard' %}" class="btn-dashboard">Go to Dashboard</a>
+                {% endif %}
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
