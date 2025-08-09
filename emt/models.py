@@ -173,13 +173,15 @@ class ExpenseDetail(models.Model):
 class ApprovalStepQuerySet(models.QuerySet):
     def visible_for_ui(self):
         """Hide optional steps that were never forwarded for display."""
-        return self.exclude(
-            is_optional=True,
-            optional_unlocked=False,
-            status=ApprovalStep.Status.PENDING,
-        ).exclude(
-            is_optional=True,
-            status=ApprovalStep.Status.SKIPPED,
+        return (
+            self.exclude(
+                is_optional=True,
+                optional_unlocked=False,
+            )
+            .exclude(
+                is_optional=True,
+                status=ApprovalStep.Status.SKIPPED,
+            )
         )
 
     # Backwards compatibility with previous helper name
