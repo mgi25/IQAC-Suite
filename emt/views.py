@@ -6,7 +6,7 @@ import json
 from django.db.models import Q
 from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
-    EventExpectedOutcomes, TentativeFlow,
+    EventExpectedOutcomes, TentativeFlow, EventActivity,
     ExpenseDetail, SpeakerProfile,EventReport, EventReportAttachment, CDLSupport
 )
 from .forms import (
@@ -20,6 +20,7 @@ from core.models import (
     OrganizationType,
     Report as SubmittedReport,
     ApprovalFlowTemplate,
+    SDGGoal,
 )
 from django.contrib.auth.models import User
 from emt.utils import (
@@ -125,6 +126,56 @@ def _save_text_sections(proposal, data):
             obj.content = data.get(field) or ""
             obj.save()
 
+
+def _save_activities(proposal, data):
+    proposal.activities.all().delete()
+    index = 1
+    while True:
+        name = data.get(f"activity_name_{index}")
+        date = data.get(f"activity_date_{index}")
+        if not name and not date:
+            break
+        if name and date:
+            EventActivity.objects.create(proposal=proposal, name=name, date=date)
+        index += 1
+
+
+def _save_speakers(proposal, data, files):
+    proposal.speakers.all().delete()
+    index = 0
+    while f"speaker_full_name_{index}" in data:
+        full_name = data.get(f"speaker_full_name_{index}")
+        if full_name:
+            SpeakerProfile.objects.create(
+                proposal=proposal,
+                full_name=full_name,
+                designation=data.get(f"speaker_designation_{index}", ""),
+                affiliation=data.get(f"speaker_affiliation_{index}", ""),
+                contact_email=data.get(f"speaker_contact_email_{index}", ""),
+                contact_number=data.get(f"speaker_contact_number_{index}", ""),
+                linkedin_url=data.get(f"speaker_linkedin_url_{index}", ""),
+                photo=files.get(f"speaker_photo_{index}"),
+                detailed_profile=data.get(f"speaker_detailed_profile_{index}", ""),
+            )
+        index += 1
+
+
+def _save_expenses(proposal, data):
+    proposal.expense_details.all().delete()
+    index = 0
+    while f"expense_particulars_{index}" in data or f"expense_amount_{index}" in data:
+        particulars = data.get(f"expense_particulars_{index}")
+        amount = data.get(f"expense_amount_{index}")
+        if particulars and amount:
+            sl_no = data.get(f"expense_sl_no_{index}") or 0
+            ExpenseDetail.objects.create(
+                proposal=proposal,
+                sl_no=sl_no or 0,
+                particulars=particulars,
+                amount=amount,
+            )
+        index += 1
+
 # ──────────────────────────────
 # PROPOSAL STEP 1: Proposal Submission
 # ──────────────────────────────
@@ -195,6 +246,9 @@ def submit_proposal(request, pk=None):
     objectives = EventObjectives.objects.filter(proposal=proposal).first() if proposal else None
     outcomes = EventExpectedOutcomes.objects.filter(proposal=proposal).first() if proposal else None
     flow = TentativeFlow.objects.filter(proposal=proposal).first() if proposal else None
+    activities = list(proposal.activities.values('name', 'date')) if proposal else []
+    speakers = list(proposal.speakers.values('full_name','designation','affiliation','contact_email','contact_number','linkedin_url','detailed_profile')) if proposal else []
+    expenses = list(proposal.expense_details.values('sl_no','particulars','amount')) if proposal else []
 
     ctx = {
         "form": form,
@@ -204,6 +258,10 @@ def submit_proposal(request, pk=None):
         "objectives": objectives,
         "outcomes": outcomes,
         "flow": flow,
+        "sdg_goals_list": json.dumps(list(SDGGoal.objects.values('id','name'))),
+        "activities_json": json.dumps(activities),
+        "speakers_json": json.dumps(speakers),
+        "expenses_json": json.dumps(expenses),
     }
 
 
@@ -216,6 +274,9 @@ def submit_proposal(request, pk=None):
             proposal.save()
             form.save_m2m()
             _save_text_sections(proposal, request.POST)
+            _save_activities(proposal, request.POST)
+            _save_speakers(proposal, request.POST, request.FILES)
+            _save_expenses(proposal, request.POST)
             logger.debug(
                 "Proposal %s saved with faculty %s",
                 proposal.id,
@@ -232,6 +293,9 @@ def submit_proposal(request, pk=None):
             proposal.save()
             form.save_m2m()
             _save_text_sections(proposal, request.POST)
+            _save_activities(proposal, request.POST)
+            _save_speakers(proposal, request.POST, request.FILES)
+            _save_expenses(proposal, request.POST)
             logger.debug(
                 "Draft proposal %s saved with faculty %s",
                 proposal.id,

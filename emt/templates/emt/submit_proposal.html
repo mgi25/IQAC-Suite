@@ -181,9 +181,17 @@
 
                         <div class="form-row full-width">
                             <div class="input-group">
-                                <label for="aligned-sdg-goals-modern">Aligned SDG Goals</label>
-                                <textarea id="aligned-sdg-goals-modern" rows="3" placeholder="List the SDG goals aligned with this event (e.g., Quality Education, Gender Equality, etc.)"></textarea>
+                                <label>Aligned SDG Goals</label>
+                                <div id="sdg-goals-modern"></div>
                                 <div class="help-text">Specify which Sustainable Development Goals this event addresses</div>
+                            </div>
+                        </div>
+
+                        <div class="form-row full-width">
+                            <div class="input-group">
+                                <label for="committees-modern">Committees</label>
+                                <textarea id="committees-modern" rows="2" placeholder="List committees involved"></textarea>
+                                <div class="help-text">List internal committees involved</div>
                             </div>
                         </div>
 
@@ -268,10 +276,12 @@
                     {{ form.event_focus_type }}
                     {{ form.pos_pso.label_tag }}
                     {{ form.pos_pso }}
-                    {{ form.aligned_sdg_goals.label_tag }}
-                    {{ form.aligned_sdg_goals }}
+                    {{ form.committees.label_tag }}
+                    {{ form.committees }}
                     {{ form.committees_collaborations.label_tag }}
                     {{ form.committees_collaborations }}
+                    {{ form.sdg_goals.label_tag }}
+                    {{ form.sdg_goals }}
                     {{ form.academic_year.label_tag }}
                     {{ form.academic_year }}
                     {{ form.student_coordinators.label_tag }}
@@ -283,7 +293,7 @@
                         {{ form.faculty_incharges }}
                     </div>
                     {% for field in form.visible_fields %}
-                        {% if field.name not in "organization_type,organization,event_title,event_start_date,event_end_date,venue,target_audience,event_focus_type,academic_year,student_coordinators,num_activities,faculty_incharges,pos_pso,aligned_sdg_goals,committees_collaborations" %}
+                        {% if field.name not in "organization_type,organization,event_title,event_start_date,event_end_date,venue,target_audience,event_focus_type,academic_year,student_coordinators,num_activities,faculty_incharges,pos_pso,sdg_goals,committees,committees_collaborations" %}
                             <div id="django-field-{{ field.name }}">
                                 {{ field.label_tag }}
                                 {{ field }}
@@ -338,6 +348,10 @@
         window.API_ORGANIZATIONS = "{% url 'emt:api_organizations' %}";
         window.API_FACULTY = "{% url 'emt:api_faculty' %}";
         window.API_OUTCOMES_BASE = "{% url 'emt:api_outcomes' 0 %}".replace(/0\/$/, '');
+        window.SDG_GOALS = {{ sdg_goals_list|safe }};
+        window.EXISTING_ACTIVITIES = {{ activities_json|safe }};
+        window.EXISTING_SPEAKERS = {{ speakers_json|safe }};
+        window.EXISTING_EXPENSES = {{ expenses_json|safe }};
     </script>
     <script src="{% static 'emt/js/autosave_draft.js' %}"></script>
     <script src="{% static 'emt/js/proposal_dashboard.js' %}"></script>

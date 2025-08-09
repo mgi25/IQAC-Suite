@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
-from core.models import Organization
+from core.models import Organization, SDGGoal
 
 # ────────────────────────────────────────────────────────────────
 #  MAIN PROPOSAL
@@ -41,6 +41,7 @@ class EventProposal(models.Model):
 
     committees = models.TextField(blank=True, help_text="List of committees involved.")
     aligned_sdg_goals = models.TextField(blank=True, help_text="Aligned SDG Goals for this event.")
+    sdg_goals = models.ManyToManyField(SDGGoal, blank=True, related_name="event_proposals")
     committees_collaborations = models.TextField(blank=True, help_text="Committees and collaborations involved.")
     event_title = models.CharField(max_length=200, blank=True)
     num_activities = models.PositiveIntegerField(null=True, blank=True)
@@ -126,6 +127,15 @@ class TentativeFlow(models.Model):
     """Stores the tentative flow of events for a proposal."""
     proposal = models.OneToOneField(EventProposal, on_delete=models.CASCADE, related_name='tentative_flow')
     content = models.TextField()
+
+class EventActivity(models.Model):
+    """Represents a planned activity within an event proposal."""
+    proposal = models.ForeignKey(EventProposal, on_delete=models.CASCADE, related_name='activities')
+    name = models.CharField(max_length=255)
+    date = models.DateField()
+
+    class Meta:
+        ordering = ['date', 'id']
 
 # ────────────────────────────────────────────────────────────────
 #  Speaker & Expense

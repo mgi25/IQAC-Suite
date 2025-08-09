@@ -236,9 +236,10 @@ $(document).ready(function() {
         const fieldsToSync = [
             'event_title', 'target_audience', 'event_start_date', 'event_end_date',
             'event_focus_type', 'venue', 'academic_year', 'student_coordinators', 'num_activities',
-            'pos_pso', 'aligned_sdg_goals', 'committees_collaborations'
+            'pos_pso', 'committees', 'committees_collaborations'
         ];
         fieldsToSync.forEach(copyDjangoField);
+        setupSDGGoalsSync();
         setupFacultyTomSelect();
     }
     
@@ -246,15 +247,14 @@ $(document).ready(function() {
     function setupDynamicActivitiesListener() {
         const numActivitiesInput = document.getElementById('num-activities-modern');
         if (!numActivitiesInput || numActivitiesInput.dataset.listenerAttached) return;
-        numActivitiesInput.addEventListener('input', () => {
-            const count = parseInt(numActivitiesInput.value, 10);
-            const container = document.getElementById('dynamic-activities-section');
+        const container = document.getElementById('dynamic-activities-section');
+        function render(count) {
             if (!container) return;
             container.innerHTML = '';
             if (!isNaN(count) && count > 0) {
-                let allGroupsHTML = '';
+                let html = '';
                 for (let i = 1; i <= Math.min(count, 50); i++) {
-                    allGroupsHTML += `
+                    html += `
                         <div class="dynamic-activity-group">
                             <div class="input-group">
                                 <label for="activity_name_${i}">Activity ${i} Name</label>
@@ -266,10 +266,25 @@ $(document).ready(function() {
                             </div>
                         </div>`;
                 }
-                container.innerHTML = allGroupsHTML;
+                container.innerHTML = html;
+                if (window.EXISTING_ACTIVITIES && window.EXISTING_ACTIVITIES.length) {
+                    window.EXISTING_ACTIVITIES.forEach((act, idx) => {
+                        const index = idx + 1;
+                        $(`#activity_name_${index}`).val(act.name);
+                        $(`#activity_date_${index}`).val(act.date);
+                    });
+                }
             }
+        }
+        numActivitiesInput.addEventListener('input', () => {
+            const count = parseInt(numActivitiesInput.value, 10);
+            render(count);
         });
         numActivitiesInput.dataset.listenerAttached = 'true';
+        if (window.EXISTING_ACTIVITIES && window.EXISTING_ACTIVITIES.length) {
+            numActivitiesInput.value = window.EXISTING_ACTIVITIES.length;
+            render(window.EXISTING_ACTIVITIES.length);
+        }
     }
     
     // The rest of the file uses your original, working functions.
@@ -403,6 +418,33 @@ $(document).ready(function() {
                 clearFieldError($(this));
             });
         }
+    }
+
+    function setupSDGGoalsSync() {
+        const hidden = $('#django-basic-info [name="sdg_goals"]');
+        const container = $('#sdg-goals-modern');
+        if (!hidden.length || !container.length) return;
+        if (container.children().length === 0 && window.SDG_GOALS) {
+            let html = '';
+            window.SDG_GOALS.forEach(goal => {
+                html += `<label><input type="checkbox" class="sdg-goal-checkbox" value="${goal.id}"> ${goal.name}</label>`;
+            });
+            container.html(html);
+        }
+        const map = {};
+        hidden.each(function(){ map[$(this).val()] = $(this); });
+        container.find('input.sdg-goal-checkbox').each(function(){
+            const val = $(this).val();
+            if (map[val]) {
+                $(this).prop('checked', map[val].prop('checked'));
+            }
+            $(this).on('change', function(){
+                if (map[val]) {
+                    map[val].prop('checked', $(this).is(':checked'));
+                    hidden.trigger('change');
+                }
+            });
+        });
     }
 
     function handleOrgTypeChange(orgType, preserveOrg = false) {
@@ -575,9 +617,17 @@ $(document).ready(function() {
 
                 <div class="form-row full-width">
                     <div class="input-group">
-                        <label for="aligned-sdg-goals-modern">Aligned SDG Goals</label>
-                        <textarea id="aligned-sdg-goals-modern" rows="3" placeholder="List the SDG goals aligned with this event (e.g., Quality Education, Gender Equality, etc.)"></textarea>
+                        <label>Aligned SDG Goals</label>
+                        <div id="sdg-goals-modern"></div>
                         <div class="help-text">Specify which Sustainable Development Goals this event addresses</div>
+                    </div>
+                </div>
+
+                <div class="form-row full-width">
+                    <div class="input-group">
+                        <label for="committees-modern">Committees</label>
+                        <textarea id="committees-modern" rows="2" placeholder="List committees involved"></textarea>
+                        <div class="help-text">List internal committees involved</div>
                     </div>
                 </div>
 
@@ -895,15 +945,30 @@ function getWhyThisEventForm() {
             addSpeakerForm();
             showEmptyState();
         });
-        
+
         container.on('click', '.remove-speaker-btn', function() {
             $(this).closest('.speaker-form-container').remove();
             updateSpeakerHeaders();
             showEmptyState();
         });
 
-        // Show empty state initially
-        showEmptyState();
+        if (window.EXISTING_SPEAKERS && window.EXISTING_SPEAKERS.length) {
+            container.empty();
+            window.EXISTING_SPEAKERS.forEach(sp => {
+                addSpeakerForm();
+                const idx = index - 1;
+                $(`#speaker_full_name_${idx}`).val(sp.full_name);
+                $(`#speaker_designation_${idx}`).val(sp.designation);
+                $(`#speaker_affiliation_${idx}`).val(sp.affiliation);
+                $(`#speaker_contact_email_${idx}`).val(sp.contact_email);
+                $(`#speaker_contact_number_${idx}`).val(sp.contact_number);
+                $(`#speaker_linkedin_url_${idx}`).val(sp.linkedin_url);
+                $(`#speaker_detailed_profile_${idx}`).val(sp.detailed_profile);
+            });
+            showEmptyState();
+        } else {
+            showEmptyState();
+        }
     }
 
     function setupExpensesSection() {
@@ -973,15 +1038,26 @@ function getWhyThisEventForm() {
             addExpenseRow();
             showEmptyState();
         });
-        
+
         container.on('click', '.remove-expense-btn', function() {
             $(this).closest('.expense-form-container').remove();
             updateExpenseHeaders();
             showEmptyState();
         });
 
-        // Show empty state initially
-        showEmptyState();
+        if (window.EXISTING_EXPENSES && window.EXISTING_EXPENSES.length) {
+            container.empty();
+            window.EXISTING_EXPENSES.forEach(ex => {
+                addExpenseRow();
+                const idx = index - 1;
+                $(`#expense_sl_no_${idx}`).val(ex.sl_no);
+                $(`#expense_particulars_${idx}`).val(ex.particulars);
+                $(`#expense_amount_${idx}`).val(ex.amount);
+            });
+            showEmptyState();
+        } else {
+            showEmptyState();
+        }
     }
     
     // ===== SAVE SECTION FUNCTIONALITY - FULLY PRESERVED =====
