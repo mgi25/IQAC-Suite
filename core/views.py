@@ -1773,7 +1773,7 @@ from operator import attrgetter
 
 from .models import (
     Organization, OrganizationType, OrganizationRole, RoleAssignment,
-    Profile, EventProposal, Report, Program, ProgramOutcome, 
+    Profile, Report, Program, ProgramOutcome, 
     ProgramSpecificOutcome, ApprovalFlowTemplate
 )
 from emt.models import (
