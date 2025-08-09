@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'core/css/admin_master_data.css' %}">
+
+<div class="main-container">
+  <div class="page-header">
+    <h1 class="page-title">SDG Goals Management</h1>
+  </div>
+
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Goal</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for goal in goals %}
+        <tr>
+          <td>{{ goal.id }}</td>
+          <td>{{ goal.name }}</td>
+          <td>
+            <form method="post" style="display:inline">
+              {% csrf_token %}
+              <input type="hidden" name="delete_goal_id" value="{{ goal.id }}">
+              <button type="submit" class="delete-btn"><i class="fas fa-trash"></i> Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3">No SDG goals added yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pso-po-management" style="margin-top:20px;">
+    <form method="post">
+      {% csrf_token %}
+      <input type="text" name="name" placeholder="Add new SDG goal..." required>
+      <button type="submit"><i class="fas fa-plus"></i> Add Goal</button>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+

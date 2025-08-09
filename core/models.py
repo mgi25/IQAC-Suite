@@ -171,6 +171,13 @@ class ProgramSpecificOutcome(models.Model):
     def __str__(self):
         return f"PSO - {self.program.name}"
 
+
+class SDGGoal(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+
+    def __str__(self):
+        return self.name
+
 # ───────────────────────────────
 #  Approval Flow Templates & Config
 # ───────────────────────────────
