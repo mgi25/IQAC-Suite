@@ -1,6 +1,7 @@
 import os
 import requests
 from django.contrib.auth.models import User
+from django.utils import timezone
 from .models import ApprovalStep
 from core.models import (
     Organization,
@@ -31,6 +32,7 @@ def build_approval_chain(proposal):
                 ApprovalStep(
                     proposal=proposal,
                     step_order=idx,
+                    order_index=idx,
                     role_required=ApprovalStep.Role.FACULTY_INCHARGE,
                     assigned_to=fic,
                     status="pending" if idx == 1 else "waiting",
@@ -39,8 +41,6 @@ def build_approval_chain(proposal):
             idx += 1
 
     for tmpl in flow:
-        if getattr(tmpl, 'optional', False):
-            continue
         # Skip duplicate faculty in-charge steps if they're already added above
         if fic_first and tmpl.role_required == ApprovalStep.Role.FACULTY_INCHARGE:
             continue
@@ -54,14 +54,67 @@ def build_approval_chain(proposal):
             ApprovalStep(
                 proposal=proposal,
                 step_order=idx,
+                order_index=idx,
                 role_required=tmpl.role_required,
                 assigned_to=assigned_to,
+                is_optional=getattr(tmpl, "optional", False),
                 status="pending" if idx == 1 else "waiting",
             )
         )
         idx += 1
 
     ApprovalStep.objects.bulk_create(steps)
+
+
+def auto_approve_non_optional_duplicates(proposal, approver, actor):
+    """Auto-approve non-optional duplicate steps for the same user."""
+    qs = ApprovalStep.objects.filter(
+        proposal=proposal,
+        assigned_to=approver,
+        is_optional=False,
+        status__in=[ApprovalStep.Status.PENDING, "waiting"],
+    )
+    now = timezone.now()
+    qs.update(
+        status=ApprovalStep.Status.APPROVED,
+        approved_by=actor,
+        approved_at=now,
+        decided_by=actor,
+        decided_at=now,
+        note="Auto-approved (duplicate non-optional step for same approver).",
+    )
+
+
+def unlock_optionals_after(step, selected_ids):
+    """Unlock selected optional steps downstream of the given step."""
+    ApprovalStep.objects.filter(
+        proposal=step.proposal,
+        is_optional=True,
+        status__in=[ApprovalStep.Status.PENDING, "waiting"],
+        optional_unlocked=False,
+        order_index__gt=step.order_index,
+        id__in=selected_ids,
+    ).update(optional_unlocked=True, status=ApprovalStep.Status.PENDING, note="Unlocked by previous approver.")
+
+
+def skip_all_downstream_optionals(step, skip_note="Automatically skipped (not forwarded to optional approver)."):
+    """Skip all optional steps downstream of the given step."""
+    ApprovalStep.objects.filter(
+        proposal=step.proposal,
+        is_optional=True,
+        status__in=[ApprovalStep.Status.PENDING, "waiting"],
+        order_index__gt=step.order_index,
+    ).update(status=ApprovalStep.Status.SKIPPED, note=skip_note)
+
+
+def get_downstream_optional_candidates(step):
+    """Return optional steps after current step for UI."""
+    return ApprovalStep.objects.filter(
+        proposal=step.proposal,
+        is_optional=True,
+        status__in=[ApprovalStep.Status.PENDING, "waiting"],
+        order_index__gt=step.order_index,
+    ).order_by("order_index")
 
 # ---------------------------------------------
 # generate_report_with_ai remains unchanged!
