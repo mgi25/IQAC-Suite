@@ -5,11 +5,11 @@
 <link rel="stylesheet" href="{% static 'core/css/reports.css' %}">
 
 <div class="reports-main-container">
-    <div class="reports-header-title">Reports</div>
+    <h1 class="h1">Reports</h1>
     <div class="reports-header-desc">
         Review, approve, and download submitted or generated reports below.
     </div>
-    <div class="reports-table-wrap">
+    <section class="reports-table-wrap card table-responsive">
         <table class="reports-table">
             <thead>
                 <tr>
@@ -106,6 +106,6 @@
                 {% endfor %}
             </tbody>
         </table>
-    </div>
+    </section>
 </div>
 {% endblock %}

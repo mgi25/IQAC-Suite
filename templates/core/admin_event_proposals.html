@@ -3,7 +3,8 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'core/css/admin_event_proposals.css' %}">
 <div class="container admin-proposals-container">
-    <h1 class="proposals-title">Event Proposals</h1>
+    <h1 class="h1">Event Proposals</h1>
+    <section class="card">
     <form method="get" class="proposals-filter-form">
         <input type="text" name="q" placeholder="Search by title, user, or organization..." value="{{ request.GET.q|default:'' }}">
         <select name="status">
@@ -17,7 +18,8 @@
         </select>
         <button type="submit" class="btn btn-primary">Filter</button>
     </form>
-    <div class="table-responsive">
+    </section>
+    <section class="card table-responsive">
         <table class="proposals-table">
             <thead>
                 <tr>
@@ -65,7 +67,7 @@
                 {% endfor %}
             </tbody>
         </table>
-    </div>
+    </section>
 </div>
 
 <!-- Modal for Proposal Detail -->
