@@ -1,44 +1,7 @@
 {% extends "base.html" %}
-
-{% block title %}Add Students{% endblock %}
-
 {% block content %}
-<div class="main-container">
-  <h1>Add Students - {{ organization.name }}</h1>
-  <h2>Existing Class</h2>
-  <form method="post" action="{% url 'admin_org_users_upload_csv' %}" enctype="multipart/form-data">
-    {% csrf_token %}
-    <div class="form-group">
-      <label for="class_id">Class</label>
-      <select name="class_id" id="class_id" class="form-select">
-        {% for c in existing_classes %}
-          <option value="{{ c.id }}">{{ c.name }}</option>
-        {% empty %}
-          <option value="">-- No classes available --</option>
-        {% endfor %}
-      </select>
-    </div>
-    {{ upload_form.csv_file.label_tag }} {{ upload_form.csv_file }}
-    <button type="submit" class="btn btn-primary">Upload CSV</button>
-  </form>
-
-  <hr>
-  <h2>Create New Class</h2>
-  <form method="post" action="{% url 'admin_org_create_class' %}">
-    {% csrf_token %}
-    {{ create_form.parent_org.as_hidden }}
-    <div class="form-group">
-      {{ create_form.name.label_tag }} {{ create_form.name }}
-    </div>
-    <div class="form-group">
-      {{ create_form.code.label_tag }} {{ create_form.code }}
-    </div>
-    <div class="form-group">
-      {{ create_form.academic_year.label_tag }} {{ create_form.academic_year }}
-    </div>
-    <button type="submit" class="btn btn-secondary">Create Class</button>
-  </form>
-
-  <p class="mt-3">CSV format: <code>regno,email,first_name,last_name,academic_year,role</code></p>
+<div class="admin-dashboard-container" style="padding-top:1.5rem;">
+  <h1 class="admin-dashboard-title">Add Students: {{ org.name }}</h1>
+  <p class="text-muted">Coming soon: Existing Class / Create New Class + Bulk CSV Upload.</p>
 </div>
 {% endblock %}
