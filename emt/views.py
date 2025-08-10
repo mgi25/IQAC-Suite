@@ -359,6 +359,84 @@ def autosave_proposal(request):
     proposal.save()
     form.save_m2m()               # 🆕 keep M2M in sync
     _save_text_sections(proposal, data)
+
+    errors = {}
+
+    # Validate activities
+    act_errors = {}
+    idx = 1
+    while any(key in data for key in [f"activity_name_{idx}", f"activity_date_{idx}"]):
+        name = data.get(f"activity_name_{idx}")
+        date = data.get(f"activity_date_{idx}")
+        missing = {}
+        if name or date:
+            if not name:
+                missing["name"] = "This field is required."
+            if not date:
+                missing["date"] = "This field is required."
+        if missing:
+            act_errors[idx] = missing
+        idx += 1
+    if act_errors:
+        errors["activities"] = act_errors
+
+    # Validate speakers
+    sp_errors = {}
+    sp_idx = 0
+    sp_fields = [
+        "full_name",
+        "designation",
+        "affiliation",
+        "contact_email",
+        "detailed_profile",
+    ]
+    while any(
+        f"speaker_{field}_{sp_idx}" in data
+        for field in sp_fields + ["contact_number", "linkedin_url", "photo"]
+    ):
+        missing = {}
+        has_any = False
+        for field in sp_fields:
+            value = data.get(f"speaker_{field}_{sp_idx}")
+            if value:
+                has_any = True
+            else:
+                missing[field] = "This field is required."
+        if has_any and missing:
+            sp_errors[sp_idx] = missing
+        sp_idx += 1
+    if sp_errors:
+        errors["speakers"] = sp_errors
+
+    # Validate expenses
+    ex_errors = {}
+    ex_idx = 0
+    while any(
+        f"expense_{field}_{ex_idx}" in data
+        for field in ["sl_no", "particulars", "amount"]
+    ):
+        particulars = data.get(f"expense_particulars_{ex_idx}")
+        amount = data.get(f"expense_amount_{ex_idx}")
+        missing = {}
+        if particulars or amount:
+            if not particulars:
+                missing["particulars"] = "This field is required."
+            if not amount:
+                missing["amount"] = "This field is required."
+        if missing:
+            ex_errors[ex_idx] = missing
+        ex_idx += 1
+    if ex_errors:
+        errors["expenses"] = ex_errors
+
+    if errors:
+        logger.debug("autosave_proposal dynamic errors: %s", errors)
+        return JsonResponse({"success": False, "errors": errors}, status=400)
+
+    _save_activities(proposal, data)
+    _save_speakers(proposal, data, request.FILES)
+    _save_expenses(proposal, data)
+
     logger.debug(
         "Autosaved proposal %s with faculty %s",
         proposal.id,
