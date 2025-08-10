@@ -274,6 +274,9 @@ $(document).ready(function() {
                         $(`#activity_date_${index}`).val(act.date);
                     });
                 }
+                if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                    window.AutosaveManager.reinitialize();
+                }
             }
         }
         numActivitiesInput.addEventListener('input', () => {
@@ -792,7 +795,7 @@ function getWhyThisEventForm() {
                 <div class="form-row full-width">
                     <div class="input-group">
                         <label for="schedule-modern">Event timeline and schedule *</label>
-                        <textarea id="schedule-modern" rows="8" required placeholder="9:00 AM - Registration&#10;9:30 AM - Opening Ceremony..."></textarea>
+                        <textarea id="schedule-modern" name="flow" rows="8" required placeholder="9:00 AM - Registration&#10;9:30 AM - Opening Ceremony..."></textarea>
                         <div class="help-text">Provide a detailed timeline for each activity.</div>
                     </div>
                 </div>
@@ -924,6 +927,9 @@ function getWhyThisEventForm() {
             `;
             container.append(html);
             index++;
+            if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                window.AutosaveManager.reinitialize();
+            }
         }
 
         function updateSpeakerHeaders() {
@@ -957,6 +963,9 @@ function getWhyThisEventForm() {
             $(this).closest('.speaker-form-container').remove();
             updateSpeakerHeaders();
             showEmptyState();
+            if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                window.AutosaveManager.reinitialize();
+            }
         });
 
         if (window.EXISTING_SPEAKERS && window.EXISTING_SPEAKERS.length) {
@@ -1017,6 +1026,9 @@ function getWhyThisEventForm() {
             `;
             container.append(html);
             index++;
+            if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                window.AutosaveManager.reinitialize();
+            }
         }
 
         function updateExpenseHeaders() {
@@ -1050,6 +1062,9 @@ function getWhyThisEventForm() {
             $(this).closest('.expense-form-container').remove();
             updateExpenseHeaders();
             showEmptyState();
+            if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                window.AutosaveManager.reinitialize();
+            }
         });
 
         if (window.EXISTING_EXPENSES && window.EXISTING_EXPENSES.length) {
@@ -1105,8 +1120,14 @@ function getWhyThisEventForm() {
         $('#form-panel-content').on('input.sync change.sync', 'input, textarea, select', function() {
             const fieldId = $(this).attr('id');
             if (fieldId && fieldId.endsWith('-modern')) {
-                const baseName = fieldId.replace('-modern', '').replace(/-/g, '_');
-                const djangoField = $(`#django-forms [name="${baseName}"]`);
+                let baseName = fieldId.replace('-modern', '').replace(/-/g, '_');
+                if (fieldId === 'schedule-modern') {
+                    baseName = 'flow';
+                }
+                let djangoField = $(`#django-forms [name="${baseName}"]`);
+                if (!djangoField.length && baseName === 'flow') {
+                    djangoField = $(`textarea[name="flow"]`);
+                }
                 if (djangoField.length) {
                     djangoField.val($(this).val());
                     console.log(`Synced ${baseName}:`, $(this).val());

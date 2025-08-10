@@ -22,7 +22,11 @@ class Organization(models.Model):
     name = models.CharField(max_length=100)
     org_type = models.ForeignKey(OrganizationType, on_delete=models.CASCADE, related_name="organizations")
     is_active = models.BooleanField(default=True)
-    parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL)
+    parent = models.ForeignKey(
+        'self', null=True, blank=True, on_delete=models.CASCADE, related_name='children'
+    )
+    code = models.CharField(max_length=64, unique=True, null=True, blank=True)
+    meta = models.JSONField(default=dict, blank=True)
 
     class Meta:
         unique_together = ("name", "org_type")
@@ -89,6 +93,23 @@ class RoleAssignment(models.Model):
         
         return round((user_events / total_events) * 100, 1)
 
+
+class OrganizationMembership(models.Model):
+    ROLE_CHOICES = (("student", "Student"), ("faculty", "Faculty"), ("tutor", "Tutor"))
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="org_memberships")
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="memberships"
+    )
+    academic_year = models.CharField(max_length=9)  # e.g., "2025-2026"
+    role = models.CharField(max_length=32, choices=ROLE_CHOICES, default="student")
+    is_primary = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "organization", "academic_year")
+        indexes = [models.Index(fields=["organization", "academic_year", "role"])]
+
 # ───────────────────────────────
 #  User Profile (unchanged)
 # ───────────────────────────────
@@ -105,6 +126,7 @@ class Profile(models.Model):
         ("iqac_member", "IQAC Member"),
     ]
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    register_no = models.CharField(max_length=64, blank=True, null=True, db_index=True)
     role = models.CharField(max_length=32, choices=ROLE_CHOICES, default="student")
 
     def __str__(self):

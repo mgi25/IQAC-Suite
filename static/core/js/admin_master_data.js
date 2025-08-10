@@ -288,7 +288,12 @@ function finishInlineEdit(row, name, isActive, parentName = null) {
     `;
     
     // Restore actions
-    actionsCell.innerHTML = '<button class="btn btn-edit"><i class="fas fa-pen"></i></button>';
+    actionsCell.innerHTML = `
+        <button class="btn btn-edit"><i class="fas fa-pen"></i></button>
+        <a class="btn btn-primary btn-sm" title="Add Users" href="/core-admin/org-users/${row.dataset.id}/">
+            <i class="fas fa-user-plus"></i>
+        </a>
+    `;
     
     // Update row class for inactive display
     if (isActive) {

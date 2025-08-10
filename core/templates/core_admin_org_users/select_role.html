@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-dashboard-container" style="padding-top:1.5rem;">
+  <h1 class="admin-dashboard-title">Add Users: {{ org.name }}</h1>
+  <form method="post" class="card p-4" style="max-width:520px;">
+    {% csrf_token %}
+    <p class="mb-3 text-muted">Choose how you want to add users for <strong>{{ org.name }}</strong>.</p>
+    <div class="form-check mb-2">
+      <input class="form-check-input" type="radio" name="role" id="roleStudent" value="student" required>
+      <label class="form-check-label" for="roleStudent">Add Students</label>
+    </div>
+    <div class="form-check mb-4">
+      <input class="form-check-input" type="radio" name="role" id="roleFaculty" value="faculty" required>
+      <label class="form-check-label" for="roleFaculty">Add Faculty</label>
+    </div>
+    <button class="btn btn-primary" type="submit"><i class="fas fa-arrow-right"></i> Continue</button>
+  </form>
+</div>
+{% endblock %}

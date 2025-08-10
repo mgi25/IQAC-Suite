@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from core.views import custom_logout
+from . import views_admin_org_users as orgu
 
 urlpatterns = [
     # ────────────────────────────────────────────────
@@ -89,6 +90,51 @@ urlpatterns = [
     path('core-admin/pso-po/data/<str:org_type>/<int:org_id>/', views.get_pso_po_data, name='get_pso_po_data'),
     path('core-admin/pso-po/add/<str:outcome_type>/', views.add_outcome, name='add_outcome'),
     path('core-admin/pso-po/delete/<str:outcome_type>/<int:outcome_id>/', views.delete_outcome, name='delete_outcome'),
+
+    # ────────────────────────────────────────────────
+    # Admin - Organization User Management
+    # ────────────────────────────────────────────────
+    path("core-admin/org-users/", orgu.entrypoint, name="admin_org_users_entry"),
+    path(
+        "core-admin/org-users/<int:org_id>/",
+        orgu.select_role,
+        name="admin_org_users_select_role",
+    ),
+    path(
+        "core-admin/org-users/<int:org_id>/students/",
+        orgu.student_flow,
+        name="admin_org_users_students",
+    ),
+    path(
+        "core-admin/org-users/<int:org_id>/faculty/",
+        orgu.faculty_flow,
+        name="admin_org_users_faculty",
+    ),
+    path(
+        "core-admin/org-users/<int:org_id>/create-class/",
+        orgu.create_class,
+        name="admin_org_create_class",
+    ),
+    path(
+        "core-admin/org-users/<int:org_id>/upload-csv/",
+        orgu.upload_csv,
+        name="admin_org_users_upload_csv",
+    ),
+    path(
+        "core-admin/org-users/<int:org_id>/csv-template/",
+        orgu.csv_template,
+        name="admin_org_users_csv_template",
+    ),
+    path(
+        "core-admin/org-users/fetch/children/<int:org_id>/",
+        orgu.fetch_children,
+        name="admin_org_fetch_children",
+    ),
+    path(
+        "core-admin/org-users/fetch/by-type/<int:type_id>/",
+        orgu.fetch_by_type,
+        name="admin_org_fetch_by_type",
+    ),
 
     # ────────────────────────────────────────────────
     # AJAX - Academic Year
