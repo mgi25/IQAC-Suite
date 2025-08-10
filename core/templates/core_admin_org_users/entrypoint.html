@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block title %}Add Users to Organization{% endblock %}
+
+{% block content %}
+<div class="main-container">
+  <h1>Add Users to Organization</h1>
+  <a class="btn btn-primary" href="{% url 'admin_org_users_select_role' %}">Get Started</a>
+</div>
+{% endblock %}
