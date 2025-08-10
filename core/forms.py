@@ -2,7 +2,7 @@ from django import forms
 from django.db.models import Q
 import json
 
-from .models import RoleAssignment, OrganizationRole, Organization
+from .models import RoleAssignment, OrganizationRole, Organization, OrganizationType
 
 class RoleAssignmentForm(forms.ModelForm):
     class Meta:
@@ -66,3 +66,38 @@ class RegistrationForm(forms.Form):
                 continue
             cleaned.append({"organization": org_id, "role": role_id})
         return cleaned
+
+
+class OrgSelectForm(forms.Form):
+    org_type = forms.ModelChoiceField(
+        queryset=OrganizationType.objects.all(), required=True, label="Organization Type"
+    )
+    organization = forms.ModelChoiceField(
+        queryset=Organization.objects.none(), required=True, label="Organization"
+    )
+    role = forms.ChoiceField(
+        choices=(("student", "Student"), ("faculty", "Faculty")), required=True
+    )
+
+    def __init__(self, *args, **kwargs):
+        initial_type = kwargs.pop("initial_type", None)
+        super().__init__(*args, **kwargs)
+        if initial_type:
+            self.fields["organization"].queryset = Organization.objects.filter(
+                org_type=initial_type
+            )
+
+
+class CreateClassForm(forms.Form):
+    parent_org = forms.ModelChoiceField(
+        queryset=Organization.objects.all(), label="Parent Organization"
+    )
+    name = forms.CharField(max_length=255, label="Class Name")
+    code = forms.CharField(max_length=64, label="Unique Code")
+    academic_year = forms.CharField(
+        max_length=9, label="Academic Year (e.g., 2025-2026)"
+    )
+
+
+class CSVUploadForm(forms.Form):
+    csv_file = forms.FileField()

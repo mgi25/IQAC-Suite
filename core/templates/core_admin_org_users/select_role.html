@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Select Organization{% endblock %}
+
+{% block content %}
+<div class="main-container">
+  <h1>Select Organization and Role</h1>
+  <form method="post">
+    {% csrf_token %}
+    <div class="form-group">
+      {{ form.org_type.label_tag }}
+      {{ form.org_type }}
+    </div>
+    <div class="form-group">
+      {{ form.organization.label_tag }}
+      {{ form.organization }}
+    </div>
+    <div class="form-group">
+      {{ form.role.label_tag }}
+      {{ form.role }}
+    </div>
+    <button type="submit" class="btn btn-primary">Continue</button>
+  </form>
+</div>
+<script>
+const orgType = document.getElementById('id_org_type');
+if(orgType){
+  orgType.addEventListener('change', function(){
+    fetch(`/core-admin/org-users/fetch/by-type/${this.value}/`).then(r=>r.json()).then(data=>{
+      const orgSel = document.getElementById('id_organization');
+      orgSel.innerHTML = '';
+      data.forEach(o=>{
+        const opt=document.createElement('option');
+        opt.value=o.id;
+        opt.textContent=o.name;
+        orgSel.appendChild(opt);
+      });
+    });
+  });
+}
+</script>
+{% endblock %}
