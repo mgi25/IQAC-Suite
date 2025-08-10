@@ -96,27 +96,27 @@ urlpatterns = [
     # ────────────────────────────────────────────────
     path("core-admin/org-users/", orgu.entrypoint, name="admin_org_users_entry"),
     path(
-        "core-admin/org-users/select-role/",
+        "core-admin/org-users/<int:org_id>/",
         orgu.select_role,
         name="admin_org_users_select_role",
     ),
     path(
-        "core-admin/org-users/students/",
+        "core-admin/org-users/<int:org_id>/students/",
         orgu.student_flow,
         name="admin_org_users_students",
     ),
     path(
-        "core-admin/org-users/faculty/",
+        "core-admin/org-users/<int:org_id>/faculty/",
         orgu.faculty_flow,
         name="admin_org_users_faculty",
     ),
     path(
-        "core-admin/org-users/create-class/",
+        "core-admin/org-users/<int:org_id>/create-class/",
         orgu.create_class,
         name="admin_org_create_class",
     ),
     path(
-        "core-admin/org-users/upload-csv/",
+        "core-admin/org-users/<int:org_id>/upload-csv/",
         orgu.upload_csv,
         name="admin_org_users_upload_csv",
     ),

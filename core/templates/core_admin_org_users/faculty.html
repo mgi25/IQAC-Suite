@@ -1,24 +1,7 @@
 {% extends "base.html" %}
-
-{% block title %}Add Faculty{% endblock %}
-
 {% block content %}
-<div class="main-container">
-  <h1>Add Faculty - {{ organization.name }}</h1>
-  <form method="post" action="{% url 'admin_org_users_upload_csv' %}" enctype="multipart/form-data">
-    {% csrf_token %}
-    <div class="form-group">
-      <label for="organization_id">Organization/Class</label>
-      <select name="organization_id" id="organization_id" class="form-select">
-        <option value="{{ organization.id }}">{{ organization.name }}</option>
-        {% for c in children %}
-          <option value="{{ c.id }}">{{ c.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    {{ upload_form.csv_file.label_tag }} {{ upload_form.csv_file }}
-    <button type="submit" class="btn btn-primary">Upload CSV</button>
-  </form>
-  <p class="mt-3">CSV format: <code>regno,email,first_name,last_name,academic_year,role</code></p>
+<div class="admin-dashboard-container" style="padding-top:1.5rem;">
+  <h1 class="admin-dashboard-title">Add Faculty: {{ org.name }}</h1>
+  <p class="text-muted">Coming soon: Assign faculty + Bulk CSV Upload.</p>
 </div>
 {% endblock %}
