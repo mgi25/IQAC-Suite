@@ -126,6 +126,7 @@ class Profile(models.Model):
         ("iqac_member", "IQAC Member"),
     ]
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    register_no = models.CharField(max_length=64, blank=True, null=True, db_index=True)
     role = models.CharField(max_length=32, choices=ROLE_CHOICES, default="student")
 
     def __str__(self):
