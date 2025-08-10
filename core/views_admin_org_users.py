@@ -1,9 +1,38 @@
-from django.contrib.auth.decorators import user_passes_test
-from django.http import JsonResponse
-from django.shortcuts import render, redirect, get_object_or_404
-from django.urls import reverse
-from core.models import Organization
+import csv
+import io
+import re
 
+from django.contrib import messages
+from django.contrib.auth.decorators import user_passes_test
+from django.contrib.auth.models import User
+from django.db import transaction
+from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+
+from core.models import Organization, OrganizationMembership, Profile
+from .forms import OrgUsersCSVUploadForm
+
+VALID_ROLES = {
+    "student": "student",
+    "faculty": "faculty",
+    "tutor": "tutor",
+    "s": "student",
+    "f": "faculty",
+    "t": "tutor",
+}
+
+
+def _split_name(fullname: str):
+    fullname = (fullname or "").strip()
+    if not fullname:
+        return "", ""
+    if "," in fullname:
+        last, first = [x.strip() for x in fullname.split(",", 1)]
+        return first, last
+    parts = fullname.split()
+    if len(parts) == 1:
+        return parts[0], ""
+    return " ".join(parts[:-1]), parts[-1]
 
 @user_passes_test(lambda u: u.is_superuser)
 def entrypoint(request):
@@ -50,8 +79,121 @@ def create_class(request, org_id):
 @user_passes_test(lambda u: u.is_superuser)
 def upload_csv(request, org_id):
     org = get_object_or_404(Organization, pk=org_id)
-    # TODO: parse CSV, create/update users + OrganizationMembership
+    if request.method != "POST":
+        return HttpResponseBadRequest("POST required")
+
+    form = OrgUsersCSVUploadForm(request.POST, request.FILES)
+    if not form.is_valid():
+        messages.error(request, "Please provide Academic Year and a CSV file.")
+        return redirect(request.META.get("HTTP_REFERER") or "admin_org_users_students", org_id=org.id)
+
+    ay = form.cleaned_data["academic_year"].strip()
+    f = request.FILES["csv_file"]
+    if not f.name.lower().endswith(".csv"):
+        messages.error(request, "Only .csv files are allowed.")
+        return redirect("admin_org_users_students", org_id=org.id)
+
+    users_created = 0
+    users_updated = 0
+    memberships_created = 0
+    memberships_updated = 0
+    skipped = 0
+    errors = []
+
+    try:
+        data = f.read().decode("utf-8-sig")
+    except Exception:
+        data = f.read().decode("latin-1")
+
+    reader = csv.DictReader(io.StringIO(data))
+    required = {"register_no", "name", "email", "role"}
+    if not required.issubset({c.strip().lower() for c in reader.fieldnames or []}):
+        messages.error(request, "CSV must have headers: register_no, name, email, role")
+        return redirect("admin_org_users_students", org_id=org.id)
+
+    with transaction.atomic():
+        for i, row in enumerate(reader, start=2):
+            reg = (row.get("register_no") or "").strip()
+            name = (row.get("name") or "").strip()
+            email = (row.get("email") or "").strip().lower()
+            role_raw = (row.get("role") or "").strip().lower()
+            role = VALID_ROLES.get(role_raw)
+
+            if not email or "@" not in email:
+                skipped += 1
+                errors.append(f"Row {i}: invalid email")
+                continue
+            if not role:
+                skipped += 1
+                errors.append(f"Row {i}: invalid role '{role_raw}' (use student/faculty/tutor)")
+                continue
+
+            first, last = _split_name(name)
+
+            user, created = User.objects.get_or_create(
+                username=email,
+                defaults={"email": email, "first_name": first, "last_name": last, "is_active": True},
+            )
+            if created:
+                users_created += 1
+            else:
+                upd = False
+                if not user.first_name and first:
+                    user.first_name = first
+                    upd = True
+                if not user.last_name and last:
+                    user.last_name = last
+                    upd = True
+                if upd:
+                    user.save(update_fields=["first_name", "last_name"])
+                    users_updated += 1
+
+            profile, _ = Profile.objects.get_or_create(user=user)
+            if hasattr(profile, "register_no") and reg:
+                if profile.register_no != reg:
+                    profile.register_no = reg
+                    profile.save(update_fields=["register_no"])
+
+            mem, mem_created = OrganizationMembership.objects.get_or_create(
+                user=user,
+                organization=org,
+                academic_year=ay,
+                defaults={"role": role, "is_primary": True},
+            )
+            if mem_created:
+                memberships_created += 1
+            else:
+                if mem.role != role:
+                    mem.role = role
+                    mem.save(update_fields=["role"])
+                    memberships_updated += 1
+
+    if errors:
+        messages.warning(
+            request,
+            "Some rows were skipped:\n" + "\n".join(errors[:8]) + ("" if len(errors) <= 8 else f"\n(+{len(errors) - 8} more)"),
+        )
+    messages.success(
+        request,
+        f"CSV processed for {org.name} ({ay}). Users created: {users_created}, Users updated: {users_updated}, "
+        f"Memberships created: {memberships_created}, Memberships updated: {memberships_updated}, Skipped: {skipped}.",
+    )
+
+    referer = request.META.get("HTTP_REFERER", "")
+    if "faculty" in referer:
+        return redirect("admin_org_users_faculty", org_id=org.id)
     return redirect("admin_org_users_students", org_id=org.id)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def csv_template(request, org_id):
+    org = get_object_or_404(Organization, pk=org_id)
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = f'attachment; filename="org_{org.id}_bulk_upload_template.csv"'
+    writer = csv.writer(response)
+    writer.writerow(["register_no", "name", "email", "role"])
+    writer.writerow(["24DS001", "Aarya Shah", "aarya@example.edu", "student"])
+    return response
 
 
 @user_passes_test(lambda u: u.is_superuser)

@@ -121,6 +121,11 @@ urlpatterns = [
         name="admin_org_users_upload_csv",
     ),
     path(
+        "core-admin/org-users/<int:org_id>/csv-template/",
+        orgu.csv_template,
+        name="admin_org_users_csv_template",
+    ),
+    path(
         "core-admin/org-users/fetch/children/<int:org_id>/",
         orgu.fetch_children,
         name="admin_org_fetch_children",
