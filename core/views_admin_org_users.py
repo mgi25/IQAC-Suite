@@ -82,16 +82,27 @@ def upload_csv(request, org_id):
     if request.method != "POST":
         return HttpResponseBadRequest("POST required")
 
+    referer = request.META.get("HTTP_REFERER", "")
+    is_faculty = "faculty" in referer
+
     form = OrgUsersCSVUploadForm(request.POST, request.FILES)
     if not form.is_valid():
         messages.error(request, "Please provide Academic Year and a CSV file.")
-        return redirect(request.META.get("HTTP_REFERER") or "admin_org_users_students", org_id=org.id)
+        if referer:
+            return redirect(referer)
+        return redirect(
+            "admin_org_users_faculty" if is_faculty else "admin_org_users_students",
+            org_id=org.id,
+        )
 
     ay = form.cleaned_data["academic_year"].strip()
     f = request.FILES["csv_file"]
     if not f.name.lower().endswith(".csv"):
         messages.error(request, "Only .csv files are allowed.")
-        return redirect("admin_org_users_students", org_id=org.id)
+        return redirect(
+            "admin_org_users_faculty" if is_faculty else "admin_org_users_students",
+            org_id=org.id,
+        )
 
     users_created = 0
     users_updated = 0
@@ -106,14 +117,21 @@ def upload_csv(request, org_id):
         data = f.read().decode("latin-1")
 
     reader = csv.DictReader(io.StringIO(data))
-    required = {"register_no", "name", "email", "role"}
+    id_field = "emp_id" if is_faculty else "register_no"
+    required = {id_field, "name", "email", "role"}
     if not required.issubset({c.strip().lower() for c in reader.fieldnames or []}):
-        messages.error(request, "CSV must have headers: register_no, name, email, role")
-        return redirect("admin_org_users_students", org_id=org.id)
+        messages.error(
+            request,
+            f"CSV must have headers: {id_field}, name, email, role",
+        )
+        return redirect(
+            "admin_org_users_faculty" if is_faculty else "admin_org_users_students",
+            org_id=org.id,
+        )
 
     with transaction.atomic():
         for i, row in enumerate(reader, start=2):
-            reg = (row.get("register_no") or "").strip()
+            reg = (row.get(id_field) or "").strip()
             name = (row.get("name") or "").strip()
             email = (row.get("email") or "").strip().lower()
             role_raw = (row.get("role") or "").strip().lower()
@@ -179,8 +197,7 @@ def upload_csv(request, org_id):
         f"Memberships created: {memberships_created}, Memberships updated: {memberships_updated}, Skipped: {skipped}.",
     )
 
-    referer = request.META.get("HTTP_REFERER", "")
-    if "faculty" in referer:
+    if is_faculty:
         return redirect("admin_org_users_faculty", org_id=org.id)
     return redirect("admin_org_users_students", org_id=org.id)
 
@@ -188,11 +205,15 @@ def upload_csv(request, org_id):
 @user_passes_test(lambda u: u.is_superuser)
 def csv_template(request, org_id):
     org = get_object_or_404(Organization, pk=org_id)
+    role = request.GET.get("role", "student")
+    field = "emp_id" if role == "faculty" else "register_no"
+
     response = HttpResponse(content_type="text/csv")
     response["Content-Disposition"] = f'attachment; filename="org_{org.id}_bulk_upload_template.csv"'
     writer = csv.writer(response)
-    writer.writerow(["register_no", "name", "email", "role"])
-    writer.writerow(["24DS001", "Aarya Shah", "aarya@example.edu", "student"])
+    writer.writerow([field, "name", "email", "role"])
+    sample_id = "EMP001" if field == "emp_id" else "24DS001"
+    writer.writerow([sample_id, "Aarya Shah", "aarya@example.edu", role])
     return response
 
 
