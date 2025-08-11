@@ -38,3 +38,5 @@ full_data.json
 # Data files
 *.json
 emt.txt
+
+media/
