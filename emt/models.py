@@ -166,6 +166,22 @@ class ExpenseDetail(models.Model):
         verbose_name = "Expense Detail"
         verbose_name_plural = "Expense Details"
 
+
+class IncomeDetail(models.Model):
+    """Stores a single line item of income for a proposal."""
+    proposal = models.ForeignKey(EventProposal, on_delete=models.CASCADE, related_name='income_details')
+    sl_no = models.PositiveIntegerField()
+    particulars = models.CharField(max_length=200)
+    participants = models.PositiveIntegerField()
+    rate = models.DecimalField(max_digits=10, decimal_places=2)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+
+    class Meta:
+        ordering = ['sl_no']
+        verbose_name = "Income Detail"
+        verbose_name_plural = "Income Details"
+
+
 # ────────────────────────────────────────────────────────────────
 #  Approval Steps
 # ────────────────────────────────────────────────────────────────
