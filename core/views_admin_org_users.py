@@ -9,7 +9,8 @@ from django.db import transaction
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
-from core.models import Organization, OrganizationMembership, Profile
+from core.models import Organization, OrganizationMembership, Profile, Class
+from emt.models import Student as EmtStudent
 from .forms import OrgUsersCSVUploadForm
 
 VALID_ROLES = {
@@ -58,8 +59,8 @@ def select_role(request, org_id):
 @user_passes_test(lambda u: u.is_superuser)
 def student_flow(request, org_id):
     org = get_object_or_404(Organization, pk=org_id)
-    # TODO: render tabs for Existing Class / Create New Class + CSV upload
-    return render(request, "core_admin_org_users/students.html", {"org": org})
+    classes = Class.objects.filter(organization=org).order_by("name")
+    return render(request, "core_admin_org_users/students.html", {"org": org, "classes": classes})
 
 
 @user_passes_test(lambda u: u.is_superuser)
@@ -87,7 +88,7 @@ def upload_csv(request, org_id):
 
     form = OrgUsersCSVUploadForm(request.POST, request.FILES)
     if not form.is_valid():
-        messages.error(request, "Please provide Academic Year and a CSV file.")
+        messages.error(request, "Please provide required fields and a CSV file.")
         if referer:
             return redirect(referer)
         return redirect(
@@ -96,6 +97,20 @@ def upload_csv(request, org_id):
         )
 
     ay = form.cleaned_data["academic_year"].strip()
+    class_name = (form.cleaned_data.get("class_name") or "").strip()
+    if not is_faculty and not class_name:
+        messages.error(request, "Please provide a class for the students.")
+        return redirect("admin_org_users_students", org_id=org.id)
+
+    cls = None
+    if not is_faculty:
+        cls, _ = Class.objects.get_or_create(
+            organization=org,
+            academic_year=ay,
+            code=class_name,
+            defaults={"name": class_name},
+        )
+
     f = request.FILES["csv_file"]
     if not f.name.lower().endswith(".csv"):
         messages.error(request, "Only .csv files are allowed.")
@@ -186,6 +201,10 @@ def upload_csv(request, org_id):
                     mem.save(update_fields=["role"])
                     memberships_updated += 1
 
+            if role == "student" and cls is not None:
+                student_obj, _ = EmtStudent.objects.get_or_create(user=user)
+                cls.students.add(student_obj)
+
     if errors:
         messages.warning(
             request,
@@ -200,6 +219,20 @@ def upload_csv(request, org_id):
     if is_faculty:
         return redirect("admin_org_users_faculty", org_id=org.id)
     return redirect("admin_org_users_students", org_id=org.id)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def class_detail(request, org_id, class_id):
+    org = get_object_or_404(Organization, pk=org_id)
+    cls = get_object_or_404(Class, pk=class_id, organization=org)
+    students = cls.students.select_related("user").order_by(
+        "user__first_name", "user__last_name"
+    )
+    return render(
+        request,
+        "core_admin_org_users/class_detail.html",
+        {"org": org, "cls": cls, "students": students},
+    )
 
 
 @user_passes_test(lambda u: u.is_superuser)
