@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.models import User
 from django.db import transaction
+from django.db.models import Count
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
@@ -59,8 +60,16 @@ def select_role(request, org_id):
 @user_passes_test(lambda u: u.is_superuser)
 def student_flow(request, org_id):
     org = get_object_or_404(Organization, pk=org_id)
-    classes = Class.objects.filter(organization=org).order_by("name")
-    return render(request, "core_admin_org_users/students.html", {"org": org, "classes": classes})
+    classes = (
+        Class.objects.filter(organization=org)
+        .annotate(student_count=Count("students"))
+        .order_by("name")
+    )
+    return render(
+        request,
+        "core_admin_org_users/students.html",
+        {"org": org, "classes": classes},
+    )
 
 
 @user_passes_test(lambda u: u.is_superuser)
@@ -233,6 +242,20 @@ def class_detail(request, org_id, class_id):
         "core_admin_org_users/class_detail.html",
         {"org": org, "cls": cls, "students": students},
     )
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def class_remove_student(request, org_id, class_id, student_id):
+    org = get_object_or_404(Organization, pk=org_id)
+    cls = get_object_or_404(Class, pk=class_id, organization=org)
+    student = get_object_or_404(EmtStudent, pk=student_id)
+    if request.method == "POST":
+        cls.students.remove(student)
+        messages.success(
+            request,
+            f"Removed {student.user.get_full_name() or student.user.username} from {cls.name}.",
+        )
+    return redirect("admin_org_users_class_detail", org_id=org.id, class_id=cls.id)
 
 
 @user_passes_test(lambda u: u.is_superuser)

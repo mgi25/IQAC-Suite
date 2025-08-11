@@ -8,12 +8,18 @@
     <h3 class="mb-3">Students</h3>
     {% if students %}
     <table class="table">
-      <thead><tr><th>Name</th><th>Email</th></tr></thead>
+      <thead><tr><th>Name</th><th>Email</th><th></th></tr></thead>
       <tbody>
         {% for student in students %}
         <tr>
           <td>{{ student.user.get_full_name|default:student.user.username }}</td>
           <td>{{ student.user.email }}</td>
+          <td>
+            <form method="post" action="{% url 'admin_org_users_class_remove_student' org.id cls.id student.id %}" style="display:inline;">
+              {% csrf_token %}
+              <button class="btn btn-sm btn-danger" type="submit">Remove</button>
+            </form>
+          </td>
         </tr>
         {% endfor %}
       </tbody>
