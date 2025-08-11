@@ -3,6 +3,8 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 import json
+from urllib.parse import urlparse
+import requests
 from django.db.models import Q
 from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
@@ -993,6 +995,26 @@ def api_faculty(request):
         [{"id": u.id, "text": f"{u.get_full_name() or u.username} ({u.email})"} for u in users],
         safe=False
     )
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def fetch_linkedin_profile(request):
+    """Fetch and parse a public LinkedIn profile."""
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except (TypeError, ValueError):
+        data = {}
+    url = data.get("url", "")
+    parsed = urlparse(url)
+    netloc = parsed.netloc.lower()
+    if ":" in netloc:
+        netloc = netloc.split(":", 1)[0]
+    if parsed.scheme not in ("http", "https") or not netloc.endswith("linkedin.com"):
+        return JsonResponse({"error": "Invalid LinkedIn URL"}, status=400)
+    response = requests.get(url)
+    profile = _parse_public_li(response.text)
+    return JsonResponse(profile)
 
 
 @login_required
