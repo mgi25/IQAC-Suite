@@ -68,15 +68,16 @@ def select_role(request, org_id):
 @user_passes_test(lambda u: u.is_superuser)
 def student_flow(request, org_id):
     org = get_object_or_404(Organization, pk=org_id)
+    show_archived = request.GET.get("archived") == "1"
     classes = (
-        Class.objects.filter(organization=org)
+        Class.objects.filter(organization=org, is_active=not show_archived)
         .annotate(student_count=Count("students"))
         .order_by("name")
     )
     return render(
         request,
         "core_admin_org_users/students.html",
-        {"org": org, "classes": classes},
+        {"org": org, "classes": classes, "show_archived": show_archived},
     )
 
 
@@ -291,7 +292,10 @@ def class_toggle_active(request, org_id, class_id):
     cls.save(update_fields=["is_active"])
     msg = f"Class '{cls.name}' {'activated' if cls.is_active else 'archived'}."
     messages.success(request, msg)
-    return redirect("admin_org_users_students", org_id=org.id)
+    url = reverse("admin_org_users_students", args=[org.id])
+    if request.GET.get("archived") == "1":
+        url += "?archived=1"
+    return redirect(url)
 
 
 @user_passes_test(lambda u: u.is_superuser)
