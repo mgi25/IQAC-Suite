@@ -35,9 +35,8 @@
     </div>
   </div>
 
-  {% if classes %}
   <div class="card p-4">
-    <h3 class="mb-3">Uploaded Classes</h3>
+    <h3 class="mb-3">{% if show_archived %}Archived Classes{% else %}Uploaded Classes{% endif %}</h3>
     <table class="table">
       <thead>
         <tr><th>Class</th><th>Academic Year</th><th>Students</th><th>Actions</th></tr>
@@ -45,12 +44,12 @@
       <tbody>
         {% for cls in classes %}
         <tr>
-          <td>{{ cls.name }}{% if not cls.is_active %} (Archived){% endif %}</td>
+          <td>{{ cls.name }}</td>
           <td>{{ cls.academic_year }}</td>
           <td>{{ cls.student_count }}</td>
           <td>
             <a href="{% url 'admin_org_users_class_detail' org.id cls.id %}">View</a>
-            <form method="post" action="{% url 'admin_org_users_class_toggle' org.id cls.id %}" style="display:inline;">
+            <form method="post" action="{% url 'admin_org_users_class_toggle' org.id cls.id %}{% if show_archived %}?archived=1{% endif %}" style="display:inline;">
               {% csrf_token %}
               <button class="btn btn-link p-0" type="submit">
                 {% if cls.is_active %}Archive{% else %}Activate{% endif %}
@@ -58,10 +57,20 @@
             </form>
           </td>
         </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" class="text-center text-muted">No {% if show_archived %}archived {% endif %}classes</td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>
+    <div class="d-flex justify-content-end">
+      {% if show_archived %}
+      <a href="{% url 'admin_org_users_students' org.id %}" class="btn btn-secondary btn-sm">Show Active Classes</a>
+      {% else %}
+      <a href="?archived=1" class="btn btn-secondary btn-sm">View Archived Classes</a>
+      {% endif %}
+    </div>
   </div>
-  {% endif %}
 </div>
 {% endblock %}
