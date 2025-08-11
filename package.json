@@ -1,0 +1,14 @@
+{
+  "name": "iqac-suite",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "percy:exec": "percy exec -- playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.39.0",
+    "@percy/cli": "^1.0.0",
+    "@percy/playwright": "^1.0.0"
+  }
+}

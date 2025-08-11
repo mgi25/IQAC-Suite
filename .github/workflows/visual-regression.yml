@@ -1,0 +1,19 @@
+name: Visual Regression
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  visual:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npx percy exec -- playwright test
+        env:
+          PERCY_TOKEN: ${{ secrets.PERCY_TOKEN }}
