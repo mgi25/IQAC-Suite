@@ -104,6 +104,12 @@ class CSVUploadForm(forms.Form):
 
 
 class OrgUsersCSVUploadForm(forms.Form):
+    class_name = forms.CharField(
+        max_length=100,
+        label="Class",
+        required=False,
+        widget=forms.TextInput(attrs={"placeholder": "e.g., BSc-A"}),
+    )
     academic_year = forms.CharField(
         max_length=9,
         label="Academic Year (e.g., 2025-2026)",

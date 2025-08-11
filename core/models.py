@@ -291,6 +291,14 @@ class UserEventApprovalVisibility(models.Model):
 class Class(models.Model):
     name = models.CharField(max_length=100)
     code = models.CharField(max_length=20)
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="classes",
+        null=True,
+        blank=True,
+    )
+    academic_year = models.CharField(max_length=9, null=True, blank=True)
     teacher = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='classes')
     students = models.ManyToManyField('emt.Student', blank=True, related_name='classes')
 
