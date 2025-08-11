@@ -31,6 +31,7 @@ urlpatterns = [
     path('core-admin/users/', views.admin_user_management, name='admin_user_management'),
     path('core-admin/users/<int:user_id>/edit/', views.admin_user_edit, name='admin_user_edit'),
     path('core-admin/users/<int:user_id>/deactivate/', views.admin_user_deactivate, name='admin_user_deactivate'),
+    path('core-admin/users/<int:user_id>/activate/', views.admin_user_activate, name='admin_user_activate'),
 
     # ────────────────────────────────────────────────
     # Admin - Role Management
@@ -131,6 +132,11 @@ urlpatterns = [
         "core-admin/org-users/<int:org_id>/class/<int:class_id>/remove/<int:student_id>/",
         orgu.class_remove_student,
         name="admin_org_users_class_remove_student",
+    ),
+    path(
+        "core-admin/org-users/<int:org_id>/class/<int:class_id>/toggle/",
+        orgu.class_toggle_active,
+        name="admin_org_users_class_toggle",
     ),
     path(
         "core-admin/org-users/<int:org_id>/csv-template/",

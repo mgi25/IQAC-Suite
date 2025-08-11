@@ -218,7 +218,7 @@ def dashboard(request):
         total=Sum('fest_fee_participants') + Sum('conf_fee_participants')
     )['total'] or 0
     my_students = Student.objects.filter(mentor=user)
-    my_classes = Class.objects.filter(teacher=user)
+    my_classes = Class.objects.filter(teacher=user, is_active=True)
     
     # Get user's recent proposals for notifications
     user_proposals = EventProposal.objects.filter(submitted_by=user).order_by('-updated_at')[:5]
@@ -805,6 +805,20 @@ def admin_user_edit(request, user_id):
             "next": next_url,
         },
     )
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def admin_user_activate(request, user_id):
+    """Activate a user and redirect back safely."""
+    user = get_object_or_404(User, id=user_id)
+    user.is_active = True
+    user.save()
+    messages.success(
+        request,
+        f"User '{user.get_full_name() or user.username}' activated successfully.",
+    )
+    return redirect(safe_next(request, fallback="admin_user_management"))
 
 
 @login_required
