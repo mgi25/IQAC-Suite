@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h1>Classes: {{ organization.name }}{% if academic_year %} — {{ academic_year }}{% endif %}</h1>
+</div>
+
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Class</th>
+      <th>Students</th>
+      <th style="width:120px;">Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in classes %}
+      <tr>
+        <td>{{ row.class_name|default:"(Unassigned)" }}</td>
+        <td>{{ row.student_count }}</td>
+        <td>
+          <a class="btn btn-primary btn-sm"
+             href="{% url 'class_roster_detail' organization.id row.class_name %}?year={{ academic_year }}">
+            View
+          </a>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="3" class="text-center">No classes found.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

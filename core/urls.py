@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from core import views as core_views
 from core.views import custom_logout
 from . import views_admin_org_users as orgu
 
@@ -29,6 +30,8 @@ urlpatterns = [
     path('core-admin/user-management/', views.admin_user_panel, name='admin_user_panel'),
     path('core-admin/users/', views.admin_user_management, name='admin_user_management'),
     path('core-admin/users/<int:user_id>/edit/', views.admin_user_edit, name='admin_user_edit'),
+    path('core-admin/users/<int:user_id>/deactivate/', views.admin_user_deactivate, name='admin_user_deactivate'),
+    path('core-admin/users/<int:user_id>/activate/', views.admin_user_activate, name='admin_user_activate'),
 
     # ────────────────────────────────────────────────
     # Admin - Role Management
@@ -121,6 +124,21 @@ urlpatterns = [
         name="admin_org_users_upload_csv",
     ),
     path(
+        "core-admin/org-users/<int:org_id>/class/<int:class_id>/",
+        orgu.class_detail,
+        name="admin_org_users_class_detail",
+    ),
+    path(
+        "core-admin/org-users/<int:org_id>/class/<int:class_id>/remove/<int:student_id>/",
+        orgu.class_remove_student,
+        name="admin_org_users_class_remove_student",
+    ),
+    path(
+        "core-admin/org-users/<int:org_id>/class/<int:class_id>/toggle/",
+        orgu.class_toggle_active,
+        name="admin_org_users_class_toggle",
+    ),
+    path(
         "core-admin/org-users/<int:org_id>/csv-template/",
         orgu.csv_template,
         name="admin_org_users_csv_template",
@@ -134,6 +152,16 @@ urlpatterns = [
         "core-admin/org-users/fetch/by-type/<int:type_id>/",
         orgu.fetch_by_type,
         name="admin_org_fetch_by_type",
+    ),
+    path(
+        "core-admin/org-users/<int:org_id>/classes/",
+        core_views.class_rosters,
+        name="class_rosters",
+    ),
+    path(
+        "core-admin/org-users/<int:org_id>/classes/<str:class_name>/",
+        core_views.class_roster_detail,
+        name="class_roster_detail",
     ),
 
     # ────────────────────────────────────────────────

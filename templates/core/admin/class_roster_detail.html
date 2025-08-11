@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1>{{ class_name }} — {{ organization.name }}{% if academic_year %} ({{ academic_year }}){% endif %}</h1>
+  <form method="get" class="d-flex" style="gap:.5rem;">
+    {% if academic_year %}<input type="hidden" name="year" value="{{ academic_year }}">{% endif %}
+    <input name="q" value="{{ q }}" class="form-control" placeholder="Search name/email/username">
+    <button class="btn btn-secondary">Search</button>
+  </form>
+</div>
+
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Name</th>
+      <th>Email</th>
+      <th>Username</th>
+      <th>Role</th>
+      <th style="width:140px;">Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for ra in page_obj.object_list %}
+      <tr>
+        <td>{{ forloop.counter0|add:page_obj.start_index }}</td>
+        <td>{{ ra.user.get_full_name|default:ra.user.username }}</td>
+        <td>{{ ra.user.email }}</td>
+        <td>{{ ra.user.username }}</td>
+        <td>{{ ra.role.name }}</td>
+        <td>
+          <a class="btn btn-sm btn-outline-primary"
+             href="{% url 'admin_user_edit' ra.user.id %}?next={{ request.get_full_path|urlencode }}">Edit</a>
+          <a class="btn btn-sm btn-outline-danger"
+             href="{% url 'admin_user_deactivate' ra.user.id %}?next={{ request.get_full_path|urlencode }}">Deactivate</a>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" class="text-center">No users in this class.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<nav aria-label="Pagination">
+  <ul class="pagination">
+    {% if page_obj.has_previous %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&year={{ academic_year }}&q={{ q }}">Prev</a></li>
+    {% endif %}
+    <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+    {% if page_obj.has_next %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&year={{ academic_year }}&q={{ q }}">Next</a></li>
+    {% endif %}
+  </ul>
+</nav>
+
+<a class="btn btn-light" href="{% url 'class_rosters' organization.id %}?year={{ academic_year }}">← Back to Classes</a>
+{% endblock %}

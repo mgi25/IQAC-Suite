@@ -38,3 +38,11 @@ full_data.json
 # Data files
 *.json
 emt.txt
+# Allow Node package manifests
+!package.json
+!package-lock.json
+
+media/
+
+# Visual test snapshots
+visual-tests/**-snapshots

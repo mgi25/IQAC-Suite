@@ -15,6 +15,7 @@ from core.models import (
     ApprovalFlowTemplate, ApprovalFlowConfig,
 )
 import json
+from unittest.mock import patch
 
 class FacultyAPITests(TestCase):
     def setUp(self):
@@ -544,3 +545,32 @@ class ForwardingFlowTests(TestCase):
             .visible_for_ui()
         )
         self.assertEqual(list(qs2), [base, opt])
+
+
+class LinkedInProfileFetchTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_superuser("u1", "u1@example.com", "pw")
+        self.client.force_login(self.user)
+
+    @patch("emt.views._parse_public_li", return_value={"name": "Test"}, create=True)
+    @patch("emt.views.requests.get")
+    def test_valid_linkedin_url_proceeds(self, mock_get, mock_parse):
+        mock_get.return_value.text = "<html></html>"
+        resp = self.client.post(
+            reverse("emt:fetch_linkedin_profile"),
+            data=json.dumps({"url": "https://www.linkedin.com/in/test"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        mock_get.assert_called_once()
+        mock_parse.assert_called_once_with(mock_get.return_value.text)
+
+    @patch("emt.views.requests.get")
+    def test_non_linkedin_url_rejected(self, mock_get):
+        resp = self.client.post(
+            reverse("emt:fetch_linkedin_profile"),
+            data=json.dumps({"url": "https://example.com"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+        mock_get.assert_not_called()

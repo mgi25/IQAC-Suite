@@ -55,10 +55,18 @@ class OrganizationRole(models.Model):
 class RoleAssignment(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='role_assignments')
     role = models.ForeignKey('OrganizationRole', on_delete=models.CASCADE, null=True)
-    organization = models.ForeignKey(Organization, null=True, blank=True, on_delete=models.SET_NULL,related_name='role_assignments')
+    organization = models.ForeignKey(Organization, null=True, blank=True, on_delete=models.SET_NULL, related_name='role_assignments')
+    academic_year = models.CharField(max_length=9, null=True, blank=True, db_index=True)
+    class_name = models.CharField(max_length=64, null=True, blank=True, db_index=True)
 
     class Meta:
         unique_together = ("user", "role", "organization")
+        indexes = [
+            models.Index(
+                fields=["organization", "academic_year", "class_name"],
+                name="core_ra_org_year_class_idx",
+            )
+        ]
 
     def __str__(self):
         parts = [self.role.name]  # Use the OrganizationRole name
@@ -291,8 +299,17 @@ class UserEventApprovalVisibility(models.Model):
 class Class(models.Model):
     name = models.CharField(max_length=100)
     code = models.CharField(max_length=20)
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="classes",
+        null=True,
+        blank=True,
+    )
+    academic_year = models.CharField(max_length=9, null=True, blank=True)
     teacher = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='classes')
     students = models.ManyToManyField('emt.Student', blank=True, related_name='classes')
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.code} - {self.name}"
