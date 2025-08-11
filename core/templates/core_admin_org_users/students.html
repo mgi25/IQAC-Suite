@@ -40,13 +40,14 @@
     <h3 class="mb-3">Uploaded Classes</h3>
     <table class="table">
       <thead>
-        <tr><th>Class</th><th>Academic Year</th><th></th></tr>
+        <tr><th>Class</th><th>Academic Year</th><th>Students</th><th></th></tr>
       </thead>
       <tbody>
         {% for cls in classes %}
         <tr>
           <td>{{ cls.name }}</td>
           <td>{{ cls.academic_year }}</td>
+          <td>{{ cls.student_count }}</td>
           <td><a href="{% url 'admin_org_users_class_detail' org.id cls.id %}">View</a></td>
         </tr>
         {% endfor %}
