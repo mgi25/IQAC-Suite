@@ -17,6 +17,7 @@
 
   <form id="user-edit-form" method="post" autocomplete="off">
     {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
 
     <!-- Basic info -->
     <div class="form-group">
@@ -83,7 +84,7 @@
 
     <div class="form-btn-group">
       <button type="submit" class="btn-submit">Save</button>
-      <a href="{% url 'admin_user_management' %}" class="btn-cancel">Cancel</a>
+      <a href="{{ next }}" class="btn-cancel">Cancel</a>
     </div>
   </form>
 </div>

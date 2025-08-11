@@ -1,13 +1,14 @@
 import os
 import shutil
 from datetime import timedelta, datetime
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404, resolve_url
 from django.contrib.auth import logout
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpResponseForbidden, JsonResponse, HttpResponseRedirect
 from django.contrib.auth.models import User
 from django.contrib import messages
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.db.models import Q, Sum, Count
 from django.forms import inlineformset_factory
 from django import forms
@@ -50,6 +51,17 @@ def _superuser_check(user):
     if not user.is_superuser:
         raise PermissionDenied("You are not authorized to access this page.")
     return True
+
+
+def safe_next(request, fallback="/"):
+    nxt = (
+        request.POST.get("next")
+        or request.GET.get("next")
+        or request.META.get("HTTP_REFERER")
+    )
+    if nxt and url_has_allowed_host_and_scheme(nxt, allowed_hosts={request.get_host()}):
+        return nxt
+    return resolve_url(fallback)
 
 
 # Reuse the ModelForm defined in core.forms so it can be imported from here for tests
@@ -749,17 +761,18 @@ def admin_user_edit(request, user_id):
         extra=0,
         can_delete=True,
     )
+    next_url = safe_next(request, fallback="admin_user_management")
     if request.method == "POST":
         formset = RoleFormSet(request.POST, instance=user)
         user.first_name = request.POST.get("first_name", "").strip()
-        user.last_name  = request.POST.get("last_name", "").strip()
-        user.email      = request.POST.get("email", "").strip()
+        user.last_name = request.POST.get("last_name", "").strip()
+        user.email = request.POST.get("email", "").strip()
         user.save()
 
         if formset.is_valid():
             formset.save()
             messages.success(request, "User roles updated successfully.")
-            return redirect("admin_user_management")
+            return redirect(next_url)
         else:
             messages.error(request, "Please fix the errors below and try again.")
     else:
@@ -789,6 +802,7 @@ def admin_user_edit(request, user_id):
             "organization_types": OrganizationType.objects.filter(),
             "organizations_json": json.dumps(organizations_json),
             "roles_json": json.dumps(roles_json),
+            "next": next_url,
         },
     )
 
@@ -796,7 +810,7 @@ def admin_user_edit(request, user_id):
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def admin_user_deactivate(request, user_id):
-    """Deactivate a user and redirect back to the referring page."""
+    """Deactivate a user and redirect back safely."""
     user = get_object_or_404(User, id=user_id)
     user.is_active = False
     user.save()
@@ -804,9 +818,7 @@ def admin_user_deactivate(request, user_id):
         request,
         f"User '{user.get_full_name() or user.username}' deactivated successfully.",
     )
-    return redirect(
-        request.META.get("HTTP_REFERER") or reverse("admin_user_management")
-    )
+    return redirect(safe_next(request, fallback="admin_user_management"))
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_event_proposals(request):
