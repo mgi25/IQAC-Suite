@@ -29,8 +29,10 @@
         <td>{{ ra.user.username }}</td>
         <td>{{ ra.role.name }}</td>
         <td>
-          <a class="btn btn-sm btn-outline-primary" href="{% url 'admin_user_edit' ra.user.id %}">Edit</a>
-          <a class="btn btn-sm btn-outline-danger" href="{% url 'admin_user_deactivate' ra.user.id %}">Deactivate</a>
+          <a class="btn btn-sm btn-outline-primary"
+             href="{% url 'admin_user_edit' ra.user.id %}?next={{ request.get_full_path|urlencode }}">Edit</a>
+          <a class="btn btn-sm btn-outline-danger"
+             href="{% url 'admin_user_deactivate' ra.user.id %}?next={{ request.get_full_path|urlencode }}">Deactivate</a>
         </td>
       </tr>
     {% empty %}
