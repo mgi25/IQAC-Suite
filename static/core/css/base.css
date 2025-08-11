@@ -43,10 +43,11 @@
 body.command-center-layout {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: var(--gray-50);
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
   display: grid;
-  grid-template-areas: 
+  grid-template-areas:
     "topbar topbar"
     "sidebar main";
   grid-template-columns: var(--sidebar-width) 1fr;
