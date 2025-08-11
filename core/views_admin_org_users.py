@@ -284,6 +284,17 @@ def class_remove_student(request, org_id, class_id, student_id):
 
 
 @user_passes_test(lambda u: u.is_superuser)
+def class_toggle_active(request, org_id, class_id):
+    org = get_object_or_404(Organization, pk=org_id)
+    cls = get_object_or_404(Class, pk=class_id, organization=org)
+    cls.is_active = not cls.is_active
+    cls.save(update_fields=["is_active"])
+    msg = f"Class '{cls.name}' {'activated' if cls.is_active else 'archived'}."
+    messages.success(request, msg)
+    return redirect("admin_org_users_students", org_id=org.id)
+
+
+@user_passes_test(lambda u: u.is_superuser)
 def csv_template(request, org_id):
     org = get_object_or_404(Organization, pk=org_id)
     role = request.GET.get("role", "student")

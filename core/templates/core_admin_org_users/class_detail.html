@@ -4,17 +4,37 @@
 <div class="admin-dashboard-container" style="padding-top:1.5rem; max-width:920px;">
   <h1 class="admin-dashboard-title">{{ cls.name }}: {{ org.name }}</h1>
   <p class="text-muted">Academic Year: {{ cls.academic_year }}</p>
+  <form method="post" action="{% url 'admin_org_users_class_toggle' org.id cls.id %}" class="mb-3">
+    {% csrf_token %}
+    <button class="btn btn-sm {% if cls.is_active %}btn-warning{% else %}btn-success{% endif %}" type="submit">
+      {% if cls.is_active %}Archive Class{% else %}Activate Class{% endif %}
+    </button>
+  </form>
   <div class="card p-4">
     <h3 class="mb-3">Students</h3>
     {% if students %}
     <table class="table">
-      <thead><tr><th>Name</th><th>Email</th><th></th></tr></thead>
+      <thead><tr><th>Name</th><th>Email</th><th>Actions</th></tr></thead>
       <tbody>
         {% for student in students %}
         <tr>
           <td>{{ student.user.get_full_name|default:student.user.username }}</td>
           <td>{{ student.user.email }}</td>
           <td>
+            {% if student.user.is_active %}
+            <form method="post" action="{% url 'admin_user_deactivate' student.user.id %}" style="display:inline;">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{% url 'admin_org_users_class_detail' org.id cls.id %}">
+              <button class="btn btn-sm btn-warning" type="submit">Deactivate</button>
+            </form>
+            {% else %}
+            <form method="post" action="{% url 'admin_user_activate' student.user.id %}" style="display:inline;">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{% url 'admin_org_users_class_detail' org.id cls.id %}">
+              <button class="btn btn-sm btn-success" type="submit">Activate</button>
+            </form>
+            {% endif %}
+            <a class="btn btn-sm btn-secondary" href="{% url 'admin_user_edit' student.user.id %}?next={% url 'admin_org_users_class_detail' org.id cls.id %}">Edit</a>
             <form method="post" action="{% url 'admin_org_users_class_remove_student' org.id cls.id student.id %}" style="display:inline;">
               {% csrf_token %}
               <button class="btn btn-sm btn-danger" type="submit">Remove</button>

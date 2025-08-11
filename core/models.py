@@ -309,6 +309,7 @@ class Class(models.Model):
     academic_year = models.CharField(max_length=9, null=True, blank=True)
     teacher = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='classes')
     students = models.ManyToManyField('emt.Student', blank=True, related_name='classes')
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.code} - {self.name}"
