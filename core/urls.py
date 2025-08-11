@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from core import views as core_views
 from core.views import custom_logout
 from . import views_admin_org_users as orgu
 
@@ -144,6 +145,16 @@ urlpatterns = [
         "core-admin/org-users/fetch/by-type/<int:type_id>/",
         orgu.fetch_by_type,
         name="admin_org_fetch_by_type",
+    ),
+    path(
+        "core-admin/org-users/<int:org_id>/classes/",
+        core_views.class_rosters,
+        name="class_rosters",
+    ),
+    path(
+        "core-admin/org-users/<int:org_id>/classes/<str:class_name>/",
+        core_views.class_roster_detail,
+        name="class_roster_detail",
     ),
 
     # ────────────────────────────────────────────────
