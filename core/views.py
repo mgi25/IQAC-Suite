@@ -792,6 +792,22 @@ def admin_user_edit(request, user_id):
         },
     )
 
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def admin_user_deactivate(request, user_id):
+    """Deactivate a user and redirect back to the referring page."""
+    user = get_object_or_404(User, id=user_id)
+    user.is_active = False
+    user.save()
+    messages.success(
+        request,
+        f"User '{user.get_full_name() or user.username}' deactivated successfully.",
+    )
+    return redirect(
+        request.META.get("HTTP_REFERER") or reverse("admin_user_management")
+    )
+
 @user_passes_test(lambda u: u.is_superuser)
 def admin_event_proposals(request):
     proposals = EventProposal.objects.all().order_by("-created_at")

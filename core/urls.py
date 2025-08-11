@@ -30,6 +30,7 @@ urlpatterns = [
     path('core-admin/user-management/', views.admin_user_panel, name='admin_user_panel'),
     path('core-admin/users/', views.admin_user_management, name='admin_user_management'),
     path('core-admin/users/<int:user_id>/edit/', views.admin_user_edit, name='admin_user_edit'),
+    path('core-admin/users/<int:user_id>/deactivate/', views.admin_user_deactivate, name='admin_user_deactivate'),
 
     # ────────────────────────────────────────────────
     # Admin - Role Management
