@@ -10,9 +10,17 @@ from django.db.models import Count
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
-from core.models import Organization, OrganizationMembership, Profile, Class
+from core.models import (
+    Organization,
+    OrganizationMembership,
+    Profile,
+    Class,
+    OrganizationRole,
+    RoleAssignment,
+)
 from emt.models import Student as EmtStudent
 from .forms import OrgUsersCSVUploadForm
+from django.urls import reverse
 
 VALID_ROLES = {
     "student": "student",
@@ -210,6 +218,16 @@ def upload_csv(request, org_id):
                     mem.save(update_fields=["role"])
                     memberships_updated += 1
 
+            org_role, _ = OrganizationRole.objects.get_or_create(
+                organization=org, name=role
+            )
+            RoleAssignment.objects.update_or_create(
+                user=user,
+                organization=org,
+                role=org_role,
+                defaults={"academic_year": ay, "class_name": class_name if role == "student" else None},
+            )
+
             if role == "student" and cls is not None:
                 student_obj, _ = EmtStudent.objects.get_or_create(user=user)
                 cls.students.add(student_obj)
@@ -219,15 +237,22 @@ def upload_csv(request, org_id):
             request,
             "Some rows were skipped:\n" + "\n".join(errors[:8]) + ("" if len(errors) <= 8 else f"\n(+{len(errors) - 8} more)"),
         )
+    if is_faculty:
+        messages.success(
+            request,
+            f"CSV processed for {org.name} ({ay}). Users created: {users_created}, Users updated: {users_updated}, "
+            f"Memberships created: {memberships_created}, Memberships updated: {memberships_updated}, Skipped: {skipped}.",
+        )
+        return redirect("admin_org_users_faculty", org_id=org.id)
+
+    total_students = memberships_created + memberships_updated
     messages.success(
         request,
-        f"CSV processed for {org.name} ({ay}). Users created: {users_created}, Users updated: {users_updated}, "
-        f"Memberships created: {memberships_created}, Memberships updated: {memberships_updated}, Skipped: {skipped}.",
+        f"Uploaded {total_students} students into {class_name} ({ay}).",
     )
-
-    if is_faculty:
-        return redirect("admin_org_users_faculty", org_id=org.id)
-    return redirect("admin_org_users_students", org_id=org.id)
+    return redirect(
+        f"{reverse('class_roster_detail', args=[org.id, class_name])}?year={ay}"
+    )
 
 
 @user_passes_test(lambda u: u.is_superuser)

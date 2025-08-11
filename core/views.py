@@ -3399,3 +3399,71 @@ def student_event_details(request, proposal_id):
     }
     
     return render(request, 'core/student_event_details.html', context)
+
+
+def is_superuser(u):
+    return u.is_superuser
+
+
+@login_required
+@user_passes_test(is_superuser)
+def class_rosters(request, org_id):
+    org = get_object_or_404(Organization, pk=org_id)
+    year = request.GET.get("year") or request.session.get("active_year")
+
+    qs = RoleAssignment.objects.filter(
+        organization=org,
+        role__name__iexact="student",
+    )
+    if year:
+        qs = qs.filter(academic_year=year)
+
+    classes = (
+        qs.values("class_name")
+        .annotate(student_count=Count("id"))
+        .order_by("class_name")
+    )
+
+    context = {
+        "organization": org,
+        "academic_year": year,
+        "classes": classes,
+    }
+    return render(request, "core/admin/class_rosters.html", context)
+
+
+@login_required
+@user_passes_test(is_superuser)
+def class_roster_detail(request, org_id, class_name):
+    org = get_object_or_404(Organization, pk=org_id)
+    year = request.GET.get("year") or request.session.get("active_year")
+    q = request.GET.get("q", "").strip()
+
+    ras = RoleAssignment.objects.select_related("user", "role").filter(
+        organization=org,
+        role__name__iexact="student",
+        class_name=class_name,
+    )
+    if year:
+        ras = ras.filter(academic_year=year)
+
+    if q:
+        ras = ras.filter(
+            Q(user__first_name__icontains=q)
+            | Q(user__last_name__icontains=q)
+            | Q(user__email__icontains=q)
+            | Q(user__username__icontains=q)
+        )
+
+    ras = ras.order_by("user__first_name", "user__last_name")
+    paginator = Paginator(ras, 25)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    context = {
+        "organization": org,
+        "academic_year": year,
+        "class_name": class_name,
+        "page_obj": page_obj,
+        "q": q,
+    }
+    return render(request, "core/admin/class_roster_detail.html", context)

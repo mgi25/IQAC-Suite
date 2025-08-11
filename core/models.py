@@ -55,10 +55,18 @@ class OrganizationRole(models.Model):
 class RoleAssignment(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='role_assignments')
     role = models.ForeignKey('OrganizationRole', on_delete=models.CASCADE, null=True)
-    organization = models.ForeignKey(Organization, null=True, blank=True, on_delete=models.SET_NULL,related_name='role_assignments')
+    organization = models.ForeignKey(Organization, null=True, blank=True, on_delete=models.SET_NULL, related_name='role_assignments')
+    academic_year = models.CharField(max_length=9, null=True, blank=True, db_index=True)
+    class_name = models.CharField(max_length=64, null=True, blank=True, db_index=True)
 
     class Meta:
         unique_together = ("user", "role", "organization")
+        indexes = [
+            models.Index(
+                fields=["organization", "academic_year", "class_name"],
+                name="core_ra_org_year_class_idx",
+            )
+        ]
 
     def __str__(self):
         parts = [self.role.name]  # Use the OrganizationRole name
