@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -53,15 +53,20 @@ class BulkUserUploadTests(TestCase):
         self.assertFalse(User.objects.filter(username='jane@example.com').exists())
 
         # simulate first login
-        self.client.logout()
-        session = self.client.session
+        user.set_password('pass')
+        user.save(update_fields=['password'])
+
+        user_client = Client()
+        session = user_client.session
         session['org_id'] = self.org.id
         session.save()
-        self.client.force_login(user)
+
+        self.assertTrue(user_client.login(username='john@example.com', password='pass'))
         user.refresh_from_db()
         self.assertTrue(user.is_active)
         self.assertEqual(user.profile.role, 'student')
-        self.assertEqual(self.client.session['role'], 'student')
+        # Check the role in the logged-in user's session (not the admin client)
+        self.assertEqual(user_client.session['role'], 'student')
 
 
 class BulkFacultyUploadTests(TestCase):
