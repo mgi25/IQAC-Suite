@@ -26,31 +26,42 @@ class OrganizationModelTests(TestCase):
 
 
 class UserRoleAssignmentTests(TestCase):
-    def test_student_role_assigned_by_email(self):
-        user = User.objects.create_user(
-            username="stud", email="stud1@dept.christuniversity.in", password="pass"
-        )
-        self.client.login(username="stud", password="pass")
+    def setUp(self):
+        ot = OrganizationType.objects.create(name="Dept")
+        self.org = Organization.objects.create(name="Math", org_type=ot)
+        self.student_role = OrganizationRole.objects.create(organization=self.org, name="student")
+        self.faculty_role = OrganizationRole.objects.create(organization=self.org, name="faculty")
+
+    def _login(self, username, password):
+        session = self.client.session
+        session['org_id'] = self.org.id
+        session.save()
+        self.client.login(username=username, password=password)
+
+    def test_student_role_assigned_on_login(self):
+        user = User.objects.create_user("stud", email="stud@example.com", password="pass")
+        RoleAssignment.objects.create(user=user, organization=self.org, role=self.student_role)
+        self._login("stud", "pass")
         user.refresh_from_db()
         self.assertEqual(user.profile.role, "student")
 
-    def test_faculty_role_assigned_by_email(self):
-        user = User.objects.create_user(
-            username="fac", email="fac1@faculty.example.com", password="pass"
-        )
-        self.client.login(username="fac", password="pass")
+    def test_faculty_role_assigned_on_login(self):
+        user = User.objects.create_user("fac", email="fac@example.com", password="pass")
+        RoleAssignment.objects.create(user=user, organization=self.org, role=self.faculty_role)
+        self._login("fac", "pass")
         user.refresh_from_db()
         self.assertEqual(user.profile.role, "faculty")
 
     def test_api_auth_me_returns_profile_role(self):
         user = User.objects.create_user(
             username="stud2",
-            email="stud2@dept.christuniversity.in",
+            email="stud2@example.com",
             password="pass",
             first_name="Stu",
             last_name="Dent",
         )
-        self.client.login(username="stud2", password="pass")
+        RoleAssignment.objects.create(user=user, organization=self.org, role=self.student_role)
+        self._login("stud2", "pass")
         resp = self.client.get("/core-admin/api/auth/me")
         self.assertEqual(resp.status_code, 200)
         data = resp.json()

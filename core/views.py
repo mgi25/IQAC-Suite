@@ -1904,7 +1904,11 @@ from django.contrib.auth.models import User
 from django.db.models import Q, Count
 from django.utils import timezone
 from io import StringIO, BytesIO
-import xlsxwriter
+# xlsxwriter is optional; used only for Excel export
+try:
+    import xlsxwriter
+except ImportError:  # pragma: no cover - optional dependency
+    xlsxwriter = None
 
 from itertools import chain
 from operator import attrgetter
@@ -3158,6 +3162,8 @@ def export_data_csv(request):
 @user_passes_test(is_admin)
 def export_data_excel(request):
     """Export filtered data as Excel"""
+    if xlsxwriter is None:
+        return JsonResponse({'error': 'XLSX export not available'}, status=501)
     if request.method != 'POST':
         return JsonResponse({'error': 'POST method required'}, status=405)
     
