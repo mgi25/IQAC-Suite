@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializePage();
     setupEventListeners();
     loadOrganizations();
+    loadAllAssignments();
 });
 
 let currentOrganizations = [];
@@ -40,6 +41,9 @@ function setupEventListeners() {
 
     // Modal close functionality
     setupModalEvents();
+    
+    // Assignment functionality
+    setupAssignmentListeners();
 }
 
 function setupEditButtonListeners() {
@@ -967,4 +971,376 @@ function getCsrfToken() {
         }
     }
     return '';
+}
+
+// ==========================================
+// USER ASSIGNMENT FUNCTIONALITY
+// ==========================================
+
+let currentAssignmentOrgId = null;
+let currentAssignmentOrgName = null;
+let currentAssignmentOrgType = null;
+
+// Add assignment button listeners in setupEventListeners
+function setupAssignmentListeners() {
+    // Assignment buttons from template (static HTML)
+    const assignBtns = document.querySelectorAll('.assign-user-btn');
+    console.log('Found assignment buttons:', assignBtns.length);
+    assignBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const orgId = this.dataset.orgId;
+            const orgName = this.dataset.orgName;
+            const orgType = this.dataset.orgType;
+            openAssignmentModal(orgId, orgName, orgType);
+        });
+    });
+}
+
+function openAssignmentModal(orgId, orgName, orgType) {
+    console.log('Opening assignment modal for org:', orgId, orgName, orgType);
+    
+    currentAssignmentOrgId = orgId;
+    currentAssignmentOrgName = orgName;
+    currentAssignmentOrgType = orgType;
+    
+    const modal = document.getElementById('assignUserModal');
+    const modalOrgName = document.getElementById('assign-org-name');
+    
+    if (modalOrgName) {
+        modalOrgName.textContent = orgName;
+    }
+    
+    // Reset form
+    document.getElementById('userSearch').value = '';
+    document.getElementById('selectedUserId').value = '';
+    hideUserDropdown();
+    
+    // Load current assignment
+    loadCurrentAssignment(orgId);
+    
+    // Setup user search
+    setupUserSearch(orgId, orgType);
+    
+    // Show modal
+    openModal('assignUserModal');
+}
+
+function loadCurrentAssignment(orgId) {
+    fetch(`/core/api/popso-assignments/${orgId}/`)
+        .then(response => response.json())
+        .then(data => {
+            const currentAssignmentDiv = document.getElementById('currentAssignment');
+            const currentAssignedUserSpan = document.getElementById('currentAssignedUser');
+            
+            if (data.assigned_user) {
+                currentAssignmentDiv.style.display = 'block';
+                currentAssignedUserSpan.textContent = `${data.assigned_user.full_name} (${data.assigned_user.email})`;
+                
+                // Update button text
+                const submitBtn = document.querySelector('#assignUserForm .btn-save');
+                submitBtn.textContent = 'Update Assignment';
+            } else {
+                currentAssignmentDiv.style.display = 'none';
+                
+                // Update button text
+                const submitBtn = document.querySelector('#assignUserForm .btn-save');
+                submitBtn.textContent = 'Assign User';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading current assignment:', error);
+        });
+}
+
+function setupUserSearch(orgId, orgType) {
+    const userSearchInput = document.getElementById('userSearch');
+    const userDropdown = document.getElementById('userDropdown');
+    const selectedUserIdInput = document.getElementById('selectedUserId');
+    const roleFilterSelect = document.getElementById('roleFilter');
+    
+    let searchTimeout = null;
+    
+    // Handle search input
+    userSearchInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        
+        // Clear previous timeout
+        if (searchTimeout) {
+            clearTimeout(searchTimeout);
+        }
+        
+        if (query.length < 2) {
+            hideUserDropdown();
+            return;
+        }
+        
+        // Debounce search
+        searchTimeout = setTimeout(() => {
+            searchFacultyUsers(orgId, query);
+        }, 300);
+    });
+    
+    // Handle role filter change
+    roleFilterSelect.addEventListener('change', function() {
+        const query = userSearchInput.value.trim();
+        if (query.length >= 2) {
+            searchFacultyUsers(orgId, query);
+        } else {
+            // If no search query, show users for selected role
+            loadUsersByRole(orgId);
+        }
+    });
+    
+    // Hide dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!userSearchInput.contains(e.target) && 
+            !userDropdown.contains(e.target) && 
+            !roleFilterSelect.contains(e.target)) {
+            hideUserDropdown();
+        }
+    });
+}
+
+function loadUsersByRole(orgId) {
+    const roleFilter = document.getElementById('roleFilter').value;
+    const userDropdown = document.getElementById('userDropdown');
+    
+    // Show loading
+    userDropdown.innerHTML = '<div class="loading">Loading users...</div>';
+    showUserDropdown();
+    
+    let url = `/core/api/faculty-users/${orgId}/`;
+    if (roleFilter) {
+        url += `?role=${encodeURIComponent(roleFilter)}`;
+    }
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(users => {
+            displayUserOptions(users);
+        })
+        .catch(error => {
+            console.error('Error loading users:', error);
+            userDropdown.innerHTML = '<div class="no-users">Error loading users</div>';
+        });
+}
+
+function searchFacultyUsers(orgId, query) {
+    const userDropdown = document.getElementById('userDropdown');
+    const roleFilter = document.getElementById('roleFilter').value;
+    
+    // Show loading
+    userDropdown.innerHTML = '<div class="loading">Searching users...</div>';
+    showUserDropdown();
+    
+    let url = `/core/api/faculty-users/${orgId}/?search=${encodeURIComponent(query)}`;
+    if (roleFilter) {
+        url += `&role=${encodeURIComponent(roleFilter)}`;
+    }
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(users => {
+            displayUserOptions(users);
+        })
+        .catch(error => {
+            console.error('Error searching users:', error);
+            userDropdown.innerHTML = '<div class="no-users">Error loading users</div>';
+        });
+}
+
+function displayUserOptions(users) {
+    const userDropdown = document.getElementById('userDropdown');
+    
+    if (users.length === 0) {
+        userDropdown.innerHTML = '<div class="no-users">No faculty users found</div>';
+        return;
+    }
+    
+    userDropdown.innerHTML = '';
+    
+    users.forEach(user => {
+        const option = document.createElement('div');
+        option.className = 'user-option';
+        option.dataset.userId = user.id;
+        
+        option.innerHTML = `
+            <div class="user-info">
+                <div class="user-name">${user.full_name}</div>
+                <div class="user-details">${user.email} • ${user.roles.join(', ')}</div>
+            </div>
+        `;
+        
+        option.addEventListener('click', function() {
+            selectUser(user);
+        });
+        
+        userDropdown.appendChild(option);
+    });
+}
+
+function selectUser(user) {
+    const userSearchInput = document.getElementById('userSearch');
+    const selectedUserIdInput = document.getElementById('selectedUserId');
+    
+    userSearchInput.value = user.full_name;
+    selectedUserIdInput.value = user.id;
+    
+    hideUserDropdown();
+}
+
+function showUserDropdown() {
+    const userDropdown = document.getElementById('userDropdown');
+    userDropdown.classList.add('show');
+}
+
+function hideUserDropdown() {
+    const userDropdown = document.getElementById('userDropdown');
+    userDropdown.classList.remove('show');
+}
+
+// Handle assignment form submission
+function setupAssignmentFormListeners() {
+    const assignForm = document.getElementById('assignUserForm');
+    const removeAssignmentBtn = document.getElementById('removeAssignmentBtn');
+    
+    assignForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        submitAssignment();
+    });
+    
+    removeAssignmentBtn.addEventListener('click', function() {
+        removeAssignment();
+    });
+}
+
+function submitAssignment() {
+    const selectedUserId = document.getElementById('selectedUserId').value;
+    
+    if (!selectedUserId) {
+        showNotification('Please select a user to assign', 'error');
+        return;
+    }
+    
+    fetch('/core/api/popso-assignments/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+            organization_id: currentAssignmentOrgId,
+            user_id: selectedUserId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('User assigned successfully', 'success');
+            closeModal('assignUserModal');
+            updateAssignmentDisplay(currentAssignmentOrgId, data.assignment.assigned_user);
+        } else {
+            showNotification('Error assigning user: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error assigning user:', error);
+        showNotification('Error assigning user', 'error');
+    });
+}
+
+function removeAssignment() {
+    if (!confirm('Are you sure you want to remove this assignment?')) {
+        return;
+    }
+    
+    fetch(`/core/api/popso-assignments/${currentAssignmentOrgId}/`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': getCsrfToken()
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Assignment removed successfully', 'success');
+            closeModal('assignUserModal');
+            updateAssignmentDisplay(currentAssignmentOrgId, null);
+        } else {
+            showNotification('Error removing assignment: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error removing assignment:', error);
+        showNotification('Error removing assignment', 'error');
+    });
+}
+
+function updateAssignmentDisplay(orgId, assignedUser) {
+    const assignedNameSpan = document.querySelector(`.assigned-user[data-org-id="${orgId}"] .assigned-name`);
+    const assignedUserDiv = document.querySelector(`.assigned-user[data-org-id="${orgId}"]`);
+    const assignBtn = document.querySelector(`.assign-user-btn[data-org-id="${orgId}"]`);
+    
+    if (assignedUser) {
+        assignedNameSpan.textContent = assignedUser.full_name;
+        assignedUserDiv.classList.add('has-assignment');
+        assignBtn.innerHTML = '<i class="fas fa-user-edit"></i> Change';
+        assignBtn.classList.add('assigned');
+    } else {
+        assignedNameSpan.textContent = 'Unassigned';
+        assignedUserDiv.classList.remove('has-assignment');
+        assignBtn.innerHTML = '<i class="fas fa-user-plus"></i> Assign';
+        assignBtn.classList.remove('assigned');
+    }
+}
+
+// Load all assignments on page load
+function loadAllAssignments() {
+    fetch('/core/api/popso-assignments/')
+        .then(response => response.json())
+        .then(assignments => {
+            Object.keys(assignments).forEach(orgId => {
+                const assignment = assignments[orgId];
+                updateAssignmentDisplay(orgId, assignment.assigned_user);
+            });
+        })
+        .catch(error => {
+            console.error('Error loading assignments:', error);
+        });
+}
+
+// Update the main setupEventListeners to include assignment functionality
+function setupEventListeners() {
+    // Filter buttons
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            filterBtns.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            filterOrganizations(this.dataset.type);
+        });
+    });
+
+    // Search functionality
+    const searchInput = document.getElementById('org-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            searchOrganizations(this.value);
+        });
+    }
+
+    // Edit outcomes buttons from template (static HTML)
+    setupEditButtonListeners();
+    
+    // Add outcome buttons
+    setupAddOutcomeListeners();
+    
+    // Assignment buttons
+    setupAssignmentListeners();
+    
+    // Assignment form listeners
+    setupAssignmentFormListeners();
+
+    // Modal close functionality
+    setupModalEvents();
 }

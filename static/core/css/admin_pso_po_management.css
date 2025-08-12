@@ -1541,3 +1541,223 @@
         flex-direction: column;
     }
 }
+
+/* ===============================
+   USER ASSIGNMENT STYLES
+   =============================== */
+
+/* Assign cell styling */
+.assign-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+}
+
+.assigned-user {
+    padding: 4px 8px;
+    background: #f3f4f6;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    min-width: 120px;
+    text-align: center;
+}
+
+.assigned-user.has-assignment {
+    background: #dbeafe;
+    color: #1d4ed8;
+    border: 1px solid #93c5fd;
+}
+
+.assigned-name {
+    font-weight: 500;
+}
+
+.assign-user-btn {
+    background: #10b981;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.assign-user-btn:hover {
+    background: #059669;
+    transform: translateY(-1px);
+}
+
+.assign-user-btn.assigned {
+    background: #f59e0b;
+}
+
+.assign-user-btn.assigned:hover {
+    background: #d97706;
+}
+
+/* Role filter dropdown */
+#roleFilter {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: white;
+    font-size: 14px;
+    color: #374151;
+    transition: border-color 0.2s ease;
+}
+
+#roleFilter:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* User search and dropdown */
+.user-search-container {
+    position: relative;
+    width: 100%;
+}
+
+.user-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+
+.user-dropdown.show {
+    display: block;
+}
+
+.user-option {
+    padding: 12px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid #f3f4f6;
+    transition: background-color 0.2s ease;
+}
+
+.user-option:hover {
+    background-color: #f9fafb;
+}
+
+.user-option.selected {
+    background-color: #2274cb;
+    color: white;
+}
+
+.user-option:last-child {
+    border-bottom: none;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.user-name {
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.user-details {
+    font-size: 0.8rem;
+    color: #6b7280;
+}
+
+.user-option.selected .user-details {
+    color: #e5e7eb;
+}
+
+/* Current assignment display */
+.current-assignment {
+    margin-top: 20px;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.current-assignment h4 {
+    margin: 0 0 12px 0;
+    font-size: 1rem;
+    color: #374151;
+}
+
+.assignment-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn-remove {
+    background: #dc2626;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-remove:hover {
+    background: #b91c1c;
+    transform: translateY(-1px);
+}
+
+/* Medium modal size for assignment */
+.modal-content.medium {
+    width: 90%;
+    max-width: 500px;
+}
+
+/* Loading state for user dropdown */
+.user-dropdown .loading {
+    padding: 20px;
+    text-align: center;
+    color: #6b7280;
+    font-style: italic;
+}
+
+/* No users found state */
+.user-dropdown .no-users {
+    padding: 20px;
+    text-align: center;
+    color: #6b7280;
+    font-style: italic;
+}
+
+/* Responsive adjustments for assignment column */
+@media (max-width: 768px) {
+    .assign-cell {
+        gap: 6px;
+    }
+    
+    .assigned-user {
+        min-width: 100px;
+        font-size: 0.8rem;
+    }
+    
+    .assign-user-btn {
+        font-size: 0.7rem;
+        padding: 3px 6px;
+    }
+}

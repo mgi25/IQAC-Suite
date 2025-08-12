@@ -211,6 +211,60 @@ class ProgramSpecificOutcome(models.Model):
     def __str__(self):
         return f"PSO - {self.program.name}"
 
+# ───────────────────────────────
+#  PO/PSO Assignment Model
+# ───────────────────────────────
+
+class POPSOAssignment(models.Model):
+    """
+    Model to track which users are assigned to manage PO/PSO for specific organizations
+    """
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="popso_assignments")
+    assigned_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="popso_assignments")
+    assigned_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="made_assignments")
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        unique_together = ("organization", "assigned_user")
+        ordering = ["-assigned_at"]
+    
+    def __str__(self):
+        return f"{self.assigned_user.get_full_name()} assigned to {self.organization.name}"
+
+# ───────────────────────────────
+#  PO/PSO Change Notification Model
+# ───────────────────────────────
+
+class POPSOChangeNotification(models.Model):
+    """
+    Model to track notifications for PO/PSO changes made by assigned users
+    """
+    ACTION_CHOICES = [
+        ('CREATE', 'Created'),
+        ('UPDATE', 'Updated'), 
+        ('DELETE', 'Deleted'),
+    ]
+    
+    TYPE_CHOICES = [
+        ('PO', 'Program Outcome'),
+        ('PSO', 'Program Specific Outcome'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="popso_notifications_made")
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
+    action = models.CharField(max_length=10, choices=ACTION_CHOICES)
+    outcome_type = models.CharField(max_length=3, choices=TYPE_CHOICES)
+    outcome_description = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ["-created_at"]
+    
+    def __str__(self):
+        return f"{self.user.get_full_name()} {self.action.lower()}d {self.outcome_type} for {self.organization.name}"
+
 
 class SDGGoal(models.Model):
     name = models.CharField(max_length=255, unique=True)
