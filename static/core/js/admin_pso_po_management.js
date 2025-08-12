@@ -1,62 +1,410 @@
-// Global variables
-let currentOrgId = null;
-let currentOrgType = null;
-let currentOrgName = "";
-let currentOutcomeId = null;
-let currentOutcomeType = null;
-
-// DOM Ready initialization
 document.addEventListener('DOMContentLoaded', function() {
-    initializeEventListeners();
-    validateCSRFToken();
-    addInputValidationStyling();
+    console.log('PSO & PO Management JavaScript loaded');
+    // Initialize the page
+    initializePage();
+    setupEventListeners();
+    loadOrganizations();
 });
 
-function initializeEventListeners() {
-    // Filter functionality
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', handleFilterClick);
+let currentOrganizations = [];
+let currentOrgTypes = [];
+
+function initializePage() {
+    console.log('PSO & PO Management page initialized');
+}
+
+function setupEventListeners() {
+    // Filter buttons
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            filterBtns.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            filterOrganizations(this.dataset.type);
+        });
     });
 
     // Search functionality
-    document.getElementById('org-search').addEventListener('input', handleSearch);
+    const searchInput = document.getElementById('org-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            searchOrganizations(this.value);
+        });
+    }
 
-    // Manage outcomes functionality
-    document.querySelectorAll('.manage-outcomes-btn').forEach(btn => {
-        btn.addEventListener('click', handleManageOutcomes);
-    });
+    // Edit outcomes buttons from template (static HTML)
+    setupEditButtonListeners();
+    
+    // Add outcome buttons
+    setupAddOutcomeListeners();
 
-    // Modal functionality
-    document.querySelectorAll('.close, .btn-cancel').forEach(btn => {
-        btn.addEventListener('click', closeModals);
-    });
-
-    // Close modal when clicking outside
-    window.addEventListener('click', function(event) {
-        if (event.target.classList.contains('modal')) {
-            closeModals();
-        }
-    });
-
-    // Edit outcome form submission
-    document.getElementById('editOutcomeForm').addEventListener('submit', handleEditOutcomeSubmit);
-
-    // Add PO/PSO form submissions
-    document.getElementById('add-po-form').addEventListener('submit', handleAddPOSubmit);
-    document.getElementById('add-pso-form').addEventListener('submit', handleAddPSOSubmit);
+    // Modal close functionality
+    setupModalEvents();
 }
 
-// Filter functionality
-function handleFilterClick() {
-    // Update active button
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    this.classList.add('active');
+function setupEditButtonListeners() {
+    console.log('Setting up edit button listeners');
+    // Add event listeners to existing edit buttons
+    const editBtns = document.querySelectorAll('.edit-outcomes-btn');
+    console.log('Found edit buttons:', editBtns.length);
+    editBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            console.log('Edit button clicked');
+            const orgId = this.dataset.orgId;
+            const orgName = this.dataset.orgName;
+            console.log('Opening modal for org:', orgId, orgName);
+            openOutcomesModal(orgId, orgName, 'all');
+        });
+    });
+
+    // Add event listeners to PO/PSO count spans for direct access
+    const poCounts = document.querySelectorAll('.po-count');
+    const psoCounts = document.querySelectorAll('.pso-count');
     
-    const filterType = this.dataset.type;
+    poCounts.forEach(span => {
+        span.addEventListener('click', function() {
+            const orgId = this.dataset.orgId;
+            const orgName = this.closest('tr').querySelector('.org-name').textContent;
+            openOutcomesModal(orgId, orgName, 'pos');
+        });
+        span.style.cursor = 'pointer';
+    });
+
+    psoCounts.forEach(span => {
+        span.addEventListener('click', function() {
+            const orgId = this.dataset.orgId;
+            const orgName = this.closest('tr').querySelector('.org-name').textContent;
+            openOutcomesModal(orgId, orgName, 'psos');
+        });
+        span.style.cursor = 'pointer';
+    });
+}
+
+function setupAddOutcomeListeners() {
+    // Add PO button
+    const addPOBtn = document.getElementById('addPOBtn');
+    if (addPOBtn) {
+        addPOBtn.addEventListener('click', function() {
+            const input = document.getElementById('newPOInput');
+            if (input && input.value.trim()) {
+                addNewOutcome(input.value.trim(), 'pos');
+                input.value = '';
+            }
+        });
+    }
+    
+    // Add PSO button  
+    const addPSOBtn = document.getElementById('addPSOBtn');
+    if (addPSOBtn) {
+        addPSOBtn.addEventListener('click', function() {
+            const input = document.getElementById('newPSOInput');
+            if (input && input.value.trim()) {
+                addNewOutcome(input.value.trim(), 'psos');
+                input.value = '';
+            }
+        });
+    }
+    
+    // Enter key support for inputs
+    const poInput = document.getElementById('newPOInput');
+    const psoInput = document.getElementById('newPSOInput');
+    
+    if (poInput) {
+        poInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addPOBtn.click();
+            }
+        });
+    }
+    
+    if (psoInput) {
+        psoInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addPSOBtn.click();
+            }
+        });
+    }
+}
+
+function addNewOutcome(description, type) {
+    console.log('Adding new outcome:', description, type);
+    
+    const modal = document.getElementById('outcomesModal');
+    const orgId = modal.dataset.orgId;
+    
+    if (!orgId) {
+        showNotification('Organization not found', 'error');
+        return;
+    }
+    
+    // First, we need to get or create a program for this organization
+    // For simplicity, we'll create a default program if none exists
+    getOrCreateDefaultProgram(orgId)
+        .then(programId => {
+            return createOutcome(programId, description, type);
+        })
+        .then(success => {
+            if (success) {
+                showNotification(`${type === 'pos' ? 'PO' : 'PSO'} added successfully`, 'success');
+                // Reload outcomes to show the new addition
+                loadOutcomesForOrganization(orgId);
+                // Update the counts in the main table
+                updateOutcomeCounts();
+            }
+        })
+        .catch(error => {
+            console.error('Error adding outcome:', error);
+            showNotification('Error adding outcome: ' + error.message, 'error');
+        });
+}
+
+function getOrCreateDefaultProgram(orgId) {
+    return fetch(`/core/api/programs/${orgId}/`)
+        .then(response => response.json())
+        .then(programs => {
+            if (programs && programs.length > 0) {
+                return programs[0].id;
+            } else {
+                // Create a default program
+                return createDefaultProgram(orgId);
+            }
+        });
+}
+
+function createDefaultProgram(orgId) {
+    return fetch('/core/api/create-program/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+            organization_id: orgId,
+            program_name: 'Default Program'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            return data.program.id;
+        } else {
+            throw new Error('Failed to create default program');
+        }
+    });
+}
+
+function createOutcome(programId, description, type) {
+    const endpoint = '/core/api/manage-program-outcomes/';
+    
+    return fetch(endpoint, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+            program_id: programId,
+            description: description,
+            type: type === 'pos' ? 'PO' : 'PSO'
+        })
+    })
+    .then(response => response.json())
+    .then(data => data.success);
+}
+
+function updateOutcomeCounts() {
+    // This function refreshes the outcome counts in the main table
+    const currentOrgId = document.getElementById('outcomesModal').dataset.orgId;
+    if (currentOrgId) {
+        fetch(`/core/api/programs/${currentOrgId}/`)
+            .then(response => response.json())
+            .then(programs => {
+                if (programs && programs.length > 0) {
+                    const program = programs[0];
+                    
+                    // Count POs and PSOs
+                    Promise.all([
+                        fetch(`/core/api/program-outcomes/${program.id}/?type=PO`).then(r => r.json()),
+                        fetch(`/core/api/program-outcomes/${program.id}/?type=PSO`).then(r => r.json())
+                    ]).then(([pos, psos]) => {
+                        // Update the counts in the table
+                        const poCountSpan = document.querySelector(`.po-count[data-org-id="${currentOrgId}"] .count`);
+                        const psoCountSpan = document.querySelector(`.pso-count[data-org-id="${currentOrgId}"] .count`);
+                        
+                        if (poCountSpan) {
+                            poCountSpan.textContent = pos ? pos.length : 0;
+                        }
+                        if (psoCountSpan) {
+                            psoCountSpan.textContent = psos ? psos.length : 0;
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error updating outcome counts:', error);
+            });
+    }
+}
+
+function setupModalEvents() {
+    // Close modals when clicking outside or on close button
+    const modals = document.querySelectorAll('.modal');
+    const closeBtns = document.querySelectorAll('.modal .close');
+    
+    modals.forEach(modal => {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeModal(modal.id);
+            }
+        });
+    });
+
+    closeBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const modal = this.closest('.modal');
+            closeModal(modal.id);
+        });
+    });
+
+    // Cancel buttons
+    const cancelBtns = document.querySelectorAll('.btn-cancel');
+    cancelBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const modal = this.closest('.modal');
+            closeModal(modal.id);
+        });
+    });
+}
+
+function loadOrganizations() {
+    // Use the data passed from Django template if available
+    if (typeof window.orgOutcomeCounts !== 'undefined') {
+        updateOutcomeCounts(window.orgOutcomeCounts);
+    }
+
+    // Fetch fresh organization data
+    fetch('/api/organizations/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                currentOrganizations = data.organizations;
+                currentOrgTypes = data.org_types;
+                updateFilterButtons(data.org_types);
+                displayOrganizations(data.organizations);
+                loadOutcomeCounts();
+            }
+        })
+        .catch(error => {
+            console.error('Error loading organizations:', error);
+            showNotification('Error loading organizations', 'error');
+        });
+}
+
+function updateFilterButtons(orgTypes) {
+    const filterContainer = document.querySelector('.filter-tabs');
+    if (!filterContainer) return;
+
+    // Keep the "All" button and add dynamic buttons
+    const allBtn = filterContainer.querySelector('[data-type="all"]');
+    filterContainer.innerHTML = '';
+    filterContainer.appendChild(allBtn);
+
+    orgTypes.forEach(type => {
+        const btn = document.createElement('button');
+        btn.className = 'filter-btn';
+        btn.dataset.type = type.name.toLowerCase();
+        btn.textContent = type.name + 's';
+        filterContainer.appendChild(btn);
+
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            filterOrganizations(this.dataset.type);
+        });
+    });
+}
+
+function displayOrganizations(organizations) {
+    const tbody = document.getElementById('organizations-list');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    organizations.forEach((org, index) => {
+        const row = document.createElement('tr');
+        row.className = 'org-row';
+        row.dataset.id = org.id;
+        row.dataset.name = org.name;
+        row.dataset.type = org.type.toLowerCase();
+        row.dataset.parent = org.parent || '';
+
+        row.innerHTML = `
+            <td>${org.id}</td>
+            <td class="org-name">${org.name}</td>
+            <td>${org.type}</td>
+            <td>
+                <span class="status-badge ${org.is_active ? 'active' : 'inactive'}">
+                    ${org.is_active ? 'Active' : 'Inactive'}
+                </span>
+            </td>
+            <td class="parent-name">${org.parent || '-'}</td>
+            <td>
+                <div class="outcomes-cell">
+                    <div class="outcome-counts">
+                        <span class="po-count" data-org-id="${org.id}" onclick="openOutcomesModal(${org.id}, '${org.name}', 'pos')">
+                            <span class="count">0</span> POs
+                        </span>
+                        <span class="pso-count" data-org-id="${org.id}" onclick="openOutcomesModal(${org.id}, '${org.name}', 'psos')">
+                            <span class="count">0</span> PSOs
+                        </span>
+                    </div>
+                    <button class="edit-outcomes-btn" data-org-id="${org.id}" data-org-name="${org.name}" onclick="openOutcomesModal(${org.id}, '${org.name}', 'all')">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                </div>
+            </td>
+        `;
+
+        tbody.appendChild(row);
+    });
+}
+
+function loadOutcomeCounts() {
+    // Load outcome counts for all organizations
+    currentOrganizations.forEach(org => {
+        fetch(`/api/organizations/${org.id}/outcomes/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateOrgOutcomeCounts(org.id, data.po_count, data.pso_count);
+                }
+            })
+            .catch(error => {
+                console.error(`Error loading outcomes for org ${org.id}:`, error);
+            });
+    });
+}
+
+function updateOrgOutcomeCounts(orgId, poCount, psoCount) {
+    const poCountSpan = document.querySelector(`.po-count[data-org-id="${orgId}"] .count`);
+    const psoCountSpan = document.querySelector(`.pso-count[data-org-id="${orgId}"] .count`);
+    
+    if (poCountSpan) poCountSpan.textContent = poCount;
+    if (psoCountSpan) psoCountSpan.textContent = psoCount;
+}
+
+function updateOutcomeCounts(countsData) {
+    Object.keys(countsData).forEach(orgId => {
+        const data = countsData[orgId];
+        updateOrgOutcomeCounts(orgId, data.po_count, data.pso_count);
+    });
+}
+
+function filterOrganizations(type) {
     const rows = document.querySelectorAll('.org-row');
     
     rows.forEach(row => {
-        if (filterType === 'all' || row.dataset.type === filterType) {
+        if (type === 'all' || row.dataset.type === type) {
             row.style.display = '';
         } else {
             row.style.display = 'none';
@@ -64,21 +412,16 @@ function handleFilterClick() {
     });
 }
 
-// Search functionality
-function handleSearch() {
-    const searchTerm = this.value.toLowerCase();
+function searchOrganizations(searchTerm) {
     const rows = document.querySelectorAll('.org-row');
+    const term = searchTerm.toLowerCase();
     
     rows.forEach(row => {
         const orgName = row.dataset.name.toLowerCase();
         const orgType = row.dataset.type.toLowerCase();
-        const parentName = row.dataset.parent.toLowerCase();
+        const parent = row.dataset.parent.toLowerCase();
         
-        // Check if currently filtered type matches
-        const activeFilter = document.querySelector('.filter-btn.active').dataset.type;
-        const typeMatches = activeFilter === 'all' || row.dataset.type === activeFilter;
-        
-        if (typeMatches && (orgName.includes(searchTerm) || orgType.includes(searchTerm) || parentName.includes(searchTerm))) {
+        if (orgName.includes(term) || orgType.includes(term) || parent.includes(term)) {
             row.style.display = '';
         } else {
             row.style.display = 'none';
@@ -86,559 +429,542 @@ function handleSearch() {
     });
 }
 
-// Manage outcomes functionality
-function handleManageOutcomes() {
-    const row = this.closest('tr');
-    currentOrgId = row.dataset.id;
-    currentOrgName = row.dataset.name;
-    currentOrgType = row.dataset.type;
+function openOutcomesModal(orgId, orgName, tab = 'all') {
+    console.log('Opening outcomes modal for org:', orgId, orgName);
+    const modal = document.getElementById('outcomesModal');
+    const modalOrgName = document.getElementById('modal-org-name');
     
-    document.getElementById('selected-org-name').textContent = 
-        `${currentOrgName} (${currentOrgType.charAt(0).toUpperCase() + currentOrgType.slice(1)})`;
+    if (modalOrgName) {
+        modalOrgName.textContent = orgName;
+    }
     
-    // Load existing outcomes
-    loadOutcomes();
+    // Store current organization
+    modal.dataset.orgId = orgId;
+    modal.dataset.orgName = orgName;
     
-    // Show management section
-    document.getElementById('pso-po-management').style.display = 'block';
-    document.getElementById('pso-po-management').scrollIntoView({ behavior: 'smooth' });
+    // Load outcomes for this organization
+    loadOutcomesForOrganization(orgId);
+    
+    // Show modal
+    openModal('outcomesModal');
 }
 
-// Modal functionality
-function closeModals() {
-    document.querySelectorAll('.modal').forEach(modal => {
-        modal.style.display = 'none';
-    });
+function loadOutcomesForOrganization(orgId) {
+    console.log('Loading outcomes for organization:', orgId);
+    
+    // Clear existing content first
+    const posList = document.getElementById('posList');
+    const psosList = document.getElementById('psosList');
+    
+    if (posList) {
+        posList.innerHTML = '<div class="loading">Loading POs...</div>';
+    }
+    if (psosList) {
+        psosList.innerHTML = '<div class="loading">Loading PSOs...</div>';
+    }
+    
+    // First get all programs for this organization
+    fetch(`/core/api/programs/${orgId}/`)
+        .then(response => {
+            console.log('Programs API response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(programs => {
+            console.log('Found programs:', programs);
+            
+            if (programs && programs.length > 0) {
+                // For simplicity, we'll load outcomes from the first program
+                // In the future, you might want to aggregate from all programs
+                const firstProgram = programs[0];
+                console.log('Loading outcomes for first program:', firstProgram);
+                loadProgramOutcomes(firstProgram.id);
+            } else {
+                // No programs found, show empty state
+                console.log('No programs found, showing empty state');
+                displayEmptyOutcomes();
+            }
+        })
+        .catch(error => {
+            console.error('Error loading programs:', error);
+            showNotification('Error loading outcomes: ' + error.message, 'error');
+            displayEmptyOutcomes();
+        });
 }
 
-// Edit outcome form submission
-function handleEditOutcomeSubmit(e) {
-    e.preventDefault();
-    const newDescription = document.getElementById('editOutcomeText').value.trim();
+function loadProgramOutcomes(programId) {
+    console.log('Loading outcomes for program:', programId);
     
-    if (!newDescription) {
-        showErrorMessage('Please enter a description for the outcome.');
-        return;
-    }
+    // Load POs
+    fetch(`/core/api/program-outcomes/${programId}/?type=PO`)
+        .then(response => {
+            console.log('POs API response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(pos => {
+            console.log('Loaded POs:', pos);
+            displayOutcomes(pos, 'pos');
+        })
+        .catch(error => {
+            console.error('Error loading POs:', error);
+            document.getElementById('posList').innerHTML = '<div class="no-outcomes">Error loading POs: ' + error.message + '</div>';
+        });
     
-    if (!currentOutcomeId && currentOutcomeId !== 0) {
-        showErrorMessage('No outcome selected for editing.');
-        return;
-    }
-    
-    if (newDescription.length < 10) {
-        showErrorMessage('Outcome description should be at least 10 characters long.');
-        return;
-    }
-    
-    updateOutcome(currentOutcomeType, currentOutcomeId, newDescription);
+    // Load PSOs
+    fetch(`/core/api/program-outcomes/${programId}/?type=PSO`)
+        .then(response => {
+            console.log('PSOs API response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(psos => {
+            console.log('Loaded PSOs:', psos);
+            displayOutcomes(psos, 'psos');
+        })
+        .catch(error => {
+            console.error('Error loading PSOs:', error);
+            document.getElementById('psosList').innerHTML = '<div class="no-outcomes">Error loading PSOs: ' + error.message + '</div>';
+        });
 }
 
-// Add PO functionality
-function handleAddPOSubmit(e) {
-    e.preventDefault();
-    const description = document.getElementById('new-po').value.trim();
-    
-    if (!description) {
-        showErrorMessage('Please enter a Programme Outcome description.');
-        return;
-    }
-    
-    if (!currentOrgId) {
-        showErrorMessage('Please select an organization first.');
-        return;
-    }
-    
-    if (description.length < 10) {
-        showErrorMessage('Programme Outcome description should be at least 10 characters long.');
-        return;
-    }
-    
-    addOutcome('po', description);
-    document.getElementById('new-po').value = '';
-}
-
-// Add PSO functionality
-function handleAddPSOSubmit(e) {
-    e.preventDefault();
-    const description = document.getElementById('new-pso').value.trim();
-    
-    if (!description) {
-        showErrorMessage('Please enter a Programme Specific Outcome description.');
-        return;
-    }
-    
-    if (!currentOrgId) {
-        showErrorMessage('Please select an organization first.');
-        return;
-    }
-    
-    if (description.length < 10) {
-        showErrorMessage('Programme Specific Outcome description should be at least 10 characters long.');
-        return;
-    }
-    
-    addOutcome('pso', description);
-    document.getElementById('new-pso').value = '';
-}
-
-// Load outcomes for selected organization
-function loadOutcomes() {
-    if (!currentOrgId || !currentOrgType) return;
-    
-    // Show loading indicators
-    document.getElementById('po-list').innerHTML = '<li style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading POs...</li>';
-    document.getElementById('pso-list').innerHTML = '<li style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading PSOs...</li>';
-    
-    fetch(`/core-admin/pso-po/data/${currentOrgType}/${currentOrgId}/`, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success !== false) {
-            updateOutcomesList('po-list', data.pos || data.programme_outcomes || []);
-            updateOutcomesList('pso-list', data.psos || data.programme_specific_outcomes || []);
-        } else {
-            throw new Error(data.error || 'Failed to load outcomes');
-        }
-    })
-    .catch(error => {
-        console.error('Error loading outcomes:', error);
-        // Initialize empty lists if API doesn't exist yet
-        updateOutcomesList('po-list', []);
-        updateOutcomesList('pso-list', []);
-        
-        // Show error message briefly
-        showErrorMessage('Could not load existing outcomes from server. Starting with empty lists.');
-    });
-}
-
-function updateOutcomesList(listId, outcomes) {
+function displayOutcomes(outcomes, type) {
+    const listId = type === 'pos' ? 'posList' : 'psosList';
     const list = document.getElementById(listId);
+    
+    if (!list) {
+        console.error(`List element ${listId} not found`);
+        return;
+    }
+    
     list.innerHTML = '';
     
-    if (outcomes.length === 0) {
-        const li = document.createElement('li');
-        li.innerHTML = `<div class="outcome-text" style="color: #6b7280; font-style: italic; text-align: center;">No outcomes added yet</div>`;
-        li.style.border = '2px dashed #d1d5db';
-        li.style.background = 'transparent';
-        list.appendChild(li);
+    if (!outcomes || outcomes.length === 0) {
+        list.innerHTML = '<div class="no-outcomes">No outcomes added yet.</div>';
         return;
     }
     
-    outcomes.forEach((outcome, index) => {
-        const li = document.createElement('li');
-        li.innerHTML = `
-            <div class="outcome-text">${outcome.description || outcome}</div>
+    outcomes.forEach(outcome => {
+        const item = document.createElement('div');
+        item.className = 'outcome-item';
+        item.innerHTML = `
+            <div class="outcome-text">${outcome.description}</div>
             <div class="outcome-actions">
-                <button class="edit-outcome-btn" onclick="editOutcome('${listId.includes('po') ? 'po' : 'pso'}', ${outcome.id || index}, '${(outcome.description || outcome).replace(/'/g, '\\\'').replace(/"/g, '&quot;')}')">
+                <button class="edit-outcome-btn" data-outcome-id="${outcome.id}" data-description="${outcome.description.replace(/"/g, '&quot;')}" data-type="${type}">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button class="delete-outcome-btn" onclick="deleteOutcome('${listId.includes('po') ? 'po' : 'pso'}', ${outcome.id || index}, this)">
+                <button class="delete-outcome-btn" data-outcome-id="${outcome.id}" data-type="${type}">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
         `;
-        list.appendChild(li);
+        
+        // Add event listeners for the buttons
+        const editBtn = item.querySelector('.edit-outcome-btn');
+        const deleteBtn = item.querySelector('.delete-outcome-btn');
+        
+        editBtn.addEventListener('click', function() {
+            const outcomeId = this.dataset.outcomeId;
+            const description = this.dataset.description.replace(/&quot;/g, '"');
+            const type = this.dataset.type;
+            editOutcome(outcomeId, description, type);
+        });
+        
+        deleteBtn.addEventListener('click', function() {
+            const outcomeId = this.dataset.outcomeId;
+            const type = this.dataset.type;
+            deleteOutcome(outcomeId, type);
+        });
+        
+        list.appendChild(item);
     });
 }
 
-// Edit outcome functionality
-function editOutcome(type, id, description) {
-    currentOutcomeId = id;
-    currentOutcomeType = type;
+function displayEmptyOutcomes() {
+    const posList = document.getElementById('posList');
+    const psosList = document.getElementById('psosList');
     
-    // Decode HTML entities back to normal text
-    const decodedDescription = description.replace(/&quot;/g, '"').replace(/&#x27;/g, "'");
-    document.getElementById('editOutcomeText').value = decodedDescription;
-    document.getElementById('editOutcomeModal').style.display = 'block';
+    if (posList) {
+        posList.innerHTML = '<div class="no-outcomes">No programmes found for this organization.</div>';
+    }
+    if (psosList) {
+        psosList.innerHTML = '<div class="no-outcomes">No programmes found for this organization.</div>';
+    }
 }
 
-function updateOutcome(type, id, description) {
-    // Show loading state
-    const form = document.getElementById('editOutcomeForm');
-    const saveBtn = form.querySelector('.btn-save');
-    const originalText = saveBtn.textContent;
-    saveBtn.textContent = 'Saving...';
-    saveBtn.disabled = true;
+function loadPrograms(orgId, initialTab = 'all') {
+    console.log('Loading programs for org:', orgId);
+    fetch(`/core/api/programs/${orgId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayPrograms(data.programs, initialTab);
+            } else {
+                showNotification('Error loading programs', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading programs:', error);
+            showNotification('Error loading programs', 'error');
+        });
+}
+
+function displayPrograms(programs, initialTab) {
+    const programsList = document.getElementById('programsList');
+    if (!programsList) return;
+
+    if (programs.length === 0) {
+        programsList.innerHTML = `
+            <div class="no-programs">
+                <p>No programs found for this organization.</p>
+                <button class="btn-primary" onclick="showAddProgramForm()">Add First Program</button>
+            </div>
+        `;
+        return;
+    }
+
+    programsList.innerHTML = '';
+    programs.forEach(program => {
+        const programCard = document.createElement('div');
+        programCard.className = 'program-card';
+        programCard.innerHTML = `
+            <div class="program-info">
+                <h5>${program.name}</h5>
+            </div>
+            <div class="program-stats">
+                <span class="po-stat">${program.po_count || 0} POs</span>
+                <span class="pso-stat">${program.pso_count || 0} PSOs</span>
+            </div>
+            <button class="edit-program-btn" onclick="showProgramOutcomes(${program.id}, '${program.name}', '${initialTab}')">
+                <i class="fas fa-arrow-right"></i>
+            </button>
+        `;
+        programsList.appendChild(programCard);
+    });
+
+    // If only one program and specific tab requested, go directly to outcomes
+    if (programs.length === 1 && initialTab !== 'all') {
+        showProgramOutcomes(programs[0].id, programs[0].name, initialTab);
+    }
+}
+
+function showProgramOutcomes(programId, programName, initialTab = 'pos') {
+    const programsSection = document.querySelector('.programs-section');
+    const outcomesSection = document.getElementById('outcomesSection');
+    const selectedProgramName = document.getElementById('selectedProgramName');
     
-    // Try to make API call first
-    fetch(`/core-admin/pso-po/edit/${type}/${id}/`, {
+    if (programsSection) programsSection.style.display = 'none';
+    if (outcomesSection) outcomesSection.style.display = 'block';
+    if (selectedProgramName) selectedProgramName.textContent = programName;
+    
+    // Store current program
+    outcomesSection.dataset.programId = programId;
+    
+    // Set active tab
+    switchTab(initialTab);
+    
+    // Load outcomes
+    loadOutcomes(programId, initialTab);
+    
+    // Setup back button
+    const backBtn = document.getElementById('backToPrograms');
+    if (backBtn) {
+        backBtn.onclick = function() {
+            programsSection.style.display = 'block';
+            outcomesSection.style.display = 'none';
+        };
+    }
+}
+
+function switchTab(tabName) {
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabPanes = document.querySelectorAll('.tab-pane');
+    
+    tabBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabName);
+        btn.onclick = function() {
+            switchTab(this.dataset.tab);
+            const programId = document.getElementById('outcomesSection').dataset.programId;
+            loadOutcomes(programId, this.dataset.tab);
+        };
+    });
+    
+    tabPanes.forEach(pane => {
+        pane.classList.toggle('active', pane.id === `${tabName}Tab`);
+    });
+}
+
+function loadOutcomes(programId, type) {
+    const endpoint = type === 'pos' ? 
+        `/api/programs/${programId}/pos/` : 
+        `/api/programs/${programId}/psos/`;
+        
+    fetch(endpoint)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayOutcomes(data.outcomes, type);
+            }
+        })
+        .catch(error => {
+            console.error(`Error loading ${type}:`, error);
+        });
+}
+
+function displayOutcomes(outcomes, type) {
+    const listId = type === 'pos' ? 'posList' : 'psosList';
+    const list = document.getElementById(listId);
+    if (!list) return;
+
+    list.innerHTML = '';
+    
+    outcomes.forEach(outcome => {
+        const item = document.createElement('div');
+        item.className = 'outcome-item';
+        item.innerHTML = `
+            <div class="outcome-text">${outcome.description}</div>
+            <div class="outcome-actions">
+                <button class="edit-outcome-btn" data-outcome-id="${outcome.id}" data-description="${outcome.description.replace(/"/g, '&quot;')}" data-type="${type}">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="delete-outcome-btn" data-outcome-id="${outcome.id}" data-type="${type}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+        
+        // Add event listeners for the buttons
+        const editBtn = item.querySelector('.edit-outcome-btn');
+        const deleteBtn = item.querySelector('.delete-outcome-btn');
+        
+        editBtn.addEventListener('click', function() {
+            const outcomeId = this.dataset.outcomeId;
+            const description = this.dataset.description.replace(/&quot;/g, '"');
+            const type = this.dataset.type;
+            editOutcome(outcomeId, description, type);
+        });
+        
+        deleteBtn.addEventListener('click', function() {
+            const outcomeId = this.dataset.outcomeId;
+            const type = this.dataset.type;
+            deleteOutcome(outcomeId, type);
+        });
+        
+        list.appendChild(item);
+    });
+    
+    // Setup add button
+    const addBtn = document.getElementById(type === 'pos' ? 'addPOBtn' : 'addPSOBtn');
+    if (addBtn) {
+        addBtn.onclick = function() {
+            addOutcome(type);
+        };
+    }
+}
+
+function addOutcome(type) {
+    const modal = document.getElementById('addOutcomeModal');
+    const typeSpan = document.getElementById('addOutcomeType');
+    const buttonSpan = document.getElementById('addOutcomeButtonText');
+    
+    if (typeSpan) typeSpan.textContent = type === 'pos' ? 'Programme Outcome' : 'Programme Specific Outcome';
+    if (buttonSpan) buttonSpan.textContent = type === 'pos' ? 'PO' : 'PSO';
+    
+    modal.dataset.type = type;
+    openModal('addOutcomeModal');
+    
+    // Setup form submission
+    const form = document.getElementById('addOutcomeForm');
+    form.onsubmit = function(e) {
+        e.preventDefault();
+        saveNewOutcome(type);
+    };
+}
+
+function editOutcome(outcomeId, description, type) {
+    const modal = document.getElementById('editOutcomeModal');
+    const typeSpan = document.getElementById('editOutcomeType');
+    const textarea = document.getElementById('editOutcomeText');
+    
+    if (typeSpan) typeSpan.textContent = type === 'pos' ? 'Programme Outcome' : 'Programme Specific Outcome';
+    if (textarea) textarea.value = description;
+    
+    modal.dataset.outcomeId = outcomeId;
+    modal.dataset.type = type;
+    openModal('editOutcomeModal');
+    
+    // Setup form submission
+    const form = document.getElementById('editOutcomeForm');
+    form.onsubmit = function(e) {
+        e.preventDefault();
+        saveEditedOutcome();
+    };
+}
+
+function saveNewOutcome(type) {
+    const textarea = document.getElementById('addOutcomeText');
+    const programId = document.getElementById('outcomesSection').dataset.programId;
+    const endpoint = type === 'pos' ? 
+        `/api/programs/${programId}/pos/` : 
+        `/api/programs/${programId}/psos/`;
+    
+    fetch(endpoint, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
+            'X-CSRFToken': getCsrfToken()
         },
         body: JSON.stringify({
-            description: description
+            description: textarea.value
         })
     })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Reload the outcomes from server
-            loadOutcomes();
-            closeModals();
-            showSuccessMessage('Outcome updated successfully!');
+            closeModal('addOutcomeModal');
+            textarea.value = '';
+            loadOutcomes(programId, type);
+            showNotification('Outcome added successfully', 'success');
+            updateOutcomeCountsInTable();
         } else {
-            throw new Error(data.error || 'Unknown server error');
+            showNotification('Error adding outcome', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving outcome:', error);
+        showNotification('Error adding outcome', 'error');
+    });
+}
+
+function saveEditedOutcome() {
+    const modal = document.getElementById('editOutcomeModal');
+    const textarea = document.getElementById('editOutcomeText');
+    const outcomeId = modal.dataset.outcomeId;
+    const type = modal.dataset.type;
+    const programId = document.getElementById('outcomesSection').dataset.programId;
+    
+    const endpoint = type === 'pos' ? 
+        `/api/outcomes/pos/${outcomeId}/` : 
+        `/api/outcomes/psos/${outcomeId}/`;
+    
+    fetch(endpoint, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+            description: textarea.value
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeModal('editOutcomeModal');
+            loadOutcomes(programId, type);
+            showNotification('Outcome updated successfully', 'success');
+        } else {
+            showNotification('Error updating outcome', 'error');
         }
     })
     .catch(error => {
         console.error('Error updating outcome:', error);
-        // If API call fails, update locally and show warning
-        updateOutcomeLocally(type, id, description);
-        closeModals();
-        showSuccessMessage('✅ Outcome updated and visible! (Server sync pending)');
-        
-        // Additional confirmation that change is visible
-        setTimeout(() => {
-            showSuccessMessage('💡 Your changes are now visible in the list above!');
-        }, 2000);
-    })
-    .finally(() => {
-        // Restore button state
-        saveBtn.textContent = originalText;
-        saveBtn.disabled = false;
+        showNotification('Error updating outcome', 'error');
     });
 }
 
-function updateOutcomeLocally(type, id, description) {
-    const listId = type === 'po' ? 'po-list' : 'pso-list';
-    const list = document.getElementById(listId);
-    const items = list.querySelectorAll('li');
-    
-    // Find the correct item to update - need to match exactly
-    let itemFound = false;
-    items.forEach((item, index) => {
-        const outcomeText = item.querySelector('.outcome-text');
-        const editBtn = item.querySelector('.edit-outcome-btn');
-        
-        if (outcomeText && editBtn) {
-            // Check if this is the right item by checking the onclick attribute
-            const onclickAttr = editBtn.getAttribute('onclick');
-            if (onclickAttr && onclickAttr.includes(`'${type}', ${id},`)) {
-                // Update the text content
-                outcomeText.textContent = description;
-                
-                // Update the onclick handlers with new description
-                const safeDescription = description.replace(/'/g, '\\\'').replace(/"/g, '&quot;');
-                editBtn.setAttribute('onclick', `editOutcome('${type}', ${id}, '${safeDescription}')`);
-                
-                // Also update delete button if it exists
-                const deleteBtn = item.querySelector('.delete-outcome-btn');
-                if (deleteBtn) {
-                    deleteBtn.setAttribute('onclick', `deleteOutcome('${type}', ${id}, this)`);
-                }
-                
-                itemFound = true;
-                
-                // Add a visual feedback that the item was updated
-                item.style.backgroundColor = '#dcfce7';
-                item.style.border = '2px solid #10b981';
-                setTimeout(() => {
-                    item.style.backgroundColor = '';
-                    item.style.border = '';
-                }, 1500);
-            }
-        }
-    });
-    
-    // If item not found by onclick, try by index as fallback
-    if (!itemFound && items.length > id) {
-        const item = items[id];
-        const outcomeText = item.querySelector('.outcome-text');
-        if (outcomeText) {
-            outcomeText.textContent = description;
-            
-            // Update onclick handlers
-            const editBtn = item.querySelector('.edit-outcome-btn');
-            const deleteBtn = item.querySelector('.delete-outcome-btn');
-            if (editBtn) {
-                const safeDescription = description.replace(/'/g, '\\\'').replace(/"/g, '&quot;');
-                editBtn.setAttribute('onclick', `editOutcome('${type}', ${id}, '${safeDescription}')`);
-            }
-            if (deleteBtn) {
-                deleteBtn.setAttribute('onclick', `deleteOutcome('${type}', ${id}, this)`);
-            }
-            
-            // Add visual feedback
-            item.style.backgroundColor = '#dcfce7';
-            item.style.border = '2px solid #10b981';
-            setTimeout(() => {
-                item.style.backgroundColor = '';
-                item.style.border = '';
-            }, 1500);
-        }
-    }
-}
-
-function addOutcome(type, description) {
-    // Show loading state
-    const form = document.getElementById(`add-${type}-form`);
-    const btn = form.querySelector('button[type="submit"]');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
-    btn.disabled = true;
-    
-    fetch(`/core-admin/pso-po/add/${type}/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify({
-            org_type: currentOrgType,
-            org_id: currentOrgId,
-            description: description
-        })
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            loadOutcomes(); // Reload the outcomes from server
-            showSuccessMessage(`${type.toUpperCase()} added successfully!`);
-        } else {
-            throw new Error(data.error || 'Unknown server error');
-        }
-    })
-    .catch(error => {
-        console.error('Error adding outcome:', error);
-        // For demo purposes, add to list locally if API fails
-        addOutcomeLocally(type, description);
-        showSuccessMessage(`✅ ${type.toUpperCase()} added and visible! (Server sync pending)`);
-        
-        // Additional confirmation that change is visible
-        setTimeout(() => {
-            showSuccessMessage('💡 Your new outcome is now visible in the list!');
-        }, 2000);
-    })
-    .finally(() => {
-        // Restore button state
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-    });
-}
-
-function addOutcomeLocally(type, description) {
-    const listId = type === 'po' ? 'po-list' : 'pso-list';
-    const list = document.getElementById(listId);
-    
-    // Remove "no outcomes" message if it exists
-    const emptyMessage = list.querySelector('li div[style*="font-style: italic"]');
-    if (emptyMessage) {
-        emptyMessage.closest('li').remove();
-    }
-    
-    const li = document.createElement('li');
-    const newId = Date.now(); // Use timestamp as temporary ID
-    const safeDescription = description.replace(/'/g, '\\\'').replace(/"/g, '&quot;');
-    
-    li.innerHTML = `
-        <div class="outcome-text">${description}</div>
-        <div class="outcome-actions">
-            <button class="edit-outcome-btn" onclick="editOutcome('${type}', ${newId}, '${safeDescription}')">
-                <i class="fas fa-edit"></i>
-            </button>
-            <button class="delete-outcome-btn" onclick="deleteOutcome('${type}', ${newId}, this)">
-                <i class="fas fa-trash"></i>
-            </button>
-        </div>
-    `;
-    
-    // Add visual effect for new item
-    li.style.backgroundColor = '#dbeafe';
-    li.style.border = '2px solid #3b82f6';
-    li.style.transform = 'scale(1.02)';
-    
-    list.appendChild(li);
-    
-    // Remove the visual effect after animation
-    setTimeout(() => {
-        li.style.backgroundColor = '';
-        li.style.border = '';
-        li.style.transform = '';
-    }, 1500);
-    
-    // Scroll the new item into view
-    li.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-
-function deleteOutcome(type, id, buttonElement) {
+function deleteOutcome(outcomeId, type) {
     if (!confirm('Are you sure you want to delete this outcome?')) return;
     
-    // Show loading state
-    const deleteBtn = buttonElement;
-    const originalContent = deleteBtn.innerHTML;
-    deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    deleteBtn.disabled = true;
+    const programId = document.getElementById('outcomesSection').dataset.programId;
+    const endpoint = type === 'pos' ? 
+        `/api/outcomes/pos/${outcomeId}/` : 
+        `/api/outcomes/psos/${outcomeId}/`;
     
-    fetch(`/core-admin/pso-po/delete/${type}/${id}/`, {
-        method: 'POST',
+    fetch(endpoint, {
+        method: 'DELETE',
         headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify({
-            org_type: currentOrgType,
-            org_id: currentOrgId
-        })
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            'X-CSRFToken': getCsrfToken()
         }
-        return response.json();
     })
+    .then(response => response.json())
     .then(data => {
         if (data.success) {
-            loadOutcomes(); // Reload the outcomes from server
-            showSuccessMessage('Outcome deleted successfully!');
+            loadOutcomes(programId, type);
+            showNotification('Outcome deleted successfully', 'success');
+            updateOutcomeCountsInTable();
         } else {
-            throw new Error(data.error || 'Unknown server error');
+            showNotification('Error deleting outcome', 'error');
         }
     })
     .catch(error => {
         console.error('Error deleting outcome:', error);
-        // For demo purposes, remove locally if API fails
-        if (buttonElement) {
-            buttonElement.closest('li').remove();
-            showSuccessMessage('Outcome deleted locally (server sync pending)');
-            
-            // Add empty message if no items left
-            const listId = type === 'po' ? 'po-list' : 'pso-list';
-            const list = document.getElementById(listId);
-            if (list.children.length === 0) {
-                const li = document.createElement('li');
-                li.innerHTML = `<div class="outcome-text" style="color: #6b7280; font-style: italic; text-align: center;">No outcomes added yet</div>`;
-                li.style.border = '2px dashed #d1d5db';
-                li.style.background = 'transparent';
-                list.appendChild(li);
-            }
-        }
-    })
-    .finally(() => {
-        // Restore button state if it still exists
-        if (deleteBtn && deleteBtn.parentNode) {
-            deleteBtn.innerHTML = originalContent;
-            deleteBtn.disabled = false;
-        }
+        showNotification('Error deleting outcome', 'error');
     });
 }
 
-// Message display functions
-function showSuccessMessage(message) {
-    createNotificationMessage(message, 'success');
+function updateOutcomeCountsInTable() {
+    // Refresh outcome counts in the main table
+    loadOutcomeCounts();
 }
 
-function showErrorMessage(message) {
-    createNotificationMessage(message, 'error');
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
 }
 
-function createNotificationMessage(message, type) {
-    const messageDiv = document.createElement('div');
-    const gradientColor = type === 'success' 
-        ? 'linear-gradient(135deg, #10b981, #059669)'
-        : 'linear-gradient(135deg, #ef4444, #dc2626)';
-    
-    messageDiv.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: ${gradientColor};
-        color: white;
-        padding: 12px 20px;
-        border-radius: 8px;
-        box-shadow: 0 4px 15px rgba(${type === 'success' ? '16, 185, 129' : '239, 68, 68'}, 0.3);
-        z-index: 9999;
-        font-weight: 500;
-        animation: slideInRight 0.3s ease;
-        max-width: 300px;
-        word-wrap: break-word;
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+}
+
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <div class="notification-content">
+            <span class="notification-message">${message}</span>
+            <button class="notification-close" onclick="this.parentElement.parentElement.remove()">×</button>
+        </div>
     `;
-    messageDiv.textContent = message;
-    document.body.appendChild(messageDiv);
     
-    // Add animation keyframes if not already added
-    if (!document.querySelector('#notification-animation-styles')) {
-        const style = document.createElement('style');
-        style.id = 'notification-animation-styles';
-        style.textContent = `
-            @keyframes slideInRight {
-                from { opacity: 0; transform: translateX(100px); }
-                to { opacity: 1; transform: translateX(0); }
-            }
-        `;
-        document.head.appendChild(style);
-    }
+    // Add to page
+    document.body.appendChild(notification);
     
-    const timeout = type === 'error' ? 4000 : 3000;
+    // Auto remove after 5 seconds
     setTimeout(() => {
-        messageDiv.style.animation = 'slideInRight 0.3s ease reverse';
-        setTimeout(() => {
-            if (messageDiv.parentNode) {
-                messageDiv.parentNode.removeChild(messageDiv);
-            }
-        }, 300);
-    }, timeout);
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 5000);
 }
 
-// CSRF token helper
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
+function getCsrfToken() {
+    const tokenElement = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (tokenElement) {
+        return tokenElement.value;
+    }
+    
+    // Fallback to cookie
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrftoken') {
+            return value;
         }
     }
-    return cookieValue;
-}
-
-// Validate CSRF token exists
-function validateCSRFToken() {
-    const token = getCookie('csrftoken');
-    if (!token) {
-        console.warn('CSRF token not found. Some operations may fail.');
-        showErrorMessage('Security token missing. Please refresh the page.');
-        return false;
-    }
-    return true;
-}
-
-// Add input validation styling
-function addInputValidationStyling() {
-    const inputs = document.querySelectorAll('input[type="text"], textarea');
-    inputs.forEach(input => {
-        input.addEventListener('invalid', function() {
-            this.style.borderColor = '#ef4444';
-        });
-        
-        input.addEventListener('input', function() {
-            this.style.borderColor = '#e2e8f0';
-        });
-    });
+    return '';
 }

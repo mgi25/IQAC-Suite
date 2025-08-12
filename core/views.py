@@ -13,6 +13,7 @@ from django.forms import inlineformset_factory
 from django import forms
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 import json
 import logging
@@ -26,6 +27,9 @@ from .models import (
     Report,
     Class,
     OrganizationRole,
+    Program,
+    ProgramOutcome,
+    ProgramSpecificOutcome,
 )
 from emt.models import EventProposal, Student
 from django.views.decorators.http import require_GET, require_POST
@@ -1292,24 +1296,224 @@ def admin_pso_po_management(request):
     import json
     from .models import Program, ProgramOutcome, ProgramSpecificOutcome
     
+    # Get dynamic organization types from database
     org_types = OrganizationType.objects.filter(is_active=True).order_by('name')
     orgs_by_type = {}
     orgs_by_type_json = {}
 
     for org_type in org_types:
-        qs = Organization.objects.filter(org_type=org_type).order_by('name')
+        qs = Organization.objects.filter(org_type=org_type, is_active=True).order_by('name')
         orgs_by_type[org_type.name] = qs
-        active_orgs = qs.filter(is_active=True)
-        orgs_by_type_json[org_type.name.lower()] = [{'id': o.id, 'name': o.name} for o in active_orgs]
+        orgs_by_type_json[org_type.name.lower()] = [{'id': o.id, 'name': o.name} for o in qs]
     
-    programs = Program.objects.all().order_by("name")
+    # Get all programs with their outcomes
+    programs = Program.objects.prefetch_related('pos', 'psos').all().order_by("name")
+    
+    # Prepare programs data for frontend
+    programs_data = {}
+    org_outcome_counts = {}
+    
+    for program in programs:
+        org_id = program.organization.id if program.organization else None
+        if org_id:
+            if org_id not in org_outcome_counts:
+                org_outcome_counts[org_id] = {'po_count': 0, 'pso_count': 0}
+            
+            org_outcome_counts[org_id]['po_count'] += program.pos.count()
+            org_outcome_counts[org_id]['pso_count'] += program.psos.count()
+        
+        programs_data[program.id] = {
+            'id': program.id,
+            'name': program.name,
+            'organization_id': org_id,
+            'organization_name': program.organization.name if program.organization else '',
+            'pos': [{'id': po.id, 'description': po.description} for po in program.pos.all()],
+            'psos': [{'id': pso.id, 'description': pso.description} for pso in program.psos.all()]
+        }
+    
     context = {
         "org_types": org_types,
         "orgs_by_type": orgs_by_type,
         "orgs_by_type_json": json.dumps(orgs_by_type_json),
         "programs": programs,
+        "programs_data": json.dumps(programs_data),
+        "org_outcome_counts": json.dumps(org_outcome_counts),
     }
     return render(request, "core/admin_pso_po_management.html", context)
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_http_methods(["GET", "POST", "PUT", "DELETE"])
+def manage_program_outcomes(request, program_id=None):
+    """API endpoint for managing Program Outcomes (POs and PSOs)"""
+    from .models import Program, ProgramOutcome, ProgramSpecificOutcome
+    import json
+    
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            program = Program.objects.get(id=data['program_id'])
+            outcome_type = data.get('type', '').upper()
+            
+            if outcome_type == 'PO':
+                outcome = ProgramOutcome.objects.create(
+                    program=program,
+                    description=data['description']
+                )
+            elif outcome_type == 'PSO':
+                outcome = ProgramSpecificOutcome.objects.create(
+                    program=program,
+                    description=data['description']
+                )
+            else:
+                return JsonResponse({'success': False, 'error': 'Invalid outcome type'})
+                
+            return JsonResponse({
+                'success': True, 
+                'outcome': {'id': outcome.id, 'description': outcome.description}
+            })
+        except (Program.DoesNotExist, KeyError, json.JSONDecodeError) as e:
+            return JsonResponse({'success': False, 'error': 'Invalid data: ' + str(e)})
+    
+    elif request.method == "PUT":
+        try:
+            data = json.loads(request.body)
+            outcome_type = data.get('type', '').upper()
+            
+            if outcome_type == 'PO':
+                outcome = ProgramOutcome.objects.get(id=data['outcome_id'])
+            elif outcome_type == 'PSO':
+                outcome = ProgramSpecificOutcome.objects.get(id=data['outcome_id'])
+            else:
+                return JsonResponse({'success': False, 'error': 'Invalid outcome type'})
+                
+            outcome.description = data['description']
+            outcome.save()
+            return JsonResponse({
+                'success': True,
+                'outcome': {'id': outcome.id, 'description': outcome.description}
+            })
+        except (ProgramOutcome.DoesNotExist, ProgramSpecificOutcome.DoesNotExist, KeyError, json.JSONDecodeError):
+            return JsonResponse({'success': False, 'error': 'Invalid data'})
+    
+    elif request.method == "DELETE":
+        try:
+            data = json.loads(request.body)
+            outcome_type = data.get('type', '').upper()
+            
+            if outcome_type == 'PO':
+                outcome = ProgramOutcome.objects.get(id=data['outcome_id'])
+            elif outcome_type == 'PSO':
+                outcome = ProgramSpecificOutcome.objects.get(id=data['outcome_id'])
+            else:
+                return JsonResponse({'success': False, 'error': 'Invalid outcome type'})
+                
+            outcome.delete()
+            return JsonResponse({'success': True})
+        except (ProgramOutcome.DoesNotExist, ProgramSpecificOutcome.DoesNotExist, KeyError, json.JSONDecodeError):
+            return JsonResponse({'success': False, 'error': 'Invalid data'})
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_http_methods(["GET", "POST", "PUT", "DELETE"])
+def manage_program_specific_outcomes(request, program_id=None):
+    """API endpoint for managing Program Specific Outcomes (PSOs)"""
+    from .models import Program, ProgramSpecificOutcome
+    import json
+    
+    if request.method == "GET":
+        if program_id:
+            try:
+                program = Program.objects.get(id=program_id)
+                psos = list(program.psos.values('id', 'description'))
+                return JsonResponse({
+                    'success': True,
+                    'program': {'id': program.id, 'name': program.name},
+                    'outcomes': psos
+                })
+            except Program.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Program not found'})
+        else:
+            return JsonResponse({'success': False, 'error': 'Program ID required'})
+    
+    elif request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            program = Program.objects.get(id=data['program_id'])
+            pso = ProgramSpecificOutcome.objects.create(
+                program=program,
+                description=data['description']
+            )
+            return JsonResponse({
+                'success': True,
+                'outcome': {'id': pso.id, 'description': pso.description}
+            })
+        except (Program.DoesNotExist, KeyError, json.JSONDecodeError):
+            return JsonResponse({'success': False, 'error': 'Invalid data'})
+    
+    elif request.method == "PUT":
+        try:
+            data = json.loads(request.body)
+            pso = ProgramSpecificOutcome.objects.get(id=data['outcome_id'])
+            pso.description = data['description']
+            pso.save()
+            return JsonResponse({
+                'success': True,
+                'outcome': {'id': pso.id, 'description': pso.description}
+            })
+        except (ProgramSpecificOutcome.DoesNotExist, KeyError, json.JSONDecodeError):
+            return JsonResponse({'success': False, 'error': 'Invalid data'})
+    
+    elif request.method == "DELETE":
+        try:
+            data = json.loads(request.body)
+            pso = ProgramSpecificOutcome.objects.get(id=data['outcome_id'])
+            pso.delete()
+            return JsonResponse({'success': True})
+        except (ProgramSpecificOutcome.DoesNotExist, KeyError, json.JSONDecodeError):
+            return JsonResponse({'success': False, 'error': 'Invalid data'})
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_POST
+def create_program_for_organization(request):
+    """API endpoint for creating a new program for an organization"""
+    from .models import Organization, Program
+    import json
+    
+    try:
+        data = json.loads(request.body)
+        organization = Organization.objects.get(id=data['organization_id'])
+        
+        # Check if program already exists for this organization
+        existing_program = Program.objects.filter(
+            organization=organization,
+            name=data.get('program_name', f"{organization.name} Program")
+        ).first()
+        
+        if existing_program:
+            return JsonResponse({
+                'success': True,
+                'program': {
+                    'id': existing_program.id,
+                    'name': existing_program.name,
+                    'organization_id': existing_program.organization.id
+                }
+            })
+        
+        # Create new program
+        program = Program.objects.create(
+            name=data.get('program_name', f"{organization.name} Program"),
+            organization=organization
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'program': {
+                'id': program.id,
+                'name': program.name,
+                'organization_id': program.organization.id
+            }
+        })
+    except (Organization.DoesNotExist, KeyError, json.JSONDecodeError):
+        return JsonResponse({'success': False, 'error': 'Invalid data'})
 
 @require_GET
 def get_approval_flow(request, org_id):
@@ -3399,3 +3603,46 @@ def student_event_details(request, proposal_id):
     }
     
     return render(request, 'core/student_event_details.html', context)
+
+# ─────────────────────────────────────────────────────────────
+#  PSO & PO Management API Endpoints
+# ─────────────────────────────────────────────────────────────
+
+@login_required
+@require_http_methods(["GET"])
+def api_organization_programs(request, org_id):
+    """API endpoint to get programs for an organization"""
+    try:
+        programs = Program.objects.filter(organization_id=org_id).values(
+            'id', 'name'
+        )
+        
+        return JsonResponse(list(programs), safe=False)
+    
+    except Exception as e:
+        logger.error(f"Error fetching programs for organization {org_id}: {str(e)}")
+        return JsonResponse({'error': 'Failed to fetch programs'}, status=500)
+
+@login_required
+@require_http_methods(["GET"])
+def api_program_outcomes(request, program_id):
+    """API endpoint to get outcomes for a program"""
+    try:
+        outcome_type = request.GET.get('type', '').upper()
+        
+        if outcome_type == 'PO':
+            outcomes = ProgramOutcome.objects.filter(program_id=program_id).values(
+                'id', 'description'
+            )
+        elif outcome_type == 'PSO':
+            outcomes = ProgramSpecificOutcome.objects.filter(program_id=program_id).values(
+                'id', 'description'
+            )
+        else:
+            return JsonResponse({'error': 'Invalid outcome type'}, status=400)
+        
+        return JsonResponse(list(outcomes), safe=False)
+    
+    except Exception as e:
+        logger.error(f"Error fetching {outcome_type}s for program {program_id}: {str(e)}")
+        return JsonResponse({'error': f'Failed to fetch {outcome_type}s'}, status=500)
