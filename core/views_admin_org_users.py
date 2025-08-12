@@ -231,27 +231,37 @@ def upload_csv(request, org_id):
 
             first, last = _split_name(name)
 
-            user, created = User.objects.get_or_create(
-                username=email,
-                defaults={
-                    "email": email,
-                    "first_name": first,
-                    "last_name": last,
-                    "is_active": False,
-                },
-            )
+            # Try to find an existing user by email to avoid duplicates when
+            # the username differs from the email address (e.g., users who
+            # registered manually). If not found, fall back to creating a new
+            # user with the email as the username.
+            user = User.objects.filter(email__iexact=email).first()
+            created = False
+            if not user:
+                user, created = User.objects.get_or_create(
+                    username=email,
+                    defaults={
+                        "email": email,
+                        "first_name": first,
+                        "last_name": last,
+                        "is_active": False,
+                    },
+                )
             if created:
                 users_created += 1
             else:
-                upd = False
+                fields_to_update = []
                 if not user.first_name and first:
                     user.first_name = first
-                    upd = True
+                    fields_to_update.append("first_name")
                 if not user.last_name and last:
                     user.last_name = last
-                    upd = True
-                if upd:
-                    user.save(update_fields=["first_name", "last_name"])
+                    fields_to_update.append("last_name")
+                if user.email.lower() != email:
+                    user.email = email
+                    fields_to_update.append("email")
+                if fields_to_update:
+                    user.save(update_fields=fields_to_update)
                     users_updated += 1
 
             profile, _ = Profile.objects.get_or_create(user=user)

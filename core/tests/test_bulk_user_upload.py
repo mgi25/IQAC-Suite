@@ -68,6 +68,33 @@ class BulkUserUploadTests(TestCase):
         # Check the role in the logged-in user's session (not the admin client)
         self.assertEqual(user_client.session['role'], 'student')
 
+    def test_existing_user_not_duplicated(self):
+        """Existing users matched by email should not be duplicated on upload."""
+        existing = User.objects.create_user('john', 'john@example.com', 'pass')
+
+        self.client.force_login(self.admin)
+
+        csv_content = (
+            "register_no,name,email,role\n"
+            "001,John Doe,john@example.com,student\n"
+        )
+        file = SimpleUploadedFile('users.csv', csv_content.encode('utf-8'), content_type='text/csv')
+        url = reverse('admin_org_users_upload_csv', args=[self.org.id])
+        data = {
+            'class_name': 'A',
+            'academic_year': '2024-2025',
+            'csv_file': file,
+        }
+        referer = f'http://testserver/core-admin/org-users/{self.org.id}/students/'
+        self.client.post(url, data, follow=True, HTTP_REFERER=referer)
+
+        self.assertEqual(User.objects.filter(email='john@example.com').count(), 1)
+        self.assertFalse(User.objects.filter(username='john@example.com').exists())
+        mems = OrganizationMembership.objects.filter(user=existing, organization=self.org)
+        self.assertEqual(mems.count(), 1)
+        ra = RoleAssignment.objects.get(user=existing, organization=self.org)
+        self.assertEqual(ra.role, self.student_role)
+
 
 class BulkFacultyUploadTests(TestCase):
     def setUp(self):
@@ -107,3 +134,16 @@ class BulkFacultyUploadTests(TestCase):
         # Ensure in archived list
         resp = self.client.get(reverse('admin_org_users_faculty', args=[self.org.id]) + '?archived=1')
         self.assertContains(resp, 'Prof One')
+
+    def test_existing_faculty_not_duplicated(self):
+        existing = User.objects.create_user('prof1', 'prof1@example.com', 'pass')
+
+        self.client.force_login(self.admin)
+        self._upload()
+
+        self.assertEqual(User.objects.filter(email='prof1@example.com').count(), 1)
+        self.assertFalse(User.objects.filter(username='prof1@example.com').exists())
+        mems = OrganizationMembership.objects.filter(user=existing, organization=self.org)
+        self.assertEqual(mems.count(), 1)
+        ra = RoleAssignment.objects.get(user=existing, organization=self.org)
+        self.assertEqual(ra.role, self.faculty_role)
