@@ -164,6 +164,7 @@ $(document).ready(function() {
                 // We call the new function to set up the listener for activities.
                 setupDynamicActivitiesListener();
                 setupOutcomeModal();
+                setupAudienceModal();
             }
             if (section === 'speakers') {
                 setupSpeakersSection();
@@ -424,6 +425,85 @@ $(document).ready(function() {
         });
     }
 
+    function setupAudienceModal() {
+        const audienceField = $('#target-audience-modern');
+        const djangoOrgSelect = $('#django-basic-info [name="organization"]');
+        const modal = $('#audienceModal');
+        const container = $('#audienceOptions');
+
+        if (!audienceField.length || !djangoOrgSelect.length || !modal.length) return;
+
+        audienceField.prop('readonly', true).css('cursor', 'pointer');
+        $(document).off('click', '#target-audience-modern').on('click', '#target-audience-modern', openAudienceModal);
+
+        $('#audienceCancel').off('click').on('click', () => modal.removeClass('show'));
+        $('#audienceSave').off('click').on('click', () => {
+            const selected = modal.find('input[name="audience-user"]:checked').map((_, cb) => $(cb).data('name')).get();
+            audienceField.val(selected.join(', ')).trigger('change');
+            modal.removeClass('show');
+        });
+    }
+
+    function openAudienceModal() {
+        const modal = $('#audienceModal');
+        const container = $('#audienceOptions');
+        const djangoOrgSelect = $('#django-basic-info [name="organization"]');
+        modal.addClass('show');
+        container.html(`
+            <div class="audience-type-selector">
+                <button type="button" data-type="students">Students</button>
+                <button type="button" data-type="faculty">Faculty</button>
+            </div>
+            <div id="audienceList">Select an option above.</div>
+        `);
+        const list = $('#audienceList');
+        container.find('button[data-type]').on('click', function() {
+            const type = $(this).data('type');
+            list.text('Loading...');
+            if (type === 'students') {
+                const orgId = djangoOrgSelect.val();
+                if (!orgId) { list.text('Select an organization first.'); return; }
+                fetch(`${window.API_CLASSES_BASE}${orgId}/`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            list.empty();
+                            data.classes.forEach(cls => {
+                                const classLbl = $('<label class="audience-class">');
+                                const classCb = $('<input type="checkbox" class="audience-class-cb" checked>').data('class-id', cls.id);
+                                classLbl.append(classCb).append(' ' + cls.name);
+                                const studentsDiv = $('<div class="audience-students" style="margin-left:1em;"></div>');
+                                cls.students.forEach(st => {
+                                    const stCb = $('<input type="checkbox" name="audience-user" checked>').val(st.id).data('name', st.name);
+                                    const stLbl = $('<label>').append(stCb).append(' ' + st.name);
+                                    studentsDiv.append(stLbl).append('<br>');
+                                });
+                                list.append(classLbl).append('<br>').append(studentsDiv);
+                                classCb.on('change', function() {
+                                    studentsDiv.find('input[type=checkbox]').prop('checked', $(this).is(':checked'));
+                                });
+                            });
+                        } else {
+                            list.text('No classes found.');
+                        }
+                    })
+                    .catch(() => { list.text('Error loading.'); });
+            } else {
+                fetch(window.API_FACULTY)
+                    .then(r => r.json())
+                    .then(data => {
+                        list.empty();
+                        data.forEach(f => {
+                            const cb = $('<input type="checkbox" name="audience-user">').val(f.id).data('name', f.text);
+                            const lbl = $('<label>').append(cb).append(' ' + f.text);
+                            list.append(lbl).append('<br>');
+                        });
+                    })
+                    .catch(() => { list.text('Error loading.'); });
+            }
+        });
+    }
+
     function openOutcomeModal() {
         const modal = $('#outcomeModal');
         const url = modal.attr('data-url');
@@ -638,7 +718,7 @@ $(document).ready(function() {
                     </div>
                     <div class="input-group">
                         <label for="target-audience-modern">Target Audience *</label>
-                        <input type="text" id="target-audience-modern" required placeholder="e.g., Final year students, Faculty members">
+                        <input type="text" id="target-audience-modern" required readonly placeholder="Select target audience">
                         <div class="help-text">Specify who this event is intended for</div>
                     </div>
                 </div>

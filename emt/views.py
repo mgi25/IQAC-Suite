@@ -23,6 +23,7 @@ from core.models import (
     Report as SubmittedReport,
     ApprovalFlowTemplate,
     SDGGoal,
+    Class,
 )
 from django.contrib.auth.models import User
 from emt.utils import (
@@ -1052,6 +1053,37 @@ def api_faculty(request):
         [{"id": u.id, "text": f"{u.get_full_name() or u.username} ({u.email})"} for u in users],
         safe=False
     )
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_classes(request, org_id):
+    """Return classes and their students for an organization."""
+    try:
+        classes = (
+            Class.objects
+            .filter(organization_id=org_id, is_active=True)
+            .prefetch_related('students__user')
+            .order_by('name')
+        )
+        data = []
+        for cls in classes:
+            students = [
+                {
+                    'id': s.user.id,
+                    'name': s.user.get_full_name() or s.user.username,
+                }
+                for s in cls.students.all()
+            ]
+            data.append({
+                'id': cls.id,
+                'name': cls.name,
+                'code': cls.code,
+                'students': students,
+            })
+        return JsonResponse({'success': True, 'classes': data})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 @csrf_exempt
