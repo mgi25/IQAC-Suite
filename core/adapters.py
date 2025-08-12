@@ -50,7 +50,30 @@ class SchoolSocialAccountAdapter(DefaultSocialAccountAdapter):
 
 
 class RoleBasedAccountAdapter(DefaultAccountAdapter):
-    """Redirect users based on their role after login."""
+    """Redirect users based on their role after login.
+
+    Also permits users created via bulk upload to log in once even if their
+    ``is_active`` flag is ``False``.  Upon that first login the signal
+    ``user_logged_in`` will activate the account.
+    """
+
+    def pre_login(
+        self,
+        request,
+        user,
+        *,
+        email_verification,
+        signal_kwargs,
+        email,
+        signup,
+        redirect_url,
+    ):
+        """Allow first-time inactive users to proceed with login."""
+        if not user.is_active:
+            profile = getattr(user, "profile", None)
+            if not (profile and getattr(profile, "activated_at", None) is None):
+                return self.respond_user_inactive(request, user)
+
 
     def get_login_redirect_url(self, request):
         user = request.user
