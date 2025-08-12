@@ -2,7 +2,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.contrib.auth.models import User
 from django.contrib.auth.signals import user_logged_in, user_logged_out
-from .models import Profile
+from .models import Profile, RoleAssignment
 import sys
 import logging
 
@@ -25,21 +25,31 @@ def create_or_update_user_profile(sender, instance, created, **kwargs):
 
 @receiver(user_logged_in)
 def assign_role_on_login(sender, user, request, **kwargs):
-    """Assign either the faculty or student role based on the email address."""
-    email = (user.email or "").lower()
-    # Determine role purely based on email domain.
-    # Any address ending with ``christuniversity.in`` is a student account;
-    # everything else defaults to faculty.
-    domain = email.split("@")[-1]
-    role = "student" if domain.endswith("christuniversity.in") else "faculty"
+    """Assign the user's role for the current organization on login."""
 
-    profile, _ = Profile.objects.get_or_create(user=user)
-    if profile.role != role:
-        profile.role = role
-        profile.save()
-    # Store the role in the session for downstream views if available.
-    if request is not None:
-        request.session['role'] = role
+    if request is None:
+        return
+
+    org_id = request.session.get("org_id") or request.session.get("organization_id")
+    role_assignment = None
+    if org_id is not None:
+        role_assignment = RoleAssignment.objects.filter(
+            user=user, organization_id=org_id
+        ).select_related("role").first()
+    if role_assignment is None:
+        role_assignment = RoleAssignment.objects.filter(user=user).select_related("role").first()
+
+    if role_assignment:
+        role_name = role_assignment.role.name
+        profile, _ = Profile.objects.get_or_create(user=user)
+        if profile.role != role_name:
+            profile.role = role_name
+            profile.save(update_fields=["role"])
+        request.session["role"] = role_name
+
+    if not user.is_active:
+        user.is_active = True
+        user.save(update_fields=["is_active"])
 
 @receiver(user_logged_in)
 def log_user_login(sender, request, user, **kwargs):
