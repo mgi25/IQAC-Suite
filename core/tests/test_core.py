@@ -37,8 +37,8 @@ class UserRoleAssignmentTests(TestCase):
         session = self.client.session
         session['org_id'] = self.org.id
         session.save()
-        user = User.objects.get(username=username)
-        self.client.force_login(user)
+        success = self.client.login(username=username, password=password)
+        self.assertTrue(success)
 
     def test_student_role_assigned_on_login(self):
         user = User.objects.create_user(
@@ -95,7 +95,7 @@ class ApprovalFlowViewTests(TestCase):
         user = User.objects.create_user("user", "u@x.com", "pass", is_active=False)
         role = OrganizationRole.objects.create(organization=org, name="Member")
         RoleAssignment.objects.create(user=user, role=role, organization=org)
-        self.client.force_login(user)
+        self.assertTrue(self.client.login(username="user", password="pass"))
 
         resp = self.client.post(
             f"/core-admin/approval-flow/{org.id}/save/",
@@ -142,7 +142,7 @@ class SaveApprovalFlowTests(TestCase):
         user = User.objects.create_user("user", "u@x.com", "pass", is_active=False)
         role = OrganizationRole.objects.create(organization=self.org, name="Member")
         RoleAssignment.objects.create(user=user, role=role, organization=self.org)
-        self.client.force_login(user)
+        self.assertTrue(self.client.login(username="user", password="pass"))
 
         resp = self.client.post(
             f"/core-admin/approval-flow/{self.org.id}/save/",
