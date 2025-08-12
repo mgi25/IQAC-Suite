@@ -1,13 +1,14 @@
 import os
 import shutil
 from datetime import timedelta, datetime
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404, resolve_url
 from django.contrib.auth import logout
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpResponseForbidden, JsonResponse, HttpResponseRedirect
 from django.contrib.auth.models import User
 from django.contrib import messages
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.db.models import Q, Sum, Count
 from django.forms import inlineformset_factory
 from django import forms
@@ -54,6 +55,17 @@ def _superuser_check(user):
     if not user.is_superuser:
         raise PermissionDenied("You are not authorized to access this page.")
     return True
+
+
+def safe_next(request, fallback="/"):
+    nxt = (
+        request.POST.get("next")
+        or request.GET.get("next")
+        or request.META.get("HTTP_REFERER")
+    )
+    if nxt and url_has_allowed_host_and_scheme(nxt, allowed_hosts={request.get_host()}):
+        return nxt
+    return resolve_url(fallback)
 
 
 # Reuse the ModelForm defined in core.forms so it can be imported from here for tests
@@ -210,7 +222,7 @@ def dashboard(request):
         total=Sum('fest_fee_participants') + Sum('conf_fee_participants')
     )['total'] or 0
     my_students = Student.objects.filter(mentor=user)
-    my_classes = Class.objects.filter(teacher=user)
+    my_classes = Class.objects.filter(teacher=user, is_active=True)
     
     # Get user's recent proposals for notifications
     user_proposals = EventProposal.objects.filter(submitted_by=user).order_by('-updated_at')[:5]
@@ -386,7 +398,10 @@ def admin_dashboard(request):
     from datetime import timedelta
 
     # Calculate role statistics (manual count for accuracy)
-    all_assignments = RoleAssignment.objects.select_related('role', 'user').all()
+    all_assignments = RoleAssignment.objects.select_related('role', 'user').filter(
+        user__is_active=True,
+        user__last_login__isnull=False,
+    )
     counted_users = {'faculty': set(), 'student': set(), 'hod': set()}
     for assignment in all_assignments:
         role_name = assignment.role.name.lower()
@@ -409,8 +424,12 @@ def admin_dashboard(request):
         'approved_proposals': EventProposal.objects.filter(status='approved').count(),
         'rejected_proposals': EventProposal.objects.filter(status='rejected').count(),
         'total_users': User.objects.count(),
-        'active_users': User.objects.filter(is_active=True).count(),
-        'new_users_this_week': User.objects.filter(date_joined__gte=timezone.now() - timedelta(days=7)).count(),
+        'active_users': User.objects.filter(is_active=True, last_login__isnull=False).count(),
+        'new_users_this_week': User.objects.filter(
+            is_active=True,
+            last_login__isnull=False,
+            date_joined__gte=timezone.now() - timedelta(days=7),
+        ).count(),
         'total_reports': Report.objects.count(),
         'database_status': 'Operational',
         'email_status': 'Active',
@@ -698,8 +717,10 @@ def admin_user_management(request):
     if org_type_ids:
         users_list = users_list.filter(role_assignments__organization__org_type_id__in=org_type_ids)
 
-    if status in ['active', 'inactive']:
-        users_list = users_list.filter(is_active=(status == 'active'))
+    if status == 'active':
+        users_list = users_list.filter(is_active=True, last_login__isnull=False)
+    elif status == 'inactive':
+        users_list = users_list.filter(Q(is_active=False) | Q(last_login__isnull=True))
 
     users_list = users_list.distinct()
 
@@ -753,17 +774,18 @@ def admin_user_edit(request, user_id):
         extra=0,
         can_delete=True,
     )
+    next_url = safe_next(request, fallback="admin_user_management")
     if request.method == "POST":
         formset = RoleFormSet(request.POST, instance=user)
         user.first_name = request.POST.get("first_name", "").strip()
-        user.last_name  = request.POST.get("last_name", "").strip()
-        user.email      = request.POST.get("email", "").strip()
+        user.last_name = request.POST.get("last_name", "").strip()
+        user.email = request.POST.get("email", "").strip()
         user.save()
 
         if formset.is_valid():
             formset.save()
             messages.success(request, "User roles updated successfully.")
-            return redirect("admin_user_management")
+            return redirect(next_url)
         else:
             messages.error(request, "Please fix the errors below and try again.")
     else:
@@ -793,8 +815,37 @@ def admin_user_edit(request, user_id):
             "organization_types": OrganizationType.objects.filter(),
             "organizations_json": json.dumps(organizations_json),
             "roles_json": json.dumps(roles_json),
+            "next": next_url,
         },
     )
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def admin_user_activate(request, user_id):
+    """Activate a user and redirect back safely."""
+    user = get_object_or_404(User, id=user_id)
+    user.is_active = True
+    user.save()
+    messages.success(
+        request,
+        f"User '{user.get_full_name() or user.username}' activated successfully.",
+    )
+    return redirect(safe_next(request, fallback="admin_user_management"))
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def admin_user_deactivate(request, user_id):
+    """Deactivate a user and redirect back safely."""
+    user = get_object_or_404(User, id=user_id)
+    user.is_active = False
+    user.save()
+    messages.success(
+        request,
+        f"User '{user.get_full_name() or user.username}' deactivated successfully.",
+    )
+    return redirect(safe_next(request, fallback="admin_user_management"))
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_event_proposals(request):
@@ -1160,7 +1211,7 @@ def master_data_dashboard(request):
         'organizations': Organization.objects.count(),
         'org_types': OrganizationType.objects.count(),
         'academic_years': AcademicYear.objects.count(),
-        'active_users': User.objects.filter(is_active=True).count(),
+        'active_users': User.objects.filter(is_active=True, last_login__isnull=False).count(),
     }
     
     recent_activities = [
@@ -2034,16 +2085,22 @@ def admin_dashboard_api(request):
     from django.contrib.auth.models import User
     stats = {
         'students': User.objects.filter(
-            role_assignments__role__name__icontains='student'
+            role_assignments__role__name__icontains='student',
+            is_active=True,
+            last_login__isnull=False,
         ).distinct().count(),
         'faculties': User.objects.filter(
-            role_assignments__role__name__icontains='faculty'
+            role_assignments__role__name__icontains='faculty',
+            is_active=True,
+            last_login__isnull=False,
         ).distinct().count(),
         'hods': User.objects.filter(
-            role_assignments__role__name__icontains='hod'
+            role_assignments__role__name__icontains='hod',
+            is_active=True,
+            last_login__isnull=False,
         ).distinct().count(),
         'centers': Organization.objects.filter(is_active=True).count(),
-        'total_users': User.objects.filter(is_active=True).count(),
+        'total_users': User.objects.filter(is_active=True, last_login__isnull=False).count(),
         'total_proposals': EventProposal.objects.count(),
         'pending_proposals': EventProposal.objects.filter(
             status__in=['submitted', 'under_review']
@@ -2066,7 +2123,11 @@ from django.contrib.auth.models import User
 from django.db.models import Q, Count
 from django.utils import timezone
 from io import StringIO, BytesIO
-import xlsxwriter
+# xlsxwriter is optional; used only for Excel export
+try:
+    import xlsxwriter
+except ImportError:  # pragma: no cover - optional dependency
+    xlsxwriter = None
 
 from itertools import chain
 from operator import attrgetter
@@ -3320,6 +3381,8 @@ def export_data_csv(request):
 @user_passes_test(is_admin)
 def export_data_excel(request):
     """Export filtered data as Excel"""
+    if xlsxwriter is None:
+        return JsonResponse({'error': 'XLSX export not available'}, status=501)
     if request.method != 'POST':
         return JsonResponse({'error': 'POST method required'}, status=405)
     
@@ -3482,7 +3545,7 @@ def is_admin(user):
 @user_passes_test(is_admin)
 def switch_user_view(request):
     """Display the switch user interface"""
-    users = User.objects.filter(is_active=True).select_related().order_by('username')
+    users = User.objects.filter(is_active=True, last_login__isnull=False).select_related().order_by('username')
     
     # Get current impersonated user if any
     impersonated_user = None
@@ -3553,7 +3616,9 @@ def impersonate_user(request):
         if not user_id:
             return JsonResponse({'success': False, 'error': 'User ID is required'})
         
-        target_user = get_object_or_404(User, id=user_id, is_active=True)
+        target_user = get_object_or_404(
+            User, id=user_id, is_active=True, last_login__isnull=False
+        )
         
         # Store the impersonation in session
         request.session['impersonate_user_id'] = target_user.id
@@ -3604,6 +3669,7 @@ def student_event_details(request, proposal_id):
     
     return render(request, 'core/student_event_details.html', context)
 
+
 # ─────────────────────────────────────────────────────────────
 #  PSO & PO Management API Endpoints
 # ─────────────────────────────────────────────────────────────
@@ -3646,3 +3712,70 @@ def api_program_outcomes(request, program_id):
     except Exception as e:
         logger.error(f"Error fetching {outcome_type}s for program {program_id}: {str(e)}")
         return JsonResponse({'error': f'Failed to fetch {outcome_type}s'}, status=500)
+
+def is_superuser(u):
+    return u.is_superuser
+
+
+@login_required
+@user_passes_test(is_superuser)
+def class_rosters(request, org_id):
+    org = get_object_or_404(Organization, pk=org_id)
+    year = request.GET.get("year") or request.session.get("active_year")
+
+    qs = RoleAssignment.objects.filter(
+        organization=org,
+        role__name__iexact="student",
+    )
+    if year:
+        qs = qs.filter(academic_year=year)
+
+    classes = (
+        qs.values("class_name")
+        .annotate(student_count=Count("id"))
+        .order_by("class_name")
+    )
+
+    context = {
+        "organization": org,
+        "academic_year": year,
+        "classes": classes,
+    }
+    return render(request, "core/admin/class_rosters.html", context)
+
+
+@login_required
+@user_passes_test(is_superuser)
+def class_roster_detail(request, org_id, class_name):
+    org = get_object_or_404(Organization, pk=org_id)
+    year = request.GET.get("year") or request.session.get("active_year")
+    q = request.GET.get("q", "").strip()
+
+    ras = RoleAssignment.objects.select_related("user", "role").filter(
+        organization=org,
+        role__name__iexact="student",
+        class_name=class_name,
+    )
+    if year:
+        ras = ras.filter(academic_year=year)
+
+    if q:
+        ras = ras.filter(
+            Q(user__first_name__icontains=q)
+            | Q(user__last_name__icontains=q)
+            | Q(user__email__icontains=q)
+            | Q(user__username__icontains=q)
+        )
+
+    ras = ras.order_by("user__first_name", "user__last_name")
+    paginator = Paginator(ras, 25)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    context = {
+        "organization": org,
+        "academic_year": year,
+        "class_name": class_name,
+        "page_obj": page_obj,
+        "q": q,
+    }
+    return render(request, "core/admin/class_roster_detail.html", context)

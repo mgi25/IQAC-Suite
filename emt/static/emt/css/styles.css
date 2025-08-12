@@ -191,12 +191,24 @@
 .proposal-content {
   flex: 1;
   margin-left: 280px;
-  padding: 2rem;
+  padding: 1rem 2rem;
   max-width: calc(100% - 280px);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Form Container Space Optimization */
+#proposal-form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .content-header {
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
+  flex-shrink: 0;
 }
 
 .content-title {
@@ -1133,21 +1145,39 @@
 
 /* Speakers Section Container */
 .speakers-section {
-    padding: 1rem 0;
+    padding: 2rem;
+    min-height: calc(100vh - 200px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+    width: 100%;
+    max-width: none;
 }
 
 .speakers-container {
     margin-bottom: 2rem;
-    min-height: 100px;
+    min-height: 200px;
+    width: 100%;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .speakers-empty-state {
     text-align: center;
-    padding: 3rem 2rem;
+    padding: 4rem 2rem;
     background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
     border: 2px dashed #cbd5e1;
-    border-radius: 12px;
+    border-radius: 16px;
     margin: 2rem 0;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    flex-grow: 1;
 }
 
 .empty-state-icon {
@@ -1173,10 +1203,11 @@
 .add-speaker-section {
     text-align: center;
     margin: 2rem 0;
-    padding: 1.5rem;
+    padding: 2rem;
     background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-    border-radius: 12px;
+    border-radius: 16px;
     border: 1px solid #e2e8f0;
+    width: 100%;
 }
 
 .speaker-form-container {
@@ -1537,22 +1568,39 @@
 
 /* Expenses Section Container */
 .expenses-section {
-    max-width: 800px;
-    margin: 0 auto;
+    padding: 2rem;
+    min-height: calc(100vh - 200px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+    width: 100%;
+    max-width: none;
 }
 
 .expenses-container {
     margin-bottom: 2rem;
+    width: 100%;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 /* Empty State */
 .expenses-empty-state {
     text-align: center;
-    padding: 3rem 2rem;
+    padding: 4rem 2rem;
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     border: 2px dashed #cbd5e1;
-    border-radius: 12px;
-    margin-bottom: 2rem;
+    border-radius: 16px;
+    margin: 2rem 0;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    flex-grow: 1;
 }
 
 .expenses-empty-state .empty-state-icon {
@@ -1575,27 +1623,34 @@
 /* Add Expense Section */
 .add-expense-section {
     text-align: center;
-    margin-bottom: 2rem;
+    margin: 2rem 0;
+    padding: 2rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    width: 100%;
 }
 
 /* Expense Form Container */
 .expense-form-container {
-    margin-bottom: 2rem;
-    animation: slideInUp 0.3s ease-out;
+    width: 100%;
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 0 1rem;
 }
 
 /* Expense Form Card */
 .expense-form-card {
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
+    background: white;
     border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(38, 68, 135, 0.08);
+    border: 1px solid #e2e8f0;
     overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
 }
 
 .expense-form-card:hover {
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 8px 30px rgba(38, 68, 135, 0.12);
     transform: translateY(-2px);
 }
 
@@ -1603,31 +1658,53 @@
 .expense-form-header {
     background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
     color: white;
-    padding: 1.25rem 1.5rem;
+    padding: 1.5rem 2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: relative;
+}
+
+.expense-form-header::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='m0 40l40-40h-40v40zm40 0v-40h-40l40 40z'/%3E%3C/g%3E%3C/svg%3E") repeat;
 }
 
 .expense-title {
-    margin: 0;
-    font-size: 1.125rem;
+    font-size: 1.25rem;
     font-weight: 600;
+    margin: 0;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+}
+
+.expense-title::before {
+    content: '💰';
+    margin-right: 0.75rem;
+    font-size: 1.1rem;
 }
 
 .btn-remove-expense {
     background: rgba(255, 255, 255, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.3);
     color: white;
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
     cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    z-index: 1;
+    font-size: 0.875rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
-    font-size: 0.875rem;
 }
 
 .btn-remove-expense:hover {
@@ -1639,13 +1716,14 @@
 /* Expense Form Content */
 .expense-form-content {
     padding: 2rem;
+    background: linear-gradient(135deg, #fafbff 0%, #f8fafc 100%);
 }
 
 .expense-form-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 1.5rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 0;
 }
 
 .expense-form-grid .input-group {
@@ -1655,26 +1733,41 @@
 .expense-form-grid .input-group label {
     display: block;
     font-weight: 600;
-    color: #374151;
+    color: var(--text-dark);
     margin-bottom: 0.5rem;
     font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+}
+
+.expense-form-grid .input-group input[required] + .help-text::before {
+    content: '* ';
+    color: #ef4444;
+    font-weight: 600;
 }
 
 .expense-form-grid .input-group input {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    border: 1.5px solid #d1d5db;
+    padding: 0.875rem 1rem;
+    border: 2px solid #e2e8f0;
     border-radius: 8px;
     font-size: 0.875rem;
     transition: all 0.2s ease;
-    background: #ffffff;
+    background: white;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .expense-form-grid .input-group input:focus {
     outline: none;
     border-color: var(--primary-blue);
     box-shadow: 0 0 0 3px rgba(38, 68, 135, 0.1);
-    background: #fefefe;
+    transform: translateY(-1px);
+}
+
+.expense-form-grid .input-group .help-text {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
 }
 
 /* Validation States */
@@ -1820,4 +1913,275 @@
 .btn-add-expense:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 30px rgba(38, 68, 135, 0.3);
+}
+
+/* =====================================
+   INCOME SECTION STYLING
+   ===================================== */
+
+/* Income Section Container */
+.income-section {
+    padding: 2rem;
+    min-height: calc(100vh - 200px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+    width: 100%;
+    max-width: none;
+}
+
+.income-container {
+    margin-bottom: 2rem;
+    width: 100%;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Empty State */
+.income-empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border: 2px dashed #cbd5e1;
+    border-radius: 16px;
+    margin: 2rem 0;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    flex-grow: 1;
+}
+
+.income-empty-state .empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.income-empty-state h4 {
+    color: #475569;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.income-empty-state p {
+    color: #64748b;
+    margin: 0;
+}
+
+/* Add Income Section */
+.add-income-section {
+    text-align: center;
+    margin: 2rem 0;
+    padding: 2rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    width: 100%;
+}
+
+/* Income Form Container */
+.income-form-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+/* Income Form Card */
+.income-form-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(38, 68, 135, 0.08);
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.income-form-card:hover {
+    box-shadow: 0 8px 30px rgba(38, 68, 135, 0.12);
+    transform: translateY(-2px);
+}
+
+/* Income Form Header */
+.income-form-header {
+    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
+    color: white;
+    padding: 1.5rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+}
+
+.income-form-header::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='m0 40l40-40h-40v40zm40 0v-40h-40l40 40z'/%3E%3C/g%3E%3C/svg%3E") repeat;
+}
+
+.income-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+}
+
+.income-title::before {
+    content: '�';
+    margin-right: 0.75rem;
+    font-size: 1.1rem;
+}
+
+.btn-remove-income {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    z-index: 1;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-remove-income:hover {
+    background: rgba(239, 68, 68, 0.9);
+    border-color: rgba(239, 68, 68, 1);
+    transform: scale(1.05);
+}
+
+/* Income Form Content */
+.income-form-content {
+    padding: 2rem;
+    background: linear-gradient(135deg, #fafbff 0%, #f8fafc 100%);
+}
+
+.income-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 0;
+}
+
+.income-form-grid .input-group {
+    margin-bottom: 0;
+}
+
+.income-form-grid .input-group label {
+    display: block;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+}
+
+.income-form-grid .input-group input[required] + .help-text::before {
+    content: '* ';
+    color: #ef4444;
+    font-weight: 600;
+}
+
+.income-form-grid .input-group input {
+    padding: 0.875rem 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    background: white;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.income-form-grid .input-group input:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(38, 68, 135, 0.1);
+    transform: translateY(-1px);
+}
+
+.income-form-grid .input-group .help-text {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+}
+
+/* Validation States for Income */
+.income-form-grid .input-group.has-error input {
+    border-color: #ef4444;
+    background-color: #fef2f2;
+}
+
+.income-form-grid .input-group.has-error label {
+    color: #dc2626;
+}
+
+.income-form-grid .input-group.is-valid input {
+    border-color: #10b981;
+    background-color: #f0fdf4;
+}
+
+/* Enhanced Add Income Button */
+#add-income-btn,
+.btn-add-income {
+    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 0 auto;
+    box-shadow: 0 4px 20px rgba(38, 68, 135, 0.2);
+}
+
+#add-income-btn::before,
+.btn-add-income::before {
+    content: '+ ';
+    font-size: 1.2rem;
+}
+
+#add-income-btn:hover,
+.btn-add-income:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(38, 68, 135, 0.3);
+}
+
+/* Responsive Design for Income */
+@media (max-width: 768px) {
+    .income-section {
+        margin: 0 1rem;
+    }
+    
+    .income-form-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .income-form-content {
+        padding: 1.5rem;
+    }
 }

@@ -6,11 +6,21 @@ from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.models import User
 from django.db import transaction
+from django.db.models import Count
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
-from core.models import Organization, OrganizationMembership, Profile
+from core.models import (
+    Organization,
+    OrganizationMembership,
+    Profile,
+    Class,
+    OrganizationRole,
+    RoleAssignment,
+)
+from emt.models import Student as EmtStudent
 from .forms import OrgUsersCSVUploadForm
+from django.urls import reverse
 
 VALID_ROLES = {
     "student": "student",
@@ -58,8 +68,17 @@ def select_role(request, org_id):
 @user_passes_test(lambda u: u.is_superuser)
 def student_flow(request, org_id):
     org = get_object_or_404(Organization, pk=org_id)
-    # TODO: render tabs for Existing Class / Create New Class + CSV upload
-    return render(request, "core_admin_org_users/students.html", {"org": org})
+    show_archived = request.GET.get("archived") == "1"
+    classes = (
+        Class.objects.filter(organization=org, is_active=not show_archived)
+        .annotate(student_count=Count("students"))
+        .order_by("name")
+    )
+    return render(
+        request,
+        "core_admin_org_users/students.html",
+        {"org": org, "classes": classes, "show_archived": show_archived},
+    )
 
 
 @user_passes_test(lambda u: u.is_superuser)
@@ -87,7 +106,7 @@ def upload_csv(request, org_id):
 
     form = OrgUsersCSVUploadForm(request.POST, request.FILES)
     if not form.is_valid():
-        messages.error(request, "Please provide Academic Year and a CSV file.")
+        messages.error(request, "Please provide required fields and a CSV file.")
         if referer:
             return redirect(referer)
         return redirect(
@@ -96,6 +115,20 @@ def upload_csv(request, org_id):
         )
 
     ay = form.cleaned_data["academic_year"].strip()
+    class_name = (form.cleaned_data.get("class_name") or "").strip()
+    if not is_faculty and not class_name:
+        messages.error(request, "Please provide a class for the students.")
+        return redirect("admin_org_users_students", org_id=org.id)
+
+    cls = None
+    if not is_faculty:
+        cls, _ = Class.objects.get_or_create(
+            organization=org,
+            academic_year=ay,
+            code=class_name,
+            defaults={"name": class_name},
+        )
+
     f = request.FILES["csv_file"]
     if not f.name.lower().endswith(".csv"):
         messages.error(request, "Only .csv files are allowed.")
@@ -134,23 +167,33 @@ def upload_csv(request, org_id):
             reg = (row.get(id_field) or "").strip()
             name = (row.get("name") or "").strip()
             email = (row.get("email") or "").strip().lower()
-            role_raw = (row.get("role") or "").strip().lower()
-            role = VALID_ROLES.get(role_raw)
+            role_raw = (row.get("role") or "").strip()
+            role_key = role_raw.lower()
+            role = VALID_ROLES.get(role_key, role_key)
 
             if not email or "@" not in email:
                 skipped += 1
                 errors.append(f"Row {i}: invalid email")
                 continue
-            if not role:
+
+            org_role = OrganizationRole.objects.filter(
+                organization=org, name__iexact=role
+            ).first()
+            if not org_role:
                 skipped += 1
-                errors.append(f"Row {i}: invalid role '{role_raw}' (use student/faculty/tutor)")
+                errors.append(f"Row {i}: role '{role_raw}' not found for this organization")
                 continue
 
             first, last = _split_name(name)
 
             user, created = User.objects.get_or_create(
                 username=email,
-                defaults={"email": email, "first_name": first, "last_name": last, "is_active": True},
+                defaults={
+                    "email": email,
+                    "first_name": first,
+                    "last_name": last,
+                    "is_active": False,
+                },
             )
             if created:
                 users_created += 1
@@ -176,30 +219,93 @@ def upload_csv(request, org_id):
                 user=user,
                 organization=org,
                 academic_year=ay,
-                defaults={"role": role, "is_primary": True},
+                defaults={"role": org_role.name, "is_primary": True},
             )
             if mem_created:
                 memberships_created += 1
             else:
-                if mem.role != role:
-                    mem.role = role
+                if mem.role != org_role.name:
+                    mem.role = org_role.name
                     mem.save(update_fields=["role"])
                     memberships_updated += 1
+
+            RoleAssignment.objects.update_or_create(
+                user=user,
+                organization=org,
+                defaults={
+                    "role": org_role,
+                    "academic_year": ay,
+                    "class_name": class_name if org_role.name == "student" else None,
+                },
+            )
+
+            if org_role.name == "student" and cls is not None:
+                student_obj, _ = EmtStudent.objects.get_or_create(user=user)
+                cls.students.add(student_obj)
 
     if errors:
         messages.warning(
             request,
             "Some rows were skipped:\n" + "\n".join(errors[:8]) + ("" if len(errors) <= 8 else f"\n(+{len(errors) - 8} more)"),
         )
+    if is_faculty:
+        messages.success(
+            request,
+            f"CSV processed for {org.name} ({ay}). Users created: {users_created}, Users updated: {users_updated}, "
+            f"Memberships created: {memberships_created}, Memberships updated: {memberships_updated}, Skipped: {skipped}.",
+        )
+        return redirect("admin_org_users_faculty", org_id=org.id)
+
+    total_students = memberships_created + memberships_updated
     messages.success(
         request,
-        f"CSV processed for {org.name} ({ay}). Users created: {users_created}, Users updated: {users_updated}, "
-        f"Memberships created: {memberships_created}, Memberships updated: {memberships_updated}, Skipped: {skipped}.",
+        f"Uploaded {total_students} students into {class_name} ({ay}).",
+    )
+    return redirect(
+        f"{reverse('class_roster_detail', args=[org.id, class_name])}?year={ay}"
     )
 
-    if is_faculty:
-        return redirect("admin_org_users_faculty", org_id=org.id)
-    return redirect("admin_org_users_students", org_id=org.id)
+
+@user_passes_test(lambda u: u.is_superuser)
+def class_detail(request, org_id, class_id):
+    org = get_object_or_404(Organization, pk=org_id)
+    cls = get_object_or_404(Class, pk=class_id, organization=org)
+    students = cls.students.select_related("user").order_by(
+        "user__first_name", "user__last_name"
+    )
+    return render(
+        request,
+        "core_admin_org_users/class_detail.html",
+        {"org": org, "cls": cls, "students": students},
+    )
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def class_remove_student(request, org_id, class_id, student_id):
+    org = get_object_or_404(Organization, pk=org_id)
+    cls = get_object_or_404(Class, pk=class_id, organization=org)
+    student = get_object_or_404(EmtStudent, pk=student_id)
+    if request.method == "POST":
+        cls.students.remove(student)
+        messages.success(
+            request,
+            f"Removed {student.user.get_full_name() or student.user.username} from {cls.name}.",
+        )
+    return redirect("admin_org_users_class_detail", org_id=org.id, class_id=cls.id)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def class_toggle_active(request, org_id, class_id):
+    org = get_object_or_404(Organization, pk=org_id)
+    cls = get_object_or_404(Class, pk=class_id, organization=org)
+    cls.is_active = not cls.is_active
+    cls.save(update_fields=["is_active"])
+    msg = f"Class '{cls.name}' {'activated' if cls.is_active else 'archived'}."
+    messages.success(request, msg)
+    url = reverse("admin_org_users_students", args=[org.id])
+    if request.GET.get("archived") == "1":
+        url += "?archived=1"
+    return redirect(url)
 
 
 @user_passes_test(lambda u: u.is_superuser)

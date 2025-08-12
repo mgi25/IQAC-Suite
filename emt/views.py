@@ -3,11 +3,13 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 import json
+from urllib.parse import urlparse
+import requests
 from django.db.models import Q
 from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
     EventExpectedOutcomes, TentativeFlow, EventActivity,
-    ExpenseDetail, SpeakerProfile,EventReport, EventReportAttachment, CDLSupport
+    ExpenseDetail, IncomeDetail, SpeakerProfile,EventReport, EventReportAttachment, CDLSupport
 )
 from .forms import (
     EventProposalForm, NeedAnalysisForm, ExpectedOutcomesForm,
@@ -176,6 +178,28 @@ def _save_expenses(proposal, data):
             )
         index += 1
 
+
+def _save_income(proposal, data):
+    proposal.income_details.all().delete()
+    index = 0
+    while f"income_particulars_{index}" in data or f"income_amount_{index}" in data:
+        particulars = data.get(f"income_particulars_{index}")
+        participants = data.get(f"income_participants_{index}")
+        rate = data.get(f"income_rate_{index}")
+        amount = data.get(f"income_amount_{index}")
+        if particulars and participants and rate and amount:
+            sl_no = data.get(f"income_sl_no_{index}") or 0
+            IncomeDetail.objects.create(
+                proposal=proposal,
+                sl_no=sl_no or 0,
+                particulars=particulars,
+                participants=participants,
+                rate=rate,
+                amount=amount,
+            )
+        index += 1
+
+
 # ──────────────────────────────
 # PROPOSAL STEP 1: Proposal Submission
 # ──────────────────────────────
@@ -249,6 +273,7 @@ def submit_proposal(request, pk=None):
     activities = list(proposal.activities.values('name', 'date')) if proposal else []
     speakers = list(proposal.speakers.values('full_name','designation','affiliation','contact_email','contact_number','linkedin_url','detailed_profile')) if proposal else []
     expenses = list(proposal.expense_details.values('sl_no','particulars','amount')) if proposal else []
+    income = list(proposal.income_details.values('sl_no','particulars','participants','rate','amount')) if proposal else []
 
     ctx = {
         "form": form,
@@ -262,6 +287,7 @@ def submit_proposal(request, pk=None):
         "activities_json": json.dumps(activities),
         "speakers_json": json.dumps(speakers),
         "expenses_json": json.dumps(expenses),
+        "income_json": json.dumps(income),
     }
 
 
@@ -277,6 +303,7 @@ def submit_proposal(request, pk=None):
             _save_activities(proposal, request.POST)
             _save_speakers(proposal, request.POST, request.FILES)
             _save_expenses(proposal, request.POST)
+            _save_income(proposal, request.POST)
             logger.debug(
                 "Proposal %s saved with faculty %s",
                 proposal.id,
@@ -296,6 +323,7 @@ def submit_proposal(request, pk=None):
             _save_activities(proposal, request.POST)
             _save_speakers(proposal, request.POST, request.FILES)
             _save_expenses(proposal, request.POST)
+            _save_income(proposal, request.POST)
             logger.debug(
                 "Draft proposal %s saved with faculty %s",
                 proposal.id,
@@ -993,6 +1021,26 @@ def api_faculty(request):
         [{"id": u.id, "text": f"{u.get_full_name() or u.username} ({u.email})"} for u in users],
         safe=False
     )
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def fetch_linkedin_profile(request):
+    """Fetch and parse a public LinkedIn profile."""
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except (TypeError, ValueError):
+        data = {}
+    url = data.get("url", "")
+    parsed = urlparse(url)
+    netloc = parsed.netloc.lower()
+    if ":" in netloc:
+        netloc = netloc.split(":", 1)[0]
+    if parsed.scheme not in ("http", "https") or not netloc.endswith("linkedin.com"):
+        return JsonResponse({"error": "Invalid LinkedIn URL"}, status=400)
+    response = requests.get(url)
+    profile = _parse_public_li(response.text)
+    return JsonResponse(profile)
 
 
 @login_required

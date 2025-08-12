@@ -8,7 +8,8 @@ $(document).ready(function() {
         'why-this-event': false,
         'schedule': false,
         'speakers': false,
-        'expenses': false
+        'expenses': false,
+        'income': false
     };
 
     initializeDashboard();
@@ -38,7 +39,7 @@ $(document).ready(function() {
         });
         
         // Enable the next section only if the previous section is completed
-        const sectionOrder = ['basic-info', 'why-this-event', 'schedule', 'speakers', 'expenses'];
+        const sectionOrder = ['basic-info', 'why-this-event', 'schedule', 'speakers', 'expenses', 'income'];
         for (let i = 0; i < sectionOrder.length - 1; i++) {
             const currentSection = sectionOrder[i];
             const nextSection = sectionOrder[i + 1];
@@ -152,6 +153,7 @@ $(document).ready(function() {
             case 'schedule': formContent = getScheduleForm(); break;
             case 'speakers': formContent = getSpeakersForm(); break;
             case 'expenses': formContent = getExpensesForm(); break;
+            case 'income': formContent = getIncomeForm(); break;
             default: formContent = '<div class="form-grid"><p>Section not implemented.</p></div>';
         }
         $('#form-panel-content').html(formContent);
@@ -169,6 +171,9 @@ $(document).ready(function() {
             if (section === 'expenses') {
                 setupExpensesSection();
             }
+            if (section === 'income') {
+                setupIncomeSection();
+            }
             setupFormFieldSync();
             setupTextSectionStorage();
             clearValidationErrors();
@@ -184,7 +189,8 @@ $(document).ready(function() {
             'why-this-event': { title: 'Why This Event?', subtitle: 'Objective, GA Relevance, Learning Outcomes' },
             'schedule': { title: 'Schedule', subtitle: 'Event timeline, sessions, flow' },
             'speakers': { title: 'Speaker Profiles', subtitle: 'Names, expertise, brief bio, etc.' },
-            'expenses': { title: 'Expenses', subtitle: 'Budget, funding source, justification' }
+            'expenses': { title: 'Expenses', subtitle: 'Budget, funding source, justification' },
+            'income': { title: 'Details of Income', subtitle: 'Registration fees, sponsorship, participation rates' }
         };
         return sections[section] || { title: 'Section', subtitle: 'Complete this section' };
     }
@@ -849,13 +855,9 @@ function getWhyThisEventForm() {
                 </div>
 
                 <div class="form-row full-width">
-                    <div class="submit-section-container">
-                        <button type="submit" name="final_submit" class="btn-submit" id="submit-proposal-btn">
-                            Submit Proposal
-                        </button>
-                        <div class="submit-help-text">
-                            Review all sections before submitting
-                        </div>
+                    <div class="save-section-container">
+                        <button type="button" class="btn-save-section">Save & Continue</button>
+                        <div class="save-help-text">Complete this section to unlock the next one</div>
                     </div>
                 </div>
             </div>
@@ -1043,9 +1045,9 @@ function getWhyThisEventForm() {
             if (container.children('.expense-form-container').length === 0) {
                 container.html(`
                     <div class="expenses-empty-state">
-                        <div class="empty-state-icon">💰</div>
+                        <div class="empty-state-icon">🎤</div>
                         <h4>No expenses added yet</h4>
-                        <p>Add expense items for your event budget</p>
+                        <p>Add all expense items for your event budget</p>
                     </div>
                 `);
             } else {
@@ -1081,6 +1083,161 @@ function getWhyThisEventForm() {
             showEmptyState();
         }
     }
+
+    // ===== INCOME SECTION FUNCTIONALITY =====
+    function getIncomeForm() {
+        return `
+            <div class="income-section">
+                <div id="income-rows" class="income-container"></div>
+
+                <div class="add-income-section">
+                    <button type="button" id="add-income-btn" class="btn-add-income">
+                        Add Income Item
+                    </button>
+                    <div class="help-text" style="text-align: center; margin-top: 0.5rem;">
+                        Add all income sources for your event
+                    </div>
+                </div>
+
+                <div class="form-row full-width">
+                    <div class="submit-section-container">
+                        <button type="submit" name="final_submit" class="btn-submit" id="submit-proposal-btn">
+                            Submit Proposal
+                        </button>
+                        <div class="submit-help-text">
+                            Review all sections before submitting
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function setupIncomeSection() {
+        const container = $('#income-rows');
+        let index = 0;
+
+        function addIncomeRow() {
+            const html = `
+                <div class="income-form-container" data-index="${index}">
+                    <div class="income-form-card">
+                        <div class="income-form-header">
+                            <h3 class="income-title">Income Item ${index + 1}</h3>
+                            <button type="button" class="btn-remove-income remove-income-btn" data-index="${index}" title="Remove Income Item">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="income-form-content">
+                            <div class="income-form-grid">
+                                <div class="input-group">
+                                    <label for="income_sl_no_${index}">Sl. No.</label>
+                                    <input type="number" id="income_sl_no_${index}" name="income_sl_no_${index}" />
+                                    <div class="help-text">Entry number</div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="income_particulars_${index}">Particulars *</label>
+                                    <input type="text" id="income_particulars_${index}" name="income_particulars_${index}" required />
+                                    <div class="help-text">Income source description</div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="income_participants_${index}">No of Participants</label>
+                                    <input type="number" id="income_participants_${index}" name="income_participants_${index}" />
+                                    <div class="help-text">Number of participants</div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="income_rate_${index}">Rate (₹)</label>
+                                    <input type="number" step="0.01" id="income_rate_${index}" name="income_rate_${index}" />
+                                    <div class="help-text">Rate per participant</div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="income_amount_${index}">Amount (₹) *</label>
+                                    <input type="number" step="0.01" id="income_amount_${index}" name="income_amount_${index}" required />
+                                    <div class="help-text">Total amount in Indian Rupees</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.append(html);
+            
+            // Auto-calculate amount when participants and rate change
+            const participantsInput = $(`#income_participants_${index}`);
+            const rateInput = $(`#income_rate_${index}`);
+            const amountInput = $(`#income_amount_${index}`);
+            
+            function calculateAmount() {
+                const participants = parseFloat(participantsInput.val()) || 0;
+                const rate = parseFloat(rateInput.val()) || 0;
+                const calculatedAmount = participants * rate;
+                if (calculatedAmount > 0) {
+                    amountInput.val(calculatedAmount.toFixed(2));
+                }
+            }
+            
+            participantsInput.on('input change', calculateAmount);
+            rateInput.on('input change', calculateAmount);
+            
+            index++;
+            if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                window.AutosaveManager.reinitialize();
+            }
+        }
+
+        function updateIncomeHeaders() {
+            container.children('.income-form-container').each(function(i) {
+                $(this).find('.income-title').text(`Income Item ${i + 1}`);
+                $(this).attr('data-index', i);
+                $(this).find('.remove-income-btn').attr('data-index', i);
+            });
+        }
+
+        function showEmptyState() {
+            if (container.children('.income-form-container').length === 0) {
+                container.html(`
+                    <div class="income-empty-state">
+                        <div class="empty-state-icon">🎤</div>
+                        <h4>No income sources added yet</h4>
+                        <p>Add income items for your event budget</p>
+                    </div>
+                `);
+            } else {
+                container.find('.income-empty-state').remove();
+            }
+        }
+
+        $('#add-income-btn').on('click', function() {
+            addIncomeRow();
+            showEmptyState();
+        });
+
+        container.on('click', '.remove-income-btn', function() {
+            $(this).closest('.income-form-container').remove();
+            updateIncomeHeaders();
+            showEmptyState();
+            if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                window.AutosaveManager.reinitialize();
+            }
+        });
+
+        // Load existing income data if available
+        if (window.EXISTING_INCOME && window.EXISTING_INCOME.length) {
+            container.empty();
+            window.EXISTING_INCOME.forEach(inc => {
+                addIncomeRow();
+                const idx = index - 1;
+                $(`#income_sl_no_${idx}`).val(inc.sl_no);
+                $(`#income_particulars_${idx}`).val(inc.particulars);
+                $(`#income_participants_${idx}`).val(inc.participants);
+                $(`#income_rate_${idx}`).val(inc.rate);
+                $(`#income_amount_${idx}`).val(inc.amount);
+            });
+            showEmptyState();
+        } else {
+            showEmptyState();
+        }
+    }
     
     // ===== SAVE SECTION FUNCTIONALITY - FULLY PRESERVED =====
     function saveCurrentSection() {
@@ -1110,7 +1267,7 @@ function getWhyThisEventForm() {
 
     // ===== SECTION NAVIGATION - PRESERVED =====
     function getNextSection(currentSection) {
-        const sectionOrder = ['basic-info', 'why-this-event', 'schedule', 'speakers', 'expenses'];
+        const sectionOrder = ['basic-info', 'why-this-event', 'schedule', 'speakers', 'expenses', 'income'];
         const currentIndex = sectionOrder.indexOf(currentSection);
         return currentIndex < sectionOrder.length - 1 ? sectionOrder[currentIndex + 1] : null;
     }
@@ -1228,6 +1385,7 @@ function getWhyThisEventForm() {
             case 'schedule': return validateSchedule();
             case 'speakers': return validateSpeakers();
             case 'expenses': return validateExpenses();
+            case 'income': return validateIncome();
             default: return true;
         }
     }
@@ -1296,6 +1454,34 @@ function getWhyThisEventForm() {
         
         return isValid;
     }
+
+    function validateIncome() {
+        // Income section is optional - always return true
+        // If income items are added, validate them, but don't require at least one income item
+        const incomeContainers = $('.income-form-container');
+        
+        if (incomeContainers.length === 0) {
+            // No income items added - this is fine since income is optional
+            return true;
+        }
+        
+        let isValid = true;
+        incomeContainers.each(function() {
+            const container = $(this);
+            const requiredFields = container.find('input[required]');
+            
+            requiredFields.each(function() {
+                if (!$(this).val() || $(this).val().trim() === '') {
+                    const fieldName = $(this).closest('.input-group').find('label').text().replace(' *', '');
+                    showFieldError($(this), `${fieldName} is required`);
+                    isValid = false;
+                }
+            });
+        });
+        
+        return isValid;
+    }
+
     function validateWhyThisEvent() {
         let isValid = true;
         const requiredTextareas = ['#need-analysis-modern', '#objectives-modern', '#outcomes-modern'];

@@ -61,6 +61,15 @@
                     </div>
                 </a>
             </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link disabled" data-section="income" data-order="6">
+                    <span class="nav-number">6</span>
+                    <div class="nav-content">
+                        <div class="nav-item-title">Details of Income</div>
+                        <div class="nav-item-subtitle">Registration fees, sponsorship, participation rates</div>
+                    </div>
+                </a>
+            </li>
         </ul>
     </nav>
 
@@ -352,6 +361,7 @@
         window.EXISTING_ACTIVITIES = {{ activities_json|safe }};
         window.EXISTING_SPEAKERS = {{ speakers_json|safe }};
         window.EXISTING_EXPENSES = {{ expenses_json|safe }};
+        window.EXISTING_INCOME = {{ income_json|default:'[]'|safe }};
     </script>
     <script src="{% static 'emt/js/autosave_draft.js' %}"></script>
     <script src="{% static 'emt/js/proposal_dashboard.js' %}"></script>
