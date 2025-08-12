@@ -45,10 +45,14 @@ def assign_role_on_login(sender, user, request, **kwargs):
 
     if role_assignment:
         role_name = role_assignment.role.name
-        if profile.role != role_name:
-            profile.role = role_name
-            update_fields.append("role")
-        request.session["role"] = role_name
+    else:
+        domain = user.email.split("@")[-1].lower() if user.email else ""
+        role_name = "student" if domain.endswith("christuniversity.in") else "faculty"
+
+    if profile.role != role_name:
+        profile.role = role_name
+        update_fields.append("role")
+    request.session["role"] = role_name
 
     if not user.is_active:
         user.is_active = True
