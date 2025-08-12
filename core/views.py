@@ -394,7 +394,10 @@ def admin_dashboard(request):
     from datetime import timedelta
 
     # Calculate role statistics (manual count for accuracy)
-    all_assignments = RoleAssignment.objects.select_related('role', 'user').all()
+    all_assignments = RoleAssignment.objects.select_related('role', 'user').filter(
+        user__is_active=True,
+        user__last_login__isnull=False,
+    )
     counted_users = {'faculty': set(), 'student': set(), 'hod': set()}
     for assignment in all_assignments:
         role_name = assignment.role.name.lower()
@@ -417,8 +420,12 @@ def admin_dashboard(request):
         'approved_proposals': EventProposal.objects.filter(status='approved').count(),
         'rejected_proposals': EventProposal.objects.filter(status='rejected').count(),
         'total_users': User.objects.count(),
-        'active_users': User.objects.filter(is_active=True).count(),
-        'new_users_this_week': User.objects.filter(date_joined__gte=timezone.now() - timedelta(days=7)).count(),
+        'active_users': User.objects.filter(is_active=True, last_login__isnull=False).count(),
+        'new_users_this_week': User.objects.filter(
+            is_active=True,
+            last_login__isnull=False,
+            date_joined__gte=timezone.now() - timedelta(days=7),
+        ).count(),
         'total_reports': Report.objects.count(),
         'database_status': 'Operational',
         'email_status': 'Active',
@@ -706,8 +713,10 @@ def admin_user_management(request):
     if org_type_ids:
         users_list = users_list.filter(role_assignments__organization__org_type_id__in=org_type_ids)
 
-    if status in ['active', 'inactive']:
-        users_list = users_list.filter(is_active=(status == 'active'))
+    if status == 'active':
+        users_list = users_list.filter(is_active=True, last_login__isnull=False)
+    elif status == 'inactive':
+        users_list = users_list.filter(Q(is_active=False) | Q(last_login__isnull=True))
 
     users_list = users_list.distinct()
 
@@ -1198,7 +1207,7 @@ def master_data_dashboard(request):
         'organizations': Organization.objects.count(),
         'org_types': OrganizationType.objects.count(),
         'academic_years': AcademicYear.objects.count(),
-        'active_users': User.objects.filter(is_active=True).count(),
+        'active_users': User.objects.filter(is_active=True, last_login__isnull=False).count(),
     }
     
     recent_activities = [
@@ -1872,16 +1881,22 @@ def admin_dashboard_api(request):
     from django.contrib.auth.models import User
     stats = {
         'students': User.objects.filter(
-            role_assignments__role__name__icontains='student'
+            role_assignments__role__name__icontains='student',
+            is_active=True,
+            last_login__isnull=False,
         ).distinct().count(),
         'faculties': User.objects.filter(
-            role_assignments__role__name__icontains='faculty'
+            role_assignments__role__name__icontains='faculty',
+            is_active=True,
+            last_login__isnull=False,
         ).distinct().count(),
         'hods': User.objects.filter(
-            role_assignments__role__name__icontains='hod'
+            role_assignments__role__name__icontains='hod',
+            is_active=True,
+            last_login__isnull=False,
         ).distinct().count(),
         'centers': Organization.objects.filter(is_active=True).count(),
-        'total_users': User.objects.filter(is_active=True).count(),
+        'total_users': User.objects.filter(is_active=True, last_login__isnull=False).count(),
         'total_proposals': EventProposal.objects.count(),
         'pending_proposals': EventProposal.objects.filter(
             status__in=['submitted', 'under_review']
@@ -1904,7 +1919,11 @@ from django.contrib.auth.models import User
 from django.db.models import Q, Count
 from django.utils import timezone
 from io import StringIO, BytesIO
-import xlsxwriter
+# xlsxwriter is optional; used only for Excel export
+try:
+    import xlsxwriter
+except ImportError:  # pragma: no cover - optional dependency
+    xlsxwriter = None
 
 from itertools import chain
 from operator import attrgetter
@@ -3158,6 +3177,8 @@ def export_data_csv(request):
 @user_passes_test(is_admin)
 def export_data_excel(request):
     """Export filtered data as Excel"""
+    if xlsxwriter is None:
+        return JsonResponse({'error': 'XLSX export not available'}, status=501)
     if request.method != 'POST':
         return JsonResponse({'error': 'POST method required'}, status=405)
     
@@ -3320,7 +3341,7 @@ def is_admin(user):
 @user_passes_test(is_admin)
 def switch_user_view(request):
     """Display the switch user interface"""
-    users = User.objects.filter(is_active=True).select_related().order_by('username')
+    users = User.objects.filter(is_active=True, last_login__isnull=False).select_related().order_by('username')
     
     # Get current impersonated user if any
     impersonated_user = None
@@ -3391,7 +3412,9 @@ def impersonate_user(request):
         if not user_id:
             return JsonResponse({'success': False, 'error': 'User ID is required'})
         
-        target_user = get_object_or_404(User, id=user_id, is_active=True)
+        target_user = get_object_or_404(
+            User, id=user_id, is_active=True, last_login__isnull=False
+        )
         
         # Store the impersonation in session
         request.session['impersonate_user_id'] = target_user.id

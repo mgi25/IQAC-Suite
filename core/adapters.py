@@ -29,6 +29,7 @@ class SchoolSocialAccountAdapter(DefaultSocialAccountAdapter):
         role = "student" if domain.endswith("christuniversity.in") else "faculty"
 
         user = sociallogin.user
+        user.is_active = False
         user.save()
         profile, _ = Profile.objects.get_or_create(user=user)
         if getattr(profile, "role", None) != role:

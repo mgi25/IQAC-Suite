@@ -167,23 +167,33 @@ def upload_csv(request, org_id):
             reg = (row.get(id_field) or "").strip()
             name = (row.get("name") or "").strip()
             email = (row.get("email") or "").strip().lower()
-            role_raw = (row.get("role") or "").strip().lower()
-            role = VALID_ROLES.get(role_raw)
+            role_raw = (row.get("role") or "").strip()
+            role_key = role_raw.lower()
+            role = VALID_ROLES.get(role_key, role_key)
 
             if not email or "@" not in email:
                 skipped += 1
                 errors.append(f"Row {i}: invalid email")
                 continue
-            if not role:
+
+            org_role = OrganizationRole.objects.filter(
+                organization=org, name__iexact=role
+            ).first()
+            if not org_role:
                 skipped += 1
-                errors.append(f"Row {i}: invalid role '{role_raw}' (use student/faculty/tutor)")
+                errors.append(f"Row {i}: role '{role_raw}' not found for this organization")
                 continue
 
             first, last = _split_name(name)
 
             user, created = User.objects.get_or_create(
                 username=email,
-                defaults={"email": email, "first_name": first, "last_name": last, "is_active": True},
+                defaults={
+                    "email": email,
+                    "first_name": first,
+                    "last_name": last,
+                    "is_active": False,
+                },
             )
             if created:
                 users_created += 1
@@ -209,27 +219,27 @@ def upload_csv(request, org_id):
                 user=user,
                 organization=org,
                 academic_year=ay,
-                defaults={"role": role, "is_primary": True},
+                defaults={"role": org_role.name, "is_primary": True},
             )
             if mem_created:
                 memberships_created += 1
             else:
-                if mem.role != role:
-                    mem.role = role
+                if mem.role != org_role.name:
+                    mem.role = org_role.name
                     mem.save(update_fields=["role"])
                     memberships_updated += 1
 
-            org_role, _ = OrganizationRole.objects.get_or_create(
-                organization=org, name=role
-            )
             RoleAssignment.objects.update_or_create(
                 user=user,
                 organization=org,
-                role=org_role,
-                defaults={"academic_year": ay, "class_name": class_name if role == "student" else None},
+                defaults={
+                    "role": org_role,
+                    "academic_year": ay,
+                    "class_name": class_name if org_role.name == "student" else None,
+                },
             )
 
-            if role == "student" and cls is not None:
+            if org_role.name == "student" and cls is not None:
                 student_obj, _ = EmtStudent.objects.get_or_create(user=user)
                 cls.students.add(student_obj)
 
