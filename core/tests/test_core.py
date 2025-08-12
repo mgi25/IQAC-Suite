@@ -4,13 +4,14 @@ from django.contrib.sessions.middleware import SessionMiddleware
 from django.forms import inlineformset_factory
 from types import SimpleNamespace
 import json
+from allauth.exceptions import ImmediateHttpResponse
+from django.contrib.messages.storage.fallback import FallbackStorage
 from core.models import (
     OrganizationType,
     Organization,
     ApprovalFlowTemplate,
     OrganizationRole,
     RoleAssignment,
-    Profile,
 )
 from core.views import RoleAssignmentForm, RoleAssignmentFormSet
 from core.adapters import SchoolSocialAccountAdapter
@@ -271,8 +272,8 @@ class ApprovalFlowTemplateDisplayTests(TestCase):
         self.assertIn("optional", data["steps"][0])
 
 
-class SocialLoginRoleAssignmentTests(TestCase):
-    """Verify role assignment based on email domain during social login."""
+class SocialLoginAccessTests(TestCase):
+    """Ensure only existing users can authenticate via social login."""
 
     def setUp(self):
         self.factory = RequestFactory()
@@ -283,24 +284,27 @@ class SocialLoginRoleAssignmentTests(TestCase):
         middleware = SessionMiddleware(lambda req: None)
         middleware.process_request(request)
         request.session.save()
+        request._messages = FallbackStorage(request)
         return request
 
     def _sociallogin(self, email):
         username = email.split("@")[0]
-        return SimpleNamespace(user=User(username=username, email=email))
+        class DummySocialLogin(SimpleNamespace):
+            def connect(self, request, user):
+                self.user = user
+        return DummySocialLogin(user=User(username=username, email=email))
 
-    def test_student_email_assigns_student_role(self):
+    def test_unknown_email_blocked(self):
         request = self._build_request()
-        email = "alen.shibu@bscdsh.christuniversity.in"
+        email = "unknown@example.com"
         sociallogin = self._sociallogin(email)
-        self.adapter.pre_social_login(request, sociallogin)
-        profile = Profile.objects.get(user=sociallogin.user)
-        self.assertEqual(profile.role, "student")
+        with self.assertRaises(ImmediateHttpResponse):
+            self.adapter.pre_social_login(request, sociallogin)
+        self.assertFalse(User.objects.filter(email=email).exists())
 
-    def test_non_christ_email_assigns_faculty_role(self):
+    def test_existing_user_allowed(self):
+        user = User.objects.create_user("known", "known@example.com", "pass", is_active=False)
         request = self._build_request()
-        email = "jane.doe@example.com"
-        sociallogin = self._sociallogin(email)
+        sociallogin = self._sociallogin("known@example.com")
         self.adapter.pre_social_login(request, sociallogin)
-        profile = Profile.objects.get(user=sociallogin.user)
-        self.assertEqual(profile.role, "faculty")
+        self.assertEqual(User.objects.filter(email="known@example.com").count(), 1)

@@ -1,41 +1,38 @@
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from allauth.account.adapter import DefaultAccountAdapter
+from allauth.exceptions import ImmediateHttpResponse
+from django.contrib import messages
+from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.text import slugify
 from django.contrib.auth.models import User
-from core.models import Profile, RoleAssignment
+from core.models import RoleAssignment
 from emt.models import Student
 
 class SchoolSocialAccountAdapter(DefaultSocialAccountAdapter):
     def pre_social_login(self, request, sociallogin):
-        """
-        Prevents duplicate users by connecting to an existing user by email.
-        Lets allauth handle the login flow (no login loop).
+        """Allow login only for pre-existing users.
+
+        If a user tries to authenticate with an email that is not present in
+        the system, we block the login attempt and redirect them back to the
+        login page with an error message. This prevents unregistered users from
+        creating accounts simply by logging in with Google and avoids role
+        conflicts when administrators later import users in bulk.
         """
         email = sociallogin.user.email
         if email:
             try:
                 user = User.objects.get(email=email)
                 sociallogin.connect(request, user)
-                # Do NOT redirect or raise here! This lets allauth finish logging in.
                 return
             except User.DoesNotExist:
-                pass  # No user found, so this will be a new user
+                if request and hasattr(request, "_messages"):
+                    messages.error(request, "Account does not exist. Contact administrator.")
+                raise ImmediateHttpResponse(redirect('login'))
 
-        # If new signup, set up role and profile based on email domain.
-        # Any address ending with ``christuniversity.in`` is treated as a
-        # student; everything else defaults to a faculty account.
-        domain = email.split("@")[-1].lower() if email else ""
-        role = "student" if domain.endswith("christuniversity.in") else "faculty"
-
-        user = sociallogin.user
-        user.is_active = False
-        user.save()
-        profile, _ = Profile.objects.get_or_create(user=user)
-        if getattr(profile, "role", None) != role:
-            profile.role = role
-            profile.save()
-        request.session['role'] = role
+        if request and hasattr(request, "_messages"):
+            messages.error(request, "Invalid login attempt. Contact administrator.")
+        raise ImmediateHttpResponse(redirect('login'))
 
     def is_auto_signup_allowed(self, request, sociallogin):
         return True
