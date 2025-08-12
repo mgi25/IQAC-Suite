@@ -735,7 +735,14 @@ def admin_user_management(request):
         users = paginator.page(paginator.num_pages)
 
     # Filter options data
-    all_roles = OrganizationRole.objects.filter(is_active=True).order_by('name')
+    all_roles = OrganizationRole.objects.filter(is_active=True)
+    if org_ids:
+        # Restrict roles to those belonging to the selected organizations
+        all_roles = all_roles.filter(organization_id__in=org_ids)
+    if role_ids:
+        # Ensure currently selected roles remain available in the dropdown
+        all_roles = all_roles | OrganizationRole.objects.filter(id__in=role_ids)
+    all_roles = all_roles.select_related('organization').order_by('name').distinct()
     all_organizations = Organization.objects.filter(is_active=True).order_by('name')
     all_org_types = OrganizationType.objects.filter(is_active=True).order_by('name')
 
