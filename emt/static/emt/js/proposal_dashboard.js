@@ -242,11 +242,12 @@ $(document).ready(function() {
         const fieldsToSync = [
             'event_title', 'target_audience', 'event_start_date', 'event_end_date',
             'event_focus_type', 'venue', 'academic_year', 'student_coordinators', 'num_activities',
-            'pos_pso', 'committees_collaborations'
+            'pos_pso'
         ];
         fieldsToSync.forEach(copyDjangoField);
         setupSDGModal();
         setupFacultyTomSelect();
+        setupCommitteesTomSelect();
     }
     
     // NEW FUNCTION to handle dynamic activities
@@ -340,6 +341,52 @@ $(document).ready(function() {
         if (initialValues && initialValues.length) {
             tomselect.setValue(initialValues);
         }
+    }
+
+    function setupCommitteesTomSelect() {
+        const select = $('#committees-collaborations-modern');
+        const djangoField = $('#django-basic-info [name="committees_collaborations"]');
+        if (!select.length || !djangoField.length || select[0].tomselect) return;
+
+        const existing = djangoField.val()
+            ? djangoField.val().split(',').map(s => s.trim()).filter(Boolean)
+            : [];
+
+        const tom = new TomSelect(select[0], {
+            plugins: ['remove_button'],
+            valueField: 'text',
+            labelField: 'text',
+            searchField: 'text',
+            create: false,
+            load: (query, callback) => {
+                if (!query.length) return callback();
+                const orgId = $('#django-basic-info [name="organization"]').val();
+                const exclude = orgId ? `&exclude=${encodeURIComponent(orgId)}` : '';
+                fetch(`${window.API_ORGANIZATIONS}?q=${encodeURIComponent(query)}${exclude}`)
+                    .then(r => r.json())
+                    .then(data => callback(data.map(o => ({ text: o.text }))))
+                    .catch(() => callback());
+            }
+        });
+
+        tom.on('change', () => {
+            const values = tom.getValue();
+            djangoField.val(values.join(', ')).trigger('change');
+            clearFieldError(select);
+        });
+
+        if (existing.length) {
+            existing.forEach(name => tom.addOption({ text: name }));
+            tom.setValue(existing);
+        }
+
+        const orgSelect = $('#django-basic-info [name="organization"]');
+        orgSelect.on('change.committees', () => {
+            const orgName = orgSelect.find('option:selected').text().trim();
+            if (orgName) {
+                tom.removeItem(orgName);
+            }
+        });
     }
 
     function setupOutcomeModal() {
@@ -573,7 +620,7 @@ $(document).ready(function() {
                 <div class="form-row full-width">
                     <div class="input-group">
                         <label for="committees-collaborations-modern">Committees & Collaborations</label>
-                        <textarea id="committees-collaborations-modern" rows="3" placeholder="List committees and external collaborations involved in organizing this event"></textarea>
+                        <select id="committees-collaborations-modern" multiple placeholder="Type or select organizations..."></select>
                         <div class="help-text">Mention internal committees and external partners involved</div>
                     </div>
                 </div>
