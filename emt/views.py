@@ -457,6 +457,33 @@ def autosave_proposal(request):
     if ex_errors:
         errors["expenses"] = ex_errors
 
+    # Validate income
+    in_errors = {}
+    in_idx = 0
+    while any(
+        f"income_{field}_{in_idx}" in data
+        for field in ["particulars", "participants", "rate", "amount"]
+    ):
+        particulars = data.get(f"income_particulars_{in_idx}")
+        participants = data.get(f"income_participants_{in_idx}")
+        rate = data.get(f"income_rate_{in_idx}")
+        amount = data.get(f"income_amount_{in_idx}")
+        missing = {}
+        if particulars or participants or rate or amount:
+            if not particulars:
+                missing["particulars"] = "This field is required."
+            if not participants:
+                missing["participants"] = "This field is required."
+            if not rate:
+                missing["rate"] = "This field is required."
+            if not amount:
+                missing["amount"] = "This field is required."
+        if missing:
+            in_errors[in_idx] = missing
+        in_idx += 1
+    if in_errors:
+        errors["income"] = in_errors
+
     if errors:
         logger.debug("autosave_proposal dynamic errors: %s", errors)
         return JsonResponse({"success": False, "errors": errors}, status=400)
@@ -464,6 +491,7 @@ def autosave_proposal(request):
     _save_activities(proposal, data)
     _save_speakers(proposal, data, request.FILES)
     _save_expenses(proposal, data)
+    _save_income(proposal, data)
 
     logger.debug(
         "Autosaved proposal %s with faculty %s",
