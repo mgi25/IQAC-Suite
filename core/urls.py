@@ -211,6 +211,7 @@ urlpatterns = [
     
     # PO/PSO Assignment Management APIs
     path('core/api/faculty-users/<int:org_id>/', views.api_available_faculty_users, name='api_available_faculty_users'),
+    path('core/api/debug-org-users/<int:org_id>/', views.api_debug_org_users, name='api_debug_org_users'),
     path('core/api/popso-assignments/', views.api_popso_assignments, name='api_popso_assignments'),
     path('core/api/popso-assignments/<int:org_id>/', views.api_popso_assignments, name='api_popso_assignments_org'),
     path('core/api/log-popso-change/', views.api_log_popso_change, name='api_log_popso_change'),

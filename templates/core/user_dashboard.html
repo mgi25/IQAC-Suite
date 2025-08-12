@@ -56,6 +56,12 @@
                 <i class="fas fa-user"></i>
                 <span>My Profile</span>
             </button>
+            {% if user.popso_assignments.filter(is_active=True).exists %}
+            <a href="{% url 'settings_pso_po_management' %}" class="nav-tab settings-tab">
+                <i class="fas fa-cog"></i>
+                <span>Settings</span>
+            </a>
+            {% endif %}
         </div>
     </nav>
 

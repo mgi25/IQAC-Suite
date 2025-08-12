@@ -3794,94 +3794,137 @@ def class_roster_detail(request, org_id, class_name):
 @user_passes_test(lambda u: u.is_superuser)
 @require_http_methods(["GET"])
 def api_available_faculty_users(request, org_id):
-    """Get faculty users available for assignment to an organization"""
+    """Get faculty users available for assignment to an organization - STRICT FACULTY ONLY"""
     try:
         from .models import Organization, RoleAssignment
         
         organization = Organization.objects.get(id=org_id)
-        org_type = organization.org_type.name.lower()
-        
-        # Get optional role filter from query parameters
-        role_filter = request.GET.get('role', '').strip()
         search_query = request.GET.get('search', '').strip()
         
-        # Get users with faculty roles in the organization or its parent department
-        faculty_users = User.objects.filter(
-            role_assignments__role__name__icontains='faculty',
-            is_active=True
-        ).distinct()
-        
-        # Apply specific role filter if provided
-        if role_filter:
-            faculty_users = faculty_users.filter(
-                role_assignments__role__name__icontains=role_filter
-            )
-        
-        # Filter by organization hierarchy for departments
-        if org_type == 'department':
-            faculty_users = faculty_users.filter(
-                role_assignments__organization=organization
-            )
-        elif org_type == 'association':
-            # For associations, get faculty from parent department
-            if organization.parent:
-                faculty_users = faculty_users.filter(
-                    role_assignments__organization=organization.parent
-                )
-            else:
-                faculty_users = faculty_users.filter(
-                    role_assignments__organization=organization
-                )
-        
-        # Exclude students (users with only student roles)
-        faculty_users = faculty_users.exclude(
-            role_assignments__role__name__icontains='student'
+        # Get all active users with Faculty role assignments, similar to admin_user_management
+        faculty_users = User.objects.select_related('profile').prefetch_related(
+            'role_assignments__organization', 
+            'role_assignments__role',
+            'role_assignments__organization__org_type'
+        ).filter(
+            is_active=True,
+            role_assignments__role__name__iexact='Faculty'  # STRICT: Only Faculty role
         )
         
-        # Apply search filter if provided
+        # Filter by organization hierarchy (current org or parent)
+        org_filter = Q(role_assignments__organization=organization)
+        if organization.parent:
+            org_filter |= Q(role_assignments__organization=organization.parent)
+        
+        faculty_users = faculty_users.filter(org_filter).distinct()
+        
+        # Apply search filter if provided (search by name, username, email)
         if search_query:
-            faculty_users = faculty_users.filter(
+            search_filter = (
                 Q(first_name__icontains=search_query) |
                 Q(last_name__icontains=search_query) |
                 Q(username__icontains=search_query) |
                 Q(email__icontains=search_query)
             )
+            faculty_users = faculty_users.filter(search_filter).distinct()
         
-        # Prepare user data
+        # Prepare user data in the same format as admin_user_management
         users_data = []
         for user in faculty_users:
-            # Get user's roles in this organization
-            user_roles = user.role_assignments.filter(
-                organization=organization
-            ).values_list('role__name', flat=True)
+            # Get user's role assignments (only Faculty roles in this org/parent)
+            faculty_assignments = user.role_assignments.filter(
+                role__name__iexact='Faculty'
+            ).filter(org_filter)
             
-            if not user_roles and organization.parent:
-                # Check parent organization for associations
-                user_roles = user.role_assignments.filter(
-                    organization=organization.parent
-                ).values_list('role__name', flat=True)
+            # Skip if no faculty assignments found
+            if not faculty_assignments.exists():
+                continue
             
-            # If role filter is applied, ensure user has that specific role
-            if role_filter:
-                matching_roles = [role for role in user_roles if role_filter.lower() in role.lower()]
-                if not matching_roles:
-                    continue
+            # Get roles for display
+            role_names = list(faculty_assignments.values_list('role__name', flat=True))
             
             users_data.append({
                 'id': user.id,
                 'username': user.username,
                 'full_name': user.get_full_name() or user.username,
                 'email': user.email,
-                'roles': list(user_roles)
+                'roles': role_names
             })
         
+        logger.info(f"Found {len(users_data)} FACULTY users for org {org_id} with search '{search_query}'")
         return JsonResponse(users_data, safe=False)
         
     except Organization.DoesNotExist:
         return JsonResponse({'error': 'Organization not found'}, status=404)
     except Exception as e:
         logger.error(f"Error fetching faculty users for org {org_id}: {str(e)}")
-        return JsonResponse({'error': 'Failed to fetch users'}, status=500)
+        return JsonResponse({'error': f'Failed to fetch users: {str(e)}'}, status=500)
+        
+    except Organization.DoesNotExist:
+        return JsonResponse({'error': 'Organization not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error fetching faculty users for org {org_id}: {str(e)}")
+        return JsonResponse({'error': f'Failed to fetch users: {str(e)}'}, status=500)
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_http_methods(["GET"])
+def api_debug_org_users(request, org_id):
+    """Debug endpoint to see what users and roles exist for an organization"""
+    try:
+        from .models import Organization, RoleAssignment
+        
+        organization = Organization.objects.get(id=org_id)
+        
+        # Get all users with any role in this organization
+        all_users = User.objects.filter(
+            role_assignments__organization=organization,
+            is_active=True
+        ).distinct()
+        
+        # Get all role assignments for this org
+        role_assignments = RoleAssignment.objects.filter(
+            organization=organization
+        ).select_related('user', 'role')
+        
+        debug_data = {
+            'organization': {
+                'id': organization.id,
+                'name': organization.name,
+                'type': organization.org_type.name,
+                'parent': organization.parent.name if organization.parent else None
+            },
+            'total_users_in_org': all_users.count(),
+            'total_role_assignments': role_assignments.count(),
+            'users': [],
+            'role_assignments': []
+        }
+        
+        for user in all_users:
+            user_roles = list(user.role_assignments.filter(
+                organization=organization
+            ).values_list('role__name', flat=True))
+            
+            debug_data['users'].append({
+                'id': user.id,
+                'username': user.username,
+                'full_name': user.get_full_name() or user.username,
+                'email': user.email,
+                'roles': user_roles
+            })
+        
+        for ra in role_assignments:
+            debug_data['role_assignments'].append({
+                'user': ra.user.username,
+                'role': ra.role.name if ra.role else 'No role',
+                'org': ra.organization.name if ra.organization else 'No org'
+            })
+        
+        return JsonResponse(debug_data, safe=False)
+        
+    except Organization.DoesNotExist:
+        return JsonResponse({'error': 'Organization not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': f'Debug failed: {str(e)}'}, status=500)
 
 @user_passes_test(lambda u: u.is_superuser)
 @require_http_methods(["GET", "POST", "DELETE"])
