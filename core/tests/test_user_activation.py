@@ -31,6 +31,23 @@ class UserActivationTests(TestCase):
         resp = self.client.get(reverse('admin_user_management') + '?q=newuser')
         self.assertContains(resp, 'Active')
 
+    def test_allauth_login_activates_user(self):
+        user = User.objects.create_user(
+            'newuser2', email='new2@example.com', password='pass', is_active=False
+        )
+
+        user_client = Client()
+        resp = user_client.post(
+            reverse('account_login'),
+            {'login': 'new2@example.com', 'password': 'pass'},
+        )
+        self.assertEqual(resp.status_code, 302)
+
+        user.refresh_from_db()
+        user.profile.refresh_from_db()
+        self.assertTrue(user.is_active)
+        self.assertIsNotNone(user.profile.activated_at)
+
     def test_deactivated_user_cannot_login(self):
         user = User.objects.create_user('olduser', email='old@example.com', password='pass', is_active=False)
         user.profile.activated_at = timezone.now()
