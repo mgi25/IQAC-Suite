@@ -120,6 +120,7 @@ class OrganizationMembership(models.Model):
     academic_year = models.CharField(max_length=9)  # e.g., "2025-2026"
     role = models.CharField(max_length=32, choices=ROLE_CHOICES, default="student")
     is_primary = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -114,6 +114,16 @@ urlpatterns = [
         name="admin_org_users_faculty",
     ),
     path(
+        "core-admin/org-users/<int:org_id>/faculty/<int:member_id>/",
+        orgu.faculty_detail,
+        name="admin_org_users_faculty_detail",
+    ),
+    path(
+        "core-admin/org-users/<int:org_id>/faculty/<int:member_id>/toggle/",
+        orgu.faculty_toggle_active,
+        name="admin_org_users_faculty_toggle",
+    ),
+    path(
         "core-admin/org-users/<int:org_id>/create-class/",
         orgu.create_class,
         name="admin_org_create_class",

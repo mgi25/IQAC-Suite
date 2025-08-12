@@ -1,6 +1,7 @@
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from django.urls import reverse
+from django.utils import timezone
 
 
 class UserActivationTests(TestCase):
@@ -19,7 +20,8 @@ class UserActivationTests(TestCase):
         self.assertContains(resp, 'Inactive')
 
         user_client = Client()
-        user_client.force_login(user)
+        login_success = user_client.login(username='newuser', password='pass')
+        self.assertTrue(login_success)
 
         user.refresh_from_db()
         user.profile.refresh_from_db()
@@ -28,3 +30,11 @@ class UserActivationTests(TestCase):
 
         resp = self.client.get(reverse('admin_user_management') + '?q=newuser')
         self.assertContains(resp, 'Active')
+
+    def test_deactivated_user_cannot_login(self):
+        user = User.objects.create_user('olduser', email='old@example.com', password='pass', is_active=False)
+        user.profile.activated_at = timezone.now()
+        user.profile.save(update_fields=['activated_at'])
+
+        user_client = Client()
+        self.assertFalse(user_client.login(username='olduser', password='pass'))
