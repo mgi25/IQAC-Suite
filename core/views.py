@@ -3779,3 +3779,300 @@ def class_roster_detail(request, org_id, class_name):
         "q": q,
     }
     return render(request, "core/admin/class_roster_detail.html", context)
+
+# ─────────────────────────────────────────────────────────────
+#  PO/PSO Assignment Management API Views
+# ─────────────────────────────────────────────────────────────
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_http_methods(["GET"])
+def api_available_faculty_users(request, org_id):
+    """Get faculty users available for assignment to an organization"""
+    try:
+        from .models import Organization, RoleAssignment
+        
+        organization = Organization.objects.get(id=org_id)
+        org_type = organization.org_type.name.lower()
+        
+        # Get optional role filter from query parameters
+        role_filter = request.GET.get('role', '').strip()
+        search_query = request.GET.get('search', '').strip()
+        
+        # Get users with faculty roles in the organization or its parent department
+        faculty_users = User.objects.filter(
+            role_assignments__role__name__icontains='faculty',
+            is_active=True
+        ).distinct()
+        
+        # Apply specific role filter if provided
+        if role_filter:
+            faculty_users = faculty_users.filter(
+                role_assignments__role__name__icontains=role_filter
+            )
+        
+        # Filter by organization hierarchy for departments
+        if org_type == 'department':
+            faculty_users = faculty_users.filter(
+                role_assignments__organization=organization
+            )
+        elif org_type == 'association':
+            # For associations, get faculty from parent department
+            if organization.parent:
+                faculty_users = faculty_users.filter(
+                    role_assignments__organization=organization.parent
+                )
+            else:
+                faculty_users = faculty_users.filter(
+                    role_assignments__organization=organization
+                )
+        
+        # Exclude students (users with only student roles)
+        faculty_users = faculty_users.exclude(
+            role_assignments__role__name__icontains='student'
+        )
+        
+        # Apply search filter if provided
+        if search_query:
+            faculty_users = faculty_users.filter(
+                Q(first_name__icontains=search_query) |
+                Q(last_name__icontains=search_query) |
+                Q(username__icontains=search_query) |
+                Q(email__icontains=search_query)
+            )
+        
+        # Prepare user data
+        users_data = []
+        for user in faculty_users:
+            # Get user's roles in this organization
+            user_roles = user.role_assignments.filter(
+                organization=organization
+            ).values_list('role__name', flat=True)
+            
+            if not user_roles and organization.parent:
+                # Check parent organization for associations
+                user_roles = user.role_assignments.filter(
+                    organization=organization.parent
+                ).values_list('role__name', flat=True)
+            
+            # If role filter is applied, ensure user has that specific role
+            if role_filter:
+                matching_roles = [role for role in user_roles if role_filter.lower() in role.lower()]
+                if not matching_roles:
+                    continue
+            
+            users_data.append({
+                'id': user.id,
+                'username': user.username,
+                'full_name': user.get_full_name() or user.username,
+                'email': user.email,
+                'roles': list(user_roles)
+            })
+        
+        return JsonResponse(users_data, safe=False)
+        
+    except Organization.DoesNotExist:
+        return JsonResponse({'error': 'Organization not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error fetching faculty users for org {org_id}: {str(e)}")
+        return JsonResponse({'error': 'Failed to fetch users'}, status=500)
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_http_methods(["GET", "POST", "DELETE"])
+def api_popso_assignments(request, org_id=None):
+    """Manage PO/PSO assignments for organizations"""
+    from .models import Organization, POPSOAssignment
+    import json
+    
+    if request.method == "GET":
+        try:
+            if org_id:
+                # Get assignment for specific organization
+                try:
+                    assignment = POPSOAssignment.objects.get(
+                        organization_id=org_id, 
+                        is_active=True
+                    )
+                    return JsonResponse({
+                        'assigned_user': {
+                            'id': assignment.assigned_user.id,
+                            'full_name': assignment.assigned_user.get_full_name() or assignment.assigned_user.username,
+                            'email': assignment.assigned_user.email
+                        },
+                        'assigned_at': assignment.assigned_at.isoformat(),
+                        'assigned_by': assignment.assigned_by.get_full_name() or assignment.assigned_by.username
+                    })
+                except POPSOAssignment.DoesNotExist:
+                    return JsonResponse({'assigned_user': None})
+            else:
+                # Get all assignments
+                assignments = POPSOAssignment.objects.filter(is_active=True).select_related(
+                    'organization', 'assigned_user', 'assigned_by'
+                )
+                
+                assignments_data = {}
+                for assignment in assignments:
+                    assignments_data[assignment.organization.id] = {
+                        'assigned_user': {
+                            'id': assignment.assigned_user.id,
+                            'full_name': assignment.assigned_user.get_full_name() or assignment.assigned_user.username,
+                            'email': assignment.assigned_user.email
+                        },
+                        'assigned_at': assignment.assigned_at.isoformat(),
+                        'assigned_by': assignment.assigned_by.get_full_name() or assignment.assigned_by.username
+                    }
+                
+                return JsonResponse(assignments_data)
+                
+        except Exception as e:
+            logger.error(f"Error fetching assignments: {str(e)}")
+            return JsonResponse({'error': 'Failed to fetch assignments'}, status=500)
+    
+    elif request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            organization = Organization.objects.get(id=data['organization_id'])
+            assigned_user = User.objects.get(id=data['user_id'])
+            
+            # Deactivate existing assignment if any
+            POPSOAssignment.objects.filter(
+                organization=organization,
+                is_active=True
+            ).update(is_active=False)
+            
+            # Create new assignment
+            assignment = POPSOAssignment.objects.create(
+                organization=organization,
+                assigned_user=assigned_user,
+                assigned_by=request.user,
+                is_active=True
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'assignment': {
+                    'assigned_user': {
+                        'id': assignment.assigned_user.id,
+                        'full_name': assignment.assigned_user.get_full_name() or assignment.assigned_user.username,
+                        'email': assignment.assigned_user.email
+                    },
+                    'assigned_at': assignment.assigned_at.isoformat(),
+                    'assigned_by': assignment.assigned_by.get_full_name() or assignment.assigned_by.username
+                }
+            })
+            
+        except (Organization.DoesNotExist, User.DoesNotExist, KeyError, json.JSONDecodeError) as e:
+            return JsonResponse({'success': False, 'error': 'Invalid data'}, status=400)
+        except Exception as e:
+            logger.error(f"Error creating assignment: {str(e)}")
+            return JsonResponse({'success': False, 'error': 'Failed to create assignment'}, status=500)
+    
+    elif request.method == "DELETE":
+        try:
+            if not org_id:
+                return JsonResponse({'success': False, 'error': 'Organization ID required'}, status=400)
+                
+            POPSOAssignment.objects.filter(
+                organization_id=org_id,
+                is_active=True
+            ).update(is_active=False)
+            
+            return JsonResponse({'success': True})
+            
+        except Exception as e:
+            logger.error(f"Error removing assignment: {str(e)}")
+            return JsonResponse({'success': False, 'error': 'Failed to remove assignment'}, status=500)
+
+@login_required
+@require_http_methods(["POST"])
+def api_log_popso_change(request):
+    """Log PO/PSO changes made by assigned users"""
+    from .models import POPSOChangeNotification
+    import json
+    
+    try:
+        data = json.loads(request.body)
+        
+        notification = POPSOChangeNotification.objects.create(
+            user=request.user,
+            organization_id=data['organization_id'],
+            action=data['action'],
+            outcome_type=data['outcome_type'],
+            outcome_description=data['outcome_description']
+        )
+        
+        return JsonResponse({'success': True, 'notification_id': notification.id})
+        
+    except (KeyError, json.JSONDecodeError) as e:
+        return JsonResponse({'success': False, 'error': 'Invalid data'}, status=400)
+    except Exception as e:
+        logger.error(f"Error logging PO/PSO change: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'Failed to log change'}, status=500)
+
+@login_required
+@require_http_methods(["GET"])
+def api_popso_manager_status(request):
+    """Check if the current user is assigned as a PO/PSO manager"""
+    from .models import POPSOAssignment
+    
+    try:
+        # Check if user is assigned to any organization for PO/PSO management
+        is_manager = POPSOAssignment.objects.filter(
+            assigned_user=request.user,
+            is_active=True
+        ).exists()
+        
+        # If user is a manager, get their assigned organizations
+        assignments = []
+        if is_manager:
+            assignments = POPSOAssignment.objects.filter(
+                assigned_user=request.user,
+                is_active=True
+            ).select_related('organization').values(
+                'organization__id',
+                'organization__name',
+                'organization__org_type__name'
+            )
+        
+        return JsonResponse({
+            'is_manager': is_manager,
+            'assignments': list(assignments)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error checking manager status for user {request.user.id}: {str(e)}")
+        return JsonResponse({'error': 'Failed to check manager status'}, status=500)
+
+@login_required
+def settings_pso_po_management(request):
+    """Settings page for assigned PO/PSO managers"""
+    from .models import POPSOAssignment, Program, ProgramOutcome, ProgramSpecificOutcome
+    
+    # Check if user is assigned as manager
+    assignments = POPSOAssignment.objects.filter(
+        assigned_user=request.user,
+        is_active=True
+    ).select_related('organization', 'organization__org_type')
+    
+    if not assignments.exists():
+        messages.error(request, "You are not assigned to manage any PO/PSO outcomes.")
+        return redirect('dashboard')
+    
+    # Get assigned organizations and their programs
+    assigned_orgs = []
+    for assignment in assignments:
+        org = assignment.organization
+        programs = Program.objects.filter(organization=org)
+        
+        org_data = {
+            'organization': org,
+            'programs': programs,
+            'assignment': assignment
+        }
+        assigned_orgs.append(org_data)
+    
+    context = {
+        'assigned_organizations': assigned_orgs,
+        'user': request.user
+    }
+    
+    return render(request, 'core/settings_pso_po_management.html', context)

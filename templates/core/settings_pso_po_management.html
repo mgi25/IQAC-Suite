@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Settings - PO/PSO Management{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/css/admin_pso_po_management.css' %}">
+<style>
+.settings-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.settings-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.settings-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin: 0.5rem 0 0 0;
+}
+
+.assignment-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.org-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.org-name {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.org-type {
+    background: #3b82f6;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    font-weight: 500;
+}
+
+.programs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.program-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 1rem;
+    background: #f9fafb;
+    transition: all 0.2s ease;
+}
+
+.program-card:hover {
+    background: #f3f4f6;
+    transform: translateY(-1px);
+}
+
+.program-name {
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.5rem;
+}
+
+.program-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.manage-btn {
+    background: #059669;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    transition: background 0.2s ease;
+}
+
+.manage-btn:hover {
+    background: #047857;
+    color: white;
+    text-decoration: none;
+}
+
+.no-programs {
+    text-align: center;
+    color: #6b7280;
+    font-style: italic;
+    padding: 2rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <div class="settings-header">
+        <h1 class="settings-title">PO/PSO Management Settings</h1>
+        <p class="settings-subtitle">Manage Program Outcomes and Program Specific Outcomes for your assigned organizations</p>
+    </div>
+
+    {% if assigned_organizations %}
+        {% for org_data in assigned_organizations %}
+        <div class="assignment-card">
+            <div class="org-header">
+                <div>
+                    <h2 class="org-name">{{ org_data.organization.name }}</h2>
+                    <span class="org-type">{{ org_data.organization.org_type.name }}</span>
+                </div>
+            </div>
+
+            {% if org_data.programs %}
+            <div class="programs-grid">
+                {% for program in org_data.programs %}
+                <div class="program-card">
+                    <div class="program-name">{{ program.name }}</div>
+                    <div class="program-actions">
+                        <a href="{% url 'admin_pso_po_management' %}?org={{ org_data.organization.id }}&program={{ program.id }}" 
+                           class="manage-btn">
+                            <i class="fas fa-cog"></i>
+                            Manage POs & PSOs
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="no-programs">
+                No programs found for this organization.
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="assignment-card">
+            <div class="no-programs">
+                <h3>No Assignments Found</h3>
+                <p>You are not currently assigned to manage any PO/PSO outcomes.</p>
+                <p>Please contact your administrator if you believe this is an error.</p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
