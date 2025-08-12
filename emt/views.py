@@ -1022,9 +1022,12 @@ def autosave_need_analysis(request):
 def api_organizations(request):
     q = request.GET.get("q", "").strip()
     org_type = request.GET.get("org_type", "").strip()  # e.g., "Department", "Club", etc.
+    exclude = [e for e in request.GET.get("exclude", "").split(",") if e.isdigit()]
     orgs = Organization.objects.filter(name__icontains=q, is_active=True)
     if org_type:
         orgs = orgs.filter(org_type__name=org_type)
+    if exclude:
+        orgs = orgs.exclude(id__in=exclude)
     orgs = orgs.order_by("name")[:20]
     return JsonResponse([{"id": o.id, "text": o.name} for o in orgs], safe=False)
 
