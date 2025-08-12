@@ -36,17 +36,22 @@ class UserRoleAssignmentTests(TestCase):
         session = self.client.session
         session['org_id'] = self.org.id
         session.save()
-        self.client.login(username=username, password=password)
+        user = User.objects.get(username=username)
+        self.client.force_login(user)
 
     def test_student_role_assigned_on_login(self):
-        user = User.objects.create_user("stud", email="stud@example.com", password="pass")
+        user = User.objects.create_user(
+            "stud", email="stud@example.com", password="pass", is_active=False
+        )
         RoleAssignment.objects.create(user=user, organization=self.org, role=self.student_role)
         self._login("stud", "pass")
         user.refresh_from_db()
         self.assertEqual(user.profile.role, "student")
 
     def test_faculty_role_assigned_on_login(self):
-        user = User.objects.create_user("fac", email="fac@example.com", password="pass")
+        user = User.objects.create_user(
+            "fac", email="fac@example.com", password="pass", is_active=False
+        )
         RoleAssignment.objects.create(user=user, organization=self.org, role=self.faculty_role)
         self._login("fac", "pass")
         user.refresh_from_db()
@@ -59,6 +64,7 @@ class UserRoleAssignmentTests(TestCase):
             password="pass",
             first_name="Stu",
             last_name="Dent",
+            is_active=False,
         )
         RoleAssignment.objects.create(user=user, organization=self.org, role=self.student_role)
         self._login("stud2", "pass")
@@ -85,7 +91,7 @@ class ApprovalFlowViewTests(TestCase):
     def test_save_approval_flow_forbidden_for_non_superuser(self):
         ot = OrganizationType.objects.create(name="Dept")
         org = Organization.objects.create(name="Math", org_type=ot)
-        user = User.objects.create_user("user", "u@x.com", "pass")
+        user = User.objects.create_user("user", "u@x.com", "pass", is_active=False)
         role = OrganizationRole.objects.create(organization=org, name="Member")
         RoleAssignment.objects.create(user=user, role=role, organization=org)
         self.client.force_login(user)
@@ -132,7 +138,7 @@ class SaveApprovalFlowTests(TestCase):
         self.assertTrue(templates[1].optional)
 
     def test_save_approval_flow_forbidden_for_non_superuser(self):
-        user = User.objects.create_user("user", "u@x.com", "pass")
+        user = User.objects.create_user("user", "u@x.com", "pass", is_active=False)
         role = OrganizationRole.objects.create(organization=self.org, name="Member")
         RoleAssignment.objects.create(user=user, role=role, organization=self.org)
         self.client.force_login(user)

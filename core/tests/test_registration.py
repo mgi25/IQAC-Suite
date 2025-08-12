@@ -9,7 +9,7 @@ class RegistrationMiddlewareTests(TestCase):
         self.user = User.objects.create_user(
             username="u1", email="u1@example.com", password="pass"
         )
-        self.client.login(username="u1", password="pass")
+        self.client.force_login(self.user)
 
     def test_redirects_unregistered_user(self):
         response = self.client.get(reverse("dashboard"))
@@ -29,7 +29,7 @@ class RegistrationAPITests(TestCase):
         self.user = User.objects.create_user(
             username="u2", email="u2@example.com", password="pass"
         )
-        self.client.login(username="u2", password="pass")
+        self.client.force_login(self.user)
         self.ot = OrganizationType.objects.create(name="Dept")
         self.org = Organization.objects.create(name="Science", org_type=self.ot)
         self.role = OrganizationRole.objects.create(
