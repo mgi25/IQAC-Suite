@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
 from django.utils import timezone
+from django.db.models import Q
 
 # ───────────────────────────────
 #  New Generic Organization Models
@@ -61,6 +62,13 @@ class RoleAssignment(models.Model):
 
     class Meta:
         unique_together = ("user", "role", "organization")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "role"],
+                condition=Q(organization__isnull=True),
+                name="unique_user_role_global",
+            )
+        ]
         indexes = [
             models.Index(
                 fields=["organization", "academic_year", "class_name"],

@@ -8,34 +8,17 @@ from emt.models import Student
 
 class SchoolSocialAccountAdapter(DefaultSocialAccountAdapter):
     def pre_social_login(self, request, sociallogin):
-        """
-        Prevents duplicate users by connecting to an existing user by email.
-        Lets allauth handle the login flow (no login loop).
-        """
+        """Connect to existing user if email matches, otherwise allow signup."""
         email = sociallogin.user.email
-        if email:
-            try:
-                user = User.objects.get(email=email)
-                sociallogin.connect(request, user)
-                # Do NOT redirect or raise here! This lets allauth finish logging in.
-                return
-            except User.DoesNotExist:
-                pass  # No user found, so this will be a new user
-
-        # If new signup, set up role and profile based on email domain.
-        # Any address ending with ``christuniversity.in`` is treated as a
-        # student; everything else defaults to a faculty account.
-        domain = email.split("@")[-1].lower() if email else ""
-        role = "student" if domain.endswith("christuniversity.in") else "faculty"
-
-        user = sociallogin.user
-        user.is_active = False
-        user.save()
-        profile, _ = Profile.objects.get_or_create(user=user)
-        if getattr(profile, "role", None) != role:
-            profile.role = role
-            profile.save()
-        request.session['role'] = role
+        if not email:
+            return
+        try:
+            user = User.objects.get(email=email)
+            sociallogin.connect(request, user)
+        except User.DoesNotExist:
+            # New email; allow the social login flow to continue which will
+            # create a new user account.
+            pass
 
     def is_auto_signup_allowed(self, request, sociallogin):
         return True
@@ -50,6 +33,16 @@ class SchoolSocialAccountAdapter(DefaultSocialAccountAdapter):
             count += 1
             username = f"{base_username}{count}"
         user.username = username
+        return user
+
+    def save_user(self, request, sociallogin, form=None):
+        user = super().save_user(request, sociallogin, form=form)
+        profile, _ = Profile.objects.get_or_create(user=user)
+        domain = user.email.split("@")[-1].lower() if user.email else ""
+        role = "student" if domain.endswith("christuniversity.in") else "faculty"
+        if profile.role != role:
+            profile.role = role
+            profile.save(update_fields=["role"])
         return user
 
     def login(self, request, sociallogin):
