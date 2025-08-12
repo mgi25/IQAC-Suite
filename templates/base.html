@@ -251,8 +251,8 @@
               <i class="fas fa-route"></i> Approval Flow Management
             </a>
           </div>
-          <a href="{% url 'admin_outcome_dashboard' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_outcome_dashboard' or request.resolver_match.url_name == 'admin_pso_po_management' or request.resolver_match.url_name == 'admin_sdg_management' %}active{% endif %}">
-            <i class="fas fa-clipboard-list"></i> PO, PSO & SDG Management
+          <a href="{% url 'admin_pso_po_management' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_outcome_dashboard' or request.resolver_match.url_name == 'admin_pso_po_management' or request.resolver_match.url_name == 'admin_sdg_management' %}active{% endif %}">
+            <i class="fas fa-clipboard-list"></i> POs & PSOs Management
           </a>
         </div>
       </div>

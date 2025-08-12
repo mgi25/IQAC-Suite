@@ -9,18 +9,16 @@
 <div class="main-container">
   <!-- Page Header -->
   <div class="page-header">
-    <h1 class="page-title">PSO & PO Management</h1>
+    <h1 class="page-title">POs & PSOs Management</h1>
   </div>
 
   <!-- Controls Section -->
   <div class="controls-section">
     <div class="filter-tabs">
       <button class="filter-btn active" data-type="all">All</button>
-      <button class="filter-btn" data-type="department">Departments</button>
-      <button class="filter-btn" data-type="club">Clubs</button>
-      <button class="filter-btn" data-type="center">Centers</button>
-      <button class="filter-btn" data-type="cell">Cells</button>
-      <button class="filter-btn" data-type="association">Associations</button>
+      {% for org_type in org_types %}
+        <button class="filter-btn" data-type="{{ org_type.name|lower }}">{{ org_type.name }}s</button>
+      {% endfor %}
     </div>
     
     <div class="search-container">
@@ -38,7 +36,7 @@
           <th>Type</th>
           <th>Status</th>
           <th>Parent</th>
-          <th>Action</th>
+          <th>POs & PSOs</th>
         </tr>
       </thead>
       <tbody id="organizations-list">
@@ -61,9 +59,19 @@
                 {% if org.parent %}{{ org.parent.name }}{% else %}-{% endif %}
               </td>
               <td>
-                <button class="manage-btn manage-outcomes-btn">
-                  <i class="fas fa-cog"></i> Manage Outcomes
-                </button>
+                <div class="outcomes-cell">
+                  <div class="outcome-counts">
+                    <span class="po-count" data-org-id="{{ org.id }}">
+                      <span class="count">0</span> POs
+                    </span>
+                    <span class="pso-count" data-org-id="{{ org.id }}">
+                      <span class="count">0</span> PSOs
+                    </span>
+                  </div>
+                  <button class="edit-outcomes-btn" data-org-id="{{ org.id }}" data-org-name="{{ org.name }}">
+                    <i class="fas fa-edit"></i> Edit
+                  </button>
+                </div>
               </td>
             </tr>
           {% endfor %}
@@ -72,33 +80,51 @@
     </table>
   </div>
 
-  <!-- PSO/PO Management Section -->
-  <div class="pso-po-management" id="pso-po-management">
-    <div class="management-header">
-      <h2>Manage Outcomes for <span id="selected-org-name"></span></h2>
-    </div>
-    
-    <div class="management-content">
-      <div class="outcome-section">
-        <h3>Programme Outcomes (POs)</h3>
-        <ul class="outcome-list" id="po-list"></ul>
-        <form class="add-outcome-form" id="add-po-form">
-          <input type="text" id="new-po" placeholder="Add new Programme Outcome..." required>
-          <button type="submit">
-            <i class="fas fa-plus"></i> Add PO
-          </button>
-        </form>
+  <!-- Outcomes Management Modal -->
+  <div id="outcomesModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Manage Outcomes for <span id="modal-org-name"></span></h3>
+        <button class="close">&times;</button>
       </div>
-      
-      <div class="outcome-section">
-        <h3>Programme Specific Outcomes (PSOs)</h3>
-        <ul class="outcome-list" id="pso-list"></ul>
-        <form class="add-outcome-form" id="add-pso-form">
-          <input type="text" id="new-pso" placeholder="Add new Programme Specific Outcome..." required>
-          <button type="submit">
-            <i class="fas fa-plus"></i> Add PSO
-          </button>
-        </form>
+      <div class="modal-body">
+        <div class="outcomes-container">
+          <!-- Programme Outcomes Card -->
+          <div class="outcome-card po-card">
+            <div class="card-header">
+              <h4>PROGRAMME OUTCOMES (POS)</h4>
+            </div>
+            <div class="card-body">
+              <div class="outcomes-list" id="posList">
+                <!-- POs will be loaded here -->
+              </div>
+              <div class="add-outcome-section">
+                <input type="text" id="newPOInput" placeholder="Add new Programme Outcome..." class="outcome-input">
+                <button class="add-outcome-btn" id="addPOBtn">
+                  <i class="fas fa-plus"></i> ADD PO
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Programme Specific Outcomes Card -->
+          <div class="outcome-card pso-card">
+            <div class="card-header">
+              <h4>PROGRAMME SPECIFIC OUTCOMES (PSOS)</h4>
+            </div>
+            <div class="card-body">
+              <div class="outcomes-list" id="psosList">
+                <!-- PSOs will be loaded here -->
+              </div>
+              <div class="add-outcome-section">
+                <input type="text" id="newPSOInput" placeholder="Add new Programme Specific Outcome..." class="outcome-input">
+                <button class="add-outcome-btn" id="addPSOBtn">
+                  <i class="fas fa-plus"></i> ADD PSO
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -106,16 +132,16 @@
 
 <!-- Edit Outcome Modal -->
 <div id="editOutcomeModal" class="modal">
-  <div class="modal-content">
+  <div class="modal-content small">
     <div class="modal-header">
-      <h3>Edit Outcome</h3>
+      <h3>Edit <span id="editOutcomeType"></span></h3>
       <button class="close">&times;</button>
     </div>
     <div class="modal-body">
       <form id="editOutcomeForm">
         <div class="form-group">
           <label for="editOutcomeText">Outcome Description</label>
-          <textarea id="editOutcomeText" rows="4" required style="width: 100%; padding: 12px 16px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; outline: none; transition: all 0.3s ease; background: white; box-sizing: border-box; resize: vertical; font-family: inherit;"></textarea>
+          <textarea id="editOutcomeText" rows="4" required placeholder="Enter outcome description..."></textarea>
         </div>
         <div class="modal-actions">
           <button type="button" class="btn-cancel">Cancel</button>
@@ -126,5 +152,53 @@
   </div>
 </div>
 
+<!-- Add Outcome Modal -->
+<div id="addOutcomeModal" class="modal">
+  <div class="modal-content small">
+    <div class="modal-header">
+      <h3>Add <span id="addOutcomeType"></span></h3>
+      <button class="close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="addOutcomeForm">
+        <div class="form-group">
+          <label for="addOutcomeText">Outcome Description</label>
+          <textarea id="addOutcomeText" rows="4" required placeholder="Enter outcome description..."></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-cancel">Cancel</button>
+          <button type="submit" class="btn-save">Add <span id="addOutcomeButtonText"></span></button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <script src="{% static 'core/js/admin_pso_po_management.js' %}"></script>
+
+<script>
+  // Pass backend data to JavaScript
+  window.orgOutcomeCounts = {{ org_outcome_counts|safe }};
+  
+  // Update outcome counts in the table
+  document.addEventListener('DOMContentLoaded', function() {
+    const outcomeCounts = window.orgOutcomeCounts || {};
+    
+    Object.keys(outcomeCounts).forEach(orgId => {
+      const counts = outcomeCounts[orgId];
+      
+      // Update PO count
+      const poCountSpan = document.querySelector(`.po-count[data-org-id="${orgId}"] .count`);
+      if (poCountSpan) {
+        poCountSpan.textContent = counts.po_count || 0;
+      }
+      
+      // Update PSO count
+      const psoCountSpan = document.querySelector(`.pso-count[data-org-id="${orgId}"] .count`);
+      if (psoCountSpan) {
+        psoCountSpan.textContent = counts.pso_count || 0;
+      }
+    });
+  });
+</script>
 {% endblock %}
