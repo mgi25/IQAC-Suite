@@ -11,7 +11,11 @@ class RegistrationMiddlewareTests(TestCase):
         )
         self.client.force_login(self.user)
 
-    def test_redirects_unregistered_user(self):
+    def test_redirects_when_profile_role_blank(self):
+        # Simulate an unregistered user by clearing their profile role
+        profile = self.user.profile
+        profile.role = ""
+        profile.save(update_fields=["role"])
         response = self.client.get(reverse("dashboard"))
         self.assertRedirects(response, reverse("registration_form"))
 

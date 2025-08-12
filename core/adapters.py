@@ -1,38 +1,24 @@
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from allauth.account.adapter import DefaultAccountAdapter
-from allauth.exceptions import ImmediateHttpResponse
-from django.contrib import messages
-from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.text import slugify
 from django.contrib.auth.models import User
-from core.models import RoleAssignment
+from core.models import Profile, RoleAssignment
 from emt.models import Student
 
 class SchoolSocialAccountAdapter(DefaultSocialAccountAdapter):
     def pre_social_login(self, request, sociallogin):
-        """Allow login only for pre-existing users.
-
-        If a user tries to authenticate with an email that is not present in
-        the system, we block the login attempt and redirect them back to the
-        login page with an error message. This prevents unregistered users from
-        creating accounts simply by logging in with Google and avoids role
-        conflicts when administrators later import users in bulk.
-        """
+        """Connect to existing user if email matches, otherwise allow signup."""
         email = sociallogin.user.email
-        if email:
-            try:
-                user = User.objects.get(email=email)
-                sociallogin.connect(request, user)
-                return
-            except User.DoesNotExist:
-                if request and hasattr(request, "_messages"):
-                    messages.error(request, "Account does not exist. Contact administrator.")
-                raise ImmediateHttpResponse(redirect('login'))
-
-        if request and hasattr(request, "_messages"):
-            messages.error(request, "Invalid login attempt. Contact administrator.")
-        raise ImmediateHttpResponse(redirect('login'))
+        if not email:
+            return
+        try:
+            user = User.objects.get(email=email)
+            sociallogin.connect(request, user)
+        except User.DoesNotExist:
+            # New email; allow the social login flow to continue which will
+            # create a new user account.
+            pass
 
     def is_auto_signup_allowed(self, request, sociallogin):
         return True
@@ -47,6 +33,16 @@ class SchoolSocialAccountAdapter(DefaultSocialAccountAdapter):
             count += 1
             username = f"{base_username}{count}"
         user.username = username
+        return user
+
+    def save_user(self, request, sociallogin, form=None):
+        user = super().save_user(request, sociallogin, form=form)
+        profile, _ = Profile.objects.get_or_create(user=user)
+        domain = user.email.split("@")[-1].lower() if user.email else ""
+        role = "student" if domain.endswith("christuniversity.in") else "faculty"
+        if profile.role != role:
+            profile.role = role
+            profile.save(update_fields=["role"])
         return user
 
     def login(self, request, sociallogin):

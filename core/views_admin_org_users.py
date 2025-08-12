@@ -239,6 +239,10 @@ def upload_csv(request, org_id):
                 },
             )
 
+            if profile.role != org_role.name:
+                profile.role = org_role.name
+                profile.save(update_fields=["role"])
+
             if org_role.name == "student" and cls is not None:
                 student_obj, _ = EmtStudent.objects.get_or_create(user=user)
                 cls.students.add(student_obj)

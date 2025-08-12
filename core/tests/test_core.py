@@ -294,12 +294,12 @@ class SocialLoginAccessTests(TestCase):
                 self.user = user
         return DummySocialLogin(user=User(username=username, email=email))
 
-    def test_unknown_email_blocked(self):
+    def test_unknown_email_allowed(self):
         request = self._build_request()
         email = "unknown@example.com"
         sociallogin = self._sociallogin(email)
-        with self.assertRaises(ImmediateHttpResponse):
-            self.adapter.pre_social_login(request, sociallogin)
+        # Should not raise and should not create a user automatically
+        self.adapter.pre_social_login(request, sociallogin)
         self.assertFalse(User.objects.filter(email=email).exists())
 
     def test_existing_user_allowed(self):

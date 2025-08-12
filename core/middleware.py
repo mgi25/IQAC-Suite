@@ -50,4 +50,7 @@ class RegistrationRequiredMiddleware:
                 return False
             if not student.registration_number:
                 return False
+        profile = getattr(user, "profile", None)
+        if profile and profile.role:
+            return True
         return RoleAssignment.objects.filter(user=user).exists()
