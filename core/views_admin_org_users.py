@@ -293,8 +293,8 @@ def upload_csv(request, org_id):
             RoleAssignment.objects.update_or_create(
                 user=user,
                 organization=org,
+                role=org_role,
                 defaults={
-                    "role": org_role,
                     "academic_year": ay,
                     "class_name": class_name if org_role.name == "student" else None,
                 },
