@@ -64,7 +64,6 @@
                         <thead>
                             <tr class="text-center">
                                 <th>Role Name</th>
-                                <th>Description</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -73,7 +72,6 @@
                             {% for role in roles %}
                             <tr class="align-middle text-center">
                                 <td><strong>{{ role.name }}</strong></td>
-                                <td>{{ role.description|default:"No description" }}</td>
                                 <td>
                                     {% if role.is_active %}
                                         <span class="badge badge-primary">Active</span>
@@ -98,7 +96,7 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="4" class="text-center">
+                                <td colspan="3" class="text-center">
                                     <div style="padding: 2rem;">
                                         <i class="fas fa-users" style="font-size: 3rem; color: var(--gray-400); margin-bottom: 1rem;"></i>
                                         <h5 style="color: var(--gray-500);">No roles found</h5>

@@ -164,6 +164,7 @@ $(document).ready(function() {
                 // We call the new function to set up the listener for activities.
                 setupDynamicActivitiesListener();
                 setupOutcomeModal();
+                setupAudienceModal();
             }
             if (section === 'speakers') {
                 setupSpeakersSection();
@@ -242,11 +243,12 @@ $(document).ready(function() {
         const fieldsToSync = [
             'event_title', 'target_audience', 'event_start_date', 'event_end_date',
             'event_focus_type', 'venue', 'academic_year', 'student_coordinators', 'num_activities',
-            'pos_pso', 'committees_collaborations'
+            'pos_pso'
         ];
         fieldsToSync.forEach(copyDjangoField);
         setupSDGModal();
         setupFacultyTomSelect();
+        setupCommitteesTomSelect();
     }
     
     // NEW FUNCTION to handle dynamic activities
@@ -342,6 +344,52 @@ $(document).ready(function() {
         }
     }
 
+    function setupCommitteesTomSelect() {
+        const select = $('#committees-collaborations-modern');
+        const djangoField = $('#django-basic-info [name="committees_collaborations"]');
+        if (!select.length || !djangoField.length || select[0].tomselect) return;
+
+        const existing = djangoField.val()
+            ? djangoField.val().split(',').map(s => s.trim()).filter(Boolean)
+            : [];
+
+        const tom = new TomSelect(select[0], {
+            plugins: ['remove_button'],
+            valueField: 'text',
+            labelField: 'text',
+            searchField: 'text',
+            create: false,
+            load: (query, callback) => {
+                if (!query.length) return callback();
+                const orgId = $('#django-basic-info [name="organization"]').val();
+                const exclude = orgId ? `&exclude=${encodeURIComponent(orgId)}` : '';
+                fetch(`${window.API_ORGANIZATIONS}?q=${encodeURIComponent(query)}${exclude}`)
+                    .then(r => r.json())
+                    .then(data => callback(data.map(o => ({ text: o.text }))))
+                    .catch(() => callback());
+            }
+        });
+
+        tom.on('change', () => {
+            const values = tom.getValue();
+            djangoField.val(values.join(', ')).trigger('change');
+            clearFieldError(select);
+        });
+
+        if (existing.length) {
+            existing.forEach(name => tom.addOption({ text: name }));
+            tom.setValue(existing);
+        }
+
+        const orgSelect = $('#django-basic-info [name="organization"]');
+        orgSelect.on('change.committees', () => {
+            const orgName = orgSelect.find('option:selected').text().trim();
+            if (orgName) {
+                tom.removeItem(orgName);
+            }
+        });
+    }
+
     function setupOutcomeModal() {
         const posField = $('#pos-pso-modern');
         const djangoOrgSelect = $('#django-basic-info [name="organization"]');
@@ -374,6 +422,85 @@ $(document).ready(function() {
             const value = existing ? existing + '\n' + selected.join('\n') : selected.join('\n');
             posField.val(value).trigger('change');
             modal.removeClass('show');
+        });
+    }
+
+    function setupAudienceModal() {
+        const audienceField = $('#target-audience-modern');
+        const djangoOrgSelect = $('#django-basic-info [name="organization"]');
+        const modal = $('#audienceModal');
+        const container = $('#audienceOptions');
+
+        if (!audienceField.length || !djangoOrgSelect.length || !modal.length) return;
+
+        audienceField.prop('readonly', true).css('cursor', 'pointer');
+        $(document).off('click', '#target-audience-modern').on('click', '#target-audience-modern', openAudienceModal);
+
+        $('#audienceCancel').off('click').on('click', () => modal.removeClass('show'));
+        $('#audienceSave').off('click').on('click', () => {
+            const selected = modal.find('input[name="audience-user"]:checked').map((_, cb) => $(cb).data('name')).get();
+            audienceField.val(selected.join(', ')).trigger('change');
+            modal.removeClass('show');
+        });
+    }
+
+    function openAudienceModal() {
+        const modal = $('#audienceModal');
+        const container = $('#audienceOptions');
+        const djangoOrgSelect = $('#django-basic-info [name="organization"]');
+        modal.addClass('show');
+        container.html(`
+            <div class="audience-type-selector">
+                <button type="button" data-type="students">Students</button>
+                <button type="button" data-type="faculty">Faculty</button>
+            </div>
+            <div id="audienceList">Select an option above.</div>
+        `);
+        const list = $('#audienceList');
+        container.find('button[data-type]').on('click', function() {
+            const type = $(this).data('type');
+            list.text('Loading...');
+            if (type === 'students') {
+                const orgId = djangoOrgSelect.val();
+                if (!orgId) { list.text('Select an organization first.'); return; }
+                fetch(`${window.API_CLASSES_BASE}${orgId}/`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            list.empty();
+                            data.classes.forEach(cls => {
+                                const classLbl = $('<label class="audience-class">');
+                                const classCb = $('<input type="checkbox" class="audience-class-cb" checked>').data('class-id', cls.id);
+                                classLbl.append(classCb).append(' ' + cls.name);
+                                const studentsDiv = $('<div class="audience-students" style="margin-left:1em;"></div>');
+                                cls.students.forEach(st => {
+                                    const stCb = $('<input type="checkbox" name="audience-user" checked>').val(st.id).data('name', st.name);
+                                    const stLbl = $('<label>').append(stCb).append(' ' + st.name);
+                                    studentsDiv.append(stLbl).append('<br>');
+                                });
+                                list.append(classLbl).append('<br>').append(studentsDiv);
+                                classCb.on('change', function() {
+                                    studentsDiv.find('input[type=checkbox]').prop('checked', $(this).is(':checked'));
+                                });
+                            });
+                        } else {
+                            list.text('No classes found.');
+                        }
+                    })
+                    .catch(() => { list.text('Error loading.'); });
+            } else {
+                fetch(window.API_FACULTY)
+                    .then(r => r.json())
+                    .then(data => {
+                        list.empty();
+                        data.forEach(f => {
+                            const cb = $('<input type="checkbox" name="audience-user">').val(f.id).data('name', f.text);
+                            const lbl = $('<label>').append(cb).append(' ' + f.text);
+                            list.append(lbl).append('<br>');
+                        });
+                    })
+                    .catch(() => { list.text('Error loading.'); });
+            }
         });
     }
 
@@ -573,7 +700,7 @@ $(document).ready(function() {
                 <div class="form-row full-width">
                     <div class="input-group">
                         <label for="committees-collaborations-modern">Committees & Collaborations</label>
-                        <textarea id="committees-collaborations-modern" rows="3" placeholder="List committees and external collaborations involved in organizing this event"></textarea>
+                        <select id="committees-collaborations-modern" multiple placeholder="Type or select organizations..."></select>
                         <div class="help-text">Mention internal committees and external partners involved</div>
                     </div>
                 </div>
@@ -591,7 +718,7 @@ $(document).ready(function() {
                     </div>
                     <div class="input-group">
                         <label for="target-audience-modern">Target Audience *</label>
-                        <input type="text" id="target-audience-modern" required placeholder="e.g., Final year students, Faculty members">
+                        <input type="text" id="target-audience-modern" required readonly placeholder="Select target audience">
                         <div class="help-text">Specify who this event is intended for</div>
                     </div>
                 </div>

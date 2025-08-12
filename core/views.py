@@ -583,7 +583,7 @@ def add_org_role(request, organization_id):
                 is_active=True
                 # Remove description if not in model
             )
-    return redirect("admin_role_management") + f"?org_type_id={org.org_type.id}"
+    return redirect(f"{reverse('admin_role_management')}?org_type_id={org.org_type.id}")
 
 
 @user_passes_test(lambda u: u.is_superuser)
@@ -627,7 +627,7 @@ def update_org_role(request, role_id):
 
     if not new_name:
         messages.error(request, "Role name is required.")
-        return redirect("admin_role_management") + f"?org_type_id={org_type.id}"
+        return redirect(f"{reverse('admin_role_management')}?org_type_id={org_type.id}")
 
     # Update all roles with the old name from all organizations of this type
     updated_count = OrganizationRole.objects.filter(
@@ -639,7 +639,7 @@ def update_org_role(request, role_id):
     )
     
     messages.success(request, f"Role updated for {updated_count} {org_type.name}(s).")
-    return redirect("admin_role_management") + f"?org_type_id={org_type.id}"
+    return redirect(f"{reverse('admin_role_management')}?org_type_id={org_type.id}")
 
 
 @user_passes_test(lambda u: u.is_superuser)
@@ -669,7 +669,7 @@ def delete_org_role(request, role_id):
     ).delete()[0]
     
     messages.success(request, f"Role '{role_name}' deleted from {deleted_count} {org_type.name}(s).")
-    return redirect("admin_role_management") + f"?org_type_id={org_type.id}"
+    return redirect(f"{reverse('admin_role_management')}?org_type_id={org_type.id}")
 
 # ===================================================================
 # END OF SINGLE-PAGE ROLE MANAGEMENT
@@ -735,7 +735,14 @@ def admin_user_management(request):
         users = paginator.page(paginator.num_pages)
 
     # Filter options data
-    all_roles = OrganizationRole.objects.filter(is_active=True).order_by('name')
+    all_roles = OrganizationRole.objects.filter(is_active=True)
+    if org_ids:
+        # Restrict roles to those belonging to the selected organizations
+        all_roles = all_roles.filter(organization_id__in=org_ids)
+    if role_ids:
+        # Ensure currently selected roles remain available in the dropdown
+        all_roles = all_roles | OrganizationRole.objects.filter(id__in=role_ids)
+    all_roles = all_roles.select_related('organization').order_by('name').distinct()
     all_organizations = Organization.objects.filter(is_active=True).order_by('name')
     all_org_types = OrganizationType.objects.filter(is_active=True).order_by('name')
 

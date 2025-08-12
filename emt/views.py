@@ -23,6 +23,7 @@ from core.models import (
     Report as SubmittedReport,
     ApprovalFlowTemplate,
     SDGGoal,
+    Class,
 )
 from django.contrib.auth.models import User
 from emt.utils import (
@@ -457,6 +458,33 @@ def autosave_proposal(request):
     if ex_errors:
         errors["expenses"] = ex_errors
 
+    # Validate income
+    in_errors = {}
+    in_idx = 0
+    while any(
+        f"income_{field}_{in_idx}" in data
+        for field in ["particulars", "participants", "rate", "amount"]
+    ):
+        particulars = data.get(f"income_particulars_{in_idx}")
+        participants = data.get(f"income_participants_{in_idx}")
+        rate = data.get(f"income_rate_{in_idx}")
+        amount = data.get(f"income_amount_{in_idx}")
+        missing = {}
+        if particulars or participants or rate or amount:
+            if not particulars:
+                missing["particulars"] = "This field is required."
+            if not participants:
+                missing["participants"] = "This field is required."
+            if not rate:
+                missing["rate"] = "This field is required."
+            if not amount:
+                missing["amount"] = "This field is required."
+        if missing:
+            in_errors[in_idx] = missing
+        in_idx += 1
+    if in_errors:
+        errors["income"] = in_errors
+
     if errors:
         logger.debug("autosave_proposal dynamic errors: %s", errors)
         return JsonResponse({"success": False, "errors": errors}, status=400)
@@ -464,6 +492,7 @@ def autosave_proposal(request):
     _save_activities(proposal, data)
     _save_speakers(proposal, data, request.FILES)
     _save_expenses(proposal, data)
+    _save_income(proposal, data)
 
     logger.debug(
         "Autosaved proposal %s with faculty %s",
@@ -994,9 +1023,12 @@ def autosave_need_analysis(request):
 def api_organizations(request):
     q = request.GET.get("q", "").strip()
     org_type = request.GET.get("org_type", "").strip()  # e.g., "Department", "Club", etc.
+    exclude = [e for e in request.GET.get("exclude", "").split(",") if e.isdigit()]
     orgs = Organization.objects.filter(name__icontains=q, is_active=True)
     if org_type:
         orgs = orgs.filter(org_type__name=org_type)
+    if exclude:
+        orgs = orgs.exclude(id__in=exclude)
     orgs = orgs.order_by("name")[:20]
     return JsonResponse([{"id": o.id, "text": o.name} for o in orgs], safe=False)
 
@@ -1021,6 +1053,37 @@ def api_faculty(request):
         [{"id": u.id, "text": f"{u.get_full_name() or u.username} ({u.email})"} for u in users],
         safe=False
     )
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_classes(request, org_id):
+    """Return classes and their students for an organization."""
+    try:
+        classes = (
+            Class.objects
+            .filter(organization_id=org_id, is_active=True)
+            .prefetch_related('students__user')
+            .order_by('name')
+        )
+        data = []
+        for cls in classes:
+            students = [
+                {
+                    'id': s.user.id,
+                    'name': s.user.get_full_name() or s.user.username,
+                }
+                for s in cls.students.all()
+            ]
+            data.append({
+                'id': cls.id,
+                'name': cls.name,
+                'code': cls.code,
+                'students': students,
+            })
+        return JsonResponse({'success': True, 'classes': data})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 @csrf_exempt
