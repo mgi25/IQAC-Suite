@@ -84,8 +84,53 @@ def student_flow(request, org_id):
 @user_passes_test(lambda u: u.is_superuser)
 def faculty_flow(request, org_id):
     org = get_object_or_404(Organization, pk=org_id)
-    # TODO: UI to assign faculty to org or underlying class + CSV upload
-    return render(request, "core_admin_org_users/faculty.html", {"org": org})
+    show_archived = request.GET.get("archived") == "1"
+    faculty = (
+        OrganizationMembership.objects.filter(
+            organization=org,
+            role="faculty",
+            is_active=not show_archived,
+        )
+        .select_related("user")
+        .order_by("user__first_name", "user__last_name")
+    )
+    return render(
+        request,
+        "core_admin_org_users/faculty.html",
+        {"org": org, "faculty": faculty, "show_archived": show_archived},
+    )
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def faculty_detail(request, org_id, member_id):
+    org = get_object_or_404(Organization, pk=org_id)
+    membership = get_object_or_404(
+        OrganizationMembership, pk=member_id, organization=org, role="faculty"
+    )
+    return render(
+        request,
+        "core_admin_org_users/faculty_detail.html",
+        {"org": org, "membership": membership},
+    )
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def faculty_toggle_active(request, org_id, member_id):
+    org = get_object_or_404(Organization, pk=org_id)
+    membership = get_object_or_404(
+        OrganizationMembership, pk=member_id, organization=org, role="faculty"
+    )
+    membership.is_active = not membership.is_active
+    membership.save(update_fields=["is_active"])
+    msg = (
+        f"Faculty '{membership.user.get_full_name() or membership.user.username}' "
+        f"{'activated' if membership.is_active else 'archived'}."
+    )
+    messages.success(request, msg)
+    url = reverse("admin_org_users_faculty", args=[org.id])
+    if request.GET.get("archived") == "1":
+        url += "?archived=1"
+    return redirect(url)
 
 
 @user_passes_test(lambda u: u.is_superuser)
@@ -219,14 +264,20 @@ def upload_csv(request, org_id):
                 user=user,
                 organization=org,
                 academic_year=ay,
-                defaults={"role": org_role.name, "is_primary": True},
+                defaults={"role": org_role.name, "is_primary": True, "is_active": True},
             )
             if mem_created:
                 memberships_created += 1
             else:
+                fields_to_update = []
                 if mem.role != org_role.name:
                     mem.role = org_role.name
-                    mem.save(update_fields=["role"])
+                    fields_to_update.append("role")
+                if not mem.is_active:
+                    mem.is_active = True
+                    fields_to_update.append("is_active")
+                if fields_to_update:
+                    mem.save(update_fields=fields_to_update)
                     memberships_updated += 1
 
             RoleAssignment.objects.update_or_create(

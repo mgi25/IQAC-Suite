@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<div class="admin-dashboard-container" style="padding-top:1.5rem; max-width:920px;">
+  <h1 class="admin-dashboard-title">Faculty Details: {{ membership.user.get_full_name|default:membership.user.username }}</h1>
+  <div class="card p-4">
+    <p><strong>Email:</strong> {{ membership.user.email }}</p>
+    <p><strong>Academic Year:</strong> {{ membership.academic_year }}</p>
+    <p><strong>Status:</strong> {% if membership.is_active %}Active{% else %}Archived{% endif %}</p>
+    <a href="{% url 'admin_org_users_faculty' org.id %}" class="btn btn-secondary">Back</a>
+  </div>
+</div>
+{% endblock %}

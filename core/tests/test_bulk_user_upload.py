@@ -8,6 +8,7 @@ from core.models import (
     OrganizationType,
     Organization,
     OrganizationRole,
+    OrganizationMembership,
     RoleAssignment,
 )
 
@@ -64,4 +65,45 @@ class BulkUserUploadTests(TestCase):
         user.refresh_from_db()
         self.assertTrue(user.is_active)
         self.assertEqual(user.profile.role, 'student')
+        # Check the role in the logged-in user's session (not the admin client)
         self.assertEqual(user_client.session['role'], 'student')
+
+
+class BulkFacultyUploadTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser('admin', 'admin@example.com', 'pass')
+        org_type = OrganizationType.objects.create(name='Dept')
+        self.org = Organization.objects.create(name='Science', org_type=org_type)
+        self.faculty_role = OrganizationRole.objects.create(organization=self.org, name='faculty')
+
+    def _upload(self):
+        csv_content = (
+            "emp_id,name,email,role\n"
+            "EMP1,Prof One,prof1@example.com,faculty\n"
+        )
+        file = SimpleUploadedFile('faculty.csv', csv_content.encode('utf-8'), content_type='text/csv')
+        url = reverse('admin_org_users_upload_csv', args=[self.org.id])
+        data = {
+            'academic_year': '2024-2025',
+            'csv_file': file,
+        }
+        referer = f'http://testserver/core-admin/org-users/{self.org.id}/faculty/'
+        return self.client.post(url, data, follow=True, HTTP_REFERER=referer)
+
+    def test_upload_and_archive_flow(self):
+        self.client.force_login(self.admin)
+        self._upload()
+
+        user = User.objects.get(username='prof1@example.com')
+        mem = user.org_memberships.get(organization=self.org)
+        self.assertTrue(mem.is_active)
+
+        # Toggle archive
+        toggle_url = reverse('admin_org_users_faculty_toggle', args=[self.org.id, mem.id])
+        self.client.post(toggle_url)
+        mem.refresh_from_db()
+        self.assertFalse(mem.is_active)
+
+        # Ensure in archived list
+        resp = self.client.get(reverse('admin_org_users_faculty', args=[self.org.id]) + '?archived=1')
+        self.assertContains(resp, 'Prof One')

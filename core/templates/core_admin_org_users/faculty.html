@@ -31,6 +31,42 @@
     </div>
   </div>
 
-  {# UI for assigning faculty or other features can be added here later #}
+  <div class="card p-4">
+    <h3 class="mb-3">{% if show_archived %}Archived Faculty{% else %}Uploaded Faculty{% endif %}</h3>
+    <table class="table">
+      <thead>
+        <tr><th>Name</th><th>Email</th><th>Academic Year</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for mem in faculty %}
+        <tr>
+          <td>{{ mem.user.get_full_name|default:mem.user.username }}</td>
+          <td>{{ mem.user.email }}</td>
+          <td>{{ mem.academic_year }}</td>
+          <td>
+            <a href="{% url 'admin_org_users_faculty_detail' org.id mem.id %}">View</a>
+            <form method="post" action="{% url 'admin_org_users_faculty_toggle' org.id mem.id %}{% if show_archived %}?archived=1{% endif %}" style="display:inline;">
+              {% csrf_token %}
+              <button class="btn btn-link p-0" type="submit">
+                {% if mem.is_active %}Archive{% else %}Activate{% endif %}
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" class="text-center text-muted">No {% if show_archived %}archived {% endif %}faculty</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="d-flex justify-content-end">
+      {% if show_archived %}
+      <a href="{% url 'admin_org_users_faculty' org.id %}" class="btn btn-secondary btn-sm">Show Active Faculty</a>
+      {% else %}
+      <a href="?archived=1" class="btn btn-secondary btn-sm">View Archived Faculty</a>
+      {% endif %}
+    </div>
+  </div>
 </div>
 {% endblock %}
