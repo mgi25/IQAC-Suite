@@ -2,6 +2,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.contrib.auth.models import User
 from django.contrib.auth.signals import user_logged_in, user_logged_out
+from django.utils import timezone
 from .models import Profile, RoleAssignment
 import sys
 import logging
@@ -39,17 +40,24 @@ def assign_role_on_login(sender, user, request, **kwargs):
     if role_assignment is None:
         role_assignment = RoleAssignment.objects.filter(user=user).select_related("role").first()
 
+    profile, _ = Profile.objects.get_or_create(user=user)
+    update_fields = []
+
     if role_assignment:
         role_name = role_assignment.role.name
-        profile, _ = Profile.objects.get_or_create(user=user)
         if profile.role != role_name:
             profile.role = role_name
-            profile.save(update_fields=["role"])
+            update_fields.append("role")
         request.session["role"] = role_name
 
     if not user.is_active:
         user.is_active = True
         user.save(update_fields=["is_active"])
+        profile.activated_at = timezone.now()
+        update_fields.append("activated_at")
+
+    if update_fields:
+        profile.save(update_fields=update_fields)
 
 @receiver(user_logged_in)
 def log_user_login(sender, request, user, **kwargs):

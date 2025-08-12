@@ -136,6 +136,7 @@ class Profile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     register_no = models.CharField(max_length=64, blank=True, null=True, db_index=True)
     role = models.CharField(max_length=32, choices=ROLE_CHOICES, default="student")
+    activated_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.user.username} ({self.role})"
