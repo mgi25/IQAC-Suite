@@ -37,6 +37,7 @@
           <th>Status</th>
           <th>Parent</th>
           <th>POs & PSOs</th>
+          <th>Assign To</th>
         </tr>
       </thead>
       <tbody id="organizations-list">
@@ -70,6 +71,16 @@
                   </div>
                   <button class="edit-outcomes-btn" data-org-id="{{ org.id }}" data-org-name="{{ org.name }}">
                     <i class="fas fa-edit"></i> Edit
+                  </button>
+                </div>
+              </td>
+              <td>
+                <div class="assign-cell">
+                  <div class="assigned-user" data-org-id="{{ org.id }}">
+                    <span class="assigned-name">Unassigned</span>
+                  </div>
+                  <button class="assign-user-btn" data-org-id="{{ org.id }}" data-org-name="{{ org.name }}" data-org-type="{{ org_type.name|lower }}">
+                    <i class="fas fa-user-plus"></i> Assign
                   </button>
                 </div>
               </td>
@@ -168,6 +179,51 @@
         <div class="modal-actions">
           <button type="button" class="btn-cancel">Cancel</button>
           <button type="submit" class="btn-save">Add <span id="addOutcomeButtonText"></span></button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- User Assignment Modal -->
+<div id="assignUserModal" class="modal">
+  <div class="modal-content medium">
+    <div class="modal-header">
+      <h3>Assign User to <span id="assign-org-name"></span></h3>
+      <button class="close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="assignUserForm">
+        <div class="form-group">
+          <label for="roleFilter">Filter by Role</label>
+          <select id="roleFilter" class="form-control">
+            <option value="">All Faculty</option>
+            <option value="faculty_head">Faculty Head</option>
+            <option value="faculty">Faculty</option>
+            <option value="hod">Head of Department</option>
+            <option value="coordinator">Coordinator</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="userSelect">Select Faculty User</label>
+          <div class="user-search-container">
+            <input type="text" id="userSearch" placeholder="Search for faculty users..." autocomplete="off">
+            <div id="userDropdown" class="user-dropdown">
+              <!-- Users will be populated here -->
+            </div>
+          </div>
+          <input type="hidden" id="selectedUserId" required>
+        </div>
+        <div class="current-assignment" id="currentAssignment" style="display: none;">
+          <h4>Current Assignment</h4>
+          <div class="assignment-info">
+            <span id="currentAssignedUser"></span>
+            <button type="button" id="removeAssignmentBtn" class="btn-remove">Remove Assignment</button>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-cancel">Cancel</button>
+          <button type="submit" class="btn-save">Assign User</button>
         </div>
       </form>
     </div>

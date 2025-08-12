@@ -110,6 +110,9 @@
             <a href="#" class="dropdown-item">
               <i class="fas fa-user"></i> Profile Settings
             </a>
+            <a href="{% url 'settings_pso_po_management' %}" class="dropdown-item" id="popso-settings-link" style="display: none;">
+              <i class="fas fa-cogs"></i> PO/PSO Management
+            </a>
             <a href="{% url 'logout' %}" class="dropdown-item">
               <i class="fas fa-sign-out-alt"></i> Logout
             </a>
@@ -573,6 +576,27 @@
           notificationDropdown.classList.remove('active');
         }
     });
+
+    // Check if user is a PO/PSO manager and show Settings link
+    {% if request.user.is_authenticated %}
+    checkPOPSOManagerStatus();
+    {% endif %}
+
+    function checkPOPSOManagerStatus() {
+      fetch('/core/api/popso-manager-status/')
+        .then(response => response.json())
+        .then(data => {
+          if (data.is_manager) {
+            const settingsLink = document.getElementById('popso-settings-link');
+            if (settingsLink) {
+              settingsLink.style.display = 'block';
+            }
+          }
+        })
+        .catch(error => {
+          console.error('Error checking manager status:', error);
+        });
+    }
   });
   </script>
   {% block scripts %}{% endblock %}

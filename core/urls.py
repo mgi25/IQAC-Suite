@@ -25,6 +25,11 @@ urlpatterns = [
     path('event/<int:proposal_id>/details/', views.student_event_details, name='student_event_details'),
 
     # ────────────────────────────────────────────────
+    # Settings - PO/PSO Management for Assigned Users
+    # ────────────────────────────────────────────────
+    path('core/settings/pso-po-management/', views.settings_pso_po_management, name='settings_pso_po_management'),
+
+    # ────────────────────────────────────────────────
     # Admin - User Management
     # ────────────────────────────────────────────────
     path('core-admin/user-management/', views.admin_user_panel, name='admin_user_panel'),
@@ -203,6 +208,13 @@ urlpatterns = [
     path('core/api/create-program/', views.create_program_for_organization, name='create_program_for_organization'),
     path('core/api/program-outcomes/<int:program_id>/', views.api_program_outcomes, name='api_program_outcomes'),
     path('core/api/manage-program-outcomes/', views.manage_program_outcomes, name='manage_program_outcomes'),
+    
+    # PO/PSO Assignment Management APIs
+    path('core/api/faculty-users/<int:org_id>/', views.api_available_faculty_users, name='api_available_faculty_users'),
+    path('core/api/popso-assignments/', views.api_popso_assignments, name='api_popso_assignments'),
+    path('core/api/popso-assignments/<int:org_id>/', views.api_popso_assignments, name='api_popso_assignments_org'),
+    path('core/api/log-popso-change/', views.api_log_popso_change, name='api_log_popso_change'),
+    path('core/api/popso-manager-status/', views.api_popso_manager_status, name='api_popso_manager_status'),
 
     # ────────────────────────────────────────────────
     # Admin Dashboard API
