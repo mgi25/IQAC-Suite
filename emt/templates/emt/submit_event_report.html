@@ -1,134 +1,1817 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block title %}Event Report Dashboard{% endblock %}
+
 {% block head_extra %}
-  <link rel="stylesheet" href="{% static 'emt/css/submit_event_report.css' %}">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'emt/css/styles.css' %}">
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet"/>
+    <style>
+        /* Professional Activities Section Styling */
+        .activities-reference-card {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin: 0.5rem 0;
+        }
+        
+        .activities-grid {
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            margin-bottom: 1rem;
+        }
+        
+        .activity-reference-item {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s ease;
+        }
+        
+        .activity-reference-item:hover {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
+        }
+        
+        .activity-title {
+            font-weight: 600;
+            color: var(--primary-blue, #2563eb);
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+        
+        .activity-date {
+            font-size: 0.875rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+        
+        .activities-summary {
+            text-align: center;
+            padding: 0.75rem;
+            background: rgba(59, 130, 246, 0.05);
+            border-radius: 0.25rem;
+            border: 1px solid rgba(59, 130, 246, 0.1);
+        }
+        
+        .text-muted {
+            color: #6b7280;
+            font-style: italic;
+        }
+        
+        .no-activities-message {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            color: #64748b;
+            font-style: italic;
+            gap: 0.5rem;
+        }
+        
+        .info-icon {
+            font-size: 1.25rem;
+            color: #3b82f6;
+        }
+        
+        /* Enhanced Form Section Headers */
+        .form-section-header {
+            border-bottom: 2px solid var(--primary-blue, #2563eb);
+            margin: 2rem 0 1.5rem 0;
+            padding-bottom: 0.75rem;
+            position: relative;
+        }
+        
+        .form-section-header::before {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 60px;
+            height: 2px;
+            background: var(--accent-color, #10b981);
+        }
+        
+        .form-section-header h3 {
+            color: var(--primary-blue, #2563eb);
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        /* Professional Input Styling */
+        .input-group input,
+        .input-group select,
+        .input-group textarea {
+            transition: all 0.2s ease;
+            border: 1px solid #d1d5db;
+        }
+        
+        .input-group input:focus,
+        .input-group select:focus,
+        .input-group textarea:focus {
+            border-color: var(--primary-blue, #2563eb);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            outline: none;
+        }
+        
+        .input-group input[readonly] {
+            background-color: #f9fafb;
+            color: #6b7280;
+            cursor: not-allowed;
+        }
+        
+        /* Enhanced Help Text */
+        .help-text {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-top: 0.375rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.25rem;
+        }
+        
+        .help-text::before {
+            content: '💡';
+            font-size: 0.75rem;
+            margin-top: 0.125rem;
+            opacity: 0.7;
+        }
+        
+        /* Professional Button Styling */
+        .btn-save-section {
+            background: linear-gradient(135deg, var(--primary-blue, #2563eb) 0%, #1d4ed8 100%);
+            border: none;
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            font-size: 0.875rem;
+        }
+        
+        .btn-save-section:hover {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+        }
+        
+        .btn-draft-section {
+            background: transparent;
+            border: 2px solid #e5e7eb;
+            color: #6b7280;
+            padding: 0.6rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-draft-section:hover {
+            border-color: #d1d5db;
+            background: #f9fafb;
+        }
+        
+        /* Enhanced Save Section */
+        .save-section-container {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 2rem;
+            margin: 2rem 0;
+            text-align: center;
+        }
+        
+        .save-help-text {
+            color: #64748b;
+            font-size: 0.875rem;
+            font-style: italic;
+        }
+        
+        /* Auto-resize textarea functionality */
+        textarea {
+            resize: none;
+            overflow: hidden;
+            min-height: 120px;
+            max-height: none;
+            box-sizing: border-box;
+            transition: height 0.2s ease;
+        }
+        
+        /* Equal sizing for form elements */
+        .form-row .input-group {
+            flex: 1;
+            min-width: calc(50% - 12.5px);
+        }
+        
+        .form-row .input-group textarea {
+            min-height: 140px;
+        }
+        
+        /* Ensure equal heights for side-by-side textareas */
+        .form-row:not(.full-width) .input-group textarea {
+            height: auto;
+            min-height: 140px;
+        }
+        
+        /* Word counter styling */
+        .word-counter {
+            font-size: 0.85rem;
+            margin-top: 5px;
+            text-align: right;
+            font-weight: 500;
+        }
+        
+        .word-counter.text-success {
+            color: #10b981 !important;
+        }
+        
+        .word-counter.text-warning {
+            color: #f59e0b !important;
+        }
+        
+        .word-counter.text-danger {
+            color: #ef4444 !important;
+        }
+        
+        /* Graduate Attributes Multi-select Styling */
+        .graduate-attributes-select {
+            min-height: 220px;
+            max-height: 220px;
+            overflow-y: auto;
+            padding: 12px;
+        }
+        
+        .graduate-attributes-select option {
+            padding: 8px 12px;
+            margin: 2px 0;
+            border-radius: 4px;
+        }
+        
+        .graduate-attributes-select option:checked {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+        }
+        
+        /* SDG Selection Button */
+        .btn-select-sdg {
+            margin-top: 8px;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-select-sdg:hover {
+            background: linear-gradient(135deg, #059669, #047857);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+        }
+        
+        /* SDG Modal Styling */
+        .sdg-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .sdg-modal-content {
+            background-color: #fff;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .sdg-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .sdg-option {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .sdg-option:hover {
+            border-color: #3498db;
+            background-color: #f8f9fa;
+        }
+        
+        .sdg-option.selected {
+            border-color: #3498db;
+            background-color: #e3f2fd;
+        }
+        
+        .sdg-option input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        
+        /* Navigation States */
+        .nav-link.completed {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+        
+        .nav-link.completed .nav-number {
+            background: white;
+            color: #10b981;
+        }
+        
+        .nav-link.completed::after {
+            content: '✓';
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: white;
+            color: #10b981;
+            border-radius: 50%;
+            width: 1.25rem;
+            height: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        
+        /* Speakers Reference Card */
+        .speakers-reference-card {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin: 0.5rem 0;
+        }
+        
+        .speaker-reference-item {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .speaker-name {
+            font-weight: 600;
+            color: var(--primary-blue, #2563eb);
+            margin-bottom: 0.25rem;
+        }
+        
+        .speaker-details {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+        
+        /* Placeholder Section Styling */
+        .placeholder-section {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border: 2px dashed #e2e8f0;
+            border-radius: 0.75rem;
+            color: #64748b;
+            font-size: 1.125rem;
+            font-style: italic;
+        }
+        
+        /* Error Styling */
+        .field-error {
+            color: #dc2626;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        .field-error::before {
+            content: '⚠️';
+            font-size: 0.75rem;
+        }
+        
+        .input-group input.error,
+        .input-group select.error,
+        .input-group textarea.error {
+            border-color: #dc2626;
+            background-color: #fef2f2;
+        }
+        
+        /* Responsive Grid Improvements */
+        @media (max-width: 768px) {
+            .activities-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
+<div class="proposal-layout">
+    <nav class="proposal-nav">
+        <div class="nav-header">
+            <h2 class="nav-title">Event Report</h2>
+            <p class="nav-subtitle">Complete all sections to submit</p>
+        </div>
+        <ul class="nav-items">
+            <li class="nav-item">
+                <a href="#" class="nav-link active" data-section="event-information" data-order="1">
+                    <span class="nav-number">1</span>
+                    <div class="nav-content">
+                        <div class="nav-item-title">Event Information</div>
+                        <div class="nav-item-subtitle">Basic event details and metadata</div>
+                    </div>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link disabled" data-section="participants-information" data-order="2">
+                    <span class="nav-number">2</span>
+                    <div class="nav-content">
+                        <div class="nav-item-title">Participants Information</div>
+                        <div class="nav-item-subtitle">Attendees, speakers, organizing committee</div>
+                    </div>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link disabled" data-section="event-summary" data-order="3">
+                    <span class="nav-number">3</span>
+                    <div class="nav-content">
+                        <div class="nav-item-title">Summary of Overall Event</div>
+                        <div class="nav-item-subtitle">Comprehensive event overview (min 500 words)</div>
+                    </div>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link disabled" data-section="event-outcomes" data-order="4">
+                    <span class="nav-number">4</span>
+                    <div class="nav-content">
+                        <div class="nav-item-title">Outcomes of the Event</div>
+                        <div class="nav-item-subtitle">Post-event evaluation and achievements</div>
+                    </div>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link disabled" data-section="analysis" data-order="5">
+                    <span class="nav-number">5</span>
+                    <div class="nav-content">
+                        <div class="nav-item-title">Analysis</div>
+                        <div class="nav-item-subtitle">Detailed analysis and insights (min 500 words)</div>
+                    </div>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link disabled" data-section="event-relevance" data-order="6">
+                    <span class="nav-number">6</span>
+                    <div class="nav-content">
+                        <div class="nav-item-title">Relevance of the Event</div>
+                        <div class="nav-item-subtitle">POs, PSOs, graduate attributes, SDGs</div>
+                    </div>
+                </a>
+            </li>
+        </ul>
+    </nav>
 
-<div class="report-layout">
-  <aside class="info-panel">
-    <div class="info-card">
-      <h2 class="panel-title">Event Info</h2>
-      <table>
-        <tr><th>Organization</th><td>{{ proposal.organization.name }}</td></tr>
-        <tr><th>Title</th><td>{{ proposal.event_title }}</td></tr>
-        <tr><th>Date & Time</th><td>{{ proposal.event_datetime|date:"d M Y, H:i" }}</td></tr>
-        <tr><th>Venue</th><td>{{ proposal.venue }}</td></tr>
-        <tr><th>Academic Year</th><td>{{ proposal.academic_year }}</td></tr>
-        <tr><th>Focus</th><td>{{ proposal.event_focus_type }}</td></tr>
-        <tr><th>Target Audience</th><td>{{ proposal.target_audience }}</td></tr>
-      </table>
-    </div>
-  </aside>
-
-  <section class="form-wrapper">
-    <div class="form-card">
-      <h1 class="page-title">Generate Event Report</h1>
-      <p class="form-meta">Fill the required fields and attach supporting documents.</p>
-      <form method="post" enctype="multipart/form-data" class="event-report-form">
-        {% csrf_token %}
-
-        <div class="section">
-          <h3 class="section-title">Report Details</h3>
-          {{ form.non_field_errors }}
-          <div class="form-grid">
-            {% for field in form %}
-              {% if field.name != 'location' and field.name != 'external_contact_details' and field.name != 'pos_pso_mapping' and field.name != 'outcomes' and field.name != 'num_participants' and field.name != 'iqac_feedback' and field.name != 'blog_link' and field.name != 'num_student_volunteers' %}
-                <div class="form-group">
-                  {{ field }}
-                  <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
-                  {% if field.help_text %}<small class="help">{{ field.help_text }}</small>{% endif %}
-                  {{ field.errors }}
-                </div>
-              {% endif %}
-            {% endfor %}
-          </div>
+    <main class="proposal-content">
+        <div class="content-header">
+            <h1 class="content-title" id="main-title">Event Information</h1>
+            <p class="content-subtitle" id="main-subtitle">Basic event details fetched from proposal</p>
         </div>
 
-        <div class="section">
-          <h3 class="section-title">Upload Attachments</h3>
-          {{ formset.management_form }}
-          <div id="attachment-list" class="attachment-row">
-            {% for f in formset %}
-              <div class="attachment-block" data-form-index="{{ forloop.counter0 }}" {% if f.instance.pk %}data-existing="1"{% endif %}>
-                {{ f.id }}
-                <div class="attach-upload">
-                  {% if f.instance.pk %}
-                    <img src="{{ f.instance.file.url }}" alt="attachment">
-                    <span class="attach-remove">&times;</span>
-                  {% else %}
-                    <span class="attach-add">+</span>
-                    <span class="attach-remove" style="display:none;">&times;</span>
-                  {% endif %}
-                </div>
-                {{ f.file }}
-                {{ f.caption }}
-                {% if f.instance.pk %}
-                  {{ f.DELETE }}
-                {% endif %}
-              </div>
-            {% endfor %}
-          </div>
-          <button type="button" id="add-attachment-btn" class="add-attachment-btn">Add Attachment</button>
-
-          <template id="attachment-template">
-            <div class="attachment-block" data-form-index="__prefix__">
-              {{ formset.empty_form.id }}
-              <div class="attach-upload">
-                <span class="attach-add">+</span>
-                <span class="attach-remove" style="display:none;">&times;</span>
-              </div>
-              {{ formset.empty_form.file }}
-              {{ formset.empty_form.caption }}
+        {% if form.errors %}
+            <div class="form-errors-banner">
+                <strong>Please fix the following errors:</strong>
+                <ul>
+                    {% for field, errors in form.errors.items %}
+                        {% for error in errors %}
+                            <li>{{ field }}: {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
             </div>
-          </template>
-          <div id="imgModal" class="image-modal">
-            <span class="close-btn">&times;</span>
-            <img id="imgModalImg" src="" alt="preview">
-          </div>
-        </div>
+        {% endif %}
 
-        <div class="section">
-          <h3 class="section-title">Review &amp; Submit</h3>
-          <div class="save-btn">
-            <button type="submit">Save &amp; Generate</button>
-          </div>
-        </div>
-      </form>
-    </div>
-  </section>
+        <form method="post" enctype="multipart/form-data" id="report-form" autocomplete="off">
+            {% csrf_token %}
+            <textarea name="event_summary" hidden>{{ event_summary.content|default_if_none:'' }}</textarea>
+            <textarea name="event_outcomes" hidden>{{ event_outcomes.content|default_if_none:'' }}</textarea>
+            <textarea name="analysis" hidden>{{ analysis.content|default_if_none:'' }}</textarea>
+
+            <div class="form-panel" id="form-panel">
+                <div class="form-panel-content" id="form-panel-content">
+                    <div class="form-grid">
+                        <!-- Organization Information Section -->
+                        <div class="form-section-header">
+                            <h3>🏢 Organization Details</h3>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label for="department-modern">Department *</label>
+                                <input type="text" id="department-modern" name="department" value="{{ proposal.organization.name|default:'' }}">
+                                <div class="help-text">Department from original proposal (editable)</div>
+                            </div>
+                            <div class="input-group">
+                                <label for="location-modern">Venue/Location *</label>
+                                <input type="text" id="location-modern" name="venue" value="{{ proposal.venue|default:'' }}">
+                                <div class="help-text">Venue from original proposal (editable)</div>
+                            </div>
+                        </div>
+
+                        <!-- Event Information Section -->
+                        <div class="form-section-header">
+                            <h3>🎯 Event Information</h3>
+                        </div>
+
+                        <div class="form-row full-width">
+                            <div class="input-group">
+                                <label for="event-title-modern">Event Title *</label>
+                                <input type="text" id="event-title-modern" name="event_title" value="{{ proposal.event_title|default:'' }}">
+                                <div class="help-text">Event title from proposal (editable)</div>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label for="num-activities-modern">Number of Activities</label>
+                                <input type="number" id="num-activities-modern" name="num_activities" value="{{ proposal.num_activities|default:1 }}">
+                                <div class="help-text">Total activities from proposal (editable)</div>
+                            </div>
+                            <div class="input-group">
+                                <label for="venue-modern">Venue *</label>
+                                <input type="text" id="venue-modern" name="venue_detail" value="{{ proposal.venue|default:'' }}">
+                                <div class="help-text">Venue from proposal (editable)</div>
+                            </div>
+                        </div>
+
+                        <!-- Schedule & Academic Information Section -->
+                        <div class="form-section-header">
+                            <h3>📅 Schedule & Academic Information</h3>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label for="start-date-modern">Event Start Date *</label>
+                                <input type="date" id="start-date-modern" name="event_start_date" value="{% if proposal.event_start_date %}{{ proposal.event_start_date|date:'Y-m-d' }}{% elif proposal.event_datetime %}{{ proposal.event_datetime|date:'Y-m-d' }}{% endif %}">
+                                <div class="help-text">Start date from original proposal (editable)</div>
+                            </div>
+                            <div class="input-group">
+                                <label for="end-date-modern">Event End Date *</label>
+                                <input type="date" id="end-date-modern" name="event_end_date" value="{% if proposal.event_end_date %}{{ proposal.event_end_date|date:'Y-m-d' }}{% elif proposal.event_datetime %}{{ proposal.event_datetime|date:'Y-m-d' }}{% endif %}">
+                                <div class="help-text">End date from original proposal (editable)</div>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label for="academic-year-modern">Academic Year *</label>
+                                <input type="text" id="academic-year-modern" name="academic_year" value="{{ proposal.academic_year|default:'2024-2025' }}">
+                                <div class="help-text">Academic year from proposal (editable)</div>
+                            </div>
+                            <div class="input-group">
+                                <label for="event-type-modern">Actual Event Type *</label>
+                                <select id="event-type-modern" required>
+                                    <option value="">Select the type of event that was conducted</option>
+                                    <option value="Training Program">Training Program</option>
+                                    <option value="Workshop">Workshop</option>
+                                    <option value="Seminar">Seminar</option>
+                                    <option value="Conference">Conference</option>
+                                    <option value="Guest Lecture">Guest Lecture</option>
+                                    <option value="Webinar">Webinar</option>
+                                    <option value="Competition">Competition</option>
+                                    <option value="Cultural Event">Cultural Event</option>
+                                    <option value="Sports Event">Sports Event</option>
+                                    <option value="Exhibition">Exhibition</option>
+                                    <option value="Panel Discussion">Panel Discussion</option>
+                                    <option value="Hackathon">Hackathon</option>
+                                    <option value="Field Trip">Field Trip</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                                <div class="help-text">Select the actual type of event that was conducted</div>
+                            </div>
+                        </div>
+
+                        <!-- Additional Information Section -->
+                        <div class="form-section-header">
+                            <h3>📝 Additional Information</h3>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label for="actual-location-modern">Actual Event Location</label>
+                                <input type="text" id="actual-location-modern" name="location" value="{{ form.location.value|default:'' }}" placeholder="Enter the actual venue where event was held">
+                                <div class="help-text">Specify the actual venue (if different from proposed venue)</div>
+                                {% if form.location.errors %}
+                                    <div class="field-error">{{ form.location.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="input-group">
+                                <label for="blog-link-modern">Blog Link</label>
+                                <input type="url" id="blog-link-modern" name="blog_link" value="{{ form.blog_link.value|default:'' }}" placeholder="https://example.com/blog-post">
+                                <div class="help-text">Optional: Link to blog post or article about the event</div>
+                                {% if form.blog_link.errors %}
+                                    <div class="field-error">{{ form.blog_link.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label for="num-participants-modern">Number of Participants</label>
+                                <input type="number" id="num-participants-modern" name="num_participants" value="{{ form.num_participants.value|default:'' }}" min="0" placeholder="Enter total participants">
+                                <div class="help-text">Total number of people who attended the event</div>
+                                {% if form.num_participants.errors %}
+                                    <div class="field-error">{{ form.num_participants.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="input-group">
+                                <label for="num-volunteers-modern">Number of Student Volunteers</label>
+                                <input type="number" id="num-volunteers-modern" name="num_student_volunteers" value="{{ form.num_student_volunteers.value|default:'' }}" min="0" placeholder="Enter volunteer count">
+                                <div class="help-text">Number of students who volunteered for the event</div>
+                                {% if form.num_student_volunteers.errors %}
+                                    <div class="field-error">{{ form.num_student_volunteers.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Activities Information Section -->
+                        <div class="form-section-header">
+                            <h3>🎭 Activities Information</h3>
+                        </div>
+
+                        <div class="form-row full-width">
+                            <div class="input-group">
+                                <label>Activities from Original Proposal</label>
+                                <div class="activities-reference-card">
+                                    {% if proposal.activities.all %}
+                                        <div class="activities-grid">
+                                            {% for activity in proposal.activities.all %}
+                                                <div class="activity-reference-item">
+                                                    <div class="activity-title">{{ activity.name }}</div>
+                                                    <div class="activity-date">{{ activity.date|date:"M d, Y" }}</div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                        <div class="activities-summary">
+                                            <small class="text-muted">
+                                                Total: {{ proposal.activities.count }} activit{{ proposal.activities.count|pluralize:"y,ies" }} planned
+                                            </small>
+                                        </div>
+                                    {% else %}
+                                        <div class="no-activities-message">
+                                            <i class="info-icon">ℹ</i>
+                                            <span>No activities were defined in the original proposal</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="help-text">Reference: Activities planned in the original proposal</div>
+                            </div>
+                        </div>
+
+                        <!-- Save Section -->
+                        <div class="form-row full-width">
+                            <div class="save-section-container" style="display: flex; flex-direction: column; align-items: center;">
+                                <button type="button" class="btn-save-section" style="margin-bottom: 0.5rem;">Save & Continue</button>
+                                <button type="submit" name="save_draft" class="btn-draft-section">Save as Draft</button>
+                                <div class="save-help-text" style="margin-top: 0.75rem;">Complete this section to unlock the next one</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="submit-section">
+                <button type="submit" name="final_submit" class="btn-submit" id="submit-report-btn" disabled>Submit Report</button>
+                <button type="submit" name="save_draft" class="btn-draft" id="save-draft-btn">Save as Draft</button>
+                <div class="submit-help-text">Complete all sections above to enable submission</div>
+            </div>
+
+            <div style="display: none;" id="django-forms">
+                <!-- Include all remaining Django form fields that aren't shown in the UI -->
+                {% for field in form %}
+                    {% if field.name not in "blog_link,location,num_participants,num_student_volunteers" %}
+                        {{ field }}
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </form>
+    </main>
 </div>
 
-{% if proposal.organization %}
-  <div id="outcomeModal" class="outcome-modal"
-       data-url="{% url 'emt:api_outcomes' proposal.organization.id %}">
-    <div class="modal-content">
-      <h3>Select Outcomes</h3>
-      <div id="outcomeOptions">Loading...</div>
-      <div class="modal-actions">
-        <button type="button" id="outcomeCancel" class="btn-cancel">Cancel</button>
-        <button type="button" id="outcomeSave" class="btn-save">Add</button>
-      </div>
+<!-- SDG Goals Modal -->
+<div id="sdgModal" class="sdg-modal">
+    <div class="sdg-modal-content">
+        <h3>Select SDG Goals</h3>
+        <p>Choose the Sustainable Development Goals that this event addresses:</p>
+        <div id="sdgOptions" class="sdg-options">
+            <!-- SDG options will be populated here -->
+        </div>
+        <div class="modal-actions" style="margin-top: 20px; text-align: center;">
+            <button type="button" id="sdgCancel" class="btn-draft-section" style="margin-right: 10px;">Cancel</button>
+            <button type="button" id="sdgSave" class="btn-save-section">Save Selection</button>
+        </div>
     </div>
-  </div>
-{% else %}
-  <div id="outcomeModal" class="outcome-modal" data-url="">
-    <div class="modal-content">
-      <h3>Select Outcomes</h3>
-      <div id="outcomeOptions">No organization selected.</div>
-      <div class="modal-actions">
-        <button type="button" id="outcomeCancel" class="btn-cancel">Cancel</button>
-        <button type="button" id="outcomeSave" class="btn-save">Add</button>
-      </div>
-    </div>
-  </div>
-{% endif %}
+</div>
 
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'emt/js/submit_event_report.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script>
+        if (!window.jQuery) { document.write("<script src='{% static 'emt/js/jquery-3.7.1.min.js' %}'><\/script>"); }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+    <script>
+        window.REPORT_ID = "{{ report.id|default:'' }}";
+        window.PROPOSAL_ID = "{{ proposal.id|default:'' }}";
+        window.REPORT_STATUS = "{{ report.status|default:'draft' }}";
+        window.AUTOSAVE_URL = "#"; // TODO: Add autosave URL for reports
+        window.AUTOSAVE_CSRF = "{{ csrf_token }}";
+        window.API_ORGANIZATIONS = "#"; // TODO: Add API URLs
+        window.API_FACULTY = "#"; // TODO: Add API URLs
+        window.API_OUTCOMES_BASE = "#"; // TODO: Add API URLs
+        window.SDG_GOALS = {{ sdg_goals_list|default:'[]'|safe }};
+        window.EXISTING_ACTIVITIES = {{ activities_json|default:'[]'|safe }};
+        window.EXISTING_SPEAKERS = {{ speakers_json|default:'[]'|safe }};
+        window.PROPOSAL_DATA = {
+            department: "{{ proposal.organization.name|default:'' }}",
+            venue: "{{ proposal.venue|default:'' }}",
+            title: "{{ proposal.event_title|default:'' }}",
+            target_audience: "{{ proposal.target_audience|default:'' }}",
+            event_focus_type: "{{ proposal.event_focus_type|default:'' }}",
+            student_coordinators: "{{ proposal.student_coordinators|default:'' }}",
+            academic_year: "{{ proposal.academic_year|default:'2024-2025' }}",
+            num_activities: "{{ proposal.num_activities|default:0 }}",
+            event_start_date: "{% if proposal.event_start_date %}{{ proposal.event_start_date|date:'Y-m-d' }}{% elif proposal.event_datetime %}{{ proposal.event_datetime|date:'Y-m-d' }}{% endif %}",
+            event_end_date: "{% if proposal.event_end_date %}{{ proposal.event_end_date|date:'Y-m-d' }}{% elif proposal.event_datetime %}{{ proposal.event_datetime|date:'Y-m-d' }}{% endif %}",
+            activities: {{ activities_json|default:'[]'|safe }},
+            speakers: {{ speakers_json|default:'[]'|safe }},
+            pos_pso: "{{ proposal.pos_pso|default:'' }}",
+            sdg_goals: "{{ proposal.sdg_goals|default:'' }}"
+        };
+
+        // Form validation and field management
+        $(document).ready(function() {
+            console.log('Event Report Form initialized');
+            
+            let currentSection = 'event-information';
+            let sectionProgress = {
+                'event-information': false,
+                'participants-information': false,
+                'event-summary': false,
+                'event-outcomes': false,
+                'analysis': false,
+                'event-relevance': false
+            };
+            
+            // Auto-resize textarea functionality
+            function autoResizeTextarea(textarea) {
+                textarea.style.height = 'auto';
+                textarea.style.height = textarea.scrollHeight + 'px';
+            }
+            
+            // Initialize auto-resize for all textareas
+            function initializeAutoResize() {
+                $(document).on('input', 'textarea', function() {
+                    autoResizeTextarea(this);
+                });
+                
+                // Initial resize for existing content
+                $('textarea').each(function() {
+                    autoResizeTextarea(this);
+                });
+                
+                // Word counter for event summary
+                $(document).on('input', '#event-summary-modern', function() {
+                    const text = $(this).val().trim();
+                    const wordCount = text ? text.split(/\s+/).filter(word => word.length > 0).length : 0;
+                    $('#summary-word-count').text(wordCount);
+                    
+                    // Update styling based on word count
+                    if (wordCount >= 500) {
+                        $('#summary-word-count').parent().removeClass('text-danger').addClass('text-success');
+                    } else {
+                        $('#summary-word-count').parent().removeClass('text-success').addClass('text-danger');
+                    }
+                });
+                
+                // Word counter for lessons learned
+                $(document).on('input', '#lessons-learned-modern', function() {
+                    const text = $(this).val().trim();
+                    const wordCount = text ? text.split(/\s+/).filter(word => word.length > 0).length : 0;
+                    $('#lessons-word-count').text(wordCount);
+                    
+                    // Update styling based on word count (300 recommended)
+                    if (wordCount >= 300) {
+                        $('#lessons-word-count').parent().removeClass('text-warning').addClass('text-success');
+                    } else if (wordCount >= 150) {
+                        $('#lessons-word-count').parent().removeClass('text-success text-danger').addClass('text-warning');
+                    } else {
+                        $('#lessons-word-count').parent().removeClass('text-success text-warning').addClass('text-danger');
+                    }
+                });
+                
+                // Word counter for societal impact
+                $(document).on('input', '#societal-impact-modern', function() {
+                    const text = $(this).val().trim();
+                    const wordCount = text ? text.split(/\s+/).filter(word => word.length > 0).length : 0;
+                    $('#societal-word-count').text(wordCount);
+                    
+                    // Update styling based on word count (250 recommended)
+                    if (wordCount >= 250) {
+                        $('#societal-word-count').parent().removeClass('text-warning').addClass('text-success');
+                    } else if (wordCount >= 125) {
+                        $('#societal-word-count').parent().removeClass('text-success text-danger').addClass('text-warning');
+                    } else {
+                        $('#societal-word-count').parent().removeClass('text-success text-warning').addClass('text-danger');
+                    }
+                });
+            }
+            
+            // Call initialization
+            initializeAutoResize();
+            
+            // Initialize SDG modal functionality
+            initializeSDGModal();
+            
+            // Populate fields with proposal data
+            populateProposalData();
+            
+            // Add validation styling to form fields with errors
+            $('.field-error').each(function() {
+                $(this).siblings('input, select, textarea').addClass('error');
+            });
+            
+            // Auto-populate actual location with proposal venue if empty
+            const actualLocationField = $('#actual-location-modern');
+            if (actualLocationField.val().trim() === '' && window.PROPOSAL_DATA.venue) {
+                actualLocationField.val(window.PROPOSAL_DATA.venue);
+            }
+            
+            // Navigation handling
+            $('.nav-link').on('click', function(e) {
+                e.preventDefault();
+                const targetSection = $(this).data('section');
+                
+                if ($(this).hasClass('disabled')) {
+                    showNotification('Complete previous sections first', 'error');
+                    return;
+                }
+                
+                activateSection(targetSection);
+            });
+            
+            // Save & Continue button handling
+            $(document).on('click', '.btn-save-section', function(e) {
+                e.preventDefault();
+                
+                if (validateCurrentSection()) {
+                    markSectionComplete(currentSection);
+                    const nextSection = getNextSection(currentSection);
+                    
+                    if (nextSection) {
+                        enableSection(nextSection);
+                        activateSection(nextSection);
+                        showNotification('Section saved! Moving to next section', 'success');
+                    } else {
+                        showNotification('All sections completed!', 'success');
+                    }
+                } else {
+                    showNotification('Please fill in all required fields', 'error');
+                }
+            });
+            
+            function activateSection(sectionName) {
+                currentSection = sectionName;
+                
+                // Update navigation
+                $('.nav-link').removeClass('active');
+                $(`.nav-link[data-section="${sectionName}"]`).addClass('active');
+                
+                // Update content
+                loadSectionContent(sectionName);
+            }
+            
+            function loadSectionContent(sectionName) {
+                const sectionData = getSectionData(sectionName);
+                $('#main-title').text(sectionData.title);
+                $('#main-subtitle').text(sectionData.subtitle);
+                
+                let content = '';
+                switch (sectionName) {
+                    case 'event-information':
+                        content = getEventInformationContent();
+                        break;
+                    case 'participants-information':
+                        content = getParticipantsInformationContent();
+                        break;
+                    case 'event-summary':
+                        content = getEventSummaryContent();
+                        break;
+                    case 'event-outcomes':
+                        content = getEventOutcomesContent();
+                        break;
+                    case 'analysis':
+                        content = getAnalysisContent();
+                        break;
+                    case 'event-relevance':
+                        content = getEventRelevanceContent();
+                        break;
+                    default:
+                        content = getEventInformationContent();
+                }
+                
+                $('.form-grid').html(content);
+                
+                // Restore field values if switching back to a section
+                setTimeout(() => {
+                    restoreFieldValues(sectionName);
+                }, 100);
+            }
+            
+            function getSectionData(section) {
+                const sections = {
+                    'event-information': { 
+                        title: 'Event Information', 
+                        subtitle: 'Basic event details fetched from proposal' 
+                    },
+                    'participants-information': { 
+                        title: 'Participants Information', 
+                        subtitle: 'Attendees, speakers, organizing committee details' 
+                    },
+                    'event-summary': { 
+                        title: 'Summary of Overall Event', 
+                        subtitle: 'Comprehensive event overview (minimum 500 words)' 
+                    },
+                    'event-outcomes': { 
+                        title: 'Outcomes of the Event', 
+                        subtitle: 'Post-event evaluation and achievements' 
+                    },
+                    'analysis': { 
+                        title: 'Analysis', 
+                        subtitle: 'Detailed analysis and insights (minimum 500 words)' 
+                    },
+                    'event-relevance': { 
+                        title: 'Relevance of the Event', 
+                        subtitle: 'Program outcomes, graduate attributes, SDGs mapping' 
+                    },
+                    'suggestions': { 
+                        title: 'Suggestions for Improvements', 
+                        subtitle: 'IQAC coordinator feedback and recommendations' 
+                    }
+                };
+                return sections[section] || { title: 'Section', subtitle: 'Complete this section' };
+            }
+            
+            function getNextSection(current) {
+                const order = ['event-information', 'participants-information', 'event-summary', 'event-outcomes', 'analysis', 'event-relevance', 'suggestions'];
+                const currentIndex = order.indexOf(current);
+                return currentIndex < order.length - 1 ? order[currentIndex + 1] : null;
+            }
+            
+            function validateCurrentSection() {
+                if (currentSection === 'event-information') {
+                    return validateEventInformation();
+                } else if (currentSection === 'participants-information') {
+                    return validateParticipantsInformation();
+                } else if (currentSection === 'event-summary') {
+                    return validateEventSummary();
+                } else if (currentSection === 'event-outcomes') {
+                    return validateEventOutcomes();
+                } else if (currentSection === 'analysis') {
+                    return validateAnalysis();
+                } else if (currentSection === 'event-relevance') {
+                    return validateEventRelevance();
+                }
+                // Add other section validations as needed
+                return true;
+            }
+            
+            function validateEventInformation() {
+                let isValid = true;
+                const eventType = $('#event-type-modern');
+                
+                if (!eventType.val() || eventType.val().trim() === '') {
+                    showFieldError(eventType, 'Event Type is required');
+                    isValid = false;
+                } else {
+                    clearFieldError(eventType);
+                }
+                
+                return isValid;
+            }
+            
+            function validateParticipantsInformation() {
+                let isValid = true;
+                const requiredFields = [
+                    { id: '#total-participants-modern', name: 'Total Participants' },
+                    { id: '#organizing-committee-modern', name: 'Organizing Committee' }
+                ];
+                
+                requiredFields.forEach(function(field) {
+                    const element = $(field.id);
+                    if (!element.val() || element.val().trim() === '') {
+                        showFieldError(element, field.name + ' is required');
+                        isValid = false;
+                    } else {
+                        clearFieldError(element);
+                    }
+                });
+                
+                return isValid;
+            }
+            
+            function validateEventSummary() {
+                let isValid = true;
+                const summaryField = $('#event-summary-modern');
+                const summary = summaryField.val().trim();
+                const wordCount = summary ? summary.split(/\s+/).filter(word => word.length > 0).length : 0;
+                
+                if (!summary) {
+                    showFieldError(summaryField, 'Event Summary is required');
+                    isValid = false;
+                } else if (wordCount < 500) {
+                    showFieldError(summaryField, `Event Summary must be at least 500 words (current: ${wordCount} words)`);
+                    isValid = false;
+                } else {
+                    clearFieldError(summaryField);
+                }
+                
+                return isValid;
+            }
+            
+            function validateEventOutcomes() {
+                let isValid = true;
+                const requiredFields = [
+                    { id: '#learning-outcomes-modern', name: 'Learning Outcomes' },
+                    { id: '#participant-feedback-modern', name: 'Participant Feedback' },
+                    { id: '#measurable-outcomes-modern', name: 'Measurable Outcomes' },
+                    { id: '#impact-assessment-modern', name: 'Impact Assessment' }
+                ];
+                
+                requiredFields.forEach(function(field) {
+                    const element = $(field.id);
+                    if (!element.val() || element.val().trim() === '') {
+                        showFieldError(element, field.name + ' is required');
+                        isValid = false;
+                    } else {
+                        clearFieldError(element);
+                    }
+                });
+                
+                return isValid;
+            }
+            
+            function validateAnalysis() {
+                let isValid = true;
+                const requiredFields = [
+                    { id: '#objective-achievement-modern', name: 'Objective Achievement Analysis' },
+                    { id: '#strengths-analysis-modern', name: 'Strengths and Successes' },
+                    { id: '#challenges-analysis-modern', name: 'Challenges and Areas for Improvement' },
+                    { id: '#effectiveness-analysis-modern', name: 'Overall Effectiveness Analysis' },
+                    { id: '#lessons-learned-modern', name: 'Lessons Learned and Insights' }
+                ];
+                
+                requiredFields.forEach(function(field) {
+                    const element = $(field.id);
+                    if (!element.val() || element.val().trim() === '') {
+                        showFieldError(element, field.name + ' is required');
+                        isValid = false;
+                    } else {
+                        clearFieldError(element);
+                    }
+                });
+                
+                return isValid;
+            }
+            
+            function validateEventRelevance() {
+                let isValid = true;
+                const requiredFields = [
+                    { id: '#pos-pso-modern', name: "PO's and PSO's Management" },
+                    { id: '#graduate-attributes-modern', name: 'Graduate Attributes' },
+                    { id: '#contemporary-requirements-modern', name: 'Contemporary Requirements' },
+                    { id: '#sdg-implementation-modern', name: 'SDG Implementation' }
+                ];
+                
+                requiredFields.forEach(function(field) {
+                    const element = $(field.id);
+                    if (field.id === '#graduate-attributes-modern') {
+                        // Special validation for multi-select
+                        if (!element.val() || element.val().length === 0) {
+                            showFieldError(element, field.name + ' - Please select at least one attribute');
+                            isValid = false;
+                        } else {
+                            clearFieldError(element);
+                        }
+                    } else {
+                        // For textarea and input fields
+                        if (!element.val() || element.val().trim() === '') {
+                            showFieldError(element, field.name + ' is required');
+                            isValid = false;
+                        } else {
+                            clearFieldError(element);
+                        }
+                    }
+                });
+                
+                return isValid;
+            }
+            
+            function markSectionComplete(sectionName) {
+                sectionProgress[sectionName] = true;
+                $(`.nav-link[data-section="${sectionName}"]`).addClass('completed');
+            }
+            
+            function enableSection(sectionName) {
+                $(`.nav-link[data-section="${sectionName}"]`).removeClass('disabled');
+            }
+            
+            function restoreFieldValues(sectionName) {
+                // Restore form field values when navigating back to sections
+                // This would typically sync with any stored data
+            }
+            
+            function getEventInformationContent() {
+                return `
+                    <!-- Organization Information Section -->
+                    <div class="form-section-header">
+                        <h3>🏢 Organization Details</h3>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label for="department-modern">Department *</label>
+                            <input type="text" id="department-modern" name="department" value="${window.PROPOSAL_DATA.department || ''}">
+                            <div class="help-text">Department from original proposal (editable)</div>
+                        </div>
+                        <div class="input-group">
+                            <label for="location-modern">Venue/Location *</label>
+                            <input type="text" id="location-modern" name="venue" value="${window.PROPOSAL_DATA.venue || ''}">
+                            <div class="help-text">Venue from original proposal (editable)</div>
+                        </div>
+                    </div>
+
+                    <!-- Event Information Section -->
+                    <div class="form-section-header">
+                        <h3>🎯 Event Information</h3>
+                    </div>
+
+                    <div class="form-row full-width">
+                        <div class="input-group">
+                            <label for="event-title-modern">Event Title *</label>
+                            <input type="text" id="event-title-modern" name="event_title" value="${window.PROPOSAL_DATA.title || ''}">
+                            <div class="help-text">Event title from proposal (editable)</div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label for="num-activities-modern">Number of Activities</label>
+                            <input type="number" id="num-activities-modern" name="num_activities" value="${window.PROPOSAL_DATA.num_activities || 1}">
+                            <div class="help-text">Total activities from proposal (editable)</div>
+                        </div>
+                        <div class="input-group">
+                            <label for="venue-modern">Venue *</label>
+                            <input type="text" id="venue-modern" name="venue_detail" value="${window.PROPOSAL_DATA.venue || ''}">
+                            <div class="help-text">Venue from proposal (editable)</div>
+                        </div>
+                    </div>
+
+                    <!-- Schedule & Academic Information Section -->
+                    <div class="form-section-header">
+                        <h3>📅 Schedule & Academic Information</h3>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label for="start-date-modern">Event Start Date *</label>
+                            <input type="date" id="start-date-modern" name="event_start_date" value="${window.PROPOSAL_DATA.event_start_date || ''}">
+                            <div class="help-text">Start date from original proposal (editable)</div>
+                        </div>
+                        <div class="input-group">
+                            <label for="end-date-modern">Event End Date *</label>
+                            <input type="date" id="end-date-modern" name="event_end_date" value="${window.PROPOSAL_DATA.event_end_date || ''}">
+                            <div class="help-text">End date from original proposal (editable)</div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label for="academic-year-modern">Academic Year *</label>
+                            <input type="text" id="academic-year-modern" name="academic_year" value="${window.PROPOSAL_DATA.academic_year || ''}">
+                            <div class="help-text">Academic year from proposal (editable)</div>
+                        </div>
+                        <div class="input-group">
+                            <label for="event-type-modern">Actual Event Type *</label>
+                            <select id="event-type-modern" required>
+                                <option value="">Select the type of event that was conducted</option>
+                                <option value="Training Program">Training Program</option>
+                                <option value="Workshop">Workshop</option>
+                                <option value="Seminar">Seminar</option>
+                                <option value="Conference">Conference</option>
+                                <option value="Guest Lecture">Guest Lecture</option>
+                                <option value="Webinar">Webinar</option>
+                                <option value="Competition">Competition</option>
+                                <option value="Cultural Event">Cultural Event</option>
+                                <option value="Sports Event">Sports Event</option>
+                                <option value="Exhibition">Exhibition</option>
+                                <option value="Panel Discussion">Panel Discussion</option>
+                                <option value="Hackathon">Hackathon</option>
+                                <option value="Field Trip">Field Trip</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <div class="help-text">Select the actual type of event that was conducted</div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Information Section -->
+                    <div class="form-section-header">
+                        <h3>📝 Additional Information</h3>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label for="actual-location-modern">Actual Event Location</label>
+                            <input type="text" id="actual-location-modern" name="location" placeholder="Enter the actual venue where event was held">
+                            <div class="help-text">Specify the actual venue (if different from proposed venue)</div>
+                        </div>
+                        <div class="input-group">
+                            <label for="blog-link-modern">Blog Link</label>
+                            <input type="url" id="blog-link-modern" name="blog_link" placeholder="https://example.com/blog-post">
+                            <div class="help-text">Optional: Link to blog post or article about the event</div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label for="num-participants-modern">Number of Participants</label>
+                            <input type="number" id="num-participants-modern" name="num_participants" min="0" placeholder="Enter total participants">
+                            <div class="help-text">Total number of people who attended the event</div>
+                        </div>
+                        <div class="input-group">
+                            <label for="num-volunteers-modern">Number of Student Volunteers</label>
+                            <input type="number" id="num-volunteers-modern" name="num_student_volunteers" min="0" placeholder="Enter volunteer count">
+                            <div class="help-text">Number of students who volunteered for the event</div>
+                        </div>
+                    </div>
+
+                    <!-- Activities Information Section -->
+                    <div class="form-section-header">
+                        <h3>🎭 Activities Information</h3>
+                    </div>
+
+                    <div class="form-row full-width">
+                        <div class="input-group">
+                            <label>Activities from Original Proposal</label>
+                            <div class="activities-reference-card">
+                                <div id="activities-display">Loading activities...</div>
+                            </div>
+                            <div class="help-text">Reference: Activities planned in the original proposal</div>
+                        </div>
+                    </div>
+
+                    <!-- Save Section -->
+                    <div class="form-row full-width">
+                        <div class="save-section-container">
+                            <button type="button" class="btn-save-section">Save & Continue</button>
+                            <button type="submit" name="save_draft" class="btn-draft-section">Save as Draft</button>
+                            <div class="save-help-text">Complete this section to unlock the next one</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            function getParticipantsInformationContent() {
+                return `
+                    <!-- Attendance Information Section -->
+                    <div class="form-section-header">
+                        <h3>👥 Attendance Information</h3>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label for="total-participants-modern">Total Participants *</label>
+                            <input type="number" id="total-participants-modern" name="num_participants" min="0" required placeholder="Enter total number of attendees">
+                            <div class="help-text">Total number of people who attended the event</div>
+                        </div>
+                        <div class="input-group">
+                            <label for="student-participants-modern">Student Participants</label>
+                            <input type="number" id="student-participants-modern" min="0" placeholder="Number of students">
+                            <div class="help-text">How many students attended the event?</div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label for="faculty-participants-modern">Faculty Participants</label>
+                            <input type="number" id="faculty-participants-modern" min="0" placeholder="Number of faculty">
+                            <div class="help-text">How many faculty members attended?</div>
+                        </div>
+                        <div class="input-group">
+                            <label for="external-participants-modern">External Participants</label>
+                            <input type="number" id="external-participants-modern" min="0" placeholder="Number of external attendees">
+                            <div class="help-text">External participants (industry, other institutions)</div>
+                        </div>
+                    </div>
+
+                    <!-- Organizing Team Section -->
+                    <div class="form-section-header">
+                        <h3>🏗️ Organizing Team</h3>
+                    </div>
+
+                    <div class="form-row full-width">
+                        <div class="input-group">
+                            <label for="organizing-committee-modern">Organizing Committee *</label>
+                            <textarea id="organizing-committee-modern" rows="8" required placeholder="List the organizing committee members and their roles...&#10;&#10;Example:&#10;Dr. John Doe - Event Coordinator&#10;Prof. Jane Smith - Technical Head&#10;Mr. Alex Johnson - Logistics Manager&#10;&#10;Include:&#10;• Faculty coordinators&#10;• Student coordinators&#10;• Technical team members&#10;• Administrative support"></textarea>
+                            <div class="help-text">List all organizing committee members with their roles</div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label for="student-coordinators-modern">Student Coordinators</label>
+                            <input type="text" id="student-coordinators-modern" name="student_coordinators" value="${window.PROPOSAL_DATA.student_coordinators || ''}" placeholder="Names of student coordinators">
+                            <div class="help-text">Student coordinators from proposal (editable)</div>
+                        </div>
+                        <div class="input-group">
+                            <label for="volunteers-count-modern">Total Volunteers</label>
+                            <input type="number" id="volunteers-count-modern" name="num_student_volunteers" min="0" placeholder="Number of volunteers">
+                            <div class="help-text">Total number of student volunteers involved</div>
+                        </div>
+                    </div>
+
+                    <!-- Speaker Information Section -->
+                    <div class="form-section-header">
+                        <h3>🎤 Speaker Information</h3>
+                    </div>
+
+                    <div class="form-row full-width">
+                        <div class="input-group">
+                            <label>Speakers from Original Proposal</label>
+                            <div class="speakers-reference-card">
+                                <div id="speakers-display">
+                                    <div class="no-activities-message">
+                                        <i class="info-icon">ℹ</i>
+                                        <span>Speaker information will be loaded from proposal</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="help-text">Reference: Speakers planned in the original proposal</div>
+                        </div>
+                    </div>
+
+                    <!-- External Contacts Section -->
+                    <div class="form-section-header">
+                        <h3>📞 External Contacts</h3>
+                    </div>
+
+                    <div class="form-row full-width">
+                        <div class="input-group">
+                            <label for="external-contacts-modern">External Contact Details</label>
+                            <textarea id="external-contacts-modern" name="external_contact_details" rows="3" placeholder="External organizations/contacts involved...&#10;&#10;Include:&#10;- Organization names&#10;- Contact person details&#10;- Role in the event"></textarea>
+                            <div class="help-text">Details of external organizations and contacts involved</div>
+                        </div>
+                    </div>
+
+                    <!-- Save Section -->
+                    <div class="form-row full-width">
+                        <div class="save-section-container">
+                            <button type="button" class="btn-save-section">Save & Continue</button>
+                            <button type="submit" name="save_draft" class="btn-draft-section">Save as Draft</button>
+                            <div class="save-help-text">Complete this section to unlock the next one</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Placeholder functions for other sections
+            function getEventSummaryContent() {
+                return `
+                    <!-- Event Summary Section -->
+                    <div class="form-section-header">
+                        <h3>📝 Summary of Overall Event</h3>
+                    </div>
+                    
+                    <div class="form-row full-width">
+                        <div class="input-group">
+                            <label for="event-summary-modern">Comprehensive Event Overview *</label>
+                            <textarea id="event-summary-modern" name="summary" rows="12" required 
+                                placeholder="Provide a comprehensive summary of the entire event...&#10;&#10;Include:&#10;• Event objectives and how they were met&#10;• Key activities and sessions conducted&#10;• Participant engagement and response&#10;• Major highlights and achievements&#10;• Overall event flow and execution&#10;• Any challenges faced and how they were addressed&#10;• Success metrics and outcomes&#10;&#10;Minimum 500 words required."></textarea>
+                            <div class="help-text">Provide a detailed overview of the entire event (minimum 500 words)</div>
+                            <div class="word-counter">
+                                <span id="summary-word-count">0</span> words (minimum 500 required)
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Save Section -->
+                    <div class="form-row full-width">
+                        <div class="save-section-container">
+                            <button type="button" class="btn-save-section">Save & Continue</button>
+                            <button type="submit" name="save_draft" class="btn-draft-section">Save as Draft</button>
+                            <div class="save-help-text">Complete this section to unlock the next one</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            function getEventOutcomesContent() {
+                return `
+                    <!-- Event Outcomes Section -->
+                    <div class="form-section-header">
+                        <h3>🎯 Outcomes of the Event</h3>
+                        <p class="section-description">Evaluate the results, impact, and achievements of your event</p>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label for="learning-outcomes-modern">Learning Outcomes Achieved *</label>
+                            <textarea id="learning-outcomes-modern" name="learning_outcomes" rows="8" required 
+                                placeholder="Describe the specific learning outcomes achieved by participants:&#10;&#10;• New knowledge areas covered&#10;• Skills developed or enhanced&#10;• Competencies gained&#10;• Understanding improved&#10;• Practical applications learned&#10;&#10;Provide concrete examples and evidence where possible."
+                                class="auto-resize-textarea"></textarea>
+                            <div class="help-text">Detail the knowledge and skills gained by participants</div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="participant-feedback-modern">Participant Feedback Summary *</label>
+                            <textarea id="participant-feedback-modern" name="participant_feedback" rows="8" required 
+                                placeholder="Summarize feedback received from participants:&#10;&#10;• Overall satisfaction ratings&#10;• Positive comments and highlights&#10;• Areas for improvement mentioned&#10;• Suggestions for future events&#10;• Most valued aspects of the event&#10;&#10;Include both quantitative and qualitative feedback."
+                                class="auto-resize-textarea"></textarea>
+                            <div class="help-text">Summarize feedback received from event participants</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label for="measurable-outcomes-modern">Measurable Outcomes *</label>
+                            <textarea id="measurable-outcomes-modern" name="measurable_outcomes" rows="8" required 
+                                placeholder="List quantifiable results and achievements:&#10;&#10;• Number of participants trained/certified&#10;• Projects initiated or completed&#10;• Partnerships established&#10;• Resources shared or distributed&#10;• Follow-up actions planned&#10;• Metrics achieved vs. targets"
+                                class="auto-resize-textarea"></textarea>
+                            <div class="help-text">Quantifiable results and achievements from the event</div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="impact-assessment-modern">Impact Assessment *</label>
+                            <textarea id="impact-assessment-modern" name="impact_assessment" rows="8" required 
+                                placeholder="Evaluate the broader impact of the event:&#10;&#10;• Impact on individual participants&#10;• Contribution to institutional goals&#10;• Community or societal benefits&#10;• Academic/professional development&#10;• Future opportunities created&#10;• Long-term benefits expected"
+                                class="auto-resize-textarea"></textarea>
+                            <div class="help-text">Assess the broader impact and significance of the event</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row full-width">
+                        <div class="input-group">
+                            <label for="follow-up-actions-modern">Follow-up Actions Planned</label>
+                            <textarea id="follow-up-actions-modern" name="follow_up_actions" rows="6" 
+                                placeholder="Outline planned follow-up activities and initiatives:&#10;&#10;• Additional training sessions&#10;• Implementation of recommendations&#10;• Ongoing collaboration plans&#10;• Resource development&#10;• Progress monitoring activities&#10;• Future events or initiatives"
+                                class="auto-resize-textarea"></textarea>
+                            <div class="help-text">Describe any planned follow-up activities or initiatives</div>
+                        </div>
+                    </div>
+
+                    <!-- Save Section -->
+                    <div class="form-row full-width">
+                        <div class="save-section-container">
+                            <button type="button" class="btn-save-section">Save & Continue</button>
+                            <button type="submit" name="save_draft" class="btn-draft-section">Save as Draft</button>
+                            <div class="save-help-text">Complete this section to unlock the next one</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            function getAnalysisContent() {
+                return `
+                    <!-- Analysis Section -->
+                    <div class="form-section-header">
+                        <h3>📊 Analysis</h3>
+                        <p class="section-description">Provide detailed analysis of the event's effectiveness and impact</p>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label for="objective-achievement-modern">Objective Achievement Analysis *</label>
+                            <textarea id="objective-achievement-modern" name="objective_achievement" rows="10" required 
+                                placeholder="Analyze how well the event achieved its stated objectives:&#10;&#10;• Objective 1: [Achievement level and evidence]&#10;• Objective 2: [Achievement level and evidence]&#10;• Objective 3: [Achievement level and evidence]&#10;&#10;For each objective, provide:&#10;• Degree of achievement (fully/partially/not achieved)&#10;• Supporting evidence and metrics&#10;• Factors that contributed to success/failure"></textarea>
+                            <div class="help-text">Evaluate achievement of each stated objective with evidence</div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="strengths-analysis-modern">Strengths and Successes *</label>
+                            <textarea id="strengths-analysis-modern" name="strengths_analysis" rows="10" required 
+                                placeholder="Identify and analyze the event's key strengths:&#10;&#10;• Content quality and relevance&#10;• Speaker expertise and delivery&#10;• Participant engagement levels&#10;• Organizational efficiency&#10;• Resource utilization&#10;• Innovation and creativity&#10;• Networking opportunities&#10;• Learning outcomes achieved&#10;&#10;Provide specific examples and evidence for each strength."></textarea>
+                            <div class="help-text">Analyze what worked well and contributed to success</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label for="challenges-analysis-modern">Challenges and Areas for Improvement *</label>
+                            <textarea id="challenges-analysis-modern" name="challenges_analysis" rows="10" required 
+                                placeholder="Analyze challenges faced and areas needing improvement:&#10;&#10;• Logistical challenges encountered&#10;• Technical difficulties faced&#10;• Participant-related issues&#10;• Resource constraints&#10;• Communication gaps&#10;• Time management issues&#10;• Content delivery problems&#10;• Feedback concerns raised&#10;&#10;For each challenge, explain:&#10;• Root cause analysis&#10;• Impact on event success&#10;• Mitigation strategies used"></textarea>
+                            <div class="help-text">Identify challenges and analyze their impact and solutions</div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="effectiveness-analysis-modern">Overall Effectiveness Analysis *</label>
+                            <textarea id="effectiveness-analysis-modern" name="effectiveness_analysis" rows="10" required 
+                                placeholder="Provide comprehensive effectiveness analysis:&#10;&#10;• Overall success rating (1-10) with justification&#10;• Cost-benefit analysis&#10;• Resource efficiency evaluation&#10;• Time management assessment&#10;• Quality vs. quantity trade-offs&#10;• Stakeholder satisfaction levels&#10;• Comparison with similar past events&#10;• Return on investment analysis&#10;&#10;Support your analysis with data and specific examples."></textarea>
+                            <div class="help-text">Evaluate overall event effectiveness with supporting data</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row full-width">
+                        <div class="input-group">
+                            <label for="lessons-learned-modern">Lessons Learned and Insights *</label>
+                            <textarea id="lessons-learned-modern" name="lessons_learned" rows="10" required 
+                                placeholder="Document key lessons learned and insights gained:&#10;&#10;• What would you do differently next time?&#10;• What strategies proved most effective?&#10;• What assumptions were proven wrong?&#10;• What unexpected outcomes emerged?&#10;• What best practices were identified?&#10;• What knowledge gaps were discovered?&#10;• What organizational improvements are needed?&#10;• What stakeholder feedback patterns emerged?&#10;&#10;Focus on actionable insights that can improve future events."
+                                class="analysis-textarea"></textarea>
+                            <div class="help-text">Capture actionable insights for future event improvement</div>
+                            <div class="word-counter">
+                                <span id="lessons-word-count">0</span> words (minimum 300 recommended)
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Save Section -->
+                    <div class="form-row full-width">
+                        <div class="save-section-container">
+                            <button type="button" class="btn-save-section">Save & Continue</button>
+                            <button type="submit" name="save_draft" class="btn-draft-section">Save as Draft</button>
+                            <div class="save-help-text">Complete this section to unlock the next one</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            function getEventRelevanceContent() {
+                return `
+                    <!-- Event Relevance Section -->
+                    <div class="form-section-header">
+                        <h3>🎯 Event Relevance</h3>
+                        <p class="section-description">Evaluate the relevance and alignment of the event with academic and development goals</p>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label for="pos-pso-modern">PO's and PSO's Management *</label>
+                            <textarea id="pos-pso-modern" name="pos_pso" rows="12" required 
+                                placeholder="e.g., PO1, PO3, PSO2, PSO4&#10;&#10;Program Outcomes (POs):&#10;• PO1: Engineering knowledge&#10;• PO2: Problem analysis&#10;• PO3: Design/development of solutions&#10;&#10;Program Specific Outcomes (PSOs):&#10;• PSO1: Domain-specific knowledge&#10;• PSO2: Professional skills&#10;&#10;You can edit this data from the proposal."></textarea>
+                            <div class="help-text">Program Outcomes and Program Specific Outcomes addressed by this event (editable)</div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="graduate-attributes-modern">Graduate Attributes *</label>
+                            <select id="graduate-attributes-modern" name="graduate_attributes" multiple required class="graduate-attributes-select">
+                                <option value="engineering_knowledge">Engineering Knowledge</option>
+                                <option value="problem_analysis">Problem Analysis</option>
+                                <option value="design_solutions">Design/Development of Solutions</option>
+                                <option value="investigation">Conduct Investigations</option>
+                                <option value="modern_tools">Modern Tool Usage</option>
+                                <option value="engineer_society">The Engineer and Society</option>
+                                <option value="environment_sustainability">Environment and Sustainability</option>
+                                <option value="ethics">Ethics</option>
+                                <option value="individual_teamwork">Individual and Team Work</option>
+                                <option value="communication">Communication</option>
+                                <option value="project_management">Project Management and Finance</option>
+                                <option value="lifelong_learning">Life-long Learning</option>
+                            </select>
+                            <div class="help-text">Select relevant graduate attributes developed through this event</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label for="contemporary-requirements-modern">Contemporary Requirements *</label>
+                            <textarea id="contemporary-requirements-modern" name="contemporary_requirements" rows="12" required 
+                                placeholder="Describe how the event addresses contemporary requirements:&#10;&#10;• Employability enhancement&#10;• Entrepreneurship development&#10;• Skill development initiatives&#10;• Industry 4.0 readiness&#10;• Digital transformation skills&#10;• Innovation and creativity&#10;• Leadership and soft skills&#10;• Global competency development&#10;&#10;Provide specific examples of how these requirements were addressed."></textarea>
+                            <div class="help-text">Explain how the event addresses employability, entrepreneurship, skill development, etc.</div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="sdg-implementation-modern">SDG Implementation *</label>
+                            <textarea id="sdg-implementation-modern" name="sdg_goals" rows="10" required 
+                                placeholder="Click 'Select SDG Goals' to choose from the 17 Sustainable Development Goals&#10;&#10;Selected goals will appear here and can be edited:&#10;&#10;You can modify the SDG selection or add additional context about how your event addresses these goals."></textarea>
+                            <button type="button" id="sdg-select-btn" class="btn-select-sdg">Select SDG Goals</button>
+                            <div class="help-text">Sustainable Development Goals addressed by this event (editable)</div>
+                        </div>
+                    </div>
+
+                    <!-- Save Section -->
+                    <div class="form-row full-width">
+                        <div class="save-section-container">
+                            <button type="button" class="btn-save-section">Save & Continue</button>
+                            <button type="submit" name="save_draft" class="btn-draft-section">Save as Draft</button>
+                            <div class="save-help-text">Complete this section to unlock the next one</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            
+            // Form submission validation
+            $('#report-form').on('submit', function(e) {
+                if (!validateCurrentSection()) {
+                    e.preventDefault();
+                    showNotification('Please fill in all required fields', 'error');
+                }
+            });
+            
+            // Clear field errors on input
+            $(document).on('input change', 'input, select, textarea', function() {
+                clearFieldError($(this));
+            });
+        });
+        
+        function showFieldError(field, message) {
+            clearFieldError(field);
+            field.addClass('error');
+            field.after(`<div class="field-error">${message}</div>`);
+        }
+        
+        function clearFieldError(field) {
+            field.removeClass('error');
+            field.siblings('.field-error').remove();
+        }
+        
+        function showNotification(message, type = 'info') {
+            // Simple notification system
+            const notification = $(`
+                <div class="notification ${type}" style="
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    padding: 1rem;
+                    background: ${type === 'error' ? '#dc2626' : '#059669'};
+                    color: white;
+                    border-radius: 0.5rem;
+                    z-index: 1000;
+                    max-width: 300px;
+                ">
+                    ${message}
+                </div>
+            `);
+            
+            $('body').append(notification);
+            
+            setTimeout(() => {
+                notification.fadeOut(() => {
+                    notification.remove();
+                });
+            }, 5000);
+        }
+        
+        // Populate fields with proposal data
+        function populateProposalData() {
+            // Populate PO/PSO field when section becomes active
+            $(document).on('click', '[data-section="event-relevance"]', function() {
+                setTimeout(function() {
+                    if ($('#pos-pso-modern').length && window.PROPOSAL_DATA.pos_pso) {
+                        $('#pos-pso-modern').val(window.PROPOSAL_DATA.pos_pso);
+                    }
+                    if ($('#sdg-implementation-modern').length && window.PROPOSAL_DATA.sdg_goals) {
+                        $('#sdg-implementation-modern').val(window.PROPOSAL_DATA.sdg_goals);
+                    }
+                }, 100);
+            });
+        }
+        
+        // SDG Modal functionality
+        function initializeSDGModal() {
+            // SDG Goals data
+            const sdgGoals = window.SDG_GOALS || [
+                { id: 1, title: "No Poverty", description: "End poverty in all its forms everywhere" },
+                { id: 2, title: "Zero Hunger", description: "End hunger, achieve food security and improved nutrition" },
+                { id: 3, title: "Good Health and Well-being", description: "Ensure healthy lives and promote well-being for all" },
+                { id: 4, title: "Quality Education", description: "Ensure inclusive and equitable quality education" },
+                { id: 5, title: "Gender Equality", description: "Achieve gender equality and empower all women and girls" },
+                { id: 6, title: "Clean Water and Sanitation", description: "Ensure availability and sustainable management of water" },
+                { id: 7, title: "Affordable and Clean Energy", description: "Ensure access to affordable, reliable, sustainable energy" },
+                { id: 8, title: "Decent Work and Economic Growth", description: "Promote sustained, inclusive economic growth" },
+                { id: 9, title: "Industry, Innovation and Infrastructure", description: "Build resilient infrastructure, promote inclusive industrialization" },
+                { id: 10, title: "Reduced Inequalities", description: "Reduce inequality within and among countries" },
+                { id: 11, title: "Sustainable Cities and Communities", description: "Make cities and human settlements inclusive, safe, resilient" },
+                { id: 12, title: "Responsible Consumption and Production", description: "Ensure sustainable consumption and production patterns" },
+                { id: 13, title: "Climate Action", description: "Take urgent action to combat climate change" },
+                { id: 14, title: "Life Below Water", description: "Conserve and sustainably use the oceans, seas and marine resources" },
+                { id: 15, title: "Life on Land", description: "Protect, restore and promote sustainable use of terrestrial ecosystems" },
+                { id: 16, title: "Peace, Justice and Strong Institutions", description: "Promote peaceful and inclusive societies" },
+                { id: 17, title: "Partnerships for the Goals", description: "Strengthen the means of implementation and revitalize partnerships" }
+            ];
+            
+            // Populate SDG options
+            function populateSDGOptions() {
+                const container = $('#sdgOptions');
+                container.empty();
+                
+                sdgGoals.forEach(goal => {
+                    const optionHtml = `
+                        <div class="sdg-option" data-sdg-id="${goal.id}">
+                            <input type="checkbox" id="sdg-${goal.id}" value="SDG${goal.id}">
+                            <label for="sdg-${goal.id}">
+                                <strong>SDG ${goal.id}: ${goal.title}</strong><br>
+                                <small>${goal.description}</small>
+                            </label>
+                        </div>
+                    `;
+                    container.append(optionHtml);
+                });
+            }
+            
+            // Open SDG modal
+            $(document).on('click', '#sdg-select-btn', function() {
+                populateSDGOptions();
+                
+                // Pre-select existing SDG goals
+                const currentSDGs = $('#sdg-implementation-modern').val();
+                if (currentSDGs) {
+                    // Extract SDG numbers from the text (look for SDG1, SDG2, etc.)
+                    const sdgMatches = currentSDGs.match(/SDG\d+/g) || [];
+                    sdgMatches.forEach(sdg => {
+                        const sdgNumber = sdg.replace('SDG', '');
+                        $(`#sdg-${sdgNumber}`).prop('checked', true);
+                        $(`.sdg-option[data-sdg-id="${sdgNumber}"]`).addClass('selected');
+                    });
+                }
+                
+                $('#sdgModal').show();
+            });
+            
+            // SDG option selection
+            $(document).on('click', '.sdg-option', function() {
+                const checkbox = $(this).find('input[type="checkbox"]');
+                checkbox.prop('checked', !checkbox.prop('checked'));
+                $(this).toggleClass('selected', checkbox.prop('checked'));
+            });
+            
+            // Save SDG selection
+            $(document).on('click', '#sdgSave', function() {
+                const selectedSDGs = [];
+                const selectedTitles = [];
+                $('.sdg-option input[type="checkbox"]:checked').each(function() {
+                    selectedSDGs.push($(this).val());
+                    const sdgId = $(this).val().replace('SDG', '');
+                    const sdgGoal = sdgGoals.find(goal => goal.id == sdgId);
+                    if (sdgGoal) {
+                        selectedTitles.push(`${$(this).val()}: ${sdgGoal.title}`);
+                    }
+                });
+                
+                // Create a formatted string for the textarea
+                const formattedSDGs = selectedTitles.length > 0 
+                    ? selectedTitles.join('\n') + '\n\n(You can edit this text and add additional context about how your event addresses these SDG goals)'
+                    : '';
+                
+                $('#sdg-implementation-modern').val(formattedSDGs);
+                $('#sdgModal').hide();
+            });
+            
+            // Cancel SDG selection
+            $(document).on('click', '#sdgCancel', function() {
+                $('#sdgModal').hide();
+            });
+            
+            // Close modal when clicking outside
+            $(document).on('click', '#sdgModal', function(e) {
+                if (e.target === this) {
+                    $('#sdgModal').hide();
+                }
+            });
+        }
+    </script>
+    <script src="{% static 'emt/js/submit_event_report.js' %}"></script>
 {% endblock %}
