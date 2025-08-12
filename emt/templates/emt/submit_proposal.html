@@ -140,7 +140,7 @@
                             </div>
                             <div class="input-group">
                                 <label for="target-audience-modern">Target Audience *</label>
-                                <input type="text" id="target-audience-modern" required placeholder="e.g., Final year students, Faculty members">
+                                <input type="text" id="target-audience-modern" required readonly placeholder="Select target audience">
                                 <div class="help-text">Specify who this event is intended for</div>
                             </div>
                         </div>
@@ -331,6 +331,22 @@
     </div>
 </div>
 {% endif %}
+<div id="audienceModal" class="outcome-modal">
+    <div class="modal-content">
+        <h3>Select Target Audience</h3>
+        <div id="audienceOptions">
+            <div class="audience-type-selector">
+                <button type="button" data-type="students">Students</button>
+                <button type="button" data-type="faculty">Faculty</button>
+            </div>
+            <div id="audienceList">Select an option above.</div>
+        </div>
+        <div class="modal-actions">
+            <button type="button" id="audienceCancel" class="btn-cancel">Cancel</button>
+            <button type="button" id="audienceSave" class="btn-save">Add</button>
+        </div>
+    </div>
+</div>
 <div id="sdgModal" class="outcome-modal">
     <div class="modal-content">
         <h3>Select SDG Goals</h3>
@@ -356,6 +372,7 @@
         window.AUTOSAVE_CSRF = "{{ csrf_token }}";
         window.API_ORGANIZATIONS = "{% url 'emt:api_organizations' %}";
         window.API_FACULTY = "{% url 'emt:api_faculty' %}";
+        window.API_CLASSES_BASE = "{% url 'emt:api_classes' 0 %}".replace(/0\/$/, '');
         window.API_OUTCOMES_BASE = "{% url 'emt:api_outcomes' 0 %}".replace(/0\/$/, '');
         window.SDG_GOALS = {{ sdg_goals_list|safe }};
         window.EXISTING_ACTIVITIES = {{ activities_json|safe }};
