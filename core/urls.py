@@ -188,6 +188,12 @@ urlpatterns = [
     path('core-admin/api/filter/roles/', views.api_filter_roles, name='api_filter_roles'),
     path('core-admin/api/search/org-types/', views.api_search_org_types, name='api_search_org_types'),
 
+    # PSO & PO Management APIs
+    path('core/api/programs/<int:org_id>/', views.api_organization_programs, name='api_organization_programs'),
+    path('core/api/create-program/', views.create_program_for_organization, name='create_program_for_organization'),
+    path('core/api/program-outcomes/<int:program_id>/', views.api_program_outcomes, name='api_program_outcomes'),
+    path('core/api/manage-program-outcomes/', views.manage_program_outcomes, name='manage_program_outcomes'),
+
     # ────────────────────────────────────────────────
     # Admin Dashboard API
     # ────────────────────────────────────────────────
