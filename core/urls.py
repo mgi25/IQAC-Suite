@@ -69,6 +69,7 @@ urlpatterns = [
     path('core-admin/settings/<str:model_name>/add/', views.admin_master_data_add, name='admin_settings_add'),
     path('core-admin/settings/<str:model_name>/<int:pk>/edit/', views.admin_master_data_edit, name='admin_settings_edit'),
     path('core-admin/settings/<str:model_name>/<int:pk>/delete/', views.admin_master_data_delete, name='admin_settings_delete'),
+    path('core-admin/academic-years/', views.admin_academic_year_settings, name='admin_academic_year_settings'),
 
     # ────────────────────────────────────────────────
     # Admin - Approval Flow Management

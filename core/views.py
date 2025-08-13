@@ -1256,6 +1256,43 @@ def proposal_detail(request, proposal_id):
 def admin_settings_dashboard(request):
     return render(request, "core/admin_settings.html")
 
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def admin_academic_year_settings(request):
+    from transcript.models import AcademicYear
+
+    academic_years = AcademicYear.objects.all().order_by('-year')
+
+    if request.method == "POST":
+        active_id = request.POST.get('active_year')
+        for ay in academic_years:
+            start = request.POST.get(f'start_date_{ay.id}')
+            end = request.POST.get(f'end_date_{ay.id}')
+            ay.start_date = start or None
+            ay.end_date = end or None
+            ay.is_active = str(ay.id) == active_id
+            ay.save()
+
+        new_year = request.POST.get('new_year')
+        if new_year:
+            new_ay = AcademicYear.objects.create(
+                year=new_year,
+                start_date=request.POST.get('new_start') or None,
+                end_date=request.POST.get('new_end') or None,
+                is_active=active_id == 'new',
+            )
+            if active_id == 'new':
+                AcademicYear.objects.exclude(pk=new_ay.pk).update(is_active=False)
+
+        return redirect('admin_academic_year_settings')
+
+    return render(
+        request,
+        'core/admin_academic_year_settings.html',
+        {'academic_years': academic_years},
+    )
+
 @user_passes_test(lambda u: u.is_superuser)
 def master_data_dashboard(request):
     from transcript.models import AcademicYear

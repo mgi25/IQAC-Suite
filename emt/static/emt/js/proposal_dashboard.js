@@ -252,6 +252,7 @@ $(document).ready(function() {
         setupCommitteesTomSelect();
         setupStudentCoordinatorSelect();
         $('#target-audience-modern').on('change.studentcoordinator', setupStudentCoordinatorSelect);
+        $('#target-audience-class-ids').on('change.studentcoordinator', setupStudentCoordinatorSelect);
     }
     
     // NEW FUNCTION to handle dynamic activities
@@ -352,10 +353,14 @@ $(document).ready(function() {
     function setupCommitteesTomSelect() {
         const select = $('#committees-collaborations-modern');
         const djangoField = $('#django-basic-info [name="committees_collaborations"]');
+        const idsField = $('#django-basic-info [name="committees_collaborations_ids"]');
         if (!select.length || !djangoField.length || select[0].tomselect) return;
 
-        const existing = djangoField.val()
+        const existingNames = djangoField.val()
             ? djangoField.val().split(',').map(s => s.trim()).filter(Boolean)
+            : [];
+        const existingIds = idsField.length && idsField.val()
+            ? idsField.val().split(',').map(s => s.trim()).filter(Boolean)
             : [];
 
         const tom = new TomSelect(select[0], {
@@ -379,14 +384,34 @@ $(document).ready(function() {
             const ids = tom.getValue();
             const names = ids.map(id => tom.options[id]?.text || id);
             djangoField.val(names.join(', ')).trigger('change');
-            // store selected ids for later use (e.g., audience modal)
-            select.data('selected-org-ids', ids);
+            if (idsField.length) {
+                idsField.val(ids.join(', ')).trigger('change');
+            }
             clearFieldError(select);
         });
 
-        if (existing.length) {
-            existing.forEach(name => tom.addOption({ id: name, text: name }));
-            tom.setValue(existing);
+        if (existingIds.length) {
+            fetch(`${window.API_ORGANIZATIONS}?ids=${existingIds.join(',')}`)
+                .then(r => r.json())
+                .then(data => {
+                    data.forEach(opt => tom.addOption(opt));
+                    tom.setValue(existingIds);
+                })
+                .catch(() => {
+                    if (existingNames.length) {
+                        existingNames.forEach((name, idx) => {
+                            const id = existingIds[idx] || name;
+                            tom.addOption({ id, text: name });
+                        });
+                        tom.setValue(existingIds.length ? existingIds : existingNames);
+                    }
+                });
+        } else if (existingNames.length) {
+            existingNames.forEach((name, idx) => {
+                const id = existingIds[idx] || name;
+                tom.addOption({ id, text: name });
+            });
+            tom.setValue(existingIds.length ? existingIds : existingNames);
         }
 
         const orgSelect = $('#django-basic-info [name="organization"]');
@@ -407,15 +432,27 @@ $(document).ready(function() {
         const select = $('#student-coordinators-modern');
         const djangoField = $('#django-basic-info [name="student_coordinators"]');
         const audienceField = $('#target-audience-modern');
+        const classIdsField = $('#target-audience-class-ids');
         if (!select.length || !djangoField.length) return;
 
         if (select[0].tomselect) {
             select[0].tomselect.destroy();
         }
 
-        const names = audienceField.val()
-            ? audienceField.val().split(',').map(s => s.trim()).filter(Boolean)
+        let names = [];
+        const classIds = classIdsField.val()
+            ? classIdsField.val().split(',').map(s => s.trim()).filter(Boolean)
             : [];
+        if (classIds.length) {
+            classIds.forEach(id => {
+                const cls = audienceClassMap[id];
+                if (cls && Array.isArray(cls.students)) {
+                    cls.students.forEach(st => names.push(st.name));
+                }
+            });
+        } else if (audienceField.val()) {
+            names = audienceField.val().split(',').map(s => s.trim()).filter(Boolean);
+        }
 
         const tom = new TomSelect(select[0], {
             plugins: ['remove_button'],
@@ -482,6 +519,7 @@ $(document).ready(function() {
 
     function setupAudienceModal() {
         const audienceField = $('#target-audience-modern');
+        const classIdsField = $('#target-audience-class-ids');
         const djangoOrgSelect = $('#django-basic-info [name="organization"]');
         const modal = $('#audienceModal');
         const container = $('#audienceOptions');
@@ -494,7 +532,10 @@ $(document).ready(function() {
         $('#audienceCancel').off('click').on('click', () => modal.removeClass('show'));
         $('#audienceSave').off('click').on('click', () => {
             const selected = modal.find('input[name="audience-user"]:checked').map((_, cb) => $(cb).data('name')).get();
-            audienceField.val(selected.join(', ')).trigger('change');
+            audienceField.val(selected.join(', ')).trigger('change').trigger('input');
+            if (classIdsField.length) {
+                classIdsField.val('').trigger('change').trigger('input');
+            }
             modal.removeClass('show');
         });
     }
@@ -503,6 +544,10 @@ $(document).ready(function() {
         const modal = $('#audienceModal');
         const container = $('#audienceOptions');
         const djangoOrgSelect = $('#django-basic-info [name="organization"]');
+        const classIdsField = $('#target-audience-class-ids');
+        const preselected = classIdsField.length && classIdsField.val()
+            ? classIdsField.val().split(',').map(s => s.trim()).filter(Boolean)
+            : [];
         modal.addClass('show');
         $('#audienceSave').hide();
         container.html(`
@@ -513,14 +558,11 @@ $(document).ready(function() {
             <div id="audienceList">Select an option above.</div>
         `);
         const list = $('#audienceList');
-        container.find('button[data-type]').on('click', function() {
-            const type = $(this).data('type');
-            list.text('Loading...');
 
+        function collectOrgIds() {
             const primaryOrgId = djangoOrgSelect.val();
             const committeeTS = $('#committees-collaborations-modern')[0]?.tomselect;
             const extraOrgIds = committeeTS ? committeeTS.getValue().filter(id => /^\d+$/.test(id)) : [];
-
             const orgIds = [];
             if (primaryOrgId) {
                 orgIds.push({ id: primaryOrgId, name: djangoOrgSelect.find('option:selected').text().trim() });
@@ -531,18 +573,47 @@ $(document).ready(function() {
                     orgIds.push({ id, name });
                 });
             }
+            return orgIds;
+        }
 
+        function loadStudentView(preselectIds) {
+            const orgIds = collectOrgIds();
+            if (!orgIds.length) { list.text('Select an organization first.'); return; }
+            list.text('Loading...');
+            Promise.all(orgIds.map(o =>
+                fetch(`${window.API_CLASSES_BASE}${o.id}/`, { credentials: 'include' })
+                    .then(r => r.json().then(data => ({ org: o, data })))
+            ))
+            .then(results => {
+                audienceClassMap = {};
+                results.forEach(res => {
+                    const { org, data } = res;
+                    if (data.success && data.classes.length) {
+                        data.classes.forEach(cls => {
+                            audienceClassMap[cls.id] = { ...cls, org_name: org.name };
+                        });
+                    }
+                });
+                renderStudentSelection(preselectIds, list);
+            })
+            .catch(() => { list.text('Error loading.'); });
+        }
+
+        container.find('button[data-type]').on('click', function() {
+            const type = $(this).data('type');
+            const orgIds = collectOrgIds();
             if (!orgIds.length) { list.text('Select an organization first.'); return; }
 
             if (type === 'students') {
                 $('#audienceSave').hide();
+                list.text('Loading...');
                 Promise.all(orgIds.map(o =>
                     fetch(`${window.API_CLASSES_BASE}${o.id}/`, { credentials: 'include' })
                         .then(r => r.json().then(data => ({ org: o, data })))
                 ))
                 .then(results => {
                     audienceClassMap = {};
-                    renderClassSelection(results, list);
+                    renderClassSelection(results, list, preselected);
                 })
                 .catch(() => { list.text('Error loading.'); });
             } else {
@@ -561,8 +632,10 @@ $(document).ready(function() {
                             const orgHeader = $('<div class="audience-org-header">').text(org.name);
                             list.append(orgHeader);
                             data.forEach(f => {
-                                const cb = $('<input type="checkbox" name="audience-user">').val(f.id).data('name', f.text);
-                                const lbl = $('<label>').append(cb).append(' ' + f.text);
+                                const name = f.text.replace(/\s*\(.*?\)\s*$/, '');
+                                const label = `${name} (${org.name})`;
+                                const cb = $('<input type="checkbox" name="audience-user">').val(f.id).data('name', label);
+                                const lbl = $('<label>').append(cb).append(' ' + label);
                                 list.append(lbl).append('<br>');
                             });
                         }
@@ -572,9 +645,13 @@ $(document).ready(function() {
                 .catch(() => { list.text('Error loading.'); });
             }
         });
+
+        if (preselected.length) {
+            loadStudentView(preselected);
+        }
     }
 
-    function renderClassSelection(results, list) {
+    function renderClassSelection(results, list, preselected = []) {
         list.empty();
         let hasAny = false;
         const selectAll = $('<label class="audience-select-all"><input type="checkbox" id="audienceSelectAllClasses"> Select All Classes</label>');
@@ -586,9 +663,12 @@ $(document).ready(function() {
                 const orgHeader = $('<div class="audience-org-header">').text(org.name);
                 list.append(orgHeader);
                 data.classes.forEach(cls => {
-                    audienceClassMap[cls.id] = cls;
+                    audienceClassMap[cls.id] = { ...cls, org_name: org.name };
                     const lbl = $('<label class="audience-class-choice">');
                     const cb = $('<input type="checkbox" class="audience-class-choice-cb">').val(cls.id);
+                    if (preselected.includes(String(cls.id))) {
+                        cb.prop('checked', true);
+                    }
                     lbl.append(cb).append(' ' + cls.name);
                     list.append(lbl).append('<br>');
                 });
@@ -609,6 +689,14 @@ $(document).ready(function() {
                 alert('Please select at least one class.');
                 return;
             }
+            const audienceField = $('#target-audience-modern');
+            const classIdsField = $('#target-audience-class-ids');
+            const names = selected.map(id => {
+                const cls = audienceClassMap[id];
+                return cls ? `${cls.name} (${cls.org_name})` : '';
+            });
+            audienceField.val(names.join(', ')).trigger('change').trigger('input');
+            classIdsField.val(selected.join(',')).trigger('change').trigger('input');
             renderStudentSelection(selected, list);
         });
     }
@@ -620,7 +708,7 @@ $(document).ready(function() {
             const cls = audienceClassMap[id];
             if (!cls) return;
             const classLbl = $('<label class="audience-class">');
-            const classCb = $('<input type="checkbox" class="audience-class-cb" checked>');
+            const classCb = $('<input type="checkbox" class="audience-class-cb" checked>').val(id);
             classLbl.append(classCb).append(' ' + cls.name);
             const studentsDiv = $('<div class="audience-students" style="margin-left:1em;"></div>');
             cls.students.forEach(st => {
@@ -632,6 +720,19 @@ $(document).ready(function() {
             classCb.on('change', function() {
                 studentsDiv.find('input[type=checkbox]').prop('checked', $(this).is(':checked'));
             });
+        });
+
+        const audienceField = $('#target-audience-modern');
+        const classIdsField = $('#target-audience-class-ids');
+        $('#audienceSave').off('click').on('click', () => {
+            const selectedClasses = list.find('.audience-class-cb:checked').map((_, cb) => $(cb).val()).get();
+            const names = selectedClasses.map(id => {
+                const cls = audienceClassMap[id];
+                return cls ? `${cls.name} (${cls.org_name})` : '';
+            });
+            audienceField.val(names.join(', ')).trigger('change').trigger('input');
+            classIdsField.val(selectedClasses.join(',')).trigger('change').trigger('input');
+            $('#audienceModal').removeClass('show');
         });
     }
 

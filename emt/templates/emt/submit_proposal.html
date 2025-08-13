@@ -141,6 +141,7 @@
                             <div class="input-group">
                                 <label for="target-audience-modern">Target Audience *</label>
                                 <input type="text" id="target-audience-modern" required readonly placeholder="Select target audience">
+                                <input type="hidden" name="target_audience_class_ids" id="target-audience-class-ids">
                                 <div class="help-text">Specify who this event is intended for</div>
                             </div>
                         </div>
@@ -279,6 +280,7 @@
                     {{ form.pos_pso }}
                     {{ form.committees_collaborations.label_tag }}
                     {{ form.committees_collaborations }}
+                    <input type="hidden" name="committees_collaborations_ids" id="committees-collaborations-ids">
                     {{ form.sdg_goals.label_tag }}
                     {{ form.sdg_goals }}
                     {{ form.academic_year.label_tag }}
