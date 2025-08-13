@@ -33,8 +33,7 @@ class EventProposalForm(forms.ModelForm):
     )
     student_coordinators = forms.CharField(
         required=False,
-        widget=forms.Textarea(attrs={'rows': 2, 'placeholder': 'e.g., Alice, Bob'}),
-        help_text="Enter student coordinator names, separated by commas."
+        widget=forms.HiddenInput(),
     )
     sdg_goals = forms.ModelMultipleChoiceField(
         queryset=SDGGoal.objects.all(),
