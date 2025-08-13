@@ -245,4 +245,7 @@ urlpatterns = [
     path('api/export-data/csv/', views.export_data_csv, name='export_data_csv'),
     path('api/export-data/excel/', views.export_data_excel, name='export_data_excel'),
     path('settings/pso-po-management/', views.settings_pso_po_management,name='settings_pso_po_management'),
+
+     path('dashboard/', views.dashboard, name='dashboard'),
+     path('dashboard/', views.dashboard, name='dashboard_alt')
 ]
