@@ -1934,21 +1934,110 @@ from django.views.decorators.http import require_GET
 @login_required
 def api_auth_me(request):
     user = request.user
-    role = 'faculty' if user.is_staff else 'student'
-    initials = ''.join([x[0] for x in user.get_full_name().split()]) or user.username[:2].upper()
-    return JsonResponse({
-        'role': role,
-        'name': user.get_full_name(),
-        'subtitle': '',  # Add more info if needed
-        'initials': initials,
-    })
+    role = getattr(getattr(user, "profile", None), "role", None)
+    if not role:
+        role = "faculty" if user.is_staff else "student"
+    initials = "".join([x[0] for x in user.get_full_name().split()]) or user.username[:2].upper()
+    return JsonResponse(
+        {
+            "role": role,
+            "name": user.get_full_name(),
+            "subtitle": "",
+            "initials": initials,
+        }
+    )
 
 @login_required
 def api_faculty_overview(request):
     stats = [
-        # Build from your models as needed
+        {
+            "label": "Pending Approvals",
+            "value": 5,
+            "subtitle": "Awaiting",
+            "icon": "clock",
+            "color": "blue",
+        },
+        {
+            "label": "Events Conducted",
+            "value": 3,
+            "subtitle": "This Semester",
+            "icon": "calendar",
+            "color": "green",
+        },
     ]
     return JsonResponse(stats, safe=False)
+
+
+@login_required
+def api_faculty_events(request):
+    events = [
+        {"title": "Orientation", "date": "2024-07-10", "status": "approved"},
+        {"title": "Workshop", "date": "2024-08-02", "status": "pending"},
+    ]
+    return JsonResponse(events, safe=False)
+
+
+@login_required
+def api_faculty_students(request):
+    students = [
+        {"name": "Alice", "progress": 80},
+        {"name": "Bob", "progress": 65},
+    ]
+    return JsonResponse(students, safe=False)
+
+
+@login_required
+def api_student_overview(request):
+    data = {
+        "stats": [
+            {
+                "label": "Events Attended",
+                "value": 4,
+                "subtitle": "This Year",
+                "icon": "calendar",
+                "color": "purple",
+            }
+        ],
+        "attributes": [
+            {"label": "Leadership", "level": 3},
+            {"label": "Communication", "level": 4},
+        ],
+        "remarks": [
+            "Great participation in events",
+            "Needs improvement in assignments",
+        ],
+    }
+    return JsonResponse(data)
+
+
+@login_required
+def api_student_events(request):
+    data = {
+        "participated": [
+            {"title": "Orientation", "date": "2024-07-10"},
+            {"title": "Workshop", "date": "2024-08-05"},
+        ],
+        "upcoming": [
+            {"title": "Seminar", "date": "2024-09-20"},
+        ],
+    }
+    return JsonResponse(data)
+
+
+@login_required
+def api_student_achievements(request):
+    data = {
+        "stats": {"total": 5, "this_year": 2},
+        "achievements": [
+            {"title": "Hackathon Winner", "year": 2024},
+            {"title": "Top Speaker", "year": 2023},
+        ],
+        "peers": [
+            {"name": "Jane", "achievement": "Sports Captain"},
+            {"name": "Tom", "achievement": "Debate Winner"},
+        ],
+    }
+    return JsonResponse(data)
 
 @login_required
 def user_dashboard(request):
