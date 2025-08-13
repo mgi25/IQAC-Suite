@@ -26,6 +26,7 @@ from core.models import (
     SDGGoal,
     Class,
     SDG_GOALS,
+    OrganizationMembership,
 )
 from django.contrib.auth.models import User
 from emt.utils import (
@@ -789,43 +790,58 @@ def pending_reports(request):
 @login_required
 @require_http_methods(["GET"])
 def api_event_participants(request, proposal_id):
-    """API endpoint to search for participants of a specific event"""
+    """API endpoint to search for eligible assignees for a specific event"""
     try:
         proposal = get_object_or_404(EventProposal, id=proposal_id)
-        
+
         # Check if user has permission to view this proposal
         if proposal.submitted_by != request.user and request.user not in proposal.faculty_incharges.all():
             return JsonResponse({'error': 'Permission denied'}, status=403)
-        
-        query = request.GET.get('q', '').strip()
-        
-        # Get all participants for this event (faculty incharges + submitted_by)
+
+        query = request.GET.get('q', '').strip().lower()
+
+        # Collect all eligible users
         participants = set()
-        
-        # Add the submitter
+
+        # Members of the event's organization
+        if proposal.organization:
+            memberships = OrganizationMembership.objects.filter(organization=proposal.organization)
+
+            # Filter by target audience roles if specified
+            if proposal.target_audience:
+                target_roles = [r.strip().lower() for r in proposal.target_audience.split(',')]
+                memberships = memberships.filter(role__in=target_roles)
+
+            for membership in memberships.select_related('user'):
+                participants.add(membership.user)
+
+        # Always include submitter and faculty incharges
         participants.add(proposal.submitted_by)
-        
-        # Add faculty incharges
         for faculty in proposal.faculty_incharges.all():
             participants.add(faculty)
-        
-        # Filter participants based on search query
+
+        # Apply search filter
         if query:
             filtered_participants = [
-                user for user in participants 
-                if query.lower() in user.get_full_name().lower() or 
-                   query.lower() in user.username.lower() or
-                   query.lower() in user.email.lower()
+                user for user in participants
+                if query in (user.get_full_name() or '').lower() or
+                   query in user.username.lower() or
+                   query in (user.email or '').lower()
             ]
         else:
             filtered_participants = list(participants)
-        
-        # Format response
+
         results = []
         for user in filtered_participants:
-            # Determine role
-            role = "Submitter" if user == proposal.submitted_by else "Faculty Incharge"
-            
+            # Determine role to display
+            if user == proposal.submitted_by:
+                role = "Submitter"
+            elif user in proposal.faculty_incharges.all():
+                role = "Faculty Incharge"
+            else:
+                membership = OrganizationMembership.objects.filter(user=user, organization=proposal.organization).first()
+                role = membership.role.capitalize() if membership else "Member"
+
             results.append({
                 'id': user.id,
                 'name': user.get_full_name() or user.username,
@@ -833,9 +849,9 @@ def api_event_participants(request, proposal_id):
                 'role': role,
                 'username': user.username
             })
-        
+
         return JsonResponse({'participants': results})
-        
+
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
@@ -857,13 +873,23 @@ def assign_report_task(request, proposal_id):
         if not assigned_user_id:
             return JsonResponse({'error': 'assigned_user_id is required'}, status=400)
         
-        # Verify the assigned user is a participant of this event
+        # Verify the assigned user is eligible for assignment
         assigned_user = get_object_or_404(User, id=assigned_user_id)
-        
-        # Check if assigned user is either submitter or faculty incharge
-        if (assigned_user != proposal.submitted_by and 
+
+        if (assigned_user != proposal.submitted_by and
             assigned_user not in proposal.faculty_incharges.all()):
-            return JsonResponse({'error': 'Can only assign to event participants'}, status=400)
+
+            membership_qs = OrganizationMembership.objects.filter(
+                user=assigned_user,
+                organization=proposal.organization,
+            )
+
+            if proposal.target_audience:
+                target_roles = [r.strip().lower() for r in proposal.target_audience.split(',')]
+                membership_qs = membership_qs.filter(role__in=target_roles)
+
+            if not membership_qs.exists():
+                return JsonResponse({'error': 'Can only assign to event organization members or target audience'}, status=400)
         
         # Update assignment
         proposal.report_assigned_to = assigned_user
