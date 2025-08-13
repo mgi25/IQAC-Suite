@@ -12,6 +12,7 @@ $(document).ready(function() {
         'income': false
     };
     let audienceClassMap = {};
+    const autoFillEnabled = new URLSearchParams(window.location.search).has('autofill');
 
     initializeDashboard();
 
@@ -21,6 +22,7 @@ $(document).ready(function() {
         loadExistingData();
         checkForExistingErrors();
         enablePreviouslyVisitedSections();
+        $('#autofill-btn').on('click', autofillTestData);
         if (!$('.form-errors-banner').length) {
             setTimeout(() => {
                 activateSection('basic-info');
@@ -181,6 +183,9 @@ $(document).ready(function() {
             clearValidationErrors();
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
+            }
+            if (autoFillEnabled && section === 'basic-info') {
+                autofillTestData();
             }
         }, 100);
     }
@@ -1699,6 +1704,42 @@ function getWhyThisEventForm() {
         console.log(`Section ${section} marked as complete`);
         updateProgressBar();
         updateSubmitButton();
+    }
+
+    function autofillTestData() {
+        const today = new Date().toISOString().split('T')[0];
+        const fields = {
+            'event-title-modern': 'Test Event Title',
+            'target-audience-modern': 'Test Audience',
+            'target-audience-class-ids': '1',
+            'venue-modern': 'Main Auditorium',
+            'event-start-date': today,
+            'event-end-date': today,
+            'academic-year-modern': '2024-2025',
+            'pos-pso-modern': 'PO1, PSO2',
+            'sdg-goals-modern': 'Goal 4',
+            'num-activities-modern': '1'
+        };
+
+        Object.entries(fields).forEach(([id, value]) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.value = value;
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+
+        const focusSelect = document.getElementById('event-focus-type-modern');
+        if (focusSelect && focusSelect.options.length > 1) {
+            focusSelect.selectedIndex = 1;
+            focusSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        const facultySelect = document.getElementById('faculty-select');
+        if (facultySelect && facultySelect.options.length > 0) {
+            facultySelect.options[0].selected = true;
+            $(facultySelect).trigger('change');
+        }
     }
 
     function unlockNextSection(section) {
