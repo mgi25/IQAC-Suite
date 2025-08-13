@@ -1056,11 +1056,9 @@ function setupUserSearch(orgId, orgType) {
     const userSearchInput = document.getElementById('userSearch');
     const userDropdown = document.getElementById('userDropdown');
     const selectedUserIdInput = document.getElementById('selectedUserId');
-    const roleFilterSelect = document.getElementById('roleFilter');
-    
     let searchTimeout = null;
-    
-    // Handle search input
+
+    // Real-time dynamic search - fires immediately on input
     userSearchInput.addEventListener('input', function() {
         const query = this.value.trim();
         
@@ -1069,112 +1067,129 @@ function setupUserSearch(orgId, orgType) {
             clearTimeout(searchTimeout);
         }
         
-        if (query.length < 2) {
+        // Show dropdown immediately if there's any input
+        if (query.length > 0) {
+            userDropdown.innerHTML = '<div class="loading">Searching faculty...</div>';
+            showUserDropdown();
+            
+            // Debounce API calls to prevent too many requests (300ms)
+            searchTimeout = setTimeout(() => {
+                searchFacultyUsers(orgId, query);
+            }, 300);
+        } else {
             hideUserDropdown();
-            return;
         }
-        
-        // Debounce search
-        searchTimeout = setTimeout(() => {
-            searchFacultyUsers(orgId, query);
-        }, 300);
     });
-    
-    // Handle role filter change
-    roleFilterSelect.addEventListener('change', function() {
-        const query = userSearchInput.value.trim();
-        if (query.length >= 2) {
+
+    // Show faculty users when focused (no search required)
+    userSearchInput.addEventListener('focus', function() {
+        const query = this.value.trim();
+        if (query.length > 0) {
+            showUserDropdown();
             searchFacultyUsers(orgId, query);
         } else {
-            // If no search query, show users for selected role
-            loadUsersByRole(orgId);
+            // Load all faculty users when focused with empty input
+            loadAllFacultyForOrg(orgId);
         }
     });
-    
+
     // Hide dropdown when clicking outside
     document.addEventListener('click', function(e) {
-        if (!userSearchInput.contains(e.target) && 
-            !userDropdown.contains(e.target) && 
-            !roleFilterSelect.contains(e.target)) {
+        if (!userSearchInput.contains(e.target) && !userDropdown.contains(e.target)) {
             hideUserDropdown();
         }
     });
 }
 
-function loadUsersByRole(orgId) {
-    const roleFilter = document.getElementById('roleFilter').value;
+// Removed loadUsersByRole function - no longer needed with strict faculty filtering
+
+function loadAllFacultyForOrg(orgId) {
     const userDropdown = document.getElementById('userDropdown');
-    
-    // Show loading
-    userDropdown.innerHTML = '<div class="loading">Loading users...</div>';
+    userDropdown.innerHTML = '<div class="loading">Loading faculty...</div>';
     showUserDropdown();
     
-    let url = `/core/api/faculty-users/${orgId}/`;
-    if (roleFilter) {
-        url += `?role=${encodeURIComponent(roleFilter)}`;
-    }
-    
-    fetch(url)
-        .then(response => response.json())
+    fetch(`/core/api/faculty-users/${orgId}/`)
+        .then(response => {
+            console.log('Load faculty response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response.json();
+        })
         .then(users => {
+            console.log('Faculty users loaded:', users);
             displayUserOptions(users);
         })
         .catch(error => {
-            console.error('Error loading users:', error);
-            userDropdown.innerHTML = '<div class="no-users">Error loading users</div>';
+            console.error('Error loading faculty:', error);
+            userDropdown.innerHTML = `<div class="no-users">Error loading faculty: ${error.message}</div>`;
         });
 }
 
 function searchFacultyUsers(orgId, query) {
     const userDropdown = document.getElementById('userDropdown');
-    const roleFilter = document.getElementById('roleFilter').value;
-    
-    // Show loading
-    userDropdown.innerHTML = '<div class="loading">Searching users...</div>';
+    // Show loading with search context
+    userDropdown.innerHTML = `<div class="loading">Searching faculty for "${query}"...</div>`;
     showUserDropdown();
     
+    // Search strictly faculty users only - use correct URL pattern
     let url = `/core/api/faculty-users/${orgId}/?search=${encodeURIComponent(query)}`;
-    if (roleFilter) {
-        url += `&role=${encodeURIComponent(roleFilter)}`;
-    }
+    
+    console.log('Searching FACULTY ONLY:', url);
     
     fetch(url)
-        .then(response => response.json())
+        .then(response => {
+            console.log('Faculty search response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response.json();
+        })
         .then(users => {
-            displayUserOptions(users);
+            console.log('Found faculty users:', users);
+            displayUserOptions(users, query);
         })
         .catch(error => {
-            console.error('Error searching users:', error);
-            userDropdown.innerHTML = '<div class="no-users">Error loading users</div>';
+            console.error('Error searching faculty:', error);
+            userDropdown.innerHTML = `<div class="no-users">Error searching faculty: ${error.message}</div>`;
         });
 }
 
-function displayUserOptions(users) {
+function displayUserOptions(users, searchQuery = '') {
     const userDropdown = document.getElementById('userDropdown');
     
     if (users.length === 0) {
-        userDropdown.innerHTML = '<div class="no-users">No faculty users found</div>';
+        const message = searchQuery ? 
+            `No faculty users found for "${searchQuery}"` : 
+            'No faculty users found';
+        userDropdown.innerHTML = `<div class="no-users">${message}</div>`;
+        showUserDropdown();
         return;
     }
     
     userDropdown.innerHTML = '';
+    showUserDropdown();
     
     users.forEach(user => {
         const option = document.createElement('div');
         option.className = 'user-option';
         option.dataset.userId = user.id;
         
+        // Handle roles - ensure it's properly displayed
+        let rolesText = 'Faculty';
+        if (user.roles && Array.isArray(user.roles) && user.roles.length > 0) {
+            rolesText = user.roles.join(', ');
+        }
+        
         option.innerHTML = `
             <div class="user-info">
                 <div class="user-name">${user.full_name}</div>
-                <div class="user-details">${user.email} • ${user.roles.join(', ')}</div>
+                <div class="user-details">${user.email} • ${rolesText}</div>
             </div>
         `;
-        
         option.addEventListener('click', function() {
             selectUser(user);
         });
-        
         userDropdown.appendChild(option);
     });
 }
@@ -1191,12 +1206,12 @@ function selectUser(user) {
 
 function showUserDropdown() {
     const userDropdown = document.getElementById('userDropdown');
-    userDropdown.classList.add('show');
+    userDropdown.style.display = 'block';
 }
 
 function hideUserDropdown() {
     const userDropdown = document.getElementById('userDropdown');
-    userDropdown.classList.remove('show');
+    userDropdown.style.display = 'none';
 }
 
 // Handle assignment form submission

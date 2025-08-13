@@ -194,23 +194,12 @@
     </div>
     <div class="modal-body">
       <form id="assignUserForm">
-        <div class="form-group">
-          <label for="roleFilter">Filter by Role</label>
-          <select id="roleFilter" class="form-control">
-            <option value="">All Faculty</option>
-            <option value="faculty_head">Faculty Head</option>
-            <option value="faculty">Faculty</option>
-            <option value="hod">Head of Department</option>
-            <option value="coordinator">Coordinator</option>
-          </select>
-        </div>
+    <!-- Removed Filter by Role dropdown -->
         <div class="form-group">
           <label for="userSelect">Select Faculty User</label>
           <div class="user-search-container">
-            <input type="text" id="userSearch" placeholder="Search for faculty users..." autocomplete="off">
-            <div id="userDropdown" class="user-dropdown">
-              <!-- Users will be populated here -->
-            </div>
+            <input type="text" id="userSearch" placeholder="Search faculty users (real-time)..." autocomplete="off">
+            <div id="userDropdown" class="user-dropdown" style="display:none;"></div>
           </div>
           <input type="hidden" id="selectedUserId" required>
         </div>
