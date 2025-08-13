@@ -1336,6 +1336,7 @@ function getWhyThisEventForm() {
                                 <div class="input-group">
                                     <label for="speaker_photo_${index}">Photo</label>
                                     <input type="file" id="speaker_photo_${index}" name="speaker_photo_${index}" accept="image/*" />
+                                    <img class="linkedin-photo" style="max-width:100px; display:none;" />
                                     <div class="help-text">Upload headshot (JPG, PNG)</div>
                                 </div>
                             </div>
@@ -1389,6 +1390,53 @@ function getWhyThisEventForm() {
             showEmptyState();
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
+            }
+        });
+
+        container.on('change', "input[id^='speaker_linkedin_url_']", async function() {
+            const url = $(this).val().trim();
+            if (!url) return;
+            try {
+                const resp = await fetch(window.API_FETCH_LINKEDIN, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': window.AUTOSAVE_CSRF || ''
+                    },
+                    body: JSON.stringify({ url })
+                });
+                if (!resp.ok) return;
+                const data = await resp.json();
+                const form = $(this).closest('.speaker-form-container');
+                const idx = form.data('index');
+                const nameInput = form.find(`#speaker_full_name_${idx}`)[0];
+                const desigInput = form.find(`#speaker_designation_${idx}`)[0];
+                const affInput = form.find(`#speaker_affiliation_${idx}`)[0];
+                if (data.name && nameInput && !nameInput.value) nameInput.value = data.name;
+                if (data.designation && desigInput && !desigInput.value) desigInput.value = data.designation;
+                if (data.affiliation && affInput && !affInput.value) affInput.value = data.affiliation;
+                if (data.image) {
+                    const imgPreview = form.find('.linkedin-photo')[0];
+                    if (imgPreview) {
+                        imgPreview.src = data.image;
+                        imgPreview.style.display = 'block';
+                    }
+                    const photoInput = form.find(`#speaker_photo_${idx}`)[0];
+                    if (photoInput) {
+                        try {
+                            const imgResp = await fetch(data.image);
+                            const blob = await imgResp.blob();
+                            const file = new File([blob], 'photo.jpg', { type: blob.type });
+                            const dt = new DataTransfer();
+                            dt.items.add(file);
+                            photoInput.files = dt.files;
+                        } catch (err) {
+                            console.error('Could not set photo file', err);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('LinkedIn fetch failed', err);
             }
         });
 
