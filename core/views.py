@@ -2204,7 +2204,21 @@ def api_student_achievements(request):
 
 @login_required
 def user_dashboard(request):
-    return render(request, 'core/user_dashboard.html')
+    """Render the simplified user dashboard with calendar events."""
+    events = EventProposal.objects.filter(
+        status="finalized", event_datetime__isnull=False
+    )
+    calendar_events = [
+        {
+            "id": e.id,
+            "title": e.event_title,
+            "date": e.event_datetime.strftime("%Y-%m-%d"),
+            "datetime": e.event_datetime.strftime("%Y-%m-%d %H:%M"),
+            "venue": e.venue or "",
+        }
+        for e in events
+    ]
+    return render(request, "core/user_dashboard.html", {"calendar_events": calendar_events})
 
 @login_required
 @require_GET
