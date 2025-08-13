@@ -11,9 +11,17 @@ from emt.utils import (
 )
 from emt.forms import EventProposalForm
 from core.models import (
-    OrganizationType, Organization, OrganizationRole, RoleAssignment,
-    Program, ProgramOutcome, ProgramSpecificOutcome,
-    ApprovalFlowTemplate, ApprovalFlowConfig, SDG_GOALS,
+    OrganizationType,
+    Organization,
+    OrganizationRole,
+    RoleAssignment,
+    Program,
+    ProgramOutcome,
+    ProgramSpecificOutcome,
+    ApprovalFlowTemplate,
+    ApprovalFlowConfig,
+    SDG_GOALS,
+    OrganizationMembership,
 )
 import json
 from unittest.mock import patch
@@ -200,6 +208,38 @@ class AutosaveProposalTests(TestCase):
         ids_after = set(proposal.faculty_incharges.values_list("id", flat=True))
         self.assertEqual(ids_after, {self.f1.id, self.f2.id})
         self.assertEqual(proposal.status, EventProposal.Status.SUBMITTED)
+
+
+class EventProposalOrganizationPrefillTests(TestCase):
+    def setUp(self):
+        self.ot = OrganizationType.objects.create(name="Dept")
+        self.org = Organization.objects.create(name="Science", org_type=self.ot)
+        role = OrganizationRole.objects.create(organization=self.org, name="Member")
+        self.user = User.objects.create_user("creator2", password="pass")
+        RoleAssignment.objects.create(user=self.user, role=role, organization=self.org)
+        self.client.force_login(self.user)
+
+    def test_fields_prefilled_from_role_assignment(self):
+        resp = self.client.get(reverse("emt:submit_proposal"))
+        self.assertEqual(resp.status_code, 200)
+        content = resp.content.decode()
+        self.assertIn(f'<option value="{self.ot.id}" selected', content)
+        self.assertIn(f'<option value="{self.org.id}" selected', content)
+
+    def test_fallback_to_org_membership(self):
+        user2 = User.objects.create_user("member", password="pass")
+        OrganizationMembership.objects.create(
+            user=user2,
+            organization=self.org,
+            academic_year="2024-2025",
+            role="student",
+        )
+        self.client.force_login(user2)
+        resp = self.client.get(reverse("emt:submit_proposal"))
+        self.assertEqual(resp.status_code, 200)
+        content = resp.content.decode()
+        self.assertIn(f'<option value="{self.ot.id}" selected', content)
+        self.assertIn(f'<option value="{self.org.id}" selected', content)
 
 
 class EventApprovalsNavTests(TestCase):
