@@ -1,0 +1,10 @@
+{# Reusable section card for proposal review #}
+<div class="section-glass card-base">
+  <h3>{{ title }}</h3>
+  {% if body %}
+    <div class="detail-block">{{ body|linebreaksbr }}</div>
+  {% else %}
+    <div class="detail-block">—</div>
+  {% endif %}
+</div>
+

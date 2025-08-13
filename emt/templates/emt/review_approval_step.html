@@ -6,11 +6,11 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'emt/css/review_proposal.css' %}">
 
-<div class="ultra-proposal-root">
+<div class="review-grid">
 
   <!-- LEFT COLUMN: Event Info Card -->
-  <aside class="ultra-side-info">
-    <div class="info-card glass">
+  <aside class="review-side">
+    <div class="info-card card-base">
       <h2>Event Information</h2>
       <table>
         <tr><th>Organization</th><td>{{ proposal.organization.name|default:"—" }}</td></tr>
@@ -91,52 +91,27 @@
   </aside>
 
   <!-- RIGHT COLUMN: All Proposal Details -->
-  <main class="ultra-main-content">
-    <div class="fadein-card ultra-header review-top">
-      <div class="review-title-row">
+  <main class="review-main">
+    <header class="review-header card-base">
+      <nav class="review-nav" aria-label="Review navigation">
+        <a href="{% url 'emt:my_approvals' %}" aria-label="Back to approvals"><i class="fas fa-arrow-left"></i></a>
+      </nav>
+      <div class="review-heading">
         <h1 class="review-title">Event Proposal Review</h1>
         <span class="status-badge status-{{ proposal.status }}">{{ proposal.get_status_display }}</span>
+        <span class="meta">{{ proposal.event_title }} &middot; Submitted by {{ proposal.submitted_by.get_full_name }}</span>
       </div>
-      <span class="meta">{{ proposal.event_title }} &middot; Submitted by {{ proposal.submitted_by.get_full_name }}</span>
-    </div>
+    </header>
 
-    <div class="fadein-card section-glass">
-      <h3>Need Analysis</h3>
-      {% if need_analysis %}
-        <div class="detail-block">{{ need_analysis.content|linebreaksbr }}</div>
-      {% else %}
-        <div class="detail-block">—</div>
-      {% endif %}
-    </div>
+    {% include "emt/partials/review_section.html" with title="Need Analysis" body=need_analysis.content %}
 
-    <div class="fadein-card section-glass">
-      <h3>Objectives</h3>
-      {% if objectives %}
-        <div class="detail-block">{{ objectives.content|linebreaksbr }}</div>
-      {% else %}
-        <div class="detail-block">—</div>
-      {% endif %}
-    </div>
+    {% include "emt/partials/review_section.html" with title="Objectives" body=objectives.content %}
 
-    <div class="fadein-card section-glass">
-      <h3>Expected Outcomes</h3>
-      {% if outcomes %}
-        <div class="detail-block">{{ outcomes.content|linebreaksbr }}</div>
-      {% else %}
-        <div class="detail-block">—</div>
-      {% endif %}
-    </div>
+    {% include "emt/partials/review_section.html" with title="Expected Outcomes" body=outcomes.content %}
 
-    <div class="fadein-card section-glass">
-      <h3>Tentative Flow</h3>
-      {% if flow %}
-        <div class="detail-block">{{ flow.content|linebreaksbr }}</div>
-      {% else %}
-        <div class="detail-block">—</div>
-      {% endif %}
-    </div>
+    {% include "emt/partials/review_section.html" with title="Tentative Flow" body=flow.content %}
 
-    <div class="fadein-card section-glass">
+    <div class="section-glass card-base">
       <h3>Speaker Profile</h3>
       {% if speakers %}
         {% for sp in speakers %}
@@ -158,8 +133,7 @@
       {% endif %}
     </div>
 
-    <!-- INCOME & EXPENSES SIDE BY SIDE -->
-    <div class="fadein-card section-glass">
+    <div class="section-glass card-base">
       <div class="fin-row">
         <div class="fin-half">
           <h3>Income</h3>
@@ -235,8 +209,7 @@
       </div>
     </div>
 
-    <!-- APPROVAL HISTORY SECTION -->
-    <div class="fadein-card section-glass approval-card">
+    <div class="section-glass card-base approval-card">
       <h3>Approval History</h3>
       <div class="approval-history-ul">
         <ul>
@@ -259,10 +232,9 @@
       </div>
     </div>
 
-    <!-- COMMENT & ACTION FORM (always at the bottom, glassy card) -->
-    <div class="fadein-card section-glass review-form-card">
+    <div class="section-glass card-base review-form-card">
       {% if step.status == 'pending' %}
-        <form method="post" class="review-form-ultra">
+        <form method="post" class="review-form-ultra" aria-label="Approval actions">
           {% csrf_token %}
           <div class="form-group">
             <label>Comment / Remarks: <small class="text-muted">(required when rejecting)</small></label>
@@ -288,8 +260,12 @@
           </div>
           {% endif %}
           <div class="review-actions">
-            <button type="submit" name="action" value="approve" class="btn-ultra btn-success-ultra">Approve</button>
-            <button type="submit" name="action" value="reject" class="btn-ultra btn-danger-ultra">Reject</button>
+            <button type="submit" name="action" value="approve" class="btn-ultra btn-success-ultra" aria-label="Approve">
+              <i class="fas fa-check"></i> Approve
+            </button>
+            <button type="submit" name="action" value="reject" class="btn-ultra btn-danger-ultra" aria-label="Reject">
+              <i class="fas fa-times"></i> Reject
+            </button>
           </div>
         </form>
       {% else %}
@@ -297,9 +273,10 @@
           This step is <strong>{{ step.get_status_display }}</strong>.
         </div>
       {% endif %}
-</div>
+    </div>
 
   </main>
 </div>
 <script src="{% static 'emt/js/review_approval_step.js' %}"></script>
 {% endblock %}
+
