@@ -492,6 +492,7 @@ $(document).ready(function() {
         const djangoField = $('#django-basic-info [name="student_coordinators"]');
         const audienceField = $('#target-audience-modern');
         const classIdsField = $('#target-audience-class-ids');
+        const list = $('#student-coordinators-list');
         if (!select.length || !djangoField.length) return;
 
         if (select[0].tomselect) {
@@ -531,14 +532,26 @@ $(document).ready(function() {
             tom.setValue(existing.filter(v => names.includes(v)));
         }
 
+        updateList(tom.getValue());
+
         tom.on('change', () => {
             const values = tom.getValue();
             const joined = Array.isArray(values) ? values.join(', ') : '';
             djangoField.val(joined).trigger('change');
             clearFieldError(select);
+            updateList(values);
         });
 
         select[0].tomselect = tom;
+
+        function updateList(values) {
+            if (!list.length) return;
+            list.empty();
+            const arr = Array.isArray(values) ? values : [values];
+            arr.filter(Boolean).forEach(name => {
+                list.append($('<li>').text(name));
+            });
+        }
     }
 
     function setupOutcomeModal() {
