@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 
 register = template.Library()
 
-@register.inclusion_tag('core/partials/impersonation_banner.html', takes_context=True)
+@register.inclusion_tag('partials/impersonation_banner.html', takes_context=True)
 def impersonation_banner(context):
     """Display impersonation banner"""
     request = context['request']

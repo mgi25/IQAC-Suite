@@ -11,22 +11,9 @@
 {% block content %}
 <div class="main-container">
 
-  <div class="page-header">
-    <h1>Master Data Management</h1>
-    <div class="academic-year-filter">
-      <label for="academicYearSelect">Academic Year:</label>
-      <select id="academicYearSelect" onchange="setAcademicYear(this.value)">
-        {% for year in academic_years %}
-          <option value="{{ year.value }}" {% if year.value == selected_year.value %}selected{% endif %}>
-            {{ year.display }}
-          </option>
-        {% endfor %}
-      </select>
-      <button class="btn btn-secondary btn-sm" onclick="showAddAcademicYearForm()" title="Add New Academic Year">
-        <i class="fas fa-plus"></i>
-      </button>
+    <div class="page-header">
+      <h1>Master Data Management</h1>
     </div>
-  </div>
 
   <div class="controls-container">
     <div class="search-bar">

@@ -77,6 +77,7 @@
         <div class="content-header">
             <h1 class="content-title" id="main-title">Basic Information</h1>
             <p class="content-subtitle" id="main-subtitle">Organization details and event basics</p>
+            <button type="button" id="autofill-btn" class="btn-draft" style="margin-top:0.5rem;">Auto-Fill Test Data</button>
         </div>
 
         {% if form.errors %}
@@ -243,19 +244,11 @@
                         <div class="form-row full-width">
                             <div class="save-section-container" style="display: flex; flex-direction: column; align-items: center;">
                                 <button type="button" class="btn-save-section" style="margin-bottom: 0.5rem;">Save & Continue</button>
-                                <button type="submit" name="save_draft" class="btn-draft-section">Save as Draft</button>
                                 <div class="save-help-text" style="margin-top: 0.75rem;">Complete this section to unlock the next one</div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-
-
-            <div class="submit-section">
-                <button type="submit" name="final_submit" class="btn-submit" id="submit-proposal-btn" disabled>Submit Proposal</button>
-                <button type="submit" name="save_draft" class="btn-draft" id="save-draft-btn">Save as Draft</button>
-                <div class="submit-help-text">Complete all sections above to enable submission</div>
             </div>
 
             <div style="display: none;" id="django-forms">

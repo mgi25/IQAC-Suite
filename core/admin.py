@@ -5,7 +5,7 @@ from django.urls import path
 from django.shortcuts import redirect
 from django.contrib import messages
 
-from .models import SDGGoal
+from .models import SDGGoal, log_impersonation_start
 
 
 class ImpersonationUserAdmin(BaseUserAdmin):
@@ -32,6 +32,7 @@ class ImpersonationUserAdmin(BaseUserAdmin):
             target_user = User.objects.get(id=user_id, is_active=True)
             request.session['impersonate_user_id'] = target_user.id
             request.session['original_user_id'] = request.user.id
+            log_impersonation_start(request, target_user)
             messages.success(request, f'Now impersonating {target_user.get_full_name() or target_user.username}')
             return redirect('/')  # Redirect to main site
         except User.DoesNotExist:

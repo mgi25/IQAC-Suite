@@ -1009,27 +1009,10 @@ def iqac_suite_dashboard(request):
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def admin_master_data(request):
-    from transcript.models import AcademicYear
-    import datetime
+    from transcript.models import get_active_academic_year
     import json
 
-    selected_year_param = request.GET.get('year')
-    current_year = datetime.datetime.now().year
-
-    academic_years_from_db = AcademicYear.objects.all().order_by('-year')
-    if not academic_years_from_db.exists():
-        for year in range(current_year - 1, current_year + 3):
-            AcademicYear.objects.create(year=f"{year}-{year + 1}")
-        academic_years_from_db = AcademicYear.objects.all().order_by('-year')
-
-    academic_years = [{'value': ay.year, 'display': ay.year} for ay in academic_years_from_db]
-
-    if selected_year_param:
-        selected_year = next((ay for ay in academic_years if ay['value'] == selected_year_param), None)
-        if not selected_year:
-            selected_year = academic_years[0] if academic_years else {'value': f"{current_year}-{current_year + 1}", 'display': f"{current_year}-{current_year + 1}"}
-    else:
-        selected_year = academic_years[0] if academic_years else {'value': f"{current_year}-{current_year + 1}", 'display': f"{current_year}-{current_year + 1}"}
+    academic_year = get_active_academic_year()
 
     org_types = OrganizationType.objects.filter(is_active=True).order_by('name')
     orgs_by_type = {}
@@ -1044,9 +1027,8 @@ def admin_master_data(request):
     return render(request, "core/admin_master_data.html", {
         "org_types": org_types,
         "orgs_by_type": orgs_by_type,
-        "academic_years": academic_years,
-        "selected_year": selected_year,
         "orgs_by_type_json": json.dumps(orgs_by_type_json),
+        "academic_year": academic_year,
     })
 
 
@@ -1260,38 +1242,94 @@ def admin_settings_dashboard(request):
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def admin_academic_year_settings(request):
+    """Add and manage academic years.
+
+    Displays existing academic years split into active and archived groups. Allows
+    creation of new academic years and editing existing ones using the same
+    form. The year string is derived from the provided start and end dates.
+    """
+
+    from datetime import datetime
     from transcript.models import AcademicYear
 
-    academic_years = AcademicYear.objects.all().order_by('-year')
+    # Editing existing year if ``id`` provided in POST or ``edit`` in GET
+    edit_id = request.GET.get("edit")
+    edit_year = None
+    if edit_id:
+        edit_year = get_object_or_404(AcademicYear, pk=edit_id)
 
     if request.method == "POST":
-        active_id = request.POST.get('active_year')
-        for ay in academic_years:
-            start = request.POST.get(f'start_date_{ay.id}')
-            end = request.POST.get(f'end_date_{ay.id}')
-            ay.start_date = start or None
-            ay.end_date = end or None
-            ay.is_active = str(ay.id) == active_id
-            ay.save()
+        year_id = request.POST.get("id")
+        start = request.POST.get("start_date") or None
+        end = request.POST.get("end_date") or None
 
-        new_year = request.POST.get('new_year')
-        if new_year:
-            new_ay = AcademicYear.objects.create(
-                year=new_year,
-                start_date=request.POST.get('new_start') or None,
-                end_date=request.POST.get('new_end') or None,
-                is_active=active_id == 'new',
+        year_str = None
+        if start:
+            try:
+                start_year = datetime.strptime(start, "%Y-%m-%d").year
+                end_year = (
+                    datetime.strptime(end, "%Y-%m-%d").year if end else start_year + 1
+                )
+                year_str = f"{start_year}-{end_year}"
+            except ValueError:
+                pass
+
+        if year_id:
+            obj = get_object_or_404(AcademicYear, pk=year_id)
+            obj.year = year_str
+            obj.start_date = start
+            obj.end_date = end
+            obj.save()
+        else:
+            # Ensure only one academic year is active at any time
+            AcademicYear.objects.filter(is_active=True).update(is_active=False)
+            AcademicYear.objects.create(
+                year=year_str, start_date=start, end_date=end, is_active=True
             )
-            if active_id == 'new':
-                AcademicYear.objects.exclude(pk=new_ay.pk).update(is_active=False)
+        return redirect("admin_academic_year_settings")
 
-        return redirect('admin_academic_year_settings')
+    active_years = AcademicYear.objects.filter(is_active=True).order_by("-start_date")
+    archived_years = AcademicYear.objects.filter(is_active=False).order_by(
+        "-start_date"
+    )
 
     return render(
         request,
-        'core/admin_academic_year_settings.html',
-        {'academic_years': academic_years},
+        "core/admin_academic_year_settings.html",
+        {
+            "active_years": active_years,
+            "archived_years": archived_years,
+            "edit_year": edit_year,
+        },
     )
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def academic_year_archive(request, pk):
+    """Archive the selected academic year."""
+
+    from transcript.models import AcademicYear
+
+    year = get_object_or_404(AcademicYear, pk=pk)
+    if request.method == "POST":
+        year.is_active = False
+        year.save()
+    return redirect("admin_academic_year_settings")
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def academic_year_restore(request, pk):
+    """Restore an archived academic year."""
+
+    from transcript.models import AcademicYear
+
+    year = get_object_or_404(AcademicYear, pk=pk)
+    if request.method == "POST":
+        year.is_active = True
+        year.save()
+    return redirect("admin_academic_year_settings")
 
 @user_passes_test(lambda u: u.is_superuser)
 def master_data_dashboard(request):
@@ -1384,45 +1422,6 @@ def admin_sdg_management(request):
     return render(request, "core/admin_sdg_management.html", {"goals": goals})
 
 
-
-
-@login_required
-@csrf_exempt
-def set_academic_year(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            academic_year = data.get('academic_year')
-            if academic_year:
-                request.session['selected_academic_year'] = str(academic_year)
-                return JsonResponse({'success': True})
-        except (json.JSONDecodeError, ValueError):
-            pass
-    return JsonResponse({'success': False})
-
-@login_required
-@user_passes_test(lambda u: u.is_superuser)
-@csrf_exempt
-def add_academic_year(request):
-    if request.method == 'POST':
-        try:
-            import re
-            from transcript.models import AcademicYear
-            data = json.loads(request.body)
-            academic_year = data.get('academic_year')
-            if not academic_year:
-                return JsonResponse({'success': False, 'error': 'Academic year is required'})
-            if not re.match(r'^\d{4}-\d{4}$', academic_year):
-                return JsonResponse({'success': False, 'error': 'Invalid format. Use YYYY-YYYY (e.g., 2025-2026)'})
-            if AcademicYear.objects.filter(year=academic_year).exists():
-                return JsonResponse({'success': False, 'error': f'Academic year {academic_year} already exists'})
-            AcademicYear.objects.create(year=academic_year)
-            return JsonResponse({'success': True, 'message': f'Academic year {academic_year} added successfully'})
-        except (json.JSONDecodeError, ValueError) as e:
-            return JsonResponse({'success': False, 'error': 'Invalid request data'})
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
-    return JsonResponse({'success': False, 'error': 'Only POST method allowed'})
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_pso_po_management(request):
@@ -3729,12 +3728,30 @@ def is_admin(user):
 def stop_impersonation(request):
     """Stop impersonating and return to original user"""
     if 'impersonate_user_id' in request.session:
+        from core.models import log_impersonation_end
+
+        log_impersonation_end(request)
         del request.session['impersonate_user_id']
         if 'original_user_id' in request.session:
             del request.session['original_user_id']
         messages.success(request, 'Stopped impersonation')
-    
-    return redirect('admin_dashboard') 
+
+    return redirect('admin_dashboard')
+
+@login_required
+@user_passes_test(is_admin)
+def admin_impersonate_user(request, user_id):
+    """Start impersonating a user from admin pages."""
+    target_user = get_object_or_404(User, id=user_id, is_active=True)
+    request.session['impersonate_user_id'] = target_user.id
+    request.session['original_user_id'] = request.user.id
+
+    from core.models import log_impersonation_start
+
+    log_impersonation_start(request, target_user)
+    messages.success(request, f"Now impersonating {target_user.get_full_name() or target_user.username}")
+    next_url = safe_next(request, fallback=reverse('dashboard'))
+    return redirect(next_url)
 
 @login_required
 @user_passes_test(is_admin)

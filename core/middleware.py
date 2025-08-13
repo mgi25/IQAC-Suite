@@ -3,8 +3,42 @@ from django.shortcuts import redirect
 from django.urls import reverse
 from core.models import RoleAssignment
 from emt.models import Student
-from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
+
+
+class ImpersonationMiddleware:
+    """Swap ``request.user`` when admin impersonates another user.
+
+    If ``request.session['impersonate_user_id']`` is present, we fetch the
+    target user and make subsequent code see that user as the authenticated
+    ``request.user``.  The original user (the admin) is exposed via
+    ``request.original_user`` and ``request.actor`` so views can attribute
+    any changes to the admin rather than the impersonated account.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        request.is_impersonating = False
+        request.original_user = None
+        request.actor = request.user
+
+        impersonate_id = request.session.get("impersonate_user_id")
+        if impersonate_id:
+            UserModel = get_user_model()
+            try:
+                target = UserModel.objects.get(id=impersonate_id)
+            except UserModel.DoesNotExist:
+                request.session.pop("impersonate_user_id", None)
+            else:
+                request.original_user = request.user
+                request.user = target
+                request.actor = request.original_user
+                request.is_impersonating = True
+
+        response = self.get_response(request)
+        return response
 
 class RegistrationRequiredMiddleware:
     """Redirect authenticated users to the registration form until they register."""

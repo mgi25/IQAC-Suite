@@ -6,7 +6,13 @@ from .models import (
     EventExpectedOutcomes, TentativeFlow, SpeakerProfile,
     ExpenseDetail, EventReport, EventReportAttachment, CDLSupport
 )
-from core.models import Organization, OrganizationType, SDGGoal, SDG_GOALS
+from core.models import (
+    Organization,
+    OrganizationType,
+    SDGGoal,
+    SDG_GOALS,
+    OrganizationMembership,
+)
 
 class EventProposalForm(forms.ModelForm):
     organization_type = forms.ModelChoiceField(
@@ -84,6 +90,17 @@ class EventProposalForm(forms.ModelForm):
                 org_type = assignment.organization.org_type
                 self.fields["organization_type"].initial = org_type
                 self.fields["organization"].initial = assignment.organization
+            else:
+                membership = (
+                    user.org_memberships
+                    .filter(is_active=True)
+                    .select_related("organization__org_type")
+                    .first()
+                )
+                if membership:
+                    org_type = membership.organization.org_type
+                    self.fields["organization_type"].initial = org_type
+                    self.fields["organization"].initial = membership.organization
 
         if org_type:
             self.fields['organization'].queryset = Organization.objects.filter(org_type=org_type, is_active=True)
@@ -218,14 +235,15 @@ class EventReportForm(forms.ModelForm):
     class Meta:
         model = EventReport
         fields = [
-            'location', 'blog_link', 'num_student_volunteers', 'num_participants', 'external_contact_details',
+            'location', 'blog_link', 'actual_event_type', 'num_student_volunteers', 'num_participants', 'external_contact_details',
             'summary', 'outcomes', 'impact_on_stakeholders', 'innovations_best_practices',
             'pos_pso_mapping', 'needs_grad_attr_mapping', 'contemporary_requirements', 'sdg_value_systems_mapping',
-            'iqac_feedback', 'report_signed_date', 'beneficiaries_details'
+            'iqac_feedback', 'report_signed_date', 'beneficiaries_details', 'attendance_notes'
         ]
         widgets = {
             'location': forms.TextInput(attrs={'class': 'ultra-input'}),
             'blog_link': forms.TextInput(attrs={'class': 'ultra-input'}),
+            'actual_event_type': forms.TextInput(attrs={'class': 'ultra-input'}),
             'num_student_volunteers': forms.NumberInput(attrs={'class': 'ultra-input'}),
             'num_participants': forms.NumberInput(attrs={'class': 'ultra-input'}),
             'external_contact_details': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 3}),
@@ -240,6 +258,7 @@ class EventReportForm(forms.ModelForm):
             'iqac_feedback': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 2}),
             'report_signed_date': forms.DateInput(attrs={'class': 'ultra-input', 'type': 'date'}),
             'beneficiaries_details': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 2}),
+            'attendance_notes': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 2}),
         }
 
 class EventReportAttachmentForm(forms.ModelForm):

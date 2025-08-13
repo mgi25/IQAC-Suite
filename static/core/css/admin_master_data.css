@@ -64,29 +64,6 @@ body {
     color: var(--primary-dark);
 }
 
-.academic-year-filter {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background-color: var(--card-bg);
-    padding: 8px 12px;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow);
-}
-
-.academic-year-filter label {
-    font-weight: 600;
-    color: var(--dark-grey);
-}
-
-#academicYearSelect {
-    padding: 5px 8px;
-    border-radius: var(--border-radius);
-    border: 1px solid var(--medium-grey);
-    font-size: 1rem;
-    font-weight: 500;
-    cursor: pointer;
-}
 
 /* --- Top Controls --- */
 .controls-container {
