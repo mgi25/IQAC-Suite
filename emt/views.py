@@ -703,12 +703,11 @@ def submit_cdl_support(request, proposal_id):
 @login_required
 def proposal_status_detail(request, proposal_id):
     proposal = get_object_or_404(
-        EventProposal,
+        EventProposal.objects.select_related('organization', 'submitted_by')
+        .prefetch_related('sdg_goals', 'faculty_incharges'),
         id=proposal_id,
         submitted_by=request.user
     )
-
-    proposal = get_object_or_404(EventProposal, id=proposal_id)
     
     if request.method == 'POST':
         action = request.POST.get('action') # Assuming you get 'approve' or 'reject' from a form

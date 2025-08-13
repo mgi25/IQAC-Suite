@@ -252,6 +252,7 @@ $(document).ready(function() {
         setupCommitteesTomSelect();
         setupStudentCoordinatorSelect();
         $('#target-audience-modern').on('change.studentcoordinator', setupStudentCoordinatorSelect);
+        $('#target-audience-class-ids').on('change.studentcoordinator', setupStudentCoordinatorSelect);
     }
     
     // NEW FUNCTION to handle dynamic activities
@@ -431,15 +432,27 @@ $(document).ready(function() {
         const select = $('#student-coordinators-modern');
         const djangoField = $('#django-basic-info [name="student_coordinators"]');
         const audienceField = $('#target-audience-modern');
+        const classIdsField = $('#target-audience-class-ids');
         if (!select.length || !djangoField.length) return;
 
         if (select[0].tomselect) {
             select[0].tomselect.destroy();
         }
 
-        const names = audienceField.val()
-            ? audienceField.val().split(',').map(s => s.trim()).filter(Boolean)
+        let names = [];
+        const classIds = classIdsField.val()
+            ? classIdsField.val().split(',').map(s => s.trim()).filter(Boolean)
             : [];
+        if (classIds.length) {
+            classIds.forEach(id => {
+                const cls = audienceClassMap[id];
+                if (cls && Array.isArray(cls.students)) {
+                    cls.students.forEach(st => names.push(st.name));
+                }
+            });
+        } else if (audienceField.val()) {
+            names = audienceField.val().split(',').map(s => s.trim()).filter(Boolean);
+        }
 
         const tom = new TomSelect(select[0], {
             plugins: ['remove_button'],
@@ -574,10 +587,10 @@ $(document).ready(function() {
             .then(results => {
                 audienceClassMap = {};
                 results.forEach(res => {
-                    const { data } = res;
+                    const { org, data } = res;
                     if (data.success && data.classes.length) {
                         data.classes.forEach(cls => {
-                            audienceClassMap[cls.id] = cls;
+                            audienceClassMap[cls.id] = { ...cls, org_name: org.name };
                         });
                     }
                 });
@@ -619,8 +632,10 @@ $(document).ready(function() {
                             const orgHeader = $('<div class="audience-org-header">').text(org.name);
                             list.append(orgHeader);
                             data.forEach(f => {
-                                const cb = $('<input type="checkbox" name="audience-user">').val(f.id).data('name', f.text);
-                                const lbl = $('<label>').append(cb).append(' ' + f.text);
+                                const name = f.text.replace(/\s*\(.*?\)\s*$/, '');
+                                const label = `${name} (${org.name})`;
+                                const cb = $('<input type="checkbox" name="audience-user">').val(f.id).data('name', label);
+                                const lbl = $('<label>').append(cb).append(' ' + label);
                                 list.append(lbl).append('<br>');
                             });
                         }
@@ -648,7 +663,7 @@ $(document).ready(function() {
                 const orgHeader = $('<div class="audience-org-header">').text(org.name);
                 list.append(orgHeader);
                 data.classes.forEach(cls => {
-                    audienceClassMap[cls.id] = cls;
+                    audienceClassMap[cls.id] = { ...cls, org_name: org.name };
                     const lbl = $('<label class="audience-class-choice">');
                     const cb = $('<input type="checkbox" class="audience-class-choice-cb">').val(cls.id);
                     if (preselected.includes(String(cls.id))) {
@@ -676,7 +691,10 @@ $(document).ready(function() {
             }
             const audienceField = $('#target-audience-modern');
             const classIdsField = $('#target-audience-class-ids');
-            const names = selected.map(id => audienceClassMap[id]?.name || '');
+            const names = selected.map(id => {
+                const cls = audienceClassMap[id];
+                return cls ? `${cls.name} (${cls.org_name})` : '';
+            });
             audienceField.val(names.join(', ')).trigger('change').trigger('input');
             classIdsField.val(selected.join(',')).trigger('change').trigger('input');
             renderStudentSelection(selected, list);
@@ -707,9 +725,12 @@ $(document).ready(function() {
         const audienceField = $('#target-audience-modern');
         const classIdsField = $('#target-audience-class-ids');
         $('#audienceSave').off('click').on('click', () => {
-            const selectedNames = list.find('input[name="audience-user"]:checked').map((_, cb) => $(cb).data('name')).get();
             const selectedClasses = list.find('.audience-class-cb:checked').map((_, cb) => $(cb).val()).get();
-            audienceField.val(selectedNames.join(', ')).trigger('change').trigger('input');
+            const names = selectedClasses.map(id => {
+                const cls = audienceClassMap[id];
+                return cls ? `${cls.name} (${cls.org_name})` : '';
+            });
+            audienceField.val(names.join(', ')).trigger('change').trigger('input');
             classIdsField.val(selectedClasses.join(',')).trigger('change').trigger('input');
             $('#audienceModal').removeClass('show');
         });
