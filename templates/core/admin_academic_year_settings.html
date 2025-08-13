@@ -10,10 +10,6 @@
     <form method="post" class="year-form">
       {% csrf_token %}
       <div class="form-row">
-        <label for="yearPicker">Academic Year</label>
-        <input type="text" id="yearPicker" name="year" value="{{ academic_year.year|slice:':4' }}" placeholder="Select year" required>
-      </div>
-      <div class="form-row">
         <label for="startDate">Start Date</label>
         <input type="date" id="startDate" name="start_date" value="{{ academic_year.start_date|date:'Y-m-d' }}">
       </div>
@@ -27,15 +23,5 @@
     </form>
   </section>
 </main>
-
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/yearSelect/yearSelect.min.js"></script>
-<script>
-  flatpickr("#yearPicker", {
-    plugins: [new yearSelectPlugin({dateFormat: "Y"})],
-    defaultDate: "{{ academic_year.year|slice:':4' }}"
-  });
-</script>
 {% endblock %}
 
