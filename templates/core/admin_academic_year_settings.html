@@ -21,7 +21,13 @@
       </thead>
       <tbody>
         <tr>
-          <td><input type="text" name="year" value="{{ academic_year.year|default:'' }}" placeholder="YYYY-YYYY"></td>
+          <td>
+            <select name="year">
+              {% for y in year_options %}
+                <option value="{{ y }}" {% if academic_year and academic_year.year == y %}selected{% endif %}>{{ y }}</option>
+              {% endfor %}
+            </select>
+          </td>
           <td><input type="date" name="start_date" value="{{ academic_year.start_date|date:'Y-m-d' }}"></td>
           <td><input type="date" name="end_date" value="{{ academic_year.end_date|date:'Y-m-d' }}"></td>
         </tr>
