@@ -243,13 +243,15 @@ $(document).ready(function() {
         // We add the new field IDs to the list of fields to be synced.
         const fieldsToSync = [
             'event_title', 'target_audience', 'event_start_date', 'event_end_date',
-            'event_focus_type', 'venue', 'academic_year', 'student_coordinators', 'num_activities',
+            'event_focus_type', 'venue', 'academic_year', 'num_activities',
             'pos_pso'
         ];
         fieldsToSync.forEach(copyDjangoField);
         setupSDGModal();
         setupFacultyTomSelect();
         setupCommitteesTomSelect();
+        setupStudentCoordinatorSelect();
+        $('#target-audience-modern').on('change.studentcoordinator', setupStudentCoordinatorSelect);
     }
     
     // NEW FUNCTION to handle dynamic activities
@@ -399,6 +401,48 @@ $(document).ready(function() {
                 tom.removeOption(optionId);
             }
         });
+    }
+
+    function setupStudentCoordinatorSelect() {
+        const select = $('#student-coordinators-modern');
+        const djangoField = $('#django-basic-info [name="student_coordinators"]');
+        const audienceField = $('#target-audience-modern');
+        if (!select.length || !djangoField.length) return;
+
+        if (select[0].tomselect) {
+            select[0].tomselect.destroy();
+        }
+
+        const names = audienceField.val()
+            ? audienceField.val().split(',').map(s => s.trim()).filter(Boolean)
+            : [];
+
+        const tom = new TomSelect(select[0], {
+            plugins: ['remove_button'],
+            valueField: 'value',
+            labelField: 'text',
+            searchField: 'text',
+            create: false,
+            maxItems: names.length || null,
+            options: names.map(n => ({ value: n, text: n })),
+            placeholder: names.length ? 'Select student coordinators' : 'Select target audience first',
+        });
+
+        const existing = djangoField.val()
+            ? djangoField.val().split(',').map(s => s.trim()).filter(Boolean)
+            : [];
+        if (existing.length) {
+            tom.setValue(existing.filter(v => names.includes(v)));
+        }
+
+        tom.on('change', () => {
+            const values = tom.getValue();
+            const joined = Array.isArray(values) ? values.join(', ') : '';
+            djangoField.val(joined).trigger('change');
+            clearFieldError(select);
+        });
+
+        select[0].tomselect = tom;
     }
 
     function setupOutcomeModal() {
@@ -882,8 +926,8 @@ $(document).ready(function() {
                     </div>
                     <div class="input-group">
                         <label for="student-coordinators-modern">Student Coordinators</label>
-                        <input type="text" id="student-coordinators-modern" placeholder="Names of student coordinators">
-                        <div class="help-text">List the names of student coordinators</div>
+                        <select id="student-coordinators-modern" multiple></select>
+                        <div class="help-text">Search and select student coordinators from the target audience</div>
                     </div>
                 </div>
                 
@@ -1491,6 +1535,7 @@ function getWhyThisEventForm() {
         $('#form-panel-content').on('input.sync change.sync', 'input, textarea, select', function() {
             const fieldId = $(this).attr('id');
             if (fieldId && fieldId.endsWith('-modern')) {
+                if (fieldId === 'student-coordinators-modern') return; // handled separately
                 let baseName = fieldId.replace('-modern', '').replace(/-/g, '_');
                 if (fieldId === 'schedule-modern') {
                     baseName = 'flow';
