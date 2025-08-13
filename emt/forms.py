@@ -6,7 +6,13 @@ from .models import (
     EventExpectedOutcomes, TentativeFlow, SpeakerProfile,
     ExpenseDetail, EventReport, EventReportAttachment, CDLSupport
 )
-from core.models import Organization, OrganizationType, SDGGoal, SDG_GOALS
+from core.models import (
+    Organization,
+    OrganizationType,
+    SDGGoal,
+    SDG_GOALS,
+    OrganizationMembership,
+)
 
 class EventProposalForm(forms.ModelForm):
     organization_type = forms.ModelChoiceField(
@@ -84,6 +90,17 @@ class EventProposalForm(forms.ModelForm):
                 org_type = assignment.organization.org_type
                 self.fields["organization_type"].initial = org_type
                 self.fields["organization"].initial = assignment.organization
+            else:
+                membership = (
+                    user.org_memberships
+                    .filter(is_active=True)
+                    .select_related("organization__org_type")
+                    .first()
+                )
+                if membership:
+                    org_type = membership.organization.org_type
+                    self.fields["organization_type"].initial = org_type
+                    self.fields["organization"].initial = membership.organization
 
         if org_type:
             self.fields['organization'].queryset = Organization.objects.filter(org_type=org_type, is_active=True)
