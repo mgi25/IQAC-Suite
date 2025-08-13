@@ -335,3 +335,13 @@ Pune Lavasa Campus – Infotech R&D Team
 Email: infotech.lavasa@christuniversity.in  
 GitHub: [CHRISTInfotech](https://github.com/CHRISTInfotech)  
 Website: https://christuniversity.in/lavasa
+
+### Removing an Academic Year Entry
+
+If you created an academic year with an incorrect year value or need to clear a duplicate entry, you can remove it using the provided management command:
+
+```bash
+python manage.py delete_academic_year 2025-2026
+```
+
+Replace `2025-2026` with the year you want to delete.
