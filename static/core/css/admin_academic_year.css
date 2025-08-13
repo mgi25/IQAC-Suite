@@ -87,6 +87,54 @@ body {
   box-shadow: 0 4px 12px rgba(16, 100, 200, 0.3);
 }
 
+.year-list {
+  margin-top: 2rem;
+}
+
+.list-title {
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+  color: #165fb2;
+  font-weight: 600;
+}
+
+.year-card {
+  background: #fff;
+  border: 1px solid #dfe3e8;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.year-actions a,
+.year-actions button {
+  margin-left: 0.5rem;
+  text-decoration: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-edit {
+  background: #1064c8;
+  color: #fff;
+}
+
+.btn-archive {
+  background: #c8102e;
+  color: #fff;
+}
+
+.btn-restore {
+  background: #28a745;
+  color: #fff;
+}
+
 @media (max-width: 600px) {
   .academic-year-card {
     padding: 1.5rem 1.25rem;

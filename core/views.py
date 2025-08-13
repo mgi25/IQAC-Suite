@@ -1246,43 +1246,92 @@ def admin_settings_dashboard(request):
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def admin_academic_year_settings(request):
-    from transcript.models import AcademicYear
-    from datetime import datetime
+    """Add and manage academic years.
 
-    academic_year = AcademicYear.objects.first()
+    Displays existing academic years split into active and archived groups. Allows
+    creation of new academic years and editing existing ones using the same
+    form. The year string is derived from the provided start and end dates.
+    """
+
+    from datetime import datetime
+    from transcript.models import AcademicYear
+
+    # Editing existing year if ``id`` provided in POST or ``edit`` in GET
+    edit_id = request.GET.get("edit")
+    edit_year = None
+    if edit_id:
+        edit_year = get_object_or_404(AcademicYear, pk=edit_id)
 
     if request.method == "POST":
-        start = request.POST.get('start_date') or None
-        end = request.POST.get('end_date') or None
+        year_id = request.POST.get("id")
+        start = request.POST.get("start_date") or None
+        end = request.POST.get("end_date") or None
 
-        year = None
+        year_str = None
         if start:
             try:
                 start_year = datetime.strptime(start, "%Y-%m-%d").year
-                if end:
-                    end_year = datetime.strptime(end, "%Y-%m-%d").year
-                else:
-                    end_year = start_year + 1
-                year = f"{start_year}-{end_year}"
+                end_year = (
+                    datetime.strptime(end, "%Y-%m-%d").year if end else start_year + 1
+                )
+                year_str = f"{start_year}-{end_year}"
             except ValueError:
                 pass
 
-        if academic_year:
-            academic_year.year = year
-            academic_year.start_date = start
-            academic_year.end_date = end
-            academic_year.save()
+        if year_id:
+            obj = get_object_or_404(AcademicYear, pk=year_id)
+            obj.year = year_str
+            obj.start_date = start
+            obj.end_date = end
+            obj.save()
         else:
-            AcademicYear.objects.create(year=year, start_date=start, end_date=end)
-        return redirect('admin_academic_year_settings')
+            AcademicYear.objects.create(
+                year=year_str, start_date=start, end_date=end, is_active=True
+            )
+        return redirect("admin_academic_year_settings")
+
+    active_years = AcademicYear.objects.filter(is_active=True).order_by("-start_date")
+    archived_years = AcademicYear.objects.filter(is_active=False).order_by(
+        "-start_date"
+    )
 
     return render(
         request,
-        'core/admin_academic_year_settings.html',
+        "core/admin_academic_year_settings.html",
         {
-            'academic_year': academic_year,
+            "active_years": active_years,
+            "archived_years": archived_years,
+            "edit_year": edit_year,
         },
     )
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def academic_year_archive(request, pk):
+    """Archive the selected academic year."""
+
+    from transcript.models import AcademicYear
+
+    year = get_object_or_404(AcademicYear, pk=pk)
+    if request.method == "POST":
+        year.is_active = False
+        year.save()
+    return redirect("admin_academic_year_settings")
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def academic_year_restore(request, pk):
+    """Restore an archived academic year."""
+
+    from transcript.models import AcademicYear
+
+    year = get_object_or_404(AcademicYear, pk=pk)
+    if request.method == "POST":
+        year.is_active = True
+        year.save()
+    return redirect("admin_academic_year_settings")
 
 @user_passes_test(lambda u: u.is_superuser)
 def master_data_dashboard(request):
