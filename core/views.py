@@ -2219,6 +2219,8 @@ def user_dashboard(request):
         .values_list("organization_id", flat=True)
     )
 
+    today = timezone.now().date()
+
     events = (
         EventProposal.objects.filter(status="finalized")
         .filter(
@@ -2226,6 +2228,12 @@ def user_dashboard(request):
             | Q(faculty_incharges=user)
             | Q(organization_id__in=user_org_ids)
             | Q(participants__user=user)
+        )
+        # Only include events with a date and scheduled for today or later
+        .filter(
+            Q(event_datetime__date__gte=today)
+            | Q(event_start_date__gte=today)
+            | Q(event_end_date__gte=today)
         )
         .filter(
             Q(event_datetime__isnull=False)

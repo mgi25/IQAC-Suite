@@ -226,6 +226,19 @@ body.is-student .nav-content .student-only {
     box-shadow: var(--shadow);
 }
 
+/* Calendar event indicator */
+.day.has-event::after {
+    content: "";
+    position: absolute;
+    bottom: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #e74c3c;
+}
+
 .chart-section canvas {
     width: 100%;
     max-width: 300px;
