@@ -1104,7 +1104,6 @@ $(document).ready(function() {
                 <div class="form-row full-width">
                     <div class="save-section-container" style="display: flex; flex-direction: column; align-items: center;">
                         <button type="button" class="btn-save-section" style="margin-bottom: 0.5rem;">Save & Continue</button>
-                        <button type="submit" name="save_draft" class="btn-draft-section">Save as Draft</button>
                         <div class="save-help-text" style="margin-top: 0.75rem;">Complete this section to unlock the next one</div>
                     </div>
                 </div>
@@ -1511,8 +1510,8 @@ function getWhyThisEventForm() {
                 </div>
 
                 <div class="form-row full-width">
-                    <div class="submit-section-container">
-                        <button type="submit" name="final_submit" class="btn-submit" id="submit-proposal-btn">
+                    <div class="submit-section">
+                        <button type="submit" name="final_submit" class="btn-submit" id="submit-proposal-btn" disabled>
                             Submit Proposal
                         </button>
                         <div class="submit-help-text">
