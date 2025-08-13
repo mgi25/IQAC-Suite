@@ -2185,3 +2185,55 @@
         padding: 1.5rem;
     }
 }
+
+/* Audience modal enhancements */
+#audienceModal .modal-content {
+    max-width: 650px;
+    width: 90%;
+}
+
+#audienceModal .audience-type-selector {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+#audienceModal .audience-type-selector button {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-color);
+    background: var(--light-bg);
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+#audienceModal #audienceList {
+    max-height: 50vh;
+    overflow-y: auto;
+    margin-top: 1rem;
+}
+
+#audienceModal .audience-org-header {
+    font-weight: 600;
+    margin-top: 1rem;
+}
+
+#audienceModal .btn-continue {
+    margin-top: 1rem;
+    background: var(--primary-blue);
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+#audienceModal .btn-continue:hover {
+    background: var(--primary-blue-dark);
+}
+
+#audienceModal .audience-select-all {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}

@@ -207,8 +207,35 @@ def upload_csv(request, org_id):
             org_id=org.id,
         )
 
+    rows = list(reader)
+    roles_in_csv = set()
+    invalid_roles = set()
+    for row in rows:
+        role_raw = (row.get("role") or "").strip()
+        if not role_raw:
+            continue
+        role_key = role_raw.lower()
+        role_name = VALID_ROLES.get(role_key)
+        if role_name:
+            roles_in_csv.add(role_name)
+        else:
+            invalid_roles.add(role_raw)
+
+    if invalid_roles:
+        messages.error(
+            request,
+            "Unknown roles in CSV: " + ", ".join(sorted(invalid_roles)),
+        )
+        return redirect(
+            "admin_org_users_faculty" if is_faculty else "admin_org_users_students",
+            org_id=org.id,
+        )
+
+    for role_name in roles_in_csv:
+        OrganizationRole.objects.get_or_create(organization=org, name=role_name)
+
     with transaction.atomic():
-        for i, row in enumerate(reader, start=2):
+        for i, row in enumerate(rows, start=2):
             reg = (row.get(id_field) or "").strip()
             name = (row.get("name") or "").strip()
             email = (row.get("email") or "").strip().lower()
@@ -225,9 +252,17 @@ def upload_csv(request, org_id):
                 organization=org, name__iexact=role
             ).first()
             if not org_role:
-                skipped += 1
-                errors.append(f"Row {i}: role '{role_raw}' not found for this organization")
-                continue
+                messages.error(
+                    request,
+                    f"Row {i}: role '{role_raw}' not found for this organization."
+                    " Please create it first.",
+                )
+                return redirect(
+                    "admin_org_users_faculty"
+                    if is_faculty
+                    else "admin_org_users_students",
+                    org_id=org.id,
+                )
 
             first, last = _split_name(name)
 

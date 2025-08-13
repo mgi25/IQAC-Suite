@@ -363,14 +363,15 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% if user.profile %}
+                        {% if user.role_assignments.all %}
+                            {% for ra in user.role_assignments.all %}
+                                <div class="{% if not forloop.first %}mt-1{% endif %}">
+                                    <span class="badge {% if forloop.first %}bg-primary{% else %}bg-secondary{% endif %}">{{ ra.role.name }}</span>
+                                </div>
+                            {% endfor %}
+                        {% elif user.profile %}
                             <span class="badge bg-primary">{{ user.profile.get_role_display }}</span>
                         {% endif %}
-                        {% for ra in user.role_assignments.all %}
-                            <div class="mt-1">
-                                <span class="badge bg-secondary">{{ ra.role.name }}</span>
-                            </div>
-                        {% endfor %}
                     </td>
                     <td>
                         {% for ra in user.role_assignments.all %}
