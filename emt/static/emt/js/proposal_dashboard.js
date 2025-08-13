@@ -260,7 +260,13 @@ $(document).ready(function() {
                 const orgTypeInput = $('#org-type-modern-input');
                 const orgTypeOptions = Array.from(orgTypeSelect.find('option')).map(opt => ({ value: $(opt).val(), text: $(opt).text() })).filter(o => o.value);
                 const orgTypeTS = new TomSelect(orgTypeInput[0], {
-                    valueField: 'value', labelField: 'text', searchField: 'text', options: orgTypeOptions, create: false, dropdownParent: 'body',
+                    valueField: 'value',
+                    labelField: 'text',
+                    searchField: 'text',
+                    options: orgTypeOptions,
+                    create: false,
+                    dropdownParent: 'body',
+                    maxItems: 1,
                     onChange: function(value) {
                         const selectedText = this.options[value]?.text.toLowerCase().trim() || '';
                         orgTypeSelect.val(value).trigger('change');
@@ -922,10 +928,11 @@ $(document).ready(function() {
         
         if (newSelect.length && typeof TomSelect !== 'undefined') {
             const tom = new TomSelect(newSelect[0], {
-                valueField: 'id', 
-                labelField: 'text', 
-                searchField: 'text', 
+                valueField: 'id',
+                labelField: 'text',
+                searchField: 'text',
                 create: false,
+                maxItems: 1,
                 dropdownParent: 'body',
                 placeholder: `Type ${label} name...`,
                 load: (query, callback) => {
