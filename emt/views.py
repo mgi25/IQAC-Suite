@@ -1162,7 +1162,7 @@ def review_approval_step(request, step_id):
             "expected_outcomes",
             "tentative_flow",
         )
-        .prefetch_related("speakers", "expense_details", "faculty_incharges")
+        .prefetch_related("speakers", "expense_details", "faculty_incharges", "sdg_goals")
         .get(pk=step.proposal_id)
     )
 
