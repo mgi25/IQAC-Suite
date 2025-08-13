@@ -11,6 +11,7 @@ $(document).ready(function() {
         'expenses': false,
         'income': false
     };
+    let audienceClassMap = {};
 
     initializeDashboard();
 
@@ -459,6 +460,7 @@ $(document).ready(function() {
         const container = $('#audienceOptions');
         const djangoOrgSelect = $('#django-basic-info [name="organization"]');
         modal.addClass('show');
+        $('#audienceSave').hide();
         container.html(`
             <div class="audience-type-selector">
                 <button type="button" data-type="students">Students</button>
@@ -489,40 +491,18 @@ $(document).ready(function() {
             if (!orgIds.length) { list.text('Select an organization first.'); return; }
 
             if (type === 'students') {
-                list.empty();
+                $('#audienceSave').hide();
                 Promise.all(orgIds.map(o =>
                     fetch(`${window.API_CLASSES_BASE}${o.id}/`, { credentials: 'include' })
                         .then(r => r.json().then(data => ({ org: o, data })))
                 ))
                 .then(results => {
-                    let hasAny = false;
-                    results.forEach(res => {
-                        const { org, data } = res;
-                        if (data.success && data.classes.length) {
-                            hasAny = true;
-                            const orgHeader = $('<div class="audience-org-header">').text(org.name);
-                            list.append(orgHeader);
-                            data.classes.forEach(cls => {
-                                const classLbl = $('<label class="audience-class">');
-                                const classCb = $('<input type="checkbox" class="audience-class-cb" checked>').data('class-id', cls.id);
-                                classLbl.append(classCb).append(' ' + cls.name);
-                                const studentsDiv = $('<div class="audience-students" style="margin-left:1em;"></div>');
-                                cls.students.forEach(st => {
-                                    const stCb = $('<input type="checkbox" name="audience-user" checked>').val(st.id).data('name', st.name);
-                                    const stLbl = $('<label>').append(stCb).append(' ' + st.name);
-                                    studentsDiv.append(stLbl).append('<br>');
-                                });
-                                list.append(classLbl).append('<br>').append(studentsDiv);
-                                classCb.on('change', function() {
-                                    studentsDiv.find('input[type=checkbox]').prop('checked', $(this).is(':checked'));
-                                });
-                            });
-                        }
-                    });
-                    if (!hasAny) list.text('No classes found.');
+                    audienceClassMap = {};
+                    renderClassSelection(results, list);
                 })
                 .catch(() => { list.text('Error loading.'); });
             } else {
+                $('#audienceSave').show();
                 list.empty();
                 Promise.all(orgIds.map(o =>
                     fetch(`${window.API_FACULTY}?org_id=${o.id}`, { credentials: 'include' })
@@ -547,6 +527,67 @@ $(document).ready(function() {
                 })
                 .catch(() => { list.text('Error loading.'); });
             }
+        });
+    }
+
+    function renderClassSelection(results, list) {
+        list.empty();
+        let hasAny = false;
+        const selectAll = $('<label class="audience-select-all"><input type="checkbox" id="audienceSelectAllClasses"> Select All Classes</label>');
+        list.append(selectAll);
+        results.forEach(res => {
+            const { org, data } = res;
+            if (data.success && data.classes.length) {
+                hasAny = true;
+                const orgHeader = $('<div class="audience-org-header">').text(org.name);
+                list.append(orgHeader);
+                data.classes.forEach(cls => {
+                    audienceClassMap[cls.id] = cls;
+                    const lbl = $('<label class="audience-class-choice">');
+                    const cb = $('<input type="checkbox" class="audience-class-choice-cb">').val(cls.id);
+                    lbl.append(cb).append(' ' + cls.name);
+                    list.append(lbl).append('<br>');
+                });
+            }
+        });
+        if (!hasAny) {
+            list.text('No classes found.');
+            return;
+        }
+        $('#audienceSelectAllClasses').on('change', function() {
+            list.find('.audience-class-choice-cb').prop('checked', $(this).is(':checked'));
+        });
+        const continueBtn = $('<button type="button" class="btn-continue">Continue</button>');
+        list.append(continueBtn);
+        continueBtn.on('click', function() {
+            const selected = list.find('.audience-class-choice-cb:checked').map((_, cb) => $(cb).val()).get();
+            if (!selected.length) {
+                alert('Please select at least one class.');
+                return;
+            }
+            renderStudentSelection(selected, list);
+        });
+    }
+
+    function renderStudentSelection(selectedIds, list) {
+        list.empty();
+        $('#audienceSave').show();
+        selectedIds.forEach(id => {
+            const cls = audienceClassMap[id];
+            if (!cls) return;
+            const classLbl = $('<label class="audience-class">');
+            const classCb = $('<input type="checkbox" class="audience-class-cb" checked>');
+            classLbl.append(classCb).append(' ' + cls.name);
+            const studentsDiv = $('<div class="audience-students" style="margin-left:1em;"></div>');
+            cls.students.forEach(st => {
+                const stCb = $('<input type="checkbox" name="audience-user" checked>').val(st.id).data('name', st.name);
+                const stLbl = $('<label>').append(stCb).append(' ' + st.name);
+                studentsDiv.append(stLbl).append('<br>');
+            });
+            list.append(classLbl).append('<br>').append(studentsDiv);
+            classCb.on('change', function() {
+                studentsDiv.find('input[type=checkbox]').prop('checked', $(this).is(':checked'));
+            });
         });
     }
 
