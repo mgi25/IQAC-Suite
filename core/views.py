@@ -2208,39 +2208,57 @@ def user_dashboard(request):
 
     Events shown are related to the current user either directly (submitted
     by or managed by them), through their organization assignments, or, if the
-    user is a student, through their participation in events. Only finalized
-    events with a defined date/time are considered.
+    user is a student, through their participation in events.
     """
 
     user = request.user
 
     # Organizations the user is connected to via role assignments
     user_org_ids = list(
-        user.role_assignments.exclude(organization__isnull=True)
+        RoleAssignment.objects.filter(user=user, organization_id__isnull=False)
         .values_list("organization_id", flat=True)
     )
 
     events = (
-        EventProposal.objects.filter(status="finalized", event_datetime__isnull=False)
+        EventProposal.objects.filter(status="finalized")
         .filter(
             Q(submitted_by=user)
             | Q(faculty_incharges=user)
             | Q(organization_id__in=user_org_ids)
             | Q(participants__user=user)
         )
+        .filter(
+            Q(event_datetime__isnull=False)
+            | Q(event_start_date__isnull=False)
+            | Q(event_end_date__isnull=False)
+        )
         .distinct()
     )
 
-    calendar_events = [
-        {
-            "id": e.id,
-            "title": e.event_title,
-            "date": e.event_datetime.strftime("%Y-%m-%d"),
-            "datetime": e.event_datetime.strftime("%Y-%m-%d %H:%M"),
-            "venue": e.venue or "",
-        }
-        for e in events
-    ]
+    calendar_events = []
+    for e in events:
+        if e.event_datetime:
+            calendar_events.append(
+                {
+                    "id": e.id,
+                    "title": e.event_title,
+                    "date": e.event_datetime.date().isoformat(),
+                    "datetime": e.event_datetime.isoformat(),
+                    "venue": e.venue or "",
+                }
+            )
+        elif e.event_start_date or e.event_end_date:
+            start = e.event_start_date or e.event_end_date
+            end = e.event_end_date or e.event_start_date
+            calendar_events.append(
+                {
+                    "id": e.id,
+                    "title": e.event_title,
+                    "start": start.isoformat(),
+                    "end": end.isoformat(),
+                    "venue": e.venue or "",
+                }
+            )
 
     return render(
         request, "core/user_dashboard.html", {"calendar_events": calendar_events}

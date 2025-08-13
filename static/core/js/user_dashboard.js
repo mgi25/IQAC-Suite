@@ -2,6 +2,13 @@
 
 // On page load, fetch user role from backend
 document.addEventListener('DOMContentLoaded', () => {
+    try {
+        const el = document.getElementById('calendarEventsJson');
+        window.DASHBOARD_EVENTS = el ? JSON.parse(el.textContent) : [];
+    } catch {
+        window.DASHBOARD_EVENTS = [];
+    }
+
     fetch('/api/auth/me')
         .then(res => res.json())
         .then(user => {
@@ -263,7 +270,19 @@ function buildCalendar() {
     headTitle.textContent = calRef.toLocaleString(undefined, { month: 'long', year: 'numeric' });
 
     // Pre-compute dates that have events for quick lookup
-    const eventDates = new Set((window.DASHBOARD_EVENTS || []).map(e => e.date));
+    const eventDates = new Set();
+    (window.DASHBOARD_EVENTS || []).forEach(ev => {
+        if (ev.date) {
+            eventDates.add(ev.date);
+        } else if (ev.start && ev.end) {
+            let cur = new Date(ev.start);
+            const end = new Date(ev.end);
+            while (cur <= end) {
+                eventDates.add(cur.toISOString().split('T')[0]);
+                cur.setDate(cur.getDate() + 1);
+            }
+        }
+    });
 
     const first = new Date(calRef.getFullYear(), calRef.getMonth(), 1);
     const last = new Date(calRef.getFullYear(), calRef.getMonth() + 1, 0);
@@ -295,7 +314,11 @@ function openDay(day) {
     const dateStr = `${yyyy}-${mm}-${dd}`;
     const list = document.getElementById('upcomingWrap');
     if (!list) return;
-    const items = (window.DASHBOARD_EVENTS || []).filter(e => e.date === dateStr);
+    const items = (window.DASHBOARD_EVENTS || []).filter(e => {
+        if (e.date) return e.date === dateStr;
+        if (e.start && e.end) return e.start <= dateStr && dateStr <= e.end;
+        return false;
+    });
     list.innerHTML = items.length
         ? items.map(e => `<div class="u-item"><div>${e.title}</div></div>`).join('')
         : `<div class="empty">No events for ${day.toLocaleDateString()}</div>`;
