@@ -545,14 +545,11 @@ $(document).ready(function() {
             <div id="audienceList">Select an option above.</div>
         `);
         const list = $('#audienceList');
-        container.find('button[data-type]').on('click', function() {
-            const type = $(this).data('type');
-            list.text('Loading...');
 
+        function collectOrgIds() {
             const primaryOrgId = djangoOrgSelect.val();
             const committeeTS = $('#committees-collaborations-modern')[0]?.tomselect;
             const extraOrgIds = committeeTS ? committeeTS.getValue().filter(id => /^\d+$/.test(id)) : [];
-
             const orgIds = [];
             if (primaryOrgId) {
                 orgIds.push({ id: primaryOrgId, name: djangoOrgSelect.find('option:selected').text().trim() });
@@ -563,11 +560,40 @@ $(document).ready(function() {
                     orgIds.push({ id, name });
                 });
             }
+            return orgIds;
+        }
 
+        function loadStudentView(preselectIds) {
+            const orgIds = collectOrgIds();
+            if (!orgIds.length) { list.text('Select an organization first.'); return; }
+            list.text('Loading...');
+            Promise.all(orgIds.map(o =>
+                fetch(`${window.API_CLASSES_BASE}${o.id}/`, { credentials: 'include' })
+                    .then(r => r.json().then(data => ({ org: o, data })))
+            ))
+            .then(results => {
+                audienceClassMap = {};
+                results.forEach(res => {
+                    const { data } = res;
+                    if (data.success && data.classes.length) {
+                        data.classes.forEach(cls => {
+                            audienceClassMap[cls.id] = cls;
+                        });
+                    }
+                });
+                renderStudentSelection(preselectIds, list);
+            })
+            .catch(() => { list.text('Error loading.'); });
+        }
+
+        container.find('button[data-type]').on('click', function() {
+            const type = $(this).data('type');
+            const orgIds = collectOrgIds();
             if (!orgIds.length) { list.text('Select an organization first.'); return; }
 
             if (type === 'students') {
                 $('#audienceSave').hide();
+                list.text('Loading...');
                 Promise.all(orgIds.map(o =>
                     fetch(`${window.API_CLASSES_BASE}${o.id}/`, { credentials: 'include' })
                         .then(r => r.json().then(data => ({ org: o, data })))
@@ -604,6 +630,10 @@ $(document).ready(function() {
                 .catch(() => { list.text('Error loading.'); });
             }
         });
+
+        if (preselected.length) {
+            loadStudentView(preselected);
+        }
     }
 
     function renderClassSelection(results, list, preselected = []) {
