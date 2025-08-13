@@ -1,5 +1,6 @@
 body {
-  background: linear-gradient(110deg, #e8f1fa 70%, #e2e2ef 100%);
+  background: linear-gradient(135deg, #eaf6ff 0%, #f0f4ff 100%);
+  font-family: 'Inter', sans-serif;
 }
 
 /* -------- Layout -------- */
@@ -79,25 +80,52 @@ body {
   border-bottom: 2.5px solid #e6ecf6;
   padding: 0 0 14px 0;
 }
-.ultra-header h1 {
-  font-size: 2.16rem;
-  font-weight: 900;
-  letter-spacing: 1.3px;
-  margin: 0;
+.review-top {
+  background: rgba(255,255,255,0.9);
+  border: 1.5px solid #e3eaf7;
+  border-radius: 18px;
+  box-shadow: 0 4px 28px rgba(36,70,120,0.08);
+  padding: 24px 26px 20px 26px;
+  border-bottom: none;
 }
-.glow-text {
-  color: #23457a;
-  text-shadow: 0 2px 16px #c5deff, 0 0px 2px #74b4ff;
-  letter-spacing: 0.9px;
+.review-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.review-title {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #204d8c;
+  margin: 0;
+  letter-spacing: -0.5px;
 }
 .ultra-header .meta {
   font-size: 1.06rem;
-  color: #5370b6;
-  margin-top: 1px;
+  color: #5a6a85;
+  margin-top: 4px;
   display: block;
   font-weight: 500;
   letter-spacing: 0.03em;
 }
+
+/* Status badge styling inspired by proposal status detail page */
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.status-badge.status-draft { background: #e0f2fe; color: #0369a1; }
+.status-badge.status-submitted { background: #fef9c3; color: #b45309; }
+.status-badge.status-under_review { background: #ede9fe; color: #6d28d9; }
+.status-badge.status-returned { background: #fde8e8; color: #b91c1c; }
+.status-badge.status-rejected { background: #fee2e2; color: #991b1b; }
+.status-badge.status-finalized { background: #d1fae5; color: #047857; }
 
 /* -------- Section Cards -------- */
 .section-glass {
@@ -355,7 +383,7 @@ body {
 }
 @media (max-width: 600px) {
   .section-glass, .info-card, .review-form-card { padding: 8px 2vw; }
-  .ultra-header h1 { font-size: 1.05rem; }
+  .review-title { font-size: 1.05rem; }
   .review-form-card { margin-top: 20px; }
 }
 
