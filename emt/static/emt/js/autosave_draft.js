@@ -64,6 +64,8 @@ window.AutosaveManager = (function() {
             formData['proposal_id'] = proposalId;
         }
 
+        document.dispatchEvent(new Event('autosave:start'));
+
         fetch(window.AUTOSAVE_URL, {
             method: 'POST',
             headers: {
@@ -72,14 +74,20 @@ window.AutosaveManager = (function() {
             },
             body: JSON.stringify(formData)
         })
-        .then(res => res.json())
+        .then(res => res.ok ? res.json() : Promise.reject())
         .then(data => {
             if (data.success && data.proposal_id) {
                 proposalId = data.proposal_id;
                 saveLocal();
+                document.dispatchEvent(new Event('autosave:success'));
+            } else {
+                document.dispatchEvent(new Event('autosave:error'));
             }
         })
-        .catch(err => console.error('Autosave error:', err));
+        .catch(err => {
+            console.error('Autosave error:', err);
+            document.dispatchEvent(new Event('autosave:error'));
+        });
     }
 
     function bindField(field) {
@@ -142,9 +150,15 @@ window.AutosaveManager = (function() {
         formEl.addEventListener('submit', clearLocal);
     }
 
+    // Expose helpers globally for legacy code
+    window.autosaveDraft = autosaveDraft;
+    window.clearLocal = clearLocal;
+
     return {
         reinitialize,
-        manualSave
+        manualSave,
+        autosaveDraft,
+        clearLocal
     };
 })();
 
