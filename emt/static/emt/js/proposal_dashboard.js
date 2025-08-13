@@ -302,6 +302,7 @@ $(document).ready(function() {
     function setupFacultyTomSelect() {
         const facultySelect = $('#faculty-select');
         const djangoFacultySelect = $('#django-basic-info [name="faculty_incharges"]');
+        const djangoOrgSelect = $('#django-basic-info [name="organization"]');
         if (!facultySelect.length || !djangoFacultySelect.length || facultySelect[0].tomselect) return;
 
         const existingOptions = Array.from(djangoFacultySelect.find('option')).map(opt => {
@@ -318,8 +319,9 @@ $(document).ready(function() {
             maxItems: 10,
             options: existingOptions,
             load: (query, callback) => {
-                if (!query.length) return callback();
-                fetch(`${window.API_FACULTY}?q=${encodeURIComponent(query)}`)
+                const orgId = djangoOrgSelect.val();
+                if (!query.length || !orgId) return callback();
+                fetch(`${window.API_FACULTY}?org_id=${orgId}&q=${encodeURIComponent(query)}`)
                     .then(r => r.json())
                     .then(callback)
                     .catch(() => callback());
@@ -489,7 +491,9 @@ $(document).ready(function() {
                     })
                     .catch(() => { list.text('Error loading.'); });
             } else {
-                fetch(window.API_FACULTY)
+                const orgId = djangoOrgSelect.val();
+                if (!orgId) { list.text('Select an organization first.'); return; }
+                fetch(`${window.API_FACULTY}?org_id=${orgId}`)
                     .then(r => r.json())
                     .then(data => {
                         list.empty();

@@ -1035,19 +1035,23 @@ def api_organizations(request):
 @login_required
 def api_faculty(request):
     q = request.GET.get("q", "").strip()
+    org_id = request.GET.get("org_id")
+
+    users = User.objects.filter(
+        role_assignments__role__name__icontains="faculty"
+    )
+    if org_id:
+        users = users.filter(role_assignments__organization_id=org_id)
+
     users = (
-        User.objects
-            .filter(
-                Q(role_assignments__role__name__icontains="faculty") |
-                Q(profile__role__icontains="faculty")
-            )
-            .filter(
-                Q(first_name__icontains=q) |
-                Q(last_name__icontains=q) |
-                Q(email__icontains=q)
-            )
-            .distinct()
-            .order_by("first_name")[:20]
+        users
+        .filter(
+            Q(first_name__icontains=q)
+            | Q(last_name__icontains=q)
+            | Q(email__icontains=q)
+        )
+        .distinct()
+        .order_by("first_name")[:20]
     )
     return JsonResponse(
         [{"id": u.id, "text": f"{u.get_full_name() or u.username} ({u.email})"} for u in users],
