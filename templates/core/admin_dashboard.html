@@ -50,11 +50,6 @@
       <div class="pkp-body">
         <h1 class="pkp-name">{{ request.user.get_full_name|default:request.user.username }}</h1>
         <h2 class="pkp-sub">{{ request.user.email }}</h2>
-        <div class="pkp-actions">
-          <button id="btnSwitchUser" class="btn-solid">
-            <i class="fa-solid fa-right-left"></i> Switch User
-          </button>
-        </div>
       </div>
     </div>
   </section>
@@ -138,13 +133,6 @@
 
 {% block scripts_extra %}
 <script>
-  // Switch user modal trigger
-  document.getElementById('btnSwitchUser')?.addEventListener('click', function(){
-    const modal = document.getElementById('switchUserModal') || document.getElementById('impersonateModal');
-    if (modal && window.bootstrap) new bootstrap.Modal(modal).show();
-    else if (modal) modal.style.display = 'block';
-  });
-
   // Hard-override any previous export listeners so it always opens the backend page
   document.addEventListener('DOMContentLoaded', function () {
     const fixExport = () => {
