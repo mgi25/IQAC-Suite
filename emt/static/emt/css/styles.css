@@ -800,9 +800,8 @@
 .notification.notification-info {
   border-left: 4px solid var(--primary-blue);
 }
-.submit-section {
-  display: none !important;
-}
+/* Submission section hidden state now controlled via .hidden utility instead of forced always-off */
+.submit-section.hidden { display: none; }
 
 /* ### MODIFICATION: Styles for New Dynamic Section Appended ### */
 #dynamic-activities-section {
@@ -843,9 +842,7 @@
   /* ...etc */
 }
 /* ... All other existing styles ... */
-.submit-section {
-  display: none !important;
-}
+/* (duplicate removed) */
 
 /* ### MODIFICATION: Styles for New Dynamic Section Appended ### */
 #dynamic-activities-section {
@@ -886,9 +883,7 @@
   /* ...etc... */
 }
 /* ... All other existing styles from your provided file ... */
-.submit-section {
-  display: none !important;
-}
+/* (duplicate removed) */
 
 /* ### MODIFICATION: Styles for New Dynamic Section Appended ### */
 #dynamic-activities-section {
@@ -2236,4 +2231,440 @@
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 500;
+}
+
+/* ===========================================
+   SUBMIT EVENT REPORT PAGE INLINE STYLES
+   Moved from submit_event_report.html template
+   =========================================== */
+
+/* Professional Activities Section Styling */
+.activities-reference-card {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    margin: 0.5rem 0;
+}
+
+.activities-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    margin-bottom: 1rem;
+}
+
+.activity-reference-item {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+.activity-reference-item:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+.activity-title {
+    font-weight: 600;
+    color: var(--primary-blue, #2563eb);
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.activity-date {
+    font-size: 0.875rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.activities-summary {
+    text-align: center;
+    padding: 0.75rem;
+    background: rgba(59, 130, 246, 0.05);
+    border-radius: 0.25rem;
+    border: 1px solid rgba(59, 130, 246, 0.1);
+}
+
+.text-muted {
+    color: #6b7280;
+    font-style: italic;
+}
+
+.no-activities-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    color: #64748b;
+    font-style: italic;
+    gap: 0.5rem;
+}
+
+.info-icon {
+    font-size: 1.25rem;
+    color: #3b82f6;
+}
+
+/* Enhanced Form Section Headers */
+.form-section-header {
+    border-bottom: 2px solid var(--primary-blue, #2563eb);
+    margin: 2rem 0 1.5rem 0;
+    padding-bottom: 0.75rem;
+    position: relative;
+}
+
+.form-section-header::before {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 60px;
+    height: 2px;
+    background: var(--accent-color, #10b981);
+}
+
+.form-section-header h3 {
+    color: var(--primary-blue, #2563eb);
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Professional Input Styling */
+.input-group input,
+.input-group select,
+.input-group textarea {
+    transition: all 0.2s ease;
+    border: 1px solid #d1d5db;
+}
+
+.input-group input:focus,
+.input-group select:focus,
+.input-group textarea:focus {
+    border-color: var(--primary-blue, #2563eb);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    outline: none;
+}
+
+.input-group input[readonly] {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+}
+
+/* Enhanced Help Text */
+.help-text {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-top: 0.375rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.25rem;
+}
+
+.help-text::before {
+    content: '💡';
+    font-size: 0.75rem;
+    margin-top: 0.125rem;
+    opacity: 0.7;
+}
+
+/* Professional Button Styling */
+.btn-save-section {
+    background: linear-gradient(135deg, var(--primary-blue, #2563eb) 0%, #1d4ed8 100%);
+    border: none;
+    color: white;
+    padding: 0.75rem 2rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    font-size: 0.875rem;
+}
+
+.btn-save-section:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+}
+
+.btn-draft-section {
+    background: transparent;
+    border: 2px solid #e5e7eb;
+    color: #6b7280;
+    padding: 0.6rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-draft-section:hover {
+    border-color: #d1d5db;
+    background: #f9fafb;
+}
+
+/* Enhanced Save Section */
+.save-section-container {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 2rem;
+    margin: 2rem 0;
+    text-align: center;
+}
+
+.save-help-text {
+    color: #64748b;
+    font-size: 0.875rem;
+    font-style: italic;
+}
+
+/* Auto-resize textarea functionality */
+textarea {
+    resize: none;
+    overflow: hidden;
+    min-height: 120px;
+    max-height: none;
+    box-sizing: border-box;
+    transition: height 0.2s ease;
+}
+
+/* Equal sizing for form elements */
+.form-row .input-group {
+    flex: 1;
+    min-width: calc(50% - 12.5px);
+}
+
+.form-row .input-group textarea {
+    min-height: 140px;
+}
+
+/* Ensure equal heights for side-by-side textareas */
+.form-row:not(.full-width) .input-group textarea {
+    height: auto;
+    min-height: 140px;
+}
+
+/* Word counter styling */
+.word-counter {
+    font-size: 0.85rem;
+    margin-top: 5px;
+    text-align: right;
+    font-weight: 500;
+}
+
+.word-counter.text-success {
+    color: #10b981 !important;
+}
+
+.word-counter.text-warning {
+    color: #f59e0b !important;
+}
+
+.word-counter.text-danger {
+    color: #ef4444 !important;
+}
+
+/* Graduate Attributes Multi-select Styling */
+.graduate-attributes-select {
+    min-height: 220px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 12px;
+}
+
+.graduate-attributes-select option {
+    padding: 8px 12px;
+    margin: 2px 0;
+    border-radius: 4px;
+}
+
+.graduate-attributes-select option:checked {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+}
+
+/* SDG Selection Button */
+.btn-select-sdg {
+    margin-top: 8px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.btn-select-sdg:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+}
+
+/* SDG Modal Styling */
+.sdg-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.sdg-modal-content {
+    background-color: #fff;
+    margin: 5% auto;
+    padding: 20px;
+    border-radius: 10px;
+    width: 80%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.sdg-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.sdg-option {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.sdg-option:hover {
+    border-color: #3498db;
+    background-color: #f8f9fa;
+}
+
+.sdg-option.selected {
+    border-color: #3498db;
+    background-color: #e3f2fd;
+}
+
+.sdg-option input[type="checkbox"] {
+    margin-right: 10px;
+}
+
+/* Navigation States */
+.nav-link.completed {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.nav-link.completed .nav-number {
+    background: white;
+    color: #10b981;
+}
+
+.nav-link.completed::after {
+    content: '✓';
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: white;
+    color: #10b981;
+    border-radius: 50%;
+    width: 1.25rem;
+    height: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+/* Speakers Reference Card */
+.speakers-reference-card {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    margin: 0.5rem 0;
+}
+
+.speaker-reference-item {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.speaker-name {
+    font-weight: 600;
+    color: var(--primary-blue, #2563eb);
+    margin-bottom: 0.25rem;
+}
+
+.speaker-details {
+    font-size: 0.875rem;
+    color: #64748b;
+}
+
+/* Placeholder Section Styling */
+.placeholder-section {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 2px dashed #e2e8f0;
+    border-radius: 0.75rem;
+    color: #64748b;
+    font-size: 1.125rem;
+    font-style: italic;
+}
+
+/* Error Styling */
+.field-error {
+    color: #dc2626;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.field-error::before {
+    content: '⚠️';
+    font-size: 0.75rem;
+}
+
+.input-group input.error,
+.input-group select.error,
+.input-group textarea.error {
+    border-color: #dc2626;
+    background-color: #fef2f2;
+}
+
+/* Responsive Grid Improvements */
+@media (max-width: 768px) {
+    .activities-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
 }
