@@ -97,6 +97,26 @@ class FacultyAPITests(TestCase):
         ids = {item["id"] for item in data}
         self.assertIn(user5.id, ids)
 
+    def test_api_faculty_filters_by_organization(self):
+        other_org = Organization.objects.create(name="Arts", org_type=self.ot)
+        other_role = OrganizationRole.objects.create(
+            organization=other_org, name=ApprovalStep.Role.FACULTY.value
+        )
+        other_user = User.objects.create(
+            username="f3", first_name="Gamma", email="gamma@example.com"
+        )
+        RoleAssignment.objects.create(
+            user=other_user, role=other_role, organization=other_org
+        )
+
+        resp = self.client.get(reverse("emt:api_faculty"), {"org_id": self.org.id})
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        ids = {item["id"] for item in data}
+        self.assertIn(self.user1.id, ids)
+        self.assertIn(self.user2.id, ids)
+        self.assertNotIn(other_user.id, ids)
+
 
 class OutcomesAPITests(TestCase):
     def setUp(self):
