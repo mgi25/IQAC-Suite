@@ -8,6 +8,20 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch {
         window.DASHBOARD_EVENTS = [];
     }
+    // Precompute a Set of ISO date strings that contain events for quick lookup
+    window.EVENT_DATE_SET = new Set();
+    (window.DASHBOARD_EVENTS || []).forEach(ev => {
+        if (ev.date) {
+            window.EVENT_DATE_SET.add(ev.date);
+        } else if (ev.start && ev.end) {
+            let cur = new Date(ev.start);
+            const end = new Date(ev.end);
+            while (cur <= end) {
+                window.EVENT_DATE_SET.add(cur.toISOString().split('T')[0]);
+                cur.setDate(cur.getDate() + 1);
+            }
+        }
+    });
 
     fetch('/api/auth/me')
         .then(res => res.json())
@@ -269,21 +283,6 @@ function buildCalendar() {
 
     headTitle.textContent = calRef.toLocaleString(undefined, { month: 'long', year: 'numeric' });
 
-    // Pre-compute dates that have events for quick lookup
-    const eventDates = new Set();
-    (window.DASHBOARD_EVENTS || []).forEach(ev => {
-        if (ev.date) {
-            eventDates.add(ev.date);
-        } else if (ev.start && ev.end) {
-            let cur = new Date(ev.start);
-            const end = new Date(ev.end);
-            while (cur <= end) {
-                eventDates.add(cur.toISOString().split('T')[0]);
-                cur.setDate(cur.getDate() + 1);
-            }
-        }
-    });
-
     const first = new Date(calRef.getFullYear(), calRef.getMonth(), 1);
     const last = new Date(calRef.getFullYear(), calRef.getMonth() + 1, 0);
     const startIdx = first.getDay();
@@ -300,7 +299,7 @@ function buildCalendar() {
     grid.innerHTML = cells.map(c => {
         const today = c.date && isSame(c.date, new Date());
         const iso = c.date ? `${c.date.getFullYear()}-${fmt2(c.date.getMonth() + 1)}-${fmt2(c.date.getDate())}` : '';
-        const hasEvent = iso && eventDates.has(iso);
+        const hasEvent = iso && window.EVENT_DATE_SET && window.EVENT_DATE_SET.has(iso);
         return `<div class="day${c.muted ? ' muted' : ''}${today ? ' today' : ''}${hasEvent ? ' has-event' : ''}" data-date="${iso}">${c.text}</div>`;
     }).join('');
 
