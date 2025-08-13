@@ -211,9 +211,9 @@ def _save_income(proposal, data):
 # ──────────────────────────────
 @login_required
 def submit_proposal(request, pk=None):
-    # --- Academic year: set a default if missing (for demo/dev, set your real logic as needed) ---
-    if not request.session.get('selected_academic_year'):
-        request.session['selected_academic_year'] = "2024-2025"  # Or dynamically fetch the current active year!
+    from transcript.models import AcademicYear
+    active_year = AcademicYear.objects.first()
+    selected_academic_year = active_year.year if active_year else ""
 
     proposal = None
     if pk:
@@ -228,7 +228,7 @@ def submit_proposal(request, pk=None):
         form = EventProposalForm(
             post_data,
             instance=proposal,
-            selected_academic_year=request.session.get('selected_academic_year'),
+            selected_academic_year=selected_academic_year,
             user=request.user,
         )
 
@@ -245,12 +245,9 @@ def submit_proposal(request, pk=None):
         # --------------------------------------------------
 
     else:
-        # Always get the selected academic year from session (ensured above)
-        selected_academic_year = request.session.get('selected_academic_year')
-        
         # Only pre-populate form with existing data if it's still a draft
         form_instance = proposal if (proposal and proposal.status == 'draft') else None
-        
+
         form = EventProposalForm(
             instance=form_instance,
             selected_academic_year=selected_academic_year,
