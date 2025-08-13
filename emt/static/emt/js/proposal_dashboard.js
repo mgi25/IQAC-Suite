@@ -465,7 +465,7 @@ $(document).ready(function() {
             if (type === 'students') {
                 const orgId = djangoOrgSelect.val();
                 if (!orgId) { list.text('Select an organization first.'); return; }
-                fetch(`${window.API_CLASSES_BASE}${orgId}/`)
+                fetch(`${window.API_CLASSES_BASE}${orgId}/`, { credentials: 'include' })
                     .then(r => r.json())
                     .then(data => {
                         if (data.success) {
@@ -493,7 +493,7 @@ $(document).ready(function() {
             } else {
                 const orgId = djangoOrgSelect.val();
                 if (!orgId) { list.text('Select an organization first.'); return; }
-                fetch(`${window.API_FACULTY}?org_id=${orgId}`)
+                fetch(`${window.API_FACULTY}?org_id=${orgId}`, { credentials: 'include' })
                     .then(r => r.json())
                     .then(data => {
                         list.empty();
