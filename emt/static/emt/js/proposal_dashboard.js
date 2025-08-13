@@ -389,7 +389,23 @@ $(document).ready(function() {
             clearFieldError(select);
         });
 
-        if (existingNames.length) {
+        if (existingIds.length) {
+            fetch(`${window.API_ORGANIZATIONS}?ids=${existingIds.join(',')}`)
+                .then(r => r.json())
+                .then(data => {
+                    data.forEach(opt => tom.addOption(opt));
+                    tom.setValue(existingIds);
+                })
+                .catch(() => {
+                    if (existingNames.length) {
+                        existingNames.forEach((name, idx) => {
+                            const id = existingIds[idx] || name;
+                            tom.addOption({ id, text: name });
+                        });
+                        tom.setValue(existingIds.length ? existingIds : existingNames);
+                    }
+                });
+        } else if (existingNames.length) {
             existingNames.forEach((name, idx) => {
                 const id = existingIds[idx] || name;
                 tom.addOption({ id, text: name });
@@ -490,6 +506,7 @@ $(document).ready(function() {
 
     function setupAudienceModal() {
         const audienceField = $('#target-audience-modern');
+        const classIdsField = $('#target-audience-class-ids');
         const djangoOrgSelect = $('#django-basic-info [name="organization"]');
         const modal = $('#audienceModal');
         const container = $('#audienceOptions');
@@ -502,7 +519,10 @@ $(document).ready(function() {
         $('#audienceCancel').off('click').on('click', () => modal.removeClass('show'));
         $('#audienceSave').off('click').on('click', () => {
             const selected = modal.find('input[name="audience-user"]:checked').map((_, cb) => $(cb).data('name')).get();
-            audienceField.val(selected.join(', ')).trigger('change');
+            audienceField.val(selected.join(', ')).trigger('change').trigger('input');
+            if (classIdsField.length) {
+                classIdsField.val('').trigger('change').trigger('input');
+            }
             modal.removeClass('show');
         });
     }
@@ -511,6 +531,10 @@ $(document).ready(function() {
         const modal = $('#audienceModal');
         const container = $('#audienceOptions');
         const djangoOrgSelect = $('#django-basic-info [name="organization"]');
+        const classIdsField = $('#target-audience-class-ids');
+        const preselected = classIdsField.length && classIdsField.val()
+            ? classIdsField.val().split(',').map(s => s.trim()).filter(Boolean)
+            : [];
         modal.addClass('show');
         $('#audienceSave').hide();
         container.html(`
@@ -550,7 +574,7 @@ $(document).ready(function() {
                 ))
                 .then(results => {
                     audienceClassMap = {};
-                    renderClassSelection(results, list);
+                    renderClassSelection(results, list, preselected);
                 })
                 .catch(() => { list.text('Error loading.'); });
             } else {
@@ -582,7 +606,7 @@ $(document).ready(function() {
         });
     }
 
-    function renderClassSelection(results, list) {
+    function renderClassSelection(results, list, preselected = []) {
         list.empty();
         let hasAny = false;
         const selectAll = $('<label class="audience-select-all"><input type="checkbox" id="audienceSelectAllClasses"> Select All Classes</label>');
@@ -597,6 +621,9 @@ $(document).ready(function() {
                     audienceClassMap[cls.id] = cls;
                     const lbl = $('<label class="audience-class-choice">');
                     const cb = $('<input type="checkbox" class="audience-class-choice-cb">').val(cls.id);
+                    if (preselected.includes(String(cls.id))) {
+                        cb.prop('checked', true);
+                    }
                     lbl.append(cb).append(' ' + cls.name);
                     list.append(lbl).append('<br>');
                 });
@@ -617,6 +644,11 @@ $(document).ready(function() {
                 alert('Please select at least one class.');
                 return;
             }
+            const audienceField = $('#target-audience-modern');
+            const classIdsField = $('#target-audience-class-ids');
+            const names = selected.map(id => audienceClassMap[id]?.name || '');
+            audienceField.val(names.join(', ')).trigger('change').trigger('input');
+            classIdsField.val(selected.join(',')).trigger('change').trigger('input');
             renderStudentSelection(selected, list);
         });
     }
@@ -628,7 +660,7 @@ $(document).ready(function() {
             const cls = audienceClassMap[id];
             if (!cls) return;
             const classLbl = $('<label class="audience-class">');
-            const classCb = $('<input type="checkbox" class="audience-class-cb" checked>');
+            const classCb = $('<input type="checkbox" class="audience-class-cb" checked>').val(id);
             classLbl.append(classCb).append(' ' + cls.name);
             const studentsDiv = $('<div class="audience-students" style="margin-left:1em;"></div>');
             cls.students.forEach(st => {
@@ -640,6 +672,16 @@ $(document).ready(function() {
             classCb.on('change', function() {
                 studentsDiv.find('input[type=checkbox]').prop('checked', $(this).is(':checked'));
             });
+        });
+
+        const audienceField = $('#target-audience-modern');
+        const classIdsField = $('#target-audience-class-ids');
+        $('#audienceSave').off('click').on('click', () => {
+            const selectedNames = list.find('input[name="audience-user"]:checked').map((_, cb) => $(cb).data('name')).get();
+            const selectedClasses = list.find('.audience-class-cb:checked').map((_, cb) => $(cb).val()).get();
+            audienceField.val(selectedNames.join(', ')).trigger('change').trigger('input');
+            classIdsField.val(selectedClasses.join(',')).trigger('change').trigger('input');
+            $('#audienceModal').removeClass('show');
         });
     }
 
