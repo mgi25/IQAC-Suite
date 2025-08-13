@@ -32,6 +32,7 @@ from .models import (
     Program,
     ProgramOutcome,
     ProgramSpecificOutcome,
+    ActivityLog,
 )
 from emt.models import EventProposal, Student
 from django.views.decorators.http import require_GET, require_POST
@@ -2060,6 +2061,31 @@ def admin_reports_view(request):
     except Exception as e:
         print(f"Error in admin_reports_view: {e}")
         return HttpResponse(f"An error occurred: {e}", status=500)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser or request.session.get('role') == 'admin')
+def admin_history(request):
+    """List activity log entries for administrators."""
+    logs = ActivityLog.objects.select_related('user')
+    paginator = Paginator(logs, 50)
+    page = request.GET.get('page')
+    try:
+        logs_page = paginator.page(page)
+    except PageNotAnInteger:
+        logs_page = paginator.page(1)
+    except EmptyPage:
+        logs_page = paginator.page(paginator.num_pages)
+    context = {'logs': logs_page}
+    return render(request, 'core/admin_history.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser or request.session.get('role') == 'admin')
+def admin_history_detail(request, pk):
+    """Detailed view of a single activity log entry."""
+    log = get_object_or_404(ActivityLog, pk=pk)
+    return render(request, 'core/admin_history_detail.html', {'log': log})
 
 # ======================== API Endpoints & User Dashboard ========================
 
