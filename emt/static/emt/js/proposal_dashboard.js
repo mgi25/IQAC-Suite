@@ -19,6 +19,7 @@ $(document).ready(function() {
         titles: ['AI Workshop', 'Tech Symposium', 'Innovation Summit'],
         audiences: ['All Students', 'CSE Students', 'Faculty Members'],
         venues: ['Main Auditorium', 'Conference Hall A', 'Online Platform'],
+        focusTypes: ['Workshop', 'Seminar', 'Training'],
         objectives: [
             '• Learn about emerging technologies\n• Encourage innovation\n• Foster collaboration',
             '• Understand basics\n• Gain hands-on experience',
@@ -1010,10 +1011,8 @@ $(document).ready(function() {
                 <div class="form-row">
                     <div class="input-group">
                         <label for="event-focus-type-modern">Event Focus Type</label>
-                        <select id="event-focus-type-modern">
-                            <option value="">Select Focus Type</option>
-                        </select>
-                        <div class="help-text">Choose the primary focus of your event</div>
+                        <input type="text" id="event-focus-type-modern" placeholder="Enter event focus">
+                        <div class="help-text">Specify the primary focus of your event</div>
                     </div>
                     <div class="input-group">
                         <label for="venue-modern">Location</label>
@@ -1759,6 +1758,7 @@ function getWhyThisEventForm() {
                 'target-audience-modern': getRandom(AUTO_FILL_DATA.audiences),
                 'target-audience-class-ids': '1',
                 'venue-modern': getRandom(AUTO_FILL_DATA.venues),
+                'event-focus-type-modern': getRandom(AUTO_FILL_DATA.focusTypes),
                 'event-start-date': today,
                 'event-end-date': today,
                 'academic-year-modern': '2024-2025',
@@ -1774,12 +1774,6 @@ function getWhyThisEventForm() {
                 el.dispatchEvent(new Event('input', { bubbles: true }));
                 el.dispatchEvent(new Event('change', { bubbles: true }));
             });
-
-            const focusSelect = document.getElementById('event-focus-type-modern');
-            if (focusSelect && focusSelect.options.length > 1) {
-                focusSelect.selectedIndex = 1;
-                focusSelect.dispatchEvent(new Event('change', { bubbles: true }));
-            }
 
             // Fill dynamic activity once rendered
             setTimeout(() => {
