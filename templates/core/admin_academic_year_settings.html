@@ -9,19 +9,58 @@
     <h1 class="card-title">Academic Year Settings</h1>
     <form method="post" class="year-form">
       {% csrf_token %}
+      {% if edit_year %}
+      <input type="hidden" name="id" value="{{ edit_year.id }}">
+      {% endif %}
       <div class="form-row">
         <label for="startDate">Start Date</label>
-        <input type="date" id="startDate" name="start_date" value="{{ academic_year.start_date|date:'Y-m-d' }}">
+        <input type="date" id="startDate" name="start_date" value="{{ edit_year.start_date|date:'Y-m-d' }}">
       </div>
       <div class="form-row">
         <label for="endDate">End Date</label>
-        <input type="date" id="endDate" name="end_date" value="{{ academic_year.end_date|date:'Y-m-d' }}">
+        <input type="date" id="endDate" name="end_date" value="{{ edit_year.end_date|date:'Y-m-d' }}">
       </div>
       <div class="form-actions">
-        <button type="submit" class="btn-save">Save</button>
+        <button type="submit" class="btn-save">{% if edit_year %}Update{% else %}Add{% endif %}</button>
       </div>
     </form>
   </section>
+
+  <section class="year-list">
+    <h2 class="list-title">Active Academic Years</h2>
+    {% for year in active_years %}
+    <div class="year-card">
+      <span class="year-label">{{ year.year }}</span>
+      <div class="year-actions">
+        <a href="?edit={{ year.id }}" class="btn-edit">Edit</a>
+        <form method="post" action="{% url 'academic_year_archive' year.id %}" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn-archive">Archive</button>
+        </form>
+      </div>
+    </div>
+    {% empty %}
+    <p>No academic years found.</p>
+    {% endfor %}
+  </section>
+
+  <section class="year-list">
+    <details>
+      <summary class="list-title">Archived Academic Years</summary>
+      {% for year in archived_years %}
+      <div class="year-card">
+        <span class="year-label">{{ year.year }}</span>
+        <div class="year-actions">
+          <form method="post" action="{% url 'academic_year_restore' year.id %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn-restore">Restore</button>
+          </form>
+        </div>
+      </div>
+      {% empty %}
+      <p class="archived-empty">No archived academic years.</p>
+      {% endfor %}
+    </details>
+  </section>
 </main>
 {% endblock %}
-
