@@ -1,48 +1,112 @@
+/* ===== CSS Utility Variables ===== */
+:root {
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --color-bg: #eaf6ff;
+  --color-bg-alt: #f0f4ff;
+  --color-surface: #ffffff;
+  --color-text: #1f2540;
+  --color-accent: #204d8c;
+  --font-base: 'Inter', sans-serif;
+  --transition-base: 0.2s ease-in-out;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #1a1f29;
+    --color-bg-alt: #1e2432;
+    --color-surface: #2a303c;
+    --color-text: #e5e7eb;
+    --color-accent: #93c5fd;
+  }
+}
+
 body {
-  background: linear-gradient(135deg, #eaf6ff 0%, #f0f4ff 100%);
-  font-family: 'Inter', sans-serif;
+  background: linear-gradient(135deg, var(--color-bg) 0%, var(--color-bg-alt) 100%);
+  font-family: var(--font-base);
+  color: var(--color-text);
+  transition: background var(--transition-base), color var(--transition-base);
+}
+
+/* Reusable Card Component */
+.card-base {
+  background: var(--color-surface);
+  border-radius: 18px;
+  border: 1.4px solid #e3eaf7;
+  box-shadow: 0 4px 28px 0 rgba(36, 70, 120, 0.08);
+  padding: 24px 26px 20px 26px;
+  transition: box-shadow var(--transition-base), background var(--transition-base), color var(--transition-base);
+}
+
+.card-base:hover,
+.card-base:focus {
+  box-shadow: 0 7px 34px 0 rgba(46, 86, 180, 0.16);
+}
+
+@media (prefers-color-scheme: dark) {
+  .card-base {
+    background: var(--color-surface);
+    border-color: #374151;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  }
 }
 
 /* -------- Layout -------- */
-.ultra-proposal-root {
-  display: flex;
+.review-grid {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  grid-template-areas:
+    "header header"
+    "side main";
   gap: 46px;
   max-width: 1440px;
   margin: 40px auto 0 auto;
   min-height: 88vh;
 }
 
-.ultra-side-info {
-  flex: 0 0 390px;
+.review-header { grid-area: header; text-align: center; }
+
+.review-side {
+  grid-area: side;
   min-width: 340px;
   max-width: 410px;
   position: sticky;
-  top: 90px;   /* Fixes the event info to appear below navbar */
+  top: 90px;
   align-self: flex-start;
   height: fit-content;
   z-index: 2;
 }
 
+.review-main {
+  grid-area: main;
+  min-width: 420px;
+  max-width: 960px;
+}
+
 @media (max-width: 1050px) {
-  .ultra-proposal-root { flex-direction: column; gap: 26px;}
-  .ultra-side-info { position: static; margin-bottom: 28px;}
+  .review-grid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "header"
+      "side"
+      "main";
+    gap: 26px;
+  }
+  .review-side { position: static; }
+  .review-main { min-width: 0; max-width: 100%; }
 }
 
 /* -------- Info Card -------- */
 .info-card {
   padding: 32px 28px 22px 28px;
-  border-radius: 23px;
-  box-shadow: 0 4px 32px 0 rgba(42,67,155,0.11);
-  background: rgba(245,249,255,0.83);
-  border: 1.5px solid #e7ebf4;
-  -webkit-backdrop-filter: blur(9px);
-  backdrop-filter: blur(9px);
   animation: fadein-side 0.7s;
 }
 
 .info-card h2 {
   margin-top: 0; margin-bottom: 19px;
-  font-size: 1.18rem; color: #253c72;
+  font-size: 1.18rem; color: var(--color-accent);
   letter-spacing: 0.4px;
   font-weight: 800;
   text-transform: uppercase;
@@ -63,52 +127,64 @@ body {
 }
 .info-card th { width: 44%; color: #26407c; font-weight: 700; }
 .info-card tr:last-child td, .info-card tr:last-child th { border-bottom: none; }
-.info-card td { color: #1f2540; }
+.info-card td { color: var(--color-text); }
 
 /* -------- Main Content -------- */
-.ultra-main-content {
-  flex: 1 1 0%;
-  min-width: 420px;
-  max-width: 960px;
-  margin-left: 0;
-}
 
-.ultra-header {
+.review-header {
   background: none;
   margin-bottom: 18px;
   box-shadow: none;
   border-bottom: 2.5px solid #e6ecf6;
   padding: 0 0 14px 0;
-}
-.review-top {
-  background: rgba(255,255,255,0.9);
-  border: 1.5px solid #e3eaf7;
-  border-radius: 18px;
-  box-shadow: 0 4px 28px rgba(36,70,120,0.08);
-  padding: 24px 26px 20px 26px;
-  border-bottom: none;
-}
-.review-title-row {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  justify-content: center;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
 }
+
+.review-heading { flex: 1; text-align: center; }
+
 .review-title {
   font-size: 2.2rem;
   font-weight: 800;
-  color: #204d8c;
+  color: var(--color-accent);
   margin: 0;
   letter-spacing: -0.5px;
 }
-.ultra-header .meta {
+
+.review-header .meta {
   font-size: 1.06rem;
   color: #5a6a85;
   margin-top: 4px;
   display: block;
   font-weight: 500;
   letter-spacing: 0.03em;
+}
+
+.review-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--spacing-sm);
+}
+
+.review-nav a {
+  color: var(--color-accent);
+  padding: var(--spacing-xs);
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--transition-base), color var(--transition-base);
+}
+
+.review-nav a:focus,
+.review-nav a:hover {
+  background: var(--color-accent);
+  color: #fff;
+  outline: none;
 }
 
 /* Status badge styling inspired by proposal status detail page */
@@ -130,22 +206,12 @@ body {
 /* -------- Section Cards -------- */
 .section-glass {
   margin-bottom: 22px;
-  background: rgba(255,255,255,0.81);
-  border-radius: 18px;
-  border: 1.4px solid #e3eaf7;
-  box-shadow: 0 4px 28px 0 rgba(36,70,120,0.08);
-  padding: 24px 26px 20px 26px;
-  transition: box-shadow 0.18s;
-}
-
-.section-glass:hover, .info-card:hover {
-  box-shadow: 0 7px 34px 0 rgba(46,86,180,0.16);
 }
 
 .section-glass h3 {
   font-size: 1.16rem;
   font-weight: 700;
-  color: #253c72;
+  color: var(--color-accent);
   margin-top: 0;
   margin-bottom: 10px;
   letter-spacing: 0.07em;
@@ -157,7 +223,7 @@ body {
   padding: 7px 4px 7px 1px;
   min-height: 30px;
   font-size: 1.06rem;
-  color: #253456;
+  color: var(--color-text);
   line-height: 1.5;
   white-space: pre-line;
   word-break: break-word;
@@ -286,15 +352,12 @@ body {
 /* -------- Approval Form Card -------- */
 .review-form-card {
   margin: 38px auto 22px auto;
-  background: linear-gradient(120deg, #fafdff 85%, #e4eefa 100%);
-  border-radius: 20px;
-  box-shadow: 0 4px 18px rgba(38,86,190,0.08);
-  border: 1.5px solid #e3eaf7;
-  padding: 36px 42px 29px 42px;
   max-width: 590px;
   width: 100%;
   min-width: 260px;
   display: block;
+  background: linear-gradient(120deg, #fafdff 85%, #e4eefa 100%);
+  padding: 36px 42px 29px 42px;
 }
 
 .review-form-ultra label {
@@ -347,9 +410,11 @@ body {
   background: linear-gradient(90deg,#f13c3c 65%, #b42b39 100%);
   color: #fff;
 }
-.btn-ultra:hover {
+.btn-ultra:hover,
+.btn-ultra:focus {
   transform: scale(1.05) translateY(-2px);
   box-shadow: 0 4px 16px rgba(60,120,250,0.08);
+  outline: none;
 }
 
 .info-glass.status-complete {
@@ -375,8 +440,8 @@ body {
 }
 
 @media (max-width: 900px) {
-  .ultra-main-content, .ultra-side-info, .fin-row { min-width: 0; }
-  .ultra-main-content, .ultra-side-info { max-width: 100%; }
+  .review-main, .review-side, .fin-row { min-width: 0; }
+  .review-main, .review-side { max-width: 100%; }
   .fin-row { flex-direction: column; gap: 17px;}
   .section-glass, .info-card { padding: 13px 7vw; }
   .review-form-card { padding: 24px 5vw; }
