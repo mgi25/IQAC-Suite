@@ -6,6 +6,7 @@ import json
 import re
 from urllib.parse import urlparse
 import requests
+from bs4 import BeautifulSoup
 from django.db.models import Q
 from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
@@ -1133,21 +1134,50 @@ def fetch_linkedin_profile(request):
         netloc = netloc.split(":", 1)[0]
     if parsed.scheme not in ("http", "https") or not netloc.endswith("linkedin.com"):
         return JsonResponse({"error": "Invalid LinkedIn URL"}, status=400)
-    response = requests.get(url)
+    try:
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; IQACSuite/1.0)"}
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+    except Exception:
+        return JsonResponse({"error": "Unable to fetch profile"}, status=500)
     profile = _parse_public_li(response.text)
     return JsonResponse(profile)
 
 # Temporary safe parser stub (prevent NameError if real parser not implemented)
-def _parse_public_li(html: str):  # pragma: no cover - simple stub
-    """Fallback parser for public LinkedIn profile HTML.
-    Replace with a proper HTML parsing implementation.
-    Returns minimal structure to keep endpoint functional.
+def _parse_public_li(html: str):  # pragma: no cover
+    """Parse minimal data from a public LinkedIn profile page.
+
+    Uses Open Graph meta tags available on public profiles to extract
+    the name, headline/description, and profile image. Returns a
+    dictionary suitable for JSON serialization. The parsing intentionally
+    avoids any advanced scraping that would require authentication.
     """
+    soup = BeautifulSoup(html or "", "html.parser")
+
+    def _meta(prop):
+        tag = soup.find("meta", property=prop)
+        return tag.get("content", "").strip() if tag and tag.get("content") else ""
+
+    name = _meta("og:title")
+    description = _meta("og:description")
+    image = _meta("og:image")
+
+    designation = ""
+    affiliation = ""
+    if description:
+        main_desc = description.split("|")[0].strip()
+        if " at " in main_desc:
+            designation, affiliation = [p.strip() for p in main_desc.split(" at ", 1)]
+        else:
+            designation = main_desc
+
     return {
-        "headline": None,
-        "name": None,
+        "headline": description or None,
+        "name": name or None,
         "about": None,
-        "raw_length": len(html or ""),
+        "image": image or None,
+        "designation": designation or None,
+        "affiliation": affiliation or None,
     }
 
 
