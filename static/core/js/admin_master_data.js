@@ -36,8 +36,6 @@ function initializeMasterData() {
     // Initialize form handlers
     initializeFormHandlers();
     
-    // Initialize academic year functionality
-    initializeAcademicYear();
     
     // Show success message if redirected after operation
     const urlParams = new URLSearchParams(window.location.search);
@@ -433,59 +431,6 @@ function initializeFormHandlers() {
     }
 }
 
-// Academic Year functionality
-function initializeAcademicYear() {
-    const academicYearSelect = document.querySelector('#academicYearSelect');
-    if (academicYearSelect && academicYearSelect.value) {
-        localStorage.setItem('selectedAcademicYear', academicYearSelect.value);
-    }
-}
-
-function setAcademicYear(year) {
-    localStorage.setItem('selectedAcademicYear', year);
-    fetch('/core-admin/set-academic-year/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()
-        },
-        body: JSON.stringify({ academic_year: year })
-    }).then(() => {
-        window.location.href = '?year=' + encodeURIComponent(year);
-    }).catch(() => {
-        window.location.href = '?year=' + encodeURIComponent(year);
-    });
-}
-
-function showAddAcademicYearForm() {
-    const year = prompt("Enter new academic year (format: YYYY-YYYY):\nExample: 2025-2026");
-    if (year && year.match(/^\d{4}-\d{4}$/)) {
-        addAcademicYear(year);
-    } else if (year) {
-        showToast("Please enter academic year in correct format: YYYY-YYYY (e.g., 2025-2026)", 'error');
-    }
-}
-
-function addAcademicYear(yearString) {
-    fetch('/core-admin/add-academic-year/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()
-        },
-        body: JSON.stringify({ academic_year: yearString })
-    }).then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            window.location.reload();
-        } else {
-            showToast(data.error || 'Failed to add academic year', 'error');
-        }
-    }).catch(() => {
-        showToast('Error adding academic year', 'error');
-    });
-}
-
 // CRUD Operations
 function addNewEntry() {
     const categorySelect = document.getElementById("categorySelect");
@@ -712,6 +657,3 @@ function createToastElement() {
 }
 
 // Export functions for global access
-window.setAcademicYear = setAcademicYear;
-window.showAddAcademicYearForm = showAddAcademicYearForm;
-window.addAcademicYear = addAcademicYear;

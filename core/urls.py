@@ -176,12 +176,6 @@ urlpatterns = [
     ),
 
     # ────────────────────────────────────────────────
-    # AJAX - Academic Year
-    # ────────────────────────────────────────────────
-    path('core-admin/set-academic-year/', views.set_academic_year, name='set_academic_year'),
-    path('core-admin/add-academic-year/', views.add_academic_year, name='add_academic_year'),
-
-    # ────────────────────────────────────────────────
     # Core APIs (Admin Dashboard)
     # ────────────────────────────────────────────────
     path('core-admin/api/auth/me', views.api_auth_me, name='api_auth_me'),
