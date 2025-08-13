@@ -352,10 +352,14 @@ $(document).ready(function() {
     function setupCommitteesTomSelect() {
         const select = $('#committees-collaborations-modern');
         const djangoField = $('#django-basic-info [name="committees_collaborations"]');
+        const idsField = $('#django-basic-info [name="committees_collaborations_ids"]');
         if (!select.length || !djangoField.length || select[0].tomselect) return;
 
-        const existing = djangoField.val()
+        const existingNames = djangoField.val()
             ? djangoField.val().split(',').map(s => s.trim()).filter(Boolean)
+            : [];
+        const existingIds = idsField.length && idsField.val()
+            ? idsField.val().split(',').map(s => s.trim()).filter(Boolean)
             : [];
 
         const tom = new TomSelect(select[0], {
@@ -379,14 +383,18 @@ $(document).ready(function() {
             const ids = tom.getValue();
             const names = ids.map(id => tom.options[id]?.text || id);
             djangoField.val(names.join(', ')).trigger('change');
-            // store selected ids for later use (e.g., audience modal)
-            select.data('selected-org-ids', ids);
+            if (idsField.length) {
+                idsField.val(ids.join(', ')).trigger('change');
+            }
             clearFieldError(select);
         });
 
-        if (existing.length) {
-            existing.forEach(name => tom.addOption({ id: name, text: name }));
-            tom.setValue(existing);
+        if (existingNames.length) {
+            existingNames.forEach((name, idx) => {
+                const id = existingIds[idx] || name;
+                tom.addOption({ id, text: name });
+            });
+            tom.setValue(existingIds.length ? existingIds : existingNames);
         }
 
         const orgSelect = $('#django-basic-info [name="organization"]');
