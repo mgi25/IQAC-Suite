@@ -15,6 +15,7 @@ from django import forms
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.db import models, transaction
 from django.utils import timezone
 import json
 import logging
@@ -1707,19 +1708,69 @@ def api_org_type_organizations(request, org_type_id):
 @user_passes_test(lambda u: u.is_superuser)
 def api_org_type_roles(request, org_type_id):
     """Return distinct role names for a given organization type."""
+    # First, get all organizations of this type
+    organizations = Organization.objects.filter(org_type_id=org_type_id)
+    
+    if not organizations.exists():
+        return JsonResponse({"success": False, "roles": [], "error": "No organizations found for this type"})
+
+    # Get the organization with the most roles (likely Commerce in your case)
+    org_with_most_roles = (
+        organizations
+        .annotate(role_count=models.Count('organizationrole'))
+        .order_by('-role_count')
+        .first()
+    )
+
+    # Get all roles from the organization with the most roles
+    template_roles = (
+        OrganizationRole.objects
+        .filter(organization=org_with_most_roles)
+        .values('name', 'is_active')
+        .distinct()
+        .order_by('name')
+    )
+
+    # For each organization that doesn't have all roles, create the missing ones
+    with transaction.atomic():
+        for org in organizations:
+            existing_role_names = set(
+                OrganizationRole.objects
+                .filter(organization=org)
+                .values_list('name', flat=True)
+            )
+            
+            # Create any missing roles
+            for template_role in template_roles:
+                if template_role['name'] not in existing_role_names:
+                    OrganizationRole.objects.create(
+                        organization=org,
+                        name=template_role['name'],
+                        is_active=template_role['is_active']
+                    )
+
+    # Now fetch all roles for this organization type
     roles = (
         OrganizationRole.objects
-        .filter(organization__org_type_id=org_type_id, is_active=True)
-        .values("id", "name")
-        .order_by("name")
+        .filter(organization__org_type_id=org_type_id)
+        .values('id', 'name', 'is_active')
+        .distinct()
+        .order_by('name')
     )
-    # Deduplicate by name while preserving an ID for each
-    seen = set()
+
+    # Deduplicate by name, preferring active roles
+    seen = {}
     unique_roles = []
     for r in roles:
-        if r["name"] not in seen:
-            seen.add(r["name"])
-            unique_roles.append({"id": r["id"], "name": r["name"]})
+        name = r['name']
+        if name not in seen or (not seen[name]['is_active'] and r['is_active']):
+            seen[name] = r
+            unique_roles.append({
+                'id': r['id'],
+                'name': r['name'],
+                'is_active': r['is_active']
+            })
+
     return JsonResponse({"success": True, "roles": unique_roles})
 
 
