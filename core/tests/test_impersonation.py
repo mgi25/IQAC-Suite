@@ -12,8 +12,11 @@ class ImpersonationTests(TestCase):
         self.client.force_login(self.admin)
 
     def test_impersonation_flow(self):
-        # start impersonation
+        # start impersonation and ensure redirect to dashboard
         response = self.client.get(reverse('admin_impersonate_user', args=[self.user.id]))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse('dashboard'))
+        self.assertNotIn('core-admin', response.url)
         self.assertIn('impersonate_user_id', self.client.session)
         self.assertEqual(self.client.session['impersonate_user_id'], self.user.id)
         # request any page to trigger middleware
