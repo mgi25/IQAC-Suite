@@ -235,7 +235,7 @@ class EventReportForm(forms.ModelForm):
     class Meta:
         model = EventReport
         fields = [
-            'location', 'blog_link', 'num_student_volunteers', 'num_participants', 'external_contact_details',
+            'location', 'blog_link', 'actual_event_type', 'num_student_volunteers', 'num_participants', 'external_contact_details',
             'summary', 'outcomes', 'impact_on_stakeholders', 'innovations_best_practices',
             'pos_pso_mapping', 'needs_grad_attr_mapping', 'contemporary_requirements', 'sdg_value_systems_mapping',
             'iqac_feedback', 'report_signed_date', 'beneficiaries_details', 'attendance_notes'
@@ -243,6 +243,7 @@ class EventReportForm(forms.ModelForm):
         widgets = {
             'location': forms.TextInput(attrs={'class': 'ultra-input'}),
             'blog_link': forms.TextInput(attrs={'class': 'ultra-input'}),
+            'actual_event_type': forms.TextInput(attrs={'class': 'ultra-input'}),
             'num_student_volunteers': forms.NumberInput(attrs={'class': 'ultra-input'}),
             'num_participants': forms.NumberInput(attrs={'class': 'ultra-input'}),
             'external_contact_details': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 3}),

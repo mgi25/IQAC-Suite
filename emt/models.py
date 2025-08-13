@@ -314,6 +314,7 @@ class EventReport(models.Model):
     proposal = models.OneToOneField(EventProposal, on_delete=models.CASCADE, related_name='event_report')
     location = models.CharField(max_length=200, blank=True)
     blog_link = models.URLField(blank=True)
+    actual_event_type = models.CharField(max_length=200, blank=True)
     num_student_volunteers = models.PositiveIntegerField(null=True, blank=True)
     num_participants = models.PositiveIntegerField(null=True, blank=True)
     external_contact_details = models.TextField(blank=True)

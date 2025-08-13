@@ -188,7 +188,11 @@ document.addEventListener('DOMContentLoaded', function(){
       }
       
       $('.form-grid').html(content);
-      
+
+      if (sectionName === 'participants-information') {
+          populateSpeakersFromProposal();
+      }
+
       // Restore field values if switching back to a section
       setTimeout(() => {
           restoreFieldValues(sectionName);
@@ -447,6 +451,7 @@ document.addEventListener('DOMContentLoaded', function(){
   });
   
   function getEventInformationContent() {
+      const selectedEventType = window.REPORT_ACTUAL_EVENT_TYPE || (window.PROPOSAL_DATA ? window.PROPOSAL_DATA.event_focus_type || '' : '');
       return `
           <!-- Organization Information Section -->
           <div class="form-section-header">
@@ -518,22 +523,22 @@ document.addEventListener('DOMContentLoaded', function(){
               </div>
               <div class="input-group">
                   <label for="event-type-modern">Actual Event Type *</label>
-                  <select id="event-type-modern" required>
+                  <select id="event-type-modern" name="actual_event_type" required>
                       <option value="">Select the type of event that was conducted</option>
-                      <option value="Training Program">Training Program</option>
-                      <option value="Workshop">Workshop</option>
-                      <option value="Seminar">Seminar</option>
-                      <option value="Conference">Conference</option>
-                      <option value="Guest Lecture">Guest Lecture</option>
-                      <option value="Webinar">Webinar</option>
-                      <option value="Competition">Competition</option>
-                      <option value="Cultural Event">Cultural Event</option>
-                      <option value="Sports Event">Sports Event</option>
-                      <option value="Exhibition">Exhibition</option>
-                      <option value="Panel Discussion">Panel Discussion</option>
-                      <option value="Hackathon">Hackathon</option>
-                      <option value="Field Trip">Field Trip</option>
-                      <option value="Other">Other</option>
+                      <option value="Training Program" ${selectedEventType === 'Training Program' ? 'selected' : ''}>Training Program</option>
+                      <option value="Workshop" ${selectedEventType === 'Workshop' ? 'selected' : ''}>Workshop</option>
+                      <option value="Seminar" ${selectedEventType === 'Seminar' ? 'selected' : ''}>Seminar</option>
+                      <option value="Conference" ${selectedEventType === 'Conference' ? 'selected' : ''}>Conference</option>
+                      <option value="Guest Lecture" ${selectedEventType === 'Guest Lecture' ? 'selected' : ''}>Guest Lecture</option>
+                      <option value="Webinar" ${selectedEventType === 'Webinar' ? 'selected' : ''}>Webinar</option>
+                      <option value="Competition" ${selectedEventType === 'Competition' ? 'selected' : ''}>Competition</option>
+                      <option value="Cultural Event" ${selectedEventType === 'Cultural Event' ? 'selected' : ''}>Cultural Event</option>
+                      <option value="Sports Event" ${selectedEventType === 'Sports Event' ? 'selected' : ''}>Sports Event</option>
+                      <option value="Exhibition" ${selectedEventType === 'Exhibition' ? 'selected' : ''}>Exhibition</option>
+                      <option value="Panel Discussion" ${selectedEventType === 'Panel Discussion' ? 'selected' : ''}>Panel Discussion</option>
+                      <option value="Hackathon" ${selectedEventType === 'Hackathon' ? 'selected' : ''}>Hackathon</option>
+                      <option value="Field Trip" ${selectedEventType === 'Field Trip' ? 'selected' : ''}>Field Trip</option>
+                      <option value="Other" ${selectedEventType === 'Other' ? 'selected' : ''}>Other</option>
                   </select>
                   <div class="help-text">Select the actual type of event that was conducted</div>
               </div>
@@ -999,6 +1004,29 @@ function populateProposalData() {
             }
         }, 100);
     });
+}
+
+// Populate speaker reference card with speakers from the original proposal
+function populateSpeakersFromProposal() {
+    const container = document.getElementById('speakers-display');
+    if (!container) return;
+
+    const speakers = (window.PROPOSAL_DATA && window.PROPOSAL_DATA.speakers) || [];
+    if (!speakers.length) {
+        container.innerHTML = '<div class="no-speakers-message">No speakers were defined in the original proposal</div>';
+        return;
+    }
+
+    let html = '';
+    speakers.forEach(sp => {
+        html += `
+            <div class="speaker-reference-item">
+                <div class="speaker-name">${sp.full_name || ''}</div>
+                <div class="speaker-affiliation">${sp.affiliation || ''}</div>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
 }
 
 // SDG Modal functionality
