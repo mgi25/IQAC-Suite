@@ -39,6 +39,7 @@ from django.views.decorators.http import require_GET, require_POST
 from .models import ApprovalFlowTemplate, ApprovalFlowConfig
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from .decorators import admin_required
 
 logger = logging.getLogger(__name__)
 
@@ -2064,7 +2065,7 @@ def admin_reports_view(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser or request.session.get('role') == 'admin')
+@admin_required
 def admin_history(request):
     """List activity log entries for administrators."""
     logs = ActivityLog.objects.select_related('user')
@@ -2081,7 +2082,7 @@ def admin_history(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser or request.session.get('role') == 'admin')
+@admin_required
 def admin_history_detail(request, pk):
     """Detailed view of a single activity log entry."""
     log = get_object_or_404(ActivityLog, pk=pk)
