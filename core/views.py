@@ -3750,7 +3750,7 @@ def admin_impersonate_user(request, user_id):
 
     log_impersonation_start(request, target_user)
     messages.success(request, f"Now impersonating {target_user.get_full_name() or target_user.username}")
-    next_url = request.GET.get('next') or reverse('dashboard')
+    next_url = safe_next(request, fallback=reverse('dashboard'))
     return redirect(next_url)
 
 @login_required
