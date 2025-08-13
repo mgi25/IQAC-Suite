@@ -106,6 +106,7 @@ DATABASES = {
 # AUTHENTICATION
 # ──────────────────────────────────────────────────────────────────────────────
 AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',           # ← REQUIRED for /admin
     'core.auth_backends.AllowInactiveFirstLoginBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
 ]

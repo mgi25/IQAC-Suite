@@ -1110,6 +1110,19 @@ def fetch_linkedin_profile(request):
     profile = _parse_public_li(response.text)
     return JsonResponse(profile)
 
+# Temporary safe parser stub (prevent NameError if real parser not implemented)
+def _parse_public_li(html: str):  # pragma: no cover - simple stub
+    """Fallback parser for public LinkedIn profile HTML.
+    Replace with a proper HTML parsing implementation.
+    Returns minimal structure to keep endpoint functional.
+    """
+    return {
+        "headline": None,
+        "name": None,
+        "about": None,
+        "raw_length": len(html or ""),
+    }
+
 
 @login_required
 def api_outcomes(request, org_id):
@@ -1313,9 +1326,9 @@ def submit_event_report(request, proposal_id):
                 obj.save()
             for obj in formset.deleted_objects:
                 obj.delete()
-            messages.success(request, "Report submitted successfully!")
-            # Redirect as needed (PDF preview/download, dashboard, etc.)
-            return redirect('emt:ai_generate_report', proposal_id=proposal.id)
+            messages.success(request, "Report submitted successfully! Starting AI generation...")
+            # Directly redirect to streaming AI progress page
+            return redirect('emt:ai_report_progress', proposal_id=proposal.id)
     else:
         form = EventReportForm(instance=report)
         formset = AttachmentFormSet(queryset=report.attachments.all())

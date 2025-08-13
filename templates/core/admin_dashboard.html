@@ -1,337 +1,168 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% load static %}
 
-{% block title %}Admin Dashboard - CHRIST University{% endblock %}
+{% block title %}Admin Dashboard – Event Management Suite{% endblock %}
 
 {% block head_extra %}
-  <link rel="stylesheet" href="{% static 'core/css/admin_dashboard.css' %}">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'core/css/admin_dashboard.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
-  <!-- Dashboard Header -->
-  <div class="dashboard-header">
-    <div class="dashboard-icon">
-      <i class="fas fa-tachometer-alt"></i>
-    </div>
-    <h1 class="dashboard-title">Admin Dashboard</h1>
-  </div>
+<div class="ems-dashboard admin-dash">
 
-  <!-- Welcome Message -->
-  <div class="dashboard-welcome">
-    <p>Welcome, <strong>{{ request.user.get_full_name|default:request.user.username }}!</strong></p>
-  </div>
+  <header class="topbar">
+    <div>
+      <h1>Welcome, {{ request.user.first_name|default:request.user.username }}</h1>
+      <span class="topbar-date">{% now "F j, Y · l" %}</span>
+    </div>
+  </header>
 
-  <!-- Statistics Row -->
-  <div class="dashboard-stats">
-    <div class="stat-card">
-      <div class="stat-number">{{ stats.students }}</div>
-      <div class="stat-label">Students</div>
+  <section class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-icon bg-indigo"><i class="fa-solid fa-user-graduate"></i></div>
+      <div class="kpi-content"><span class="kpi-title">Students</span><span class="kpi-value">{{ stats.students|default:0 }}</span></div>
     </div>
-    <div class="stat-card">
-      <div class="stat-number">{{ stats.faculties }}</div>
-      <div class="stat-label">Faculties</div>
+    <div class="kpi-card">
+      <div class="kpi-icon bg-sky"><i class="fa-solid fa-chalkboard-user"></i></div>
+      <div class="kpi-content"><span class="kpi-title">Faculties</span><span class="kpi-value">{{ stats.faculties|default:0 }}</span></div>
     </div>
-    <div class="stat-card">
-      <div class="stat-number">{{ stats.hods }}</div>
-      <div class="stat-label">HODs</div>
+    <div class="kpi-card">
+      <div class="kpi-icon bg-orange"><i class="fa-solid fa-user-tie"></i></div>
+      <div class="kpi-content"><span class="kpi-title">HODs</span><span class="kpi-value">{{ stats.hods|default:0 }}</span></div>
     </div>
-    <div class="stat-card">
-      <div class="stat-number">{{ stats.centers }}</div>
-      <div class="stat-label">Centers</div>
+    <div class="kpi-card">
+      <div class="kpi-icon bg-emerald"><i class="fa-solid fa-building-columns"></i></div>
+      <div class="kpi-content"><span class="kpi-title">Centers / Organizations</span><span class="kpi-value">{{ stats.centers|default:0 }}</span></div>
     </div>
-  </div>
 
-  <!-- Analytics Section -->
-  <div class="dashboard-analytics">
-    <div class="analytics-row">
-      <div class="analytics-card">
-        <h3>Event Proposals</h3>
-        <div class="analytics-content">
-          <div class="metric">
-            <span class="metric-label">Total:</span>
-            <span class="metric-value">{{ stats.total_proposals }}</span>
-          </div>
-          <div class="metric">
-            <span class="metric-label">Pending:</span>
-            <span class="metric-value pending">{{ stats.pending_proposals }}</span>
-          </div>
-          <div class="metric">
-            <span class="metric-label">Approved:</span>
-            <span class="metric-value approved">{{ stats.approved_proposals }}</span>
-          </div>
-          <div class="metric">
-            <span class="metric-label">Rejected:</span>
-            <span class="metric-value rejected">{{ stats.rejected_proposals }}</span>
-          </div>
-        </div>
+    <div class="profile-kpi card">
+      <div class="pkp-avatar">
+        {% if request.user.profile and request.user.profile.photo %}
+          <img src="{{ request.user.profile.photo.url }}" alt="{{ request.user.get_full_name|default:request.user.username }}">
+        {% else %}
+          <span class="pkp-initials">
+            {% if request.user.first_name %}{{ request.user.first_name.0|upper }}{% if request.user.last_name %}{{ request.user.last_name.0|upper }}{% endif %}{% else %}{{ request.user.username.0|upper }}{% endif %}
+          </span>
+        {% endif %}
       </div>
-      
-      <div class="analytics-card">
-        <h3>System Overview</h3>
-        <div class="analytics-content">
-          <div class="metric">
-            <span class="metric-label">Total Users:</span>
-            <span class="metric-value">{{ stats.total_users }}</span>
-          </div>
-          <div class="metric">
-            <span class="metric-label">Active Users:</span>
-            <span class="metric-value">{{ stats.active_users }}</span>
-          </div>
-          <div class="metric">
-            <span class="metric-label">New This Week:</span>
-            <span class="metric-value">{{ stats.new_users_this_week }}</span>
-          </div>
-          <div class="metric">
-            <span class="metric-label">Reports:</span>
-            <span class="metric-value">{{ stats.total_reports }}</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="analytics-card">
-        <h3>Organizations</h3>
-        <div class="analytics-content">
-          <div class="metric">
-            <span class="metric-label">Departments:</span>
-            <span class="metric-value">{{ stats.departments }}</span>
-          </div>
-          <div class="metric">
-            <span class="metric-label">Clubs:</span>
-            <span class="metric-value">{{ stats.clubs }}</span>
-          </div>
-          <div class="metric">
-            <span class="metric-label">Total Orgs:</span>
-            <span class="metric-value">{{ stats.centers }}</span>
-          </div>
+      <div class="pkp-body">
+        <h1 class="pkp-name">{{ request.user.get_full_name|default:request.user.username }}</h1>
+        <h2 class="pkp-sub">{{ request.user.email }}</h2>
+        <div class="pkp-actions">
+          <button id="btnSwitchUser" class="btn-solid">
+            <i class="fa-solid fa-right-left"></i> Switch User
+          </button>
         </div>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Dynamic Organization Stats Row (optional, show if org_stats exists) -->
-  {% if org_stats %}
-  <div class="admin-dashboard-stats-row" style="margin-top:2rem;">
-    {% for stat in org_stats %}
-      <div class="admin-dashboard-stat">
-        <div class="stat-icon stat-center"></div>
-        <div class="stat-count">{{ stat.user_count }}</div>
-        <div class="stat-label">{{ stat.organization_org_type_name }}</div>
+  <main class="grid-3">
+    <!-- Event Proposals -->
+    <section class="card eq" data-card="proposals">
+      <div class="card-header"><h3><i class="fa-solid fa-file-signature"></i> Event Proposals</h3></div>
+      <div class="stats-rows">
+        <div class="sr"><span>Total</span><strong>{{ stats.total_proposals|default:0 }}</strong></div>
+        <div class="sr"><span>Pending</span><strong>{{ stats.pending_proposals|default:0 }}</strong></div>
+        <div class="sr"><span>Approved</span><strong class="ok">{{ stats.approved_proposals|default:0 }}</strong></div>
+        <div class="sr"><span>Rejected</span><strong class="bad">{{ stats.rejected_proposals|default:0 }}</strong></div>
+        <a id="viewAllProposals" class="chip-btn" href="/core-admin/event-proposals/">View All</a>
       </div>
-    {% empty %}
-      <p>No organization data.</p>
-    {% endfor %}
-  </div>
-  {% endif %}
+    </section>
 
-
-  
-  <!-- Recent Activity Feed -->
-  {% if recent_activities %}
-  <div class="recent-activities">
-    <div class="section-header">
-      <h3>Recent Activity</h3>
-      <span class="activity-count">{{ recent_activities|length }} recent items</span>
-    </div>
-    <div class="activity-list">
-      {% for activity in recent_activities %}
-      <div class="activity-item">
-        <div class="activity-icon">
-          {% if activity.type == 'proposal' %}
-            <i class="fas fa-clipboard-list"></i>
-          {% elif activity.type == 'report' %}
-            <i class="fas fa-file-alt"></i>
-          {% elif activity.type == 'user' %}
-            <i class="fas fa-user-plus"></i>
-          {% else %}
-            <i class="fas fa-bell"></i>
-          {% endif %}
-        </div>
-        <div class="activity-content">
-          <p class="activity-description">{{ activity.description }}</p>
-          <div class="activity-meta">
-            <span class="activity-user">by {{ activity.user }}</span>
-            <span class="activity-time">{{ activity.timestamp|timesince }} ago</span>
-            <span class="status-badge status-{{ activity.status }}">{{ activity.status|title }}</span>
-          </div>
-        </div>
+    <!-- System Overview -->
+    <section class="card eq">
+      <div class="card-header"><h3><i class="fa-solid fa-gauge-high"></i> System Overview</h3></div>
+      <div class="stats-rows">
+        <div class="sr"><span>Total Users</span><strong>{{ stats.total_users|default:0 }}</strong></div>
+        <div class="sr"><span>Active Users</span><strong>{{ stats.active_users|default:0 }}</strong></div>
+        <div class="sr"><span>New This Week</span><strong>{{ stats.new_users_this_week|default:0 }}</strong></div>
+        <div class="sr"><span>Reports</span><strong>{{ stats.total_reports|default:0 }}</strong></div>
+        <a class="chip-btn" href="/core-admin/users/">Manage Users</a>
       </div>
-      {% endfor %}
-    </div>
-    <div class="activity-footer">
-      <a href="/core-admin/event-proposals/" class="view-all-link">View All Proposals →</a>
-    </div>
-  </div>
-  {% endif %}
+    </section>
 
-  <!-- System Status Bar -->
-  <div class="system-status">
-    <div class="status-item">
-      <div class="status-indicator {% if stats.database_status == 'Operational' %}status-green{% else %}status-red{% endif %}"></div>
-      <span>Database: {{ stats.database_status }}</span>
-    </div>
-    <div class="status-item">
-      <div class="status-indicator {% if stats.email_status == 'Active' %}status-green{% else %}status-yellow{% endif %}"></div>
-      <span>Email Service: {{ stats.email_status }}</span>
-    </div>
-    <div class="status-item">
-      <div class="status-indicator {% if '7' in stats.storage_status or '8' in stats.storage_status %}status-yellow{% else %}status-green{% endif %}"></div>
-      <span>Storage: {{ stats.storage_status }}</span>
-    </div>
-    <div class="status-item">
-      <div class="status-indicator status-green"></div>
-      <span>Last Backup: {{ stats.last_backup }}</span>
-    </div>
-  </div>
+    <!-- Organizations -->
+    <section class="card eq">
+      <div class="card-header"><h3><i class="fa-solid fa-sitemap"></i> Organizations</h3></div>
+      <div class="stats-rows">
+        <div class="sr"><span>Departments</span><strong>{{ stats.departments|default:0 }}</strong></div>
+        <div class="sr"><span>Clubs</span><strong>{{ stats.clubs|default:0 }}</strong></div>
+        <div class="sr"><span>Total Organizations</span><strong>{{ stats.centers|default:0 }}</strong></div>
+        <a class="chip-btn" href="/core-admin/users/">View Organizations</a>
+      </div>
+    </section>
+
+    <!-- Notifications (scrollable) -->
+    <section class="card wide" id="cardNotifications">
+      <div class="card-header"><h3><i class="fa-regular fa-bell"></i> Notifications</h3></div>
+      <div class="list list-scroll">
+        {% if recent_activities %}
+          {% for a in recent_activities %}
+            <article class="list-item">
+              <div class="bullet"><i class="fa-solid fa-circle-info"></i></div>
+              <div class="list-body">
+                <h4>{{ a.title }}</h4>
+                <p class="muted">{{ a.description }}</p>
+              </div>
+              {% if a.status %}<span class="pill status-{{ a.status|lower }}">{{ a.status }}</span>{% endif %}
+            </article>
+          {% endfor %}
+        {% else %}
+          <div class="empty">No notifications.</div>
+        {% endif %}
+      </div>
+      <div class="list">
+        <a class="chip-btn" href="/core-admin/event-proposals/">
+          <i class="fa-regular fa-eye"></i> View all proposals
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <section class="sysbar">
+    <div class="chip">DB: <strong class="{% if stats.database_status == 'OK' %}ok{% else %}bad{% endif %}">{{ stats.database_status|default:"—" }}</strong></div>
+    <div class="chip">Email: <strong class="{% if stats.email_status == 'OK' %}ok{% else %}bad{% endif %}">{{ stats.email_status|default:"—" }}</strong></div>
+    <div class="chip">Storage: <strong class="{% if stats.storage_status == 'OK' %}ok{% else %}bad{% endif %}">{{ stats.storage_status|default:"—" }}</strong></div>
+    <div class="chip">Last Backup: <strong>{{ stats.last_backup|default:"—" }}</strong></div>
+
+    <!-- Export button → open data_export_filter.html -->
+    <a id="btnExport" class="btn-solid right" href="{% url 'data_export_filter' %}">
+      <i class="fa-solid fa-download"></i> Export
+    </a>
+  </section>
 </div>
+{% endblock %}
 
-<!-- Fixed Download Button -->
-<a href="{% url 'data_export_filter' %}" class="fixed-download-btn" title="Export Data">
-  <i class="fas fa-download"></i>
-</a>
-
-<div class="admin-switch-section">
-    {% if is_impersonating %}
-        <!-- Currently impersonating -->
-        <div class="impersonation-card">
-            <div class="impersonation-info">
-                <h4>🎭 Currently Viewing As</h4>
-                <p><strong>{{ user.get_full_name|default:user.username }}</strong></p>
-                <p>{{ user.email }}</p>
-            </div>
-            <a href="{% url 'stop_impersonation' %}" class="btn-stop-impersonation">
-                Stop Impersonation
-            </a>
-        </div>
-    {% else %}
-        <!-- Switch user button -->
-        <div class="switch-user-card">
-            <h4>👤 Switch User View</h4>
-            <p>View the website as any user</p>
-            <button class="btn-switch-user" onclick="openSwitchModal()">
-                Switch User
-            </button>
-        </div>
-    {% endif %}
-</div>
-
-<!-- Simple Switch Modal -->
-<div class="switch-modal" id="switchModal" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Switch User</h3>
-            <button class="close-btn" onclick="closeSwitchModal()">&times;</button>
-        </div>
-        <div class="modal-body">
-            <input type="text" 
-                   id="userSearch" 
-                   placeholder="Search by name or email..." 
-                   onkeyup="searchUsers()">
-            
-            <div class="users-list" id="usersList">
-                <div class="loading">Type to search users...</div>
-            </div>
-        </div>
-    </div>
-</div>
-
+{% block scripts_extra %}
 <script>
-function openSwitchModal() {
-    document.getElementById('switchModal').style.display = 'flex';
-    document.getElementById('userSearch').focus();
-}
+  // Switch user modal trigger
+  document.getElementById('btnSwitchUser')?.addEventListener('click', function(){
+    const modal = document.getElementById('switchUserModal') || document.getElementById('impersonateModal');
+    if (modal && window.bootstrap) new bootstrap.Modal(modal).show();
+    else if (modal) modal.style.display = 'block';
+  });
 
-function closeSwitchModal() {
-    document.getElementById('switchModal').style.display = 'none';
-    document.getElementById('usersList').innerHTML = '<div class="loading">Type to search users...</div>';
-    document.getElementById('userSearch').value = '';
-}
+  // Hard-override any previous export listeners so it always opens the backend page
+  document.addEventListener('DOMContentLoaded', function () {
+    const fixExport = () => {
+      const btn = document.getElementById('btnExport');
+      if (!btn) return;
+      const clean = btn.cloneNode(true);            // strips any existing JS listeners that trigger CSV
+      clean.setAttribute('href', "{% url 'data_export_filter' %}");
+      clean.removeAttribute('data-try');
+      btn.replaceWith(clean);
+    };
+    fixExport();
+    window.addEventListener('load', fixExport);
+    setTimeout(fixExport, 0);
+  });
 
-let searchTimeout;
-
-function searchUsers() {
-    const searchTerm = document.getElementById('userSearch').value;
-    const usersList = document.getElementById('usersList');
-    
-    clearTimeout(searchTimeout);
-    
-    if (searchTerm.length < 2) {
-        usersList.innerHTML = '<div class="loading">Type to search users...</div>';
-        return;
-    }
-    
-    usersList.innerHTML = '<div class="loading">Searching...</div>';
-    
-    // Try the simple GET method first
-    searchTimeout = setTimeout(() => {
-        fetch(`/api/search-users-simple/?search=${encodeURIComponent(searchTerm)}`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Search results:', data); // Debug log
-            if (data.users && data.users.length > 0) {
-                usersList.innerHTML = data.users.map(user => `
-                    <div class="user-item">
-                        <div class="user-info">
-                            <h5>${user.full_name || user.username}</h5>
-                            <small>${user.email}</small>
-                        </div>
-                        <button class="btn-impersonate" onclick="impersonateUser(${user.id})">
-                            Switch
-                        </button>
-                    </div>
-                `).join('');
-            } else {
-                usersList.innerHTML = '<div class="loading">No users found</div>';
-            }
-        })
-        .catch(error => {
-            console.error('Search error:', error); // Debug log
-            usersList.innerHTML = '<div class="error">Error searching users. Check console for details.</div>';
-        });
-    }, 300);
-}
-
-function impersonateUser(userId) {
-    // Get CSRF token
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-    
-    // Create form data
-    const formData = new FormData();
-    formData.append('user_id', userId);
-    formData.append('csrfmiddlewaretoken', csrfToken);
-    
-    fetch('/api/impersonate-simple/', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('Impersonate result:', data); // Debug log
-        if (data.success) {
-            closeSwitchModal();
-            window.location.reload();
-        } else {
-            alert('Error: ' + (data.error || 'Unknown error'));
-        }
-    })
-    .catch(error => {
-        console.error('Impersonation error:', error); // Debug log
-        alert('Error switching user. Check console for details.');
-    });
-}
-
-// Close modal when clicking outside
-document.addEventListener('click', function(event) {
-    const modal = document.getElementById('switchModal');
-    if (event.target === modal) {
-        closeSwitchModal();
-    }
-});
+  // Ensure proposals link uses direct navigation
+  document.getElementById('viewAllProposals')?.addEventListener('click', function(e){
+    // no preventDefault -> normal navigation to /core-admin/event-proposals/
+  });
 </script>
-
 {% endblock %}
