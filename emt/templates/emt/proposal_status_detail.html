@@ -11,10 +11,14 @@
       <div class="overview-fields">
         <div><span class="label">Submitted by:</span> {{ proposal.submitted_by.get_full_name }} ({{ proposal.submitted_by.email }})</div>
         <div><span class="label">Submitted on:</span> {{ proposal.created_at|date:"M d, Y H:i" }}</div>
-        {% if proposal.event_datetime %}
-          <div><span class="label">Event Date:</span> {{ proposal.event_datetime|date:"M d, Y H:i" }}</div>
-        {% endif %}
+        <div><span class="label">Organization Type:</span> {{ proposal.organization.org_type.name }}</div>
         <div><span class="label">Organization:</span> {{ proposal.organization.name }}</div>
+        {% if proposal.event_start_date or proposal.event_end_date %}
+          <div><span class="label">Event Dates:</span>
+            {{ proposal.event_start_date|date:"M d, Y" }}
+            {% if proposal.event_end_date %}– {{ proposal.event_end_date|date:"M d, Y" }}{% endif %}
+          </div>
+        {% endif %}
         {% if proposal.association %}
           <div><span class="label">Association:</span> {{ proposal.association.name }}</div>
         {% endif %}
@@ -79,10 +83,18 @@
       <div class="event-details-card">
         <h3>Event Details</h3>
         <div class="event-details-grid">
+          {% if proposal.event_start_date %}
           <div class="field">
-            <span class="field-label">Date &amp; Time</span>
-            <span class="field-value">{{ proposal.event_datetime|date:"M d, Y H:i" }}</span>
+            <span class="field-label">Start Date</span>
+            <span class="field-value">{{ proposal.event_start_date|date:"M d, Y" }}</span>
           </div>
+          {% endif %}
+          {% if proposal.event_end_date %}
+          <div class="field">
+            <span class="field-label">End Date</span>
+            <span class="field-value">{{ proposal.event_end_date|date:"M d, Y" }}</span>
+          </div>
+          {% endif %}
           <div class="field">
             <span class="field-label">Venue</span>
             <span class="field-value">{{ proposal.venue }}</span>
@@ -100,8 +112,20 @@
             <span class="field-value">{{ proposal.target_audience }}</span>
           </div>
           <div class="field">
-            <span class="field-label">Committee</span>
-            <span class="field-value">{{ proposal.committees }}</span>
+            <span class="field-label">POS &amp; PSO</span>
+            <span class="field-value">{{ proposal.pos_pso }}</span>
+          </div>
+          <div class="field">
+            <span class="field-label">Committees &amp; Collaborations</span>
+            <span class="field-value">{{ proposal.committees_collaborations }}</span>
+          </div>
+          <div class="field">
+            <span class="field-label">Faculty In-Charges</span>
+            <span class="field-value">
+              {% for fi in proposal.faculty_incharges.all %}
+                {{ fi.get_full_name }}{% if not forloop.last %}, {% endif %}
+              {% empty %}-{% endfor %}
+            </span>
           </div>
           <div class="field">
             <span class="field-label">Student Coordinators</span>
@@ -110,6 +134,14 @@
           <div class="field">
             <span class="field-label">No of Activities</span>
             <span class="field-value">{{ proposal.num_activities }}</span>
+          </div>
+          <div class="field">
+            <span class="field-label">Aligned SDG Goals</span>
+            <span class="field-value">
+              {% for goal in proposal.sdg_goals.all %}
+                {{ goal.name }}{% if not forloop.last %}, {% endif %}
+              {% empty %}-{% endfor %}
+            </span>
           </div>
           <div class="field">
             <span class="field-label">Expected Income</span>
