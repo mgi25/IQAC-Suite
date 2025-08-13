@@ -1092,28 +1092,25 @@ def api_faculty(request):
 @login_required
 @require_http_methods(["GET"])
 def api_students(request):
-    """Return students matching the search query."""
+    """Return users with a student membership matching the search query."""
     q = request.GET.get("q", "").strip()
     org_id = request.GET.get("org_id")
 
-    students = Student.objects.select_related("user")
+    users = User.objects.filter(org_memberships__role="student")
     if org_id:
-        students = students.filter(
-            Q(classes__organization_id=org_id)
-            | Q(user__org_memberships__organization_id=org_id)
-        )
+        users = users.filter(org_memberships__organization_id=org_id)
 
     if q:
-        students = students.filter(
-            Q(user__first_name__icontains=q)
-            | Q(user__last_name__icontains=q)
-            | Q(user__email__icontains=q)
+        users = users.filter(
+            Q(first_name__icontains=q)
+            | Q(last_name__icontains=q)
+            | Q(email__icontains=q)
         )
 
-    students = students.distinct().order_by("user__first_name")[:20]
+    users = users.distinct().order_by("first_name")[:20]
     data = [
-        {"id": s.user.id, "text": s.user.get_full_name() or s.user.username}
-        for s in students
+        {"id": u.id, "text": u.get_full_name() or u.username}
+        for u in users
     ]
     return JsonResponse(data, safe=False)
 
