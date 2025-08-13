@@ -220,7 +220,9 @@ $(document).ready(function() {
                     }
                 });
                 if (orgTypeSelect.val()) {
-                    orgTypeTS.setValue(orgTypeSelect.val());
+                    // Set the initial org type without triggering the change handler
+                    // so the pre-selected organization value is preserved.
+                    orgTypeTS.setValue(orgTypeSelect.val(), true);
                     const initialText = orgTypeOptions.find(opt => opt.value === orgTypeSelect.val())?.text?.toLowerCase().trim() || '';
                     if (initialText) {
                         setTimeout(() => {
