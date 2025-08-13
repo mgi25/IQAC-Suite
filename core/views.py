@@ -1247,19 +1247,26 @@ def admin_settings_dashboard(request):
 @user_passes_test(lambda u: u.is_superuser)
 def admin_academic_year_settings(request):
     from transcript.models import AcademicYear
+    from datetime import datetime
 
     academic_year = AcademicYear.objects.first()
 
     if request.method == "POST":
-        year = request.POST.get('year')
-        if year and '-' not in year:
-            try:
-                y = int(year)
-                year = f"{y}-{y + 1}"
-            except ValueError:
-                pass
         start = request.POST.get('start_date') or None
         end = request.POST.get('end_date') or None
+
+        year = None
+        if start:
+            try:
+                start_year = datetime.strptime(start, "%Y-%m-%d").year
+                if end:
+                    end_year = datetime.strptime(end, "%Y-%m-%d").year
+                else:
+                    end_year = start_year + 1
+                year = f"{start_year}-{end_year}"
+            except ValueError:
+                pass
+
         if academic_year:
             academic_year.year = year
             academic_year.start_date = start
