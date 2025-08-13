@@ -238,7 +238,7 @@ class EventReportForm(forms.ModelForm):
             'location', 'blog_link', 'num_student_volunteers', 'num_participants', 'external_contact_details',
             'summary', 'outcomes', 'impact_on_stakeholders', 'innovations_best_practices',
             'pos_pso_mapping', 'needs_grad_attr_mapping', 'contemporary_requirements', 'sdg_value_systems_mapping',
-            'iqac_feedback', 'report_signed_date', 'beneficiaries_details'
+            'iqac_feedback', 'report_signed_date', 'beneficiaries_details', 'attendance_notes'
         ]
         widgets = {
             'location': forms.TextInput(attrs={'class': 'ultra-input'}),
@@ -257,6 +257,7 @@ class EventReportForm(forms.ModelForm):
             'iqac_feedback': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 2}),
             'report_signed_date': forms.DateInput(attrs={'class': 'ultra-input', 'type': 'date'}),
             'beneficiaries_details': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 2}),
+            'attendance_notes': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 2}),
         }
 
 class EventReportAttachmentForm(forms.ModelForm):
