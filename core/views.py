@@ -3728,12 +3728,30 @@ def is_admin(user):
 def stop_impersonation(request):
     """Stop impersonating and return to original user"""
     if 'impersonate_user_id' in request.session:
+        from core.models import log_impersonation_end
+
+        log_impersonation_end(request)
         del request.session['impersonate_user_id']
         if 'original_user_id' in request.session:
             del request.session['original_user_id']
         messages.success(request, 'Stopped impersonation')
-    
-    return redirect('admin_dashboard') 
+
+    return redirect('admin_dashboard')
+
+@login_required
+@user_passes_test(is_admin)
+def admin_impersonate_user(request, user_id):
+    """Start impersonating a user from admin pages."""
+    target_user = get_object_or_404(User, id=user_id, is_active=True)
+    request.session['impersonate_user_id'] = target_user.id
+    request.session['original_user_id'] = request.user.id
+
+    from core.models import log_impersonation_start
+
+    log_impersonation_start(request, target_user)
+    messages.success(request, f"Now impersonating {target_user.get_full_name() or target_user.username}")
+    next_url = request.GET.get('next') or reverse('dashboard')
+    return redirect(next_url)
 
 @login_required
 @user_passes_test(is_admin)

@@ -1,4 +1,4 @@
-{% load static group_filters %}
+{% load static group_filters admin_tags %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -28,6 +28,8 @@
     {% endfor %}
   </div>
   {% endif %}
+
+  {% impersonation_banner %}
 
   <!-- ZONE 1: TOP UTILITY BAR -->
   <div class="top-utility-bar">

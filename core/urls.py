@@ -32,6 +32,8 @@ urlpatterns = [
     path('core-admin/users/<int:user_id>/edit/', views.admin_user_edit, name='admin_user_edit'),
     path('core-admin/users/<int:user_id>/deactivate/', views.admin_user_deactivate, name='admin_user_deactivate'),
     path('core-admin/users/<int:user_id>/activate/', views.admin_user_activate, name='admin_user_activate'),
+    path('core-admin/users/<int:user_id>/impersonate/', views.admin_impersonate_user, name='admin_impersonate_user'),
+    path('core-admin/stop-impersonation/', views.stop_impersonation, name='stop_impersonation'),
 
     # ────────────────────────────────────────────────
     # Admin - Role Management
