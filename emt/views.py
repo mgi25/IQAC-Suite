@@ -211,8 +211,9 @@ def _save_income(proposal, data):
 # ──────────────────────────────
 @login_required
 def submit_proposal(request, pk=None):
-    from transcript.models import AcademicYear
-    active_year = AcademicYear.objects.first()
+    from transcript.models import get_active_academic_year
+
+    active_year = get_active_academic_year()
     selected_academic_year = active_year.year if active_year else ""
 
     proposal = None

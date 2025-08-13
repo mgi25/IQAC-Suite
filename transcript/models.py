@@ -1,4 +1,6 @@
 from django.db import models
+from django.utils import timezone
+from zoneinfo import ZoneInfo
 
 # ─────────────────────────────────────────────────────────────
 # Graduate Attribute and Character Strength
@@ -37,6 +39,29 @@ class AcademicYear(models.Model):
 
     def __str__(self):
         return self.year
+
+
+IST = ZoneInfo("Asia/Kolkata")
+
+
+def get_active_academic_year():
+    """Return the currently active academic year, creating one if missing.
+
+    The active year is determined by the ``is_active`` flag. If none is set
+    active, a year covering the current date (based on IST) is created and
+    returned. This ensures all parts of the application reference a single
+    source of truth for the academic year.
+    """
+    ay = AcademicYear.objects.filter(is_active=True).order_by("-start_date").first()
+    if ay:
+        return ay
+
+    now = timezone.now().astimezone(IST)
+    start_year = now.year if now.month >= 6 else now.year - 1
+    end_year = start_year + 1
+    year_str = f"{start_year}-{end_year}"
+    ay, _ = AcademicYear.objects.get_or_create(year=year_str, defaults={"is_active": True})
+    return ay
 
 class School(models.Model):
     name = models.CharField(max_length=100, unique=True)

@@ -3,7 +3,7 @@ from django.utils.timesince import timesince
 from django.db.models import Q
 from datetime import timedelta
 from emt.models import EventProposal
-from transcript.models import AcademicYear
+from transcript.models import get_active_academic_year
 
 def notifications(request):
     """Return proposal-related notifications for the logged-in user."""
@@ -38,6 +38,5 @@ def notifications(request):
 
 
 def active_academic_year(request):
-    """Provide the single active academic year to all templates."""
-    ay = AcademicYear.objects.first()
-    return {"active_academic_year": ay}
+    """Provide the active academic year to all templates."""
+    return {"active_academic_year": get_active_academic_year()}
