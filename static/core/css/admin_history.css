@@ -1,0 +1,41 @@
+body {
+    background: #e8f3fc;
+}
+.admin-history-container,
+.history-detail-container {
+    background: #fff;
+    border-radius: 24px;
+    width: calc(100% - 40px);
+    margin: 40px auto;
+    padding: 40px;
+    box-shadow: 0 8px 40px rgba(34,116,203,0.10);
+}
+.history-title {
+    font-size: 2.1rem;
+    font-weight: 800;
+    color: #20508c;
+    margin-bottom: 22px;
+    letter-spacing: -1px;
+}
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.history-table th,
+.history-table td {
+    border-bottom: 1.5px solid #e3eefd;
+    padding: 12px 16px;
+    text-align: left;
+}
+.history-table th {
+    background: #f4f8fc;
+    color: #20508c;
+    font-weight: 600;
+}
+.pagination {
+    margin-top: 20px;
+    text-align: center;
+}
+.pagination .page-link {
+    margin: 0 5px;
+}

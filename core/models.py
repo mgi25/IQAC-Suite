@@ -421,14 +421,45 @@ class ImpersonationLog(models.Model):
     def __str__(self):
         return f"{self.original_user} -> {self.impersonated_user} at {self.started_at}"
 
+
+class ActivityLog(models.Model):
+    """Generic activity log for auditing system actions"""
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="activity_logs",
+    )
+    action = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    metadata = models.JSONField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-timestamp"]
+
+    def __str__(self):
+        return f"{self.timestamp} - {self.user} - {self.action}"
+
 # Enhanced views with logging
 def log_impersonation_start(request, target_user):
     """Log when impersonation starts"""
+    ip = request.META.get('REMOTE_ADDR')
+    ua = request.META.get('HTTP_USER_AGENT', '')
     ImpersonationLog.objects.create(
         original_user=request.user,
         impersonated_user=target_user,
-        ip_address=request.META.get('REMOTE_ADDR'),
-        user_agent=request.META.get('HTTP_USER_AGENT', '')
+        ip_address=ip,
+        user_agent=ua
+    )
+    ActivityLog.objects.create(
+        user=request.user,
+        action="impersonation_start",
+        description=f"Started impersonating {target_user.username}",
+        ip_address=ip,
+        metadata={"target_user": target_user.id},
     )
 
 def log_impersonation_end(request):
@@ -440,9 +471,16 @@ def log_impersonation_end(request):
                 impersonated_user_id=request.session['impersonate_user_id'],
                 ended_at__isnull=True
             ).first()
-            
+
             if log_entry:
                 log_entry.ended_at = timezone.now()
                 log_entry.save()
+                ActivityLog.objects.create(
+                    user=log_entry.original_user,
+                    action="impersonation_end",
+                    description=f"Stopped impersonating {log_entry.impersonated_user.username}",
+                    ip_address=request.META.get('REMOTE_ADDR'),
+                    metadata={"target_user": log_entry.impersonated_user.id},
+                )
         except Exception:
             pass  # Handle gracefully

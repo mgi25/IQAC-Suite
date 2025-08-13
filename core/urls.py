@@ -61,6 +61,12 @@ urlpatterns = [
     path('core-admin/reports/<int:report_id>/approve/', views.admin_reports_approve, name='admin_reports_approve'),
     path('core-admin/reports/<int:report_id>/reject/', views.admin_reports_reject, name='admin_reports_reject'),
 
+    # ────────────────────────────────────────────
+    # Admin - History
+    # ────────────────────────────────────────────
+    path('core-admin/history/', views.admin_history, name='admin_history'),
+    path('core-admin/history/<int:pk>/', views.admin_history_detail, name='admin_history_detail'),
+
     # ────────────────────────────────────────────────
     # Admin - Master Data & Settings
     # ────────────────────────────────────────────────

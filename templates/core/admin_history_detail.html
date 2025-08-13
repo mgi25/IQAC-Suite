@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'core/css/admin_history.css' %}">
+<div class="history-detail-container">
+  <h1 class="history-title">Activity Detail</h1>
+  <p><strong>Timestamp:</strong> {{ log.timestamp|date:"Y-m-d H:i" }}</p>
+  <p><strong>User:</strong> {{ log.user.get_full_name|default:log.user.username|default:"System" }}</p>
+  <p><strong>Action:</strong> {{ log.action }}</p>
+  <p><strong>Description:</strong> {{ log.description|default:"-" }}</p>
+  {% if log.ip_address %}
+  <p><strong>IP Address:</strong> {{ log.ip_address }}</p>
+  {% endif %}
+  {% if log.metadata %}
+  <p><strong>Metadata:</strong> {{ log.metadata }}</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -236,6 +236,15 @@
       </div>
       {% endif %}
 
+      {% if user.is_superuser or request.session.role == 'admin' %}
+      <div class="nav-item">
+        <a href="/core-admin/history/" class="nav-link {% if request.resolver_match.url_name == 'admin_history' or request.resolver_match.url_name == 'admin_history_detail' %}active{% endif %}">
+          <i class="fas fa-history nav-icon"></i>
+          <span class="nav-text">History</span>
+        </a>
+      </div>
+      {% endif %}
+
       <!-- Settings - Expandable (Admin Only) -->
       {% if user.is_superuser or request.session.role == 'admin' %}
       <div class="nav-section {% if 'settings' in request.path or 'approval' in request.path or 'pso-po' in request.path or 'master-data' in request.path or 'outcomes' in request.path or 'sdg-goals' in request.path or request.resolver_match.url_name == 'admin_settings' or request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'admin_pso_po_management' or request.resolver_match.url_name == 'admin_outcome_dashboard' or request.resolver_match.url_name == 'admin_sdg_management' or request.resolver_match.url_name == 'admin_academic_year_settings' %}expanded{% endif %}">
