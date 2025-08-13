@@ -24,6 +24,7 @@ from core.models import (
     ApprovalFlowTemplate,
     SDGGoal,
     Class,
+    SDG_GOALS,
 )
 from django.contrib.auth.models import User
 from emt.utils import (
@@ -284,7 +285,7 @@ def submit_proposal(request, pk=None):
         "objectives": objectives,
         "outcomes": outcomes,
         "flow": flow,
-        "sdg_goals_list": json.dumps(list(SDGGoal.objects.values('id','name'))),
+        "sdg_goals_list": json.dumps(list(SDGGoal.objects.filter(name__in=SDG_GOALS).values('id','name'))),
         "activities_json": json.dumps(activities),
         "speakers_json": json.dumps(speakers),
         "expenses_json": json.dumps(expenses),

@@ -1293,19 +1293,10 @@ def admin_outcome_dashboard(request):
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_sdg_management(request):
-    """Manage Sustainable Development Goals."""
-    from .models import SDGGoal
+    """Display Sustainable Development Goals."""
+    from .models import SDGGoal, SDG_GOALS
 
-    if request.method == "POST":
-        if request.POST.get("delete_goal_id"):
-            SDGGoal.objects.filter(id=request.POST["delete_goal_id"]).delete()
-            return redirect("admin_sdg_management")
-        name = request.POST.get("name", "").strip()
-        if name:
-            SDGGoal.objects.get_or_create(name=name)
-        return redirect("admin_sdg_management")
-
-    goals = SDGGoal.objects.all().order_by("id")
+    goals = SDGGoal.objects.filter(name__in=SDG_GOALS).order_by("id")
     return render(request, "core/admin_sdg_management.html", {"goals": goals})
 
 
