@@ -14,13 +14,62 @@
       <h2>Event Information</h2>
       <table>
         <tr><th>Organization</th><td>{{ proposal.organization.name|default:"—" }}</td></tr>
-        <tr><th>Committee(s)</th><td>{{ proposal.committees|default:"—" }}</td></tr>
+        <tr>
+          <th>Committees &amp; Collaborations</th>
+          <td>
+            {% if proposal.committees_collaborations %}
+              {{ proposal.committees_collaborations }}
+            {% elif proposal.committees %}
+              {{ proposal.committees }}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+        </tr>
         <tr><th>Event Title</th><td>{{ proposal.event_title }}</td></tr>
         <tr><th>No. of Activities</th><td>{{ proposal.num_activities|default:"—" }}</td></tr>
-        <tr><th>Date & Time</th><td>{{ proposal.event_datetime|date:"d M Y, H:i" }}</td></tr>
+        <tr>
+          <th>Start Date</th>
+          <td>
+            {% if proposal.event_start_date %}
+              {{ proposal.event_start_date|date:"d M Y" }}
+            {% elif proposal.event_datetime %}
+              {{ proposal.event_datetime|date:"d M Y" }}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+        </tr>
+        <tr>
+          <th>End Date</th>
+          <td>
+            {% if proposal.event_end_date %}
+              {{ proposal.event_end_date|date:"d M Y" }}
+            {% elif proposal.event_datetime %}
+              {{ proposal.event_datetime|date:"d M Y" }}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+        </tr>
         <tr><th>Venue</th><td>{{ proposal.venue|default:"—" }}</td></tr>
         <tr><th>Academic Year</th><td>{{ proposal.academic_year|default:"—" }}</td></tr>
         <tr><th>Target Audience</th><td>{{ proposal.target_audience|default:"—" }}</td></tr>
+        <tr><th>POS &amp; PSO</th><td>{{ proposal.pos_pso|default:"—" }}</td></tr>
+        <tr>
+          <th>SDG Goals</th>
+          <td>
+            {% with goals=proposal.sdg_goals.all %}
+              {% if goals %}
+                {% for goal in goals %}
+                  {{ goal.name }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+              {% else %}
+                —
+              {% endif %}
+            {% endwith %}
+          </td>
+        </tr>
         <tr>
           <th>Faculty Incharges</th>
           <td>
