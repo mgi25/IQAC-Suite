@@ -10,31 +10,16 @@
     <div class="sdg-title">SDG Goals Management</div>
   </div>
 
-  <div class="sdg-toolbar">
-    <form method="post" class="row">
-      {% csrf_token %}
-      <input type="text" name="name" placeholder="Add new SDG goal..." required class="input">
-      <button type="submit" class="btn btn-primary">+ Add Goal</button>
-    </form>
-  </div>
-
   {% if goals %}
   <div class="card mt">
     <div class="table-wrap">
       <table class="table">
-        <thead><tr><th>#</th><th>Goal</th><th>Action</th></tr></thead>
+        <thead><tr><th>#</th><th>Goal</th></tr></thead>
         <tbody>
         {% for goal in goals %}
           <tr>
             <td>{{ goal.id }}</td>
             <td>{{ goal.name }}</td>
-            <td>
-              <form method="post" style="display:inline">
-                {% csrf_token %}
-                <input type="hidden" name="delete_goal_id" value="{{ goal.id }}">
-                <button type="submit" class="btn btn-quiet delete-btn"><i class="fas fa-trash"></i> Delete</button>
-              </form>
-            </td>
           </tr>
         {% endfor %}
         </tbody>
