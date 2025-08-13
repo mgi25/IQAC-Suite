@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Student Dashboard – Event Management Suite{% endblock %}
+
+{% block head_extra %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="{% static 'core/css/student_dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ems-dashboard">
+  <header class="topbar">
+    <div>
+      <h1>Welcome, {{ user.first_name|default:user.username }}</h1>
+      <span class="topbar-date">{% now "F j, Y · l" %}</span>
+    </div>
+  </header>
+
+  <!-- TOP ROW -->
+  <section class="kpi-row">
+    <button class="kpi-card" id="kpiEvents">
+      <div class="kpi-icon bg-indigo"><i class="fa-solid fa-people-group"></i></div>
+      <div class="kpi-content">
+        <span class="kpi-title">Events Participated</span>
+        <span class="kpi-value">{{ participated_events_count|default:0 }}</span>
+      </div>
+    </button>
+
+    <button class="kpi-card" id="kpiAchievements">
+      <div class="kpi-icon bg-sky"><i class="fa-solid fa-trophy"></i></div>
+      <div class="kpi-content">
+        <span class="kpi-title">Achievements</span>
+        <span class="kpi-value">{{ achievements_count|default:0 }}</span>
+      </div>
+    </button>
+
+    <button class="kpi-card" id="kpiClubs">
+      <div class="kpi-icon bg-orange"><i class="fa-solid fa-users-rays"></i></div>
+      <div class="kpi-content">
+        <span class="kpi-title">Clubs Joined</span>
+        <span class="kpi-value">{{ clubs_count|default:0 }}</span>
+      </div>
+    </button>
+
+    <button class="kpi-card" id="kpiActivityScore">
+      <div class="kpi-icon bg-emerald"><i class="fa-solid fa-bolt"></i></div>
+      <div class="kpi-content">
+        <span class="kpi-title">Activity Score</span>
+        <span class="kpi-value">{{ activity_score|default:0 }}%</span>
+      </div>
+    </button>
+
+    <!-- Profile -->
+    <div class="profile-kpi card">
+      <div class="pkp-avatar">
+        {% if user.profile and user.profile.photo %}
+          <img src="{{ user.profile.photo.url }}" alt="{{ user.get_full_name|default:user.username }}">
+        {% else %}
+          <span class="pkp-initials">
+            {% if user.first_name %}{{ user.first_name.0|upper }}{% if user.last_name %}{{ user.last_name.0|upper }}{% endif %}{% else %}{{ user.username.0|upper }}{% endif %}
+          </span>
+        {% endif %}
+      </div>
+      <div class="pkp-body">
+        <h1 class="pkp-name">{{ user.get_full_name|default:user.username }}</h1>
+        <h2 class="pkp-sub">{{ user.email }}</h2>
+        <h3 class="pkp-meta">
+          <span>Department: <strong>{{ user.department|default:"—" }}</strong></span>
+          <span>Year: <strong>{{ user.year|default:"—" }}</strong></span>
+        </h3>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAIN GRID -->
+  <main class="grid-3">
+    <!-- Recent Activity -->
+    <section class="card eq" id="cardActions">
+      <div class="card-header">
+        <h3><i class="fa-solid fa-inbox"></i> Recent Activity</h3>
+      </div>
+      <div class="list">
+        {% if recent_activity %}
+          {% for act in recent_activity %}
+            <article class="list-item">
+              <div class="bullet"><i class="fa-solid fa-circle-check"></i></div>
+              <div class="list-body">
+                <h4>{{ act.title }}</h4>
+                <p>{{ act.description }}</p>
+              </div>
+            </article>
+          {% endfor %}
+        {% else %}
+          <div class="empty">No recent activity.</div>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- Performance/Contribution Chart -->
+    <section class="card eq" id="cardPerformance">
+      <div class="card-header">
+        <h3><i class="fa-solid fa-chart-pie"></i> <span id="perfTitle">Graduate Attributes</span></h3>
+        <div class="header-actions">
+          <div class="seg">
+            <button class="seg-btn active" data-view="performance">Performance</button>
+            <button class="seg-btn" data-view="contribution">Contribution</button>
+          </div>
+        </div>
+      </div>
+      <div class="chart-wrap donut">
+        <canvas id="donutChart"></canvas>
+        <div class="chart-legend" id="donutLegend"></div>
+      </div>
+    </section>
+
+    <!-- Calendar -->
+    <section class="card eq" id="cardCalendar">
+      <div class="card-header">
+        <h3><i class="fa-regular fa-calendar"></i> Calendar</h3>
+      </div>
+      <div class="mini-cal" id="miniCalendar">
+        <div class="cal-head">
+          <button class="cal-nav" id="calPrev"><i class="fa-solid fa-chevron-left"></i></button>
+          <div id="calTitle"></div>
+          <button class="cal-nav" id="calNext"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+        <div class="cal-weekdays">
+          <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+      <div id="upcomingWrap" class="upcoming"></div>
+    </section>
+
+    <!-- Heatmap -->
+    <section class="card" id="cardContribution">
+      <div class="card-header"><h3><i class="fa-solid fa-fire"></i> Yearly Contribution</h3></div>
+      <div id="heatmapContainer" class="heatmap"></div>
+    </section>
+
+    <!-- My Event Proposals -->
+    <section class="card eq" id="cardTodo">
+      <div class="card-header">
+        <h3><i class="fa-regular fa-square-check"></i> My Event Proposals</h3>
+      </div>
+      <ul id="todoList" class="todo">
+        {% if proposals %}
+          {% for p in proposals %}
+            <li>{{ p.title }} – <strong>{{ p.status }}</strong></li>
+          {% endfor %}
+        {% else %}
+          <li>No proposals yet.</li>
+        {% endif %}
+      </ul>
+    </section>
+  </main>
+
+  {{ calendar_events|json_script:"calendarEventsJson" }}
+  <script>
+    try{window.DASHBOARD_EVENTS=JSON.parse(document.getElementById('calendarEventsJson').textContent);}catch{window.DASHBOARD_EVENTS=[];}
+  </script>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script src="{% static 'core/js/student_dashboard.js' %}"></script>
+{% endblock %}

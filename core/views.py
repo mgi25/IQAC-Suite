@@ -178,77 +178,99 @@ def api_roles(request):
     return JsonResponse({"roles": data})
 
 # ─────────────────────────────────────────────────────────────
-#  Dashboard
+#  Dashboard (safe: context always defined)
 # ─────────────────────────────────────────────────────────────
 @login_required
 def dashboard(request):
-    # Role-based landing logic
     user = request.user
-    roles = RoleAssignment.objects.filter(user=user).select_related('role', 'organization')
-    role_names = [ra.role.name for ra in roles]
 
-    # Superuser/admin: redirect to admin dashboard
+    # ---- role / domain detection ----
+    roles = RoleAssignment.objects.filter(user=user).select_related('role', 'organization')
+    role_lc = [ra.role.name.lower() for ra in roles]
+
     if user.is_superuser:
         return redirect('admin_dashboard')
 
-    # Student: show student dashboard (core/dashboard.html)
-    if 'student' in [r.lower() for r in role_names]:
-        dashboard_template = "core/dashboard.html"
-    # Faculty: show faculty dashboard (core/dashboard.html)
-    elif 'faculty' in [r.lower() for r in role_names]:
-        dashboard_template = "core/dashboard.html"
-    # Default: show dashboard
-    else:
-        dashboard_template = "core/dashboard.html"
+    email = (user.email or "").lower()
+    is_student = ('student' in role_lc) or email.endswith('@christuniversity.in')
+    dashboard_template = "core/student_dashboard.html" if is_student else "core/dashboard.html"
 
-    # Get events data
-    finalized_events = EventProposal.objects.filter(status='finalized').distinct()
-    
-    # For students, show events they are participating in or have submitted
-    # For faculty, show events they are involved with
-    if 'student' in [r.lower() for r in role_names]:
-        my_events = EventProposal.objects.filter(
-            Q(submitted_by=user) | Q(status='finalized')
-        ).distinct()
-    else:
-        my_events = finalized_events.filter(Q(submitted_by=user) | Q(faculty_incharges=user)).distinct()
-    
-    other_events = finalized_events.exclude(Q(submitted_by=user) | Q(faculty_incharges=user)).distinct()
-    upcoming_events_count = finalized_events.filter(event_datetime__gte=timezone.now()).count()
-    organized_events_count = EventProposal.objects.filter(submitted_by=user).count()
-    week_start = timezone.now().date() - timezone.timedelta(days=timezone.now().weekday())
-    week_end = week_start + timezone.timedelta(days=6)
-    this_week_events = finalized_events.filter(event_datetime__date__gte=week_start, event_datetime__date__lte=week_end).count()
-    students_participated = finalized_events.aggregate(
-        total=Sum('fest_fee_participants') + Sum('conf_fee_participants')
-    )['total'] or 0
-    my_students = Student.objects.filter(mentor=user)
-    my_classes = Class.objects.filter(teacher=user, is_active=True)
-    
-    # Get user's recent proposals for notifications
-    user_proposals = EventProposal.objects.filter(submitted_by=user).order_by('-updated_at')[:5]
-    
-    # Prepare calendar events data for JavaScript
-    all_events = finalized_events.filter(event_datetime__isnull=False)
+    # ---- defaults (avoid UnboundLocalError) ----
+    my_events = EventProposal.objects.none()
+    other_events = EventProposal.objects.none()
+    upcoming_events_count = 0
+    organized_events_count = 0
+    this_week_events = 0
+    students_participated = 0
+    my_students = Student.objects.none()
+    my_classes = Class.objects.none()
+    user_proposals = EventProposal.objects.none()
     calendar_events = []
-    for event in all_events:
-        calendar_events.append({
-            'id': event.id,
-            'title': event.event_title,
-            'date': event.event_datetime.strftime('%Y-%m-%d'),
-            'datetime': event.event_datetime.strftime('%Y-%m-%d %H:%M'),
-            'venue': event.venue or '',
-            'organization': event.organization.name if event.organization else '',
-            'submitted_by': event.submitted_by.get_full_name() or event.submitted_by.username,
-            'participants': event.fest_fee_participants or event.conf_fee_participants or 0,
-            'is_my_event': user in [event.submitted_by] + list(event.faculty_incharges.all())
-        })
-    
-    # Debug: Print calendar events to console
-    print(f"Calendar events for user {user.username}: {len(calendar_events)} events")
-    for event in calendar_events[:3]:  # Print first 3 events for debugging
-        print(f"  - {event['title']} on {event['date']}")
-    
+
+    # ---- data (wrapped for safety) ----
+    try:
+        finalized_events = EventProposal.objects.filter(status='finalized').distinct()
+
+        if is_student:
+            my_events = EventProposal.objects.filter(
+                Q(submitted_by=user) | Q(status='finalized')
+            ).distinct()
+        else:
+            my_events = finalized_events.filter(
+                Q(submitted_by=user) | Q(faculty_incharges=user)
+            ).distinct()
+
+        other_events = finalized_events.exclude(
+            Q(submitted_by=user) | Q(faculty_incharges=user)
+        ).distinct()
+
+        upcoming_events_count = finalized_events.filter(
+            event_datetime__gte=timezone.now()
+        ).count()
+
+        organized_events_count = EventProposal.objects.filter(submitted_by=user).count()
+
+        week_start = timezone.now().date() - timezone.timedelta(days=timezone.now().weekday())
+        week_end = week_start + timezone.timedelta(days=6)
+        this_week_events = finalized_events.filter(
+            event_datetime__date__gte=week_start,
+            event_datetime__date__lte=week_end
+        ).count()
+
+        students_participated = finalized_events.aggregate(
+            total=Sum('fest_fee_participants') + Sum('conf_fee_participants')
+        )['total'] or 0
+
+        my_students = Student.objects.filter(mentor=user)
+        my_classes = Class.objects.filter(teacher=user, is_active=True)
+
+        user_proposals = EventProposal.objects.filter(submitted_by=user).order_by('-updated_at')[:5]
+
+        all_events = finalized_events.filter(event_datetime__isnull=False)
+        calendar_events = [{
+            'id': e.id,
+            'title': e.event_title,
+            'date': e.event_datetime.strftime('%Y-%m-%d'),
+            'datetime': e.event_datetime.strftime('%Y-%m-%d %H:%M'),
+            'venue': e.venue or '',
+            'organization': e.organization.name if e.organization else '',
+            'submitted_by': e.submitted_by.get_full_name() or e.submitted_by.username,
+            'participants': e.fest_fee_participants or e.conf_fee_participants or 0,
+            'is_my_event': user in [e.submitted_by] + list(e.faculty_incharges.all())
+        } for e in all_events]
+
+    except Exception:  # keep UI alive even if data fails
+        pass
+
+    # ---- student-only bindings ----
+    participated_events_count = my_events.count() if is_student else 0
+    achievements_count = 0
+    clubs_count = 0
+    activity_score = 0
+    recent_activity = []
+    proposals_min = [{'title': p.event_title, 'status': p.get_status_display()} for p in user_proposals]
+
+    # ---- context (always defined) ----
     context = {
         "my_events": my_events,
         "other_events": other_events,
@@ -258,12 +280,36 @@ def dashboard(request):
         "students_participated": students_participated,
         "my_students": my_students,
         "my_classes": my_classes,
-        "role_names": role_names,
+        "role_names": [ra.role.name for ra in roles],
         "user": user,
         "user_proposals": user_proposals,
-        "calendar_events": calendar_events,  # Pass as Python list, not JSON
+        "calendar_events": calendar_events,
+
+        # student dashboard bindings
+        "participated_events_count": participated_events_count,
+        "achievements_count": achievements_count,
+        "clubs_count": clubs_count,
+        "activity_score": activity_score,
+        "recent_activity": recent_activity,
+        "proposals": proposals_min,
     }
-    return render(request, dashboard_template, context)
+
+        # --- robust template selection + debug ---
+    from django.conf import settings
+    from django.template.loader import select_template
+    import os
+
+    # quick runtime checks (remove after verifying)
+    print("TEMPLATE_DIRS:", settings.TEMPLATES[0]['DIRS'])
+    exp1 = os.path.join(settings.BASE_DIR, "templates", "core", "student_dashboard.html")
+    exp2 = os.path.join(settings.BASE_DIR, "templates", "student_dashboard.html")
+    print("EXPECTS:", exp1, "EXISTS:", os.path.exists(exp1))
+    print("EXPECTS:", exp2, "EXISTS:", os.path.exists(exp2))
+
+    candidates = ["core/student_dashboard.html", "student_dashboard.html"] if is_student else ["core/dashboard.html", "dashboard.html"]
+    tpl = select_template(candidates)  # picks the first that actually exists
+    return render(request, tpl.template.name, context)
+
 
 @login_required
 def event_contribution_data(request):
@@ -4294,3 +4340,4 @@ def settings_pso_po_management(request):
     }
     
     return render(request, 'core/settings_pso_po_management.html', context)
+
