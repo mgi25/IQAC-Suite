@@ -1730,19 +1730,59 @@
 }
 
 /* Loading state for user dropdown */
+/* User dropdown styles for assignment modal */
+.user-search-container {
+    position: relative;
+}
+.user-dropdown {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    z-index: 1000;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    max-height: 220px;
+    overflow-y: auto;
+    margin-top: 2px;
+}
 .user-dropdown .loading {
     padding: 20px;
     text-align: center;
     color: #6b7280;
     font-style: italic;
 }
-
-/* No users found state */
 .user-dropdown .no-users {
     padding: 20px;
     text-align: center;
     color: #6b7280;
     font-style: italic;
+}
+.user-option {
+    padding: 12px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid #f3f4f6;
+    transition: background 0.15s;
+}
+.user-option:last-child {
+    border-bottom: none;
+}
+.user-option:hover {
+    background: #f3f4f6;
+}
+.user-info {
+    display: flex;
+    flex-direction: column;
+}
+.user-name {
+    font-weight: 600;
+    color: #1f2937;
+}
+.user-details {
+    font-size: 0.9em;
+    color: #6b7280;
 }
 
 /* Responsive adjustments for assignment column */
