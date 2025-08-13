@@ -1098,7 +1098,10 @@ def api_students(request):
 
     students = Student.objects.select_related("user")
     if org_id:
-        students = students.filter(classes__organization_id=org_id)
+        students = students.filter(
+            Q(classes__organization_id=org_id)
+            | Q(user__org_memberships__organization_id=org_id)
+        )
 
     if q:
         students = students.filter(
