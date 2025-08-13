@@ -1211,7 +1211,19 @@ def admin_proposal_detail(request, proposal_id):
         len(proposal.expense_details.all()),
         len(proposal.approval_steps.all()),
     )
-    return render(request, "core/admin_proposal_detail.html", {"proposal": proposal})
+    steps = [
+        {"key": "draft", "label": "Draft"},
+        {"key": "submitted", "label": "Submitted"},
+        {"key": "under_review", "label": "Under Review"},
+        {"key": "approved", "label": "Approved"},
+        {"key": "rejected", "label": "Rejected"},
+        {"key": "returned", "label": "Returned for Revision"},
+    ]
+    return render(
+        request,
+        "core/admin_proposal_detail.html",
+        {"proposal": proposal, "steps": steps},
+    )
 
 @login_required
 def proposal_detail(request, proposal_id):
