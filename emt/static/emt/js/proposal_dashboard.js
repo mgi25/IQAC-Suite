@@ -14,6 +14,51 @@ $(document).ready(function() {
     let audienceClassMap = {};
     const autoFillEnabled = new URLSearchParams(window.location.search).has('autofill');
 
+    // Demo data used for rapid prototyping. Remove once real data is wired.
+    const AUTO_FILL_DATA = {
+        titles: ['AI Workshop', 'Tech Symposium', 'Innovation Summit'],
+        audiences: ['All Students', 'CSE Students', 'Faculty Members'],
+        venues: ['Main Auditorium', 'Conference Hall A', 'Online Platform'],
+        objectives: [
+            '• Learn about emerging technologies\n• Encourage innovation\n• Foster collaboration',
+            '• Understand basics\n• Gain hands-on experience',
+            '• Explore research trends\n• Build industry connections'
+        ],
+        outcomes: [
+            'Participants will understand fundamentals',
+            'Improved networking amongst attendees',
+            'Creation of follow-up projects'
+        ],
+        need: [
+            'To bridge the gap between theory and practice',
+            'Demand for skills in industry',
+            'Enhance student exposure to experts'
+        ],
+        schedule: [
+            '09:00 AM - Registration\n10:00 AM - Inauguration\n11:00 AM - Keynote Session',
+            '10:00 AM - Welcome\n10:30 AM - Talk 1\n12:00 PM - Lunch'
+        ],
+        speakerNames: ['Dr. Jane Smith', 'Prof. John Doe', 'Ms. Alice Johnson'],
+        designations: ['Professor', 'Senior Analyst', 'Researcher'],
+        affiliations: ['XYZ University', 'Tech Corp', 'Research Lab'],
+        emails: ['jane@example.com', 'john@example.com', 'alice@example.com'],
+        phones: ['9876543210', '9123456780', '9988776655'],
+        linkedins: [
+            'https://linkedin.com/in/jane',
+            'https://linkedin.com/in/john',
+            'https://linkedin.com/in/alice'
+        ],
+        bios: [
+            'Expert in AI and ML with 10 years of experience.',
+            'Data science enthusiast and keynote speaker.',
+            'Researcher focusing on emerging technologies.'
+        ],
+        expenseItems: ['Venue Setup', 'Refreshments', 'Equipment Rental'],
+        incomeItems: ['Registration Fees', 'Sponsorship', 'Donations']
+    };
+
+    const getRandom = arr => arr[Math.floor(Math.random() * arr.length)];
+
     initializeDashboard();
 
     function initializeDashboard() {
@@ -22,7 +67,7 @@ $(document).ready(function() {
         loadExistingData();
         checkForExistingErrors();
         enablePreviouslyVisitedSections();
-        $('#autofill-btn').on('click', autofillTestData);
+        $('#autofill-btn').on('click', () => autofillTestData(currentExpandedCard));
         if (!$('.form-errors-banner').length) {
             setTimeout(() => {
                 activateSection('basic-info');
@@ -184,8 +229,8 @@ $(document).ready(function() {
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
             }
-            if (autoFillEnabled && section === 'basic-info') {
-                autofillTestData();
+            if (autoFillEnabled) {
+                autofillTestData(section);
             }
         }, 100);
     }
@@ -1706,39 +1751,115 @@ function getWhyThisEventForm() {
         updateSubmitButton();
     }
 
-    function autofillTestData() {
+    function autofillTestData(section) {
         const today = new Date().toISOString().split('T')[0];
-        const fields = {
-            'event-title-modern': 'Test Event Title',
-            'target-audience-modern': 'Test Audience',
-            'target-audience-class-ids': '1',
-            'venue-modern': 'Main Auditorium',
-            'event-start-date': today,
-            'event-end-date': today,
-            'academic-year-modern': '2024-2025',
-            'pos-pso-modern': 'PO1, PSO2',
-            'sdg-goals-modern': 'Goal 4',
-            'num-activities-modern': '1'
-        };
 
-        Object.entries(fields).forEach(([id, value]) => {
-            const el = document.getElementById(id);
-            if (!el) return;
-            el.value = value;
-            el.dispatchEvent(new Event('input', { bubbles: true }));
-            el.dispatchEvent(new Event('change', { bubbles: true }));
-        });
+        if (section === 'basic-info') {
+            const fields = {
+                'event-title-modern': getRandom(AUTO_FILL_DATA.titles),
+                'target-audience-modern': getRandom(AUTO_FILL_DATA.audiences),
+                'target-audience-class-ids': '1',
+                'venue-modern': getRandom(AUTO_FILL_DATA.venues),
+                'event-start-date': today,
+                'event-end-date': today,
+                'academic-year-modern': '2024-2025',
+                'pos-pso-modern': 'PO1, PSO2',
+                'sdg-goals-modern': 'Goal 4',
+                'num-activities-modern': '1'
+            };
 
-        const focusSelect = document.getElementById('event-focus-type-modern');
-        if (focusSelect && focusSelect.options.length > 1) {
-            focusSelect.selectedIndex = 1;
-            focusSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            Object.entries(fields).forEach(([id, value]) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.value = value;
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+
+            const focusSelect = document.getElementById('event-focus-type-modern');
+            if (focusSelect && focusSelect.options.length > 1) {
+                focusSelect.selectedIndex = 1;
+                focusSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+
+            // Fill dynamic activity once rendered
+            setTimeout(() => {
+                const actName = document.getElementById('activity_name_1');
+                const actDate = document.getElementById('activity_date_1');
+                if (actName) actName.value = 'Intro Session';
+                if (actDate) actDate.value = today;
+            }, 150);
+
+            const sc = document.getElementById('student-coordinators-modern');
+            if (sc && !sc.options.length) {
+                sc.appendChild(new Option('Demo Student', '1', true, true));
+                sc.dispatchEvent(new Event('change', { bubbles: true }));
+            }
         }
 
-        const facultySelect = document.getElementById('faculty-select');
-        if (facultySelect && facultySelect.options.length > 0) {
-            facultySelect.options[0].selected = true;
-            $(facultySelect).trigger('change');
+        if (section === 'why-this-event') {
+            const need = document.getElementById('need-analysis-modern');
+            const obj = document.getElementById('objectives-modern');
+            const out = document.getElementById('outcomes-modern');
+            if (need) need.value = getRandom(AUTO_FILL_DATA.need);
+            if (obj) obj.value = getRandom(AUTO_FILL_DATA.objectives);
+            if (out) out.value = getRandom(AUTO_FILL_DATA.outcomes);
+        }
+
+        if (section === 'schedule') {
+            const sched = document.getElementById('schedule-modern');
+            if (sched) sched.value = getRandom(AUTO_FILL_DATA.schedule);
+        }
+
+        if (section === 'speakers') {
+            document.getElementById('add-speaker-btn')?.click();
+            setTimeout(() => {
+                const idx = 0;
+                const name = document.getElementById(`speaker_full_name_${idx}`);
+                const desig = document.getElementById(`speaker_designation_${idx}`);
+                const aff = document.getElementById(`speaker_affiliation_${idx}`);
+                const email = document.getElementById(`speaker_contact_email_${idx}`);
+                const phone = document.getElementById(`speaker_contact_number_${idx}`);
+                const linked = document.getElementById(`speaker_linkedin_url_${idx}`);
+                const bio = document.getElementById(`speaker_detailed_profile_${idx}`);
+                if (name) name.value = getRandom(AUTO_FILL_DATA.speakerNames);
+                if (desig) desig.value = getRandom(AUTO_FILL_DATA.designations);
+                if (aff) aff.value = getRandom(AUTO_FILL_DATA.affiliations);
+                if (email) email.value = getRandom(AUTO_FILL_DATA.emails);
+                if (phone) phone.value = getRandom(AUTO_FILL_DATA.phones);
+                if (linked) linked.value = getRandom(AUTO_FILL_DATA.linkedins);
+                if (bio) bio.value = getRandom(AUTO_FILL_DATA.bios);
+            }, 100);
+        }
+
+        if (section === 'expenses') {
+            document.getElementById('add-expense-btn')?.click();
+            setTimeout(() => {
+                const idx = 0;
+                const sl = document.getElementById(`expense_sl_no_${idx}`);
+                const part = document.getElementById(`expense_particulars_${idx}`);
+                const amt = document.getElementById(`expense_amount_${idx}`);
+                if (sl) sl.value = '1';
+                if (part) part.value = getRandom(AUTO_FILL_DATA.expenseItems);
+                if (amt) amt.value = '1000';
+            }, 100);
+        }
+
+        if (section === 'income') {
+            document.getElementById('add-income-btn')?.click();
+            setTimeout(() => {
+                const idx = 0;
+                const sl = document.getElementById(`income_sl_no_${idx}`);
+                const part = document.getElementById(`income_particulars_${idx}`);
+                const partCount = document.getElementById(`income_participants_${idx}`);
+                const rate = document.getElementById(`income_rate_${idx}`);
+                const amt = document.getElementById(`income_amount_${idx}`);
+                if (sl) sl.value = '1';
+                if (part) part.value = getRandom(AUTO_FILL_DATA.incomeItems);
+                if (partCount) partCount.value = '50';
+                if (rate) rate.value = '100';
+                if (amt) amt.value = '5000';
+            }, 100);
         }
     }
 
