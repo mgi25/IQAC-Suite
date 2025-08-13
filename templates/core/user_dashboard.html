@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Dashboard - CHRIST University</title>
     <link rel="stylesheet" href="{% static 'core/user_dashboard.css' %}">
+    <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -70,6 +71,23 @@
         <!-- Overview Tab -->
         <div id="overview" class="tab-content active">
             <div class="stats-grid" id="statsGrid"></div>
+            <div class="chart-section">
+                <canvas id="eventContributionChart"></canvas>
+            </div>
+            <div class="calendar-section">
+                <div class="mini-cal" id="miniCalendar">
+                    <div class="cal-head">
+                        <button class="cal-nav" id="calPrev" aria-label="Previous month"><i class="fa-solid fa-chevron-left"></i></button>
+                        <div id="calTitle">Month YYYY</div>
+                        <button class="cal-nav" id="calNext" aria-label="Next month"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                    <div class="cal-weekdays">
+                        <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+                    </div>
+                    <div class="cal-grid" id="calGrid"></div>
+                </div>
+                <div id="upcomingWrap" class="upcoming"></div>
+            </div>
             <div class="mentees-section faculty-only" id="menteesSection"></div>
             <div class="attributes-section student-only" id="attributesSection"></div>
             <div class="remarks-section student-only" id="remarksSection"></div>
@@ -129,6 +147,12 @@
         </div>
     </div>
 
+    {{ calendar_events|json_script:"calendarEventsJson" }}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+        try { window.DASHBOARD_EVENTS = JSON.parse(document.getElementById('calendarEventsJson').textContent); }
+        catch { window.DASHBOARD_EVENTS = []; }
+    </script>
     <script src="{% static 'core/user_dashboard.js' %}"></script>
 </body>
 </html>

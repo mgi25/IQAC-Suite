@@ -217,6 +217,23 @@ body.is-student .nav-content .student-only {
     box-shadow: var(--shadow);
 }
 
+/* Chart and Calendar Sections */
+.chart-section, .calendar-section {
+    margin-top: 24px;
+    background-color: var(--card-background);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+}
+
+.chart-section canvas {
+    width: 100%;
+    max-width: 300px;
+    height: 200px;
+    display: block;
+    margin: 0 auto;
+}
+
 h3 {
     margin-top: 0;
     font-size: 18px;
