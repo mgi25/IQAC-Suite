@@ -236,13 +236,13 @@
 
       <!-- Settings - Expandable (Admin Only) -->
       {% if user.is_superuser or request.session.role == 'admin' %}
-      <div class="nav-section {% if 'settings' in request.path or 'approval' in request.path or 'pso-po' in request.path or 'master-data' in request.path or 'outcomes' in request.path or 'sdg-goals' in request.path or request.resolver_match.url_name == 'admin_settings' or request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'admin_pso_po_management' or request.resolver_match.url_name == 'admin_outcome_dashboard' or request.resolver_match.url_name == 'admin_sdg_management' %}expanded{% endif %}">
+      <div class="nav-section {% if 'settings' in request.path or 'approval' in request.path or 'pso-po' in request.path or 'master-data' in request.path or 'outcomes' in request.path or 'sdg-goals' in request.path or request.resolver_match.url_name == 'admin_settings' or request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'admin_pso_po_management' or request.resolver_match.url_name == 'admin_outcome_dashboard' or request.resolver_match.url_name == 'admin_sdg_management' or request.resolver_match.url_name == 'admin_academic_year_settings' %}expanded{% endif %}">
         <div class="nav-section-header">
           <i class="fas fa-cog nav-icon"></i>
           <span class="nav-text">Settings</span>
-          <i class="fas fa-chevron-right expand-icon {% if 'settings' in request.path or 'approval' in request.path or 'pso-po' in request.path or 'master-data' in request.path or 'outcomes' in request.path or 'sdg-goals' in request.path or request.resolver_match.url_name == 'admin_settings' or request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'admin_pso_po_management' or request.resolver_match.url_name == 'admin_outcome_dashboard' or request.resolver_match.url_name == 'admin_sdg_management' %}rotated{% endif %}"></i>
+          <i class="fas fa-chevron-right expand-icon {% if 'settings' in request.path or 'approval' in request.path or 'pso-po' in request.path or 'master-data' in request.path or 'outcomes' in request.path or 'sdg-goals' in request.path or request.resolver_match.url_name == 'admin_settings' or request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'admin_pso_po_management' or request.resolver_match.url_name == 'admin_outcome_dashboard' or request.resolver_match.url_name == 'admin_sdg_management' or request.resolver_match.url_name == 'admin_academic_year_settings' %}rotated{% endif %}"></i>
         </div>
-        <div class="nav-submenu {% if 'settings' in request.path or 'approval' in request.path or 'pso-po' in request.path or 'master-data' in request.path or 'outcomes' in request.path or 'sdg-goals' in request.path or request.resolver_match.url_name == 'admin_settings' or request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'admin_pso_po_management' or request.resolver_match.url_name == 'admin_outcome_dashboard' or request.resolver_match.url_name == 'admin_sdg_management' %}open{% endif %}">
+        <div class="nav-submenu {% if 'settings' in request.path or 'approval' in request.path or 'pso-po' in request.path or 'master-data' in request.path or 'outcomes' in request.path or 'sdg-goals' in request.path or request.resolver_match.url_name == 'admin_settings' or request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'admin_pso_po_management' or request.resolver_match.url_name == 'admin_outcome_dashboard' or request.resolver_match.url_name == 'admin_sdg_management' or request.resolver_match.url_name == 'admin_academic_year_settings' %}open{% endif %}">
           <a href="{% url 'admin_master_data' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'master_data_dashboard' %}active{% endif %}">
             <i class="fas fa-user-cog"></i> User Settings
           </a>
@@ -256,6 +256,9 @@
           </div>
           <a href="{% url 'admin_pso_po_management' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_outcome_dashboard' or request.resolver_match.url_name == 'admin_pso_po_management' or request.resolver_match.url_name == 'admin_sdg_management' %}active{% endif %}">
             <i class="fas fa-clipboard-list"></i> POs & PSOs Management
+          </a>
+          <a href="{% url 'admin_academic_year_settings' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_academic_year_settings' %}active{% endif %}">
+            <i class="fas fa-calendar-alt"></i> Academic Year Settings
           </a>
         </div>
       </div>
