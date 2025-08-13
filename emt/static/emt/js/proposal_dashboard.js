@@ -12,6 +12,7 @@ $(document).ready(function() {
         'income': false
     };
     let audienceClassMap = {};
+    const autoFillEnabled = new URLSearchParams(window.location.search).has('autofill');
 
     initializeDashboard();
 
@@ -21,6 +22,7 @@ $(document).ready(function() {
         loadExistingData();
         checkForExistingErrors();
         enablePreviouslyVisitedSections();
+        $('#autofill-btn').on('click', () => autofillTestData(currentExpandedCard));
         if (!$('.form-errors-banner').length) {
             setTimeout(() => {
                 activateSection('basic-info');
@@ -181,6 +183,9 @@ $(document).ready(function() {
             clearValidationErrors();
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
+            }
+            if (autoFillEnabled) {
+                autofillTestData(section);
             }
         }, 100);
     }
@@ -1699,6 +1704,126 @@ function getWhyThisEventForm() {
         console.log(`Section ${section} marked as complete`);
         updateProgressBar();
         updateSubmitButton();
+    }
+
+    function autofillTestData(section = 'basic-info') {
+        const today = new Date().toISOString().split('T')[0];
+
+        if (section === 'basic-info') {
+            const fields = {
+                'event-title-modern': 'Test Event Title',
+                'target-audience-modern': 'Test Audience',
+                'target-audience-class-ids': '1',
+                'venue-modern': 'Main Auditorium',
+                'event-start-date': today,
+                'event-end-date': today,
+                'academic-year-modern': '2024-2025',
+                'pos-pso-modern': 'PO1, PSO2',
+                'sdg-goals-modern': 'Goal 4, Goal 5',
+                'num-activities-modern': '1'
+            };
+
+            Object.entries(fields).forEach(([id, value]) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.value = value;
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+
+            const focusSelect = document.getElementById('event-focus-type-modern');
+            if (focusSelect && focusSelect.options.length > 1) {
+                focusSelect.selectedIndex = 1;
+                focusSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+
+            const studentSelect = document.getElementById('student-coordinators-modern');
+            if (studentSelect) {
+                if (!studentSelect.options.length) {
+                    const option = new Option('Test Coordinator', '1');
+                    studentSelect.add(option);
+                }
+                studentSelect.value = '1';
+                $(studentSelect).trigger('change');
+            }
+
+        } else if (section === 'why-this-event') {
+            const fields = {
+                'need-analysis-modern': 'Sample need analysis text for testing.',
+                'objectives-modern': 'Objective 1: Demo\nObjective 2: Demo',
+                'outcomes-modern': 'Participants will learn demo outcomes.'
+            };
+
+            Object.entries(fields).forEach(([id, value]) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.value = value;
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+
+        } else if (section === 'schedule') {
+            const scheduleEl = document.getElementById('schedule-modern');
+            if (scheduleEl) {
+                scheduleEl.value = '09:00 AM - Registration\n09:30 AM - Opening Remarks';
+                scheduleEl.dispatchEvent(new Event('input', { bubbles: true }));
+                scheduleEl.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+
+        } else if (section === 'speakers') {
+            $('#add-speaker-btn').trigger('click');
+            const fields = {
+                'speaker_full_name_0': 'Dr. Jane Doe',
+                'speaker_designation_0': 'Professor',
+                'speaker_affiliation_0': 'University of Example',
+                'speaker_contact_email_0': 'jane.doe@example.com',
+                'speaker_contact_number_0': '1234567890',
+                'speaker_linkedin_url_0': 'https://linkedin.com/in/janedoe',
+                'speaker_detailed_profile_0': 'Expert in sample topics.'
+            };
+
+            Object.entries(fields).forEach(([id, value]) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.value = value;
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+
+        } else if (section === 'expenses') {
+            $('#add-expense-btn').trigger('click');
+            const fields = {
+                'expense_sl_no_0': '1',
+                'expense_particulars_0': 'Venue Booking',
+                'expense_amount_0': '5000'
+            };
+
+            Object.entries(fields).forEach(([id, value]) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.value = value;
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+
+        } else if (section === 'income') {
+            $('#add-income-btn').trigger('click');
+            const fields = {
+                'income_sl_no_0': '1',
+                'income_particulars_0': 'Registration Fees',
+                'income_participants_0': '100',
+                'income_rate_0': '50',
+                'income_amount_0': '5000'
+            };
+
+            Object.entries(fields).forEach(([id, value]) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.value = value;
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+        }
     }
 
     function unlockNextSection(section) {
