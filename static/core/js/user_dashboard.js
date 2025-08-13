@@ -262,6 +262,9 @@ function buildCalendar() {
 
     headTitle.textContent = calRef.toLocaleString(undefined, { month: 'long', year: 'numeric' });
 
+    // Pre-compute dates that have events for quick lookup
+    const eventDates = new Set((window.DASHBOARD_EVENTS || []).map(e => e.date));
+
     const first = new Date(calRef.getFullYear(), calRef.getMonth(), 1);
     const last = new Date(calRef.getFullYear(), calRef.getMonth() + 1, 0);
     const startIdx = first.getDay();
@@ -278,7 +281,8 @@ function buildCalendar() {
     grid.innerHTML = cells.map(c => {
         const today = c.date && isSame(c.date, new Date());
         const iso = c.date ? `${c.date.getFullYear()}-${fmt2(c.date.getMonth() + 1)}-${fmt2(c.date.getDate())}` : '';
-        return `<div class="day${c.muted ? ' muted' : ''}${today ? ' today' : ''}" data-date="${iso}">${c.text}</div>`;
+        const hasEvent = iso && eventDates.has(iso);
+        return `<div class="day${c.muted ? ' muted' : ''}${today ? ' today' : ''}${hasEvent ? ' has-event' : ''}" data-date="${iso}">${c.text}</div>`;
     }).join('');
 
     grid.querySelectorAll('.day[data-date]').forEach(el => {

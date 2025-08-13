@@ -2204,10 +2204,33 @@ def api_student_achievements(request):
 
 @login_required
 def user_dashboard(request):
-    """Render the simplified user dashboard with calendar events."""
-    events = EventProposal.objects.filter(
-        status="finalized", event_datetime__isnull=False
+    """Render the simplified user dashboard with calendar events.
+
+    Events shown are related to the current user either directly (submitted
+    by or managed by them), through their organization assignments, or, if the
+    user is a student, through their participation in events. Only finalized
+    events with a defined date/time are considered.
+    """
+
+    user = request.user
+
+    # Organizations the user is connected to via role assignments
+    user_org_ids = list(
+        user.role_assignments.exclude(organization__isnull=True)
+        .values_list("organization_id", flat=True)
     )
+
+    events = (
+        EventProposal.objects.filter(status="finalized", event_datetime__isnull=False)
+        .filter(
+            Q(submitted_by=user)
+            | Q(faculty_incharges=user)
+            | Q(organization_id__in=user_org_ids)
+            | Q(participants__user=user)
+        )
+        .distinct()
+    )
+
     calendar_events = [
         {
             "id": e.id,
@@ -2218,7 +2241,10 @@ def user_dashboard(request):
         }
         for e in events
     ]
-    return render(request, "core/user_dashboard.html", {"calendar_events": calendar_events})
+
+    return render(
+        request, "core/user_dashboard.html", {"calendar_events": calendar_events}
+    )
 
 @login_required
 @require_GET
