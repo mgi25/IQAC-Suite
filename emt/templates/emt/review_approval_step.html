@@ -92,10 +92,11 @@
 
   <!-- RIGHT COLUMN: All Proposal Details -->
   <main class="ultra-main-content">
-    <div class="fadein-card ultra-header">
-      <h1>
-        <span class="glow-text">Event Proposal Review</span>
-      </h1>
+    <div class="fadein-card ultra-header review-top">
+      <div class="review-title-row">
+        <h1 class="review-title">Event Proposal Review</h1>
+        <span class="status-badge status-{{ proposal.status }}">{{ proposal.get_status_display }}</span>
+      </div>
       <span class="meta">{{ proposal.event_title }} &middot; Submitted by {{ proposal.submitted_by.get_full_name }}</span>
     </div>
 
