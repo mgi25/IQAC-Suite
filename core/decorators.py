@@ -20,12 +20,17 @@ def role_required(role):
     return decorator
 
 def admin_required(view_func):
-    """Decorator that requires user to be admin (staff or superuser)"""
+    """Decorator that requires user to be a superuser or have admin role."""
+
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
-        if not (request.user.is_staff or request.user.is_superuser):
+        if not (
+            request.user.is_superuser
+            or request.session.get("role") == "admin"
+        ):
             raise PermissionDenied("Admin access required")
         return view_func(request, *args, **kwargs)
+
     return _wrapped_view
 
 def prevent_impersonation_of_admins(view_func):
