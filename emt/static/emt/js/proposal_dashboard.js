@@ -357,7 +357,7 @@ $(document).ready(function() {
 
         const tom = new TomSelect(select[0], {
             plugins: ['remove_button'],
-            valueField: 'text',
+            valueField: 'id',
             labelField: 'text',
             searchField: 'text',
             create: false,
@@ -367,27 +367,35 @@ $(document).ready(function() {
                 const exclude = orgId ? `&exclude=${encodeURIComponent(orgId)}` : '';
                 fetch(`${window.API_ORGANIZATIONS}?q=${encodeURIComponent(query)}${exclude}`)
                     .then(r => r.json())
-                    .then(data => callback(data.map(o => ({ text: o.text }))))
+                    .then(data => callback(data))
                     .catch(() => callback());
             }
         });
 
         tom.on('change', () => {
-            const values = tom.getValue();
-            djangoField.val(values.join(', ')).trigger('change');
+            const ids = tom.getValue();
+            const names = ids.map(id => tom.options[id]?.text || id);
+            djangoField.val(names.join(', ')).trigger('change');
+            // store selected ids for later use (e.g., audience modal)
+            select.data('selected-org-ids', ids);
             clearFieldError(select);
         });
 
         if (existing.length) {
-            existing.forEach(name => tom.addOption({ text: name }));
+            existing.forEach(name => tom.addOption({ id: name, text: name }));
             tom.setValue(existing);
         }
 
         const orgSelect = $('#django-basic-info [name="organization"]');
         orgSelect.on('change.committees', () => {
+            const orgId = orgSelect.val();
             const orgName = orgSelect.find('option:selected').text().trim();
-            if (orgName) {
-                tom.removeItem(orgName);
+            if (!orgId) return;
+            // remove selected organization from committees list
+            const optionId = tom.options[orgId] ? orgId : Object.keys(tom.options).find(id => tom.options[id].text === orgName);
+            if (optionId) {
+                tom.removeItem(optionId);
+                tom.removeOption(optionId);
             }
         });
     }
@@ -462,14 +470,38 @@ $(document).ready(function() {
         container.find('button[data-type]').on('click', function() {
             const type = $(this).data('type');
             list.text('Loading...');
+
+            const primaryOrgId = djangoOrgSelect.val();
+            const committeeTS = $('#committees-collaborations-modern')[0]?.tomselect;
+            const extraOrgIds = committeeTS ? committeeTS.getValue().filter(id => /^\d+$/.test(id)) : [];
+
+            const orgIds = [];
+            if (primaryOrgId) {
+                orgIds.push({ id: primaryOrgId, name: djangoOrgSelect.find('option:selected').text().trim() });
+            }
+            if (committeeTS) {
+                extraOrgIds.forEach(id => {
+                    const name = committeeTS.options[id]?.text || '';
+                    orgIds.push({ id, name });
+                });
+            }
+
+            if (!orgIds.length) { list.text('Select an organization first.'); return; }
+
             if (type === 'students') {
-                const orgId = djangoOrgSelect.val();
-                if (!orgId) { list.text('Select an organization first.'); return; }
-                fetch(`${window.API_CLASSES_BASE}${orgId}/`, { credentials: 'include' })
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.success) {
-                            list.empty();
+                list.empty();
+                Promise.all(orgIds.map(o =>
+                    fetch(`${window.API_CLASSES_BASE}${o.id}/`, { credentials: 'include' })
+                        .then(r => r.json().then(data => ({ org: o, data })))
+                ))
+                .then(results => {
+                    let hasAny = false;
+                    results.forEach(res => {
+                        const { org, data } = res;
+                        if (data.success && data.classes.length) {
+                            hasAny = true;
+                            const orgHeader = $('<div class="audience-org-header">').text(org.name);
+                            list.append(orgHeader);
                             data.classes.forEach(cls => {
                                 const classLbl = $('<label class="audience-class">');
                                 const classCb = $('<input type="checkbox" class="audience-class-cb" checked>').data('class-id', cls.id);
@@ -485,25 +517,35 @@ $(document).ready(function() {
                                     studentsDiv.find('input[type=checkbox]').prop('checked', $(this).is(':checked'));
                                 });
                             });
-                        } else {
-                            list.text('No classes found.');
                         }
-                    })
-                    .catch(() => { list.text('Error loading.'); });
+                    });
+                    if (!hasAny) list.text('No classes found.');
+                })
+                .catch(() => { list.text('Error loading.'); });
             } else {
-                const orgId = djangoOrgSelect.val();
-                if (!orgId) { list.text('Select an organization first.'); return; }
-                fetch(`${window.API_FACULTY}?org_id=${orgId}`, { credentials: 'include' })
-                    .then(r => r.json())
-                    .then(data => {
-                        list.empty();
-                        data.forEach(f => {
-                            const cb = $('<input type="checkbox" name="audience-user">').val(f.id).data('name', f.text);
-                            const lbl = $('<label>').append(cb).append(' ' + f.text);
-                            list.append(lbl).append('<br>');
-                        });
-                    })
-                    .catch(() => { list.text('Error loading.'); });
+                list.empty();
+                Promise.all(orgIds.map(o =>
+                    fetch(`${window.API_FACULTY}?org_id=${o.id}`, { credentials: 'include' })
+                        .then(r => r.json().then(data => ({ org: o, data })))
+                ))
+                .then(results => {
+                    let hasAny = false;
+                    results.forEach(res => {
+                        const { org, data } = res;
+                        if (data.length) {
+                            hasAny = true;
+                            const orgHeader = $('<div class="audience-org-header">').text(org.name);
+                            list.append(orgHeader);
+                            data.forEach(f => {
+                                const cb = $('<input type="checkbox" name="audience-user">').val(f.id).data('name', f.text);
+                                const lbl = $('<label>').append(cb).append(' ' + f.text);
+                                list.append(lbl).append('<br>');
+                            });
+                        }
+                    });
+                    if (!hasAny) list.text('No faculty found.');
+                })
+                .catch(() => { list.text('Error loading.'); });
             }
         });
     }
