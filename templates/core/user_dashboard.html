@@ -149,10 +149,6 @@
 
     {{ calendar_events|json_script:"calendarEventsJson" }}
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <script>
-        try { window.DASHBOARD_EVENTS = JSON.parse(document.getElementById('calendarEventsJson').textContent); }
-        catch { window.DASHBOARD_EVENTS = []; }
-    </script>
     <script src="{% static 'core/user_dashboard.js' %}"></script>
 </body>
 </html>
