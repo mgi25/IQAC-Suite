@@ -9,10 +9,11 @@ from emt.utils import (
     unlock_optionals_after,
     skip_all_downstream_optionals,
 )
+from emt.forms import EventProposalForm
 from core.models import (
     OrganizationType, Organization, OrganizationRole, RoleAssignment,
     Program, ProgramOutcome, ProgramSpecificOutcome,
-    ApprovalFlowTemplate, ApprovalFlowConfig,
+    ApprovalFlowTemplate, ApprovalFlowConfig, SDG_GOALS,
 )
 import json
 from unittest.mock import patch
@@ -594,3 +595,11 @@ class LinkedInProfileFetchTests(TestCase):
         )
         self.assertEqual(resp.status_code, 400)
         mock_get.assert_not_called()
+
+
+class SDGGoalsFormTests(TestCase):
+    def test_form_lists_predefined_sdg_goals_only(self):
+        form = EventProposalForm()
+        names = list(form.fields["sdg_goals"].queryset.values_list("name", flat=True))
+        self.assertEqual(set(names), set(SDG_GOALS))
+        self.assertEqual(len(names), len(SDG_GOALS))

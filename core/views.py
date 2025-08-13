@@ -15,6 +15,7 @@ from django import forms
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.db import models, transaction
 from django.utils import timezone
 import json
 import logging
@@ -177,77 +178,99 @@ def api_roles(request):
     return JsonResponse({"roles": data})
 
 # ─────────────────────────────────────────────────────────────
-#  Dashboard
+#  Dashboard (safe: context always defined)
 # ─────────────────────────────────────────────────────────────
 @login_required
 def dashboard(request):
-    # Role-based landing logic
     user = request.user
-    roles = RoleAssignment.objects.filter(user=user).select_related('role', 'organization')
-    role_names = [ra.role.name for ra in roles]
 
-    # Superuser/admin: redirect to admin dashboard
+    # ---- role / domain detection ----
+    roles = RoleAssignment.objects.filter(user=user).select_related('role', 'organization')
+    role_lc = [ra.role.name.lower() for ra in roles]
+
     if user.is_superuser:
         return redirect('admin_dashboard')
 
-    # Student: show student dashboard (core/dashboard.html)
-    if 'student' in [r.lower() for r in role_names]:
-        dashboard_template = "core/dashboard.html"
-    # Faculty: show faculty dashboard (core/dashboard.html)
-    elif 'faculty' in [r.lower() for r in role_names]:
-        dashboard_template = "core/dashboard.html"
-    # Default: show dashboard
-    else:
-        dashboard_template = "core/dashboard.html"
+    email = (user.email or "").lower()
+    is_student = ('student' in role_lc) or email.endswith('@christuniversity.in')
+    dashboard_template = "core/student_dashboard.html" if is_student else "core/dashboard.html"
 
-    # Get events data
-    finalized_events = EventProposal.objects.filter(status='finalized').distinct()
-    
-    # For students, show events they are participating in or have submitted
-    # For faculty, show events they are involved with
-    if 'student' in [r.lower() for r in role_names]:
-        my_events = EventProposal.objects.filter(
-            Q(submitted_by=user) | Q(status='finalized')
-        ).distinct()
-    else:
-        my_events = finalized_events.filter(Q(submitted_by=user) | Q(faculty_incharges=user)).distinct()
-    
-    other_events = finalized_events.exclude(Q(submitted_by=user) | Q(faculty_incharges=user)).distinct()
-    upcoming_events_count = finalized_events.filter(event_datetime__gte=timezone.now()).count()
-    organized_events_count = EventProposal.objects.filter(submitted_by=user).count()
-    week_start = timezone.now().date() - timezone.timedelta(days=timezone.now().weekday())
-    week_end = week_start + timezone.timedelta(days=6)
-    this_week_events = finalized_events.filter(event_datetime__date__gte=week_start, event_datetime__date__lte=week_end).count()
-    students_participated = finalized_events.aggregate(
-        total=Sum('fest_fee_participants') + Sum('conf_fee_participants')
-    )['total'] or 0
-    my_students = Student.objects.filter(mentor=user)
-    my_classes = Class.objects.filter(teacher=user, is_active=True)
-    
-    # Get user's recent proposals for notifications
-    user_proposals = EventProposal.objects.filter(submitted_by=user).order_by('-updated_at')[:5]
-    
-    # Prepare calendar events data for JavaScript
-    all_events = finalized_events.filter(event_datetime__isnull=False)
+    # ---- defaults (avoid UnboundLocalError) ----
+    my_events = EventProposal.objects.none()
+    other_events = EventProposal.objects.none()
+    upcoming_events_count = 0
+    organized_events_count = 0
+    this_week_events = 0
+    students_participated = 0
+    my_students = Student.objects.none()
+    my_classes = Class.objects.none()
+    user_proposals = EventProposal.objects.none()
     calendar_events = []
-    for event in all_events:
-        calendar_events.append({
-            'id': event.id,
-            'title': event.event_title,
-            'date': event.event_datetime.strftime('%Y-%m-%d'),
-            'datetime': event.event_datetime.strftime('%Y-%m-%d %H:%M'),
-            'venue': event.venue or '',
-            'organization': event.organization.name if event.organization else '',
-            'submitted_by': event.submitted_by.get_full_name() or event.submitted_by.username,
-            'participants': event.fest_fee_participants or event.conf_fee_participants or 0,
-            'is_my_event': user in [event.submitted_by] + list(event.faculty_incharges.all())
-        })
-    
-    # Debug: Print calendar events to console
-    print(f"Calendar events for user {user.username}: {len(calendar_events)} events")
-    for event in calendar_events[:3]:  # Print first 3 events for debugging
-        print(f"  - {event['title']} on {event['date']}")
-    
+
+    # ---- data (wrapped for safety) ----
+    try:
+        finalized_events = EventProposal.objects.filter(status='finalized').distinct()
+
+        if is_student:
+            my_events = EventProposal.objects.filter(
+                Q(submitted_by=user) | Q(status='finalized')
+            ).distinct()
+        else:
+            my_events = finalized_events.filter(
+                Q(submitted_by=user) | Q(faculty_incharges=user)
+            ).distinct()
+
+        other_events = finalized_events.exclude(
+            Q(submitted_by=user) | Q(faculty_incharges=user)
+        ).distinct()
+
+        upcoming_events_count = finalized_events.filter(
+            event_datetime__gte=timezone.now()
+        ).count()
+
+        organized_events_count = EventProposal.objects.filter(submitted_by=user).count()
+
+        week_start = timezone.now().date() - timezone.timedelta(days=timezone.now().weekday())
+        week_end = week_start + timezone.timedelta(days=6)
+        this_week_events = finalized_events.filter(
+            event_datetime__date__gte=week_start,
+            event_datetime__date__lte=week_end
+        ).count()
+
+        students_participated = finalized_events.aggregate(
+            total=Sum('fest_fee_participants') + Sum('conf_fee_participants')
+        )['total'] or 0
+
+        my_students = Student.objects.filter(mentor=user)
+        my_classes = Class.objects.filter(teacher=user, is_active=True)
+
+        user_proposals = EventProposal.objects.filter(submitted_by=user).order_by('-updated_at')[:5]
+
+        all_events = finalized_events.filter(event_datetime__isnull=False)
+        calendar_events = [{
+            'id': e.id,
+            'title': e.event_title,
+            'date': e.event_datetime.strftime('%Y-%m-%d'),
+            'datetime': e.event_datetime.strftime('%Y-%m-%d %H:%M'),
+            'venue': e.venue or '',
+            'organization': e.organization.name if e.organization else '',
+            'submitted_by': e.submitted_by.get_full_name() or e.submitted_by.username,
+            'participants': e.fest_fee_participants or e.conf_fee_participants or 0,
+            'is_my_event': user in [e.submitted_by] + list(e.faculty_incharges.all())
+        } for e in all_events]
+
+    except Exception:  # keep UI alive even if data fails
+        pass
+
+    # ---- student-only bindings ----
+    participated_events_count = my_events.count() if is_student else 0
+    achievements_count = 0
+    clubs_count = 0
+    activity_score = 0
+    recent_activity = []
+    proposals_min = [{'title': p.event_title, 'status': p.get_status_display()} for p in user_proposals]
+
+    # ---- context (always defined) ----
     context = {
         "my_events": my_events,
         "other_events": other_events,
@@ -257,12 +280,36 @@ def dashboard(request):
         "students_participated": students_participated,
         "my_students": my_students,
         "my_classes": my_classes,
-        "role_names": role_names,
+        "role_names": [ra.role.name for ra in roles],
         "user": user,
         "user_proposals": user_proposals,
-        "calendar_events": calendar_events,  # Pass as Python list, not JSON
+        "calendar_events": calendar_events,
+
+        # student dashboard bindings
+        "participated_events_count": participated_events_count,
+        "achievements_count": achievements_count,
+        "clubs_count": clubs_count,
+        "activity_score": activity_score,
+        "recent_activity": recent_activity,
+        "proposals": proposals_min,
     }
-    return render(request, dashboard_template, context)
+
+        # --- robust template selection + debug ---
+    from django.conf import settings
+    from django.template.loader import select_template
+    import os
+
+    # quick runtime checks (remove after verifying)
+    print("TEMPLATE_DIRS:", settings.TEMPLATES[0]['DIRS'])
+    exp1 = os.path.join(settings.BASE_DIR, "templates", "core", "student_dashboard.html")
+    exp2 = os.path.join(settings.BASE_DIR, "templates", "student_dashboard.html")
+    print("EXPECTS:", exp1, "EXISTS:", os.path.exists(exp1))
+    print("EXPECTS:", exp2, "EXISTS:", os.path.exists(exp2))
+
+    candidates = ["core/student_dashboard.html", "student_dashboard.html"] if is_student else ["core/dashboard.html", "dashboard.html"]
+    tpl = select_template(candidates)  # picks the first that actually exists
+    return render(request, tpl.template.name, context)
+
 
 @login_required
 def event_contribution_data(request):
@@ -1209,6 +1256,43 @@ def proposal_detail(request, proposal_id):
 def admin_settings_dashboard(request):
     return render(request, "core/admin_settings.html")
 
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def admin_academic_year_settings(request):
+    from transcript.models import AcademicYear
+
+    academic_years = AcademicYear.objects.all().order_by('-year')
+
+    if request.method == "POST":
+        active_id = request.POST.get('active_year')
+        for ay in academic_years:
+            start = request.POST.get(f'start_date_{ay.id}')
+            end = request.POST.get(f'end_date_{ay.id}')
+            ay.start_date = start or None
+            ay.end_date = end or None
+            ay.is_active = str(ay.id) == active_id
+            ay.save()
+
+        new_year = request.POST.get('new_year')
+        if new_year:
+            new_ay = AcademicYear.objects.create(
+                year=new_year,
+                start_date=request.POST.get('new_start') or None,
+                end_date=request.POST.get('new_end') or None,
+                is_active=active_id == 'new',
+            )
+            if active_id == 'new':
+                AcademicYear.objects.exclude(pk=new_ay.pk).update(is_active=False)
+
+        return redirect('admin_academic_year_settings')
+
+    return render(
+        request,
+        'core/admin_academic_year_settings.html',
+        {'academic_years': academic_years},
+    )
+
 @user_passes_test(lambda u: u.is_superuser)
 def master_data_dashboard(request):
     from transcript.models import AcademicYear
@@ -1293,19 +1377,10 @@ def admin_outcome_dashboard(request):
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_sdg_management(request):
-    """Manage Sustainable Development Goals."""
-    from .models import SDGGoal
+    """Display Sustainable Development Goals."""
+    from .models import SDGGoal, SDG_GOALS
 
-    if request.method == "POST":
-        if request.POST.get("delete_goal_id"):
-            SDGGoal.objects.filter(id=request.POST["delete_goal_id"]).delete()
-            return redirect("admin_sdg_management")
-        name = request.POST.get("name", "").strip()
-        if name:
-            SDGGoal.objects.get_or_create(name=name)
-        return redirect("admin_sdg_management")
-
-    goals = SDGGoal.objects.all().order_by("id")
+    goals = SDGGoal.objects.filter(name__in=SDG_GOALS).order_by("id")
     return render(request, "core/admin_sdg_management.html", {"goals": goals})
 
 
@@ -1716,19 +1791,69 @@ def api_org_type_organizations(request, org_type_id):
 @user_passes_test(lambda u: u.is_superuser)
 def api_org_type_roles(request, org_type_id):
     """Return distinct role names for a given organization type."""
+    # First, get all organizations of this type
+    organizations = Organization.objects.filter(org_type_id=org_type_id)
+    
+    if not organizations.exists():
+        return JsonResponse({"success": False, "roles": [], "error": "No organizations found for this type"})
+
+    # Get the organization with the most roles (likely Commerce in your case)
+    org_with_most_roles = (
+        organizations
+        .annotate(role_count=models.Count('organizationrole'))
+        .order_by('-role_count')
+        .first()
+    )
+
+    # Get all roles from the organization with the most roles
+    template_roles = (
+        OrganizationRole.objects
+        .filter(organization=org_with_most_roles)
+        .values('name', 'is_active')
+        .distinct()
+        .order_by('name')
+    )
+
+    # For each organization that doesn't have all roles, create the missing ones
+    with transaction.atomic():
+        for org in organizations:
+            existing_role_names = set(
+                OrganizationRole.objects
+                .filter(organization=org)
+                .values_list('name', flat=True)
+            )
+            
+            # Create any missing roles
+            for template_role in template_roles:
+                if template_role['name'] not in existing_role_names:
+                    OrganizationRole.objects.create(
+                        organization=org,
+                        name=template_role['name'],
+                        is_active=template_role['is_active']
+                    )
+
+    # Now fetch all roles for this organization type
     roles = (
         OrganizationRole.objects
-        .filter(organization__org_type_id=org_type_id, is_active=True)
-        .values("id", "name")
-        .order_by("name")
+        .filter(organization__org_type_id=org_type_id)
+        .values('id', 'name', 'is_active')
+        .distinct()
+        .order_by('name')
     )
-    # Deduplicate by name while preserving an ID for each
-    seen = set()
+
+    # Deduplicate by name, preferring active roles
+    seen = {}
     unique_roles = []
     for r in roles:
-        if r["name"] not in seen:
-            seen.add(r["name"])
-            unique_roles.append({"id": r["id"], "name": r["name"]})
+        name = r['name']
+        if name not in seen or (not seen[name]['is_active'] and r['is_active']):
+            seen[name] = r
+            unique_roles.append({
+                'id': r['id'],
+                'name': r['name'],
+                'is_active': r['is_active']
+            })
+
     return JsonResponse({"success": True, "roles": unique_roles})
 
 
@@ -1934,21 +2059,110 @@ from django.views.decorators.http import require_GET
 @login_required
 def api_auth_me(request):
     user = request.user
-    role = 'faculty' if user.is_staff else 'student'
-    initials = ''.join([x[0] for x in user.get_full_name().split()]) or user.username[:2].upper()
-    return JsonResponse({
-        'role': role,
-        'name': user.get_full_name(),
-        'subtitle': '',  # Add more info if needed
-        'initials': initials,
-    })
+    role = getattr(getattr(user, "profile", None), "role", None)
+    if not role:
+        role = "faculty" if user.is_staff else "student"
+    initials = "".join([x[0] for x in user.get_full_name().split()]) or user.username[:2].upper()
+    return JsonResponse(
+        {
+            "role": role,
+            "name": user.get_full_name(),
+            "subtitle": "",
+            "initials": initials,
+        }
+    )
 
 @login_required
 def api_faculty_overview(request):
     stats = [
-        # Build from your models as needed
+        {
+            "label": "Pending Approvals",
+            "value": 5,
+            "subtitle": "Awaiting",
+            "icon": "clock",
+            "color": "blue",
+        },
+        {
+            "label": "Events Conducted",
+            "value": 3,
+            "subtitle": "This Semester",
+            "icon": "calendar",
+            "color": "green",
+        },
     ]
     return JsonResponse(stats, safe=False)
+
+
+@login_required
+def api_faculty_events(request):
+    events = [
+        {"title": "Orientation", "date": "2024-07-10", "status": "approved"},
+        {"title": "Workshop", "date": "2024-08-02", "status": "pending"},
+    ]
+    return JsonResponse(events, safe=False)
+
+
+@login_required
+def api_faculty_students(request):
+    students = [
+        {"name": "Alice", "progress": 80},
+        {"name": "Bob", "progress": 65},
+    ]
+    return JsonResponse(students, safe=False)
+
+
+@login_required
+def api_student_overview(request):
+    data = {
+        "stats": [
+            {
+                "label": "Events Attended",
+                "value": 4,
+                "subtitle": "This Year",
+                "icon": "calendar",
+                "color": "purple",
+            }
+        ],
+        "attributes": [
+            {"label": "Leadership", "level": 3},
+            {"label": "Communication", "level": 4},
+        ],
+        "remarks": [
+            "Great participation in events",
+            "Needs improvement in assignments",
+        ],
+    }
+    return JsonResponse(data)
+
+
+@login_required
+def api_student_events(request):
+    data = {
+        "participated": [
+            {"title": "Orientation", "date": "2024-07-10"},
+            {"title": "Workshop", "date": "2024-08-05"},
+        ],
+        "upcoming": [
+            {"title": "Seminar", "date": "2024-09-20"},
+        ],
+    }
+    return JsonResponse(data)
+
+
+@login_required
+def api_student_achievements(request):
+    data = {
+        "stats": {"total": 5, "this_year": 2},
+        "achievements": [
+            {"title": "Hackathon Winner", "year": 2024},
+            {"title": "Top Speaker", "year": 2023},
+        ],
+        "peers": [
+            {"name": "Jane", "achievement": "Sports Captain"},
+            {"name": "Tom", "achievement": "Debate Winner"},
+        ],
+    }
+    return JsonResponse(data)
 
 @login_required
 def user_dashboard(request):
@@ -4126,3 +4340,4 @@ def settings_pso_po_management(request):
     }
     
     return render(request, 'core/settings_pso_po_management.html', context)
+

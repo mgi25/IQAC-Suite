@@ -104,20 +104,124 @@ function renderStatsGrid(stats) {
     `).join('');
 }
 
-// ... (repeat for other render functions, as in previous answer, but all data comes from backend) ...
+function renderFacultyEvents(events) {
+    const container = document.getElementById('facultyEventsSection');
+    if (!container) return;
+    if (!events || !events.length) {
+        container.innerHTML = '<p>No events found.</p>';
+        return;
+    }
+    container.innerHTML = events.map(ev => `
+        <div class="list-card">
+            <h4>${ev.title}</h4>
+            <p>${ev.date} - ${ev.status}</p>
+        </div>
+    `).join('');
+}
 
-function renderFacultyEvents(events) { /* ... */ }
-function renderStudentsList(students) { /* ... */ }
-function renderAttributesSection(attributes) { /* ... */ }
-function renderRemarksSection(remarks) { /* ... */ }
-function renderStudentEvents(participated, upcoming) { /* ... */ }
-function renderAchievementStats(stats) { /* ... */ }
-function renderAchievementsList(achievements) { /* ... */ }
-function renderPeerAchievements(peers) { /* ... */ }
+function renderStudentsList(students) {
+    const container = document.getElementById('studentsList');
+    if (!container) return;
+    if (!students || !students.length) {
+        container.innerHTML = '<p>No students assigned.</p>';
+        return;
+    }
+    container.innerHTML = students.map(st => `
+        <div class="list-card">
+            <span>${st.name}</span>
+            <span class="progress">${st.progress}%</span>
+        </div>
+    `).join('');
+}
 
-document.querySelector('.graph-icon').addEventListener('click', function() {
-    window.location.href = '/dashboard/';
-});
+function renderAttributesSection(attributes) {
+    const container = document.getElementById('attributesSection');
+    if (!container) return;
+    if (!attributes) return;
+    container.innerHTML = attributes.map(attr => `
+        <div class="list-card">
+            <span>${attr.label}</span>
+            <span>${attr.level}</span>
+        </div>
+    `).join('');
+}
+
+function renderRemarksSection(remarks) {
+    const container = document.getElementById('remarksSection');
+    if (!container) return;
+    if (!remarks) return;
+    container.innerHTML = remarks.map(r => `
+        <div class="list-card">${r}</div>
+    `).join('');
+}
+
+function renderStudentEvents(participated, upcoming) {
+    const container = document.getElementById('studentEventsSection');
+    if (!container) return;
+    let html = '';
+    if (participated && participated.length) {
+        html += '<h4>Participated</h4>';
+        html += participated.map(ev => `
+            <div class="list-card"><h5>${ev.title}</h5><p>${ev.date}</p></div>
+        `).join('');
+    }
+    if (upcoming && upcoming.length) {
+        html += '<h4>Upcoming</h4>';
+        html += upcoming.map(ev => `
+            <div class="list-card"><h5>${ev.title}</h5><p>${ev.date}</p></div>
+        `).join('');
+    }
+    container.innerHTML = html || '<p>No events found.</p>';
+}
+
+function renderAchievementStats(stats) {
+    const container = document.getElementById('achievementStats');
+    if (!container) return;
+    if (!stats) return;
+    container.innerHTML = `
+        <div class="stat-card purple">
+            <div class="stat-content">
+                <div class="stat-text">
+                    <p class="stat-label">Total Achievements</p>
+                    <p class="stat-value">${stats.total || 0}</p>
+                    <p class="stat-subtitle">This Year: ${stats.this_year || 0}</p>
+                </div>
+                <i class="fas fa-trophy stat-icon"></i>
+            </div>
+        </div>
+    `;
+}
+
+function renderAchievementsList(achievements) {
+    const container = document.getElementById('achievementsList');
+    if (!container) return;
+    if (!achievements) return;
+    container.innerHTML = achievements.map(a => `
+        <div class="list-card">
+            <h5>${a.title}</h5>
+            <p>${a.year}</p>
+        </div>
+    `).join('');
+}
+
+function renderPeerAchievements(peers) {
+    const container = document.getElementById('peerAchievements');
+    if (!container) return;
+    if (!peers) return;
+    container.innerHTML = peers.map(p => `
+        <div class="list-card">
+            <h5>${p.name}</h5>
+            <p>${p.achievement}</p>
+        </div>
+    `).join('');
+}
+
+const graphIcon = document.querySelector('.graph-icon');
+if (graphIcon) {
+    graphIcon.addEventListener('click', function() {
+        window.location.href = '/dashboard/';
+    });
+}
 
 document.addEventListener('DOMContentLoaded', function () {
     

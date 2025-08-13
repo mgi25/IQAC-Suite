@@ -1,29 +1,21 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.urls import reverse
-from core.models import OrganizationType, Organization, OrganizationRole, RoleAssignment
+from core.models import OrganizationType, Organization, OrganizationRole
 
 
-class RegistrationMiddlewareTests(TestCase):
+class RegistrationAccessTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
             username="u1", email="u1@example.com", password="pass"
         )
         self.client.force_login(self.user)
 
-    def test_redirects_when_profile_role_blank(self):
+    def test_dashboard_access_without_registration(self):
         # Simulate an unregistered user by clearing their profile role
         profile = self.user.profile
         profile.role = ""
         profile.save(update_fields=["role"])
-        response = self.client.get(reverse("dashboard"))
-        self.assertRedirects(response, reverse("registration_form"))
-
-    def test_allows_access_after_role_assignment(self):
-        ot = OrganizationType.objects.create(name="Dept")
-        org = Organization.objects.create(name="Math", org_type=ot)
-        role = OrganizationRole.objects.create(name="Member", organization=org)
-        RoleAssignment.objects.create(user=self.user, role=role, organization=org)
         response = self.client.get(reverse("dashboard"))
         self.assertEqual(response.status_code, 200)
 

@@ -59,24 +59,25 @@
 
     <!-- Profile -->
     <div class="profile-kpi card">
-      <div class="pkp-avatar">
-        {% if user.profile and user.profile.photo %}
-          <img src="{{ user.profile.photo.url }}" alt="{{ user.get_full_name|default:user.username }}">
-        {% else %}
-          <span>
-            {% if user.first_name %}{{ user.first_name.0|upper }}{% if user.last_name %}{{ user.last_name.0|upper }}{% endif %}{% else %}{{ user.username.0|upper }}{% endif %}
-          </span>
-        {% endif %}
-      </div>
-      <div class="pkp-body">
-        <div class="pkp-name">{{ user.get_full_name|default:user.username }}</div>
-        <div class="pkp-sub">{{ user.email }}</div>
-        <div class="pkp-stats">
-          <span>Rank:&nbsp;<strong>{{ user.rank|default:"—" }}</strong></span>
-          <span>Classes:&nbsp;<strong>{{ classes_count|default:0 }}</strong></span>
+        <div class="pkp-avatar">
+          {% if user.profile and user.profile.photo %}
+            <img src="{{ user.profile.photo.url }}" alt="{{ user.get_full_name|default:user.username }}">
+          {% else %}
+            <span class="pkp-initials">
+              {% if user.first_name %}{{ user.first_name.0|upper }}{% if user.last_name %}{{ user.last_name.0|upper }}{% endif %}{% else %}{{ user.username.0|upper }}{% endif %}
+            </span>
+          {% endif %}
+        </div>
+        <div class="pkp-body">
+          <h1 class="pkp-name">{{ user.get_full_name|default:user.username }}</h1>
+          <h2 class="pkp-sub">{{ user.email }}</h2>
+          <h3 class="pkp-meta">
+            <span>Rank: <strong>{{ user.rank|default:"—" }}</strong></span>
+            <span>Classes: <strong>{{ classes_count|default:0 }}</strong></span>
+          </h3>
         </div>
       </div>
-    </div>
+      
   </section>
 
   <!-- MAIN GRID -->

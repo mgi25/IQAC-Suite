@@ -3,6 +3,7 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 import json
+import re
 from urllib.parse import urlparse
 import requests
 from django.db.models import Q
@@ -24,6 +25,7 @@ from core.models import (
     ApprovalFlowTemplate,
     SDGGoal,
     Class,
+    SDG_GOALS,
 )
 from django.contrib.auth.models import User
 from emt.utils import (
@@ -132,21 +134,23 @@ def _save_text_sections(proposal, data):
 
 def _save_activities(proposal, data):
     proposal.activities.all().delete()
-    index = 1
-    while True:
+    pattern = re.compile(r"^activity_(?:name|date)_(\d+)$")
+    indices = sorted({int(m.group(1)) for key in data.keys() if (m := pattern.match(key))})
+    for index in indices:
         name = data.get(f"activity_name_{index}")
         date = data.get(f"activity_date_{index}")
-        if not name and not date:
-            break
         if name and date:
             EventActivity.objects.create(proposal=proposal, name=name, date=date)
-        index += 1
 
 
 def _save_speakers(proposal, data, files):
     proposal.speakers.all().delete()
-    index = 0
-    while f"speaker_full_name_{index}" in data:
+    pattern = re.compile(
+        r"^speaker_(?:full_name|designation|affiliation|contact_email|contact_number|linkedin_url|photo|detailed_profile)_(\d+)$"
+    )
+    all_keys = list(data.keys()) + list(files.keys())
+    indices = sorted({int(m.group(1)) for key in all_keys if (m := pattern.match(key))})
+    for index in indices:
         full_name = data.get(f"speaker_full_name_{index}")
         if full_name:
             SpeakerProfile.objects.create(
@@ -160,13 +164,13 @@ def _save_speakers(proposal, data, files):
                 photo=files.get(f"speaker_photo_{index}"),
                 detailed_profile=data.get(f"speaker_detailed_profile_{index}", ""),
             )
-        index += 1
 
 
 def _save_expenses(proposal, data):
     proposal.expense_details.all().delete()
-    index = 0
-    while f"expense_particulars_{index}" in data or f"expense_amount_{index}" in data:
+    pattern = re.compile(r"^expense_(?:sl_no|particulars|amount)_(\d+)$")
+    indices = sorted({int(m.group(1)) for key in data.keys() if (m := pattern.match(key))})
+    for index in indices:
         particulars = data.get(f"expense_particulars_{index}")
         amount = data.get(f"expense_amount_{index}")
         if particulars and amount:
@@ -177,13 +181,15 @@ def _save_expenses(proposal, data):
                 particulars=particulars,
                 amount=amount,
             )
-        index += 1
 
 
 def _save_income(proposal, data):
     proposal.income_details.all().delete()
-    index = 0
-    while f"income_particulars_{index}" in data or f"income_amount_{index}" in data:
+    pattern = re.compile(
+        r"^income_(?:sl_no|particulars|participants|rate|amount)_(\d+)$"
+    )
+    indices = sorted({int(m.group(1)) for key in data.keys() if (m := pattern.match(key))})
+    for index in indices:
         particulars = data.get(f"income_particulars_{index}")
         participants = data.get(f"income_participants_{index}")
         rate = data.get(f"income_rate_{index}")
@@ -198,7 +204,6 @@ def _save_income(proposal, data):
                 rate=rate,
                 amount=amount,
             )
-        index += 1
 
 
 # ──────────────────────────────
@@ -284,7 +289,7 @@ def submit_proposal(request, pk=None):
         "objectives": objectives,
         "outcomes": outcomes,
         "flow": flow,
-        "sdg_goals_list": json.dumps(list(SDGGoal.objects.values('id','name'))),
+        "sdg_goals_list": json.dumps(list(SDGGoal.objects.filter(name__in=SDG_GOALS).values('id','name'))),
         "activities_json": json.dumps(activities),
         "speakers_json": json.dumps(speakers),
         "expenses_json": json.dumps(expenses),
@@ -698,12 +703,11 @@ def submit_cdl_support(request, proposal_id):
 @login_required
 def proposal_status_detail(request, proposal_id):
     proposal = get_object_or_404(
-        EventProposal,
+        EventProposal.objects.select_related('organization', 'submitted_by')
+        .prefetch_related('sdg_goals', 'faculty_incharges'),
         id=proposal_id,
         submitted_by=request.user
     )
-
-    proposal = get_object_or_404(EventProposal, id=proposal_id)
     
     if request.method == 'POST':
         action = request.POST.get('action') # Assuming you get 'approve' or 'reject' from a form

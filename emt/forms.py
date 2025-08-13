@@ -6,7 +6,7 @@ from .models import (
     EventExpectedOutcomes, TentativeFlow, SpeakerProfile,
     ExpenseDetail, EventReport, EventReportAttachment, CDLSupport
 )
-from core.models import Organization, OrganizationType, SDGGoal
+from core.models import Organization, OrganizationType, SDGGoal, SDG_GOALS
 
 class EventProposalForm(forms.ModelForm):
     organization_type = forms.ModelChoiceField(
@@ -33,11 +33,10 @@ class EventProposalForm(forms.ModelForm):
     )
     student_coordinators = forms.CharField(
         required=False,
-        widget=forms.Textarea(attrs={'rows': 2, 'placeholder': 'e.g., Alice, Bob'}),
-        help_text="Enter student coordinator names, separated by commas."
+        widget=forms.HiddenInput(),
     )
     sdg_goals = forms.ModelMultipleChoiceField(
-        queryset=SDGGoal.objects.all(),
+        queryset=SDGGoal.objects.filter(name__in=SDG_GOALS).order_by("id"),
         required=False,
         widget=forms.CheckboxSelectMultiple,
         label='Aligned SDG Goals',

@@ -31,6 +31,9 @@ class AttributeStrengthMap(models.Model):
 # ─────────────────────────────────────────────────────────────
 class AcademicYear(models.Model):
     year = models.CharField(max_length=10, unique=True)
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=False)
 
     def __str__(self):
         return self.year

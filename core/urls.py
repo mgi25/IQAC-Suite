@@ -21,7 +21,8 @@ urlpatterns = [
     path('propose-event/', views.propose_event, name='propose_event'),
     path('proposal-status/<int:pk>/', views.proposal_status, name='proposal_status'),
     path('proposal/<int:proposal_id>/detail/', views.proposal_detail, name='proposal_detail'),
-    #path('event/<int:proposal_id>/details/', views.student_event_details, name='student_event_details'),
+    path('user-dashboard/', views.user_dashboard, name='user_dashboard'),
+    path('event/<int:proposal_id>/details/', views.student_event_details, name='student_event_details'),
 
     # ────────────────────────────────────────────────
     # Admin - User Management
@@ -29,8 +30,8 @@ urlpatterns = [
     path('core-admin/user-management/', views.admin_user_panel, name='admin_user_panel'),
     path('core-admin/users/', views.admin_user_management, name='admin_user_management'),
     path('core-admin/users/<int:user_id>/edit/', views.admin_user_edit, name='admin_user_edit'),
-    #path('core-admin/users/<int:user_id>/deactivate/', views.admin_user_deactivate, name='admin_user_deactivate'),
-    #path('core-admin/users/<int:user_id>/activate/', views.admin_user_activate, name='admin_user_activate'),
+    path('core-admin/users/<int:user_id>/deactivate/', views.admin_user_deactivate, name='admin_user_deactivate'),
+    path('core-admin/users/<int:user_id>/activate/', views.admin_user_activate, name='admin_user_activate'),
 
     # ────────────────────────────────────────────────
     # Admin - Role Management
@@ -68,6 +69,7 @@ urlpatterns = [
     path('core-admin/settings/<str:model_name>/add/', views.admin_master_data_add, name='admin_settings_add'),
     path('core-admin/settings/<str:model_name>/<int:pk>/edit/', views.admin_master_data_edit, name='admin_settings_edit'),
     path('core-admin/settings/<str:model_name>/<int:pk>/delete/', views.admin_master_data_delete, name='admin_settings_delete'),
+    path('core-admin/academic-years/', views.admin_academic_year_settings, name='admin_academic_year_settings'),
 
     # ────────────────────────────────────────────────
     # Admin - Approval Flow Management
@@ -162,14 +164,16 @@ urlpatterns = [
         orgu.fetch_by_type,
         name="admin_org_fetch_by_type",
     ),
-    #path(
-    # "core-admin/org-users/<int:org_id>/classes/",
-    # core_views.class_rosters,
-    # name="class_rosters",),
-    #path(
-    # "core-admin/org-users/<int:org_id>/classes/<str:class_name>/",
-    # core_views.class_roster_detail,
-    # name="class_roster_detail",),
+    path(
+        "core-admin/org-users/<int:org_id>/classes/",
+        core_views.class_rosters,
+        name="class_rosters",
+    ),
+    path(
+        "core-admin/org-users/<int:org_id>/classes/<str:class_name>/",
+        core_views.class_roster_detail,
+        name="class_roster_detail",
+    ),
 
     # ────────────────────────────────────────────────
     # AJAX - Academic Year
@@ -223,6 +227,13 @@ urlpatterns = [
     path('api/organizations/', views.api_organizations, name='api_organizations'),
     path('api/roles/', views.api_roles, name='api_roles'),
     path('api/event-contribution/', views.event_contribution_data, name='event_contribution_data'),
+    path('api/auth/me', views.api_auth_me, name='frontend_api_auth_me'),
+    path('api/faculty/overview', views.api_faculty_overview, name='frontend_api_faculty_overview'),
+    path('api/faculty/events', views.api_faculty_events, name='api_faculty_events'),
+    path('api/faculty/students', views.api_faculty_students, name='api_faculty_students'),
+    path('api/student/overview', views.api_student_overview, name='api_student_overview'),
+    path('api/student/events', views.api_student_events, name='api_student_events'),
+    path('api/student/achievements', views.api_student_achievements, name='api_student_achievements'),
     
     
     
@@ -235,4 +246,7 @@ urlpatterns = [
     path('api/export-data/csv/', views.export_data_csv, name='export_data_csv'),
     path('api/export-data/excel/', views.export_data_excel, name='export_data_excel'),
     path('settings/pso-po-management/', views.settings_pso_po_management,name='settings_pso_po_management'),
+
+     path('dashboard/', views.dashboard, name='dashboard'),
+     path('dashboard/', views.dashboard, name='dashboard_alt')
 ]
