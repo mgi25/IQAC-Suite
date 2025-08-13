@@ -18,9 +18,23 @@ class BulkUserUploadTests(TestCase):
         self.admin = User.objects.create_superuser('admin', 'admin@example.com', 'pass')
         org_type = OrganizationType.objects.create(name='Dept')
         self.org = Organization.objects.create(name='Science', org_type=org_type)
-        self.student_role = OrganizationRole.objects.create(organization=self.org, name='student')
 
     def _upload(self):
+        csv_content = (
+            "register_no,name,email,role\n"
+            "001,John Doe,john@example.com,student\n"
+        )
+        file = SimpleUploadedFile('users.csv', csv_content.encode('utf-8'), content_type='text/csv')
+        url = reverse('admin_org_users_upload_csv', args=[self.org.id])
+        data = {
+            'class_name': 'A',
+            'academic_year': '2024-2025',
+            'csv_file': file,
+        }
+        referer = f'http://testserver/core-admin/org-users/{self.org.id}/students/'
+        return self.client.post(url, data, follow=True, HTTP_REFERER=referer)
+
+    def _upload_with_invalid(self):
         csv_content = (
             "register_no,name,email,role\n"
             "001,John Doe,john@example.com,student\n"
@@ -40,17 +54,13 @@ class BulkUserUploadTests(TestCase):
         self.client.force_login(self.admin)
         response = self._upload()
 
-        # warning for invalid role
-        warnings = [m.message for m in get_messages(response.wsgi_request) if m.level_tag == 'warning']
-        self.assertTrue(any('role' in msg.lower() for msg in warnings))
+        errors = [m.message for m in get_messages(response.wsgi_request) if m.level_tag == 'error']
+        self.assertFalse(errors)
 
-        # valid user exists but inactive
         user = User.objects.get(username='john@example.com')
         self.assertFalse(user.is_active)
         ra = RoleAssignment.objects.get(user=user, organization=self.org)
-        self.assertEqual(ra.role, self.student_role)
-        # invalid row skipped
-        self.assertFalse(User.objects.filter(username='jane@example.com').exists())
+        self.assertEqual(ra.role.name, 'student')
 
         # simulate first login
         user.set_password('pass')
@@ -67,6 +77,14 @@ class BulkUserUploadTests(TestCase):
         self.assertEqual(user.profile.role, 'student')
         # Check the role in the logged-in user's session (not the admin client)
         self.assertEqual(user_client.session['role'], 'student')
+
+    def test_upload_with_unknown_role_errors(self):
+        self.client.force_login(self.admin)
+        response = self._upload_with_invalid()
+
+        errors = [m.message for m in get_messages(response.wsgi_request) if m.level_tag == 'error']
+        self.assertTrue(any('role' in msg.lower() for msg in errors))
+        self.assertFalse(User.objects.filter(username='john@example.com').exists())
 
     def test_existing_user_not_duplicated(self):
         """Existing users matched by email should not be duplicated on upload."""
@@ -93,7 +111,7 @@ class BulkUserUploadTests(TestCase):
         mems = OrganizationMembership.objects.filter(user=existing, organization=self.org)
         self.assertEqual(mems.count(), 1)
         ra = RoleAssignment.objects.get(user=existing, organization=self.org)
-        self.assertEqual(ra.role, self.student_role)
+        self.assertEqual(ra.role.name, 'student')
 
 
 class BulkFacultyUploadTests(TestCase):
