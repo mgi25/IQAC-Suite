@@ -11,7 +11,8 @@ from django.db.models import Q
 from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
     EventExpectedOutcomes, TentativeFlow, EventActivity,
-    ExpenseDetail, IncomeDetail, SpeakerProfile,EventReport, EventReportAttachment, CDLSupport
+    ExpenseDetail, IncomeDetail, SpeakerProfile, EventReport,
+    EventReportAttachment, CDLSupport, Student
 )
 from .forms import (
     EventProposalForm, NeedAnalysisForm, ExpectedOutcomesForm,
@@ -1086,6 +1087,32 @@ def api_faculty(request):
         [{"id": u.id, "text": f"{u.get_full_name() or u.username} ({u.email})"} for u in users],
         safe=False
     )
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_students(request):
+    """Return students matching the search query."""
+    q = request.GET.get("q", "").strip()
+    org_id = request.GET.get("org_id")
+
+    students = Student.objects.select_related("user")
+    if org_id:
+        students = students.filter(classes__organization_id=org_id)
+
+    if q:
+        students = students.filter(
+            Q(user__first_name__icontains=q)
+            | Q(user__last_name__icontains=q)
+            | Q(user__email__icontains=q)
+        )
+
+    students = students.distinct().order_by("user__first_name")[:20]
+    data = [
+        {"id": s.user.id, "text": s.user.get_full_name() or s.user.username}
+        for s in students
+    ]
+    return JsonResponse(data, safe=False)
 
 
 @login_required

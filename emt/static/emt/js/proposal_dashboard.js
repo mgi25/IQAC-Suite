@@ -310,8 +310,6 @@ $(document).ready(function() {
         setupFacultyTomSelect();
         setupCommitteesTomSelect();
         setupStudentCoordinatorSelect();
-        $('#target-audience-modern').on('change.studentcoordinator', setupStudentCoordinatorSelect);
-        $('#target-audience-class-ids').on('change.studentcoordinator', setupStudentCoordinatorSelect);
     }
     
     // NEW FUNCTION to handle dynamic activities
@@ -490,8 +488,7 @@ $(document).ready(function() {
     function setupStudentCoordinatorSelect() {
         const select = $('#student-coordinators-modern');
         const djangoField = $('#django-basic-info [name="student_coordinators"]');
-        const audienceField = $('#target-audience-modern');
-        const classIdsField = $('#target-audience-class-ids');
+        const orgSelect = $('#django-basic-info [name="organization"]');
         const list = $('#student-coordinators-list');
         if (!select.length || !djangoField.length) return;
 
@@ -499,47 +496,42 @@ $(document).ready(function() {
             select[0].tomselect.destroy();
         }
 
-        let names = [];
-        const classIds = classIdsField.val()
-            ? classIdsField.val().split(',').map(s => s.trim()).filter(Boolean)
-            : [];
-        if (classIds.length) {
-            classIds.forEach(id => {
-                const cls = audienceClassMap[id];
-                if (cls && Array.isArray(cls.students)) {
-                    cls.students.forEach(st => names.push(st.name));
-                }
-            });
-        } else if (audienceField.val()) {
-            names = audienceField.val().split(',').map(s => s.trim()).filter(Boolean);
-        }
-
         const tom = new TomSelect(select[0], {
             plugins: ['remove_button'],
-            valueField: 'value',
+            valueField: 'text',
             labelField: 'text',
             searchField: 'text',
             create: false,
-            maxItems: names.length || null,
-            options: names.map(n => ({ value: n, text: n })),
-            placeholder: names.length ? 'Select student coordinators' : 'Select target audience first',
+            placeholder: 'Type a student name…',
+            load: function(query, callback) {
+                const orgId = orgSelect.val();
+                const url = `/suite/api/students/?q=${encodeURIComponent(query)}${orgId ? `&org_id=${orgId}` : ''}`;
+                fetch(url)
+                    .then(response => response.json())
+                    .then(json => {
+                        callback(json);
+                    })
+                    .catch(() => {
+                        callback();
+                    });
+            },
         });
 
         const existing = djangoField.val()
             ? djangoField.val().split(',').map(s => s.trim()).filter(Boolean)
             : [];
         if (existing.length) {
-            tom.setValue(existing.filter(v => names.includes(v)));
+            tom.addOptions(existing.map(n => ({ text: n })));
+            tom.setValue(existing);
+            updateList(existing);
         }
-
-        updateList(tom.getValue());
 
         tom.on('change', () => {
             const values = tom.getValue();
-            const joined = Array.isArray(values) ? values.join(', ') : '';
-            djangoField.val(joined).trigger('change');
+            const arr = Array.isArray(values) ? values : [values];
+            djangoField.val(arr.join(', ')).trigger('change');
             clearFieldError(select);
-            updateList(values);
+            updateList(arr);
         });
 
         select[0].tomselect = tom;
@@ -547,10 +539,11 @@ $(document).ready(function() {
         function updateList(values) {
             if (!list.length) return;
             list.empty();
-            const arr = Array.isArray(values) ? values : [values];
-            arr.filter(Boolean).forEach(name => {
-                list.append($('<li>').text(name));
-            });
+            (Array.isArray(values) ? values : [values])
+                .filter(Boolean)
+                .forEach(name => {
+                    list.append($('<li>').text(name));
+                });
         }
     }
 
@@ -1099,7 +1092,7 @@ $(document).ready(function() {
                     <div class="input-group">
                         <label for="student-coordinators-modern">Student Coordinators</label>
                         <select id="student-coordinators-modern" multiple></select>
-                        <div class="help-text">Search and select student coordinators from the target audience</div>
+                        <div class="help-text">Search and select student coordinators by name</div>
                     </div>
                 </div>
                 

@@ -33,6 +33,7 @@ urlpatterns = [
 
     # Faculty remains as is
     path("api/faculty/", views.api_faculty, name="api_faculty"),
+    path("api/students/", views.api_students, name="api_students"),
     path('api/classes/<int:org_id>/', views.api_classes, name='api_classes'),
     path('api/fetch-linkedin-profile/', views.fetch_linkedin_profile, name='fetch_linkedin_profile'),
 
