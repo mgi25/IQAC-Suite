@@ -4,571 +4,181 @@
 {% block title %}Dashboard – Event Management Suite{% endblock %}
 
 {% block head_extra %}
-  <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}" id="dashboardCss">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  <!-- Chart.js for event contribution chart -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-  <style>
-    /* Fallback style if CSS fails to load */
-    #dashboardCss[disabled] ~ .user-dashboard {
-      background: #f8f9fa;
-      color: #222;
-    }
-  </style>
-  <script>
-    // Fallback: If CSS fails to load, disable the link and show fallback
-    window.addEventListener('DOMContentLoaded', function() {
-      var css = document.getElementById('dashboardCss');
-      if (css && css.sheet && css.sheet.cssRules.length === 0) {
-        css.disabled = true;
-      }
-    });
-  </script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="user-dashboard">
-    <div class="welcome-banner">
-        <div class="banner-content">
-            <h1>Welcome back, {{ user.first_name|default:user.username }}!</h1>
-            <p>Here's your summary for today, {% now "F j, Y" %}.</p>
-        </div>
+<div class="ems-dashboard">
+  <header class="topbar">
+    <div>
+      <h1>Welcome back, {{ user.first_name|default:user.username }}</h1>
+      <span class="topbar-date">{% now "F j, Y · l" %}</span>
     </div>
+  </header>
 
-    <nav class="nav-tabs">
-        <div class="nav-content">
-            <button class="nav-tab active" data-tab="overview"><i class="fas fa-chart-line"></i> <span>Overview</span></button>
-            <button class="nav-tab" data-tab="events"><i class="fas fa-calendar-alt"></i> <span>My Events</span></button>
-            {% if not request.session.role or request.session.role != 'student' %}
-            <button class="nav-tab" data-tab="students"><i class="fas fa-user-graduate"></i> <span>My Students</span></button>
-            {% endif %}
-            <button class="nav-tab" data-tab="profile"><i class="fas fa-user-circle"></i> <span>My Profile</span></button>
-
-            {% if user.is_superuser %}
-            <a href="/admin/" class="nav-tab"><i class="fas fa-cogs"></i> <span>Admin</span></a>
-            {% endif %}
-        </div>
-    </nav>
-
-    <main class="main-content">
-        <div id="overview" class="tab-content active">
-            <!-- For all users, show the calendar and mentees/stats -->
-            <div class="overview-top-row">
-                {% if not request.session.role or request.session.role != 'student' %}
-                <div class="mentees-section-half">
-                    <h3>My Top Mentees</h3>
-                    <div class="mentees-list">
-                        <div class="mentee-item">
-                            <div class="mentee-avatar">SD</div>
-                            <div class="mentee-info">
-                                <h4>S. Devkrishna</h4>
-                                <p>GPA: 8.5 | Attendance: 92%</p>
-                                <span>Last meeting: 2 days ago</span>
-                            </div>
-                        </div>
-                        <div class="mentee-item">
-                            <div class="mentee-avatar">AG</div>
-                            <div class="mentee-info">
-                                <h4>Arisha Gupta</h4>
-                                <p>GPA: 9.2 | Attendance: 96%</p>
-                                <span>Last meeting: 1 week ago</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% else %}
-                <!-- Student Notifications Section -->
-                <div class="mentees-section-half">
-                    <h3>📢 My Notifications</h3>
-                    <div class="notifications-container">
-                        {% if user_proposals %}
-                            {% for proposal in user_proposals %}
-                            <div class="notification-item">
-                                <div class="notification-content">
-                                    <h4 class="notification-title">{{ proposal.event_title }}</h4>
-                                    <div class="notification-status">
-                                        {% if proposal.status == 'submitted' %}
-                                        <span class="status-badge pending">Pending</span>
-                                        {% elif proposal.status == 'under_review' %}
-                                        <span class="status-badge approved">Under Review</span>
-                                        {% elif proposal.status == 'rejected' %}
-                                        <span class="status-badge rejected">Rejected</span>
-                                        {% elif proposal.status == 'finalized' %}
-                                        <span class="status-badge approved">Approved</span>
-                                        {% elif proposal.status == 'returned' %}
-                                        <span class="status-badge pending">Returned</span>
-                                        {% else %}
-                                        <span class="status-badge">{{ proposal.get_status_display }}</span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                <div class="notification-actions">
-                                    <a href="{% url 'proposal_status' proposal.id %}" class="btn-view-status">View Status</a>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="empty-state">
-                                <p>No recent proposals found.</p>
-                                <a href="/suite/submit/" class="btn-primary">Create Your First Event</a>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endif %}
-                
-                <div class="calendar-section-half">
-                    <h3>📅 Event Calendar</h3>
-                    <div class="modern-calendar">
-                        <div class="calendar-header">
-                            <button id="prevMonth" class="calendar-nav-btn">
-                                <i class="fas fa-chevron-left"></i>
-                            </button>
-                            <h4 id="currentMonth"></h4>
-                            <button id="nextMonth" class="calendar-nav-btn">
-                                <i class="fas fa-chevron-right"></i>
-                            </button>
-                        </div>
-                        <div class="calendar-container">
-                            <div class="calendar-days-header">
-                                <div class="calendar-day-header">Mo</div>
-                                <div class="calendar-day-header">Tu</div>
-                                <div class="calendar-day-header">We</div>
-                                <div class="calendar-day-header">Th</div>
-                                <div class="calendar-day-header">Fr</div>
-                                <div class="calendar-day-header">Sa</div>
-                                <div class="calendar-day-header">Su</div>
-                            </div>
-                            <div class="calendar-days" id="calendarDays">
-                                <!-- Calendar days will be generated by JavaScript -->
-                            </div>
-                        </div>
-                        <div class="calendar-footer">
-                            <button class="calendar-done-btn" id="calendarDone">Done</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Event Details Modal -->
-        <div id="eventModal" class="event-modal" style="display: none;">
-            <div class="event-modal-content">
-                <div class="event-modal-header">
-                    <h3 id="eventModalTitle">Events on Selected Date</h3>
-                    <button class="event-modal-close" onclick="closeEventModal()">&times;</button>
-                </div>
-                <div class="event-modal-body">
-                    <div id="eventModalList" class="event-modal-list">
-                        <!-- Event details will be populated here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Calendar Events Data -->
-        {{ calendar_events|json_script:"calendarEventsJson" }}
-        <script>
-            // Pass calendar events data to JavaScript
-            try {
-                window.DASHBOARD_EVENTS = JSON.parse(document.getElementById('calendarEventsJson').textContent);
-                console.log('Calendar events loaded:', window.DASHBOARD_EVENTS.length, 'events');
-            } catch (e) {
-                console.error('Error parsing calendar events:', e);
-                window.DASHBOARD_EVENTS = [];
-            }
-        </script>
-
-        <div id="events" class="tab-content">
-            <div class="stats-row" style="display: flex; gap: 24px; margin-bottom: 24px;">
-                <div class="stat-card blue clickable" id="cardUpcoming" style="flex: 1;">
-                    <div class="stat-center">
-                        <i class="fas fa-calendar stat-icon-large"></i>
-                        <div class="stat-label">Upcoming Events</div>
-                        <div class="stat-number">{{ upcoming_events_count }}</div>
-                    </div>
-                </div>
-                <div class="stat-card green clickable" id="cardOrganized" style="flex: 1;">
-                    <div class="stat-center">
-                        <i class="fas fa-target stat-icon-large"></i>
-                        <div class="stat-label">Organized Events</div>
-                        <div class="stat-number">{{ organized_events_count }}</div>
-                    </div>
-                </div>
-                <div class="stat-card purple" style="flex: 1;">
-                    <div class="stat-center">
-                        <i class="fas fa-users stat-icon-large"></i>
-                        <div class="stat-label">Students Participated</div>
-                        <div class="stat-number">{{ students_participated }}</div>
-                    </div>
-                </div>
-                <div class="stat-card orange clickable" id="cardThisWeek" style="flex: 1;">
-                    <div class="stat-center">
-                        <i class="fas fa-calendar-week stat-icon-large"></i>
-                        <div class="stat-label">This Week</div>
-                        <div class="stat-number">{{ this_week_events }}</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="dashboard-events-bottom" style="display: flex; gap: 32px; align-items: stretch; margin-top: 24px; min-height: 500px;">
-                <div class="dashboard-events-left" style="flex: 1; min-width: 0;">
-                    <!-- Event Contribution Card -->
-                    <div class="chart-card" style="margin-bottom: 24px;">
-                        <div class="chart-header">
-                            <h3>Event Contribution</h3>
-                            <div class="chart-controls">
-                                <select id="organizationSelect" class="form-select form-select-sm">
-                                    <option value="all">All Organizations</option>
-                                    <!-- Options will be populated by JavaScript -->
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="chart-container">
-                            <div class="donut-chart-wrapper">
-                                <canvas id="contributionChart" width="300" height="300"></canvas>
-                                <div class="chart-center-info">
-                                    <div class="center-number" id="centerNumber">0</div>
-                                    <div class="center-label" id="centerLabel">Total Events</div>
-                                </div>
-                            </div>
-                            
-                            <div class="chart-legend" id="chartLegend">
-                                <!-- Legend will be populated by JavaScript -->
-                            </div>
-                        </div>
-                        
-                        <div class="chart-details" id="chartDetails">
-                            <div class="detail-item">
-                                <span class="detail-label">Your Participation:</span>
-                                <span class="detail-value" id="userParticipation">0 events</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Contribution Rate:</span>
-                                <span class="detail-value" id="contributionRate">0%</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Filters Section -->
-                    <div class="filters-section">
-                        <div class="filters-content">
-                            <div class="filter-label"><i class="fas fa-filter"></i><span>Filters:</span></div>
-                            <select class="filter-select" id="eventTypeFilter">
-                                <option value="">All Events</option>
-                                <option value="my">My Proposed Events</option>
-                                <option value="participating">Events I'm Participating</option>
-                            </select>
-                            <select class="filter-select" id="eventTimeFilter">
-                                <option value="">All Time</option>
-                                <option value="upcoming">Upcoming</option>
-                                <option value="week">This Week</option>
-                                <option value="month">This Month</option>
-                            </select>
-                            <select class="filter-select" id="eventStatusFilter">
-                                <option value="">All Status</option>
-                                <option value="finalized">Finalized</option>
-                                <option value="under_review">Under Review</option>
-                                <option value="submitted">Submitted</option>
-                                <option value="rejected">Rejected</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- My Events Card -->
-                    <div class="events-card">
-                        <div class="events-card-header">
-                            <h3><i class="fas fa-calendar-alt"></i> My Events</h3>
-                            <a class="btn-primary" href="/suite/submit/">
-                              <i class="fas fa-plus"></i> Create Event
-                            </a>
-                        </div>
-                        <div class="events-card-body">
-                            <div class="events-list-scrollable" id="myEventsList">
-  {% for event in my_events %}
-    <div class="event-item-card" data-event-type="{% if event.submitted_by == user %}my{% else %}participating{% endif %}" data-event-status="{{ event.status|lower }}" data-event-date="{{ event.event_datetime|date:'Y-m-d' }}">
-      <div class="event-main-info">
-        <h4>{{ event.event_title }}</h4>
-        <div class="event-details-row">
-          <span class="event-date">📍 {{ event.event_datetime|date:"M d, Y H:i" }}</span>
-          <span class="event-user">👤 {{ event.submitted_by.get_full_name }}</span>
-          <span class="event-participants">👥 {{ event.fest_fee_participants|default:event.conf_fee_participants|default:"0" }}</span>
-        </div>
+  <!-- TOP ROW -->
+  <section class="kpi-row">
+    <button class="kpi-card" id="kpiStudents">
+      <div class="kpi-icon bg-indigo"><i class="fa-solid fa-user-graduate"></i></div>
+      <div class="kpi-content">
+        <span class="kpi-title">No. of Students</span>
+        <span class="kpi-value">{{ mentee_count|default:0 }}</span>
+        <span class="kpi-bar" style="--pct:60%"></span>
       </div>
-      <div class="event-actions-row">
-        <span class="status-badge {{ event.status|lower }}">{{ event.get_status_display }}</span>
-        <div class="event-action-buttons">
-          <a href="{% url 'admin_proposal_detail' event.id %}" class="btn-icon view-details" title="View Details">
-            <i class="fas fa-eye"></i>
-            <span>View Details</span>
-          </a>
-        </div>
+    </button>
+
+    <button class="kpi-card" id="kpiClasses">
+      <div class="kpi-icon bg-sky"><i class="fa-solid fa-chalkboard-user"></i></div>
+      <div class="kpi-content">
+        <span class="kpi-title">No. of Classes</span>
+        <span class="kpi-value">{{ classes_count|default:0 }}</span>
+        <span class="kpi-bar" style="--pct:55%"></span>
       </div>
-    </div>
-  {% empty %}
-    <div class="empty-state">
-        <div class="empty-state-icon">
-            <i class="fas fa-calendar-times"></i>
-        </div>
-        <h4>No events found</h4>
-        <p>You haven't created or participated in any events yet.</p>
-        <a href="/suite/submit/" class="btn-primary">
-            <i class="fas fa-plus"></i> Create Your First Event
-        </a>
-    </div>
-  {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="dashboard-events-right" style="flex: 1; min-width: 0;">
-                    <!-- Proposal Status Card -->
-                    <div class="proposal-status-card">
-                        <div class="proposal-status-header">
-                            <h3><i class="fas fa-clipboard-list"></i> Proposal Status</h3>
-                        </div>
-                        <div class="proposal-status-body">
-                            <div class="activity-list-scrollable">
-                                {% if user_proposals %}
-                                    {% for proposal in user_proposals|slice:":10" %}
-                                    <div class="activity-item">
-                                        <div class="activity-icon status-{{ proposal.status|lower }}">
-                                            {% if proposal.status == 'finalized' %}
-                                            <i class="fas fa-check-circle"></i>
-                                            {% elif proposal.status == 'rejected' %}
-                                            <i class="fas fa-times-circle"></i>
-                                            {% elif proposal.status == 'under_review' %}
-                                            <i class="fas fa-clock"></i>
-                                            {% else %}
-                                            <i class="fas fa-file-alt"></i>
-                                            {% endif %}
-                                        </div>
-                                        <div class="activity-content">
-                                            <h4>{{ proposal.event_title }}</h4>
-                                            <p>{{ proposal.get_status_display }} • {{ proposal.updated_at|timesince }} ago</p>
-                                            <a href="{% url 'emt:proposal_status_detail' proposal.id %}" class="view-status-btn">
-                                                <i class="fas fa-eye"></i> View Status
-                                            </a>
-                                        </div>
-                                    </div>
-                                    {% endfor %}
-                                {% else %}
-                                    <div class="empty-state">
-                                        <div class="empty-state-icon">
-                                            <i class="fas fa-clipboard"></i>
-                                        </div>
-                                        <h4>No proposals yet</h4>
-                                        <p>You haven't submitted any event proposals yet.</p>
-                                        <a href="/suite/submit/" class="btn-primary">
-                                            <i class="fas fa-plus"></i> Submit Your First Proposal
-                                        </a>
-                                    </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    </button>
 
-        {% if not request.session.role or request.session.role != 'student' %}
-        <div id="students" class="tab-content">
-            <div class="search-section">
-                <div class="search-content">
-                    <div class="search-input">
-                        <i class="fas fa-search search-icon"></i>
-                        <input type="text" placeholder="Search students..." id="studentSearch">
-                    </div>
-                    <select class="filter-select" id="studentStatusFilter"><option value="">All Students</option><option value="need_checkin">Need Check-in</option><option value="doing_well">Doing Well</option></select>
-                    <select class="filter-select" id="studentDeptFilter"><option value="">All Departments</option><option value="cs">Computer Science</option><option value="ece">Electronics</option><option value="me">Mechanical</option></select>
-                </div>
-            </div>
+    <button class="kpi-card" id="kpiOrgEvents">
+      <div class="kpi-icon bg-orange"><i class="fa-solid fa-calendar-check"></i></div>
+      <div class="kpi-content">
+        <span class="kpi-title">Events Organized</span>
+        <span class="kpi-value">{{ organized_events_count|default:0 }}</span>
+        <span class="kpi-bar" style="--pct:45%"></span>
+      </div>
+    </button>
 
-            <div class="students-section">
-                <div class="section-header">
-                    <h3>My Students</h3>
-                    <button class="btn-primary" type="button" data-action="add-student">
-                        <i class="fas fa-plus"></i> Add Student
-                    </button>
-                </div>
-                <div class="students-list">
-                    <div class="student-item" data-action="show-student-profile" data-student-id="1">
-                        <div class="student-left">
-                            <div class="student-avatar">SD</div>
-                            <div class="student-info">
-                                <h4>S. Devkrishna</h4>
-                                <p class="student-reg">23112015 | 25 interactions</p>
-                                <div class="student-stats">
-                                    <span>📊 GPA: 8.5</span>
-                                    <span>📅 Attendance: 92%</span>
-                                    <span>🎯 Last meeting: 2 days ago</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="student-actions">
-                            <span class="status-badge warning">⚠️ Needs check-in</span>
-                            <button class="btn-icon" type="button" data-action="message-student" data-student-id="1"><i class="fas fa-comment"></i></button>
-                            <button class="btn-icon" type="button" data-action="call-student" data-student-id="1"><i class="fas fa-phone"></i></button>
-                        </div>
-                    </div>
-                    <div class="student-item" data-action="show-student-profile" data-student-id="2">
-                        <div class="student-left">
-                            <div class="student-avatar">AG</div>
-                            <div class="student-info">
-                                <h4>Arisha Gupta</h4>
-                                <p class="student-reg">23112002 | 14 interactions</p>
-                                <div class="student-stats">
-                                    <span>📊 GPA: 9.2</span>
-                                    <span>📅 Attendance: 96%</span>
-                                    <span>🎯 Last meeting: 1 week ago</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="student-actions">
-                            <span class="status-badge success">✅ Doing well</span>
-                            <button class="btn-icon" type="button" data-action="message-student" data-student-id="2"><i class="fas fa-comment"></i></button>
-                            <button class="btn-icon" type="button" data-action="call-student" data-student-id="2"><i class="fas fa-phone"></i></button>
-                        </div>
-                    </div>
-                    <div class="student-item" data-action="show-student-profile" data-student-id="3">
-                        <div class="student-left">
-                            <div class="student-avatar">RK</div>
-                            <div class="student-info">
-                                <h4>Rohit Kumar</h4>
-                                <p class="student-reg">23112025 | 18 interactions</p>
-                                <div class="student-stats">
-                                    <span>📊 GPA: 7.8</span>
-                                    <span>📅 Attendance: 88%</span>
-                                    <span>🎯 Last meeting: 5 days ago</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="student-actions">
-                            <span class="status-badge warning">⚠️ Needs attention</span>
-                            <button class="btn-icon" type="button" data-action="message-student" data-student-id="3"><i class="fas fa-comment"></i></button>
-                            <button class="btn-icon" type="button" data-action="call-student" data-student-id="3"><i class="fas fa-phone"></i></button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <button class="kpi-card" id="kpiPartEvents">
+      <div class="kpi-icon bg-emerald"><i class="fa-solid fa-people-group"></i></div>
+      <div class="kpi-content">
+        <span class="kpi-title">Events Participated</span>
+        <span class="kpi-value">{{ participated_events_count|default:0 }}</span>
+        <span class="kpi-bar" style="--pct:65%"></span>
+      </div>
+    </button>
+
+    <!-- Profile -->
+    <div class="profile-kpi card">
+      <div class="pkp-avatar">
+        {% if user.profile and user.profile.photo %}
+          <img src="{{ user.profile.photo.url }}" alt="{{ user.get_full_name|default:user.username }}">
+        {% else %}
+          <span>
+            {% if user.first_name %}{{ user.first_name.0|upper }}{% if user.last_name %}{{ user.last_name.0|upper }}{% endif %}{% else %}{{ user.username.0|upper }}{% endif %}
+          </span>
         {% endif %}
-
-        <div id="profile" class="tab-content">
-            <div class="profile-section">
-                <div class="profile-header">
-                    <div class="profile-left">
-                        <div class="profile-avatar-large">
-                            {% if user.first_name %}
-                                {{ user.first_name.0|upper }}{% if user.last_name %}{{ user.last_name.0|upper }}{% endif %}
-                            {% else %}
-                                {{ user.username.0|upper }}
-                            {% endif %}
-                        </div>
-                        <div class="profile-info">
-                            <h2>{{ user.get_full_name|default:user.username }}</h2>
-                            <p>{{ user.email }}</p>
-                            {% if user.role_assignments.exists %}
-                              <p>
-                                {% for ra in user.role_assignments.all %}
-                                  {{ ra.organization.name }} &bull; {{ ra.role.name }}<br>
-                                {% endfor %}
-                              </p>
-                            {% else %}
-                              <p>No organization/role assigned.</p>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="classes-section">
-                <h3>📚 My Classes</h3>
-                <div class="classes-list">
-                    <div class="class-item">
-                        <div>
-                            <p class="class-name">CS101 - Programming Fundamentals</p>
-                            <p class="class-students">45 students</p>
-                        </div>
-                        <button class="btn-link" type="button" data-action="view-class-details" data-class-id="1">View Details</button>
-                    </div>
-                    <div class="class-item">
-                        <div>
-                            <p class="class-name">CS301 - Data Structures</p>
-                            <p class="class-students">32 students</p>
-                        </div>
-                        <button class="btn-link" type="button" data-action="view-class-details" data-class-id="2">View Details</button>
-                    </div>
-                    <div class="class-item">
-                        <div>
-                            <p class="class-name">CS401 - Database Systems</p>
-                            <p class="class-students">28 students</p>
-                        </div>
-                        <button class="btn-link" type="button" data-action="view-class-details" data-class-id="3">View Details</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="profile-grid">
-                <div class="achievements-section card">
-                    <div class="section-header">
-                        <h3>🏆 My Achievements</h3>
-                        <button class="btn-icon" type="button" data-action="add-achievement"><i class="fas fa-plus"></i></button>
-                    </div>
-                    <div class="achievements-list">
-                        <div class="achievement-item">Best Faculty Award 2024</div>
-                        <div class="achievement-item">Research Publication - AI in Education</div>
-                        <div class="achievement-item">15 years of teaching experience</div>
-                        <div class="achievement-item">Department Innovation Award</div>
-                    </div>
-                </div>
-
-                <div class="goals-section card">
-                    <div class="section-header">
-                        <h3>🎯 Current Goals</h3>
-                        <button class="btn-icon" type="button" data-action="add-goal"><i class="fas fa-plus"></i></button>
-                    </div>
-                    <div class="goals-list">
-                        <div class="goal-item">
-                            <p class="goal-text">Complete 10 LORs this month</p>
-                            <div class="goal-progress">
-                                <div class="progress-bar"><div class="progress-fill" style="width: 80%"></div></div>
-                                <span class="progress-text">80%</span>
-                            </div>
-                        </div>
-                        <div class="goal-item">
-                            <p class="goal-text">Organize Tech Symposium</p>
-                            <div class="goal-progress">
-                                <div class="progress-bar"><div class="progress-fill" style="width: 70%"></div></div>
-                                <span class="progress-text">70%</span>
-                            </div>
-                        </div>
-                        <div class="goal-item">
-                            <p class="goal-text">Publish Research Paper</p>
-                            <div class="goal-progress">
-                                <div class="progress-bar"><div class="progress-fill" style="width: 45%"></div></div>
-                                <span class="progress-text">45%</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-<div class="timeline-section">
-    <h3>📅 This Year's Contributions</h3>
-    <div class="timeline">
-        <div class="timeline-item completed"><div class="timeline-dot"></div><div class="timeline-content"><h4>January</h4><p>Organized New Student Orientation</p><span class="timeline-status">completed</span></div></div>
-        <div class="timeline-item completed"><div class="timeline-dot"></div><div class="timeline-content"><h4>February</h4><p>Research Paper Submission</p><span class="timeline-status">completed</span></div></div>
-        <div class="timeline-item ongoing"><div class="timeline-dot"></div><div class="timeline-content"><h4>March</h4><p>Coordinating Tech Symposium</p><span class="timeline-status">ongoing</span></div></div>
-        <div class="timeline-item planned"><div class="timeline-dot"></div><div class="timeline-content"><h4>April</h4><p>Student Career Guidance Workshop</p><span class="timeline-status">planned</span></div></div>
-    </div>
-</div>
+      </div>
+      <div class="pkp-body">
+        <div class="pkp-name">{{ user.get_full_name|default:user.username }}</div>
+        <div class="pkp-sub">{{ user.email }}</div>
+        <div class="pkp-stats">
+          <span>Rank:&nbsp;<strong>{{ user.rank|default:"—" }}</strong></span>
+          <span>Classes:&nbsp;<strong>{{ classes_count|default:0 }}</strong></span>
         </div>
-    </main>
-</div>
+      </div>
+    </div>
+  </section>
 
-<!-- Removed unwanted line at the bottom (if any element like <hr> or border div existed, it would be removed here) -->
+  <!-- MAIN GRID -->
+  <main class="grid-3">
+    <!-- Actions (col 1) -->
+    <section class="card eq" id="cardActions">
+      <div class="card-header">
+        <h3><i class="fa-solid fa-inbox"></i> Actions</h3>
+        <a class="link-muted" href="#" data-go-tab="events">View all</a>
+      </div>
+      <div class="list">
+        {% with actionable=user_proposals %}
+          {% if actionable %}
+            {% for proposal in actionable %}
+              {% if proposal.status == 'submitted' or proposal.status == 'under_review' or proposal.status == 'returned' %}
+              <article class="list-item">
+                <div class="bullet {{ proposal.status|lower }}">
+                  {% if proposal.status == 'under_review' %}<i class="fa-regular fa-clock"></i>
+                  {% elif proposal.status == 'returned' %}<i class="fa-solid fa-rotate-left"></i>
+                  {% else %}<i class="fa-regular fa-file-lines"></i>{% endif %}
+                </div>
+                <div class="list-body">
+                  <h4>{{ proposal.event_title }}</h4>
+                  <p>{{ proposal.get_status_display }}</p>
+                </div>
+                <a href="{% url 'emt:proposal_status_detail' proposal.id %}" class="chip-btn"><i class="fa-regular fa-eye"></i> Open</a>
+              </article>
+              {% endif %}
+            {% endfor %}
+          {% else %}
+            <div class="empty">Nothing needs attention.</div>
+          {% endif %}
+        {% endwith %}
+      </div>
+    </section>
+
+    <!-- Performance (col 2) -->
+    <section class="card eq" id="cardPerformance">
+      <div class="card-header">
+        <h3><i class="fa-solid fa-chart-pie"></i> <span id="perfTitle">Student Performance</span></h3>
+        <div class="header-actions">
+          <div class="seg">
+            <button class="seg-btn active" data-view="performance">Performance</button>
+            <button class="seg-btn" data-view="contribution">Contribution</button>
+          </div>
+        </div>
+      </div>
+      <div class="chart-wrap donut">
+        <canvas id="donutChart"></canvas>
+        <div class="chart-legend" id="donutLegend"></div>
+      </div>
+    </section>
+
+    <!-- Calendar (col 3, row 1) -->
+    <section class="card eq" id="cardCalendar">
+      <div class="card-header">
+        <h3><i class="fa-regular fa-calendar"></i> Calendar</h3>
+        <div class="header-actions">
+          <select id="visibilitySelect" class="select">
+            <option value="all">All</option>
+            <option value="private">Private</option>
+            <option value="staff">Teachers</option>
+          </select>
+          <a href="/suite/submit/?via=dashboard" class="chip-btn" id="addEventBtn"><i class="fa-solid fa-plus"></i> Add</a>
+        </div>
+      </div>
+      <div class="mini-cal" id="miniCalendar">
+        <div class="cal-head">
+          <button class="cal-nav" id="calPrev" aria-label="Previous month"><i class="fa-solid fa-chevron-left"></i></button>
+          <div id="calTitle">Month YYYY</div>
+          <button class="cal-nav" id="calNext" aria-label="Next month"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+        <div class="cal-weekdays">
+          <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+      <div id="upcomingWrap" class="upcoming"></div>
+    </section>
+
+    <!-- Contribution (col 1–2, row 2) -->
+    <!-- Contribution (span same width as Actions + Performance) -->
+    <section class="card" id="cardContribution">
+        <div class="card-header"><h3><i class="fa-solid fa-fire"></i> Yearly Contribution</h3></div>
+        <div id="heatmapContainer" class="heatmap"></div>
+      </section>      
+
+    <!-- To‑do (col 3, row 2) -->
+    <section class="card eq" id="cardTodo">
+      <div class="card-header">
+        <h3><i class="fa-regular fa-square-check"></i> To-do</h3>
+        <button class="chip-btn" id="addTodo"><i class="fa-solid fa-plus"></i> Add</button>
+      </div>
+      <ul id="todoList" class="todo"></ul>
+    </section>
+  </main>
+
+  {{ calendar_events|json_script:"calendarEventsJson" }}
+  <script>
+    try{window.DASHBOARD_EVENTS=JSON.parse(document.getElementById('calendarEventsJson').textContent);}catch{window.DASHBOARD_EVENTS=[];}
+  </script>
+</div>
 {% endblock %}
 
 {% block scripts_extra %}

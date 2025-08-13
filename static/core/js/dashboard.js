@@ -1,1345 +1,261 @@
-// --- Tab Navigation ---
-document.addEventListener('DOMContentLoaded', function() {
-  // Tab switching functionality
-  const tabButtons = document.querySelectorAll('.nav-tab[data-tab]');
-  const tabContents = document.querySelectorAll('.tab-content');
+/* IQAC Suite – Dashboard UI (frontend only) */
+(function () {
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+  const px = v => Number.parseFloat(v) || 0;
 
-  tabButtons.forEach(button => {
-    button.addEventListener('click', function() {
-      const targetTab = this.dataset.tab;
-      
-      // Remove active class from all tabs and contents
-      tabButtons.forEach(btn => btn.classList.remove('active'));
-      tabContents.forEach(content => content.classList.remove('active'));
-      
-      // Add active class to clicked tab and corresponding content
-      this.classList.add('active');
-      const targetContent = document.getElementById(targetTab);
-      if (targetContent) {
-        targetContent.classList.add('active');
+  // Simple tab/anchor navigation
+  function goTab(id, hash) {
+    const extra = hash ? (hash.startsWith('#') ? hash.slice(1) : hash) : '';
+    const suffix = extra ? (extra.startsWith('&') ? extra : `&${extra}`) : '';
+    location.hash = `#${id}${suffix}`;
+  }
+  $('#kpiStudents')?.addEventListener('click', () => goTab('students'));
+  $('#kpiClasses')?.addEventListener('click', () => goTab('profile'));
+  $('#kpiOrgEvents')?.addEventListener('click', () => goTab('events', '#type=my'));
+  $('#kpiPartEvents')?.addEventListener('click', () => goTab('events', '#type=participating'));
+  $$('[data-go-tab="profile"]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();goTab('profile');}));
+  $$('[data-go-tab="events"]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();goTab('events');}));
+
+  // Donut: Performance / Contribution
+  let donut, currentView = 'performance';
+  const ctx = $('#donutChart')?.getContext('2d');
+  const COLORS = ['#6366f1','#f59e0b','#10b981','#ef4444'];
+
+  function renderDonut(labels, data) {
+    if (!ctx) return;
+    donut?.destroy();
+    donut = new Chart(ctx, {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data, backgroundColor: COLORS, borderWidth: 0, cutout: '70%' }] },
+      options: {
+        plugins: { legend: { display: false } },
+        responsive: true,
+        maintainAspectRatio: true,
+        layout:{padding:10}
       }
     });
-  });
-
-  // Filter functionality for events
-  const eventTypeFilter = document.getElementById('eventTypeFilter');
-  const eventTimeFilter = document.getElementById('eventTimeFilter');
-  const eventStatusFilter = document.getElementById('eventStatusFilter');
-  const eventsList = document.getElementById('myEventsList');
-
-  function filterEvents() {
-    if (!eventsList) return;
-
-    const typeValue = eventTypeFilter ? eventTypeFilter.value : '';
-    const timeValue = eventTimeFilter ? eventTimeFilter.value : '';
-    const statusValue = eventStatusFilter ? eventStatusFilter.value : '';
-    
-    const eventCards = eventsList.querySelectorAll('.event-item-card');
-    
-    eventCards.forEach(card => {
-      let showCard = true;
-      
-      // Filter by type (my vs participating)
-      if (typeValue) {
-        const cardType = card.getAttribute('data-event-type');
-        if (cardType !== typeValue) {
-          showCard = false;
-        }
-      }
-      
-      // Filter by status
-      if (statusValue && showCard) {
-        const cardStatus = card.getAttribute('data-event-status');
-        if (cardStatus !== statusValue) {
-          showCard = false;
-        }
-      }
-      
-      // Filter by time
-      if (timeValue && showCard) {
-        const eventDate = card.getAttribute('data-event-date');
-        const eventDateTime = new Date(eventDate);
-        const today = new Date();
-        const weekFromNow = new Date();
-        weekFromNow.setDate(today.getDate() + 7);
-        const monthFromNow = new Date();
-        monthFromNow.setMonth(today.getMonth() + 1);
-        
-        switch (timeValue) {
-          case 'upcoming':
-            if (eventDateTime <= today) showCard = false;
-            break;
-          case 'week':
-            if (eventDateTime <= today || eventDateTime > weekFromNow) showCard = false;
-            break;
-          case 'month':
-            if (eventDateTime <= today || eventDateTime > monthFromNow) showCard = false;
-            break;
-        }
-      }
-      
-      card.style.display = showCard ? 'block' : 'none';
-    });
+    const legend = $('#donutLegend');
+    if (legend) legend.innerHTML = labels.map((l,i)=>
+      `<div class="legend-row"><span class="legend-dot" style="background:${COLORS[i]}"></span><span>${l}</span><strong style="margin-left:auto">${data[i]}%</strong></div>`
+    ).join('');
   }
 
-  // Add event listeners for filters
-  if (eventTypeFilter) eventTypeFilter.addEventListener('change', filterEvents);
-  if (eventTimeFilter) eventTimeFilter.addEventListener('change', filterEvents);
-  if (eventStatusFilter) eventStatusFilter.addEventListener('change', filterEvents);
+  async function loadPerformance() {
+    try{
+      const res = await fetch('/api/student-performance/', { headers: { 'X-Requested-With':'XMLHttpRequest' }});
+      const j = await res.json();
+      renderDonut(j.labels, j.percentages);
+    }catch{
+      renderDonut(['Excellent','Good','Average','Poor'], [35, 40, 20, 5]);
+    }
+  }
+  async function loadContribution() {
+    try{
+      const res = await fetch('/api/event-contribution-summary/', { headers: { 'X-Requested-With':'XMLHttpRequest' }});
+      const j = await res.json();
+      renderDonut(j.labels, j.percentages);
+    }catch{
+      renderDonut(['Organized','Participated','Reviewed','Other'], [45, 35, 15, 5]);
+    }
+  }
 
-  // Calendar functionality follows below...
-});
+  $$('.seg-btn').forEach(b => b.addEventListener('click', e => {
+    $$('.seg-btn').forEach(x => x.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+    currentView = e.currentTarget.dataset.view;
+    const title = $('#perfTitle');
+    if (title) title.textContent = currentView === 'performance' ? 'Student Performance' : 'Event Contribution';
+    (currentView === 'performance' ? loadPerformance() : loadContribution()).then(syncHeights);
+  }));
 
-// Get events data from window variable or use empty array as fallback
-const EVENTS = window.DASHBOARD_EVENTS || [];
+  // Calendar
+  let calRef = new Date();
+  const fmt2 = v => String(v).padStart(2,'0');
+  const isSame = (a,b)=>a.getFullYear()==b.getFullYear()&&a.getMonth()==b.getMonth()&&a.getDate()==b.getDate();
 
-function getEventsForDate(dateStr) {
-  return EVENTS.filter(ev => ev.date === dateStr);
-}
+  function buildCalendar() {
+    const headTitle = $('#calTitle');
+    const grid = $('#calGrid');
+    if(!grid || !headTitle) return;
 
-function formatDate(dateStr) {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  });
-}
+    headTitle.textContent = calRef.toLocaleString(undefined,{month:'long', year:'numeric'});
 
-function showEventsModal(dateStr, events) {
-  const modal = document.getElementById('eventModal');
-  const title = document.getElementById('eventModalTitle');
-  const list = document.getElementById('eventModalList');
-  
-  title.textContent = `Events on ${formatDate(dateStr)}`;
-  
-  if (events.length === 0) {
-    list.innerHTML = '<div class="no-events">No events scheduled for this date.</div>';
-  } else {
-    list.innerHTML = events.map(ev => {
-      // Check if event is in the past
-      const eventDate = new Date(ev.date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const isPastEvent = eventDate < today;
-      
-      return `
-      <div class="event-card ${ev.is_my_event ? 'my-event' : 'other-event'} ${isPastEvent ? 'past-event' : ''}">
-        <div class="event-card-header">
-          <div class="event-title-section">
-            <h3 class="event-title">${ev.title}</h3>
-            <div class="event-badges">
-              <span class="event-badge ${ev.is_my_event ? 'my-event-badge' : 'other-event-badge'}">
-                ${ev.is_my_event ? 'My Event' : 'Other Event'}
-              </span>
-              ${isPastEvent ? '<span class="event-badge past-badge">Completed</span>' : ''}
-            </div>
-          </div>
-        </div>
-        <div class="event-card-body">
-          <div class="event-info">
-            <div class="event-info-item">
-              <i class="fas fa-clock"></i>
-              <span>${ev.datetime}</span>
-            </div>
-            <div class="event-info-item">
-              <i class="fas fa-map-marker-alt"></i>
-              <span>${ev.venue || 'Venue TBD'}</span>
-            </div>
-          </div>
-        </div>
-        <div class="event-card-actions">
-          <a href="/proposal/${ev.id}/detail/" class="btn-action btn-primary" target="_blank">
-            <i class="fas fa-eye"></i>
-            <span>View Details</span>
-          </a>
-          ${!isPastEvent ? `
-          <button class="btn-action btn-secondary" onclick="addToCalendar('${ev.title}', '${ev.date}', '${ev.venue}')">
-            <i class="fas fa-calendar-plus"></i>
-            <span>Add to Calendar</span>
-          </button>
-          ` : ''}
-        </div>
-      </div>
-    `;
+    const first = new Date(calRef.getFullYear(), calRef.getMonth(), 1);
+    const last  = new Date(calRef.getFullYear(), calRef.getMonth()+1, 0);
+    const startIdx = first.getDay();
+    const prevLast = new Date(calRef.getFullYear(), calRef.getMonth(), 0).getDate();
+
+    const cells = [];
+    for(let i=startIdx-1;i>=0;i--){ cells.push({text: prevLast - i, date:null, muted:true}); }
+    for(let d=1; d<=last.getDate(); d++){
+      const dt = new Date(calRef.getFullYear(), calRef.getMonth(), d);
+      cells.push({text:d, date:dt, muted:false});
+    }
+    while(cells.length % 7 !== 0){ cells.push({text: cells.length%7+1, date:null, muted:true}); }
+
+    grid.innerHTML = cells.map(c=>{
+      const today = c.date && isSame(c.date, new Date());
+      const iso = c.date ? `${c.date.getFullYear()}-${fmt2(c.date.getMonth()+1)}-${fmt2(c.date.getDate())}` : '';
+      return `<div class="day${c.muted?' muted':''}${today?' today':''}" data-date="${iso}">${c.text}</div>`;
     }).join('');
+
+    grid.querySelectorAll('.day[data-date]').forEach(el=>{
+      el.addEventListener('click', ()=> openDay(new Date(el.dataset.date)));
+    });
   }
-  
-  modal.style.display = 'flex';
+
+  function openDay(day){
+    const yyyy = day.getFullYear(), mm = String(day.getMonth()+1).padStart(2,'0'), dd = String(day.getDate()).padStart(2,'0');
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+    const list = $('#upcomingWrap'); if (!list) return;
+    const items = (window.DASHBOARD_EVENTS||[]).filter(e => e.date === dateStr);
+    list.innerHTML = items.length
+      ? items.map(e => `<div class="u-item"><div>${e.title}</div><a class="chip-btn" href="/proposal/${e.id}/detail/"><i class="fa-regular fa-eye"></i> View</a></div>`).join('')
+      : `<div class="empty">No events for ${day.toLocaleDateString()}</div>`;
+  }
+
+  $('#calPrev')?.addEventListener('click', ()=>{ calRef = new Date(calRef.getFullYear(), calRef.getMonth()-1, 1); buildCalendar(); syncHeights(); });
+  $('#calNext')?.addEventListener('click', ()=>{ calRef = new Date(calRef.getFullYear(), calRef.getMonth()+1, 1); buildCalendar(); syncHeights(); });
+
+  // Add event scope passthrough
+  $('#addEventBtn')?.addEventListener('click', (e) => {
+    const scope = $('#visibilitySelect')?.value || 'all';
+    e.currentTarget.href = `/suite/submit/?via=dashboard&scope=${encodeURIComponent(scope)}`;
+  });
+
+  // Heatmap
+  // Heatmap (fills card)
+function renderHeatmap(){
+  const wrap = $('#heatmapContainer'); if (!wrap) return;
+  const cols = 53, rows = 7;
+  const grid = document.createElement('div'); grid.className='hm-grid';
+  for (let c=0;c<cols;c++){
+    const col = document.createElement('div'); col.className='hm-col';
+    for (let r=0;r<rows;r++){
+      const cell = document.createElement('div'); cell.className='hm-cell';
+      const v = Math.random();
+      if (v>0.8) cell.classList.add('l4'); else if (v>0.6) cell.classList.add('l3'); else if (v>0.35) cell.classList.add('l2'); else if (v>0.18) cell.classList.add('l1');
+      col.appendChild(cell);
+    }
+    grid.appendChild(col);
+  }
+  wrap.innerHTML=''; wrap.appendChild(grid);
+  fitHeatmap();
 }
 
-function closeEventModal() {
-  const modal = document.getElementById('eventModal');
-  modal.style.display = 'none';
+function fitHeatmap(){
+  const wrap = $('#heatmapContainer'); if(!wrap) return;
+  const cols = 53, rows = 7, gap = 3;
+  const cs = getComputedStyle(wrap);
+  const availW = wrap.clientWidth  - (parseFloat(cs.paddingLeft)||0) - (parseFloat(cs.paddingRight)||0);
+  const availH = wrap.clientHeight - (parseFloat(cs.paddingTop)||0)  - (parseFloat(cs.paddingBottom)||0);
+  const size = Math.max(4, Math.floor(Math.min(
+    (availW - (cols - 1) * gap) / cols,
+    (availH - (rows - 1) * gap) / rows
+  )));
+  wrap.style.setProperty('--hm-size', size + 'px');
+  wrap.style.setProperty('--hm-gap',  gap  + 'px');
 }
 
-function addToCalendar(title, date, venue) {
-  // Create Google Calendar URL with proper date formatting
-  const eventDate = new Date(date);
-  
-  // Format date for Google Calendar (YYYYMMDD)
-  const year = eventDate.getFullYear();
-  const month = String(eventDate.getMonth() + 1).padStart(2, '0');
-  const day = String(eventDate.getDate()).padStart(2, '0');
-  const startDate = `${year}${month}${day}`;
-  
-  // For all-day events, use the same date for start and end
-  const endDate = startDate;
-  
-  // Prepare event details
-  const details = [
-    venue ? `Venue: ${venue}` : '',
-    'Event from IQAC Suite'
-  ].filter(Boolean).join('\n');
-  
-  // Create Google Calendar URL
-  const googleCalendarUrl = `https://calendar.google.com/calendar/render?` +
-    `action=TEMPLATE` +
-    `&text=${encodeURIComponent(title)}` +
-    `&dates=${startDate}/${endDate}` +
-    `&details=${encodeURIComponent(details)}` +
-    `&sf=true&output=xml`;
-  
-  // Open in new tab
-  window.open(googleCalendarUrl, '_blank');
-}
 
-// --- Calendar Rendering ---
-// Simple Calendar Implementation
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('🗓️ Initializing calendar...');
-  
-  // Get calendar elements
-  const calendarDays = document.getElementById('calendarDays');
-  const currentMonthLabel = document.getElementById('currentMonth');
-  const prevMonthBtn = document.getElementById('prevMonth');
-  const nextMonthBtn = document.getElementById('nextMonth');
+  // To-do (local only)
+  const todoKey = 'ems.todo';
+  function loadTodos(){
+    const list = $('#todoList'); if(!list) return;
+    const data = JSON.parse(localStorage.getItem(todoKey)||'[]');
+    list.innerHTML = data.map((t,i)=>`
+      <li data-i="${i}">
+        <input type="checkbox" ${t.done?'checked':''}>
+        <span>${t.text}</span>
+        <button class="rm" title="Remove"><i class="fa-regular fa-trash-can"></i></button>
+      </li>`).join('');
 
-  if (!calendarDays) {
-    console.error('❌ Calendar container not found!');
-    return;
-  }
-
-  // Calendar state
-  const today = new Date();
-  let currentMonth = today.getMonth();
-  let currentYear = today.getFullYear();
-  
-  // Get events data
-  const events = window.DASHBOARD_EVENTS || [];
-  console.log('📅 Events loaded:', events.length);
-
-  // Helper function to pad numbers
-  function pad(n) {
-    return n < 10 ? '0' + n : n;
-  }
-
-  // Get events for a specific date
-  function getEventsForDate(dateStr) {
-    const dayEvents = events.filter(event => event.date === dateStr);
-    console.log(`📍 Events for ${dateStr}:`, dayEvents.length);
-    return dayEvents;
-  }
-
-  // Render calendar
-  function renderCalendar() {
-    console.log(`🗓️ Rendering calendar for ${currentMonth + 1}/${currentYear}`);
-    
-    const firstDay = new Date(currentYear, currentMonth, 1);
-    const lastDay = new Date(currentYear, currentMonth + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startDay = (firstDay.getDay() + 6) % 7; // Monday = 0
-    
-    // Update month label
-    if (currentMonthLabel) {
-      currentMonthLabel.textContent = firstDay.toLocaleString('default', { 
-        month: 'long', 
-        year: 'numeric' 
+    list.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+      cb.addEventListener('change',e=>{
+        const i = +e.target.closest('li').dataset.i;
+        data[i].done = e.target.checked;
+        localStorage.setItem(todoKey, JSON.stringify(data));
       });
-    }
-    
-    let html = '';
-    
-    // Add empty cells for days before month starts
-    for (let i = 0; i < startDay; i++) {
-      html += '<div class="calendar-day empty"></div>';
-    }
-    
-    // Add days of the month
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = `${currentYear}-${pad(currentMonth + 1)}-${pad(day)}`;
-      const dayEvents = getEventsForDate(dateStr);
-      const isToday = (
-        day === today.getDate() && 
-        currentMonth === today.getMonth() && 
-        currentYear === today.getFullYear()
-      );
-      
-      let classes = ['calendar-day'];
-      if (isToday) classes.push('today');
-      if (dayEvents.length > 0) classes.push('has-event');
-      
-      html += `
-        <div class="${classes.join(' ')}" data-date="${dateStr}" onclick="showEventModal('${dateStr}')">
-          <span class="calendar-day-number">${day}</span>
-          ${dayEvents.length > 0 ? '<div class="event-dot"></div>' : ''}
-        </div>
-      `;
-    }
-    
-    calendarDays.innerHTML = html;
-    console.log('✅ Calendar rendered successfully');
-  }
+    });
 
-  // Navigation event listeners
-  if (prevMonthBtn) {
-    prevMonthBtn.addEventListener('click', function() {
-      currentMonth--;
-      if (currentMonth < 0) {
-        currentMonth = 11;
-        currentYear--;
-      }
-      renderCalendar();
+    list.querySelectorAll('.rm').forEach(btn=>{
+      btn.addEventListener('click',e=>{
+        const i = +e.currentTarget.closest('li').dataset.i;
+        data.splice(i,1);
+        localStorage.setItem(todoKey, JSON.stringify(data));
+        loadTodos();
+        syncHeights();
+      });
     });
   }
 
-  if (nextMonthBtn) {
-    nextMonthBtn.addEventListener('click', function() {
-      currentMonth++;
-      if (currentMonth > 11) {
-        currentMonth = 0;
-        currentYear++;
-      }
-      renderCalendar();
-    });
-  }
+  $('#addTodo')?.addEventListener('click',()=>{
+    const text = prompt('New to-do'); if(!text) return;
+    const data = JSON.parse(localStorage.getItem(todoKey)||'[]');
+    data.unshift({text,done:false});
+    localStorage.setItem(todoKey, JSON.stringify(data));
+    loadTodos();
+    syncHeights();
+  });
 
-  // Initial render
-  renderCalendar();
-});
-
-// Modal functionality
-function showEventModal(dateStr) {
-  const events = window.DASHBOARD_EVENTS || [];
-  const dayEvents = events.filter(event => event.date === dateStr);
+  function syncHeights(){
+    const isDesktop = window.innerWidth > 1200;
+    const root = document.documentElement;
+    const perf = $('#cardPerformance');
+    const acts = $('#cardActions');
+    const cal  = $('#cardCalendar');
+    const todo = $('#cardTodo');
+    const todoList = $('#todoList');
+    const todoHeader = $('#cardTodo .card-header');
+    const contrib = $('#cardContribution');
   
-  const modal = document.getElementById('eventModal');
-  const title = document.getElementById('eventModalTitle');
-  const list = document.getElementById('eventModalList');
+    if(!isDesktop){
+      ['--calH','--contribH','--todoBodyH'].forEach(v=>root.style.removeProperty(v));
+      [perf, acts, cal, todo].forEach(el=>{ if(el){ el.style.height=''; el.style.minHeight=''; }});
+      if(todoList){ todoList.style.height=''; todoList.style.overflowY=''; }
+      return;
+    }
   
-  if (!modal || !title || !list) return;
+    // 1) Match Actions + Performance exactly to Calendar height
+    if (cal) {
+      const calH = Math.ceil(cal.getBoundingClientRect().height);
+      root.style.setProperty('--calH', calH + 'px');
+      cal.style.height  = calH + 'px';
+      if (acts) acts.style.height = calH + 'px';
+      if (perf) perf.style.height = calH + 'px';
+    }
   
-  const date = new Date(dateStr);
-  title.textContent = `Events on ${date.toLocaleDateString('en-US', { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  })}`;
+    // 2) To‑do equals Contribution; body scrolls
+    if (contrib && todo && todoHeader && todoList) {
+      const contribH = Math.ceil(contrib.getBoundingClientRect().height);
+      root.style.setProperty('--contribH', contribH + 'px');
+      todo.style.height = contribH + 'px';
   
-  if (dayEvents.length === 0) {
-    list.innerHTML = '<div class="no-events">No events scheduled for this date.</div>';
-  } else {
-    list.innerHTML = dayEvents.map(event => `
-      <div class="event-card ${event.is_my_event ? 'my-event' : 'other-event'}">
-        <div class="event-card-header">
-          <div class="event-title-section">
-            <h4 class="event-title">${event.title}</h4>
-            <div class="event-badges">
-              <span class="event-badge ${event.is_my_event ? 'my-event-badge' : 'other-event-badge'}">
-                ${event.is_my_event ? 'My Event' : 'Other Event'}
-              </span>
-            </div>
-          </div>
-        </div>
-        <div class="event-card-body">
-          <div class="event-info">
-            <div class="event-info-item">
-              <i class="fas fa-clock"></i>
-              <span>${event.datetime}</span>
-            </div>
-            ${event.venue ? `
-              <div class="event-info-item">
-                <i class="fas fa-map-marker-alt"></i>
-                <span>${event.venue}</span>
-              </div>
-            ` : ''}
-            ${event.organization ? `
-              <div class="event-info-item">
-                <i class="fas fa-building"></i>
-                <span>${event.organization}</span>
-              </div>
-            ` : ''}
-          </div>
-        </div>
-        <div class="event-card-actions">
-          <a href="/event/${event.id}/details/" class="btn-action btn-primary">
-            <i class="fas fa-eye"></i>
-            <span>View Details</span>
-          </a>
-          <button class="btn-action btn-secondary" onclick="addToCalendar('${event.title}', '${event.date}', '${event.venue || ''}')">
-            <i class="fas fa-calendar-plus"></i>
-            <span>Add to Google Calendar</span>
-          </button>
-        </div>
-      </div>
-    `).join('');
-  }
+      const cs = getComputedStyle(todo);
+      const padV = (parseFloat(cs.paddingTop)||0)+(parseFloat(cs.paddingBottom)||0);
+      const borderV = (parseFloat(cs.borderTopWidth)||0)+(parseFloat(cs.borderBottomWidth)||0);
+      const headerH = Math.ceil(todoHeader.getBoundingClientRect().height);
+      const bodyH = Math.max(0, contribH - headerH - padV - borderV);
   
-  modal.style.display = 'flex';
-}
-
-function closeEventModal() {
-  const modal = document.getElementById('eventModal');
-  if (modal) {
-    modal.style.display = 'none';
-  }
-}
-
-// Add to calendar function
-function addToCalendar(title, date, venue) {
-  const eventDate = new Date(date);
-  const year = eventDate.getFullYear();
-  const month = String(eventDate.getMonth() + 1).padStart(2, '0');
-  const day = String(eventDate.getDate()).padStart(2, '0');
-  const startDate = `${year}${month}${day}`;
-  
-  const details = [
-    venue ? `Venue: ${venue}` : '',
-    'Event from IQAC Suite'
-  ].filter(Boolean).join('\\n');
-  
-  const googleCalendarUrl = `https://calendar.google.com/calendar/render?` +
-    `action=TEMPLATE` +
-    `&text=${encodeURIComponent(title)}` +
-    `&dates=${startDate}/${startDate}` +
-    `&details=${encodeURIComponent(details)}` +
-    `&sf=true&output=xml`;
-  
-  window.open(googleCalendarUrl, '_blank');
-}
-
-// Click outside modal to close
-window.addEventListener('click', function(e) {
-  const modal = document.getElementById('eventModal');
-  if (e.target === modal) {
-    closeEventModal();
-  }
-});
-// Stat card click handlers for filtering events
-    const cardUpcoming = document.getElementById('cardUpcoming');
-    const cardOrganized = document.getElementById('cardOrganized');
-    const cardThisWeek = document.getElementById('cardThisWeek');
-
-    if (cardUpcoming) {
-        cardUpcoming.addEventListener('click', function() {
-            // Show all upcoming events (after today)
-            document.getElementById('eventTimeFilter').value = '';
-            document.getElementById('eventTypeFilter').value = '';
-            filterEvents();
-        });
+      root.style.setProperty('--todoBodyH', bodyH + 'px');
+      todoList.style.height = bodyH + 'px';
+      todoList.style.overflowY = 'auto';
     }
-    if (cardOrganized) {
-        cardOrganized.addEventListener('click', function() {
-            // Show only events user proposed (My Events)
-            document.getElementById('eventTypeFilter').value = 'my';
-            document.getElementById('eventTimeFilter').value = '';
-            filterEvents();
-        });
-    }
-    if (cardThisWeek) {
-        cardThisWeek.addEventListener('click', function() {
-            // Show only events happening this week
-            document.getElementById('eventTimeFilter').value = 'week';
-            document.getElementById('eventTypeFilter').value = '';
-            filterEvents();
-        });
-    }
-console.log('Script loaded!');
-// Wait for the DOM to be fully loaded before running scripts
-document.addEventListener('DOMContentLoaded', function () {
-    // --- STAT CARD CLICK HANDLERS ---
-    const cardUpcoming = document.getElementById('cardUpcoming');
-    const cardOrganized = document.getElementById('cardOrganized');
-    const cardThisWeek = document.getElementById('cardThisWeek');
-    const eventsTab = document.querySelector('.nav-tab[data-tab="events"]');
-
-    function switchToEventsTab() {
-        if (eventsTab) {
-            activateTab(eventsTab);
-        }
-    }
-
-    if (cardUpcoming) {
-        cardUpcoming.addEventListener('click', function() {
-            switchToEventsTab();
-            document.getElementById('eventTimeFilter').value = '';
-            document.getElementById('eventTypeFilter').value = '';
-            filterEvents();
-        });
-    }
-    if (cardOrganized) {
-        cardOrganized.addEventListener('click', function() {
-            switchToEventsTab();
-            document.getElementById('eventTypeFilter').value = 'my';
-            document.getElementById('eventTimeFilter').value = '';
-            filterEvents();
-        });
-    }
-    if (cardThisWeek) {
-        cardThisWeek.addEventListener('click', function() {
-            switchToEventsTab();
-            document.getElementById('eventTimeFilter').value = 'week';
-            document.getElementById('eventTypeFilter').value = '';
-            filterEvents();
-        });
-    }
-    console.log('Dashboard JavaScript loaded');
-
-    // --- CACHE DOM ELEMENTS ---
-    const dashboard = document.querySelector('.user-dashboard');
-    const tabs = document.querySelectorAll('.nav-tab');
-    const tabContents = document.querySelectorAll('.tab-content');
-    const searchInput = document.getElementById('studentSearch');
-    const filters = document.querySelectorAll('.filter-select');
-    const modal = document.getElementById('dashboardModal');
-    const modalTitle = document.getElementById('modalTitle');
-    const modalBody = document.getElementById('modalBody');
-
-    // --- MODAL FUNCTIONS ---
-    /**
-     * Shows the modal with a given title and body content.
-     * @param {string} title - The title to display in the modal header.
-     * @param {string} body - The HTML content to display in the modal body.
-     */
-    function showModal(title, body) {
-        if (!modal || !modalTitle || !modalBody) return;
-        modalTitle.textContent = title;
-        modalBody.innerHTML = body;
-        modal.classList.add('visible');
-        // Attach close handler to cross button (modal-close)
-        const closeBtn = modal.querySelector('.modal-close');
-        if (closeBtn) {
-            closeBtn.onclick = function() {
-                hideModal();
-            };
-        }
-    }
-
-    /**
-     * Hides the modal.
-     */
-    function hideModal() {
-        if (!modal) return;
-        modal.classList.remove('visible');
-        // Optionally clear modal content
-        modalTitle.textContent = '';
-        modalBody.innerHTML = '';
-    }
-
-    // --- EVENT HANDLING ---
-    if (dashboard) {
-        dashboard.addEventListener('click', function(event) {
-            const actionTarget = event.target.closest('[data-action]');
-            if (!actionTarget) return;
-
-            const action = actionTarget.dataset.action;
-            const eventId = actionTarget.dataset.eventId;
-            const studentId = actionTarget.dataset.studentId;
-            const classId = actionTarget.dataset.classId;
-
-            // Prevent propagation for buttons inside clickable items
-            if (['message-student', 'call-student'].includes(action)) {
-                event.stopPropagation();
-            }
-
-            // Determine which action to take based on the data-action attribute
-            switch (action) {
-                case 'close-modal':
-                    hideModal();
-                    break;
-                case 'create-event':
-                    showModal('Create New Event', `
-                        <form id="createEventForm" class="modal-form">
-                            <div class="form-group">
-                                <label for="eventTitle">Event Title</label>
-                                <input type="text" id="eventTitle" name="title" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="eventDate">Date & Time</label>
-                                <input type="datetime-local" id="eventDate" name="date" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="eventType">Event Type</label>
-                                <select id="eventType" name="event_type" required>
-                                    <option value="">Select Type</option>
-                                    <option value="academic">Academic</option>
-                                    <option value="cultural">Cultural</option>
-                                    <option value="sports">Sports</option>
-                                    <option value="technical">Technical</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="eventDescription">Description</label>
-                                <textarea id="eventDescription" name="description" rows="3"></textarea>
-                            </div>
-                            <div class="form-group">
-                                <label for="maxParticipants">Max Participants</label>
-                                <input type="number" id="maxParticipants" name="max_participants" min="1">
-                            </div>
-                            <div class="form-actions">
-                                <button type="button" data-action="close-modal" class="btn-secondary">Cancel</button>
-                                <button type="submit" class="btn-primary">Create Event</button>
-                            </div>
-                        </form>
-                    `);
-                    break;
-                case 'edit-event':
-                    showModal('Edit Event', `
-                        <div class="modal-content-body">
-                            <p>Editing event ID: ${eventId}</p>
-                            <p>This would load the event data and show an edit form.</p>
-                            <div class="form-actions">
-                                <button type="button" data-action="close-modal" class="btn-secondary">Close</button>
-                            </div>
-                        </div>
-                    `);
-                    break;
-                case 'view-event-details':
-                    showModal('Event Details', `
-                        <div class="event-details-modal">
-                            <p><strong>Event ID:</strong> ${eventId}</p>
-                            <p><strong>Description:</strong> Detailed information about the event would be loaded here.</p>
-                            <p><strong>Participants:</strong> List of registered participants</p>
-                            <p><strong>Resources:</strong> Required resources and materials</p>
-                            <div class="form-actions">
-                                <button type="button" data-action="close-modal" class="btn-secondary">Close</button>
-                            </div>
-                        </div>
-                    `);
-                    break;
-                case 'add-student':
-                    showModal('Add Student', `
-                        <form id="addStudentForm" class="modal-form">
-                            <div class="form-group">
-                                <label for="studentName">Student Name</label>
-                                <input type="text" id="studentName" name="name" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="studentReg">Registration Number</label>
-                                <input type="text" id="studentReg" name="registration_number" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="studentEmail">Email</label>
-                                <input type="email" id="studentEmail" name="email" required>
-                            </div>
-                            <div class="form-actions">
-                                <button type="button" data-action="close-modal" class="btn-secondary">Cancel</button>
-                                <button type="submit" class="btn-primary">Add Student</button>
-                            </div>
-                        </form>
-                    `);
-                    break;
-                case 'show-student-profile':
-                    showModal('Student Profile', `
-                        <div class="student-profile-modal">
-                            <p><strong>Student ID:</strong> ${studentId}</p>
-                            <p>Detailed student information would be loaded here including:</p>
-                            <ul>
-                                <li>Academic performance</li>
-                                <li>Attendance records</li>
-                                <li>Meeting history</li>
-                                <li>Goals and achievements</li>
-                            </ul>
-                            <div class="form-actions">
-                                <button type="button" data-action="close-modal" class="btn-secondary">Close</button>
-                            </div>
-                        </div>
-                    `);
-                    break;
-                case 'message-student':
-                    showModal('Message Student', `
-                        <form id="messageStudentForm" class="modal-form">
-                            <p><strong>Send message to Student ID:</strong> ${studentId}</p>
-                            <div class="form-group">
-                                <label for="messageSubject">Subject</label>
-                                <input type="text" id="messageSubject" name="subject" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="messageBody">Message</label>
-                                <textarea id="messageBody" name="message" rows="4" required></textarea>
-                            </div>
-                            <div class="form-actions">
-                                <button type="button" data-action="close-modal" class="btn-secondary">Cancel</button>
-                                <button type="submit" class="btn-primary">Send Message</button>
-                            </div>
-                        </form>
-                    `);
-                    break;
-                case 'call-student':
-                    showModal('Contact Student', `
-                        <div class="contact-student-modal">
-                            <p><strong>Contact Student ID:</strong> ${studentId}</p>
-                            <p>Contact information would be displayed here:</p>
-                            <ul>
-                                <li>Phone: +1 (555) 123-4567</li>
-                                <li>Email: student@university.edu</li>
-                                <li>Emergency Contact: +1 (555) 987-6543</li>
-                            </ul>
-                            <div class="form-actions">
-                                <button type="button" onclick="window.open('tel:+15551234567')" class="btn-primary">Call Now</button>
-                                <button type="button" data-action="close-modal" class="btn-secondary">Close</button>
-                            </div>
-                        </div>
-                    `);
-                    break;
-                case 'edit-profile':
-                    showModal('Edit Profile', `
-                        <form id="editProfileForm" class="modal-form">
-                            <div class="form-group">
-                                <label for="firstName">First Name</label>
-                                <input type="text" id="firstName" name="first_name" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="lastName">Last Name</label>
-                                <input type="text" id="lastName" name="last_name" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="department">Department</label>
-                                <input type="text" id="department" name="department">
-                            </div>
-                            <div class="form-group">
-                                <label for="designation">Designation</label>
-                                <input type="text" id="designation" name="designation">
-                            </div>
-                            <div class="form-actions">
-                                <button type="button" data-action="close-modal" class="btn-secondary">Cancel</button>
-                                <button type="submit" class="btn-primary">Save Changes</button>
-                            </div>
-                        </form>
-                    `);
-                    break;
-                case 'view-class-details':
-                    showModal('Class Details', `
-                        <div class="class-details-modal">
-                            <p><strong>Class ID:</strong> ${classId}</p>
-                            <p>Class information would include:</p>
-                            <ul>
-                                <li>Student roster</li>
-                                <li>Syllabus and curriculum</li>
-                                <li>Assignment schedule</li>
-                                <li>Grade distribution</li>
-                            </ul>
-                            <div class="form-actions">
-                                <button type="button" data-action="close-modal" class="btn-secondary">Close</button>
-                            </div>
-                        </div>
-                    `);
-                    break;
-                case 'add-achievement':
-                    showModal('Add Achievement', `
-                        <form id="addAchievementForm" class="modal-form">
-                            <div class="form-group">
-                                <label for="achievementTitle">Achievement Title</label>
-                                <input type="text" id="achievementTitle" name="title" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="achievementDate">Date Achieved</label>
-                                <input type="date" id="achievementDate" name="date" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="achievementDescription">Description</label>
-                                <textarea id="achievementDescription" name="description" rows="3"></textarea>
-                            </div>
-                            <div class="form-actions">
-                                <button type="button" data-action="close-modal" class="btn-secondary">Cancel</button>
-                                <button type="submit" class="btn-primary">Add Achievement</button>
-                            </div>
-                        </form>
-                    `);
-                    break;
-                case 'add-goal':
-                    showModal('Add Goal', `
-                        <form id="addGoalForm" class="modal-form">
-                            <div class="form-group">
-                                <label for="goalTitle">Goal Title</label>
-                                <input type="text" id="goalTitle" name="title" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="goalTarget">Target Date</label>
-                                <input type="date" id="goalTarget" name="target_date" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="goalDescription">Description</label>
-                                <textarea id="goalDescription" name="description" rows="3"></textarea>
-                            </div>
-                            <div class="form-actions">
-                                <button type="button" data-action="close-modal" class="btn-secondary">Cancel</button>
-                                <button type="submit" class="btn-primary">Add Goal</button>
-                            </div>
-                        </form>
-                    `);
-                    break;
-            }
-        });
-    }
-
-    // --- TAB SWITCHING ---
-    function activateTab(tab) {
-        if (!tab) {
-            console.warn('activateTab called with null tab');
-            return;
-        }
-        const tabId = tab.dataset.tab;
-        const activeContent = document.getElementById(tabId);
-        if (!tabId) {
-            console.warn('Tab missing data-tab attribute:', tab);
-            return;
-        }
-        if (!activeContent) {
-            console.warn('No content found for tabId:', tabId);
-        }
-        tabs.forEach(t => t.classList.remove('active'));
-        tabContents.forEach(c => c.classList.remove('active'));
-        tab.classList.add('active');
-        if (activeContent) {
-            activeContent.classList.add('active');
-        }
-        console.log('Activated tab:', tabId);
-    }
-
-    tabs.forEach(tab => {
-        tab.addEventListener('click', function(e) {
-            e.preventDefault();
-            if (tab.tagName === 'A') return; // Skip admin link
-            activateTab(tab);
-        });
-    });
-
-    // Fallback: If no tab is active, activate the first tab
-    if (![...tabs].some(t => t.classList.contains('active'))) {
-        activateTab(tabs[0]);
-    }
-
-    // Always ensure only one tab-content is visible after DOM loaded
-    setTimeout(function() {
-        let activeTab = [...tabs].find(t => t.classList.contains('active'));
-        let activeContent = null;
-        if (activeTab && activeTab.dataset.tab) {
-            activeContent = document.getElementById(activeTab.dataset.tab);
-        }
-        tabs.forEach(t => t.classList.remove('active'));
-        tabContents.forEach(c => c.classList.remove('active'));
-        if (activeTab) activeTab.classList.add('active');
-        if (activeContent) activeContent.classList.add('active');
-        else if (tabContents[0]) tabContents[0].classList.add('active');
-        console.log('Tab switching DOM sync complete');
-    }, 100);
-
-    // --- PROGRESS BAR ANIMATION ---
-    setTimeout(function() {
-        const progressBars = document.querySelectorAll('.progress-fill');
-        progressBars.forEach(bar => {
-            const targetWidth = bar.style.width;
-            if (targetWidth) {
-                bar.style.width = '0%';
-                setTimeout(() => {
-                    bar.style.transition = 'width 1s ease-in-out';
-                    bar.style.width = targetWidth;
-                }, 100);
-            }
-        });
-    }, 300);
-
-    // --- SEARCH FUNCTIONALITY ---
-    if (searchInput) {
-        searchInput.addEventListener('input', function(e) {
-            const searchTerm = e.target.value.toLowerCase();
-            const studentItems = document.querySelectorAll('.student-item');
-            studentItems.forEach(item => {
-                const studentName = item.querySelector('.student-info h4')?.textContent.toLowerCase() || '';
-                const studentReg = item.querySelector('.student-reg')?.textContent.toLowerCase() || '';
-                if (studentName.includes(searchTerm) || studentReg.includes(searchTerm)) {
-                    item.style.display = 'flex';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-        });
-    }
-
-    // --- FILTER FUNCTIONALITY ---
-    // Event filter logic for My Events and Other University Events
-    function filterEvents() {
-        const type = document.getElementById('eventTypeFilter').value;
-        const time = document.getElementById('eventTimeFilter').value;
-        const role = document.getElementById('eventRoleFilter').value;
-        // For department events, get user's organization name from a global JS variable (set in template)
-        const userOrg = window.USER_ORG_NAME ? window.USER_ORG_NAME.toLowerCase() : null;
-
-        // Helper to check if event matches filter
-        function matches(event, type, time, role) {
-            let match = true;
-            // Type filter
-            if (type === 'my' && event.dataset.eventType !== 'my') match = false;
-            if (type === 'department') {
-                // Show only department events the user is part of (my_events)
-                if (event.dataset.eventType !== 'my') match = false;
-            }
-            // Role filter
-            if (role && event.dataset.eventRole && !event.dataset.eventRole.toLowerCase().includes(role)) match = false;
-            // Time filter
-            if (time) {
-                const now = new Date();
-                let eventDateStr = null;
-                // Try to get date from event-details or event-date
-                if (event.querySelector('.event-details span')) {
-                    // For My Events
-                    eventDateStr = event.querySelector('.event-details span').textContent;
-                } else if (event.querySelector('.event-date span')) {
-                    // For University Events
-                    eventDateStr = event.querySelector('.event-date span').textContent;
-                } else if (event.querySelector('.event-date')) {
-                    eventDateStr = event.querySelector('.event-date').textContent;
-                }
-                let eventDate = null;
-                if (eventDateStr) {
-                    // Try to parse date from string (format: 'M d, Y H:i' or 'M d')
-                    const parts = eventDateStr.match(/([A-Za-z]+) (\d{1,2})(, (\d{4}))?/);
-                    if (parts) {
-                        const month = parts[1];
-                        const day = parseInt(parts[2]);
-                        const year = parts[4] ? parseInt(parts[4]) : now.getFullYear();
-                        eventDate = new Date(`${month} ${day}, ${year}`);
-                    }
-                }
-                if (time === 'week' && eventDate) {
-                    // Show events in current week
-                    const weekStart = new Date(now);
-                    weekStart.setDate(now.getDate() - now.getDay());
-                    const weekEnd = new Date(weekStart);
-                    weekEnd.setDate(weekStart.getDate() + 6);
-                    if (eventDate < weekStart || eventDate > weekEnd) match = false;
-                } else if (time === 'next_month' && eventDate) {
-                    if ((eventDate.getMonth() !== (now.getMonth() + 1) % 12) || eventDate.getFullYear() !== now.getFullYear()) match = false;
-                } else if (time === 'this_month' && eventDate) {
-                    if (eventDate.getMonth() !== now.getMonth() || eventDate.getFullYear() !== now.getFullYear()) match = false;
-                }
-            }
-            return match;
-        }
-
-        // Filter My Events
-        document.querySelectorAll('#myEventsList .event-item').forEach(event => {
-            if (matches(event, type, time, role) || (type === '' && role === '' && time === '')) {
-                event.style.display = '';
-            } else {
-                event.style.display = 'none';
-            }
-        });
-        // Filter Other University Events
-        document.querySelectorAll('#otherEventsList .university-event').forEach(event => {
-            if (matches(event, type, time, role) || (type === '' && role === '' && time === '')) {
-                event.style.display = '';
-            } else {
-                event.style.display = 'none';
-            }
-        });
-    }
-
-    filters.forEach(filter => {
-        filter.addEventListener('change', filterEvents);
-    });
-});
-
-document.addEventListener('DOMContentLoaded', function() {
-    const tabs = document.querySelectorAll('.nav-tab');
-    const tabContents = document.querySelectorAll('.tab-content');
-    const calendarDaysContainer = document.querySelector('.calendar-days');
-    const monthYearElement = document.getElementById('month-year');
-    const prevMonthBtn = document.getElementById('prev-month');
-    const nextMonthBtn = document.getElementById('next-month');
-    const eventModal = document.getElementById('event-modal');
-    const eventModalClose = document.querySelector('.event-modal-close');
-    const modalBody = document.querySelector('.event-modal-body');
-    const modalTitle = document.getElementById('modal-date-title');
-
-    let currentDate = new Date();
-    let events = {}; // Cache for events: { 'YYYY-MM': [event, ...] }
-    let selectedDate = null;
-
-    // --- Tab Functionality ---
-    tabs.forEach(tab => {
-        tab.addEventListener('click', (e) => {
-            e.preventDefault();
-            const target = tab.getAttribute('data-tab');
-
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-
-            tabContents.forEach(content => {
-                content.classList.remove('active');
-                if (content.id === target) {
-                    content.classList.add('active');
-                }
-            });
-        });
-    });
-
-    // --- Calendar Functionality ---
-    async function fetchCalendarEvents(year, month) {
-        const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
-        if (events[monthStr]) {
-            return events[monthStr];
-        }
-        try {
-            const response = await fetch(`/core/api/calendar-events/?month=${monthStr}`);
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            const data = await response.json();
-            events[monthStr] = data.events;
-            return data.events;
-        } catch (error) {
-            console.error('Failed to fetch calendar events:', error);
-            return [];
-        }
-    }
-
-    async function renderCalendar(date) {
-        calendarDaysContainer.innerHTML = '';
-        const year = date.getFullYear();
-        const month = date.getMonth();
-        
-        monthYearElement.textContent = `${date.toLocaleString('default', { month: 'long' })} ${year}`;
-
-        const monthEvents = await fetchCalendarEvents(year, month);
-        const eventDates = new Set(monthEvents.map(e => new Date(e.start_time).getDate()));
-
-        const firstDay = new Date(year, month, 1).getDay();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-        // Add empty placeholders for days before the 1st
-        for (let i = 0; i < firstDay; i++) {
-            calendarDaysContainer.innerHTML += `<div class="calendar-day other-month"></div>`;
-        }
-
-        // Add days of the month
-        for (let day = 1; day <= daysInMonth; day++) {
-            const dayEl = document.createElement('div');
-            dayEl.classList.add('calendar-day');
-            dayEl.textContent = day;
-            dayEl.dataset.day = day;
-
-            const today = new Date();
-            if (year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) {
-                dayEl.classList.add('today');
-            }
-
-            if (eventDates.has(day)) {
-                dayEl.classList.add('has-event');
-            }
-            
-            dayEl.addEventListener('click', () => {
-                selectedDate = new Date(year, month, day);
-                document.querySelectorAll('.calendar-day').forEach(d => d.classList.remove('selected'));
-                dayEl.classList.add('selected');
-                if (eventDates.has(day)) {
-                    showEventsForDate(selectedDate, monthEvents);
-                }
-            });
-
-            calendarDaysContainer.appendChild(dayEl);
-        }
-    }
-
-    function showEventsForDate(date, monthEvents) {
-        modalTitle.textContent = `Events on ${date.toLocaleString('default', { month: 'long' })} ${date.getDate()}`;
-        modalBody.innerHTML = '<div class="modal-loading"></div>';
-        eventModal.style.display = 'flex';
-
-        const eventsForDay = monthEvents.filter(e => new Date(e.start_time).getDate() === date.getDate());
-
-        setTimeout(() => { // Simulate loading
-            if (eventsForDay.length > 0) {
-                modalBody.innerHTML = eventsForDay.map(event => `
-                    <div class="modal-event-item">
-                        <div class="modal-event-info">
-                            <h4>${event.title}</h4>
-                            <p class="modal-event-time">
-                                ${new Date(event.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - 
-                                ${new Date(event.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </p>
-                            <p class="modal-event-description">${event.description || 'No description available.'}</p>
-                        </div>
-                        <div class="modal-event-actions">
-                            <a href="/proposal/${event.id}/detail/" class="btn-modal-action btn-view-details">
-                                <i class="fas fa-eye"></i> View Details
-                            </a>
-                            <a href="${event.google_calendar_link}" target="_blank" class="btn-modal-action btn-add-google">
-                                <i class="fab fa-google"></i> Add to Google
-                            </a>
-                        </div>
-                    </div>
-                `).join('');
-            } else {
-                modalBody.innerHTML = '<div class="no-events"><p>No events scheduled for this day.</p></div>';
-            }
-        }, 300);
-    }
-
-    prevMonthBtn.addEventListener('click', () => {
-        currentDate.setMonth(currentDate.getMonth() - 1);
-        renderCalendar(currentDate);
-    });
-
-    nextMonthBtn.addEventListener('click', () => {
-        currentDate.setMonth(currentDate.getMonth() + 1);
-        renderCalendar(currentDate);
-    });
-
-    eventModalClose.addEventListener('click', () => {
-        eventModal.style.display = 'none';
-    });
-
-    window.addEventListener('click', (e) => {
-        if (e.target === eventModal) {
-            eventModal.style.display = 'none';
-        }
-    });
-
-    // Initial Load
-    renderCalendar(currentDate);
-});
-
-// Event Contribution Chart
-class EventContributionChart {
-    constructor(canvasId) {
-        this.canvas = document.getElementById(canvasId);
-        this.ctx = this.canvas.getContext('2d');
-        this.chart = null;
-        this.data = null;
-        this.colors = [
-            '#3498db', '#e74c3c', '#2ecc71', '#f39c12', 
-            '#9b59b6', '#1abc9c', '#34495e', '#e67e22'
-        ];
-        this.init();
-    }
-
-    async init() {
-        await this.loadChartLibrary();
-        await this.fetchData();
-        this.setupEventListeners();
-    }
-
-    async loadChartLibrary() {
-        // Chart.js is already loaded via HTML script tag
-        return Promise.resolve();
-    }
-
-    async fetchData(organizationId = 'all') {
-        try {
-            const url = organizationId === 'all' 
-                ? '/api/event-contribution/' 
-                : `/api/event-contribution/?organization_id=${organizationId}`;
-                
-            const response = await fetch(url);
-            this.data = await response.json();
-            
-            this.populateOrganizationSelect();
-            this.renderChart();
-            this.updateDetails();
-        } catch (error) {
-            console.error('Error fetching chart data:', error);
-        }
-    }
-
-    populateOrganizationSelect() {
-        const select = document.getElementById('organizationSelect');
-        if (!select || !this.data.organizations) return;
-
-        // Clear existing options except "All Organizations"
-        while (select.children.length > 1) {
-            select.removeChild(select.lastChild);
-        }
-
-        // Add organization options
-        this.data.organizations.forEach(org => {
-            const option = document.createElement('option');
-            option.value = org.id;
-            option.textContent = org.name;
-            select.appendChild(option);
-        });
-    }
-
-    renderChart() {
-        if (this.chart) {
-            this.chart.destroy();
-        }
-
-        const chartData = this.data.chart_data;
-        
-        if (!chartData || chartData.length === 0) {
-            this.renderEmptyState();
-            return;
-        }
-
-        const data = {
-            labels: chartData.map(item => item.organization),
-            datasets: [{
-                data: chartData.map(item => item.percentage),
-                backgroundColor: this.colors.slice(0, chartData.length),
-                borderWidth: 0,
-                cutout: '70%'
-            }]
-        };
-
-        const config = {
-            type: 'doughnut',
-            data: data,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: (context) => {
-                                const item = chartData[context.dataIndex];
-                                return [
-                                    `${item.organization}: ${item.percentage}%`,
-                                    `Events: ${item.user_events}/${item.total_events}`,
-                                    `Role: ${item.role}`
-                                ];
-                            }
-                        }
-                    }
-                },
-                onHover: (event, activeElements) => {
-                    this.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
-                },
-                onClick: (event, activeElements) => {
-                    if (activeElements.length > 0) {
-                        const index = activeElements[0].index;
-                        const orgData = chartData[index];
-                        this.showOrganizationDetails(orgData);
-                    }
-                }
-            }
-        };
-
-        this.chart = new Chart(this.ctx, config);
-        this.renderLegend();
-        this.updateCenterInfo();
-    }
-
-    renderEmptyState() {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.ctx.fillStyle = '#6c757d';
-        this.ctx.font = '16px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText('No data available', this.canvas.width / 2, this.canvas.height / 2);
-        
-        document.getElementById('chartLegend').innerHTML = '<p class="text-muted">No organizations found</p>';
-    }
-
-    renderLegend() {
-        const legendContainer = document.getElementById('chartLegend');
-        if (!legendContainer) return;
-
-        const chartData = this.data.chart_data;
-        
-        legendContainer.innerHTML = chartData.map((item, index) => `
-            <div class="legend-item" data-index="${index}">
-                <div class="legend-color" style="background-color: ${this.colors[index]}"></div>
-                <div class="legend-text">
-                    <div class="legend-org">${item.organization}</div>
-                    <div class="legend-stats">${item.user_events}/${item.total_events} events • ${item.role}</div>
-                </div>
-                <div class="legend-percentage">${item.percentage}%</div>
-            </div>
-        `).join('');
-
-        // Add hover effects for legend items
-        legendContainer.querySelectorAll('.legend-item').forEach((item, index) => {
-            item.addEventListener('mouseenter', () => {
-                if (this.chart) {
-                    this.chart.setActiveElements([{datasetIndex: 0, index: index}]);
-                    this.chart.update('none');
-                }
-            });
-
-            item.addEventListener('mouseleave', () => {
-                if (this.chart) {
-                    this.chart.setActiveElements([]);
-                    this.chart.update('none');
-                }
-            });
-
-            item.addEventListener('click', () => {
-                this.showOrganizationDetails(chartData[index]);
-            });
-        });
-    }
-
-    updateCenterInfo() {
-        const centerNumber = document.getElementById('centerNumber');
-        const centerLabel = document.getElementById('centerLabel');
-        
-        if (centerNumber && centerLabel) {
-            centerNumber.textContent = this.data.total_events;
-            centerLabel.textContent = 'Total Events';
-        }
-    }
-
-    updateDetails() {
-        const userParticipation = document.getElementById('userParticipation');
-        const contributionRate = document.getElementById('contributionRate');
-        
-        if (userParticipation) {
-            userParticipation.textContent = `${this.data.total_user_events} events`;
-        }
-        
-        if (contributionRate) {
-            contributionRate.textContent = `${this.data.overall_percentage}%`;
-        }
-    }
-
-    setupEventListeners() {
-        const organizationSelect = document.getElementById('organizationSelect');
-        if (organizationSelect) {
-            organizationSelect.addEventListener('change', (e) => {
-                this.fetchData(e.target.value);
-            });
-        }
-    }
-
-    showOrganizationDetails(orgData) {
-        // You can implement a modal or detailed view here
-        console.log('Organization Details:', orgData);
-        
-        // For now, let's update the center info to show selected org
-        const centerNumber = document.getElementById('centerNumber');
-        const centerLabel = document.getElementById('centerLabel');
-        
-        if (centerNumber && centerLabel) {
-            centerNumber.textContent = orgData.user_events;
-            centerLabel.textContent = orgData.organization;
-        }
-        
-        // Reset after 3 seconds
-        setTimeout(() => {
-            this.updateCenterInfo();
-        }, 3000);
-    }
-}
-
-// Initialize the chart when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    if (document.getElementById('contributionChart')) {
-        new EventContributionChart('contributionChart');
-    }
-});
+    fitHeatmap();
+  }  
+
+  const debounce = (fn,ms=120)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; };
+
+  // Boot
+  document.addEventListener('DOMContentLoaded', () => {
+    loadPerformance();
+    buildCalendar(); openDay(new Date());
+    renderHeatmap();
+    loadTodos();
+    requestAnimationFrame(()=>{ syncHeights(); });
+  });
+
+  window.addEventListener('load', ()=>syncHeights());
+  window.addEventListener('resize', debounce(syncHeights, 150));
+})();
