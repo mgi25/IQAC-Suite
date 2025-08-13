@@ -1246,9 +1246,14 @@ def admin_settings_dashboard(request):
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def admin_academic_year_settings(request):
+    from datetime import date
     from transcript.models import AcademicYear
 
     academic_year = AcademicYear.objects.first()
+
+    # Generate a range of academic years for selection, e.g., 2020-2021
+    current_year = date.today().year
+    year_options = [f"{y}-{y + 1}" for y in range(current_year - 5, current_year + 6)]
 
     if request.method == "POST":
         year = request.POST.get('year')
@@ -1266,7 +1271,10 @@ def admin_academic_year_settings(request):
     return render(
         request,
         'core/admin_academic_year_settings.html',
-        {'academic_year': academic_year},
+        {
+            'academic_year': academic_year,
+            'year_options': year_options,
+        },
     )
 
 @user_passes_test(lambda u: u.is_superuser)
