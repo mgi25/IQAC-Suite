@@ -1009,14 +1009,10 @@ def iqac_suite_dashboard(request):
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def admin_master_data(request):
-    from transcript.models import AcademicYear
-    import datetime
+    from transcript.models import get_active_academic_year
     import json
 
-    current_year = datetime.datetime.now().year
-    academic_year = AcademicYear.objects.first()
-    if not academic_year:
-        academic_year = AcademicYear.objects.create(year=f"{current_year}-{current_year + 1}")
+    academic_year = get_active_academic_year()
 
     org_types = OrganizationType.objects.filter(is_active=True).order_by('name')
     orgs_by_type = {}
@@ -1285,6 +1281,8 @@ def admin_academic_year_settings(request):
             obj.end_date = end
             obj.save()
         else:
+            # Ensure only one academic year is active at any time
+            AcademicYear.objects.filter(is_active=True).update(is_active=False)
             AcademicYear.objects.create(
                 year=year_str, start_date=start, end_date=end, is_active=True
             )
