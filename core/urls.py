@@ -8,10 +8,9 @@ urlpatterns = [
     # ────────────────────────────────────────────────
     # Authentication
     # ────────────────────────────────────────────────
-    path('login/',  views.login_view, name='login'),
+    path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('accounts/logout/', custom_logout, name='account_logout'),
-
     path('register/', views.registration_form, name='registration_form'),
 
     # ────────────────────────────────────────────────
@@ -164,13 +163,13 @@ urlpatterns = [
         name="admin_org_fetch_by_type",
     ),
     #path(
-       # "core-admin/org-users/<int:org_id>/classes/",
-        #core_views.class_rosters,
-        #name="class_rosters",),
+    # "core-admin/org-users/<int:org_id>/classes/",
+    # core_views.class_rosters,
+    # name="class_rosters",),
     #path(
-        #"core-admin/org-users/<int:org_id>/classes/<str:class_name>/",
-       # core_views.class_roster_detail,
-       #name="class_roster_detail",),
+    # "core-admin/org-users/<int:org_id>/classes/<str:class_name>/",
+    # core_views.class_roster_detail,
+    # name="class_roster_detail",),
 
     # ────────────────────────────────────────────────
     # AJAX - Academic Year
@@ -201,6 +200,14 @@ urlpatterns = [
     path('core/api/create-program/', views.create_program_for_organization, name='create_program_for_organization'),
     path('core/api/program-outcomes/<int:program_id>/', views.api_program_outcomes, name='api_program_outcomes'),
     path('core/api/manage-program-outcomes/', views.manage_program_outcomes, name='manage_program_outcomes'),
+    
+    # PO/PSO Assignment Management APIs
+    path('core/api/faculty-users/<int:org_id>/', views.api_available_faculty_users, name='api_available_faculty_users'),
+    path('core/api/debug-org-users/<int:org_id>/', views.api_debug_org_users, name='api_debug_org_users'),
+    path('core/api/popso-assignments/', views.api_popso_assignments, name='api_popso_assignments'),
+    path('core/api/popso-assignments/<int:org_id>/', views.api_popso_assignments, name='api_popso_assignments_org'),
+    path('core/api/log-popso-change/', views.api_log_popso_change, name='api_log_popso_change'),
+    path('core/api/popso-manager-status/', views.api_popso_manager_status, name='api_popso_manager_status'),
 
     # ────────────────────────────────────────────────
     # Admin Dashboard API
@@ -220,12 +227,12 @@ urlpatterns = [
     
     
     
-        
+    
     # Data Export URLs
     path('data-export-filter/', views.data_export_filter_view, name='data_export_filter'),
     path('api/filter-suggestions/', views.filter_suggestions_api, name='filter_suggestions_api'),
     path('api/execute-filter/', views.execute_filter_api, name='execute_filter_api'),
     path('api/export-data/csv/', views.export_data_csv, name='export_data_csv'),
     path('api/export-data/excel/', views.export_data_excel, name='export_data_excel'),
-    path( 'settings/pso-po-management/', views.settings_pso_po_management,name='settings_pso_po_management'),
+    path('settings/pso-po-management/', views.settings_pso_po_management,name='settings_pso_po_management'),
 ]
