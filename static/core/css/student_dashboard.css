@@ -11,7 +11,7 @@
   /* header */
   .topbar{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:24px;padding-bottom:12px;border-bottom:1px solid var(--border)}
   .topbar h1{margin:0;font-size:28px;font-weight:700;color:var(--ink)}
-  .topbar-date{color:var(--muted);font-size:14px}
+  .topbar-date{color:var(--muted);font-siz1e:14px}
   
   /* KPI row (4 + profile) */
   .kpi-row{display:grid;grid-template-columns:0.9fr 0.9fr 0.9fr 0.9fr 1.8fr;gap:16px;margin-bottom:16px}
