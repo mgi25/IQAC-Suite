@@ -4,37 +4,22 @@
   --spacing-sm: 0.5rem;
   --spacing-md: 1rem;
   --spacing-lg: 1.5rem;
-  --color-bg: #eaf6ff;
-  --color-bg-alt: #f0f4ff;
-  --color-surface: #ffffff;
-  --color-text: #1f2540;
-  --color-accent: #204d8c;
   --font-base: 'Inter', sans-serif;
   --transition-base: 0.2s ease-in-out;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #1a1f29;
-    --color-bg-alt: #1e2432;
-    --color-surface: #2a303c;
-    --color-text: #e5e7eb;
-    --color-accent: #93c5fd;
-  }
-}
-
 body {
-  background: linear-gradient(135deg, var(--color-bg) 0%, var(--color-bg-alt) 100%);
+  background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
   font-family: var(--font-base);
-  color: var(--color-text);
+  color: var(--gray-800);
   transition: background var(--transition-base), color var(--transition-base);
 }
 
 /* Reusable Card Component */
 .card-base {
-  background: var(--color-surface);
+  background: var(--white);
   border-radius: 18px;
-  border: 1.4px solid #e3eaf7;
+  border: 1.4px solid var(--gray-200);
   box-shadow: 0 4px 28px 0 rgba(36, 70, 120, 0.08);
   padding: 24px 26px 20px 26px;
   transition: box-shadow var(--transition-base), background var(--transition-base), color var(--transition-base);
@@ -43,14 +28,6 @@ body {
 .card-base:hover,
 .card-base:focus {
   box-shadow: 0 7px 34px 0 rgba(46, 86, 180, 0.16);
-}
-
-@media (prefers-color-scheme: dark) {
-  .card-base {
-    background: var(--color-surface);
-    border-color: #374151;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
-  }
 }
 
 /* -------- Layout -------- */
@@ -106,7 +83,7 @@ body {
 
 .info-card h2 {
   margin-top: 0; margin-bottom: 19px;
-  font-size: 1.18rem; color: var(--color-accent);
+  font-size: 1.18rem; color: var(--christ-blue-primary);
   letter-spacing: 0.4px;
   font-weight: 800;
   text-transform: uppercase;
@@ -122,12 +99,12 @@ body {
   text-align: left;
   vertical-align: top;
   padding: 7.5px 7px 7.5px 0;
-  border-bottom: 1px solid #e3eaf7;
+  border-bottom: 1px solid var(--gray-200);
   font-weight: 500;
 }
-.info-card th { width: 44%; color: #26407c; font-weight: 700; }
+.info-card th { width: 44%; color: var(--christ-blue-secondary); font-weight: 700; }
 .info-card tr:last-child td, .info-card tr:last-child th { border-bottom: none; }
-.info-card td { color: var(--color-text); }
+.info-card td { color: var(--gray-800); }
 
 /* -------- Main Content -------- */
 
@@ -135,7 +112,7 @@ body {
   background: none;
   margin-bottom: 18px;
   box-shadow: none;
-  border-bottom: 2.5px solid #e6ecf6;
+  border-bottom: 2.5px solid var(--gray-200);
   padding: 0 0 14px 0;
   display: flex;
   align-items: center;
@@ -149,14 +126,14 @@ body {
 .review-title {
   font-size: 2.2rem;
   font-weight: 800;
-  color: var(--color-accent);
+  color: var(--christ-blue-primary);
   margin: 0;
   letter-spacing: -0.5px;
 }
 
 .review-header .meta {
   font-size: 1.06rem;
-  color: #5a6a85;
+  color: var(--gray-500);
   margin-top: 4px;
   display: block;
   font-weight: 500;
@@ -171,7 +148,7 @@ body {
 }
 
 .review-nav a {
-  color: var(--color-accent);
+  color: var(--christ-blue-primary);
   padding: var(--spacing-xs);
   border-radius: 4px;
   display: inline-flex;
@@ -182,8 +159,8 @@ body {
 
 .review-nav a:focus,
 .review-nav a:hover {
-  background: var(--color-accent);
-  color: #fff;
+  background: var(--christ-blue-primary);
+  color: var(--white);
   outline: none;
 }
 
@@ -195,44 +172,25 @@ body {
   font-size: 0.9rem;
   font-weight: 600;
   text-transform: capitalize;
+  background: var(--gray-100);
+  color: var(--christ-blue-primary);
 }
-.status-badge.status-draft { background: #e0f2fe; color: #0369a1; }
-.status-badge.status-submitted { background: #fef9c3; color: #b45309; }
-.status-badge.status-under_review { background: #ede9fe; color: #6d28d9; }
-.status-badge.status-returned { background: #fde8e8; color: #b91c1c; }
-.status-badge.status-rejected { background: #fee2e2; color: #991b1b; }
-.status-badge.status-finalized { background: #d1fae5; color: #047857; }
 
 /* -------- Section Cards -------- */
-.section-glass {
-  margin-bottom: 22px;
-}
-
-.section-glass h3 {
-  font-size: 1.16rem;
-  font-weight: 700;
-  color: var(--color-accent);
-  margin-top: 0;
-  margin-bottom: 10px;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  border-bottom: 1.6px solid #e7ebf4;
-  padding-bottom: 4px;
-}
 .detail-block {
   padding: 7px 4px 7px 1px;
   min-height: 30px;
   font-size: 1.06rem;
-  color: var(--color-text);
+  color: var(--gray-800);
   line-height: 1.5;
   white-space: pre-line;
   word-break: break-word;
 }
 
 .speaker-profile-block {
-  background: #f8fbff;
+  background: var(--gray-50);
   border-radius: 8px;
-  border: 1px solid #dde3f3;
+  border: 1px solid var(--gray-200);
   padding: 11px 16px 7px 16px;
   margin-bottom: 7px;
   display: flex;
@@ -241,7 +199,7 @@ body {
   box-shadow: 0 1px 7px rgba(36,70,120,0.06);
 }
 .speaker-profile-block .profile-aff {
-  color: #395ba3; font-weight: 600; margin-left: 8px;
+  color: var(--christ-blue-primary); font-weight: 600; margin-left: 8px;
 }
 .speaker-photo {
   max-height: 55px;
@@ -249,15 +207,15 @@ body {
   border-radius: 6px;
   margin-left: 10px;
   margin-top: 2px;
-  border: 1.5px solid #bed3fa;
+  border: 1.5px solid var(--gray-300);
 }
 .profile-meta {
   font-size: 0.95em;
-  color: #2c6ca4;
+  color: var(--christ-blue-primary);
   margin-bottom: 5px;
 }
 .profile-desc {
-  color: #2a3653;
+  color: var(--christ-blue-dark);
   margin-top: 5px;
   font-size: 1.02em;
 }
@@ -276,7 +234,7 @@ body {
   max-width: 99vw;
 }
 .fin-half h3 {
-  color: #226189;
+  color: var(--christ-blue-secondary);
   font-size: 1.04rem;
   font-weight: 700;
   margin-bottom: 9px;
@@ -287,7 +245,7 @@ body {
   min-width: 330px;
   width: 100%;
   border-collapse: collapse;
-  background: #f7fafd;
+  background: var(--gray-50);
   border-radius: 12px;
   font-size: 1.04rem;
   box-shadow: 0 1px 7px rgba(30,70,130,0.04);
@@ -296,19 +254,19 @@ body {
   margin-top: 7px;
 }
 .finance-table th, .finance-table td {
-  border: 1px solid #d1dbe9;
+  border: 1px solid var(--gray-200);
   padding: 8px 10px;
   text-align: center;
   font-size: 1.01em;
 }
 .finance-table th {
-  background: #ecf3fa;
+  background: var(--gray-100);
   font-weight: 700;
-  color: #1c335c;
+  color: var(--christ-blue-dark);
 }
 .finance-table td {
-  background: #fff;
-  color: #223;
+  background: var(--white);
+  color: var(--gray-800);
 }
 
 @media (max-width: 1200px) {
@@ -321,10 +279,10 @@ body {
   margin-top: 28px;
 }
 .approval-history-ul {
-  background: #f3f6fb;
+  background: var(--gray-100);
   border-radius: 11px;
   padding: 13px 13px 8px 13px;
-  border: 1px solid #e4ebf4;
+  border: 1px solid var(--gray-200);
   box-shadow: 0 1px 8px rgba(34,68,122,0.04);
   margin-bottom: 0;
 }
@@ -334,20 +292,17 @@ body {
 .approval-history-ul li {
   margin-bottom: 7px;
   font-size: 1.06em;
-  color: #20305c;
+  color: var(--christ-blue-dark);
   display: flex;
   align-items: center;
   gap: 7px;
   flex-wrap: wrap;
 }
-.history-role { font-weight: 700; color: #23447c;}
-.history-person { color: #14618b; font-weight: 600;}
-.history-status { font-weight: 700; margin-left: 6px;}
-.history-status.approved { color: #3db34a;}
-.history-status.pending { color: #bc9112;}
-.history-status.rejected { color: #d32f2f;}
-.history-comment { font-style: italic; color: #937c2a; margin-left: 3px;}
-.history-date { color: #8993ba; font-size: 0.96em; margin-left: 2px;}
+.history-role { font-weight: 700; color: var(--christ-blue-secondary);}
+.history-person { color: var(--christ-blue-primary); font-weight: 600;}
+.history-status { font-weight: 700; margin-left: 6px; color: var(--christ-blue-primary);}
+.history-comment { font-style: italic; color: var(--gray-600); margin-left: 3px;}
+.history-date { color: var(--gray-500); font-size: 0.96em; margin-left: 2px;}
 
 /* -------- Approval Form Card -------- */
 .review-form-card {
@@ -356,30 +311,30 @@ body {
   width: 100%;
   min-width: 260px;
   display: block;
-  background: linear-gradient(120deg, #fafdff 85%, #e4eefa 100%);
+  background: linear-gradient(120deg, var(--white) 85%, var(--gray-100) 100%);
   padding: 36px 42px 29px 42px;
 }
 
 .review-form-ultra label {
   font-weight: 700;
-  color: #254176;
+  color: var(--christ-blue-dark);
   font-size: 1.13rem;
 }
 .review-form-ultra textarea.form-control {
   min-height: 88px;
-  background: #f3fafd;
-  border: 1.5px solid #b9d0eb;
+  background: var(--gray-50);
+  border: 1.5px solid var(--gray-300);
   border-radius: 9px;
   font-size: 1.12rem;
   font-weight: 500;
-  color: #204;
+  color: var(--christ-blue-dark);
   margin-bottom: 13px;
   width: 100%;
   display: block;
 }
 .review-form-ultra .gatekeeper label {
   font-weight: 700;
-  color: #22447a;
+  color: var(--christ-blue-secondary);
   font-size: 1.10rem;
   margin-right: 16px;
   margin-bottom: 7px;
@@ -403,12 +358,12 @@ body {
   transition: transform 0.14s, box-shadow 0.12s;
 }
 .btn-success-ultra {
-  background: linear-gradient(90deg,#11d173 65%, #2ea84e 100%);
-  color: #fff;
+  background: linear-gradient(90deg, var(--christ-blue-primary) 65%, var(--christ-blue-secondary) 100%);
+  color: var(--white);
 }
 .btn-danger-ultra {
-  background: linear-gradient(90deg,#f13c3c 65%, #b42b39 100%);
-  color: #fff;
+  background: linear-gradient(90deg, var(--christ-blue-primary) 65%, var(--christ-blue-dark) 100%);
+  color: var(--white);
 }
 .btn-ultra:hover,
 .btn-ultra:focus {
@@ -422,9 +377,9 @@ body {
   font-size: 1.13rem;
   border-radius: 13px;
   background: rgba(220,230,245,0.45);
-  border: 1.5px solid #e2eafb;
+  border: 1.5px solid var(--gray-200);
   font-weight: 700;
-  color: #22627c;
+  color: var(--christ-blue-secondary);
   box-shadow: 0 1px 9px rgba(40,80,170,0.07);
   margin-bottom: 7px;
 }
@@ -443,15 +398,15 @@ body {
   .review-main, .review-side, .fin-row { min-width: 0; }
   .review-main, .review-side { max-width: 100%; }
   .fin-row { flex-direction: column; gap: 17px;}
-  .section-glass, .info-card { padding: 13px 7vw; }
+  .info-card { padding: 13px 7vw; }
   .review-form-card { padding: 24px 5vw; }
 }
 @media (max-width: 600px) {
-  .section-glass, .info-card, .review-form-card { padding: 8px 2vw; }
+  .info-card, .review-form-card { padding: 8px 2vw; }
   .review-title { font-size: 1.05rem; }
   .review-form-card { margin-top: 20px; }
 }
 
 /* -------- Clean Scrollbar -------- */
-::-webkit-scrollbar { width: 8px; background: #f3f3fb;}
-::-webkit-scrollbar-thumb { background: #dde3f2; border-radius: 8px;}
+::-webkit-scrollbar { width: 8px; background: var(--gray-100);}
+::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 8px;}

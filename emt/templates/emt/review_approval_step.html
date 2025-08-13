@@ -4,13 +4,14 @@
 {% block title %}Review Proposal{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'emt/css/proposal_status_detail.css' %}">
 <link rel="stylesheet" href="{% static 'emt/css/review_proposal.css' %}">
 
-<div class="review-grid">
+<div class="detail-container review-grid">
 
   <!-- LEFT COLUMN: Event Info Card -->
-  <aside class="review-side">
-    <div class="info-card card-base">
+  <aside class="timeline-column review-side">
+    <div class="info-card event-details-card">
       <h2>Event Information</h2>
       <table>
         <tr><th>Organization</th><td>{{ proposal.organization.name|default:"—" }}</td></tr>
@@ -91,8 +92,8 @@
   </aside>
 
   <!-- RIGHT COLUMN: All Proposal Details -->
-  <main class="review-main">
-    <header class="review-header card-base">
+  <main class="details-column review-main">
+    <header class="review-header overview-card">
       <nav class="review-nav" aria-label="Review navigation">
         <a href="{% url 'emt:my_approvals' %}" aria-label="Back to approvals"><i class="fas fa-arrow-left"></i></a>
       </nav>
@@ -111,7 +112,7 @@
 
     {% include "emt/partials/review_section.html" with title="Tentative Flow" body=flow.content %}
 
-    <div class="section-glass card-base">
+    <div class="event-details-card">
       <h3>Speaker Profile</h3>
       {% if speakers %}
         {% for sp in speakers %}
@@ -133,7 +134,7 @@
       {% endif %}
     </div>
 
-    <div class="section-glass card-base">
+    <div class="event-details-card">
       <div class="fin-row">
         <div class="fin-half">
           <h3>Income</h3>
@@ -209,7 +210,7 @@
       </div>
     </div>
 
-    <div class="section-glass card-base approval-card">
+    <div class="event-details-card approval-card">
       <h3>Approval History</h3>
       <div class="approval-history-ul">
         <ul>
@@ -232,7 +233,7 @@
       </div>
     </div>
 
-    <div class="section-glass card-base review-form-card">
+    <div class="event-details-card review-form-card">
       {% if step.status == 'pending' %}
         <form method="post" class="review-form-ultra" aria-label="Approval actions">
           {% csrf_token %}
