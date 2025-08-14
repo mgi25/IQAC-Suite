@@ -1779,10 +1779,58 @@
 .user-name {
     font-weight: 600;
     color: #1f2937;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 .user-details {
     font-size: 0.9em;
     color: #6b7280;
+}
+
+/* Faculty badges for better identification */
+.dept-faculty-badge, .general-faculty-badge {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.dept-faculty-badge {
+    background: #059669;
+    color: white;
+}
+
+.general-faculty-badge {
+    background: #6b7280;
+    color: white;
+}
+
+.user-option:hover .dept-faculty-badge,
+.user-option:hover .general-faculty-badge {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+/* Organization context info */
+.org-context {
+    margin-bottom: 8px;
+}
+
+.org-context small {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 12px;
+    background: #f3f4f6;
+    border-radius: 6px;
+    color: #6b7280;
+    font-size: 0.8rem;
+}
+
+.org-context .fas {
+    color: #3b82f6;
 }
 
 /* Responsive adjustments for assignment column */

@@ -20,6 +20,7 @@ from django.utils import timezone
 import json
 import logging
 logger = logging.getLogger(__name__)
+from .decorators import popso_manager_required, popso_program_access_required
 from .forms import RoleAssignmentForm, RegistrationForm
 from .models import (
     Profile,
@@ -1473,11 +1474,11 @@ def admin_pso_po_management(request):
     }
     return render(request, "core/admin_pso_po_management.html", context)
 
-@user_passes_test(lambda u: u.is_superuser)
+@popso_program_access_required
 @require_http_methods(["GET", "POST", "PUT", "DELETE"])
 def manage_program_outcomes(request, program_id=None):
-    """API endpoint for managing Program Outcomes (POs and PSOs)"""
-    from .models import Program, ProgramOutcome, ProgramSpecificOutcome
+    """API endpoint for managing Program Outcomes (POs and PSOs) - Enhanced for assigned users"""
+    from .models import Program, ProgramOutcome, ProgramSpecificOutcome, POPSOAssignment
     import json
     
     if request.method == "POST":
@@ -1485,6 +1486,20 @@ def manage_program_outcomes(request, program_id=None):
             data = json.loads(request.body)
             program = Program.objects.get(id=data['program_id'])
             outcome_type = data.get('type', '').upper()
+            
+            # Additional authorization check for non-superusers
+            if not request.user.is_superuser:
+                if not program.organization:
+                    return JsonResponse({'success': False, 'error': 'Program has no organization'}, status=403)
+                
+                has_assignment = POPSOAssignment.objects.filter(
+                    assigned_user=request.user,
+                    organization=program.organization,
+                    is_active=True
+                ).exists()
+                
+                if not has_assignment:
+                    return JsonResponse({'success': False, 'error': 'Not authorized for this program'}, status=403)
             
             if outcome_type == 'PO':
                 outcome = ProgramOutcome.objects.create(
@@ -1513,10 +1528,26 @@ def manage_program_outcomes(request, program_id=None):
             
             if outcome_type == 'PO':
                 outcome = ProgramOutcome.objects.get(id=data['outcome_id'])
+                program = outcome.program
             elif outcome_type == 'PSO':
                 outcome = ProgramSpecificOutcome.objects.get(id=data['outcome_id'])
+                program = outcome.program
             else:
                 return JsonResponse({'success': False, 'error': 'Invalid outcome type'})
+            
+            # Additional authorization check for non-superusers
+            if not request.user.is_superuser:
+                if not program.organization:
+                    return JsonResponse({'success': False, 'error': 'Program has no organization'}, status=403)
+                
+                has_assignment = POPSOAssignment.objects.filter(
+                    assigned_user=request.user,
+                    organization=program.organization,
+                    is_active=True
+                ).exists()
+                
+                if not has_assignment:
+                    return JsonResponse({'success': False, 'error': 'Not authorized for this program'}, status=403)
                 
             outcome.description = data['description']
             outcome.save()
@@ -1534,10 +1565,26 @@ def manage_program_outcomes(request, program_id=None):
             
             if outcome_type == 'PO':
                 outcome = ProgramOutcome.objects.get(id=data['outcome_id'])
+                program = outcome.program
             elif outcome_type == 'PSO':
                 outcome = ProgramSpecificOutcome.objects.get(id=data['outcome_id'])
+                program = outcome.program
             else:
                 return JsonResponse({'success': False, 'error': 'Invalid outcome type'})
+            
+            # Additional authorization check for non-superusers
+            if not request.user.is_superuser:
+                if not program.organization:
+                    return JsonResponse({'success': False, 'error': 'Program has no organization'}, status=403)
+                
+                has_assignment = POPSOAssignment.objects.filter(
+                    assigned_user=request.user,
+                    organization=program.organization,
+                    is_active=True
+                ).exists()
+                
+                if not has_assignment:
+                    return JsonResponse({'success': False, 'error': 'Not authorized for this program'}, status=403)
                 
             outcome.delete()
             return JsonResponse({'success': True})
@@ -1603,16 +1650,27 @@ def manage_program_specific_outcomes(request, program_id=None):
         except (ProgramSpecificOutcome.DoesNotExist, KeyError, json.JSONDecodeError):
             return JsonResponse({'success': False, 'error': 'Invalid data'})
 
-@user_passes_test(lambda u: u.is_superuser)
+@login_required
 @require_POST
 def create_program_for_organization(request):
     """API endpoint for creating a new program for an organization"""
-    from .models import Organization, Program
+    from .models import Organization, Program, POPSOAssignment
     import json
     
     try:
         data = json.loads(request.body)
         organization = Organization.objects.get(id=data['organization_id'])
+        
+        # Authorization: superuser OR assigned POPSO manager for this organization
+        if not (
+            request.user.is_superuser or 
+            POPSOAssignment.objects.filter(
+                organization=organization,
+                assigned_user=request.user,
+                is_active=True
+            ).exists()
+        ):
+            return JsonResponse({'success': False, 'error': 'Not authorized'}, status=403)
         
         # Check if program already exists for this organization
         existing_program = Program.objects.filter(
@@ -1631,10 +1689,14 @@ def create_program_for_organization(request):
             })
         
         # Create new program
-        program = Program.objects.create(
-            name=data.get('program_name', f"{organization.name} Program"),
-            organization=organization
+        # If program_name key missing or blank, fallback to default name
+        provided_name = data.get('program_name')
+        program_name = (
+            provided_name.strip()
+            if (isinstance(provided_name, str) and provided_name.strip())
+            else f"{organization.name} Program"
         )
+        program = Program.objects.create(name=program_name, organization=organization)
         
         return JsonResponse({
             'success': True,
@@ -3927,11 +3989,29 @@ def api_organization_programs(request, org_id):
         logger.error(f"Error fetching programs for organization {org_id}: {str(e)}")
         return JsonResponse({'error': 'Failed to fetch programs'}, status=500)
 
-@login_required
+@popso_manager_required
 @require_http_methods(["GET"])
 def api_program_outcomes(request, program_id):
-    """API endpoint to get outcomes for a program"""
+    """API endpoint to get outcomes for a program - Enhanced for assigned users"""
+    from .models import POPSOAssignment, Program
+    
     try:
+        # Check authorization for non-superusers
+        if not request.user.is_superuser:
+            try:
+                program = Program.objects.get(id=program_id)
+                if program.organization:
+                    has_assignment = POPSOAssignment.objects.filter(
+                        assigned_user=request.user,
+                        organization=program.organization,
+                        is_active=True
+                    ).exists()
+                    
+                    if not has_assignment:
+                        return JsonResponse({'error': 'Not authorized for this program'}, status=403)
+            except Program.DoesNotExist:
+                return JsonResponse({'error': 'Program not found'}, status=404)
+        
         outcome_type = request.GET.get('type', '').upper()
         
         if outcome_type == 'PO':
@@ -3943,7 +4023,20 @@ def api_program_outcomes(request, program_id):
                 'id', 'description'
             )
         else:
-            return JsonResponse({'error': 'Invalid outcome type'}, status=400)
+            # If no type specified, return both POs and PSOs
+            program = Program.objects.get(id=program_id)
+            pos = [{'id': po.id, 'description': po.description} for po in program.pos.all()]
+            psos = [{'id': pso.id, 'description': pso.description} for pso in program.psos.all()]
+            
+            return JsonResponse({
+                'program': {
+                    'id': program.id,
+                    'name': program.name,
+                    'organization': program.organization.name if program.organization else None
+                },
+                'pos': pos,
+                'psos': psos
+            })
         
         return JsonResponse(list(outcomes), safe=False)
     
@@ -4025,14 +4118,35 @@ def class_roster_detail(request, org_id, class_name):
 @user_passes_test(lambda u: u.is_superuser)
 @require_http_methods(["GET"])
 def api_available_faculty_users(request, org_id):
-    """Get faculty users available for assignment to an organization - STRICT FACULTY ONLY"""
+    """Get faculty users available for assignment to an organization - STRICT FACULTY ONLY with Department Filtering"""
     try:
         from .models import Organization, RoleAssignment
         
         organization = Organization.objects.get(id=org_id)
         search_query = request.GET.get('search', '').strip()
         
-        # Get all active users with Faculty role assignments, similar to admin_user_management
+        # Enhanced Department-based Filtering Logic
+        # If organization is a Department, only show faculty assigned to that department
+        # If organization has parent, also include faculty from parent organization
+        
+        logger.info(f"Loading faculty for org: {organization.name} (Type: {organization.org_type.name})")
+        
+        # Build organization filter for faculty role assignments
+        org_filter = Q(role_assignments__organization=organization)
+        
+        # Include parent organization if exists (for hierarchical access)
+        if organization.parent:
+            org_filter |= Q(role_assignments__organization=organization.parent)
+            logger.info(f"Including parent org: {organization.parent.name}")
+        
+        # For Department type organizations, ensure strict department filtering
+        if organization.org_type.name.lower() in ['department', 'dept']:
+            # Only show faculty specifically assigned to this department
+            # Don't include broader university-level faculty unless explicitly assigned
+            org_filter = Q(role_assignments__organization=organization)
+            logger.info(f"Strict department filtering for: {organization.name}")
+        
+        # Get all active users with Faculty role assignments
         faculty_users = User.objects.select_related('profile').prefetch_related(
             'role_assignments__organization', 
             'role_assignments__role',
@@ -4040,14 +4154,7 @@ def api_available_faculty_users(request, org_id):
         ).filter(
             is_active=True,
             role_assignments__role__name__iexact='Faculty'  # STRICT: Only Faculty role
-        )
-        
-        # Filter by organization hierarchy (current org or parent)
-        org_filter = Q(role_assignments__organization=organization)
-        if organization.parent:
-            org_filter |= Q(role_assignments__organization=organization.parent)
-        
-        faculty_users = faculty_users.filter(org_filter).distinct()
+        ).filter(org_filter).distinct()
         
         # Apply search filter if provided (search by name, username, email)
         if search_query:
@@ -4058,38 +4165,61 @@ def api_available_faculty_users(request, org_id):
                 Q(email__icontains=search_query)
             )
             faculty_users = faculty_users.filter(search_filter).distinct()
+            logger.info(f"Applied search filter: '{search_query}'")
         
-        # Prepare user data in the same format as admin_user_management
+        # Prepare user data with enhanced role information
         users_data = []
         for user in faculty_users:
-            # Get user's role assignments (only Faculty roles in this org/parent)
+            # Build RoleAssignment-level filter (do NOT reuse User-level org_filter)
+            if organization.org_type.name.lower() in ['department', 'dept']:
+                ra_filter = Q(organization=organization)
+            else:
+                org_ids = [organization.id]
+                if organization.parent_id:
+                    org_ids.append(organization.parent_id)
+                ra_filter = Q(organization_id__in=org_ids)
+
+            # Get user's faculty role assignments for this org/parent
             faculty_assignments = user.role_assignments.filter(
                 role__name__iexact='Faculty'
-            ).filter(org_filter)
-            
+            ).filter(ra_filter)
+
             # Skip if no faculty assignments found
             if not faculty_assignments.exists():
                 continue
-            
-            # Get roles for display
-            role_names = list(faculty_assignments.values_list('role__name', flat=True))
-            
+
+            # Get organizations and roles for display
+            org_names = []
+            role_names = []
+
+            for assignment in faculty_assignments:
+                if assignment.organization:
+                    org_names.append(assignment.organization.name)
+                if assignment.role:
+                    role_names.append(assignment.role.name)
+
+            # Remove duplicates while preserving order
+            org_names = list(dict.fromkeys(org_names))
+            role_names = list(dict.fromkeys(role_names))
+
+            # True if any assignment is directly in this department
+            is_dept_faculty = any(
+                (assignment.organization_id == organization.id)
+                for assignment in faculty_assignments
+            )
+
             users_data.append({
                 'id': user.id,
                 'username': user.username,
                 'full_name': user.get_full_name() or user.username,
                 'email': user.email,
-                'roles': role_names
+                'roles': role_names,
+                'organizations': org_names,
+                'is_department_faculty': is_dept_faculty
             })
         
-        logger.info(f"Found {len(users_data)} FACULTY users for org {org_id} with search '{search_query}'")
+        logger.info(f"Found {len(users_data)} FACULTY users for org {org_id} ('{organization.name}') with search '{search_query}'")
         return JsonResponse(users_data, safe=False)
-        
-    except Organization.DoesNotExist:
-        return JsonResponse({'error': 'Organization not found'}, status=404)
-    except Exception as e:
-        logger.error(f"Error fetching faculty users for org {org_id}: {str(e)}")
-        return JsonResponse({'error': f'Failed to fetch users: {str(e)}'}, status=500)
         
     except Organization.DoesNotExist:
         return JsonResponse({'error': 'Organization not found'}, status=404)
@@ -4325,8 +4455,9 @@ def api_popso_manager_status(request):
 
 @login_required
 def settings_pso_po_management(request):
-    """Settings page for assigned PO/PSO managers"""
+    """Settings page for assigned PO/PSO managers with role-based access control"""
     from .models import POPSOAssignment, Program, ProgramOutcome, ProgramSpecificOutcome
+    from django.contrib import messages
     
     # Check if user is assigned as manager
     assignments = POPSOAssignment.objects.filter(
@@ -4338,22 +4469,42 @@ def settings_pso_po_management(request):
         messages.error(request, "You are not assigned to manage any PO/PSO outcomes.")
         return redirect('dashboard')
     
-    # Get assigned organizations and their programs
+    # Get assigned organizations and their programs with role-based restrictions
     assigned_orgs = []
     for assignment in assignments:
         org = assignment.organization
-        programs = Program.objects.filter(organization=org)
+        
+        # Role-based access: Only show programs for organizations where user has assignment
+        programs = Program.objects.filter(organization=org).prefetch_related('pos', 'psos')
+        
+        # Additional department-based information (no longer blocks access if assigned)
+        if org.org_type.name.lower() in ['department', 'dept']:
+            # If not department faculty, we still allow because user has explicit POPSO assignment
+            user_dept_assignments = request.user.role_assignments.filter(
+                organization=org,
+                role__name__iexact='Faculty'
+            )
+            if not user_dept_assignments.exists():
+                messages.info(request, f"Note: You're assigned to manage {org.name} but not marked Faculty in this department.")
         
         org_data = {
             'organization': org,
             'programs': programs,
-            'assignment': assignment
+            'assignment': assignment,
+            'has_department_access': org.org_type.name.lower() in ['department', 'dept'],
+            'can_edit': True  # User has explicit PSO/POS assignment, so they can edit
         }
         assigned_orgs.append(org_data)
     
+    # Check if user has any valid assignments after filtering
+    if not assigned_orgs:
+        messages.error(request, "You don't have valid assignments to manage PO/PSO outcomes.")
+        return redirect('dashboard')
+    
     context = {
         'assigned_organizations': assigned_orgs,
-        'user': request.user
+        'user': request.user,
+        'has_assignments': True
     }
     
     return render(request, 'core/settings_pso_po_management.html', context)

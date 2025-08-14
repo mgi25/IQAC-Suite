@@ -114,26 +114,26 @@ GEMINI_API_KEY=your-gemini-api-key
 ### 4. Database Migrations
 
 ```bash
-python manage.py makemigrations
-python manage.py migrate
+py manage.py makemigrations
+py manage.py migrate
 ```
 
 ### 5. Create Superuser
 
 ```bash
-python manage.py createsuperuser
+py manage.py createsuperuser
 ```
 
 ### 6. Collect Static Files
 
 ```bash
-python manage.py collectstatic
+py manage.py collectstatic
 ```
 
 ### 7. Run the Development Server
 
 ```bash
-python manage.py runserver
+py manage.py runserver
 ```
 
 Access at: `http://127.0.0.1:8000/`
@@ -341,7 +341,7 @@ Website: https://christuniversity.in/lavasa
 If you created an academic year with an incorrect year value or need to clear a duplicate entry, you can remove it using the provided management command:
 
 ```bash
-python manage.py delete_academic_year 2025-2026
+py manage.py delete_academic_year 2025-2026
 ```
 
 Replace `2025-2026` with the year you want to delete.

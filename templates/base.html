@@ -197,6 +197,16 @@
       </div>
       {% endif %}
 
+      <!-- POs & PSOs Management (Visible to assigned managers; non-admin) -->
+      {% if request.user.is_authenticated and not user.is_superuser and request.session.role != 'admin' %}
+      <div class="nav-item" id="popso-manager-nav" style="display:none;">
+        <a href="{% url 'settings_pso_po_management' %}" class="nav-link {% if request.resolver_match.url_name == 'settings_pso_po_management' %}active{% endif %}">
+          <i class="fas fa-clipboard-list nav-icon"></i>
+          <span class="nav-text">POs & PSOs Management</span>
+        </a>
+      </div>
+      {% endif %}
+
       <!-- User Management - Expandable (Admin Only) -->
       {% if user.is_superuser or request.session.role == 'admin' %}
       <div class="nav-section {% if 'users' in request.path or 'user-roles' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' %}expanded{% endif %}">
@@ -583,9 +593,10 @@
     });
 
     // Check if user is a PO/PSO manager and show Settings link
-    {% if request.user.is_authenticated %}
-    checkPOPSOManagerStatus();
-    {% endif %}
+    const isAuthenticated = {{ request.user.is_authenticated|yesno:"true,false" }};
+    if (isAuthenticated) {
+      checkPOPSOManagerStatus();
+    }
 
     function checkPOPSOManagerStatus() {
       fetch('/core/api/popso-manager-status/')
@@ -595,6 +606,10 @@
             const settingsLink = document.getElementById('popso-settings-link');
             if (settingsLink) {
               settingsLink.style.display = 'block';
+            }
+            const managerNav = document.getElementById('popso-manager-nav');
+            if (managerNav) {
+              managerNav.style.display = 'block';
             }
           }
         })
