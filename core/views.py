@@ -2099,6 +2099,18 @@ def admin_history(request):
         except ValueError:
             pass
 
+    # Build type-ahead suggestions from the currently filtered log data
+    action_suggestions = logs.values_list("action", flat=True).distinct()
+    user_suggestions = logs.values_list("user__username", flat=True).distinct()
+    suggestions = sorted(
+        set(
+            filter(
+                None,
+                list(action_suggestions) + list(user_suggestions),
+            )
+        )
+    )
+
     paginator = Paginator(logs, 50)
     page = request.GET.get("page")
     try:
@@ -2113,6 +2125,7 @@ def admin_history(request):
         "q": query,
         "start": start_date,
         "end": end_date,
+        "suggestions": suggestions,
     }
     return render(request, "core/admin_history.html", context)
 

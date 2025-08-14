@@ -6,7 +6,12 @@
 <div class="admin-history-container">
   <h1 class="history-title">Activity History</h1>
   <form method="get" class="history-filter-form">
-    <input type="text" name="q" placeholder="Search..." value="{{ q }}">
+    <input type="text" id="history-search-input" name="q" placeholder="Search..." value="{{ q }}" list="history-suggestions">
+    <datalist id="history-suggestions">
+      {% for item in suggestions %}
+        <option value="{{ item }}">
+      {% endfor %}
+    </datalist>
     <input type="date" name="start" value="{{ start }}">
     <input type="date" name="end" value="{{ end }}">
     <button type="submit">Filter</button>
@@ -14,6 +19,7 @@
       <a href="{% url 'admin_history' %}" class="btn-reset">Reset</a>
     {% endif %}
   </form>
+  <button type="button" class="btn-select-all" id="select-all-btn">Select All</button>
   <div class="table-responsive">
     <table class="history-table">
       <thead>
@@ -54,4 +60,26 @@
   </div>
   {% endif %}
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('history-search-input');
+  const rows = Array.from(document.querySelectorAll('.history-table tbody tr'));
+  searchInput.addEventListener('input', function() {
+    const term = this.value.toLowerCase();
+    rows.forEach(row => {
+      const text = row.textContent.toLowerCase();
+      row.style.display = text.includes(term) ? '' : 'none';
+    });
+  });
+  const selectAllBtn = document.getElementById('select-all-btn');
+  selectAllBtn.addEventListener('click', function() {
+    const table = document.querySelector('.history-table');
+    const range = document.createRange();
+    range.selectNodeContents(table);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  });
+});
+</script>
 {% endblock %}
