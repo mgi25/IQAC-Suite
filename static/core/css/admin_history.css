@@ -39,3 +39,22 @@ body {
 .pagination .page-link {
     margin: 0 5px;
 }
+
+/* Filter form */
+.history-filter-form {
+    margin-bottom: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.history-filter-form input,
+.history-filter-form button {
+    padding: 8px 12px;
+}
+
+.history-filter-form .btn-reset {
+    padding: 8px 0;
+    color: #20508c;
+    text-decoration: underline;
+}

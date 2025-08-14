@@ -2067,18 +2067,54 @@ def admin_reports_view(request):
 @login_required
 @admin_required
 def admin_history(request):
-    """List activity log entries for administrators."""
-    logs = ActivityLog.objects.select_related('user')
+    """List activity log entries for administrators with search and filtering."""
+
+    logs = ActivityLog.objects.select_related("user")
+
+    # Text search across user name, username, action and description
+    query = request.GET.get("q", "").strip()
+    if query:
+        logs = logs.filter(
+            Q(user__username__icontains=query)
+            | Q(user__first_name__icontains=query)
+            | Q(user__last_name__icontains=query)
+            | Q(action__icontains=query)
+            | Q(description__icontains=query)
+            | Q(ip_address__icontains=query)
+        )
+
+    # Date range filtering
+    start_date = request.GET.get("start")
+    end_date = request.GET.get("end")
+    if start_date:
+        try:
+            start = datetime.strptime(start_date, "%Y-%m-%d").date()
+            logs = logs.filter(timestamp__date__gte=start)
+        except ValueError:
+            pass
+    if end_date:
+        try:
+            end = datetime.strptime(end_date, "%Y-%m-%d").date()
+            logs = logs.filter(timestamp__date__lte=end)
+        except ValueError:
+            pass
+
     paginator = Paginator(logs, 50)
-    page = request.GET.get('page')
+    page = request.GET.get("page")
     try:
         logs_page = paginator.page(page)
     except PageNotAnInteger:
         logs_page = paginator.page(1)
     except EmptyPage:
         logs_page = paginator.page(paginator.num_pages)
-    context = {'logs': logs_page}
-    return render(request, 'core/admin_history.html', context)
+
+    context = {
+        "logs": logs_page,
+        "q": query,
+        "start": start_date,
+        "end": end_date,
+    }
+    return render(request, "core/admin_history.html", context)
 
 
 @login_required
