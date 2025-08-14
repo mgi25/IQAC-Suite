@@ -1726,7 +1726,6 @@ function getWhyThisEventForm() {
     
     // ===== SAVE SECTION FUNCTIONALITY - FULLY PRESERVED =====
     function saveCurrentSection() {
-        console.log('Saving section:', currentExpandedCard);
         if (!currentExpandedCard) return;
 
         if (validateCurrentSection()) {
@@ -1782,7 +1781,6 @@ function getWhyThisEventForm() {
                 }
                 if (djangoField.length) {
                     djangoField.val($(this).val());
-                    console.log(`Synced ${baseName}:`, $(this).val());
                 }
             }
             clearFieldError($(this));
@@ -2301,7 +2299,14 @@ function getWhyThisEventForm() {
         firstErrorField = null;
 
         const mark = (name, message) => {
-            const field = $(`[name="${name}"]`);
+            let field = $(`#${name.replace(/_/g, '-')}-modern`);
+            if (!field.length) {
+                field = $(`[name="${name}"]`);
+                if (field.length && field.attr('type') === 'hidden') {
+                    const alt = $(`#${field.attr('id')}-modern`);
+                    if (alt.length) field = alt;
+                }
+            }
             if (field.length) {
                 showFieldError(field, message);
             }
@@ -2373,7 +2378,7 @@ function getWhyThisEventForm() {
     if (window.autosaveDraft) {
         // Trigger autosave on form changes
         $('#form-panel-content').on('input change', 'input, textarea, select', debounce(function() {
-            window.autosaveDraft();
+            window.autosaveDraft().catch(() => {});
         }, 1000));
     }
 
