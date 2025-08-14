@@ -310,6 +310,13 @@ $(document).ready(function() {
         setupFacultyTomSelect();
         setupCommitteesTomSelect();
         setupStudentCoordinatorSelect();
+
+        const orgSelect = djangoBasicInfo.find('[name="organization"]');
+        const committeesIds = djangoBasicInfo.find('[name="committees_collaborations_ids"]');
+        orgSelect.off('change.studentCoordinator').on('change.studentCoordinator', setupStudentCoordinatorSelect);
+        if (committeesIds.length) {
+            committeesIds.off('change.studentCoordinator').on('change.studentCoordinator', setupStudentCoordinatorSelect);
+        }
     }
     
     // NEW FUNCTION to handle dynamic activities
@@ -489,6 +496,7 @@ $(document).ready(function() {
         const select = $('#student-coordinators-modern');
         const djangoField = $('#django-basic-info [name="student_coordinators"]');
         const orgSelect = $('#django-basic-info [name="organization"]');
+        const committeesField = $('#django-basic-info [name="committees_collaborations_ids"]');
         const list = $('#student-coordinators-list');
         if (!select.length || !djangoField.length) return;
 
@@ -504,8 +512,14 @@ $(document).ready(function() {
             create: false,
             placeholder: 'Type a student name…',
             load: function(query, callback) {
-                const orgId = orgSelect.val();
-                const url = `/suite/api/students/?q=${encodeURIComponent(query)}${orgId ? `&org_id=${orgId}` : ''}`;
+                const ids = [];
+                const main = orgSelect.val();
+                if (main) ids.push(main);
+                if (committeesField.length && committeesField.val()) {
+                    committeesField.val().split(',').map(id => id.trim()).filter(Boolean).forEach(id => ids.push(id));
+                }
+                const orgParam = ids.length ? `&org_ids=${encodeURIComponent(ids.join(','))}` : '';
+                const url = `/suite/api/students/?q=${encodeURIComponent(query)}${orgParam}`;
                 fetch(url)
                     .then(response => response.json())
                     .then(json => {

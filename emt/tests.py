@@ -165,6 +165,17 @@ class StudentAPITests(TestCase):
         self.assertIn(self.user.id, ids)
         self.assertNotIn(self.other_user.id, ids)
 
+    def test_api_students_supports_multiple_organizations(self):
+        resp = self.client.get(
+            reverse("emt:api_students"),
+            {"org_ids": f"{self.org.id},{self.other_org.id}"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        ids = {item["id"] for item in data}
+        self.assertIn(self.user.id, ids)
+        self.assertIn(self.other_user.id, ids)
+
 
 class OutcomesAPITests(TestCase):
     def setUp(self):
