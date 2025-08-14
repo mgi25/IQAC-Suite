@@ -16,6 +16,7 @@ from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.db import models, transaction
+from django.db.models.functions import TruncDate
 from django.utils import timezone
 import json
 import logging
@@ -41,6 +42,7 @@ from .models import ApprovalFlowTemplate, ApprovalFlowConfig
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from .decorators import admin_required
+from .models import FacultyMeeting
 
 logger = logging.getLogger(__name__)
 
@@ -2362,6 +2364,496 @@ def user_dashboard(request):
         "core/user_dashboard.html",
         {"calendar_events": calendar_events, "show_settings_tab": show_settings_tab},
     )
+
+# ─────────────────────────────────────────────────────────────
+#  Dashboard Enhancement APIs
+# ─────────────────────────────────────────────────────────────
+@login_required
+@require_GET
+def api_dashboard_places(request):
+    """Return places/venues for event/meeting creation."""
+    # Get unique venues from existing events
+    venues = EventProposal.objects.filter(
+        venue__isnull=False
+    ).exclude(venue='').values_list('venue', flat=True).distinct()
+    
+    places = [
+        {"id": f"venue_{i}", "name": venue} 
+        for i, venue in enumerate(venues, 1)
+    ]
+    
+    # Add some common places if database is empty
+    if not places:
+        places = [
+            {"id": "conf_room_1", "name": "Conference Room 1"},
+            {"id": "auditorium", "name": "Main Auditorium"},
+            {"id": "seminar_hall", "name": "Seminar Hall"},
+            {"id": "lab_1", "name": "Computer Lab 1"},
+            {"id": "classroom_101", "name": "Classroom 101"},
+        ]
+    
+    return JsonResponse({"places": places})
+
+@login_required
+@require_GET
+def api_dashboard_people(request):
+    """Return people for meeting invitations."""
+    org_id = request.GET.get('org_id')
+    user = request.user
+    
+    people = []
+    
+    # Get users from same organizations as current user
+    user_orgs = user.role_assignments.filter(
+        organization__isnull=False
+    ).values_list('organization_id', flat=True)
+    
+    if org_id:
+        # Filter by specific organization
+        try:
+            org_id = int(org_id)
+            if org_id in user_orgs:
+                users = User.objects.filter(
+                    role_assignments__organization_id=org_id
+                ).exclude(id=user.id).distinct()
+            else:
+                users = User.objects.none()
+        except (ValueError, TypeError):
+            users = User.objects.none()
+    else:
+        # All users from user's organizations
+        users = User.objects.filter(
+            role_assignments__organization_id__in=user_orgs
+        ).exclude(id=user.id).distinct()
+    
+    people = [
+        {
+            "id": u.id,
+            "name": u.get_full_name() or u.username,
+            "email": u.email,
+            "role": getattr(u.profile, 'role', 'user') if hasattr(u, 'profile') else 'user'
+        }
+        for u in users[:50]  # Limit to 50 for performance
+    ]
+    
+    return JsonResponse({"people": people})
+
+@login_required
+@require_GET
+def api_user_proposals(request):
+    """Return user's proposals for status tracking."""
+    proposals = EventProposal.objects.filter(
+        submitted_by=request.user
+    ).order_by('-created_at')[:10]
+    
+    proposal_data = []
+    for p in proposals:
+        proposal_data.append({
+            "id": p.id,
+            "title": p.event_title,
+            "status": p.status,
+            "status_display": p.get_status_display(),
+            "created_at": p.created_at.isoformat(),
+            # Always point to admin proposal detail as requested
+            "view_url": reverse('admin_proposal_detail', args=[p.id])
+        })
+    
+    return JsonResponse({"proposals": proposal_data})
+
+
+@login_required
+@require_GET
+def api_student_performance_data(request):
+    """API endpoint to fetch student performance data"""
+    user = request.user
+    
+    # Get user's organization assignments
+    user_orgs = RoleAssignment.objects.filter(user=user).values_list('organization', flat=True)
+    
+    # Filter events based on user's organizations
+    events = EventProposal.objects.filter(
+        organization__in=user_orgs,
+        status='approved'
+    )
+    
+    total_events = events.count()
+    
+    # Check if user has a student profile and count participated events
+    participated_events = 0
+    if hasattr(user, 'student_profile'):
+        participated_events = user.student_profile.events.filter(
+            organization__in=user_orgs,
+            status='approved'
+        ).count()
+    
+    participation_rate = (participated_events / total_events * 100) if total_events > 0 else 0
+    
+    # Get recent activities
+    recent_activities = []
+    if hasattr(user, 'student_profile'):
+        recent_events = user.student_profile.events.filter(
+            organization__in=user_orgs
+        ).order_by('-created_at')[:5]
+        for activity in recent_events:
+            recent_activities.append({
+                'title': activity.event_title,
+                'date': activity.created_at.strftime('%Y-%m-%d'),
+                'type': 'Event Participation'
+            })
+    
+    return JsonResponse({
+        'total_events': total_events,
+        'participated_events': participated_events,
+        'participation_rate': round(participation_rate, 1),
+        'recent_activities': recent_activities
+    })
+
+
+@login_required
+@require_GET
+def api_student_contributions(request):
+    """API endpoint to fetch yearly contribution data for GitHub-style graph.
+
+    Includes any EventProposal the user is associated with as:
+    - participant (via Student profile),
+    - proposer (submitted_by), or
+    - faculty-in-charge (M2M).
+    """
+    user = request.user
+    from django.utils import timezone
+    from datetime import timedelta
+
+    end_date = timezone.now().date()
+    start_date = end_date - timedelta(days=365)
+
+    # Unified queryset across roles using EventProposal with OR conditions
+    qp = models.Q(created_at__date__gte=start_date, created_at__date__lte=end_date)
+    assoc = (
+        models.Q(submitted_by=user) |
+        models.Q(faculty_incharges=user) |
+        models.Q(participants__user=user)
+    )
+    qs = EventProposal.objects.filter(qp & assoc).distinct()
+
+    # Aggregate counts per day
+    contributions_map = {}
+    daily = qs.annotate(date=TruncDate('created_at')).values('date').annotate(count=models.Count('id'))
+    for row in daily:
+        date_obj = row["date"]
+        date_str = date_obj.strftime("%Y-%m-%d") if hasattr(date_obj, "strftime") else str(date_obj)
+        contributions_map[date_str] = row["count"]
+
+    # Build full year series with intensity levels 0-4
+    series = []
+    cur = start_date
+    while cur <= end_date:
+        dstr = cur.strftime("%Y-%m-%d")
+        cnt = int(contributions_map.get(dstr, 0))
+        level = 0
+        if cnt == 0:
+            level = 0
+        elif cnt <= 1:
+            level = 1
+        elif cnt <= 3:
+            level = 2
+        elif cnt <= 5:
+            level = 3
+        else:
+            level = 4
+        series.append({"date": dstr, "count": cnt, "level": level})
+        cur += timedelta(days=1)
+
+    return JsonResponse({"contributions": series})
+
+
+@login_required
+@require_GET
+def api_user_events_data(request):
+    """API endpoint to fetch user's event data"""
+    user = request.user
+    
+    # Get user's organization assignments
+    user_orgs = RoleAssignment.objects.filter(user=user).values_list('organization', flat=True)
+    
+    # Get events based on user role
+    if user.is_staff or RoleAssignment.objects.filter(user=user, role__name__in=['Admin', 'Faculty']).exists():
+        # Faculty/Admin can see all events in their organizations
+        events = EventProposal.objects.filter(organization__in=user_orgs)
+    else:
+        # Students see events they can participate in
+        events = EventProposal.objects.filter(
+            organization__in=user_orgs,
+            status='approved'
+        )
+    
+    events_data = []
+    for event in events.order_by('-created_at')[:10]:  # Latest 10 events
+        events_data.append({
+            'id': event.id,
+            'title': event.event_title,
+            'description': event.description[:100] + '...' if len(event.description) > 100 else event.description,
+            'status': event.status,
+            'created_at': event.created_at.strftime('%Y-%m-%d %H:%M'),
+            'organization': event.organization.name if event.organization else 'N/A'
+        })
+    
+    return JsonResponse({'events': events_data})
+
+@login_required
+@require_GET
+def api_student_performance_data(request):
+    """Return student performance data based on organization and participation."""
+    user = request.user
+    org_id = request.GET.get('org_id')
+    
+    # Get user's organizations
+    user_orgs = user.role_assignments.filter(
+        organization__isnull=False
+    ).values_list('organization_id', flat=True)
+    
+    if org_id:
+        try:
+            org_id = int(org_id)
+            if org_id not in user_orgs:
+                return JsonResponse({"error": "Access denied"}, status=403)
+            filter_orgs = [org_id]
+        except (ValueError, TypeError):
+            filter_orgs = list(user_orgs)
+    else:
+        filter_orgs = list(user_orgs)
+    
+    # Get events user participated in or organized
+    organized_events = EventProposal.objects.filter(
+        submitted_by=user,
+        organization_id__in=filter_orgs,
+        status__in=['approved', 'finalized']
+    ).count()
+    
+    participated_events = EventProposal.objects.filter(
+        organization_id__in=filter_orgs,
+        status__in=['approved', 'finalized']
+    ).exclude(submitted_by=user).count()  # Simplified - in real app you'd have participants table
+    
+    # Calculate performance metrics
+    total_events = organized_events + participated_events
+    leadership_score = (organized_events / max(total_events, 1)) * 100
+    participation_score = (participated_events / max(total_events, 1)) * 100
+    
+    # Performance categories
+    if total_events >= 10:
+        overall = "Excellent"
+    elif total_events >= 5:
+        overall = "Good"
+    elif total_events >= 2:
+        overall = "Average"
+    else:
+        overall = "Needs Improvement"
+    
+    labels = ["Leadership", "Participation", "Communication", "Teamwork"]
+    percentages = [
+        min(leadership_score, 100),
+        min(participation_score, 100),
+        min(75 + (total_events * 2), 100),  # Communication based on activity
+        min(65 + (total_events * 3), 100)   # Teamwork based on activity
+    ]
+    
+    return JsonResponse({
+        "labels": labels,
+        "percentages": percentages,
+        "total_events": total_events,
+        "participated_events": participated_events,
+        "participation_rate": round(participation_score, 1),
+        "total_events": total_events,
+        "organized_events": organized_events,
+        "participated_events": participated_events,
+        "overall_performance": overall
+    })
+
+# NOTE: duplicate api_student_contributions removed; see unified implementation above
+
+# Note: Removed duplicate api_user_events_data with different payload shape.
+
+# ─────────────────────────────────────────────────────────────
+#  Calendar API (common for student/faculty dashboards)
+# ─────────────────────────────────────────────────────────────
+@login_required
+@require_GET
+def api_calendar_events(request):
+    """
+    Return calendar items based on dropdown category.
+    category: one of [all, public, private, faculty]
+    - all/public: approved/finalized EventProposals (past + future)
+    - private: only returns a marker that clicking opens Google Calendar (no backend tasks stored)
+    - faculty: FacultyMeeting within user's organizations (faculty only)
+    """
+    user = request.user
+    category = request.GET.get('category', 'all').lower()
+
+    items = []
+    now = timezone.now()
+
+    def build_view_url(item_id):
+        try:
+            return reverse('student_event_details', args=[item_id])
+        except Exception:
+            return f"/event/{item_id}/details/"
+
+    # public/approved events
+    if category in ("all", "public"):
+        events = EventProposal.objects.filter(
+            status__in=[EventProposal.Status.APPROVED, EventProposal.Status.FINALIZED]
+        ).filter(
+            Q(event_datetime__isnull=False) | Q(event_start_date__isnull=False)
+        )
+        for e in events:
+            # choose a representative date
+            dt = e.event_datetime or (
+                timezone.make_aware(datetime.combine(e.event_start_date, datetime.min.time()))
+                if e.event_start_date else None
+            )
+            if not dt:
+                continue
+            items.append({
+                "id": e.id,
+                "title": e.event_title,
+                "date": dt.date().isoformat(),
+                "datetime": dt.isoformat(),
+                "venue": e.venue or "",
+                "type": "public",
+                "past": dt < now,
+                "view_url": build_view_url(e.id),
+                "gcal_url": build_gcal_link(e),
+            })
+
+    # private category: no stored tasks, front-end will open GCal on date click
+    if category == "private":
+        return JsonResponse({"items": items, "category": category, "private": True})
+
+    # faculty meetings
+    if category == "faculty":
+        # must be faculty by role assignment
+        has_faculty_role = False
+        try:
+            has_faculty_role = any(
+                (ra.role and ra.role.name.lower() == 'faculty') for ra in user.role_assignments.select_related('role')
+            )
+        except Exception:
+            has_faculty_role = False
+        if not has_faculty_role and not user.is_superuser:
+            return JsonResponse({"items": [], "category": category})
+
+        org_ids = list(
+            user.role_assignments.filter(organization__isnull=False).values_list('organization_id', flat=True)
+        )
+        meetings = FacultyMeeting.objects.filter(organization_id__in=org_ids)
+        for m in meetings:
+            items.append({
+                "id": f"m{m.id}",
+                "title": m.title,
+                "date": m.scheduled_at.date().isoformat(),
+                "datetime": timezone.localtime(m.scheduled_at).isoformat(),
+                "venue": getattr(m, 'venue', '') or '',
+                "type": "faculty",
+                "past": m.scheduled_at < now,
+                "view_url": "",
+                "gcal_url": gcal_quick_add_link(m.title, m.scheduled_at, None, m.description),
+            })
+
+    return JsonResponse({"items": items, "category": category})
+
+
+def build_gcal_link(e: EventProposal) -> str:
+    """Create an Add to Google Calendar URL for an EventProposal."""
+    try:
+        import urllib.parse as ul
+    except Exception:
+        return ""
+    title = e.event_title or "Event"
+    details = []
+    if e.organization:
+        details.append(f"Organization: {e.organization.name}")
+    if e.venue:
+        details.append(f"Venue: {e.venue}")
+    text = ul.quote(title)
+    desc = ul.quote("\n".join(details))
+    location = ul.quote(e.venue or "")
+    # compute start/end
+    if e.event_datetime:
+        start = timezone.localtime(e.event_datetime)
+        end = start + timedelta(hours=1)
+    else:
+        start_date = e.event_start_date or e.event_end_date or timezone.localdate()
+        start = datetime.combine(start_date, datetime.min.time()).replace(tzinfo=timezone.get_current_timezone())
+        end = start + timedelta(hours=1)
+    def fmt(d):
+        return d.strftime('%Y%m%dT%H%M%S')
+    dates = f"{fmt(start)}/{fmt(end)}"
+    return (
+        "https://www.google.com/calendar/render?action=TEMPLATE"
+        f"&text={text}&dates={dates}&details={desc}&location={location}&sf=true&output=xml"
+    )
+
+
+def gcal_quick_add_link(title: str, start_dt, end_dt=None, description: str = "") -> str:
+    try:
+        import urllib.parse as ul
+    except Exception:
+        return ""
+    text = ul.quote(title)
+    if end_dt is None:
+        end_dt = start_dt + timedelta(hours=1)
+    def fmt(d):
+        return timezone.localtime(d).strftime('%Y%m%dT%H%M%S')
+    dates = f"{fmt(start_dt)}/{fmt(end_dt)}"
+    details = ul.quote(description or "")
+    return (
+        "https://www.google.com/calendar/render?action=TEMPLATE"
+        f"&text={text}&dates={dates}&details={details}&sf=true&output=xml"
+    )
+
+
+@login_required
+@require_POST
+def api_create_faculty_meeting(request):
+    """Create a faculty meeting within user's organization. Faculty only."""
+    user = request.user
+    has_faculty_role = any(
+        (ra.role and ra.role.name.lower() == 'faculty') for ra in user.role_assignments.select_related('role')
+    )
+    if not has_faculty_role and not user.is_superuser:
+        return JsonResponse({"success": False, "error": "Not allowed"}, status=403)
+
+    try:
+        payload = json.loads(request.body.decode('utf-8')) if request.body else request.POST
+    except Exception:
+        payload = request.POST
+    
+    title = (payload.get('title') or '').strip() or 'Meeting'
+    description = (payload.get('description') or '').strip()
+    org_id = payload.get('organization_id') or payload.get('org_id')
+    when = payload.get('scheduled_at') or payload.get('datetime')
+    place = (payload.get('place') or '').strip()
+    participants = payload.get('participants', [])
+    
+    if not org_id or not when:
+        return JsonResponse({"success": False, "error": "organization_id and scheduled_at are required"}, status=400)
+    
+    try:
+        from django.utils.dateparse import parse_datetime
+        dt = parse_datetime(when)
+        if dt is None:
+            return JsonResponse({"success": False, "error": "Invalid datetime"}, status=400)
+        
+        meeting = FacultyMeeting.objects.create(
+            title=title,
+            description=f"{description}\nVenue: {place}\nParticipants: {', '.join(participants) if participants else 'All faculty'}",
+            organization_id=int(org_id),
+            scheduled_at=dt,
+            created_by=user,
+        )
+        return JsonResponse({"success": True, "id": meeting.id})
+    except Exception as ex:
+        return JsonResponse({"success": False, "error": str(ex)}, status=500)
 
 @login_required
 @require_GET
