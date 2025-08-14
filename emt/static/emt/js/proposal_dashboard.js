@@ -12,6 +12,7 @@ $(document).ready(function() {
         'income': false
     };
     let audienceClassMap = {};
+    let firstErrorField = null;
     const autoFillEnabled = new URLSearchParams(window.location.search).has('autofill');
 
     // Demo data used for rapid prototyping. Remove once real data is wired.
@@ -1745,6 +1746,9 @@ function getWhyThisEventForm() {
                     })
                     .catch(err => {
                         console.error('Autosave failed:', err);
+                        if (err && err.errors) {
+                            handleAutosaveErrors(err);
+                        }
                         showNotification('Autosave failed. Please check for missing fields.', 'error');
                     });
             } else {
@@ -1976,16 +1980,38 @@ function getWhyThisEventForm() {
     function validateCurrentSection() {
         if (!currentExpandedCard) return false;
         clearValidationErrors();
-    
+        firstErrorField = null;
+
+        let valid = false;
         switch (currentExpandedCard) {
-            case 'basic-info': return validateBasicInfo();
-            case 'why-this-event': return validateWhyThisEvent();
-            case 'schedule': return validateSchedule();
-            case 'speakers': return validateSpeakers();
-            case 'expenses': return validateExpenses();
-            case 'income': return validateIncome();
-            default: return true;
+            case 'basic-info':
+                valid = validateBasicInfo();
+                break;
+            case 'why-this-event':
+                valid = validateWhyThisEvent();
+                break;
+            case 'schedule':
+                valid = validateSchedule();
+                break;
+            case 'speakers':
+                valid = validateSpeakers();
+                break;
+            case 'expenses':
+                valid = validateExpenses();
+                break;
+            case 'income':
+                valid = validateIncome();
+                break;
+            default:
+                valid = true;
         }
+
+        if (!valid && firstErrorField && firstErrorField.length) {
+            $('html, body').animate({scrollTop: firstErrorField.offset().top - 100}, 500);
+            firstErrorField.focus();
+        }
+
+        return valid;
     }
     
     function validateSchedule() {
@@ -2259,9 +2285,60 @@ function getWhyThisEventForm() {
         if (field && field.length) {
             field.addClass('has-error');
             field.closest('.input-group').addClass('has-error');
-            
+
             // Could add error message display here
             console.warn('Validation error:', message);
+            if (!firstErrorField) {
+                firstErrorField = field;
+            }
+        }
+    }
+
+    function handleAutosaveErrors(errorData) {
+        const errors = errorData?.errors || errorData;
+        if (!errors) return;
+        clearValidationErrors();
+        firstErrorField = null;
+
+        const mark = (name, message) => {
+            const field = $(`[name="${name}"]`);
+            if (field.length) {
+                showFieldError(field, message);
+            }
+        };
+
+        Object.entries(errors).forEach(([key, val]) => {
+            if (Array.isArray(val)) {
+                mark(key, val[0]);
+            } else if (typeof val === 'object') {
+                Object.entries(val).forEach(([idx, sub]) => {
+                    if (key === 'activities') {
+                        if (sub.name) mark(`activity_name_${idx}`, sub.name);
+                        if (sub.date) mark(`activity_date_${idx}`, sub.date);
+                    } else if (key === 'speakers') {
+                        if (sub.full_name) mark(`speaker_full_name_${idx}`, sub.full_name);
+                        if (sub.designation) mark(`speaker_designation_${idx}`, sub.designation);
+                        if (sub.affiliation) mark(`speaker_affiliation_${idx}`, sub.affiliation);
+                        if (sub.contact_email) mark(`speaker_contact_email_${idx}`, sub.contact_email);
+                        if (sub.detailed_profile) mark(`speaker_detailed_profile_${idx}`, sub.detailed_profile);
+                        if (sub.contact_number) mark(`speaker_contact_number_${idx}`, sub.contact_number);
+                        if (sub.linkedin_url) mark(`speaker_linkedin_url_${idx}`, sub.linkedin_url);
+                    } else if (key === 'expenses') {
+                        if (sub.particulars) mark(`expense_particulars_${idx}`, sub.particulars);
+                        if (sub.amount) mark(`expense_amount_${idx}`, sub.amount);
+                    } else if (key === 'income') {
+                        if (sub.particulars) mark(`income_particulars_${idx}`, sub.particulars);
+                        if (sub.participants) mark(`income_participants_${idx}`, sub.participants);
+                        if (sub.rate) mark(`income_rate_${idx}`, sub.rate);
+                        if (sub.amount) mark(`income_amount_${idx}`, sub.amount);
+                    }
+                });
+            }
+        });
+
+        if (firstErrorField && firstErrorField.length) {
+            $('html, body').animate({scrollTop: firstErrorField.offset().top - 100}, 500);
+            firstErrorField.focus();
         }
     }
 
@@ -2355,10 +2432,10 @@ function getWhyThisEventForm() {
 
         $(document).on('autosave:error', function(e) {
             const indicator = $('#autosave-indicator');
-            indicator.removeClass('saving saved').addClass('error');
+            indicator.removeClass('saving saved').addClass('error show');
             indicator.find('.indicator-text').text('Save Failed');
             if (e.originalEvent && e.originalEvent.detail) {
-                console.error('Autosave validation errors:', e.originalEvent.detail);
+                handleAutosaveErrors(e.originalEvent.detail);
             }
             setTimeout(() => {
                 indicator.removeClass('show');

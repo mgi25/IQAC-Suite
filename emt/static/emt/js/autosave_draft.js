@@ -97,7 +97,9 @@ window.AutosaveManager = (function() {
             return Promise.reject(data);
         })
         .catch(err => {
-            console.error('Autosave error:', err);
+            if (!err || !err.errors) {
+                console.error('Autosave error:', err);
+            }
             document.dispatchEvent(new CustomEvent('autosave:error', {detail: err}));
             return Promise.reject(err);
         });
