@@ -161,7 +161,7 @@ body {
 
 /* Filter form */
 .history-filter-form {
-    margin-bottom: 20px;
+    margin-bottom: 0;
 }
 
 .history-filter-form .btn-reset {
