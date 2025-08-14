@@ -1,8 +1,27 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block content %}
+{% block head_extra %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.colVis.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 <link rel="stylesheet" href="{% static 'core/css/admin_history.css' %}">
+{% endblock %}
+
+{% block content %}
 <div class="admin-history-container">
   <h1 class="history-title">Activity History</h1>
   <form method="get" class="history-filter-form">
@@ -19,9 +38,8 @@
       <a href="{% url 'admin_history' %}" class="btn-reset">Reset</a>
     {% endif %}
   </form>
-  <button type="button" class="btn-select-all" id="select-all-btn">Select All</button>
   <div class="table-responsive">
-    <table class="history-table">
+    <table class="history-table table table-striped table-bordered" id="historyTable">
       <thead>
         <tr>
           <th>Timestamp</th>
@@ -48,37 +66,19 @@
       </tbody>
     </table>
   </div>
-  {% if logs.has_other_pages %}
-  <div class="pagination">
-    {% if logs.has_previous %}
-      <a href="?q={{ q }}&start={{ start }}&end={{ end }}&page={{ logs.previous_page_number }}" class="page-link">&laquo;</a>
-    {% endif %}
-    <span class="page-current">Page {{ logs.number }} of {{ logs.paginator.num_pages }}</span>
-    {% if logs.has_next %}
-      <a href="?q={{ q }}&start={{ start }}&end={{ end }}&page={{ logs.next_page_number }}" class="page-link">&raquo;</a>
-    {% endif %}
-  </div>
-  {% endif %}
 </div>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  const searchInput = document.getElementById('history-search-input');
-  const rows = Array.from(document.querySelectorAll('.history-table tbody tr'));
-  searchInput.addEventListener('input', function() {
-    const term = this.value.toLowerCase();
-    rows.forEach(row => {
-      const text = row.textContent.toLowerCase();
-      row.style.display = text.includes(term) ? '' : 'none';
-    });
-  });
-  const selectAllBtn = document.getElementById('select-all-btn');
-  selectAllBtn.addEventListener('click', function() {
-    const table = document.querySelector('.history-table');
-    const range = document.createRange();
-    range.selectNodeContents(table);
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
+$(document).ready(function() {
+  $('#historyTable').DataTable({
+    responsive: true,
+    dom: '<"dt-toolbar d-flex justify-content-between align-items-center flex-wrap mb-3"lBf>rtip',
+    buttons: [
+      { extend: 'copy', className: 'btn btn-secondary' },
+      { extend: 'excel', className: 'btn btn-success' },
+      { extend: 'csv', className: 'btn btn-info' },
+      { extend: 'print', className: 'btn btn-primary' },
+      { extend: 'colvis', className: 'btn btn-secondary' }
+    ]
   });
 });
 </script>

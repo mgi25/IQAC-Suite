@@ -2111,17 +2111,9 @@ def admin_history(request):
         )
     )
 
-    paginator = Paginator(logs, 50)
-    page = request.GET.get("page")
-    try:
-        logs_page = paginator.page(page)
-    except PageNotAnInteger:
-        logs_page = paginator.page(1)
-    except EmptyPage:
-        logs_page = paginator.page(paginator.num_pages)
-
+    logs = logs.order_by("-timestamp")
     context = {
-        "logs": logs_page,
+        "logs": logs,
         "q": query,
         "start": start_date,
         "end": end_date,
