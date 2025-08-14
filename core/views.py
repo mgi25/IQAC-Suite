@@ -2265,7 +2265,7 @@ def user_dashboard(request):
     today = timezone.now().date()
 
     events = (
-        EventProposal.objects.filter(status="finalized")
+        EventProposal.objects.filter(status=EventProposal.Status.APPROVED)
         .filter(
             Q(submitted_by=user)
             | Q(faculty_incharges=user)

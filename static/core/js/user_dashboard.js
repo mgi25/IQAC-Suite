@@ -319,7 +319,13 @@ function openDay(day) {
         return false;
     });
     list.innerHTML = items.length
-        ? items.map(e => `<div class="u-item"><div>${e.title}</div></div>`).join('')
+        ? items.map(e => {
+            const time = e.datetime
+                ? new Date(e.datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : '';
+            const meta = [time, e.venue].filter(Boolean).join(' @ ');
+            return `<div class="u-item"><div>${e.title}${meta ? ' - ' + meta : ''}</div></div>`;
+        }).join('')
         : `<div class="empty">No events for ${day.toLocaleDateString()}</div>`;
 }
 
