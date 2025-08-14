@@ -1729,20 +1729,26 @@ function getWhyThisEventForm() {
         if (!currentExpandedCard) return;
 
         if (validateCurrentSection()) {
-            markSectionComplete(currentExpandedCard);
             if (window.AutosaveManager && window.AutosaveManager.manualSave) {
-                window.AutosaveManager.manualSave();
-            }
-            showNotification('Section saved successfully!', 'success');
-            
-            const nextSection = getNextSection(currentExpandedCard);
-            if (nextSection) {
-                // Enable the next section since current section is now complete
-                $(`.proposal-nav .nav-link[data-section="${nextSection}"]`).removeClass('disabled');
-                
-                setTimeout(() => {
-                    openFormPanel(nextSection);
-                }, 1000);
+                window.AutosaveManager.manualSave()
+                    .then(() => {
+                        markSectionComplete(currentExpandedCard);
+                        showNotification('Section saved successfully!', 'success');
+
+                        const nextSection = getNextSection(currentExpandedCard);
+                        if (nextSection) {
+                            $(`.proposal-nav .nav-link[data-section="${nextSection}"]`).removeClass('disabled');
+                            setTimeout(() => {
+                                openFormPanel(nextSection);
+                            }, 1000);
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Autosave failed:', err);
+                        showNotification('Autosave failed. Please check for missing fields.', 'error');
+                    });
+            } else {
+                markSectionComplete(currentExpandedCard);
             }
         } else {
             showNotification('Please complete all required fields.', 'error');
@@ -2176,7 +2182,7 @@ function getWhyThisEventForm() {
         if (e.ctrlKey && e.which === 83) { // Ctrl + S
             e.preventDefault();
             if (window.AutosaveManager && window.AutosaveManager.manualSave) {
-                window.AutosaveManager.manualSave();
+                window.AutosaveManager.manualSave().catch(() => {});
                 showNotification('Draft saved manually.', 'info');
             }
         }
@@ -2347,10 +2353,13 @@ function getWhyThisEventForm() {
             }, 2000);
         });
 
-        $(document).on('autosave:error', function() {
+        $(document).on('autosave:error', function(e) {
             const indicator = $('#autosave-indicator');
             indicator.removeClass('saving saved').addClass('error');
             indicator.find('.indicator-text').text('Save Failed');
+            if (e.originalEvent && e.originalEvent.detail) {
+                console.error('Autosave validation errors:', e.originalEvent.detail);
+            }
             setTimeout(() => {
                 indicator.removeClass('show');
             }, 3000);

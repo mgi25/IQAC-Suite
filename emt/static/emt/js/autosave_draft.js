@@ -45,7 +45,7 @@ window.AutosaveManager = (function() {
         // Don't autosave for submitted proposals
         if (window.PROPOSAL_STATUS && window.PROPOSAL_STATUS !== 'draft') {
             clearLocal();
-            return;
+            return Promise.resolve();
         }
 
         const formData = {};
@@ -66,7 +66,7 @@ window.AutosaveManager = (function() {
 
         document.dispatchEvent(new Event('autosave:start'));
 
-        fetch(window.AUTOSAVE_URL, {
+        return fetch(window.AUTOSAVE_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -74,19 +74,32 @@ window.AutosaveManager = (function() {
             },
             body: JSON.stringify(formData)
         })
-        .then(res => res.ok ? res.json() : Promise.reject())
+        .then(async res => {
+            let data = null;
+            try {
+                data = await res.json();
+            } catch (e) {
+                // ignore JSON parse errors
+            }
+            if (!res.ok) {
+                return Promise.reject(data);
+            }
+            return data;
+        })
         .then(data => {
-            if (data.success && data.proposal_id) {
+            if (data && data.success && data.proposal_id) {
                 proposalId = data.proposal_id;
                 saveLocal();
                 document.dispatchEvent(new Event('autosave:success'));
-            } else {
-                document.dispatchEvent(new Event('autosave:error'));
+                return data;
             }
+            document.dispatchEvent(new CustomEvent('autosave:error', {detail: data}));
+            return Promise.reject(data);
         })
         .catch(err => {
             console.error('Autosave error:', err);
-            document.dispatchEvent(new Event('autosave:error'));
+            document.dispatchEvent(new CustomEvent('autosave:error', {detail: err}));
+            return Promise.reject(err);
         });
     }
 
@@ -95,7 +108,7 @@ window.AutosaveManager = (function() {
         const handler = () => {
             clearTimeout(timeoutId);
             timeoutId = setTimeout(() => {
-                autosaveDraft();
+                autosaveDraft().catch(() => {});
                 saveLocal();
             }, 1000);
         };
@@ -138,8 +151,8 @@ window.AutosaveManager = (function() {
     }
 
     function manualSave() {
-        autosaveDraft();
         saveLocal();
+        return autosaveDraft();
     }
 
     // Initial setup
