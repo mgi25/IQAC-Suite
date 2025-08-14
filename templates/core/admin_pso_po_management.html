@@ -77,6 +77,7 @@
               <td>
                 <div class="assign-cell">
                   <div class="assigned-user" data-org-id="{{ org.id }}">
+                    <i class="fas fa-user-circle"></i>
                     <span class="assigned-name">Unassigned</span>
                   </div>
                   <button class="assign-user-btn" data-org-id="{{ org.id }}" data-org-name="{{ org.name }}" data-org-type="{{ org_type.name|lower }}">
@@ -197,6 +198,13 @@
     <!-- Removed Filter by Role dropdown -->
         <div class="form-group">
           <label for="userSelect">Select Faculty User</label>
+          <div class="org-context">
+            <small class="text-muted">
+              <i class="fas fa-info-circle"></i>
+              Showing faculty assigned to <strong><span id="assign-org-name-context"></span></strong> and its parent organizations.
+              Department faculty are shown first.
+            </small>
+          </div>
           <div class="user-search-container">
             <input type="text" id="userSearch" placeholder="Search faculty users (real-time)..." autocomplete="off">
             <div id="userDropdown" class="user-dropdown" style="display:none;"></div>
@@ -222,27 +230,23 @@
 <script src="{% static 'core/js/admin_pso_po_management.js' %}"></script>
 
 <script>
-  // Pass backend data to JavaScript
-  window.orgOutcomeCounts = {{ org_outcome_counts|safe }};
-  
+  // Pass backend data to JavaScript safely
+  try {
+    window.orgOutcomeCounts = JSON.parse('{{ org_outcome_counts|escapejs }}');
+  } catch (e) {
+    console.error('Failed to parse orgOutcomeCounts from template:', e);
+    window.orgOutcomeCounts = {};
+  }
+
   // Update outcome counts in the table
   document.addEventListener('DOMContentLoaded', function() {
     const outcomeCounts = window.orgOutcomeCounts || {};
-    
     Object.keys(outcomeCounts).forEach(orgId => {
-      const counts = outcomeCounts[orgId];
-      
-      // Update PO count
+      const counts = outcomeCounts[orgId] || {};
       const poCountSpan = document.querySelector(`.po-count[data-org-id="${orgId}"] .count`);
-      if (poCountSpan) {
-        poCountSpan.textContent = counts.po_count || 0;
-      }
-      
-      // Update PSO count
+      if (poCountSpan) poCountSpan.textContent = counts.po_count || 0;
       const psoCountSpan = document.querySelector(`.pso-count[data-org-id="${orgId}"] .count`);
-      if (psoCountSpan) {
-        psoCountSpan.textContent = counts.pso_count || 0;
-      }
+      if (psoCountSpan) psoCountSpan.textContent = counts.pso_count || 0;
     });
   });
 </script>

@@ -33,6 +33,77 @@ def admin_required(view_func):
 
     return _wrapped_view
 
+def popso_manager_required(view_func):
+    """
+    Decorator that checks if user is either a superuser or has an active PO/PSO assignment
+    """
+    @wraps(view_func)
+    @login_required
+    def _wrapped_view(request, *args, **kwargs):
+        # Allow superusers
+        if request.user.is_superuser:
+            return view_func(request, *args, **kwargs)
+        
+        # Check if user has active PO/PSO assignment
+        from .models import POPSOAssignment
+        has_assignment = POPSOAssignment.objects.filter(
+            assigned_user=request.user,
+            is_active=True
+        ).exists()
+        
+        if has_assignment:
+            return view_func(request, *args, **kwargs)
+        
+        return HttpResponseForbidden("You don't have permission to manage PO/PSO outcomes.")
+    
+    return _wrapped_view
+
+def popso_program_access_required(view_func):
+    """
+    Decorator that checks if user can access a specific program's PO/PSO management
+    """
+    @wraps(view_func)
+    @login_required
+    def _wrapped_view(request, *args, **kwargs):
+        # Allow superusers
+        if request.user.is_superuser:
+            return view_func(request, *args, **kwargs)
+        
+        # Get program ID from request
+        program_id = kwargs.get('program_id')
+        
+        if not program_id:
+            # Try to get from JSON body
+            try:
+                import json
+                data = json.loads(request.body) if request.body else {}
+                program_id = data.get('program_id')
+            except:
+                pass
+        
+        if not program_id:
+            return HttpResponseForbidden("Program ID required.")
+        
+        # Check if user has assignment for this program's organization
+        from .models import POPSOAssignment, Program
+        try:
+            program = Program.objects.get(id=program_id)
+            if program.organization:
+                has_assignment = POPSOAssignment.objects.filter(
+                    assigned_user=request.user,
+                    organization=program.organization,
+                    is_active=True
+                ).exists()
+                
+                if has_assignment:
+                    return view_func(request, *args, **kwargs)
+        except Program.DoesNotExist:
+            pass
+        
+        return HttpResponseForbidden("You don't have permission to manage this program's PO/PSO outcomes.")
+    
+    return _wrapped_view
+
 def prevent_impersonation_of_admins(view_func):
     """Decorator to prevent impersonation of admin users"""
     @wraps(view_func)

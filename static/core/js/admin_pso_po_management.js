@@ -1,6 +1,20 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('PSO & PO Management JavaScript loaded');
-    // Initialize the page
+
+    // If we're on the Settings page, skip heavy admin-only bootstrapping
+    // and only wire up the minimal pieces used by the modal flows.
+    if (window.IS_SETTINGS_PSO_PAGE) {
+        try {
+            // Minimal init for settings page: only modal open/close wiring.
+            // Do NOT attach admin dashboard listeners; the settings page has its own handlers.
+            setupModalEvents && setupModalEvents();
+        } catch (err) {
+            console.error('Settings minimal init error:', err);
+        }
+        return;
+    }
+
+    // Initialize the page (admin dashboard context)
     initializePage();
     setupEventListeners();
     loadOrganizations();
@@ -1005,9 +1019,14 @@ function openAssignmentModal(orgId, orgName, orgType) {
     
     const modal = document.getElementById('assignUserModal');
     const modalOrgName = document.getElementById('assign-org-name');
+    const modalOrgNameContext = document.getElementById('assign-org-name-context');
     
     if (modalOrgName) {
         modalOrgName.textContent = orgName;
+    }
+    
+    if (modalOrgNameContext) {
+        modalOrgNameContext.textContent = orgName;
     }
     
     // Reset form
@@ -1018,7 +1037,7 @@ function openAssignmentModal(orgId, orgName, orgType) {
     // Load current assignment
     loadCurrentAssignment(orgId);
     
-    // Setup user search
+    // Setup user search with organization context
     setupUserSearch(orgId, orgType);
     
     // Show modal
@@ -1118,7 +1137,18 @@ function loadAllFacultyForOrg(orgId) {
         })
         .then(users => {
             console.log('Faculty users loaded:', users);
-            displayUserOptions(users);
+            
+            // Sort users: department faculty first, then general faculty, then alphabetically
+            const sortedUsers = users.sort((a, b) => {
+                // First priority: department faculty
+                if (a.is_department_faculty && !b.is_department_faculty) return -1;
+                if (!a.is_department_faculty && b.is_department_faculty) return 1;
+                
+                // Second priority: alphabetical by name
+                return a.full_name.localeCompare(b.full_name);
+            });
+            
+            displayUserOptions(sortedUsers);
         })
         .catch(error => {
             console.error('Error loading faculty:', error);
@@ -1132,10 +1162,10 @@ function searchFacultyUsers(orgId, query) {
     userDropdown.innerHTML = `<div class="loading">Searching faculty for "${query}"...</div>`;
     showUserDropdown();
     
-    // Search strictly faculty users only - use correct URL pattern
+    // Search strictly faculty users only - use correct URL pattern with enhanced filtering
     let url = `/core/api/faculty-users/${orgId}/?search=${encodeURIComponent(query)}`;
     
-    console.log('Searching FACULTY ONLY:', url);
+    console.log('Searching FACULTY ONLY with department filtering:', url);
     
     fetch(url)
         .then(response => {
@@ -1147,7 +1177,15 @@ function searchFacultyUsers(orgId, query) {
         })
         .then(users => {
             console.log('Found faculty users:', users);
-            displayUserOptions(users, query);
+            
+            // Sort users: department faculty first, then general faculty
+            const sortedUsers = users.sort((a, b) => {
+                if (a.is_department_faculty && !b.is_department_faculty) return -1;
+                if (!a.is_department_faculty && b.is_department_faculty) return 1;
+                return a.full_name.localeCompare(b.full_name);
+            });
+            
+            displayUserOptions(sortedUsers, query);
         })
         .catch(error => {
             console.error('Error searching faculty:', error);
@@ -1161,7 +1199,7 @@ function displayUserOptions(users, searchQuery = '') {
     if (users.length === 0) {
         const message = searchQuery ? 
             `No faculty users found for "${searchQuery}"` : 
-            'No faculty users found';
+            'No faculty users found for this organization';
         userDropdown.innerHTML = `<div class="no-users">${message}</div>`;
         showUserDropdown();
         return;
@@ -1175,21 +1213,38 @@ function displayUserOptions(users, searchQuery = '') {
         option.className = 'user-option';
         option.dataset.userId = user.id;
         
-        // Handle roles - ensure it's properly displayed
+        // Enhanced role and organization display
         let rolesText = 'Faculty';
         if (user.roles && Array.isArray(user.roles) && user.roles.length > 0) {
             rolesText = user.roles.join(', ');
         }
         
+        // Show organization assignments for better context
+        let orgText = '';
+        if (user.organizations && Array.isArray(user.organizations) && user.organizations.length > 0) {
+            orgText = ` • ${user.organizations.join(', ')}`;
+        }
+        
+        // Highlight department faculty for department organizations
+        const isDeptFaculty = user.is_department_faculty;
+        const facultyBadge = isDeptFaculty ? 
+            '<span class="dept-faculty-badge">Dept Faculty</span>' : 
+            '<span class="general-faculty-badge">Faculty</span>';
+        
         option.innerHTML = `
             <div class="user-info">
-                <div class="user-name">${user.full_name}</div>
-                <div class="user-details">${user.email} • ${rolesText}</div>
+                <div class="user-name">
+                    ${user.full_name}
+                    ${facultyBadge}
+                </div>
+                <div class="user-details">${user.email} • ${rolesText}${orgText}</div>
             </div>
         `;
+        
         option.addEventListener('click', function() {
             selectUser(user);
         });
+        
         userDropdown.appendChild(option);
     });
 }
@@ -1295,17 +1350,36 @@ function updateAssignmentDisplay(orgId, assignedUser) {
     const assignedNameSpan = document.querySelector(`.assigned-user[data-org-id="${orgId}"] .assigned-name`);
     const assignedUserDiv = document.querySelector(`.assigned-user[data-org-id="${orgId}"]`);
     const assignBtn = document.querySelector(`.assign-user-btn[data-org-id="${orgId}"]`);
+    const userIcon = document.querySelector(`.assigned-user[data-org-id="${orgId}"] .fas`);
     
     if (assignedUser) {
         assignedNameSpan.textContent = assignedUser.full_name;
         assignedUserDiv.classList.add('has-assignment');
+        assignedUserDiv.title = `Assigned: ${assignedUser.full_name} (${assignedUser.email})`;
+        
+        // Update icon to show assigned state
+        if (userIcon) {
+            userIcon.className = 'fas fa-user-check';
+            userIcon.style.color = '#059669';
+        }
+        
         assignBtn.innerHTML = '<i class="fas fa-user-edit"></i> Change';
         assignBtn.classList.add('assigned');
+        assignBtn.title = 'Change assignment';
     } else {
         assignedNameSpan.textContent = 'Unassigned';
         assignedUserDiv.classList.remove('has-assignment');
+        assignedUserDiv.title = 'No user assigned for PO/PSO management';
+        
+        // Reset icon to default state
+        if (userIcon) {
+            userIcon.className = 'fas fa-user-circle';
+            userIcon.style.color = '#6b7280';
+        }
+        
         assignBtn.innerHTML = '<i class="fas fa-user-plus"></i> Assign';
         assignBtn.classList.remove('assigned');
+        assignBtn.title = 'Assign user for PO/PSO management';
     }
 }
 

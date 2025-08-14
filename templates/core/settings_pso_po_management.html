@@ -4,168 +4,648 @@
 {% block title %}Settings - PO/PSO Management{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/css/admin_master_data.css' %}">
 <link rel="stylesheet" href="{% static 'core/css/admin_pso_po_management.css' %}">
 <style>
-.settings-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 2rem;
-    border-radius: 8px;
-    margin-bottom: 2rem;
+/* Custom inline PO/PSO layout styles */
+.org-header-simple {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e5e7eb;
 }
 
-.settings-title {
-    font-size: 2.2rem;
-    font-weight: 700;
-    margin: 0;
+.org-basic-info .page-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 0.5rem 0;
 }
 
-.settings-subtitle {
-    font-size: 1.1rem;
-    opacity: 0.9;
-    margin: 0.5rem 0 0 0;
+.org-meta {
+  display: flex;
+  gap: 0.75rem;
 }
 
-.assignment-card {
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+.org-type-badge, .access-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
 }
 
-.org-header {
-    display: flex;
-    justify-content: between;
-    align-items: center;
-    margin-bottom: 1rem;
+.org-type-badge {
+  background: #3b82f6;
+  color: white;
 }
 
-.org-name {
-    font-size: 1.3rem;
-    font-weight: 600;
-    color: #1f2937;
+.access-badge {
+  background: #059669;
+  color: white;
 }
 
-.org-type {
-    background: #3b82f6;
-    color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    font-weight: 500;
+.assignment-date {
+  font-size: 0.9rem;
+  color: #6b7280;
+  font-weight: 500;
 }
 
-.programs-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1rem;
-    margin-top: 1rem;
+.program-outcomes-container {
+  margin-bottom: 3rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
 }
 
-.program-card {
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    padding: 1rem;
-    background: #f9fafb;
-    transition: all 0.2s ease;
+.outcomes-summary-row {
+  display: flex;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
 }
 
-.program-card:hover {
-    background: #f3f4f6;
-    transform: translateY(-1px);
+.summary-left, .summary-right {
+  flex: 1;
+  padding: 1.5rem;
+  display: flex;
+  justify-content: center;
 }
 
-.program-name {
-    font-weight: 600;
-    color: #374151;
-    margin-bottom: 0.5rem;
+.summary-left {
+  border-right: 1px solid #e5e7eb;
 }
 
-.program-actions {
-    display: flex;
-    gap: 0.5rem;
+.count-box {
+  text-align: center;
+  padding: 1rem;
+  border-radius: 8px;
+  min-width: 120px;
 }
 
-.manage-btn {
-    background: #059669;
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.875rem;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    transition: background 0.2s ease;
+.po-box {
+  background: #fef3c7;
+  border: 2px solid #f59e0b;
 }
 
-.manage-btn:hover {
-    background: #047857;
-    color: white;
-    text-decoration: none;
+.pso-box {
+  background: #ddd6fe;
+  border: 2px solid #8b5cf6;
 }
 
-.no-programs {
-    text-align: center;
-    color: #6b7280;
-    font-style: italic;
-    padding: 2rem;
+.count-number {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 0.25rem;
+}
+
+.count-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.outcomes-panels {
+  display: flex;
+  min-height: 400px;
+}
+
+.outcomes-panel {
+  flex: 1;
+  padding: 1.5rem;
+  border-right: 1px solid #e5e7eb;
+}
+
+.pso-panel {
+  border-right: none;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.panel-header h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.add-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.add-btn:hover {
+  background: #2563eb;
+}
+
+.outcomes-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.outcome-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background: #f9fafb;
+}
+
+.outcome-item:hover {
+  background: #f3f4f6;
+}
+
+.outcome-text {
+  flex: 1;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #374151;
+  margin-right: 0.75rem;
+}
+
+.edit-btn-inline {
+  background: #059669;
+  color: white;
+  border: none;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.edit-btn-inline:hover {
+  background: #047857;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: #6b7280;
+}
+
+.empty-state p {
+  margin: 0;
+  font-style: italic;
+}
+
+.no-programs-message {
+  text-align: center;
+  padding: 3rem;
+  color: #6b7280;
+}
+
+.no-programs-message i {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: #9ca3af;
+}
+
+.btn-delete {
+  background: #dc2626;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  margin-left: 0.5rem;
+}
+
+.btn-delete:hover {
+  background: #b91c1c;
 }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="main-container">
-    <div class="settings-header">
-        <h1 class="settings-title">PO/PSO Management Settings</h1>
-        <p class="settings-subtitle">Manage Program Outcomes and Program Specific Outcomes for your assigned organizations</p>
-    </div>
+<div class="admin-container">
+  <div class="admin-header">
+    <h1 class="admin-title">POs & PSOs Management</h1>
+    <p class="admin-subtitle">
+      {% if assigned_organizations|length == 1 %}
+        Manage Program Outcomes and Program Specific Outcomes for {{ assigned_organizations.0.organization.name }}
+      {% else %}
+        Manage Program Outcomes and Program Specific Outcomes for your assigned organizations
+      {% endif %}
+    </p>
+  </div>
 
-    {% if assigned_organizations %}
-        {% for org_data in assigned_organizations %}
-        <div class="assignment-card">
-            <div class="org-header">
-                <div>
-                    <h2 class="org-name">{{ org_data.organization.name }}</h2>
-                    <span class="org-type">{{ org_data.organization.org_type.name }}</span>
-                </div>
-            </div>
-
-            {% if org_data.programs %}
-            <div class="programs-grid">
-                {% for program in org_data.programs %}
-                <div class="program-card">
-                    <div class="program-name">{{ program.name }}</div>
-                    <div class="program-actions">
-                        <a href="{% url 'admin_pso_po_management' %}?org={{ org_data.organization.id }}&program={{ program.id }}" 
-                           class="manage-btn">
-                            <i class="fas fa-cog"></i>
-                            Manage POs & PSOs
-                        </a>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
+  <div class="admin-content">
+    {% for org_data in assigned_organizations %}
+    <div class="organization-section">
+      <!-- Organization Header -->
+      <div class="org-header-simple">
+        <div class="org-basic-info">
+          <h1 class="page-title">{{ org_data.organization.name }}</h1>
+          <div class="org-meta">
+            <span class="org-type-badge">{{ org_data.organization.org_type.name|upper }}</span>
+            {% if org_data.has_department_access %}
+            <span class="access-badge">DEPARTMENT FACULTY ACCESS</span>
             {% else %}
-            <div class="no-programs">
-                No programs found for this organization.
-            </div>
+            <span class="access-badge">GENERAL ACCESS</span>
             {% endif %}
+          </div>
+        </div>
+        <div class="assignment-info">
+          <span class="assignment-date">Assigned on: {{ org_data.assignment.created_at|date:"M d, Y" }}</span>
+        </div>
+      </div>
+
+      {% if org_data.programs %}
+        {% for program in org_data.programs %}
+        <!-- Inline PO/PSO Layout for each program -->
+        <div class="program-outcomes-container" data-program-id="{{ program.id }}">
+          
+          <!-- Summary Row with Counts -->
+          <div class="outcomes-summary-row">
+            <div class="summary-left">
+              <div class="count-box po-box">
+                <div class="count-number">{{ program.pos.count }}</div>
+                <div class="count-label">POs count</div>
+              </div>
+            </div>
+            <div class="summary-right">
+              <div class="count-box pso-box">
+                <div class="count-number">{{ program.psos.count }}</div>
+                <div class="count-label">PSOs count</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Inline Outcomes Panels -->
+          <div class="outcomes-panels">
+            <!-- POs Panel -->
+            <div class="outcomes-panel po-panel">
+              <div class="panel-header">
+                <h3>POs</h3>
+                <button class="add-btn" onclick="showAddForm('PO', {{ program.id }})">add</button>
+              </div>
+              <div class="outcomes-list" id="pos-list-{{ program.id }}">
+                {% if program.pos.count > 0 %}
+                  {% for po in program.pos.all %}
+                  <div class="outcome-item" data-outcome-id="{{ po.id }}">
+                    <div class="outcome-text">{{ po.description }}</div>
+                    <button class="edit-btn-inline" onclick="editOutcomeInline({{ po.id }}, 'PO', '{{ po.description|escapejs }}')">edit</button>
+                  </div>
+                  {% endfor %}
+                {% else %}
+                  <div class="empty-state">
+                    <p>No Programme Outcomes added yet. Click "add" to create your first PO.</p>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- PSOs Panel -->
+            <div class="outcomes-panel pso-panel">
+              <div class="panel-header">
+                <h3>PSOs</h3>
+                <button class="add-btn" onclick="showAddForm('PSO', {{ program.id }})">add</button>
+              </div>
+              <div class="outcomes-list" id="psos-list-{{ program.id }}">
+                {% if program.psos.count > 0 %}
+                  {% for pso in program.psos.all %}
+                  <div class="outcome-item" data-outcome-id="{{ pso.id }}">
+                    <div class="outcome-text">{{ pso.description }}</div>
+                    <button class="edit-btn-inline" onclick="editOutcomeInline({{ pso.id }}, 'PSO', '{{ pso.description|escapejs }}')">edit</button>
+                  </div>
+                  {% endfor %}
+                {% else %}
+                  <div class="empty-state">
+                    <p>No Programme Specific Outcomes added yet. Click "add" to create your first PSO.</p>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
         </div>
         {% endfor %}
-    {% else %}
-        <div class="assignment-card">
-            <div class="no-programs">
-                <h3>No Assignments Found</h3>
-                <p>You are not currently assigned to manage any PO/PSO outcomes.</p>
-                <p>Please contact your administrator if you believe this is an error.</p>
-            </div>
+      {% else %}
+        <div class="no-programs-message">
+          <i class="fas fa-info-circle"></i>
+          <h3>No programs found for this organization</h3>
+          <p>You can create a program for {{ org_data.organization.name }} to start adding POs and PSOs.</p>
+          <div style="margin-top: 1rem;">
+            <input type="text" id="program-name-{{ org_data.organization.id }}" placeholder="Program name (optional)" style="padding: 0.5rem 0.75rem; border: 1px solid #e5e7eb; border-radius: 6px; width: 280px;">
+            <button class="add-btn" style="margin-left: 0.5rem;" onclick="createProgramForOrg({{ org_data.organization.id }})">Create Program</button>
+          </div>
+          <small style="display:block; color:#9ca3af; margin-top:0.5rem;">If left blank, a default program name will be used.</small>
         </div>
-    {% endif %}
+      {% endif %}
+    </div>
+    {% empty %}
+    <div class="no-assignments">
+      <i class="fas fa-exclamation-triangle"></i>
+      <h2>No Assignments Found</h2>
+      <p>You are not currently assigned to manage any PO/PSO outcomes.</p>
+      <p>Please contact your administrator for assistance.</p>
+    </div>
+    {% endfor %}
+  </div>
 </div>
+
+<!-- Simple Add Form Modal -->
+<div id="addOutcomeModal" class="modal" style="display:none;">
+  <div class="modal-content small">
+    <div class="modal-header">
+      <h3>Add <span id="addOutcomeTypeLabel"></span></h3>
+      <button class="close" onclick="closeAddForm()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="newOutcomeInput">Outcome Description</label>
+        <textarea id="newOutcomeInput" rows="3" placeholder="Enter outcome description..."></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" onclick="closeAddForm()">Cancel</button>
+        <button type="button" class="btn-save" onclick="saveNewOutcome()">Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Simple Edit Form Modal -->
+<div id="editOutcomeModal" class="modal" style="display:none;">
+  <div class="modal-content small">
+    <div class="modal-header">
+      <h3>Edit <span id="editOutcomeTypeLabel"></span></h3>
+      <button class="close" onclick="closeEditForm()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="editOutcomeInput">Outcome Description</label>
+        <textarea id="editOutcomeInput" rows="3" placeholder="Enter outcome description..."></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" onclick="closeEditForm()">Cancel</button>
+        <button type="button" class="btn-save" onclick="updateOutcome()">Update</button>
+        <button type="button" class="btn-delete" onclick="deleteOutcome()">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+// Global variables
+let currentlyEditing = null;
+
+window.IS_SETTINGS_PSO_PAGE = true;
+
+// Initialize modals and setup
+document.addEventListener('DOMContentLoaded', function() {
+    initializeModals();
+});
+
+function initializeModals() {
+    // Initialize Bootstrap modals if available
+    if (typeof bootstrap !== 'undefined') {
+        const modalElements = document.querySelectorAll('.modal');
+        modalElements.forEach(modalEl => {
+            new bootstrap.Modal(modalEl);
+        });
+    }
+}
+
+// Add new PO/PSO functions
+function showAddForm(outcomeType, programId) {
+    const modal = document.querySelector('#addOutcomeModal');
+    if (modal) {
+        // Set modal title and form data
+        modal.querySelector('#addOutcomeTypeLabel').textContent = outcomeType === 'PO' ? 'Program Outcome' : 'Program Specific Outcome';
+        modal.dataset.outcomeType = outcomeType;
+        modal.dataset.programId = programId;
+        
+        // Clear form
+        modal.querySelector('#newOutcomeInput').value = '';
+        
+        modal.style.display = 'block';
+    }
+}
+
+function editOutcomeInline(outcomeId, outcomeType, description) {
+    const modal = document.querySelector('#editOutcomeModal');
+    if (modal) {
+        // Set modal title and form data
+        modal.querySelector('#editOutcomeTypeLabel').textContent = outcomeType === 'PO' ? 'Program Outcome' : 'Program Specific Outcome';
+        modal.dataset.outcomeId = outcomeId;
+        modal.dataset.outcomeType = outcomeType;
+        
+        // Fill form with current data
+        modal.querySelector('#editOutcomeInput').value = description;
+        
+        modal.style.display = 'block';
+    }
+}
+
+function closeAddForm() {
+    const modal = document.querySelector('#addOutcomeModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function closeEditForm() {
+    const modal = document.querySelector('#editOutcomeModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function saveNewOutcome() {
+  const modal = document.querySelector('#addOutcomeModal');
+  const description = modal.querySelector('#newOutcomeInput').value.trim();
+  const outcomeType = modal.dataset.outcomeType; // 'PO' | 'PSO'
+  const programId = Number(modal.dataset.programId);
+
+  if (!description) {
+    alert('Please enter a description');
+    return;
+  }
+
+  fetch("{% url 'manage_program_outcomes' %}", {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken'),
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    body: JSON.stringify({
+      program_id: programId,
+      type: outcomeType,
+      description: description
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      closeAddForm();
+      location.reload();
+    } else {
+      alert(data.error || data.message || 'Error adding outcome');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Error adding outcome');
+  });
+}
+
+function updateOutcome() {
+  const modal = document.querySelector('#editOutcomeModal');
+  const description = modal.querySelector('#editOutcomeInput').value.trim();
+  const outcomeId = Number(modal.dataset.outcomeId);
+  const outcomeType = modal.dataset.outcomeType; // 'PO' | 'PSO'
+
+  if (!description) {
+    alert('Please enter a description');
+    return;
+  }
+
+  fetch("{% url 'manage_program_outcomes' %}", {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken'),
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    body: JSON.stringify({
+      outcome_id: outcomeId,
+      type: outcomeType,
+      description: description
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      closeEditForm();
+      location.reload();
+    } else {
+      alert(data.error || data.message || 'Error updating outcome');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Error updating outcome');
+  });
+}
+
+function deleteOutcome() {
+  const modal = document.querySelector('#editOutcomeModal');
+  const outcomeId = Number(modal.dataset.outcomeId);
+  const outcomeType = modal.dataset.outcomeType; // 'PO' | 'PSO'
+
+  if (!confirm('Are you sure you want to delete this outcome?')) {
+    return;
+  }
+
+  fetch("{% url 'manage_program_outcomes' %}", {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken'),
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    body: JSON.stringify({
+      outcome_id: outcomeId,
+      type: outcomeType
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      closeEditForm();
+      location.reload();
+    } else {
+      alert(data.error || data.message || 'Error deleting outcome');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Error deleting outcome');
+  });
+}
+
+// Create Program for Organization (when no programs exist)
+function createProgramForOrg(orgId) {
+  const input = document.getElementById(`program-name-${orgId}`);
+  const name = input ? input.value.trim() : '';
+  fetch("{% url 'create_program_for_organization' %}", {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken'),
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    body: JSON.stringify({ organization_id: Number(orgId), program_name: name })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      location.reload();
+    } else {
+      alert(data.error || 'Failed to create program');
+    }
+  })
+  .catch(err => {
+    console.error('Create program failed:', err);
+    alert('Failed to create program');
+  });
+}
+
+// CSRF token helper function
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Close modal when clicking outside
+window.addEventListener('click', function(event) {
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+});
+
+// Close modal when clicking close button
+document.querySelectorAll('.modal .close').forEach(closeBtn => {
+    closeBtn.addEventListener('click', function() {
+        const modal = this.closest('.modal');
+        modal.style.display = 'none';
+    });
+});
+</script>
 {% endblock %}
