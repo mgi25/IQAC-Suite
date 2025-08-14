@@ -567,6 +567,7 @@ $(document).ready(function() {
         const djangoOrgSelect = $('#django-basic-info [name="organization"]');
         const modal = $('#outcomeModal');
         const optionsContainer = $('#outcomeOptions');
+        const djangoPosField = $('#django-basic-info [name="pos_pso"]');
 
         if (!posField.length || !djangoOrgSelect.length || !modal.length) return;
 
@@ -592,7 +593,10 @@ $(document).ready(function() {
             const selected = modal.find('input[type=checkbox]:checked').map((_, cb) => cb.value).get();
             const existing = posField.val().trim();
             const value = existing ? existing + '\n' + selected.join('\n') : selected.join('\n');
-            posField.val(value).trigger('change');
+            posField.val(value).trigger('input').trigger('change');
+            if (djangoPosField.length) {
+                djangoPosField.val(value).trigger('input').trigger('change');
+            }
             modal.removeClass('show');
         });
     }
@@ -1075,7 +1079,7 @@ $(document).ready(function() {
                     </div>
                     <div class="input-group">
                         <label for="pos-pso-modern">POS & PSO Management</label>
-                        <input type="text" id="pos-pso-modern" placeholder="e.g., PO1, PSO2">
+                        <input type="text" id="pos-pso-modern" name="pos_pso" placeholder="e.g., PO1, PSO2">
                         <div class="help-text">Program outcomes and specific outcomes addressed</div>
                     </div>
                 </div>
