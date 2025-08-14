@@ -1,10 +1,28 @@
 from pathlib import Path
 import os
+import logging
 from dotenv import load_dotenv
 import dj_database_url
 
 load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# ---------------------------------------------------------------------------
+# AI backend configuration
+# ---------------------------------------------------------------------------
+AI_BACKEND = os.getenv("AI_BACKEND", "OPENROUTER").upper()
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL")
+LOCAL_AI_BASE_URL = os.getenv("LOCAL_AI_BASE_URL")
+LOCAL_AI_MODEL = os.getenv("LOCAL_AI_MODEL")
+
+_logger = logging.getLogger(__name__)
+if AI_BACKEND == "OPENROUTER":
+    if not OPENROUTER_API_KEY or not OPENROUTER_MODEL:
+        _logger.warning("OpenRouter backend selected but OPENROUTER_API_KEY or OPENROUTER_MODEL is missing")
+elif AI_BACKEND == "LOCAL_HTTP":
+    if not LOCAL_AI_BASE_URL or not LOCAL_AI_MODEL:
+        _logger.warning("LOCAL_HTTP backend selected but LOCAL_AI_BASE_URL or LOCAL_AI_MODEL is missing")
 
 # SECRET_KEY loaded from environment with a development fallback
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-…')
