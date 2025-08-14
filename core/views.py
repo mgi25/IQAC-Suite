@@ -2069,7 +2069,9 @@ def admin_reports_view(request):
 def admin_history(request):
     """List activity log entries for administrators with search and filtering."""
 
-    logs = ActivityLog.objects.select_related("user")
+    # Fetch activity from all users so administrators can audit
+    # actions across the entire system, not just their own.
+    logs = ActivityLog.objects.select_related("user").all()
 
     # Text search across user name, username, action and description
     query = request.GET.get("q", "").strip()

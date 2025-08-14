@@ -29,3 +29,13 @@ class AdminHistoryFilterTests(TestCase):
         resp = self.client.get(url, {'start': today, 'end': today})
         self.assertContains(resp, 'logout')
         self.assertNotContains(resp, 'alice')
+
+    def test_shows_activity_for_all_users(self):
+        """Ensure history lists actions performed by all users, not only admins."""
+        url = reverse('admin_history')
+        resp = self.client.get(url)
+        # Both users' actions should be visible in the table
+        self.assertContains(resp, 'alice')
+        self.assertContains(resp, 'login')
+        self.assertContains(resp, 'bob')
+        self.assertContains(resp, 'logout')
