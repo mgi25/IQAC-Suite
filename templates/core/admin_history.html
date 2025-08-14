@@ -24,30 +24,30 @@
 {% block content %}
 <div class="admin-history-container">
   <h1 class="history-title">Activity History</h1>
-  <form method="get" class="history-filter-form row g-2 align-items-end">
-    <div class="col-md-4">
+  <form method="get" class="history-filter-form d-flex flex-wrap align-items-end gap-2 mb-3">
+    <div class="form-group">
       <label for="history-search-input" class="form-label">Search</label>
-      <input type="text" id="history-search-input" name="q" class="form-control" placeholder="Search..." value="{{ q }}" list="history-suggestions">
+      <input type="text" id="history-search-input" name="q" class="form-control form-control-sm" placeholder="Search..." value="{{ q }}" list="history-suggestions">
       <datalist id="history-suggestions">
         {% for item in suggestions %}
           <option value="{{ item }}">
         {% endfor %}
       </datalist>
     </div>
-    <div class="col-md-3">
+    <div class="form-group">
       <label for="start" class="form-label">Start date</label>
-      <input type="date" id="start" name="start" class="form-control" value="{{ start }}">
+      <input type="date" id="start" name="start" class="form-control form-control-sm" value="{{ start }}">
     </div>
-    <div class="col-md-3">
+    <div class="form-group">
       <label for="end" class="form-label">End date</label>
-      <input type="date" id="end" name="end" class="form-control" value="{{ end }}">
+      <input type="date" id="end" name="end" class="form-control form-control-sm" value="{{ end }}">
     </div>
-    <div class="col-auto">
-      <button type="submit" class="btn btn-primary">Filter</button>
+    <div class="form-group">
+      <button type="submit" class="btn btn-sm btn-primary">Filter</button>
     </div>
     {% if q or start or end %}
-    <div class="col-auto">
-      <a href="{% url 'admin_history' %}" class="btn btn-outline-secondary btn-reset">Reset</a>
+    <div class="form-group">
+      <a href="{% url 'admin_history' %}" class="btn btn-sm btn-outline-secondary btn-reset">Reset</a>
     </div>
     {% endif %}
   </form>
@@ -103,7 +103,10 @@ $(document).ready(function() {
       { extend: 'csv', className: 'btn btn-info' },
       { extend: 'print', className: 'btn btn-primary' },
       { extend: 'colvis', className: 'btn btn-secondary' }
-    ]
+    ],
+    initComplete: function() {
+      $(".history-filter-form").appendTo('.dt-toolbar').removeClass('mb-3').addClass('mb-0');
+    }
   });
 });
 </script>
