@@ -41,6 +41,10 @@ from emt.utils import (
     get_downstream_optional_candidates,
 )
 from emt.models import ApprovalStep
+import os
+OLLAMA_BASE = os.getenv("OLLAMA_BASE", "http://127.0.0.1:11434")
+GEN_MODEL   = os.getenv("OLLAMA_GEN_MODEL", "qwen2.5:7b-instruct-q4_0")
+CRITIC_MODEL = os.getenv("OLLAMA_CRITIC_MODEL", "llama3.2:3b-instruct-q4_0")
 
 # ---------------------------------------------------------------------------
 # Role name constants for lookup to avoid hardcoded strings
@@ -1811,3 +1815,32 @@ def admin_reports_view(request):
     except Exception as e:
         print(f"Error in admin_reports_view: {e}")
         return HttpResponse(f"An error occurred: {e}", status=500)
+def _ollama_chat(model, system, user, max_tokens=220, temp=0.4):
+    body = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user",   "content": user},
+        ],
+        "temperature": temp,
+        "max_tokens": max_tokens,
+    }
+    r = requests.post(f"{OLLAMA_BASE}/v1/chat/completions",
+                      headers={"Content-Type":"application/json"},
+                      data=json.dumps(body), timeout=60)
+    r.raise_for_status()
+    return r.json()["choices"][0]["message"]["content"].strip()
+
+SYS_PROMPT = "Write a concise, factual Need Analysis (80–140 words)."
+
+@csrf_exempt
+@require_POST
+def generate_need_analysis(request):
+    ctx = (request.POST.get("context") or "").strip()[:3000]
+    if not ctx:
+        return JsonResponse({"ok": False, "error": "No context"}, status=400)
+    try:
+        text = _ollama_chat(GEN_MODEL, SYS_PROMPT, ctx, max_tokens=220, temp=0.4)
+        return JsonResponse({"ok": True, "text": text})
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": str(e)}, status=503)
