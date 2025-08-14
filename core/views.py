@@ -2249,28 +2249,13 @@ def api_student_achievements(request):
 def user_dashboard(request):
     """Render the simplified user dashboard with calendar events.
 
-    Events shown are related to the current user either directly (submitted
-    by or managed by them), through their organization assignments, or, if the
-    user is a student, through their participation in events.
+    Events shown include all approved events that have any associated date.
     """
 
     user = request.user
 
-    # Organizations the user is connected to via role assignments
-    user_org_ids = list(
-        RoleAssignment.objects.filter(user=user, organization_id__isnull=False)
-        .values_list("organization_id", flat=True)
-    )
-
     events = (
         EventProposal.objects.filter(status=EventProposal.Status.APPROVED)
-        .filter(
-            Q(submitted_by=user)
-            | Q(faculty_incharges=user)
-            | Q(organization_id__in=user_org_ids)
-            | Q(participants__user=user)
-        )
-        # Include events with any recorded date, past or future
         .filter(
             Q(event_datetime__isnull=False)
             | Q(event_start_date__isnull=False)
