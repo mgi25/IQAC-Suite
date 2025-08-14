@@ -2262,8 +2262,6 @@ def user_dashboard(request):
         .values_list("organization_id", flat=True)
     )
 
-    today = timezone.now().date()
-
     events = (
         EventProposal.objects.filter(status=EventProposal.Status.APPROVED)
         .filter(
@@ -2272,12 +2270,7 @@ def user_dashboard(request):
             | Q(organization_id__in=user_org_ids)
             | Q(participants__user=user)
         )
-        # Only include events with a date and scheduled for today or later
-        .filter(
-            Q(event_datetime__date__gte=today)
-            | Q(event_start_date__gte=today)
-            | Q(event_end_date__gte=today)
-        )
+        # Include events with any recorded date, past or future
         .filter(
             Q(event_datetime__isnull=False)
             | Q(event_start_date__isnull=False)
@@ -2311,8 +2304,16 @@ def user_dashboard(request):
                 }
             )
 
+    show_settings_tab = False
+    try:
+        show_settings_tab = user.popso_assignments.filter(is_active=True).exists()
+    except Exception:
+        pass
+
     return render(
-        request, "core/user_dashboard.html", {"calendar_events": calendar_events}
+        request,
+        "core/user_dashboard.html",
+        {"calendar_events": calendar_events, "show_settings_tab": show_settings_tab},
     )
 
 @login_required
