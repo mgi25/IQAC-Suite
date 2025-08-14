@@ -150,10 +150,8 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="event-focus-type-modern">Event Focus Type</label>
-                                <select id="event-focus-type-modern">
-                                    <option value="">Select Focus Type</option>
-                                </select>
-                                <div class="help-text">Choose the primary focus of your event</div>
+                                <input type="text" id="event-focus-type-modern" placeholder="Enter event focus">
+                                <div class="help-text">Specify the primary focus of your event</div>
                             </div>
                             <div class="input-group">
                                 <label for="venue-modern">Location</label>
@@ -188,7 +186,7 @@
                             </div>
                             <div class="input-group">
                                 <label for="pos-pso-modern">POS & PSO Management</label>
-                                <input type="text" id="pos-pso-modern" placeholder="e.g., PO1, PSO2">
+                                <textarea id="pos-pso-modern" name="pos_pso" rows="2" placeholder="e.g., PO1, PSO2"></textarea>
                                 <div class="help-text">Program outcomes and specific outcomes addressed</div>
                             </div>
                         </div>
@@ -220,10 +218,11 @@
                             <div class="input-group">
                                 <label for="student-coordinators-modern">Student Coordinators</label>
                                 <select id="student-coordinators-modern" multiple></select>
-                                <div class="help-text">Search and select student coordinators from the target audience</div>
+                                <div class="help-text">Search and select student coordinators by name</div>
+                                <ul id="student-coordinators-list" class="selected-coordinators-list"></ul>
                             </div>
                         </div>
-                        
+
                         <!-- Dynamic activities section -->
                         <div id="dynamic-activities-section" class="full-width"></div>
 
@@ -369,6 +368,7 @@
         window.API_FACULTY = "{% url 'emt:api_faculty' %}";
         window.API_CLASSES_BASE = "{% url 'emt:api_classes' 0 %}".split('0/')[0];
         window.API_OUTCOMES_BASE = "{% url 'emt:api_outcomes' 0 %}".replace(/0\/$/, '');
+        window.API_FETCH_LINKEDIN = "{% url 'emt:fetch_linkedin_profile' %}";
         window.SDG_GOALS = {{ sdg_goals_list|safe }};
         window.EXISTING_ACTIVITIES = {{ activities_json|safe }};
         window.EXISTING_SPEAKERS = {{ speakers_json|safe }};

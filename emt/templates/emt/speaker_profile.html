@@ -28,7 +28,8 @@
             <div class="input-group">{{ form.affiliation.label_tag }} {{ form.affiliation }}</div>
             <div class="input-group">{{ form.contact_email.label_tag }} {{ form.contact_email }}</div>
             <div class="input-group">{{ form.contact_number.label_tag }} {{ form.contact_number }}</div>
-            <div class="input-group">{{ form.photo.label_tag }} {{ form.photo }}</div>
+            <div class="input-group">{{ form.linkedin_url.label_tag }} {{ form.linkedin_url }}</div>
+            <div class="input-group">{{ form.photo.label_tag }} {{ form.photo }}<img class="linkedin-photo" style="max-width:100px; display:none;"/></div>
             <div class="input-group">{{ form.detailed_profile.label_tag }} {{ form.detailed_profile }}</div>
             {% if form.DELETE %}
               <div class="input-group">{{ form.DELETE }} Remove this speaker</div>
@@ -52,4 +53,53 @@
     window.AUTOSAVE_CSRF = "{{ csrf_token }}";
   </script>
   <script src="{% static 'emt/js/autosave_draft.js' %}"></script>
+  <script>
+    document.querySelectorAll('.speaker-form').forEach(function(form){
+      const urlInput = form.querySelector("input[name$='linkedin_url']");
+      if(!urlInput) return;
+      urlInput.addEventListener('change', async function(){
+        const url = urlInput.value.trim();
+        if(!url) return;
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        try {
+          const resp = await fetch("{% url 'emt:fetch_linkedin_profile' %}", {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({url})
+          });
+          if(!resp.ok) return;
+          const data = await resp.json();
+          const nameInput = form.querySelector("input[name$='full_name']");
+          const desigInput = form.querySelector("input[name$='designation']");
+          const affInput = form.querySelector("input[name$='affiliation']");
+          const photoInput = form.querySelector("input[name$='photo']");
+          const imgPreview = form.querySelector('.linkedin-photo');
+          if(data.name && nameInput && !nameInput.value) nameInput.value = data.name;
+          if(data.designation && desigInput && !desigInput.value) desigInput.value = data.designation;
+          if(data.affiliation && affInput && !affInput.value) affInput.value = data.affiliation;
+          if(data.image && imgPreview){
+            imgPreview.src = data.image;
+            imgPreview.style.display = 'block';
+            if(photoInput){
+              try {
+                const imgResp = await fetch(data.image);
+                const blob = await imgResp.blob();
+                const file = new File([blob], 'photo.jpg', {type: blob.type});
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                photoInput.files = dt.files;
+              } catch(err){
+                console.error('Could not set photo file', err);
+              }
+            }
+          }
+        } catch(e){
+          console.error('LinkedIn fetch failed', e);
+        }
+      });
+    });
+  </script>
 {% endblock %}

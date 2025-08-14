@@ -32,12 +32,14 @@ from .models import (
     Program,
     ProgramOutcome,
     ProgramSpecificOutcome,
+    ActivityLog,
 )
 from emt.models import EventProposal, Student
 from django.views.decorators.http import require_GET, require_POST
 from .models import ApprovalFlowTemplate, ApprovalFlowConfig
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from .decorators import admin_required
 
 logger = logging.getLogger(__name__)
 
@@ -1211,7 +1213,19 @@ def admin_proposal_detail(request, proposal_id):
         len(proposal.expense_details.all()),
         len(proposal.approval_steps.all()),
     )
-    return render(request, "core/admin_proposal_detail.html", {"proposal": proposal})
+    steps = [
+        {"key": "draft", "label": "Draft"},
+        {"key": "submitted", "label": "Submitted"},
+        {"key": "under_review", "label": "Under Review"},
+        {"key": "approved", "label": "Approved"},
+        {"key": "rejected", "label": "Rejected"},
+        {"key": "returned", "label": "Returned for Revision"},
+    ]
+    return render(
+        request,
+        "core/admin_proposal_detail.html",
+        {"proposal": proposal, "steps": steps},
+    )
 
 @login_required
 def proposal_detail(request, proposal_id):
@@ -2049,6 +2063,74 @@ def admin_reports_view(request):
         print(f"Error in admin_reports_view: {e}")
         return HttpResponse(f"An error occurred: {e}", status=500)
 
+
+@login_required
+@admin_required
+def admin_history(request):
+    """List activity log entries for administrators with search and filtering."""
+
+    # Fetch activity from all users so administrators can audit
+    # actions across the entire system, not just their own.
+    logs = ActivityLog.objects.select_related("user").all()
+
+    # Text search across user name, username, action and description
+    query = request.GET.get("q", "").strip()
+    if query:
+        logs = logs.filter(
+            Q(user__username__icontains=query)
+            | Q(user__first_name__icontains=query)
+            | Q(user__last_name__icontains=query)
+            | Q(action__icontains=query)
+            | Q(description__icontains=query)
+            | Q(ip_address__icontains=query)
+        )
+
+    # Date range filtering
+    start_date = request.GET.get("start")
+    end_date = request.GET.get("end")
+    if start_date:
+        try:
+            start = datetime.strptime(start_date, "%Y-%m-%d").date()
+            logs = logs.filter(timestamp__date__gte=start)
+        except ValueError:
+            pass
+    if end_date:
+        try:
+            end = datetime.strptime(end_date, "%Y-%m-%d").date()
+            logs = logs.filter(timestamp__date__lte=end)
+        except ValueError:
+            pass
+
+    # Build type-ahead suggestions from the currently filtered log data
+    action_suggestions = logs.values_list("action", flat=True).distinct()
+    user_suggestions = logs.values_list("user__username", flat=True).distinct()
+    suggestions = sorted(
+        set(
+            filter(
+                None,
+                list(action_suggestions) + list(user_suggestions),
+            )
+        )
+    )
+
+    logs = logs.order_by("-timestamp")
+    context = {
+        "logs": logs,
+        "q": query,
+        "start": start_date,
+        "end": end_date,
+        "suggestions": suggestions,
+    }
+    return render(request, "core/admin_history.html", context)
+
+
+@login_required
+@admin_required
+def admin_history_detail(request, pk):
+    """Detailed view of a single activity log entry."""
+    log = get_object_or_404(ActivityLog, pk=pk)
+    return render(request, 'core/admin_history_detail.html', {'log': log})
+
 # ======================== API Endpoints & User Dashboard ========================
 
 from django.http import JsonResponse
@@ -2165,7 +2247,59 @@ def api_student_achievements(request):
 
 @login_required
 def user_dashboard(request):
-    return render(request, 'core/user_dashboard.html')
+    """Render the simplified user dashboard with calendar events.
+
+    Events shown include all approved events that have any associated date.
+    """
+
+    user = request.user
+
+    events = (
+        EventProposal.objects.filter(status=EventProposal.Status.APPROVED)
+        .filter(
+            Q(event_datetime__isnull=False)
+            | Q(event_start_date__isnull=False)
+            | Q(event_end_date__isnull=False)
+        )
+        .distinct()
+    )
+
+    calendar_events = []
+    for e in events:
+        if e.event_datetime:
+            calendar_events.append(
+                {
+                    "id": e.id,
+                    "title": e.event_title,
+                    "date": e.event_datetime.date().isoformat(),
+                    "datetime": e.event_datetime.isoformat(),
+                    "venue": e.venue or "",
+                }
+            )
+        elif e.event_start_date or e.event_end_date:
+            start = e.event_start_date or e.event_end_date
+            end = e.event_end_date or e.event_start_date
+            calendar_events.append(
+                {
+                    "id": e.id,
+                    "title": e.event_title,
+                    "start": start.isoformat(),
+                    "end": end.isoformat(),
+                    "venue": e.venue or "",
+                }
+            )
+
+    show_settings_tab = False
+    try:
+        show_settings_tab = user.popso_assignments.filter(is_active=True).exists()
+    except Exception:
+        pass
+
+    return render(
+        request,
+        "core/user_dashboard.html",
+        {"calendar_events": calendar_events, "show_settings_tab": show_settings_tab},
+    )
 
 @login_required
 @require_GET

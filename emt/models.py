@@ -50,7 +50,7 @@ class EventProposal(models.Model):
     venue = models.CharField(max_length=200, blank=True)
     academic_year = models.CharField(max_length=20, blank=True)
     target_audience = models.CharField(max_length=200, blank=True)
-    pos_pso = models.CharField(max_length=200, blank=True)
+    pos_pso = models.TextField(blank=True)
 
     faculty_incharges = models.ManyToManyField(
         User, blank=True, related_name="faculty_incharge_proposals"

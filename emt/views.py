@@ -6,11 +6,13 @@ import json
 import re
 from urllib.parse import urlparse
 import requests
+from bs4 import BeautifulSoup
 from django.db.models import Q
 from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
     EventExpectedOutcomes, TentativeFlow, EventActivity,
-    ExpenseDetail, IncomeDetail, SpeakerProfile,EventReport, EventReportAttachment, CDLSupport
+    ExpenseDetail, IncomeDetail, SpeakerProfile, EventReport,
+    EventReportAttachment, CDLSupport, Student
 )
 from .forms import (
     EventProposalForm, NeedAnalysisForm, ExpectedOutcomesForm,
@@ -26,6 +28,7 @@ from core.models import (
     SDGGoal,
     Class,
     SDG_GOALS,
+    OrganizationMembership,
 )
 from django.contrib.auth.models import User
 from emt.utils import (
@@ -789,43 +792,58 @@ def pending_reports(request):
 @login_required
 @require_http_methods(["GET"])
 def api_event_participants(request, proposal_id):
-    """API endpoint to search for participants of a specific event"""
+    """API endpoint to search for eligible assignees for a specific event"""
     try:
         proposal = get_object_or_404(EventProposal, id=proposal_id)
-        
+
         # Check if user has permission to view this proposal
         if proposal.submitted_by != request.user and request.user not in proposal.faculty_incharges.all():
             return JsonResponse({'error': 'Permission denied'}, status=403)
-        
-        query = request.GET.get('q', '').strip()
-        
-        # Get all participants for this event (faculty incharges + submitted_by)
+
+        query = request.GET.get('q', '').strip().lower()
+
+        # Collect all eligible users
         participants = set()
-        
-        # Add the submitter
+
+        # Members of the event's organization
+        if proposal.organization:
+            memberships = OrganizationMembership.objects.filter(organization=proposal.organization)
+
+            # Filter by target audience roles if specified
+            if proposal.target_audience:
+                target_roles = [r.strip().lower() for r in proposal.target_audience.split(',')]
+                memberships = memberships.filter(role__in=target_roles)
+
+            for membership in memberships.select_related('user'):
+                participants.add(membership.user)
+
+        # Always include submitter and faculty incharges
         participants.add(proposal.submitted_by)
-        
-        # Add faculty incharges
         for faculty in proposal.faculty_incharges.all():
             participants.add(faculty)
-        
-        # Filter participants based on search query
+
+        # Apply search filter
         if query:
             filtered_participants = [
-                user for user in participants 
-                if query.lower() in user.get_full_name().lower() or 
-                   query.lower() in user.username.lower() or
-                   query.lower() in user.email.lower()
+                user for user in participants
+                if query in (user.get_full_name() or '').lower() or
+                   query in user.username.lower() or
+                   query in (user.email or '').lower()
             ]
         else:
             filtered_participants = list(participants)
-        
-        # Format response
+
         results = []
         for user in filtered_participants:
-            # Determine role
-            role = "Submitter" if user == proposal.submitted_by else "Faculty Incharge"
-            
+            # Determine role to display
+            if user == proposal.submitted_by:
+                role = "Submitter"
+            elif user in proposal.faculty_incharges.all():
+                role = "Faculty Incharge"
+            else:
+                membership = OrganizationMembership.objects.filter(user=user, organization=proposal.organization).first()
+                role = membership.role.capitalize() if membership else "Member"
+
             results.append({
                 'id': user.id,
                 'name': user.get_full_name() or user.username,
@@ -833,9 +851,9 @@ def api_event_participants(request, proposal_id):
                 'role': role,
                 'username': user.username
             })
-        
+
         return JsonResponse({'participants': results})
-        
+
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
@@ -857,13 +875,23 @@ def assign_report_task(request, proposal_id):
         if not assigned_user_id:
             return JsonResponse({'error': 'assigned_user_id is required'}, status=400)
         
-        # Verify the assigned user is a participant of this event
+        # Verify the assigned user is eligible for assignment
         assigned_user = get_object_or_404(User, id=assigned_user_id)
-        
-        # Check if assigned user is either submitter or faculty incharge
-        if (assigned_user != proposal.submitted_by and 
+
+        if (assigned_user != proposal.submitted_by and
             assigned_user not in proposal.faculty_incharges.all()):
-            return JsonResponse({'error': 'Can only assign to event participants'}, status=400)
+
+            membership_qs = OrganizationMembership.objects.filter(
+                user=assigned_user,
+                organization=proposal.organization,
+            )
+
+            if proposal.target_audience:
+                target_roles = [r.strip().lower() for r in proposal.target_audience.split(',')]
+                membership_qs = membership_qs.filter(role__in=target_roles)
+
+            if not membership_qs.exists():
+                return JsonResponse({'error': 'Can only assign to event organization members or target audience'}, status=400)
         
         # Update assignment
         proposal.report_assigned_to = assigned_user
@@ -1063,6 +1091,37 @@ def api_faculty(request):
 
 @login_required
 @require_http_methods(["GET"])
+def api_students(request):
+    """Return users with a student membership matching the search query."""
+    q = request.GET.get("q", "").strip()
+    org_id = request.GET.get("org_id")
+    org_ids = request.GET.get("org_ids")
+
+    users = User.objects.filter(org_memberships__role="student")
+    if org_ids:
+        ids = [int(i) for i in org_ids.split(",") if i.strip().isdigit()]
+        if ids:
+            users = users.filter(org_memberships__organization_id__in=ids)
+    elif org_id:
+        users = users.filter(org_memberships__organization_id=org_id)
+
+    if q:
+        users = users.filter(
+            Q(first_name__icontains=q)
+            | Q(last_name__icontains=q)
+            | Q(email__icontains=q)
+        )
+
+    users = users.distinct().order_by("first_name")[:20]
+    data = [
+        {"id": u.id, "text": u.get_full_name() or u.username}
+        for u in users
+    ]
+    return JsonResponse(data, safe=False)
+
+
+@login_required
+@require_http_methods(["GET"])
 def api_classes(request, org_id):
     """Return classes and their students for an organization."""
     try:
@@ -1107,21 +1166,50 @@ def fetch_linkedin_profile(request):
         netloc = netloc.split(":", 1)[0]
     if parsed.scheme not in ("http", "https") or not netloc.endswith("linkedin.com"):
         return JsonResponse({"error": "Invalid LinkedIn URL"}, status=400)
-    response = requests.get(url)
+    try:
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; IQACSuite/1.0)"}
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+    except Exception:
+        return JsonResponse({"error": "Unable to fetch profile"}, status=500)
     profile = _parse_public_li(response.text)
     return JsonResponse(profile)
 
 # Temporary safe parser stub (prevent NameError if real parser not implemented)
-def _parse_public_li(html: str):  # pragma: no cover - simple stub
-    """Fallback parser for public LinkedIn profile HTML.
-    Replace with a proper HTML parsing implementation.
-    Returns minimal structure to keep endpoint functional.
+def _parse_public_li(html: str):  # pragma: no cover
+    """Parse minimal data from a public LinkedIn profile page.
+
+    Uses Open Graph meta tags available on public profiles to extract
+    the name, headline/description, and profile image. Returns a
+    dictionary suitable for JSON serialization. The parsing intentionally
+    avoids any advanced scraping that would require authentication.
     """
+    soup = BeautifulSoup(html or "", "html.parser")
+
+    def _meta(prop):
+        tag = soup.find("meta", property=prop)
+        return tag.get("content", "").strip() if tag and tag.get("content") else ""
+
+    name = _meta("og:title")
+    description = _meta("og:description")
+    image = _meta("og:image")
+
+    designation = ""
+    affiliation = ""
+    if description:
+        main_desc = description.split("|")[0].strip()
+        if " at " in main_desc:
+            designation, affiliation = [p.strip() for p in main_desc.split(" at ", 1)]
+        else:
+            designation = main_desc
+
     return {
-        "headline": None,
-        "name": None,
+        "headline": description or None,
+        "name": name or None,
         "about": None,
-        "raw_length": len(html or ""),
+        "image": image or None,
+        "designation": designation or None,
+        "affiliation": affiliation or None,
     }
 
 

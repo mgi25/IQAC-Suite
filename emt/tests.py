@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth.models import User
 
-from emt.models import ApprovalStep, EventProposal
+from emt.models import ApprovalStep, EventProposal, Student
 from emt.utils import (
     build_approval_chain,
     auto_approve_non_optional_duplicates,
@@ -125,6 +125,56 @@ class FacultyAPITests(TestCase):
         self.assertIn(self.user1.id, ids)
         self.assertIn(self.user2.id, ids)
         self.assertNotIn(other_user.id, ids)
+
+
+class StudentAPITests(TestCase):
+    def setUp(self):
+        self.ot = OrganizationType.objects.create(name="Dept")
+        self.org = Organization.objects.create(name="Science", org_type=self.ot)
+        self.other_org = Organization.objects.create(name="Arts", org_type=self.ot)
+        self.user = User.objects.create(
+            username="s1", first_name="Alice", email="alice@example.com"
+        )
+        Student.objects.create(user=self.user)
+        OrganizationMembership.objects.create(
+            user=self.user,
+            organization=self.org,
+            academic_year="2024-2025",
+            role="student",
+        )
+        self.other_user = User.objects.create(
+            username="s2", first_name="Bob", email="bob@example.com"
+        )
+        Student.objects.create(user=self.other_user)
+        OrganizationMembership.objects.create(
+            user=self.other_user,
+            organization=self.other_org,
+            academic_year="2024-2025",
+            role="student",
+        )
+        self.client.force_login(self.user)
+
+    def test_api_students_filters_by_org_membership(self):
+        resp = self.client.get(
+            reverse("emt:api_students"),
+            {"q": "Alice", "org_id": self.org.id},
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        ids = {item["id"] for item in data}
+        self.assertIn(self.user.id, ids)
+        self.assertNotIn(self.other_user.id, ids)
+
+    def test_api_students_supports_multiple_organizations(self):
+        resp = self.client.get(
+            reverse("emt:api_students"),
+            {"org_ids": f"{self.org.id},{self.other_org.id}"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        ids = {item["id"] for item in data}
+        self.assertIn(self.user.id, ids)
+        self.assertIn(self.other_user.id, ids)
 
 
 class OutcomesAPITests(TestCase):
