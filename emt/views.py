@@ -1,11 +1,13 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_POST
+from django.conf import settings
 import json
 import re
 from urllib.parse import urlparse
 import requests
+import time
 from bs4 import BeautifulSoup
 from django.db.models import Q
 from .models import (
@@ -1049,6 +1051,103 @@ def autosave_need_analysis(request):
         na.save()
         return JsonResponse({'success': True})
     return JsonResponse({'success': False}, status=400)
+
+# ---------------------------------------------------------------------------
+# AI Need Analysis generation
+# ---------------------------------------------------------------------------
+SYSTEM_PROMPT = "Write a concise, factual Need Analysis (80–140 words)."
+
+
+def _call_openrouter(ctx: str) -> str:
+    model = settings.OPENROUTER_MODEL
+    api_key = settings.OPENROUTER_API_KEY
+    if not api_key or not model:
+        raise RuntimeError("OpenRouter credentials not configured")
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": ctx},
+        ],
+        "max_tokens": 220,
+        "temperature": 0.4,
+    }
+    start = time.time()
+    try:
+        resp = requests.post(url, headers=headers, json=payload, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+        text = data["choices"][0]["message"]["content"].strip()
+        latency = time.time() - start
+        logger.info(
+            "openrouter model=%s latency=%.2fs input_len=%d output_len=%d",
+            model,
+            latency,
+            len(ctx),
+            len(text),
+        )
+        return text
+    except (requests.RequestException, KeyError, ValueError) as exc:
+        logger.error("OpenRouter request failed: %s", exc)
+        raise RuntimeError("OpenRouter request failed") from exc
+
+
+def _call_local(ctx: str) -> str:
+    base = settings.LOCAL_AI_BASE_URL
+    model = settings.LOCAL_AI_MODEL
+    if not base or not model:
+        raise RuntimeError("Local AI configuration missing")
+    url = base.rstrip("/") + "/v1/chat/completions"
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": ctx},
+        ],
+        "max_tokens": 220,
+        "temperature": 0.4,
+    }
+    start = time.time()
+    try:
+        resp = requests.post(url, headers=headers, json=payload, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+        text = data["choices"][0]["message"]["content"].strip()
+        latency = time.time() - start
+        logger.info(
+            "local model=%s latency=%.2fs input_len=%d output_len=%d",
+            model,
+            latency,
+            len(ctx),
+            len(text),
+        )
+        return text
+    except (requests.RequestException, KeyError, ValueError) as exc:
+        logger.error("Local AI request failed: %s", exc)
+        raise RuntimeError("Local AI request failed") from exc
+
+
+@login_required
+@require_POST
+def generate_need_analysis(request):
+    ctx = (request.POST.get("context", "") or "")[:3000]
+    if not ctx.strip():
+        return JsonResponse({"ok": False, "error": "No context provided"}, status=400)
+    try:
+        if settings.AI_BACKEND == "LOCAL_HTTP":
+            text = _call_local(ctx)
+        else:
+            text = _call_openrouter(ctx)
+        return JsonResponse({"ok": True, "text": text})
+    except Exception as exc:
+        logger.error("Need analysis generation failed: %s", exc)
+        return JsonResponse({"ok": False, "error": "AI service unavailable"}, status=503)
 @login_required
 def api_organizations(request):
     q = request.GET.get("q", "").strip()

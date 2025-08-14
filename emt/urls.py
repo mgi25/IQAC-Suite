@@ -56,6 +56,7 @@ urlpatterns = [
     path('generate-ai-report-stream/<int:proposal_id>/', views.generate_ai_report_stream, name='generate_ai_report_stream'),
     path('suite/ai-report-edit/<int:proposal_id>/', views.ai_report_edit, name='ai_report_edit'),
     path('suite/ai-report-submit/<int:proposal_id>/', views.ai_report_submit, name='ai_report_submit'),
+    path('generate-need-analysis/', views.generate_need_analysis, name='generate_need_analysis'),
     path('api/organization-types/', views.api_organization_types, name='api_organization_types'),
     path('api/outcomes/<int:org_id>/', views.api_outcomes, name='api_outcomes'),
 
