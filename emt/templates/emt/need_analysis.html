@@ -23,6 +23,10 @@
           {{ form.content.label_tag }}
           {{ form.content }}
         </div>
+        <div class="input-group">
+          <button type="button" id="generate-ai-btn" class="btn">Generate with AI</button>
+          <div id="ai-error" class="alert" style="display:none;color:red;margin-top:0.5rem;"></div>
+        </div>
       </div>
       <div class="input-group">
         <button type="submit" class="btn">Save & Continue</button>
@@ -37,6 +41,39 @@
     window.PROPOSAL_ID = "{{ proposal.id|default:'' }}";
     window.AUTOSAVE_URL = "{% url 'emt:autosave_proposal' %}"; // Update if you have a specific endpoint!
     window.AUTOSAVE_CSRF = "{{ csrf_token }}";
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const aiBtn = document.getElementById('generate-ai-btn');
+    const aiErr = document.getElementById('ai-error');
+    const textarea = document.getElementById('id_content');
+    aiBtn.addEventListener('click', async () => {
+      aiErr.style.display = 'none';
+      const original = aiBtn.textContent;
+      aiBtn.disabled = true;
+      aiBtn.textContent = 'Generating…';
+      try {
+        const fd = new FormData();
+        fd.append('context', textarea.value);
+        const resp = await fetch('/generate-need-analysis/', {
+          method: 'POST',
+          headers: {'X-CSRFToken': csrftoken},
+          body: fd
+        });
+        const data = await resp.json();
+        if (resp.ok && data.ok) {
+          textarea.value = textarea.value ? textarea.value + '\n' + data.text : data.text;
+          textarea.focus();
+        } else {
+          aiErr.textContent = data.error || 'Generation failed';
+          aiErr.style.display = 'block';
+        }
+      } catch (e) {
+        aiErr.textContent = 'Network error';
+        aiErr.style.display = 'block';
+      } finally {
+        aiBtn.disabled = false;
+        aiBtn.textContent = original;
+      }
+    });
   </script>
   <script src="{% static 'emt/js/autosave_draft.js' %}"></script>
 {% endblock %}
