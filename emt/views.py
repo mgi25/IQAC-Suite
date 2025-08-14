@@ -1095,9 +1095,14 @@ def api_students(request):
     """Return users with a student membership matching the search query."""
     q = request.GET.get("q", "").strip()
     org_id = request.GET.get("org_id")
+    org_ids = request.GET.get("org_ids")
 
     users = User.objects.filter(org_memberships__role="student")
-    if org_id:
+    if org_ids:
+        ids = [int(i) for i in org_ids.split(",") if i.strip().isdigit()]
+        if ids:
+            users = users.filter(org_memberships__organization_id__in=ids)
+    elif org_id:
         users = users.filter(org_memberships__organization_id=org_id)
 
     if q:
