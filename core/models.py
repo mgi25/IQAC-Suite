@@ -397,6 +397,29 @@ class Class(models.Model):
 
     def __str__(self):
         return f"{self.code} - {self.name}"
+
+# ───────────────────────────────
+#  Faculty Meetings (for org-wide faculty calendars)
+# ───────────────────────────────
+
+class FacultyMeeting(models.Model):
+    """
+    Simple meeting/event created by faculty members. Visible to all faculty
+    within the same organization.
+    """
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="faculty_meetings")
+    scheduled_at = models.DateTimeField()
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="created_faculty_meetings")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-scheduled_at", "-created_at"]
+
+    def __str__(self):
+        when = timezone.localtime(self.scheduled_at).strftime('%Y-%m-%d %H:%M') if self.scheduled_at else '—'
+        return f"{self.title} @ {when}"
     
 class ImpersonationLog(models.Model):
     """Track user impersonation history"""

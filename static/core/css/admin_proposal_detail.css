@@ -1,3 +1,40 @@
+/* Enable smooth scrolling and fixed-height layout */
+.review-container {
+  max-height: calc(100vh - 140px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.ultra-proposal-root {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 16px;
+  min-height: 0; /* for nested overflow */
+}
+
+.ultra-side-info {
+  overflow: auto;
+  max-height: calc(100vh - 200px);
+}
+
+.ultra-main-content {
+  overflow: auto;
+  max-height: calc(100vh - 200px);
+}
+
+.info-card.glass,
+.fadein-card.section-glass,
+.ultra-header {
+  scroll-margin: 16px;
+}
+
+/* Tweak tables to avoid stretching */
+.finance-table {
+  table-layout: fixed;
+  width: 100%;
+  word-break: break-word;
+}
 body {
   background: linear-gradient(110deg, #e8f1fa 70%, #e2e2ef 100%);
 }

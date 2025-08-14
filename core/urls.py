@@ -23,6 +23,17 @@ urlpatterns = [
     path('proposal/<int:proposal_id>/detail/', views.proposal_detail, name='proposal_detail'),
     path('user-dashboard/', views.user_dashboard, name='user_dashboard'),
     path('event/<int:proposal_id>/details/', views.student_event_details, name='student_event_details'),
+    # Calendar APIs
+    path('api/calendar/', views.api_calendar_events, name='api_calendar_events'),
+    path('api/calendar/faculty/create/', views.api_create_faculty_meeting, name='api_create_faculty_meeting'),
+    
+    # Dashboard Enhancement APIs
+    path('api/dashboard/places/', views.api_dashboard_places, name='api_dashboard_places'),
+    path('api/dashboard/people/', views.api_dashboard_people, name='api_dashboard_people'),
+    path('api/user/proposals/', views.api_user_proposals, name='api_user_proposals'),
+    path('api/student/performance-data/', views.api_student_performance_data, name='api_student_performance_data'),
+    path('api/student/contributions/', views.api_student_contributions, name='api_student_contributions'),
+    path('api/user/events-data/', views.api_user_events_data, name='api_user_events_data'),
 
     # ────────────────────────────────────────────────
     # Admin - User Management
@@ -197,6 +208,9 @@ urlpatterns = [
     path('core-admin/api/organization/<int:org_id>/roles/', views.api_organization_roles, name='api_organization_roles'),
     path('core-admin/api/search-users/', views.search_users, name='search_users'),
     path('core-admin/api/search/', views.api_global_search, name='api_global_search'),
+
+    # Misc APIs used by dashboards
+    path('api/event-contribution-data', views.event_contribution_data, name='event_contribution_data'),
     
     # Multi-select filter APIs
     #path('core-admin/api/filter/organizations/', views.api_filter_organizations, name='api_filter_organizations'),
