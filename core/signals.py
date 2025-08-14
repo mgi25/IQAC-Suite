@@ -3,7 +3,7 @@ from django.dispatch import receiver
 from django.contrib.auth.models import User
 from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.utils import timezone
-from .models import Profile, RoleAssignment
+from .models import Profile, RoleAssignment, ActivityLog
 import sys
 import logging
 
@@ -68,7 +68,14 @@ def log_user_login(sender, request, user, **kwargs):
     """
     Logs a message when a user logs in.
     """
-    logger.info(f"User '{user.username}' (ID: {user.id}) logged in from IP address {request.META.get('REMOTE_ADDR')}.")
+    ip = request.META.get('REMOTE_ADDR')
+    logger.info(f"User '{user.username}' (ID: {user.id}) logged in from IP address {ip}.")
+    ActivityLog.objects.create(
+        user=user,
+        action="login",
+        description=f"User '{user.username}' logged in.",
+        ip_address=ip,
+    )
     
 @receiver(user_logged_out)
 def log_user_logout(sender, request, user, **kwargs):
@@ -78,3 +85,9 @@ def log_user_logout(sender, request, user, **kwargs):
     # The user object might be None if the session was destroyed before the signal was sent
     if user:
         logger.info(f"User '{user.username}' (ID: {user.id}) logged out.")
+        ActivityLog.objects.create(
+            user=user,
+            action="logout",
+            description=f"User '{user.username}' logged out.",
+            ip_address=request.META.get('REMOTE_ADDR'),
+        )

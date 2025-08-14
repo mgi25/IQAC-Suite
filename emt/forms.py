@@ -142,7 +142,7 @@ class EventProposalForm(forms.ModelForm):
 
             'student_coordinators': forms.Textarea(attrs={'rows': 2}),
             'target_audience':    forms.TextInput(attrs={'placeholder': 'e.g., BSc students'}),
-            'pos_pso':            forms.TextInput(attrs={'placeholder': 'e.g., PO1, PSO2'}),
+            'pos_pso':            forms.Textarea(attrs={'rows': 2, 'placeholder': 'e.g., PO1, PSO2'}),
         }
 
     def clean(self):

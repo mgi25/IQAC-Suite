@@ -4,7 +4,27 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'core/css/admin_proposal_detail.css' %}">
 
-<div class="ultra-proposal-root">
+<div class="review-container">
+  <section class="review-tracker-card">
+    <h1 class="tracker-title">
+      <i class="fa-solid fa-file-circle-check"></i>
+      Event Review
+    </h1>
+    <div class="tracker-timeline">
+      {% for step in steps %}
+        <div class="timeline-step {% if proposal.status == step.key or steps|slice:":forloop.counter"|yesno:"active," %}{% if proposal.status == step.key %}current{% else %}active{% endif %}{% endif %}">
+          <div class="step-dot"></div>
+          <div class="step-label">{{ step.label }}</div>
+        </div>
+      {% endfor %}
+    </div>
+    <div class="proposal-meta">
+      <span class="proposal-title">{{ proposal.event_title }}</span>
+      <span class="proposal-status-pill status-{{ proposal.status|lower }}">{{ proposal.get_status_display }}</span>
+    </div>
+  </section>
+
+  <div class="ultra-proposal-root">
   <!-- LEFT COLUMN: Event Info Card -->
   <aside class="ultra-side-info">
     <div class="info-card glass">
@@ -210,5 +230,6 @@
       </div>
     </div>
   </main>
+</div>
 </div>
 {% endblock %}

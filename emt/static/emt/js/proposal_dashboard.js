@@ -12,6 +12,7 @@ $(document).ready(function() {
         'income': false
     };
     let audienceClassMap = {};
+    let firstErrorField = null;
     const autoFillEnabled = new URLSearchParams(window.location.search).has('autofill');
 
     // Demo data used for rapid prototyping. Remove once real data is wired.
@@ -19,6 +20,7 @@ $(document).ready(function() {
         titles: ['AI Workshop', 'Tech Symposium', 'Innovation Summit'],
         audiences: ['All Students', 'CSE Students', 'Faculty Members'],
         venues: ['Main Auditorium', 'Conference Hall A', 'Online Platform'],
+        focusTypes: ['Workshop', 'Seminar', 'Training'],
         objectives: [
             '• Learn about emerging technologies\n• Encourage innovation\n• Foster collaboration',
             '• Understand basics\n• Gain hands-on experience',
@@ -259,7 +261,13 @@ $(document).ready(function() {
                 const orgTypeInput = $('#org-type-modern-input');
                 const orgTypeOptions = Array.from(orgTypeSelect.find('option')).map(opt => ({ value: $(opt).val(), text: $(opt).text() })).filter(o => o.value);
                 const orgTypeTS = new TomSelect(orgTypeInput[0], {
-                    valueField: 'value', labelField: 'text', searchField: 'text', options: orgTypeOptions, create: false, dropdownParent: 'body',
+                    valueField: 'value',
+                    labelField: 'text',
+                    searchField: 'text',
+                    options: orgTypeOptions,
+                    create: false,
+                    dropdownParent: 'body',
+                    maxItems: 1,
                     onChange: function(value) {
                         const selectedText = this.options[value]?.text.toLowerCase().trim() || '';
                         orgTypeSelect.val(value).trigger('change');
@@ -303,8 +311,13 @@ $(document).ready(function() {
         setupFacultyTomSelect();
         setupCommitteesTomSelect();
         setupStudentCoordinatorSelect();
-        $('#target-audience-modern').on('change.studentcoordinator', setupStudentCoordinatorSelect);
-        $('#target-audience-class-ids').on('change.studentcoordinator', setupStudentCoordinatorSelect);
+
+        const orgSelect = djangoBasicInfo.find('[name="organization"]');
+        const committeesIds = djangoBasicInfo.find('[name="committees_collaborations_ids"]');
+        orgSelect.off('change.studentCoordinator').on('change.studentCoordinator', setupStudentCoordinatorSelect);
+        if (committeesIds.length) {
+            committeesIds.off('change.studentCoordinator').on('change.studentCoordinator', setupStudentCoordinatorSelect);
+        }
     }
     
     // NEW FUNCTION to handle dynamic activities
@@ -483,55 +496,70 @@ $(document).ready(function() {
     function setupStudentCoordinatorSelect() {
         const select = $('#student-coordinators-modern');
         const djangoField = $('#django-basic-info [name="student_coordinators"]');
-        const audienceField = $('#target-audience-modern');
-        const classIdsField = $('#target-audience-class-ids');
+        const orgSelect = $('#django-basic-info [name="organization"]');
+        const committeesField = $('#django-basic-info [name="committees_collaborations_ids"]');
+        const list = $('#student-coordinators-list');
         if (!select.length || !djangoField.length) return;
 
         if (select[0].tomselect) {
             select[0].tomselect.destroy();
         }
 
-        let names = [];
-        const classIds = classIdsField.val()
-            ? classIdsField.val().split(',').map(s => s.trim()).filter(Boolean)
-            : [];
-        if (classIds.length) {
-            classIds.forEach(id => {
-                const cls = audienceClassMap[id];
-                if (cls && Array.isArray(cls.students)) {
-                    cls.students.forEach(st => names.push(st.name));
-                }
-            });
-        } else if (audienceField.val()) {
-            names = audienceField.val().split(',').map(s => s.trim()).filter(Boolean);
-        }
-
         const tom = new TomSelect(select[0], {
             plugins: ['remove_button'],
-            valueField: 'value',
+            valueField: 'text',
             labelField: 'text',
             searchField: 'text',
             create: false,
-            maxItems: names.length || null,
-            options: names.map(n => ({ value: n, text: n })),
-            placeholder: names.length ? 'Select student coordinators' : 'Select target audience first',
+            placeholder: 'Type a student name…',
+            load: function(query, callback) {
+                const ids = [];
+                const main = orgSelect.val();
+                if (main) ids.push(main);
+                if (committeesField.length && committeesField.val()) {
+                    committeesField.val().split(',').map(id => id.trim()).filter(Boolean).forEach(id => ids.push(id));
+                }
+                const orgParam = ids.length ? `&org_ids=${encodeURIComponent(ids.join(','))}` : '';
+                const url = `/suite/api/students/?q=${encodeURIComponent(query)}${orgParam}`;
+                fetch(url)
+                    .then(response => response.json())
+                    .then(json => {
+                        callback(json);
+                    })
+                    .catch(() => {
+                        callback();
+                    });
+            },
         });
 
         const existing = djangoField.val()
             ? djangoField.val().split(',').map(s => s.trim()).filter(Boolean)
             : [];
         if (existing.length) {
-            tom.setValue(existing.filter(v => names.includes(v)));
+            tom.addOptions(existing.map(n => ({ text: n })));
+            tom.setValue(existing);
+            updateList(existing);
         }
 
         tom.on('change', () => {
             const values = tom.getValue();
-            const joined = Array.isArray(values) ? values.join(', ') : '';
-            djangoField.val(joined).trigger('change');
+            const arr = Array.isArray(values) ? values : [values];
+            djangoField.val(arr.join(', ')).trigger('change');
             clearFieldError(select);
+            updateList(arr);
         });
 
         select[0].tomselect = tom;
+
+        function updateList(values) {
+            if (!list.length) return;
+            list.empty();
+            (Array.isArray(values) ? values : [values])
+                .filter(Boolean)
+                .forEach(name => {
+                    list.append($('<li>').text(name));
+                });
+        }
     }
 
     function setupOutcomeModal() {
@@ -539,6 +567,7 @@ $(document).ready(function() {
         const djangoOrgSelect = $('#django-basic-info [name="organization"]');
         const modal = $('#outcomeModal');
         const optionsContainer = $('#outcomeOptions');
+        const djangoPosField = $('#django-basic-info [name="pos_pso"]');
 
         if (!posField.length || !djangoOrgSelect.length || !modal.length) return;
 
@@ -564,7 +593,10 @@ $(document).ready(function() {
             const selected = modal.find('input[type=checkbox]:checked').map((_, cb) => cb.value).get();
             const existing = posField.val().trim();
             const value = existing ? existing + '\n' + selected.join('\n') : selected.join('\n');
-            posField.val(value).trigger('change');
+            posField.val(value).trigger('input').trigger('change');
+            if (djangoPosField.length) {
+                djangoPosField.val(value).trigger('input').trigger('change');
+            }
             modal.removeClass('show');
         });
     }
@@ -921,10 +953,11 @@ $(document).ready(function() {
         
         if (newSelect.length && typeof TomSelect !== 'undefined') {
             const tom = new TomSelect(newSelect[0], {
-                valueField: 'id', 
-                labelField: 'text', 
-                searchField: 'text', 
+                valueField: 'id',
+                labelField: 'text',
+                searchField: 'text',
                 create: false,
+                maxItems: 1,
                 dropdownParent: 'body',
                 placeholder: `Type ${label} name...`,
                 load: (query, callback) => {
@@ -1010,10 +1043,8 @@ $(document).ready(function() {
                 <div class="form-row">
                     <div class="input-group">
                         <label for="event-focus-type-modern">Event Focus Type</label>
-                        <select id="event-focus-type-modern">
-                            <option value="">Select Focus Type</option>
-                        </select>
-                        <div class="help-text">Choose the primary focus of your event</div>
+                        <input type="text" id="event-focus-type-modern" placeholder="Enter event focus">
+                        <div class="help-text">Specify the primary focus of your event</div>
                     </div>
                     <div class="input-group">
                         <label for="venue-modern">Location</label>
@@ -1048,7 +1079,7 @@ $(document).ready(function() {
                     </div>
                     <div class="input-group">
                         <label for="pos-pso-modern">POS & PSO Management</label>
-                        <input type="text" id="pos-pso-modern" placeholder="e.g., PO1, PSO2">
+                        <input type="text" id="pos-pso-modern" name="pos_pso" placeholder="e.g., PO1, PSO2">
                         <div class="help-text">Program outcomes and specific outcomes addressed</div>
                     </div>
                 </div>
@@ -1080,7 +1111,7 @@ $(document).ready(function() {
                     <div class="input-group">
                         <label for="student-coordinators-modern">Student Coordinators</label>
                         <select id="student-coordinators-modern" multiple></select>
-                        <div class="help-text">Search and select student coordinators from the target audience</div>
+                        <div class="help-text">Search and select student coordinators by name</div>
                     </div>
                 </div>
                 
@@ -1324,6 +1355,7 @@ function getWhyThisEventForm() {
                                 <div class="input-group">
                                     <label for="speaker_photo_${index}">Photo</label>
                                     <input type="file" id="speaker_photo_${index}" name="speaker_photo_${index}" accept="image/*" />
+                                    <img class="linkedin-photo" style="max-width:100px; display:none;" />
                                     <div class="help-text">Upload headshot (JPG, PNG)</div>
                                 </div>
                             </div>
@@ -1377,6 +1409,53 @@ function getWhyThisEventForm() {
             showEmptyState();
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
+            }
+        });
+
+        container.on('change', "input[id^='speaker_linkedin_url_']", async function() {
+            const url = $(this).val().trim();
+            if (!url) return;
+            try {
+                const resp = await fetch(window.API_FETCH_LINKEDIN, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': window.AUTOSAVE_CSRF || ''
+                    },
+                    body: JSON.stringify({ url })
+                });
+                if (!resp.ok) return;
+                const data = await resp.json();
+                const form = $(this).closest('.speaker-form-container');
+                const idx = form.data('index');
+                const nameInput = form.find(`#speaker_full_name_${idx}`)[0];
+                const desigInput = form.find(`#speaker_designation_${idx}`)[0];
+                const affInput = form.find(`#speaker_affiliation_${idx}`)[0];
+                if (data.name && nameInput && !nameInput.value) nameInput.value = data.name;
+                if (data.designation && desigInput && !desigInput.value) desigInput.value = data.designation;
+                if (data.affiliation && affInput && !affInput.value) affInput.value = data.affiliation;
+                if (data.image) {
+                    const imgPreview = form.find('.linkedin-photo')[0];
+                    if (imgPreview) {
+                        imgPreview.src = data.image;
+                        imgPreview.style.display = 'block';
+                    }
+                    const photoInput = form.find(`#speaker_photo_${idx}`)[0];
+                    if (photoInput) {
+                        try {
+                            const imgResp = await fetch(data.image);
+                            const blob = await imgResp.blob();
+                            const file = new File([blob], 'photo.jpg', { type: blob.type });
+                            const dt = new DataTransfer();
+                            dt.items.add(file);
+                            photoInput.files = dt.files;
+                        } catch (err) {
+                            console.error('Could not set photo file', err);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('LinkedIn fetch failed', err);
             }
         });
 
@@ -1651,24 +1730,32 @@ function getWhyThisEventForm() {
     
     // ===== SAVE SECTION FUNCTIONALITY - FULLY PRESERVED =====
     function saveCurrentSection() {
-        console.log('Saving section:', currentExpandedCard);
         if (!currentExpandedCard) return;
 
         if (validateCurrentSection()) {
-            markSectionComplete(currentExpandedCard);
             if (window.AutosaveManager && window.AutosaveManager.manualSave) {
-                window.AutosaveManager.manualSave();
-            }
-            showNotification('Section saved successfully!', 'success');
-            
-            const nextSection = getNextSection(currentExpandedCard);
-            if (nextSection) {
-                // Enable the next section since current section is now complete
-                $(`.proposal-nav .nav-link[data-section="${nextSection}"]`).removeClass('disabled');
-                
-                setTimeout(() => {
-                    openFormPanel(nextSection);
-                }, 1000);
+                window.AutosaveManager.manualSave()
+                    .then(() => {
+                        markSectionComplete(currentExpandedCard);
+                        showNotification('Section saved successfully!', 'success');
+
+                        const nextSection = getNextSection(currentExpandedCard);
+                        if (nextSection) {
+                            $(`.proposal-nav .nav-link[data-section="${nextSection}"]`).removeClass('disabled');
+                            setTimeout(() => {
+                                openFormPanel(nextSection);
+                            }, 1000);
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Autosave failed:', err);
+                        if (err && err.errors) {
+                            handleAutosaveErrors(err);
+                        }
+                        showNotification('Autosave failed. Please check for missing fields.', 'error');
+                    });
+            } else {
+                markSectionComplete(currentExpandedCard);
             }
         } else {
             showNotification('Please complete all required fields.', 'error');
@@ -1698,7 +1785,6 @@ function getWhyThisEventForm() {
                 }
                 if (djangoField.length) {
                     djangoField.val($(this).val());
-                    console.log(`Synced ${baseName}:`, $(this).val());
                 }
             }
             clearFieldError($(this));
@@ -1759,6 +1845,7 @@ function getWhyThisEventForm() {
                 'target-audience-modern': getRandom(AUTO_FILL_DATA.audiences),
                 'target-audience-class-ids': '1',
                 'venue-modern': getRandom(AUTO_FILL_DATA.venues),
+                'event-focus-type-modern': getRandom(AUTO_FILL_DATA.focusTypes),
                 'event-start-date': today,
                 'event-end-date': today,
                 'academic-year-modern': '2024-2025',
@@ -1774,12 +1861,6 @@ function getWhyThisEventForm() {
                 el.dispatchEvent(new Event('input', { bubbles: true }));
                 el.dispatchEvent(new Event('change', { bubbles: true }));
             });
-
-            const focusSelect = document.getElementById('event-focus-type-modern');
-            if (focusSelect && focusSelect.options.length > 1) {
-                focusSelect.selectedIndex = 1;
-                focusSelect.dispatchEvent(new Event('change', { bubbles: true }));
-            }
 
             // Fill dynamic activity once rendered
             setTimeout(() => {
@@ -1901,16 +1982,38 @@ function getWhyThisEventForm() {
     function validateCurrentSection() {
         if (!currentExpandedCard) return false;
         clearValidationErrors();
-    
+        firstErrorField = null;
+
+        let valid = false;
         switch (currentExpandedCard) {
-            case 'basic-info': return validateBasicInfo();
-            case 'why-this-event': return validateWhyThisEvent();
-            case 'schedule': return validateSchedule();
-            case 'speakers': return validateSpeakers();
-            case 'expenses': return validateExpenses();
-            case 'income': return validateIncome();
-            default: return true;
+            case 'basic-info':
+                valid = validateBasicInfo();
+                break;
+            case 'why-this-event':
+                valid = validateWhyThisEvent();
+                break;
+            case 'schedule':
+                valid = validateSchedule();
+                break;
+            case 'speakers':
+                valid = validateSpeakers();
+                break;
+            case 'expenses':
+                valid = validateExpenses();
+                break;
+            case 'income':
+                valid = validateIncome();
+                break;
+            default:
+                valid = true;
         }
+
+        if (!valid && firstErrorField && firstErrorField.length) {
+            $('html, body').animate({scrollTop: firstErrorField.offset().top - 100}, 500);
+            firstErrorField.focus();
+        }
+
+        return valid;
     }
     
     function validateSchedule() {
@@ -2107,7 +2210,7 @@ function getWhyThisEventForm() {
         if (e.ctrlKey && e.which === 83) { // Ctrl + S
             e.preventDefault();
             if (window.AutosaveManager && window.AutosaveManager.manualSave) {
-                window.AutosaveManager.manualSave();
+                window.AutosaveManager.manualSave().catch(() => {});
                 showNotification('Draft saved manually.', 'info');
             }
         }
@@ -2184,9 +2287,67 @@ function getWhyThisEventForm() {
         if (field && field.length) {
             field.addClass('has-error');
             field.closest('.input-group').addClass('has-error');
-            
+
             // Could add error message display here
             console.warn('Validation error:', message);
+            if (!firstErrorField) {
+                firstErrorField = field;
+            }
+        }
+    }
+
+    function handleAutosaveErrors(errorData) {
+        const errors = errorData?.errors || errorData;
+        if (!errors) return;
+        clearValidationErrors();
+        firstErrorField = null;
+
+        const mark = (name, message) => {
+            let field = $(`#${name.replace(/_/g, '-')}-modern`);
+            if (!field.length) {
+                field = $(`[name="${name}"]`);
+                if (field.length && field.attr('type') === 'hidden') {
+                    const alt = $(`#${field.attr('id')}-modern`);
+                    if (alt.length) field = alt;
+                }
+            }
+            if (field.length) {
+                showFieldError(field, message);
+            }
+        };
+
+        Object.entries(errors).forEach(([key, val]) => {
+            if (Array.isArray(val)) {
+                mark(key, val[0]);
+            } else if (typeof val === 'object') {
+                Object.entries(val).forEach(([idx, sub]) => {
+                    if (key === 'activities') {
+                        if (sub.name) mark(`activity_name_${idx}`, sub.name);
+                        if (sub.date) mark(`activity_date_${idx}`, sub.date);
+                    } else if (key === 'speakers') {
+                        if (sub.full_name) mark(`speaker_full_name_${idx}`, sub.full_name);
+                        if (sub.designation) mark(`speaker_designation_${idx}`, sub.designation);
+                        if (sub.affiliation) mark(`speaker_affiliation_${idx}`, sub.affiliation);
+                        if (sub.contact_email) mark(`speaker_contact_email_${idx}`, sub.contact_email);
+                        if (sub.detailed_profile) mark(`speaker_detailed_profile_${idx}`, sub.detailed_profile);
+                        if (sub.contact_number) mark(`speaker_contact_number_${idx}`, sub.contact_number);
+                        if (sub.linkedin_url) mark(`speaker_linkedin_url_${idx}`, sub.linkedin_url);
+                    } else if (key === 'expenses') {
+                        if (sub.particulars) mark(`expense_particulars_${idx}`, sub.particulars);
+                        if (sub.amount) mark(`expense_amount_${idx}`, sub.amount);
+                    } else if (key === 'income') {
+                        if (sub.particulars) mark(`income_particulars_${idx}`, sub.particulars);
+                        if (sub.participants) mark(`income_participants_${idx}`, sub.participants);
+                        if (sub.rate) mark(`income_rate_${idx}`, sub.rate);
+                        if (sub.amount) mark(`income_amount_${idx}`, sub.amount);
+                    }
+                });
+            }
+        });
+
+        if (firstErrorField && firstErrorField.length) {
+            $('html, body').animate({scrollTop: firstErrorField.offset().top - 100}, 500);
+            firstErrorField.focus();
         }
     }
 
@@ -2221,7 +2382,7 @@ function getWhyThisEventForm() {
     if (window.autosaveDraft) {
         // Trigger autosave on form changes
         $('#form-panel-content').on('input change', 'input, textarea, select', debounce(function() {
-            window.autosaveDraft();
+            window.autosaveDraft().catch(() => {});
         }, 1000));
     }
 
@@ -2278,10 +2439,13 @@ function getWhyThisEventForm() {
             }, 2000);
         });
 
-        $(document).on('autosave:error', function() {
+        $(document).on('autosave:error', function(e) {
             const indicator = $('#autosave-indicator');
-            indicator.removeClass('saving saved').addClass('error');
+            indicator.removeClass('saving saved').addClass('error show');
             indicator.find('.indicator-text').text('Save Failed');
+            if (e.originalEvent && e.originalEvent.detail) {
+                handleAutosaveErrors(e.originalEvent.detail);
+            }
             setTimeout(() => {
                 indicator.removeClass('show');
             }, 3000);
