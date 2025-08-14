@@ -1822,11 +1822,16 @@ function getWhyThisEventForm() {
     }
 
     function collectBasicInfo() {
+        const getVal = (modernSelector, djangoName) => {
+            const modern = $(modernSelector);
+            if (modern.length && modern.val()) return modern.val();
+            return $(`#django-basic-info [name="${djangoName}"]`).val() || '';
+        };
         return {
-            title: $('#event-title-modern').val() || '',
-            audience: $('#target-audience-modern').val() || '',
-            focus: $('#event-focus-type-modern').val() || '',
-            venue: $('#venue-modern').val() || ''
+            title: getVal('#event-title-modern', 'event_title'),
+            audience: getVal('#target-audience-modern', 'target_audience'),
+            focus: getVal('#event-focus-type-modern', 'event_focus_type'),
+            venue: getVal('#venue-modern', 'venue')
         };
     }
 
