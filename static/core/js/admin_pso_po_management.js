@@ -49,12 +49,20 @@ function setupEventListeners() {
 
     // Edit outcomes buttons from template (static HTML)
     setupEditButtonListeners();
+
+    // Delegated handler for opening outcomes page (redirect)
+    document.addEventListener('click', function(e){
+        const trigger = e.target.closest('[data-open-outcomes]');
+        if (!trigger) return;
+        const row = trigger.closest('tr');
+        const orgId = Number(trigger.dataset.orgId || row?.dataset.id);
+        if (orgId) window.location.href = `/core-admin/pso-po/org/${orgId}/`;
+    });
     
     // Add outcome buttons
     setupAddOutcomeListeners();
 
-    // Modal close functionality
-    setupModalEvents();
+    // Close handler no longer required on list page.
     
     // Assignment functionality
     setupAssignmentListeners();
@@ -147,8 +155,8 @@ function setupAddOutcomeListeners() {
 function addNewOutcome(description, type) {
     console.log('Adding new outcome:', description, type);
     
-    const modal = document.getElementById('outcomesModal');
-    const orgId = modal.dataset.orgId;
+    const panel = document.getElementById('outcomesPanel');
+    const orgId = panel && panel.dataset ? panel.dataset.orgId : null;
     
     if (!orgId) {
         showNotification('Organization not found', 'error');
@@ -232,7 +240,8 @@ function createOutcome(programId, description, type) {
 
 function updateOutcomeCounts() {
     // This function refreshes the outcome counts in the main table
-    const currentOrgId = document.getElementById('outcomesModal').dataset.orgId;
+    const panelEl = document.getElementById('outcomesPanel');
+    const currentOrgId = panelEl ? panelEl.dataset.orgId : null;
     if (currentOrgId) {
         fetch(`/core/api/programs/${currentOrgId}/`)
             .then(response => response.json())
@@ -369,16 +378,16 @@ function displayOrganizations(organizations) {
             <td>
                 <div class="outcomes-cell">
                     <div class="outcome-counts">
-                        <span class="po-count" data-org-id="${org.id}" onclick="openOutcomesModal(${org.id}, '${org.name}', 'pos')">
+                        <a class="po-count" href="/core-admin/pso-po/org/${org.id}/" data-org-id="${org.id}">
                             <span class="count">0</span> POs
-                        </span>
-                        <span class="pso-count" data-org-id="${org.id}" onclick="openOutcomesModal(${org.id}, '${org.name}', 'psos')">
+                        </a>
+                        <a class="pso-count" href="/core-admin/pso-po/org/${org.id}/" data-org-id="${org.id}">
                             <span class="count">0</span> PSOs
-                        </span>
+                        </a>
                     </div>
-                    <button class="edit-outcomes-btn" data-org-id="${org.id}" data-org-name="${org.name}" onclick="openOutcomesModal(${org.id}, '${org.name}', 'all')">
+                    <a class="edit-outcomes-btn" href="/core-admin/pso-po/org/${org.id}/">
                         <i class="fas fa-edit"></i> Edit
-                    </button>
+                    </a>
                 </div>
             </td>
         `;
@@ -448,23 +457,17 @@ function searchOrganizations(searchTerm) {
 }
 
 function openOutcomesModal(orgId, orgName, tab = 'all') {
-    console.log('Opening outcomes modal for org:', orgId, orgName);
-    const modal = document.getElementById('outcomesModal');
-    const modalOrgName = document.getElementById('modal-org-name');
-    
-    if (modalOrgName) {
-        modalOrgName.textContent = orgName;
+    console.log('Opening outcomes panel for org:', orgId, orgName);
+    const panel = document.getElementById('outcomesPanel');
+    const nameSpan = document.getElementById('modal-org-name');
+    if (nameSpan) nameSpan.textContent = orgName;
+    if (panel) {
+        panel.style.display = 'block';
+        panel.dataset.orgId = orgId;
+        panel.dataset.orgName = orgName;
     }
-    
-    // Store current organization
-    modal.dataset.orgId = orgId;
-    modal.dataset.orgName = orgName;
-    
     // Load outcomes for this organization
     loadOutcomesForOrganization(orgId);
-    
-    // Show modal
-    openModal('outcomesModal');
 }
 
 function loadOutcomesForOrganization(orgId) {
@@ -1524,6 +1527,5 @@ function setupEventListeners() {
     // Assignment form listeners
     setupAssignmentFormListeners();
 
-    // Modal close functionality
-    setupModalEvents();
+    // (No modal events required for outcomes panel)
 }
