@@ -175,8 +175,11 @@ def upload_csv(request, org_id):
             organization=org,
             academic_year=ay,
             code=class_name,
-            defaults={"name": class_name},
+            defaults={"name": class_name, "is_active": True},
         )
+        if not cls.is_active:
+            cls.is_active = True
+            cls.save(update_fields=["is_active"])
 
     f = request.FILES["csv_file"]
     if not f.name.lower().endswith(".csv"):
