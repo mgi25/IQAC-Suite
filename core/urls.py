@@ -252,5 +252,7 @@ urlpatterns = [
     path('settings/pso-po-management/', views.settings_pso_po_management,name='settings_pso_po_management'),
 
      path('dashboard/', views.dashboard, name='dashboard'),
-     path('dashboard/', views.dashboard, name='dashboard_alt')
+
+     path("cdl/head/", views.cdl_head_dashboard, name="cdl_head_dashboard"),
+     path("cdl/work/", views.cdl_work_dashboard, name="cdl_work_dashboard"),
 ]

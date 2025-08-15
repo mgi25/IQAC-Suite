@@ -1,0 +1,65 @@
+/* align with teacher/student tokens */
+:root{
+    --primary:#264487; --ink:#0f172a; --muted:#64748b; --border:#e5e7eb; --subtle:#f8fafc;
+  }
+  
+  /* layout rows mirror student/teacher */
+  .row{display:block; margin:12px 0;}
+  .row-profile .profile-kpi.card{padding:14px}
+  
+  /* profile card (same structure classes you already use) */
+  .profile-kpi .pkp-body{display:flex; align-items:center; gap:14px}
+  .pkp-avatar{width:56px;height:56px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:var(--subtle);color:var(--primary);font-weight:800}
+  .pkp-avatar img{width:100%;height:100%;object-fit:cover}
+  .pkp-initial{font-size:20px}
+  .pkp-meta .pkp-name{margin:0 0 2px 0; font-size:16px; color:var(--ink)}
+  .pkp-meta p{margin:0; font-size:12px; color:var(--muted)}
+  .pkp-actions{margin-left:auto; display:flex; align-items:center; gap:8px}
+  .switch-label{font-size:12px; color:var(--muted); font-weight:600}
+  .switch-select{height:34px; padding:0 10px; border:1px solid var(--border); border-radius:8px; background:#fff}
+  
+  /* quick stats mini cards identical feel */
+  .row-qs{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px}
+  .qs-card.mini{background:#fff; border:1px solid var(--border); border-radius:14px; padding:10px 12px}
+  .qs-head{display:flex; align-items:center; gap:8px}
+  .qs-head i{color:var(--primary)}
+  .qs-head h3{margin:0; font-size:13px; color:var(--muted); font-weight:600}
+  .qs-value{margin-top:6px; font-size:26px; font-weight:800; color:var(--ink); line-height:1}
+  .qs-underline{width:48px; height:3px; background:var(--primary); border-radius:3px; margin-top:6px}
+  
+  /* panels/tables same as admin; add compact variant */
+  .panel{background:#fff; border:1px solid var(--border); border-radius:16px; padding:14px}
+  .panel-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px}
+  .panel-head h2{margin:0; font-size:18px; color:var(--ink)}
+  .panel-actions .btn.pill{border-radius:999px}
+  .table-wrap{overflow:auto}
+  .table.compact th, .table.compact td{padding:8px}
+  .ta-right{text-align:right}
+  
+  /* three/two column grids identical to teacher/student */
+  .grid-3{display:grid; grid-template-columns:2fr 1.3fr 1.3fr; gap:12px}
+  .grid-2{display:grid; grid-template-columns:1.6fr 1.4fr; gap:12px}
+  .list.stats{list-style:none; padding:0; margin:0}
+  .list.stats li{display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px dashed var(--border)}
+  .list.stats li:last-child{border-bottom:0}
+  
+  .calendar-skel,.heatmap-skel{height:220px; background:#f8fafc; border:1px dashed var(--border); border-radius:12px; display:grid; place-items:center; color:var(--muted); font-size:13px}
+  .todo{list-style:none; padding:0; margin:0}
+  .todo li{display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px dashed var(--border)}
+  .todo li:last-child{border-bottom:0}
+  
+  /* chips/buttons (re-use your admin styles; fallbacks below) */
+  .chip{font-size:12px;padding:4px 8px;border-radius:999px;color:#fff;white-space:nowrap}
+  .chip.gray{background:#94a3b8}
+  .chip.warn{background:#f59e0b}
+  .chip.info{background:#3b82f6}
+  .chip.amber{background:#f59e0b}
+  .chip.danger{background:#dc2626}
+  
+  .btn{border:1px solid var(--border); background:#fff; color:var(--ink); border-radius:10px; padding:6px 10px; cursor:pointer; font-size:12px}
+  .btn.xs{padding:4px 8px}
+  .btn.success{background:#10b981; color:#fff; border-color:#10b981}
+  .btn.warn{background:#f59e0b; color:#fff; border-color:#f59e0b}
+  .btn.danger{background:#dc2626; color:#fff; border-color:#dc2626}
+  .btn.active{border-color:var(--primary); color:var(--primary)}
+  

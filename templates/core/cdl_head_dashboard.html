@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Centre for Digital Learning (CDL) – Head Dashboard{% endblock %}
+
+{% block head_extra %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ems-dashboard">
+  <header class="topbar">
+    <div>
+      <h1>Centre for Digital Learning (CDL)</h1>
+      <span class="topbar-date">{% now "F j, Y · l" %}</span>
+    </div>
+  </header>
+
+  <!-- TOP ROW — EXACT same layout: 4 KPI mini-cards + profile card -->
+  <section class="kpi-row">
+    <!-- KPI 1 -->
+    <button class="kpi-card" id="kpiActive">
+      <div class="kpi-icon bg-indigo"><i class="fa-solid fa-list-check"></i></div>
+      <div class="kpi-content">
+        <span class="kpi-title">Total Active Requests</span>
+        <span class="kpi-value">{{ cdl_active_requests|default:0 }}</span>
+        <span class="kpi-bar" style="--pct:60%"></span>
+      </div>
+    </button>
+
+    <!-- KPI 2 -->
+    <button class="kpi-card" id="kpiAssetsPending">
+      <div class="kpi-icon bg-sky"><i class="fa-solid fa-folder-open"></i></div>
+      <div class="kpi-content">
+        <span class="kpi-title">Assets Delivery Pending</span>
+        <span class="kpi-value">{{ cdl_assets_pending|default:0 }}</span>
+        <span class="kpi-bar" style="--pct:55%"></span>
+      </div>
+    </button>
+
+    <!-- KPI 3 -->
+    <button class="kpi-card" id="kpiOverload">
+      <div class="kpi-icon bg-orange"><i class="fa-solid fa-user-clock"></i></div>
+      <div class="kpi-content">
+        <span class="kpi-title">Overloaded Members</span>
+        <span class="kpi-value">{{ cdl_overloaded_members|default:0 }}</span>
+        <span class="kpi-bar" style="--pct:45%"></span>
+      </div>
+    </button>
+
+    <!-- KPI 4 -->
+    <button class="kpi-card" id="kpiEventsSupported">
+      <div class="kpi-icon bg-emerald"><i class="fa-solid fa-calendar-check"></i></div>
+      <div class="kpi-content">
+        <span class="kpi-title">Total Events Supported</span>
+        <span class="kpi-value">{{ cdl_events_supported|default:0 }}</span>
+        <span class="kpi-bar" style="--pct:65%"></span>
+      </div>
+    </button>
+
+    <!-- Profile card (exactly like your dashboard.html) + Switch User -->
+    <div class="profile-kpi card">
+      <div class="pkp-avatar">
+        {% if user.profile and user.profile.photo %}
+          <img src="{{ user.profile.photo.url }}" alt="{{ user.get_full_name|default:user.username }}">
+        {% else %}
+          <span class="pkp-initials">
+            {% if user.first_name %}{{ user.first_name.0|upper }}{% if user.last_name %}{{ user.last_name.0|upper }}{% endif %}{% else %}{{ user.username.0|upper }}{% endif %}
+          </span>
+        {% endif %}
+      </div>
+      <div class="pkp-body">
+        <h1 class="pkp-name">{{ user.get_full_name|default:user.username }}</h1>
+        <h2 class="pkp-sub">{{ user.email }}</h2>
+        <h3 class="pkp-meta">
+          <span>Role: <strong>CDL Head</strong></span>
+          <span>Dept: <strong>Centre for Digital Learning</strong></span>
+        </h3>
+
+        <!-- Switch to CDL views -->
+        <div class="pkp-stats" style="margin-top:8px; gap:8px;">
+          <label class="switch-label" for="roleSwitch">Switch:</label>
+          <select id="roleSwitch" class="select">
+            <option value="" selected>Choose CDL view…</option>
+            <option value="{% url 'cdl_head_dashboard' %}">CDL Head Dashboard</option>
+            <option value="{% url 'cdl_work_dashboard' %}">CDL Team Dashboard</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAIN GRID — same IDs and layout so your CSS/JS aligns -->
+  <main class="grid-3">
+    <!-- Col 1: Request Queue (replaces “Actions”) -->
+    <section class="card eq" id="cardActions">
+      <div class="card-header">
+        <h3><i class="fa-solid fa-inbox"></i> Request Queue</h3>
+        <div class="header-actions">
+          <div class="seg">
+            <button class="seg-btn active" data-cdl-filter="all">All</button>
+            <button class="seg-btn" data-cdl-filter="poster">Posters</button>
+            <button class="seg-btn" data-cdl-filter="certificate">Certificates</button>
+            <button class="seg-btn" data-cdl-filter="coverage">Coverage</button>
+            <button class="seg-btn" data-cdl-filter="media">Media</button>
+          </div>
+        </div>
+      </div>
+      <div class="list" id="cdlQueue">
+        <!-- sample rows -->
+        <article class="list-item" data-type="poster">
+          <div class="bullet under_review"><i class="fa-regular fa-clock"></i></div>
+          <div class="list-body">
+            <h4>Business Summit — Poster</h4>
+            <p>Priority: Urgent · Due: Aug 18 · <strong>Unassigned</strong></p>
+          </div>
+          <a href="#" class="chip-btn"><i class="fa-solid fa-user-plus"></i> Assign</a>
+        </article>
+
+        <article class="list-item" data-type="certificate">
+          <div class="bullet returned"><i class="fa-solid fa-rotate-left"></i></div>
+          <div class="list-body">
+            <h4>Tech Fest — Certificates</h4>
+            <p>Priority: Normal · Due: Aug 20 · Assigned: John</p>
+          </div>
+          <a href="#" class="chip-btn"><i class="fa-regular fa-eye"></i> Review</a>
+        </article>
+      </div>
+    </section>
+
+    <!-- Col 2: Donut — Backlog/Readiness (keeps same component) -->
+    <section class="card eq" id="cardPerformance">
+      <div class="card-header">
+        <h3><i class="fa-solid fa-chart-pie"></i> <span id="perfTitle">Backlog by Type</span></h3>
+        <div class="header-actions">
+          <div class="seg">
+            <button class="seg-btn active" data-view="performance">Backlog</button>
+            <button class="seg-btn" data-view="contribution">Coverage Readiness</button>
+          </div>
+        </div>
+      </div>
+      <div class="chart-wrap donut">
+        <canvas id="donutChart"></canvas>
+        <div class="chart-legend" id="donutLegend"></div>
+      </div>
+    </section>
+
+    <!-- Col 3: Calendar (unchanged) -->
+    <section class="card eq" id="cardCalendar">
+      <div class="card-header">
+        <h3><i class="fa-regular fa-calendar"></i> Calendar</h3>
+        <div class="header-actions">
+          <select id="visibilitySelect" class="select">
+            <option value="all">All</option>
+            <option value="coverage">Coverage</option>
+            <option value="approvals">Approvals</option>
+          </select>
+          <a href="#" class="chip-btn" id="addEventBtn"><i class="fa-solid fa-plus"></i> Add</a>
+        </div>
+      </div>
+      <div class="mini-cal" id="miniCalendar">
+        <div class="cal-head">
+          <button class="cal-nav" id="calPrev" aria-label="Previous month"><i class="fa-solid fa-chevron-left"></i></button>
+          <div id="calTitle">Month YYYY</div>
+          <button class="cal-nav" id="calNext" aria-label="Next month"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+        <div class="cal-weekdays">
+          <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+      <div id="upcomingWrap" class="upcoming"></div>
+    </section>
+
+    <!-- Row 2 span: Heatmap (keeps same component) -->
+    <section class="card" id="cardContribution">
+      <div class="card-header"><h3><i class="fa-solid fa-fire"></i> Yearly CDL Throughput</h3></div>
+      <div id="heatmapContainer" class="heatmap"></div>
+    </section>
+
+    <!-- Row 2 col 3: To-do (Head actions) -->
+    <section class="card eq" id="cardTodo">
+      <div class="card-header">
+        <h3><i class="fa-regular fa-square-check"></i> To-do & Assignments</h3>
+        <button class="chip-btn" id="addTodo"><i class="fa-solid fa-plus"></i> Add</button>
+      </div>
+      <ul id="todoList" class="todo"></ul>
+    </section>
+  </main>
+
+  {{ calendar_events|json_script:"calendarEventsJson" }}
+  <script>
+    try{window.DASHBOARD_EVENTS=JSON.parse(document.getElementById('calendarEventsJson').textContent);}catch{window.DASHBOARD_EVENTS=[];}
+  </script>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<!-- Use a CDL-specific JS that mirrors dashboard.js behavior but with CDL labels & data -->
+<script src="{% static 'core/js/cdl_head_dashboard.js' %}"></script>
+<script>
+  // Auto-navigate the profile switcher
+  document.addEventListener('DOMContentLoaded', function () {
+    const sel = document.getElementById('roleSwitch');
+    sel?.addEventListener('change', function(){
+      const v = this.value.trim(); if (v) location.href = v;
+    });
+  });
+</script>
+{% endblock %}

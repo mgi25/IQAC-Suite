@@ -96,3 +96,30 @@
 .btn-solid{display:inline-flex;align-items:center;gap:8px;background:var(--primary);border:1px solid var(--primary);color:#fff;padding:8px 12px;border-radius:8px;font-weight:700;cursor:pointer}
 .btn-solid:hover{filter:brightness(.95)}
 .btn-solid.disabled{pointer-events:none;opacity:.5}
+/* Switch User (profile card actions) */
+.pkp-actions{
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.switch-label{
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.switch-select{
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 13px;
+}
+.pkp-actions .btn-solid{
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+}
