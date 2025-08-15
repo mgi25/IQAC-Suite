@@ -58,7 +58,8 @@
       </div>
     </button>
 
-    <div class="profile-kpi card">
+    <!-- PROFILE (student layout, no switch) -->
+    <div class="profile-kpi">
       <div class="pkp-avatar">
         {% if user.profile and user.profile.photo %}
           <img src="{{ user.profile.photo.url }}" alt="{{ user.get_full_name|default:user.username }}">
@@ -69,25 +70,17 @@
         {% endif %}
       </div>
       <div class="pkp-body">
-        <h1 class="pkp-name">{{ user.get_full_name|default:user.username }}</h1>
-        <h2 class="pkp-sub">{{ user.email }}</h2>
-        <h3 class="pkp-meta">
+        <h1 class="pkp-name">{{ user.get_full_name|default:"Admin" }}</h1>
+        <p class="pkp-sub">{{ user.email|default:"admin@gmail.com" }}</p>
+        <div class="pkp-meta">
           <span>Role: <strong>CDL Head</strong></span>
           <span>Dept: <strong>Centre for Digital Learning</strong></span>
-        </h3>
-        <div class="pkp-stats">
-          <label class="switch-label" for="roleSwitch">Switch:</label>
-          <select id="roleSwitch" class="select">
-            <option value="" selected>Choose CDL view…</option>
-            <option value="{% url 'cdl_head_dashboard' %}">CDL Head Dashboard</option>
-            <option value="{% url 'cdl_work_dashboard' %}">CDL Team Dashboard</option>
-          </select>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Row 2: three columns; tallest card (Calendar) sets the row height -->
+  <!-- Row 2 -->
   <main class="grid-3 grid-assign">
     <section class="card eq" id="cardNotifications">
       <div class="card-header">
@@ -157,7 +150,7 @@
     </section>
   </main>
 
-  <!-- Row 3: Assignment Manager (tight under row 2) -->
+  <!-- Row 3 -->
   <section class="card" id="cardAssignAll">
     <div class="card-header">
       <h3><i class="fa-solid fa-users-gear"></i> Assignment Manager</h3>
@@ -203,10 +196,4 @@
 
 {% block scripts_extra %}
 <script src="{% static 'core/js/cdl_head_dashboard.js' %}"></script>
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const sel = document.getElementById('roleSwitch');
-    sel?.addEventListener('change', function(){ const v=this.value.trim(); if(v) location.href=v; });
-  });
-</script>
 {% endblock %}

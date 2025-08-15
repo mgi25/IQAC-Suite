@@ -1,15 +1,9 @@
-/* ===== CDL Head Dashboard (equal height to calendar, tight row gap, profile restored) ===== */
+/* ===== CDL Head Dashboard (KPIs restored; profile wider, no switch) ===== */
 
 :root{
-    --primary:#264487;
-    --ink:#0f172a;
-    --muted:#64748b;
-    --border:#e5e7eb;
-    --surf:#fff;
-    --subtle:#f8fafc;
-    --tint:#eef2ff;
-    --shadow:0 8px 24px rgba(2,6,23,.06);
-    --shadow-lg:0 12px 40px rgba(2,6,23,.1);
+    --primary:#264487; --ink:#0f172a; --muted:#64748b; --border:#e5e7eb;
+    --surf:#fff; --subtle:#f8fafc; --tint:#eef2ff;
+    --shadow:0 8px 24px rgba(2,6,23,.06); --shadow-lg:0 12px 40px rgba(2,6,23,.1);
   }
   
   /* Top bar */
@@ -17,71 +11,76 @@
   .topbar h1{margin:0;font-size:1.35rem;font-weight:700}
   .topbar-date{font-size:.9rem;color:var(--muted)}
   
-  /* KPI row + profile */
-  .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:12px}
-  .kpi-card{display:flex;background:var(--surf);border-radius:12px;box-shadow:var(--shadow);padding:14px;border:none;cursor:pointer}
-  .kpi-card:hover{box-shadow:var(--shadow-lg)}
-  .kpi-icon{flex:0 0 42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;margin-right:10px}
-  .bg-indigo{background:#6366f1}.bg-sky{background:#0ea5e9}.bg-orange{background:#f97316}.bg-emerald{background:#10b981}
-  .kpi-content{display:flex;flex-direction:column;flex:1}
-  .kpi-title{font-size:.82rem;color:var(--muted)}
-  .kpi-value{font-size:1.55rem;font-weight:700;line-height:1.2}
-  .kpi-bar{height:3px;border-radius:2px;background:var(--tint);position:relative;margin-top:6px}
-  .kpi-bar::after{content:"";position:absolute;height:3px;background:var(--primary);border-radius:2px;width:var(--pct,0%);top:0;left:0}
+/* Lock KPI widths to original and make profile much wider (override any global student css) */
+.ems-dashboard .kpi-row{
+    display:grid;
+    grid-template-columns:0.9fr 0.9fr 0.9fr 0.9fr 1.8fr !important; /* 4 KPIs unchanged, profile wider */
+    gap:16px;
+    margin-bottom:16px;
+  }
   
-  /* Profile card: isolated styling (matches teacher/student look) */
-  .profile-kpi{position:relative;overflow:hidden;background:var(--surf);border-radius:12px;box-shadow:var(--shadow);padding:14px;display:flex;align-items:center;gap:12px}
-  .profile-kpi::before{content:"";position:absolute;right:-20%;top:-50%;width:280px;height:160px;border-radius:999px;background:radial-gradient(120px 60px at 60% 40%, #e9ecff, transparent 60%);pointer-events:none}
-  .pkp-avatar{flex:0 0 56px;height:56px;border-radius:50%;overflow:hidden;background:#e9ecff;display:flex;align-items:center;justify-content:center}
+  @media (max-width:1400px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+  @media (max-width:768px){.kpi-row{grid-template-columns:1fr}}
+  
+  /* KPI cards — unchanged look/feel */
+  .kpi-card{
+    background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:12px;
+    box-shadow:var(--shadow);transition:.2s;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;
+    grid-template-areas:"icon title" "value value";gap:10px;cursor:pointer
+  }
+  .kpi-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+  .kpi-icon{grid-area:icon;width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px}
+  .kpi-content{display:contents}
+  .kpi-title{grid-area:title;margin:0 0 0 10px;font-size:14px;font-weight:700;color:var(--ink);text-align:left}
+  .kpi-value{grid-area:value;justify-self:start;display:inline-block;font-size:40px;font-weight:900;line-height:1.05;color:var(--ink);margin-top:6px;position:relative}
+  .kpi-value::after{content:"";display:block;height:2px;width:100%;margin-top:6px;background:#94a3b8;opacity:.6;border-radius:1px}
+  .kpi-bar{display:none}
+  .bg-indigo{background:#6366f1}.bg-sky{background:#0ea5e9}.bg-orange{background:#fb923c}.bg-emerald{background:#10b981}
+  
+  /* ===== PROFILE (student style; no switch; width already handled by grid) ===== */
+  .profile-kpi{
+    background:var(--surf);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow);
+    padding:12px 16px;display:grid;grid-template-columns:140px 1fr;align-items:center;gap:14px;
+  }
+  .pkp-avatar{width:100%;height:100%;border-radius:16px;background:#e5e7eb;overflow:hidden;display:flex;align-items:center;justify-content:center}
   .pkp-avatar img{width:100%;height:100%;object-fit:cover}
-  .pkp-initials{font-weight:700;font-size:1.1rem;color:#1f2937}
-  .pkp-body{flex:1;min-width:0}
-  .pkp-name{margin:0;font-size:1rem;font-weight:600}
-  .pkp-sub{margin:2px 0;color:var(--muted);font-size:.82rem}
-  .pkp-meta{display:flex;gap:10px;color:var(--muted);font-size:.75rem}
-  .switch-label{margin-right:6px}
-  .select{padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:#fff}
+  .pkp-initials{font-weight:800;font-size:28px;color:var(--primary)}
+  .pkp-body{display:flex;flex-direction:column;gap:4px;min-width:0}
+  .pkp-name{margin:0;font-size:20px;font-weight:800;color:var(--ink)}
+  .pkp-sub{margin:0;font-size:14px;font-weight:600;color:var(--muted)}
+  .pkp-meta{margin-top:6px;display:flex;gap:16px;font-size:12px;font-weight:600;color:var(--muted)}
+  .pkp-meta strong{color:var(--ink);font-weight:800}
+  
+  @media (max-width:1400px){
+    .profile-kpi{grid-template-columns:120px 1fr}
+  }
+  @media (max-width:768px){
+    .profile-kpi{display:flex;gap:12px}
+    .pkp-avatar{width:56px;height:56px;border-radius:12px}
+    .pkp-initials{font-size:18px}
+    .pkp-name{font-size:16px}
+    .pkp-sub{font-size:12px}
+  }
   
   /* Cards */
   .card{background:var(--surf);border-radius:12px;box-shadow:var(--shadow);display:flex;flex-direction:column}
   .card-header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border)}
   .card-header h3{margin:0;font-size:.98rem;font-weight:600;display:flex;align-items:center;gap:8px}
+  .header-actions{display:flex;gap:8px;align-items:center}
   
-  /* Pills */
+  /* Segments / chips */
   .seg{display:inline-flex;border-radius:6px;background:var(--tint);overflow:hidden}
   .seg-btn{border:none;background:none;padding:4px 10px;font-size:.78rem;cursor:pointer;color:var(--muted)}
   .seg-btn.active{background:#264487;color:#fff}
-  .chip-btn{font-size:.74rem;padding:3px 8px;border-radius:6px;border:1px solid var(--border);background:#fff;cursor:pointer}
+  .chip-btn{font-size:.74rem;padding:3px 8px;border-radius:6px;border:1px solid var(--border);background:#fff;cursor:pointer;text-decoration:none}
   .chip-btn.success{border-color:#10b981;color:#10b981}
   .chip-btn.warn{border-color:#f97316;color:#f97316}
   
-  /* ===== Row-2 grid: equal height to the tallest (Calendar) ===== */
-  .grid-3{
-    display:grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap:12px;
-    margin-bottom:8px;               /* tighter gap above Row-3 */
-    align-items: stretch;            /* ← makes every child match tallest one */
-  }
-  
-  /* Only the three Row-2 cards participate in stretch */
-  .grid-assign > .card.eq{
-    display:flex;
-    flex-direction:column;
-    min-height:0;                    /* allow shrinking to row height */
-  }
-  
-  /* Their headers stay natural height */
+  /* Row-2 equal height */
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:8px;align-items:stretch}
+  .grid-assign > .card.eq{display:flex;flex-direction:column;min-height:0}
   .grid-assign > .card.eq .card-header{flex:0 0 auto}
-  
-  /* Their content fills remaining height & scrolls if needed */
-  #cardNotifications .list,
-  #cardTeam .chart-wrap,
-  #cardCalendar .mini-cal{
-    flex:1 1 auto;
-    min-height:0;
-    overflow:auto;
-  }
+  #cardNotifications .list,#cardTeam .chart-wrap,#cardCalendar .mini-cal{flex:1 1 auto;min-height:0;overflow:auto}
   
   /* Lists */
   .list{display:flex;flex-direction:column}
@@ -91,7 +90,7 @@
   .list-body p{margin:0;font-size:.75rem;color:var(--muted)}
   .btn-group{display:flex;gap:6px}
   
-  /* Calendar bits (compact so row height stays sensible) */
+  /* Calendar */
   .mini-cal{padding:10px}
   .cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
   .cal-weekdays,.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);text-align:center}
@@ -104,7 +103,7 @@
   .dot.blue{background:#3b82f6}.dot.green{background:#10b981}.dot.red{background:#ef4444}
   #cardCalendar .upcoming{flex:0 0 auto}
   
-  /* ===== Row-3 (Assignment Manager) pulled up tight ===== */
+  /* Row-3 */
   #cardAssignAll{margin-top:8px}
   .table-wrap{overflow-x:auto}
   .table{width:100%;border-collapse:collapse;font-size:.85rem}
@@ -125,34 +124,18 @@
   
   /* Responsive */
   @media (max-width:1024px){
-    .kpi-row{grid-template-columns:repeat(2,1fr)}
     .grid-3{grid-template-columns:1fr 1fr}
   }
   @media (max-width:640px){
     .grid-3{grid-template-columns:1fr}
   }
-/* —— Remove the phantom band inside Row-2 grid (no layout changes) —— */
-.ems-dashboard .grid-3.grid-assign{
-    /* release any forced height from the theme */
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
   
-    /* stop track packing that creates the big space */
-    align-content: start !important;            /* was likely space-between/center */
-    place-content: start stretch !important;    /* reset shorthand completely */
-    grid-auto-rows: auto !important;            /* no tall implicit rows */
-    row-gap: 12px !important;                   /* keep your small gap */
+  /* Remove phantom spacing */
+  .ems-dashboard .grid-3.grid-assign{
+    height:auto!important;min-height:0!important;max-height:none!important;
+    align-content:start!important;place-content:start stretch!important;
+    grid-auto-rows:auto!important;row-gap:12px!important;
   }
-  
-  /* if the base theme set it on the element with the 'main' tag */
-  main.grid-3.grid-assign{
-    height: auto !important;
-    min-height: 0 !important;
-  }
-  
-  /* safety: no child is spanning to a second row */
-  .ems-dashboard .grid-assign > *{
-    grid-row: auto !important;
-  }
+  main.grid-3.grid-assign{height:auto!important;min-height:0!important}
+  .ems-dashboard .grid-assign>*{grid-row:auto!important}
   

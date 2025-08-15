@@ -1,0 +1,201 @@
+/* CDL — Member Dashboard (self-contained)
+   Scope everything under .cdl-member so nothing leaks to other pages.
+   No dependency on head CSS. Works even with Bootstrap present. */
+
+   :root{
+    --brand:#264487;
+    --ink:#0f172a;
+    --muted:#64748b;
+    --surf:#ffffff;
+    --subtle:#f8fafc;
+    --border:#e5e7eb;
+    --shadow:0 8px 24px rgba(2,6,23,.06);
+    --shadow-lg:0 16px 48px rgba(2,6,23,.12);
+  }
+  
+  .cdl-member{
+    max-width:1280px;
+    margin:0 auto;
+    padding:16px 20px;
+    font-family:Inter, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    color:var(--ink);
+  }
+  
+  /* ---------- Top bar ---------- */
+  .cdl-member .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    margin:6px 0 16px;
+  }
+  #cdl-member .topbar h1{margin:0; font-size:22px; font-weight:800; letter-spacing:.2px;}
+  #cdl-member .topbar-date{display:block; margin-top:4px; color:var(--muted); font-size:12px;}
+  #cdl-member .header-actions{display:flex; gap:8px; align-items:center;}
+  .cdl-member .chip-btn{
+    display:inline-flex; align-items:center; gap:8px;
+    border:1px solid var(--border); background:#fff; color:var(--ink);
+    padding:8px 12px; border-radius:10px; font-size:12px; text-decoration:none;
+    box-shadow:var(--shadow);
+  }
+  .cdl-member .chip-btn i{font-size:12px;}
+  .cdl-member .chip-btn:hover{border-color:var(--brand); color:var(--brand);}
+  
+  /* ---------- KPI row + profile ---------- */
+  .cdl-member .kpi-row{
+    display:grid !important; gap:16px; margin-bottom:16px;
+    grid-template-columns:repeat(4,minmax(0,1fr)) 1.6fr;
+  }
+  .cdl-member .kpi-card{
+    appearance:none; border:0; background:var(--surf);
+    border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow);
+    padding:14px; display:flex; gap:12px; width:100%; text-align:left; cursor:pointer;
+    transition:transform .06s ease;
+  }
+  .cdl-member .kpi-card:active{transform:scale(.98);}
+  .cdl-member .kpi-icon{
+    width:40px; height:40px; border-radius:12px; color:#fff; display:grid; place-items:center;
+    box-shadow:var(--shadow);
+  }
+  .cdl-member .kpi-icon i{font-size:18px;}
+  .cdl-member .bg-indigo{background:#5b61f6;}
+  .cdl-member .bg-sky{background:#38bdf8;}
+  .cdl-member .bg-orange{background:#f59e0b;}
+  .cdl-member .bg-emerald{background:#10b981;}
+  .cdl-member .kpi-content{display:grid; align-content:start; gap:6px; min-width:0;}
+  .cdl-member .kpi-title{font-size:12px; color:var(--muted); font-weight:600;}
+  .cdl-member .kpi-value{font-size:28px; font-weight:800; line-height:1;}
+  .cdl-member .kpi-bar{
+    display:block; height:3px; width:64px; background:var(--brand); border-radius:999px; opacity:.95;
+  }
+  
+  /* Profile KPI (rightmost) */
+  .cdl-member .profile-kpi{
+    background:var(--surf); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow);
+    padding:14px; display:flex; gap:12px; align-items:flex-start;
+  }
+  .cdl-member .pkp-avatar{
+    width:48px; height:48px; border-radius:12px; overflow:hidden; background:#e9eefc;
+    display:grid; place-items:center; color:var(--brand); font-weight:800;
+  }
+  .cdl-member .pkp-avatar img{width:100%; height:100%; object-fit:cover;}
+  .cdl-member .pkp-initials{font-size:18px;}
+  .cdl-member .pkp-body{display:grid; gap:6px;}
+  .cdl-member .pkp-name{margin:0; font-size:15px; font-weight:800;}
+  .cdl-member .pkp-sub{margin:0; color:var(--muted); font-size:12px;}
+  .cdl-member .pkp-meta{display:flex; gap:16px; color:var(--muted); font-size:12px;}
+  .cdl-member .pkp-meta strong{color:var(--ink);}
+  
+  /* ---------- Row of cards (Inbox / Progress / Calendar) ---------- */
+  .cdl-member .grid-3{
+    display:grid !important; gap:16px; margin-bottom:16px;
+    grid-template-columns:1.15fr 1fr 1fr;
+  }
+  .cdl-member .card{
+    background:var(--surf); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .cdl-member .card.eq{min-height:280px; display:flex; flex-direction:column;}
+  .cdl-member .card-header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 14px; border-bottom:1px solid var(--border);
+  }
+  .cdl-member .card-header h3{margin:0; font-size:15px; display:flex; gap:8px; align-items:center;}
+  .cdl-member .card .header-actions{display:flex; gap:8px;}
+  
+  /* segmented control */
+  .cdl-member .seg{display:flex; gap:6px; flex-wrap:wrap;}
+  .cdl-member .seg-btn{
+    border:1px solid var(--border); background:#fff; border-radius:999px; padding:6px 10px; font-size:12px; cursor:pointer;
+  }
+  .cdl-member .seg-btn.active{border-color:var(--brand); color:var(--brand); font-weight:600;}
+  
+  /* list (Inbox) */
+  .cdl-member .list{padding:12px 14px; display:grid; gap:10px; overflow:auto;}
+  .cdl-member .list-item{
+    display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center;
+    border:1px solid var(--border); border-radius:12px; padding:10px;
+  }
+  .cdl-member .list-item .bullet{
+    width:32px; height:32px; border-radius:10px; display:grid; place-items:center; background:var(--subtle); color:var(--brand);
+  }
+  .cdl-member .list-body h4{margin:0; font-size:14px; font-weight:700;}
+  .cdl-member .list-body p{margin:2px 0 0; font-size:12px; color:var(--muted);}
+  .cdl-member .btn-group{display:flex; gap:8px;}
+  .cdl-member .chip-btn.success{border-color:#10b981; color:#047857;}
+  .cdl-member .chip-btn.warn{border-color:#ef4444; color:#991b1b;}
+  
+  /* Progress chart */
+  .cdl-member .chart-wrap{padding:8px 12px; flex:1;}
+  
+  /* Mini calendar */
+  .cdl-member .mini-cal{padding:10px 12px;}
+  .cdl-member .cal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;}
+  .cdl-member .cal-nav{
+    border:1px solid var(--border); background:#fff; border-radius:10px; width:28px; height:28px; display:grid; place-items:center; cursor:pointer;
+  }
+  .cdl-member .cal-weekdays{display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-bottom:6px; color:var(--muted); font-size:11px; text-align:center;}
+  .cdl-member .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px;}
+  .cdl-member .cal-grid .day{
+    border:1px solid var(--border); border-radius:10px; min-height:70px; padding:6px; display:flex; flex-direction:column; gap:6px; cursor:pointer; background:#fff;
+  }
+  .cdl-member .cal-grid .day.muted{background:#fafafa; color:#94a3b8;}
+  .cdl-member .day .num{font-size:11px; color:var(--muted);}
+  .cdl-member .day .dots{display:flex; gap:4px; flex-wrap:wrap;}
+  .cdl-member .dot{width:6px; height:6px; border-radius:999px; display:inline-block; border:1px solid var(--border);}
+  .cdl-member .dot.blue{background:#2563eb; border-color:#2563eb;}
+  .cdl-member .dot.green{background:#10b981; border-color:#10b981;}
+  .cdl-member .cal-legend{padding:6px 12px; color:var(--muted); font-size:12px; display:flex; gap:12px; align-items:center;}
+  .cdl-member .upcoming{padding:0 12px 12px; display:grid; gap:8px;}
+  .cdl-member .u-item{border:1px solid var(--border); border-radius:10px; padding:8px; font-size:13px;}
+  .cdl-member .empty{color:var(--muted); font-size:13px; padding:8px 12px;}
+  
+  /* ---------- Workboard table ---------- */
+  .cdl-member .table-wrap{overflow:auto;}
+  .cdl-member table.table{width:100%; border-collapse:separate; border-spacing:0; font-size:13px;}
+  .cdl-member table.table.compact thead th{
+    font-size:12px; color:var(--muted); text-align:left; padding:10px 10px; background:#f8fafc; border-bottom:1px solid var(--border);
+  }
+  .cdl-member table.table.compact tbody td{
+    padding:12px 10px; border-bottom:1px solid var(--border); background:#fff;
+  }
+  .cdl-member table.table.compact tbody tr:hover{background:#fafafa;}
+  .cdl-member .ta-right{text-align:right;}
+  
+  .cdl-member .table-actions{
+    display:flex; gap:8px; justify-content:flex-start; padding:10px 12px; border-top:1px solid var(--border);
+  }
+  
+  /* generic buttons & chips for table */
+  .cdl-member .btn{
+    border:1px solid var(--border); background:#fff; color:var(--ink);
+    padding:8px 10px; border-radius:10px; font-size:12px; cursor:pointer;
+  }
+  .cdl-member .btn.xs{padding:6px 8px; font-size:12px; border-radius:8px;}
+  .cdl-member .btn.success{border-color:#10b981; color:#047857;}
+  .cdl-member .btn.warn{border-color:#ef4444; color:#991b1b;}
+  .cdl-member .btn:disabled{opacity:.6; cursor:not-allowed;}
+  
+  .cdl-member .chip{
+    display:inline-flex; align-items:center; gap:6px;
+    border:1px solid var(--border); border-radius:999px; padding:4px 8px; font-size:11px; background:#fff;
+  }
+  .cdl-member .chip.info{border-color:#3b82f6; color:#1d4ed8;}
+  .cdl-member .chip.warn{border-color:#f59e0b; color:#b45309;}
+  .cdl-member .chip.gray{border-color:#94a3b8; color:#475569;}
+  .cdl-member .chip.danger{border-color:#ef4444; color:#991b1b;}
+  .cdl-member .chip.success{border-color:#10b981; color:#047857;}
+  .cdl-member .chip.amber{border-color:#f59e0b; color:#b45309;}
+  
+  /* header filter inputs near table */
+  .cdl-member .select, .cdl-member .input{
+    border:1px solid var(--border); background:#fff; border-radius:10px; padding:8px 10px; font-size:12px;
+  }
+  
+  /* ---------- Utilities ---------- */
+  .cdl-member .muted{color:var(--muted);}
+  .cdl-member .under_review{color:var(--brand);}
+  
+  /* ---------- Responsive ---------- */
+  @media (max-width:1100px){
+    .cdl-member .kpi-row{grid-template-columns:repeat(2,1fr);}
+    .cdl-member .grid-3{grid-template-columns:1fr;}
+  }
+  
