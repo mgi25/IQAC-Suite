@@ -57,8 +57,13 @@
                 <input type="text" id="students-class-name" name="class_name" placeholder="BSc-A" required>
               </div>
               <div class="form-group">
-                <label for="students-academic-year">Academic Year</label>
-                <input type="text" id="students-academic-year" name="academic_year" placeholder="2025-2026" required>
+                <label for="students-start-year">Academic Year</label>
+                <div class="year-selects">
+                  <select id="students-start-year" required></select>
+                  <span class="year-separator">-</span>
+                  <select id="students-end-year" required></select>
+                </div>
+                <input type="hidden" id="students-academic-year" name="academic_year" required>
               </div>
             </div>
             
@@ -118,8 +123,13 @@
             
             <div class="form-row">
               <div class="form-group">
-                <label for="faculty-academic-year">Academic Year</label>
-                <input type="text" id="faculty-academic-year" name="academic_year" placeholder="2025-2026" required>
+                <label for="faculty-start-year">Academic Year</label>
+                <div class="year-selects">
+                  <select id="faculty-start-year" required></select>
+                  <span class="year-separator">-</span>
+                  <select id="faculty-end-year" required></select>
+                </div>
+                <input type="hidden" id="faculty-academic-year" name="academic_year" required>
               </div>
             </div>
             
