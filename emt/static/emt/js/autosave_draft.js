@@ -176,15 +176,30 @@ window.AutosaveManager = (function() {
 // Simple autosave helper used by AI generation
 async function autosave() {
     try {
+        const form = document.querySelector('form');
+        const formData = new FormData(form);
+        const payload = {};
+        formData.forEach((value, key) => {
+            if (payload[key] !== undefined) {
+                if (!Array.isArray(payload[key])) {
+                    payload[key] = [payload[key]];
+                }
+                payload[key].push(value);
+            } else {
+                payload[key] = value;
+            }
+        });
         const res = await fetch('/suite/autosave-proposal/', {
             method: 'POST',
-            body: new FormData(document.querySelector('form'))
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': window.AUTOSAVE_CSRF,
+            },
+            body: JSON.stringify(payload),
         });
         if (!res.ok) {
             console.warn('autosave failed', res.status);
-            return;
         }
-        // const data = await res.json(); // optional
     } catch (e) {
         console.warn('autosave exception', e);
     }

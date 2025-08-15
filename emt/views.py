@@ -353,7 +353,13 @@ def autosave_proposal(request):
     if request.method != "POST":
         return JsonResponse({"error": "Invalid request"}, status=400)
 
-    data = json.loads(request.body.decode("utf-8"))
+    try:
+        raw = request.body.decode("utf-8")
+        data = json.loads(raw) if raw else {}
+    except json.JSONDecodeError:
+        logger.debug("autosave_proposal invalid json: %s", raw)
+        return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
+
     logger.debug("autosave_proposal payload: %s", data)
 
     # Replace department logic with generic organization
