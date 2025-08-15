@@ -2698,3 +2698,14 @@ textarea {
     margin: 0;
     padding-left: 1.25rem;
 }
+
+.ai-suggestion-card .apply-ai-suggestion {
+    margin-top: 0.5rem;
+    background: var(--primary-blue);
+    color: #fff;
+    border: none;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
