@@ -1149,13 +1149,14 @@ $(document).ready(function() {
 function getWhyThisEventForm() {
     return `
         <div class="form-grid">
-            <div class="form-row full-width" style="text-align:right;">
-                <button type="button" id="btn-generate-why" class="btn">Generate with AI</button>
+            <div class="form-row full-width">
+                <div id="ai-suggestion-status" class="ai-loading">Generating AI suggestions...</div>
             </div>
             <div class="form-row full-width">
                 <div class="input-group">
                     <label for="need-analysis-modern">Need Analysis - Why is this event necessary? *</label>
                     <textarea id="need-analysis-modern" rows="4" required placeholder="Explain why this event is necessary, what gap it fills, and its relevance to the target audience..."></textarea>
+                    <div class="ai-suggestion-card" id="ai-need-analysis"></div>
                     <div class="help-text">Provide a detailed explanation of why this event is important.</div>
                 </div>
             </div>
@@ -1164,6 +1165,7 @@ function getWhyThisEventForm() {
                 <div class="input-group">
                     <label for="objectives-modern">Objectives - What do you aim to achieve? *</label>
                     <textarea id="objectives-modern" rows="4" required placeholder="• Objective 1: ...&#10;• Objective 2: ...&#10;• Objective 3: ..."></textarea>
+                    <div class="ai-suggestion-card" id="ai-objectives"></div>
                     <div class="help-text">List 3-5 clear, measurable objectives.</div>
                 </div>
             </div>
@@ -1172,10 +1174,11 @@ function getWhyThisEventForm() {
                 <div class="input-group">
                     <label for="outcomes-modern">Expected Learning Outcomes - What results do you expect? *</label>
                     <textarea id="outcomes-modern" rows="4" required placeholder="What specific results, skills, or benefits will participants gain?"></textarea>
+                    <div class="ai-suggestion-card" id="ai-learning-outcomes"></div>
                     <div class="help-text">Describe the tangible benefits for participants.</div>
                 </div>
             </div>
-            
+
             <div class="form-row full-width">
                 <div class="save-section-container">
                     <button type="button" class="btn-save-section">Save & Continue</button>
@@ -1836,42 +1839,8 @@ function getWhyThisEventForm() {
     }
 
     function setupWhyThisEventAI() {
-        const cfg = [
-            {btn: '#btn-ai-need', field: '#need-analysis-modern', url: window.AI_NEED_URL},
-            {btn: '#btn-ai-objectives', field: '#objectives-modern', url: window.AI_OBJECTIVES_URL},
-            {btn: '#btn-ai-outcomes', field: '#outcomes-modern', url: window.AI_OUTCOMES_URL}
-        ];
-
-        cfg.forEach(({btn, field, url}) => {
-            $(btn).off('click').on('click', async function() {
-                const textarea = $(field);
-                const payload = collectBasicInfo();
-                payload.context = textarea.val();
-                const btnEl = $(this);
-                const original = btnEl.text();
-                btnEl.prop('disabled', true).text('Generating...');
-                try {
-                    const fd = new FormData();
-                    Object.entries(payload).forEach(([k, v]) => fd.append(k, v || ''));
-                    const resp = await fetch(url, {
-                        method: 'POST',
-                        headers: {'X-CSRFToken': csrftoken},
-                        body: fd
-                    });
-                    const data = await resp.json();
-                    if (data.ok) {
-                        textarea.val(data.text);
-                        textarea.trigger('input');
-                    } else {
-                        showNotification(data.error || 'Generation failed', 'error');
-                    }
-                } catch (err) {
-                    showNotification('AI request failed', 'error');
-                } finally {
-                    btnEl.prop('disabled', false).text(original);
-                }
-            });
-        });
+        // Automatically generate AI suggestions when the section loads
+        generateWhyEvent();
     }
 
     // ===== STATUS & PROGRESS FUNCTIONS - PRESERVED =====
@@ -2566,8 +2535,8 @@ function applyText(field, text){
 }
 
 async function generateWhyEvent(){
-  const btn = document.querySelector('#btn-generate-why') || this;
-  const orig = btn?.innerHTML; if (btn) btn.innerHTML='Generating…';
+  const status = document.querySelector('#ai-suggestion-status');
+  if(status) status.style.display = 'block';
   try{
     const facts = collectFactsFromForm();
     const body = new URLSearchParams(Object.entries(facts));
@@ -2581,11 +2550,20 @@ async function generateWhyEvent(){
     applyText('need_analysis', data.need_analysis || '');
     applyBullets('objectives', data.objectives || []);
     applyBullets('learning_outcomes', data.learning_outcomes || []);
+    showCard('need-analysis', data.need_analysis || '');
+    showCard('objectives', data.objectives || []);
+    showCard('learning-outcomes', data.learning_outcomes || []);
     if (typeof window.autosave === 'function') window.autosave();
   }catch(e){ console.error(e); alert('Generation failed'); }
-  finally{ if(btn) btn.innerHTML = orig || 'Generate with AI'; }
+  finally{ if(status) status.style.display = 'none'; }
 }
-document.addEventListener('DOMContentLoaded',()=>{
-  const b = document.querySelector('#btn-generate-why');
-  if (b && !b._wired){ b.addEventListener('click', generateWhyEvent); b._wired = true; }
-});
+
+function showCard(field, content){
+  const card = document.querySelector(`#ai-${field}`);
+  if (!card) return;
+  if (Array.isArray(content)){
+    card.innerHTML = '<ul>' + content.map(i=>`<li>${i}</li>`).join('') + '</ul>';
+  } else {
+    card.textContent = content;
+  }
+}
