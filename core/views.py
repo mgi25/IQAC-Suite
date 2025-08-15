@@ -1512,6 +1512,15 @@ def admin_pso_po_management(request):
     }
     return render(request, "core/admin_pso_po_management.html", context)
 
+@user_passes_test(lambda u: u.is_superuser)
+def admin_outcomes_for_org(request, org_id: int):
+    """Dedicated page to manage POs/PSOs for a single organization.
+    The page loads outcomes via existing AJAX endpoints and reuses the
+    admin_pso_po_management.js logic for inline add/edit/delete.
+    """
+    org = get_object_or_404(Organization, id=org_id)
+    return render(request, "core/admin_outcomes_for_org.html", {"organization": org})
+
 @popso_program_access_required
 @require_http_methods(["GET", "POST", "PUT", "DELETE"])
 def manage_program_outcomes(request, program_id=None):
