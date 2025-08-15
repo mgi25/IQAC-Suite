@@ -2004,10 +2004,10 @@ function getWhyThisEventForm() {
     }
 
     function updateSubmitButton() {
-        const completedSections = Object.values(sectionProgress).filter(status => status === true).length;
-        const totalSections = Object.keys(sectionProgress).length;
-        
-        if (completedSections === totalSections) {
+        const requiredSections = Object.keys(sectionProgress).filter(section => section !== 'income');
+        const completedSections = requiredSections.filter(section => sectionProgress[section] === true).length;
+
+        if (completedSections === requiredSections.length) {
             $('#submit-proposal-btn').prop('disabled', false);
             $('.submit-section').addClass('ready');
         }
@@ -2287,10 +2287,11 @@ function getWhyThisEventForm() {
 
     // ===== PROGRESS BAR FUNCTION - PRESERVED =====
     function updateProgressBar() {
-        const completedSections = Object.values(sectionProgress).filter(status => status === true).length;
-        const totalSections = Object.keys(sectionProgress).length;
+        const sections = Object.keys(sectionProgress).filter(section => section !== 'income');
+        const completedSections = sections.filter(section => sectionProgress[section] === true).length;
+        const totalSections = sections.length;
         const progressPercent = Math.round((completedSections / totalSections) * 100);
-        
+
         // Update any progress indicators in new UI
         console.log(`Progress: ${progressPercent}% (${completedSections}/${totalSections} sections complete)`);
         
