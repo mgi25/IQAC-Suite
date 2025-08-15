@@ -1,4 +1,4 @@
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.contrib.auth.models import User
 from django.contrib.auth.signals import user_logged_in, user_logged_out
@@ -62,6 +62,29 @@ def assign_role_on_login(sender, user, request, **kwargs):
 
     if update_fields:
         profile.save(update_fields=update_fields)
+
+
+@receiver(post_save, sender=RoleAssignment)
+def sync_profile_role_on_assignment_save(sender, instance, **kwargs):
+    """Keep Profile.role in sync when RoleAssignment is created or updated."""
+    role_name = instance.role.name if instance.role else "student"
+    profile, _ = Profile.objects.get_or_create(user=instance.user)
+    if profile.role != role_name:
+        profile.role = role_name
+        profile.save(update_fields=["role"])
+
+
+@receiver(post_delete, sender=RoleAssignment)
+def sync_profile_role_on_assignment_delete(sender, instance, **kwargs):
+    """Reset Profile.role when a RoleAssignment is removed."""
+    profile = Profile.objects.filter(user=instance.user).first()
+    if not profile:
+        return
+    ra = RoleAssignment.objects.filter(user=instance.user).select_related("role").first()
+    role_name = ra.role.name if ra and ra.role else "student"
+    if profile.role != role_name:
+        profile.role = role_name
+        profile.save(update_fields=["role"])
 
 @receiver(user_logged_in)
 def log_user_login(sender, request, user, **kwargs):
