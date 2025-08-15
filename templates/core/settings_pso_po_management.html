@@ -38,12 +38,12 @@
 }
 
 .org-type-badge {
-  background: #3b82f6;
+  background: #1e60b1;
   color: white;
 }
 
 .access-badge {
-  background: #059669;
+  background: #1e60b1;
   color: white;
 }
 
@@ -86,13 +86,13 @@
 }
 
 .po-box {
-  background: #fef3c7;
-  border: 2px solid #f59e0b;
+  background: #eef4fc;
+  border: 2px solid #1e60b1;
 }
 
 .pso-box {
-  background: #ddd6fe;
-  border: 2px solid #8b5cf6;
+  background: #eef4fc;
+  border: 2px solid #1e60b1;
 }
 
 .count-number {
@@ -140,7 +140,7 @@
 }
 
 .add-btn {
-  background: #3b82f6;
+  background: #1e60b1;
   color: white;
   border: none;
   padding: 0.5rem 1rem;
@@ -151,7 +151,7 @@
 }
 
 .add-btn:hover {
-  background: #2563eb;
+  background: #184e8f;
 }
 
 .outcomes-list {
@@ -183,7 +183,7 @@
 }
 
 .edit-btn-inline {
-  background: #059669;
+  background: #1e60b1;
   color: white;
   border: none;
   padding: 0.25rem 0.75rem;
@@ -194,7 +194,7 @@
 }
 
 .edit-btn-inline:hover {
-  background: #047857;
+  background: #184e8f;
 }
 
 .empty-state {
@@ -220,20 +220,11 @@
   color: #9ca3af;
 }
 
-.btn-delete {
-  background: #dc2626;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  cursor: pointer;
-  margin-left: 0.5rem;
-}
-
-.btn-delete:hover {
-  background: #b91c1c;
-}
+/* Delete buttons are styled via .btn-inline-delete in admin_pso_po_management.css to keep blue/white theme */
+/* Add-row adjustments */
+.outcome-item.add-row { gap: 0.5rem; }
+.outcome-item.add-row .inline-editor { flex: 1; }
+.outcome-actions { display: flex; gap: 0.5rem; }
 </style>
 {% endblock %}
 
@@ -298,14 +289,14 @@
             <div class="outcomes-panel po-panel">
               <div class="panel-header">
                 <h3>POs</h3>
-                <button class="add-btn" onclick="showAddForm('PO', {{ program.id }})">add</button>
+                <button class="add-btn" data-action="add-outcome" data-type="PO" data-program-id="{{ program.id }}">add</button>
               </div>
               <div class="outcomes-list" id="pos-list-{{ program.id }}">
                 {% if program.pos.count > 0 %}
                   {% for po in program.pos.all %}
                   <div class="outcome-item" data-outcome-id="{{ po.id }}">
                     <div class="outcome-text">{{ po.description }}</div>
-                    <button class="edit-btn-inline" onclick="editOutcomeInline({{ po.id }}, 'PO', '{{ po.description|escapejs }}')">edit</button>
+                    <button class="edit-btn-inline" data-action="edit-outcome" data-outcome-id="{{ po.id }}" data-outcome-type="PO">edit</button>
                   </div>
                   {% endfor %}
                 {% else %}
@@ -320,14 +311,14 @@
             <div class="outcomes-panel pso-panel">
               <div class="panel-header">
                 <h3>PSOs</h3>
-                <button class="add-btn" onclick="showAddForm('PSO', {{ program.id }})">add</button>
+                <button class="add-btn" data-action="add-outcome" data-type="PSO" data-program-id="{{ program.id }}">add</button>
               </div>
               <div class="outcomes-list" id="psos-list-{{ program.id }}">
                 {% if program.psos.count > 0 %}
                   {% for pso in program.psos.all %}
                   <div class="outcome-item" data-outcome-id="{{ pso.id }}">
                     <div class="outcome-text">{{ pso.description }}</div>
-                    <button class="edit-btn-inline" onclick="editOutcomeInline({{ pso.id }}, 'PSO', '{{ pso.description|escapejs }}')">edit</button>
+                    <button class="edit-btn-inline" data-action="edit-outcome" data-outcome-id="{{ pso.id }}" data-outcome-type="PSO">edit</button>
                   </div>
                   {% endfor %}
                 {% else %}
@@ -347,7 +338,7 @@
           <p>You can create a program for {{ org_data.organization.name }} to start adding POs and PSOs.</p>
           <div style="margin-top: 1rem;">
             <input type="text" id="program-name-{{ org_data.organization.id }}" placeholder="Program name (optional)" style="padding: 0.5rem 0.75rem; border: 1px solid #e5e7eb; border-radius: 6px; width: 280px;">
-            <button class="add-btn" style="margin-left: 0.5rem;" onclick="createProgramForOrg({{ org_data.organization.id }})">Create Program</button>
+            <button class="add-btn" style="margin-left: 0.5rem;" data-action="create-program" data-org-id="{{ org_data.organization.id }}">Create Program</button>
           </div>
           <small style="display:block; color:#9ca3af; margin-top:0.5rem;">If left blank, a default program name will be used.</small>
         </div>
@@ -364,46 +355,7 @@
   </div>
 </div>
 
-<!-- Simple Add Form Modal -->
-<div id="addOutcomeModal" class="modal" style="display:none;">
-  <div class="modal-content small">
-    <div class="modal-header">
-      <h3>Add <span id="addOutcomeTypeLabel"></span></h3>
-      <button class="close" onclick="closeAddForm()">&times;</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label for="newOutcomeInput">Outcome Description</label>
-        <textarea id="newOutcomeInput" rows="3" placeholder="Enter outcome description..."></textarea>
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="btn-cancel" onclick="closeAddForm()">Cancel</button>
-        <button type="button" class="btn-save" onclick="saveNewOutcome()">Add</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Simple Edit Form Modal -->
-<div id="editOutcomeModal" class="modal" style="display:none;">
-  <div class="modal-content small">
-    <div class="modal-header">
-      <h3>Edit <span id="editOutcomeTypeLabel"></span></h3>
-      <button class="close" onclick="closeEditForm()">&times;</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label for="editOutcomeInput">Outcome Description</label>
-        <textarea id="editOutcomeInput" rows="3" placeholder="Enter outcome description..."></textarea>
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="btn-cancel" onclick="closeEditForm()">Cancel</button>
-        <button type="button" class="btn-save" onclick="updateOutcome()">Update</button>
-        <button type="button" class="btn-delete" onclick="deleteOutcome()">Delete</button>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- No modals: fully inline UX -->
 {% endblock %}
 
 {% block scripts_extra %}
@@ -413,179 +365,223 @@ let currentlyEditing = null;
 
 window.IS_SETTINGS_PSO_PAGE = true;
 
-// Initialize modals and setup
-document.addEventListener('DOMContentLoaded', function() {
-    initializeModals();
+// Delegated events for add/edit/create actions to avoid inline onclick
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  const action = btn.dataset.action;
+  if (!action) return;
+
+  if (action === 'add-outcome') {
+    const type = btn.dataset.type; // 'PO' | 'PSO'
+    const programId = Number(btn.dataset.programId);
+    toggleInlineAdd(type, programId);
+  }
+
+  if (action === 'edit-outcome') {
+    const outcomeId = Number(btn.dataset.outcomeId);
+    const outcomeType = btn.dataset.outcomeType;
+    const item = btn.closest('.outcome-item');
+    const desc = item?.querySelector('.outcome-text')?.textContent || '';
+    editOutcomeInline(outcomeId, outcomeType, desc);
+  }
+
+  if (action === 'create-program') {
+    const orgId = Number(btn.dataset.orgId);
+    createProgramForOrg(orgId);
+  }
 });
 
-function initializeModals() {
-    // Initialize Bootstrap modals if available
-    if (typeof bootstrap !== 'undefined') {
-        const modalElements = document.querySelectorAll('.modal');
-        modalElements.forEach(modalEl => {
-            new bootstrap.Modal(modalEl);
-        });
-    }
-}
+// Inline Add: toggles an add row with textarea + Save/Cancel
+function toggleInlineAdd(outcomeType, programId) {
+  const listId = outcomeType === 'PO' ? `pos-list-${programId}` : `psos-list-${programId}`;
+  const list = document.getElementById(listId);
+  if (!list) return;
 
-// Add new PO/PSO functions
-function showAddForm(outcomeType, programId) {
-    const modal = document.querySelector('#addOutcomeModal');
-    if (modal) {
-        // Set modal title and form data
-        modal.querySelector('#addOutcomeTypeLabel').textContent = outcomeType === 'PO' ? 'Program Outcome' : 'Program Specific Outcome';
-        modal.dataset.outcomeType = outcomeType;
-        modal.dataset.programId = programId;
-        
-        // Clear form
-        modal.querySelector('#newOutcomeInput').value = '';
-        
-        modal.style.display = 'block';
-    }
+  // Remove existing add row if present (toggle behavior)
+  const existing = list.querySelector('.outcome-item.add-row');
+  if (existing) { existing.remove(); return; }
+
+  // Remove empty state if visible
+  const empty = list.querySelector('.empty-state');
+  if (empty) empty.remove();
+
+  const row = document.createElement('div');
+  row.className = 'outcome-item add-row';
+
+  const ta = document.createElement('textarea');
+  ta.className = 'inline-editor';
+  ta.placeholder = `Enter ${outcomeType} description...`;
+  ta.rows = 3;
+
+  const actions = document.createElement('div');
+  actions.className = 'outcome-actions';
+  const save = document.createElement('button'); save.className = 'btn-inline-save'; save.textContent = 'Save';
+  const cancel = document.createElement('button'); cancel.className = 'btn-inline-cancel'; cancel.textContent = 'Cancel';
+  actions.appendChild(save); actions.appendChild(cancel);
+
+  const error = document.createElement('div');
+  error.className = 'inline-error';
+  error.style.display = 'none';
+
+  row.appendChild(ta);
+  row.appendChild(actions);
+  row.appendChild(error);
+  list.prepend(row);
+  ta.focus();
+
+  cancel.addEventListener('click', () => row.remove());
+  ta.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ e.preventDefault(); row.remove(); }});
+
+  save.addEventListener('click', () => {
+    const description = (ta.value || '').trim();
+    if (!description) { error.textContent = "Description can't be empty"; error.style.display='block'; return; }
+    fetch("{% url 'manage_program_outcomes' %}", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' },
+      body: JSON.stringify({ program_id: Number(programId), type: outcomeType, description })
+    }).then(r=>r.json()).then(data=>{
+      if (data.success) {
+        // Build a standard outcome item
+        const item = document.createElement('div');
+        item.className = 'outcome-item';
+        item.dataset.outcomeId = data.outcome.id;
+        const text = document.createElement('div'); text.className = 'outcome-text'; text.textContent = data.outcome.description;
+  const edit = document.createElement('button');
+  edit.className = 'edit-btn-inline';
+  edit.textContent = 'edit';
+  edit.dataset.action = 'edit-outcome';
+  edit.dataset.outcomeId = data.outcome.id;
+  edit.dataset.outcomeType = outcomeType;
+        item.appendChild(text); item.appendChild(edit);
+        row.replaceWith(item);
+
+        // Update count
+        const programContainer = list.closest('.program-outcomes-container');
+        const summary = programContainer?.querySelector(outcomeType === 'PO' ? '.po-box .count-number' : '.pso-box .count-number');
+        if (summary) { summary.textContent = (parseInt(summary.textContent,10)||0) + 1; }
+        showToast(`${outcomeType} added`, 'success');
+      } else {
+        error.textContent = data.error || 'Add failed';
+        error.style.display = 'block';
+      }
+    }).catch(()=>{ error.textContent='Network error'; error.style.display='block'; });
+  });
 }
 
 function editOutcomeInline(outcomeId, outcomeType, description) {
-    const modal = document.querySelector('#editOutcomeModal');
-    if (modal) {
-        // Set modal title and form data
-        modal.querySelector('#editOutcomeTypeLabel').textContent = outcomeType === 'PO' ? 'Program Outcome' : 'Program Specific Outcome';
-        modal.dataset.outcomeId = outcomeId;
-        modal.dataset.outcomeType = outcomeType;
-        
-        // Fill form with current data
-        modal.querySelector('#editOutcomeInput').value = description;
-        
-        modal.style.display = 'block';
-    }
-}
+  const item = document.querySelector(`.outcome-item[data-outcome-id="${outcomeId}"]`);
+  if (!item || item.classList.contains('editing')) return;
+  item.classList.add('editing');
 
-function closeAddForm() {
-    const modal = document.querySelector('#addOutcomeModal');
-    if (modal) {
-        modal.style.display = 'none';
-    }
-}
+  const textEl = item.querySelector('.outcome-text');
+  const original = textEl ? textEl.textContent : description || '';
 
-function closeEditForm() {
-    const modal = document.querySelector('#editOutcomeModal');
-    if (modal) {
-        modal.style.display = 'none';
-    }
-}
+  const ta = document.createElement('textarea');
+  ta.className = 'inline-editor';
+  ta.value = original;
+  ta.rows = Math.min(6, Math.max(2, Math.ceil(original.length/80)));
+  textEl.replaceWith(ta);
+  ta.focus();
 
-function saveNewOutcome() {
-  const modal = document.querySelector('#addOutcomeModal');
-  const description = modal.querySelector('#newOutcomeInput').value.trim();
-  const outcomeType = modal.dataset.outcomeType; // 'PO' | 'PSO'
-  const programId = Number(modal.dataset.programId);
+  const actions = document.createElement('div');
+  actions.className = 'outcome-actions';
+  const save = document.createElement('button'); save.className = 'btn-inline-save'; save.textContent = 'Save';
+  const cancel = document.createElement('button'); cancel.className = 'btn-inline-cancel'; cancel.textContent = 'Cancel';
+  const del = document.createElement('button'); del.className = 'btn-inline-delete'; del.textContent = 'Delete';
 
-  if (!description) {
-    alert('Please enter a description');
-    return;
-  }
+  // Replace existing action (the small edit button) with full actions
+  const oldActionsBtn = item.querySelector('.edit-btn-inline');
+  if (oldActionsBtn) oldActionsBtn.replaceWith(actions);
+  actions.appendChild(save); actions.appendChild(cancel); actions.appendChild(del);
 
-  fetch("{% url 'manage_program_outcomes' %}", {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': getCookie('csrftoken'),
-      'X-Requested-With': 'XMLHttpRequest'
-    },
-    body: JSON.stringify({
-      program_id: programId,
-      type: outcomeType,
-      description: description
-    })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      closeAddForm();
-      location.reload();
-    } else {
-      alert(data.error || data.message || 'Error adding outcome');
-    }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    alert('Error adding outcome');
+  const error = document.createElement('div');
+  error.className = 'inline-error';
+  error.style.display = 'none';
+  item.appendChild(error);
+
+  const programContainer = item.closest('.program-outcomes-container');
+  const programId = Number(programContainer?.dataset.programId);
+
+  const exit = () => {
+    const restored = document.createElement('div');
+    restored.className = 'outcome-text';
+    restored.textContent = original;
+    ta.replaceWith(restored);
+  const editBtn = document.createElement('button');
+  editBtn.className = 'edit-btn-inline';
+  editBtn.textContent = 'edit';
+  editBtn.dataset.action = 'edit-outcome';
+  editBtn.dataset.outcomeId = outcomeId;
+  editBtn.dataset.outcomeType = outcomeType;
+    actions.replaceWith(editBtn);
+    error.remove();
+    item.classList.remove('editing');
+  };
+
+  cancel.addEventListener('click', exit);
+  ta.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); exit(); }});
+
+  save.addEventListener('click', () => {
+    const val = (ta.value || '').trim();
+    if (!val) { error.textContent = "Description can't be empty"; error.style.display = 'block'; return; }
+    fetch("{% url 'manage_program_outcomes' %}", {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' },
+      body: JSON.stringify({ outcome_id: Number(outcomeId), type: outcomeType, description: val })
+    }).then(r=>r.json()).then(data=>{
+      if (data.success) {
+        const restored = document.createElement('div');
+        restored.className = 'outcome-text';
+        restored.textContent = data.outcome?.description || val;
+        ta.replaceWith(restored);
+  const editBtn = document.createElement('button');
+  editBtn.className = 'edit-btn-inline';
+  editBtn.textContent = 'edit';
+  editBtn.dataset.action = 'edit-outcome';
+  editBtn.dataset.outcomeId = outcomeId;
+  editBtn.dataset.outcomeType = outcomeType;
+        actions.replaceWith(editBtn);
+        error.remove();
+        item.classList.remove('editing');
+        showToast('Outcome updated', 'success');
+      } else {
+        error.textContent = data.error || 'Update failed';
+        error.style.display = 'block';
+      }
+    }).catch(()=>{ error.textContent='Network error'; error.style.display='block'; });
+  });
+
+  let confirming = false;
+  del.addEventListener('click', () => {
+    if (!confirming) { confirming = true; del.textContent = 'Confirm Delete'; del.classList.add('confirm'); return; }
+    fetch("{% url 'manage_program_outcomes' %}", {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' },
+      body: JSON.stringify({ outcome_id: Number(outcomeId), type: outcomeType })
+    }).then(r=>r.json()).then(data=>{
+      if (data.success) {
+        // Update counts locally
+        const summary = programContainer.querySelector(outcomeType === 'PO' ? '.po-box .count-number' : '.pso-box .count-number');
+        if (summary) { const n = Math.max(0, (parseInt(summary.textContent,10)||1)-1); summary.textContent = n; }
+        const parentList = item.parentElement;
+        item.remove();
+        // If list is empty, show empty state
+        if (parentList && !parentList.querySelector('.outcome-item')) {
+          const empty = document.createElement('div');
+          empty.className = 'empty-state';
+          empty.innerHTML = `<p>No ${outcomeType === 'PO' ? 'Programme Outcomes' : 'Programme Specific Outcomes'} added yet. Click "add" to create your first ${outcomeType}.</p>`;
+          parentList.appendChild(empty);
+        }
+        showToast('Outcome deleted', 'success');
+      } else {
+        showToast(data.error || 'Delete failed', 'error');
+      }
+    }).catch(()=> showToast('Network error', 'error'));
   });
 }
 
-function updateOutcome() {
-  const modal = document.querySelector('#editOutcomeModal');
-  const description = modal.querySelector('#editOutcomeInput').value.trim();
-  const outcomeId = Number(modal.dataset.outcomeId);
-  const outcomeType = modal.dataset.outcomeType; // 'PO' | 'PSO'
-
-  if (!description) {
-    alert('Please enter a description');
-    return;
-  }
-
-  fetch("{% url 'manage_program_outcomes' %}", {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': getCookie('csrftoken'),
-      'X-Requested-With': 'XMLHttpRequest'
-    },
-    body: JSON.stringify({
-      outcome_id: outcomeId,
-      type: outcomeType,
-      description: description
-    })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      closeEditForm();
-      location.reload();
-    } else {
-      alert(data.error || data.message || 'Error updating outcome');
-    }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    alert('Error updating outcome');
-  });
-}
-
-function deleteOutcome() {
-  const modal = document.querySelector('#editOutcomeModal');
-  const outcomeId = Number(modal.dataset.outcomeId);
-  const outcomeType = modal.dataset.outcomeType; // 'PO' | 'PSO'
-
-  if (!confirm('Are you sure you want to delete this outcome?')) {
-    return;
-  }
-
-  fetch("{% url 'manage_program_outcomes' %}", {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': getCookie('csrftoken'),
-      'X-Requested-With': 'XMLHttpRequest'
-    },
-    body: JSON.stringify({
-      outcome_id: outcomeId,
-      type: outcomeType
-    })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      closeEditForm();
-      location.reload();
-    } else {
-      alert(data.error || data.message || 'Error deleting outcome');
-    }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    alert('Error deleting outcome');
-  });
-}
+// Inline edit/delete logic remains as implemented
 
 // Create Program for Organization (when no programs exist)
 function createProgramForOrg(orgId) {
@@ -603,14 +599,15 @@ function createProgramForOrg(orgId) {
   .then(r => r.json())
   .then(data => {
     if (data.success) {
+      showToast('Program created', 'success');
       location.reload();
     } else {
-      alert(data.error || 'Failed to create program');
+      showToast(data.error || 'Failed to create program', 'error');
     }
   })
   .catch(err => {
     console.error('Create program failed:', err);
-    alert('Failed to create program');
+    showToast('Failed to create program', 'error');
   });
 }
 
@@ -630,22 +627,15 @@ function getCookie(name) {
     return cookieValue;
 }
 
-// Close modal when clicking outside
-window.addEventListener('click', function(event) {
-    const modals = document.querySelectorAll('.modal');
-    modals.forEach(modal => {
-        if (event.target === modal) {
-            modal.style.display = 'none';
-        }
-    });
-});
+// No modal listeners needed
 
-// Close modal when clicking close button
-document.querySelectorAll('.modal .close').forEach(closeBtn => {
-    closeBtn.addEventListener('click', function() {
-        const modal = this.closest('.modal');
-        modal.style.display = 'none';
-    });
-});
+// Tiny toast helper using existing notification styles
+function showToast(message, type='info'){
+  const n = document.createElement('div');
+  n.className = `notification ${type}`;
+  n.innerHTML = `<div class="notification-content"><span class="notification-message">${message}</span><button class="notification-close" onclick="this.closest('.notification').remove()">×</button></div>`;
+  document.body.appendChild(n);
+  setTimeout(()=>{ n.remove(); }, 4000);
+}
 </script>
 {% endblock %}

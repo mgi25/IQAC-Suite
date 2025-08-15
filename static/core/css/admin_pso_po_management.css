@@ -1368,6 +1368,49 @@
     margin-top: 1rem;
 }
 
+/* Inline editor styles (blue/white theme) */
+.inline-editor {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: #1f2937;
+    background: #fff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(30, 96, 177, 0.0);
+}
+.inline-editor:focus {
+    border-color: #1e60b1;
+    box-shadow: 0 0 0 3px rgba(30, 96, 177, 0.15);
+}
+.inline-error {
+    margin-top: 6px;
+    font-size: 0.8rem;
+    color: #b91c1c; /* subtle red for validation */
+}
+.btn-inline-save,
+.btn-inline-cancel,
+.btn-inline-delete {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.btn-inline-save {
+    background: #1e60b1;
+    color: #fff;
+    border-color: #1e60b1;
+}
+.btn-inline-save:hover { background: #184c8c; border-color: #184c8c; }
+.btn-inline-cancel { background: #fff; color: #1e60b1; border-color: #1e60b1; }
+.btn-inline-cancel:hover { background: #f0f6ff; }
+.btn-inline-delete { background: #fff; color: #1e60b1; border-color: #1e60b1; }
+.btn-inline-delete:hover { background: #f0f6ff; }
+.btn-inline-delete.confirm { background: #1e60b1; color: #fff; border-color: #1e60b1; }
+
 .no-programs .btn-primary:hover {
     background: #1a56a3;
 }
@@ -1434,6 +1477,7 @@
     color: #374151;
     line-height: 1.4;
 }
+.outcome-text:hover { cursor: text; }
 
 .outcome-actions {
     display: flex;
