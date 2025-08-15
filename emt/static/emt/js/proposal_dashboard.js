@@ -144,8 +144,10 @@ $(document).ready(function() {
                         showNotification('Please complete all required fields in the current section first.', 'error');
                         return;
                     }
+                    // Mark current section as complete when moving to the next
+                    markSectionComplete(currentExpandedCard);
                 }
-                
+
                 $(this).removeClass('disabled');
                 activateSection(section);
             } else {
