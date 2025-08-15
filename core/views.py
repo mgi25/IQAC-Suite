@@ -2444,20 +2444,27 @@ def api_user_proposals(request):
     """Return user's proposals for status tracking."""
     proposals = EventProposal.objects.filter(
         submitted_by=request.user
-    ).order_by('-created_at')[:10]
-    
+    ).order_by('-created_at')[:50]
+
+    # Deduplicate by title (case-insensitive)
+    seen_titles = set()
     proposal_data = []
     for p in proposals:
+        title = (p.event_title or "").strip()
+        key = title.lower()
+        if key in seen_titles:
+            continue
+        seen_titles.add(key)
         proposal_data.append({
             "id": p.id,
-            "title": p.event_title,
+            "title": title or f"Proposal #{p.id}",
             "status": p.status,
             "status_display": p.get_status_display(),
             "created_at": p.created_at.isoformat(),
-            # Always point to admin proposal detail as requested
-            "view_url": reverse('admin_proposal_detail', args=[p.id])
+            # Link to EMT proposal status detail page
+            "view_url": reverse('emt:proposal_status_detail', kwargs={'proposal_id': p.id})
         })
-    
+
     return JsonResponse({"proposals": proposal_data})
 
 
@@ -2650,12 +2657,14 @@ def api_student_performance_data(request):
         overall = "Needs Improvement"
     
     labels = ["Leadership", "Participation", "Communication", "Teamwork"]
-    percentages = [
+    percentages_raw = [
         min(leadership_score, 100),
         min(participation_score, 100),
         min(75 + (total_events * 2), 100),  # Communication based on activity
         min(65 + (total_events * 3), 100)   # Teamwork based on activity
     ]
+    # Round to 1 decimal place as requested
+    percentages = [round(v, 1) for v in percentages_raw]
     
     return JsonResponse({
         "labels": labels,
@@ -2820,8 +2829,6 @@ def api_create_faculty_meeting(request):
     has_faculty_role = any(
         (ra.role and ra.role.name.lower() == 'faculty') for ra in user.role_assignments.select_related('role')
     )
-    if not has_faculty_role and not user.is_superuser:
-        return JsonResponse({"success": False, "error": "Not allowed"}, status=403)
 
     try:
         payload = json.loads(request.body.decode('utf-8')) if request.body else request.POST
@@ -2837,6 +2844,16 @@ def api_create_faculty_meeting(request):
     
     if not org_id or not when:
         return JsonResponse({"success": False, "error": "organization_id and scheduled_at are required"}, status=400)
+    # Allow any member of the organization (not just faculty) to create meetings, per requirement
+    try:
+        org_id_int = int(org_id)
+    except Exception:
+        return JsonResponse({"success": False, "error": "Invalid organization_id"}, status=400)
+    user_org_ids = set(
+        user.role_assignments.filter(organization__isnull=False).values_list('organization_id', flat=True)
+    )
+    if not (has_faculty_role or user.is_superuser or org_id_int in user_org_ids):
+        return JsonResponse({"success": False, "error": "Not allowed"}, status=403)
     
     try:
         from django.utils.dateparse import parse_datetime
@@ -2847,7 +2864,7 @@ def api_create_faculty_meeting(request):
         meeting = FacultyMeeting.objects.create(
             title=title,
             description=f"{description}\nVenue: {place}\nParticipants: {', '.join(participants) if participants else 'All faculty'}",
-            organization_id=int(org_id),
+            organization_id=org_id_int,
             scheduled_at=dt,
             created_by=user,
         )

@@ -53,7 +53,7 @@
     grid-template-areas: 
       "topbar topbar"
       "sidebar main" !important;
-    grid-template-columns: var(--sidebar-width) 1fr !important;
+  grid-template-columns: var(--sidebar-width) 1fr !important;
     grid-template-rows: var(--topbar-height) 1fr !important;
     margin: 0 !important;
     padding: 0 !important;
@@ -762,3 +762,18 @@
     flex-grow: 0 !important;
     flex-shrink: 0 !important;
   }
+
+  /* Collapsed sidebar state */
+  body.command-center-layout.sidebar-collapsed {
+    grid-template-columns: 64px 1fr !important;
+  }
+  body.command-center-layout.sidebar-collapsed .left-control-panel {
+    width: 64px !important;
+  }
+  body.command-center-layout.sidebar-collapsed .control-navigation .nav-text,
+  body.command-center-layout.sidebar-collapsed .nav-section-header .nav-text,
+  body.command-center-layout.sidebar-collapsed .nav-submenu,
+  body.command-center-layout.sidebar-collapsed .expand-icon,
+  body.command-center-layout.sidebar-collapsed .nav-subsection { display: none !important; }
+  body.command-center-layout .left-control-panel { transition: width .25s ease !important; }
+  body.command-center-layout .main-viewscreen { transition: all .25s ease !important; }
