@@ -7,7 +7,7 @@ import json
 import re
 from urllib.parse import urlparse
 import requests
-from suite import ollama_client
+from suite.ai_client import chat, AIError
 import time
 from bs4 import BeautifulSoup
 from django.db.models import Q
@@ -1772,13 +1772,15 @@ def generate_need_analysis(request):
     if not ctx:
         return JsonResponse({"error": "No context"}, status=400)
     try:
-        text = ollama_client.chat([
-            {"role": "user", "content": ctx}
-        ], system=NEED_PROMPT)
+        messages = [{"role": "user", "content": f"{NEED_PROMPT}\n\n{ctx}"}]
+        text = chat(messages, system="You write crisp academic content for university event proposals.")
         return JsonResponse({"text": text})
-    except ollama_client.AIError as exc:
+    except AIError as exc:
         logger.error("Need analysis generation failed: %s", exc)
         return JsonResponse({"error": str(exc)}, status=503)
+    except Exception as exc:
+        logger.error("Need analysis generation unexpected error: %s", exc)
+        return JsonResponse({"error": f"Unexpected error: {exc}"}, status=500)
 
 
 @login_required
@@ -1788,13 +1790,15 @@ def generate_objectives(request):
     if not ctx:
         return JsonResponse({"error": "No context"}, status=400)
     try:
-        text = ollama_client.chat([
-            {"role": "user", "content": ctx}
-        ], system=OBJ_PROMPT)
+        messages = [{"role": "user", "content": f"{OBJ_PROMPT}\n\n{ctx}"}]
+        text = chat(messages, system="You write measurable, outcome-focused objectives aligned to higher-education events.")
         return JsonResponse({"text": text})
-    except ollama_client.AIError as exc:
+    except AIError as exc:
         logger.error("Objectives generation failed: %s", exc)
         return JsonResponse({"error": str(exc)}, status=503)
+    except Exception as exc:
+        logger.error("Objectives generation unexpected error: %s", exc)
+        return JsonResponse({"error": f"Unexpected error: {exc}"}, status=500)
 
 
 @login_required
