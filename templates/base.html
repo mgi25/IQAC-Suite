@@ -61,7 +61,7 @@
       <div class="utility-right" style="display: flex; align-items: center; gap: 1.5rem;">
         <div class="notification-section">
           <button class="utility-btn notification-btn" id="notificationBtn" aria-label="Notifications">
-            <i class="fas fa-bell"></i>
+            <i class="fa-solid fa-bell"></i>
             {% if notifications and notifications|length > 0 %}
             <span class="notification-badge" id="notificationBadge">{{ notifications|length }}</span>
             {% endif %}
@@ -78,7 +78,7 @@
                 {% for notification in notifications %}
                 <div class="notification-item {% if not notification.is_read %}unread{% endif %}">
                   <div class="notification-icon">
-                    <i class="fas fa-{{ notification.icon|default:'bell' }}"></i>
+                    <i class="fa-solid fa-{{ notification.icon|default:'bell' }}"></i>
                   </div>
                   <div class="notification-content">
                     <div class="notification-title">{{ notification.title }}</div>
