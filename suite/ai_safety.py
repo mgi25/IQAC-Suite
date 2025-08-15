@@ -32,7 +32,26 @@ def enforce_no_unverified_numbers(text: str, allowed: set[str]) -> str:
     return text
 
 def parse_model_json(s: str) -> dict:
-    # tolerate accidental fencing or trailing text
+    """Parse a JSON object from a model string output.
+
+    Models occasionally wrap JSON in markdown fences or add prose before or
+    after the JSON block. This helper attempts to extract the first JSON
+    object it can find and raises a clear error when none is present.
+    """
+
     s = s.strip()
-    s = re.sub(r"^```json\s*|\s*```$", "", s, flags=re.I | re.M)
-    return json.loads(s)
+    # Remove any markdown ```json fences or plain ``` fences wherever they
+    # appear. This is more forgiving than requiring them to be at the very
+    # start or end of the string.
+    s = re.sub(r"```(?:json)?", "", s, flags=re.I)
+
+    if not s:
+        raise ValueError("Empty model response")
+
+    # Find the first JSON object within the string. This handles cases where
+    # the model prepends explanatory text before the JSON output.
+    match = re.search(r"\{.*\}", s, flags=re.S)
+    if not match:
+        raise ValueError("No JSON object found in model response")
+
+    return json.loads(match.group(0))
