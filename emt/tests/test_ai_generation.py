@@ -21,6 +21,7 @@ class AIGenerationTests(TestCase):
         })
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
+        self.assertTrue(data['ok'])
         self.assertEqual(data['text'], 'need text')
 
     @patch('emt.views.chat')
@@ -32,6 +33,7 @@ class AIGenerationTests(TestCase):
         })
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
+        self.assertTrue(data['ok'])
         self.assertEqual(data['text'], 'obj text')
 
     @patch('emt.views.chat')
@@ -43,6 +45,7 @@ class AIGenerationTests(TestCase):
         })
         self.assertEqual(resp.status_code, 503)
         data = resp.json()
+        self.assertFalse(data['ok'])
         self.assertIn('Ollama request failed', data['error'])
 
     @patch('emt.views.requests.post')
@@ -70,4 +73,5 @@ class AIGenerationTests(TestCase):
         })
         self.assertEqual(resp.status_code, 503)
         data = resp.json()
+        self.assertFalse(data['ok'])
         self.assertIn('timed out', data['error'])
