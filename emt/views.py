@@ -7,6 +7,7 @@ import json
 import re
 from urllib.parse import urlparse
 import requests
+from suite import ai_client
 import time
 from bs4 import BeautifulSoup
 from django.db.models import Q
@@ -1771,11 +1772,11 @@ def generate_need_analysis(request):
     if not ctx:
         return JsonResponse({"ok": False, "error": "No context"}, status=400)
     try:
-        text = _ollama_chat(GEN_MODEL, NEED_PROMPT, ctx, max_tokens=220, temp=0.4)
+        text = ai_client.chat([{ "role": "user", "content": ctx }], system=NEED_PROMPT)
         return JsonResponse({"ok": True, "text": text})
-    except Exception as exc:
+    except ai_client.AIError as exc:
         logger.error("Need analysis generation failed: %s", exc)
-        return JsonResponse({"ok": False, "error": "AI service unavailable"}, status=503)
+        return JsonResponse({"ok": False, "error": str(exc)}, status=503)
 
 
 @login_required
@@ -1785,11 +1786,11 @@ def generate_objectives(request):
     if not ctx:
         return JsonResponse({"ok": False, "error": "No context"}, status=400)
     try:
-        text = _ollama_chat(GEN_MODEL, OBJ_PROMPT, ctx, max_tokens=200, temp=0.4)
+        text = ai_client.chat([{ "role": "user", "content": ctx }], system=OBJ_PROMPT)
         return JsonResponse({"ok": True, "text": text})
-    except Exception as exc:
+    except ai_client.AIError as exc:
         logger.error("Objectives generation failed: %s", exc)
-        return JsonResponse({"ok": False, "error": "AI service unavailable"}, status=503)
+        return JsonResponse({"ok": False, "error": str(exc)}, status=503)
 
 
 @login_required
