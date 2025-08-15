@@ -9,9 +9,10 @@ $(document).ready(function() {
         'schedule': false,
         'speakers': false,
         'expenses': false,
-        'income': false
+        'income': false,
+        'cdl-support': false
     };
-    const optionalSections = ['speakers', 'expenses', 'income'];
+    const optionalSections = ['speakers', 'expenses', 'income', 'cdl-support'];
     let audienceClassMap = {};
     let firstErrorField = null;
     const autoFillEnabled = new URLSearchParams(window.location.search).has('autofill');
@@ -92,7 +93,7 @@ $(document).ready(function() {
         
         // Enable the next section if the previous section is completed
         // or if the previous section is optional
-        const sectionOrder = ['basic-info', 'why-this-event', 'schedule', 'speakers', 'expenses', 'income'];
+        const sectionOrder = ['basic-info', 'why-this-event', 'schedule', 'speakers', 'expenses', 'income', 'cdl-support'];
         for (let i = 0; i < sectionOrder.length - 1; i++) {
             const currentSection = sectionOrder[i];
             const nextSection = sectionOrder[i + 1];
@@ -114,6 +115,15 @@ $(document).ready(function() {
     $('.proposal-nav .nav-link').on('click', function(e) {
             e.preventDefault();
             const section = $(this).data('section');
+
+            if (section === 'cdl-support') {
+                const url = $(this).data('url');
+                if (url) {
+                    window.location.href = url;
+                }
+                return;
+            }
+
             const currentOrder = parseInt($(`.proposal-nav .nav-link[data-section="${currentExpandedCard}"]`).data('order')) || 0;
             const targetOrder = parseInt($(this).data('order')) || 0;
             
@@ -252,7 +262,8 @@ $(document).ready(function() {
             'schedule': { title: 'Schedule', subtitle: 'Event timeline, sessions, flow' },
             'speakers': { title: 'Speaker Profiles', subtitle: 'Names, expertise, brief bio, etc.' },
             'expenses': { title: 'Expenses', subtitle: 'Budget, funding source, justification' },
-            'income': { title: 'Details of Income', subtitle: 'Registration fees, sponsorship, participation rates' }
+            'income': { title: 'Details of Income', subtitle: 'Registration fees, sponsorship, participation rates' },
+            'cdl-support': { title: 'CDL Support', subtitle: 'Poster, certificates, other details' }
         };
         return sections[section] || { title: 'Section', subtitle: 'Complete this section' };
     }
@@ -1784,7 +1795,7 @@ function getWhyThisEventForm() {
 
     // ===== SECTION NAVIGATION - PRESERVED =====
     function getNextSection(currentSection) {
-        const sectionOrder = ['basic-info', 'why-this-event', 'schedule', 'speakers', 'expenses', 'income'];
+        const sectionOrder = ['basic-info', 'why-this-event', 'schedule', 'speakers', 'expenses', 'income', 'cdl-support'];
         const currentIndex = sectionOrder.indexOf(currentSection);
         return currentIndex < sectionOrder.length - 1 ? sectionOrder[currentIndex + 1] : null;
     }
