@@ -7,6 +7,7 @@ import json
 import re
 from urllib.parse import urlparse
 import requests
+from suite.ai_client import chat, AIError
 import time
 from bs4 import BeautifulSoup
 from django.db.models import Q
@@ -1052,102 +1053,6 @@ def autosave_need_analysis(request):
         return JsonResponse({'success': True})
     return JsonResponse({'success': False}, status=400)
 
-# ---------------------------------------------------------------------------
-# AI Need Analysis generation
-# ---------------------------------------------------------------------------
-SYSTEM_PROMPT = "Write a concise, factual Need Analysis (80–140 words)."
-
-
-def _call_openrouter(ctx: str) -> str:
-    model = settings.OPENROUTER_MODEL
-    api_key = settings.OPENROUTER_API_KEY
-    if not api_key or not model:
-        raise RuntimeError("OpenRouter credentials not configured")
-    url = "https://openrouter.ai/api/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": ctx},
-        ],
-        "max_tokens": 220,
-        "temperature": 0.4,
-    }
-    start = time.time()
-    try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=30)
-        resp.raise_for_status()
-        data = resp.json()
-        text = data["choices"][0]["message"]["content"].strip()
-        latency = time.time() - start
-        logger.info(
-            "openrouter model=%s latency=%.2fs input_len=%d output_len=%d",
-            model,
-            latency,
-            len(ctx),
-            len(text),
-        )
-        return text
-    except (requests.RequestException, KeyError, ValueError) as exc:
-        logger.error("OpenRouter request failed: %s", exc)
-        raise RuntimeError("OpenRouter request failed") from exc
-
-
-def _call_local(ctx: str) -> str:
-    base = settings.LOCAL_AI_BASE_URL
-    model = settings.LOCAL_AI_MODEL
-    if not base or not model:
-        raise RuntimeError("Local AI configuration missing")
-    url = base.rstrip("/") + "/v1/chat/completions"
-    headers = {"Content-Type": "application/json"}
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": ctx},
-        ],
-        "max_tokens": 220,
-        "temperature": 0.4,
-    }
-    start = time.time()
-    try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=30)
-        resp.raise_for_status()
-        data = resp.json()
-        text = data["choices"][0]["message"]["content"].strip()
-        latency = time.time() - start
-        logger.info(
-            "local model=%s latency=%.2fs input_len=%d output_len=%d",
-            model,
-            latency,
-            len(ctx),
-            len(text),
-        )
-        return text
-    except (requests.RequestException, KeyError, ValueError) as exc:
-        logger.error("Local AI request failed: %s", exc)
-        raise RuntimeError("Local AI request failed") from exc
-
-
-@login_required
-@require_POST
-def generate_need_analysis(request):
-    ctx = (request.POST.get("context", "") or "")[:3000]
-    if not ctx.strip():
-        return JsonResponse({"ok": False, "error": "No context provided"}, status=400)
-    try:
-        if settings.AI_BACKEND == "LOCAL_HTTP":
-            text = _call_local(ctx)
-        else:
-            text = _call_openrouter(ctx)
-        return JsonResponse({"ok": True, "text": text})
-    except Exception as exc:
-        logger.error("Need analysis generation failed: %s", exc)
-        return JsonResponse({"ok": False, "error": "AI service unavailable"}, status=503)
 @login_required
 def api_organizations(request):
     q = request.GET.get("q", "").strip()
@@ -1811,3 +1716,95 @@ def admin_reports_view(request):
     except Exception as e:
         print(f"Error in admin_reports_view: {e}")
         return HttpResponse(f"An error occurred: {e}", status=500)
+def _basic_info_context(data):
+    parts = []
+    title = (data.get("title") or "").strip()
+    if title:
+        parts.append(f"Event title: {title}")
+    audience = (data.get("audience") or "").strip()
+    if audience:
+        parts.append(f"Target audience: {audience}")
+    focus = (data.get("focus") or "").strip()
+    if focus:
+        parts.append(f"Event focus: {focus}")
+    venue = (data.get("venue") or "").strip()
+    if venue:
+        parts.append(f"Location: {venue}")
+    existing = (data.get("context") or "").strip()
+    if existing:
+        parts.append(f"Existing text:\n{existing}")
+    return "\n".join(parts)[:3000]
+
+
+NEED_PROMPT = "Write a concise, factual Need Analysis (80–140 words) for the event." 
+OBJ_PROMPT = "Provide 3-5 clear objectives for the event as bullet points." 
+OUT_PROMPT = "List 3-5 expected learning outcomes for participants as bullet points." 
+
+
+@login_required
+@require_POST
+def generate_need_analysis(request):
+    ctx = _basic_info_context(request.POST)
+    if not ctx:
+        return JsonResponse({"ok": False, "error": "No context"}, status=400)
+    try:
+        messages = [{"role": "user", "content": f"{NEED_PROMPT}\n\n{ctx}"}]
+        timeout = getattr(settings, "AI_HTTP_TIMEOUT", 60)
+        text = chat(
+            messages,
+            system="You write crisp academic content for university event proposals.",
+            timeout=timeout,
+        )
+        return JsonResponse({"ok": True, "text": text})
+    except AIError as exc:
+        logger.error("Need analysis generation failed: %s", exc)
+        return JsonResponse({"ok": False, "error": str(exc)}, status=503)
+    except Exception as exc:
+        logger.error("Need analysis generation unexpected error: %s", exc)
+        return JsonResponse({"ok": False, "error": f"Unexpected error: {exc}"}, status=500)
+
+
+@login_required
+@require_POST
+def generate_objectives(request):
+    ctx = _basic_info_context(request.POST)
+    if not ctx:
+        return JsonResponse({"ok": False, "error": "No context"}, status=400)
+    try:
+        messages = [{"role": "user", "content": f"{OBJ_PROMPT}\n\n{ctx}"}]
+        timeout = getattr(settings, "AI_HTTP_TIMEOUT", 60)
+        text = chat(
+            messages,
+            system="You write measurable, outcome-focused objectives aligned to higher-education events.",
+            timeout=timeout,
+        )
+        return JsonResponse({"ok": True, "text": text})
+    except AIError as exc:
+        logger.error("Objectives generation failed: %s", exc)
+        return JsonResponse({"ok": False, "error": str(exc)}, status=503)
+    except Exception as exc:
+        logger.error("Objectives generation unexpected error: %s", exc)
+        return JsonResponse({"ok": False, "error": f"Unexpected error: {exc}"}, status=500)
+
+
+@login_required
+@require_POST
+def generate_expected_outcomes(request):
+    ctx = _basic_info_context(request.POST)
+    if not ctx:
+        return JsonResponse({"ok": False, "error": "No context"}, status=400)
+    try:
+        messages = [{"role": "user", "content": f"{OUT_PROMPT}\n\n{ctx}"}]
+        timeout = getattr(settings, "AI_HTTP_TIMEOUT", 60)
+        text = chat(
+            messages,
+            system="You write measurable expected outcomes for higher-education events.",
+            timeout=timeout,
+        )
+        return JsonResponse({"ok": True, "text": text})
+    except AIError as exc:
+        logger.error("Expected outcomes generation failed: %s", exc)
+        return JsonResponse({"ok": False, "error": str(exc)}, status=503)
+    except Exception as exc:
+        logger.error("Expected outcomes generation unexpected error: %s", exc)
+        return JsonResponse({"ok": False, "error": f"Unexpected error: {exc}"}, status=500)
