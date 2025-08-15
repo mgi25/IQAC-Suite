@@ -21,6 +21,7 @@ from core.models import (
     ApprovalFlowTemplate,
     ApprovalFlowConfig,
     SDG_GOALS,
+    SDGGoal,
     OrganizationMembership,
 )
 import json
@@ -283,6 +284,22 @@ class AutosaveProposalTests(TestCase):
         data = resp.json()
         self.assertTrue(data.get("success"))
         self.assertNotIn("errors", data)
+
+    def test_autosave_saves_sdg_goals(self):
+        g1, _ = SDGGoal.objects.get_or_create(name=SDG_GOALS[0])
+        g2, _ = SDGGoal.objects.get_or_create(name=SDG_GOALS[1])
+        payload = self._payload()
+        payload["sdg_goals"] = [str(g1.id), str(g2.id)]
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        pid = resp.json()["proposal_id"]
+        proposal = EventProposal.objects.get(id=pid)
+        saved_ids = set(proposal.sdg_goals.values_list("id", flat=True))
+        self.assertEqual(saved_ids, {g1.id, g2.id})
 
 
 class EventProposalOrganizationPrefillTests(TestCase):
