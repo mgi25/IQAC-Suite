@@ -2564,18 +2564,42 @@ async function generateWhyEvent(){
 function showCard(field, content){
   const card = document.querySelector(`#ai-${field}`);
   if (!card) return;
+
+  const fieldMap = {
+    'need-analysis': 'need-analysis-modern',
+    'objectives': 'objectives-modern',
+    'learning-outcomes': 'outcomes-modern'
+  };
+  const target = document.getElementById(fieldMap[field]);
+
   if (Array.isArray(content)){
     if (!content.length){
       card.innerHTML = '';
       return;
     }
-    card.innerHTML = '<ul>' + content.map(i=>`<li>${i}</li>`).join('') + '</ul>';
+    const listHtml = '<ul>' + content.map(i=>`<li>${i}</li>`).join('') + '</ul>';
+    const text = content.map(i=>`• ${i}`).join('\n');
+    card.innerHTML = `${listHtml}<button type="button" class="apply-ai-suggestion">Apply</button>`;
+    const btn = card.querySelector('button');
+    if (btn && target){
+      btn.addEventListener('click', () => {
+        target.value = text;
+        target.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    }
   } else {
     if (!content){
       card.textContent = '';
       return;
     }
-    card.textContent = content;
+    card.innerHTML = `<p>${content}</p><button type="button" class="apply-ai-suggestion">Apply</button>`;
+    const btn = card.querySelector('button');
+    if (btn && target){
+      btn.addEventListener('click', () => {
+        target.value = content;
+        target.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    }
   }
 }
 
