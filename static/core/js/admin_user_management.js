@@ -6,6 +6,7 @@
 // Global variables
 let currentOrganization = null;
 let activeTab = 'students';
+let filterStates = { students: 'active', faculty: 'active' };
 
 // Initialize on DOM load
 document.addEventListener('DOMContentLoaded', function() {
@@ -70,8 +71,12 @@ function switchTab(tabName) {
         content.classList.remove('active');
     });
     document.getElementById(`${tabName}-tab`).classList.add('active');
-    
+
     activeTab = tabName;
+    // Sync filter button states for the newly activated tab
+    document.querySelectorAll(`#${tabName}-tab .filter-toggle`).forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === filterStates[tabName]);
+    });
     loadTabContent(tabName);
 }
 
@@ -97,7 +102,11 @@ function loadTabContent(tabName) {
 }
 
 function loadStudentsContent() {
-    fetch(`/core-admin/org-users/${currentOrganization.id}/students/`)
+    const filter = filterStates['students'];
+    const url = filter === 'archived'
+        ? `/core-admin/org-users/${currentOrganization.id}/students/?archived=1`
+        : `/core-admin/org-users/${currentOrganization.id}/students/`;
+    fetch(url)
         .then(response => response.text())
         .then(html => {
             // Extract the classes table from the response
@@ -118,7 +127,11 @@ function loadStudentsContent() {
 }
 
 function loadFacultyContent() {
-    fetch(`/core-admin/org-users/${currentOrganization.id}/faculty/`)
+    const filter = filterStates['faculty'];
+    const url = filter === 'archived'
+        ? `/core-admin/org-users/${currentOrganization.id}/faculty/?archived=1`
+        : `/core-admin/org-users/${currentOrganization.id}/faculty/`;
+    fetch(url)
         .then(response => response.text())
         .then(html => {
             // Extract the faculty table from the response
@@ -284,6 +297,26 @@ function initializePaneToggles() {
                 icon.className = 'fas fa-chevron-down';
                 this.setAttribute('title', 'Expand');
             }
+        });
+    });
+}
+
+// =============================================================================
+// FILTER TOGGLES
+// =============================================================================
+
+function initializeFilterToggles() {
+    document.querySelectorAll('.results-pane').forEach(pane => {
+        const tab = pane.closest('.tab-content').id.replace('-tab', '');
+        const buttons = pane.querySelectorAll('.filter-toggle');
+
+        buttons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                buttons.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                filterStates[tab] = this.dataset.filter;
+                loadTabContent(tab);
+            });
         });
     });
 }
