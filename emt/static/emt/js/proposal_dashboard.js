@@ -11,6 +11,7 @@ $(document).ready(function() {
         'expenses': false,
         'income': false
     };
+    const optionalSections = ['speakers', 'expenses', 'income'];
     let audienceClassMap = {};
     let firstErrorField = null;
     const autoFillEnabled = new URLSearchParams(window.location.search).has('autofill');
@@ -89,13 +90,14 @@ $(document).ready(function() {
             }
         });
         
-        // Enable the next section only if the previous section is completed
+        // Enable the next section if the previous section is completed
+        // or if the previous section is optional
         const sectionOrder = ['basic-info', 'why-this-event', 'schedule', 'speakers', 'expenses', 'income'];
         for (let i = 0; i < sectionOrder.length - 1; i++) {
             const currentSection = sectionOrder[i];
             const nextSection = sectionOrder[i + 1];
-            
-            if (sectionProgress[currentSection] === true) {
+
+            if (sectionProgress[currentSection] === true || optionalSections.includes(currentSection)) {
                 $(`.proposal-nav .nav-link[data-section="${nextSection}"]`).removeClass('disabled');
             }
         }
@@ -2004,7 +2006,7 @@ function getWhyThisEventForm() {
     }
 
     function updateSubmitButton() {
-        const requiredSections = Object.keys(sectionProgress).filter(section => section !== 'income');
+        const requiredSections = Object.keys(sectionProgress).filter(section => !optionalSections.includes(section));
         const completedSections = requiredSections.filter(section => sectionProgress[section] === true).length;
 
         if (completedSections === requiredSections.length) {
@@ -2287,7 +2289,7 @@ function getWhyThisEventForm() {
 
     // ===== PROGRESS BAR FUNCTION - PRESERVED =====
     function updateProgressBar() {
-        const sections = Object.keys(sectionProgress).filter(section => section !== 'income');
+        const sections = Object.keys(sectionProgress).filter(section => !optionalSections.includes(section));
         const completedSections = sections.filter(section => sectionProgress[section] === true).length;
         const totalSections = sections.length;
         const progressPercent = Math.round((completedSections / totalSections) * 100);
