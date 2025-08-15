@@ -1,0 +1,158 @@
+/* ===== CDL Head Dashboard (equal height to calendar, tight row gap, profile restored) ===== */
+
+:root{
+    --primary:#264487;
+    --ink:#0f172a;
+    --muted:#64748b;
+    --border:#e5e7eb;
+    --surf:#fff;
+    --subtle:#f8fafc;
+    --tint:#eef2ff;
+    --shadow:0 8px 24px rgba(2,6,23,.06);
+    --shadow-lg:0 12px 40px rgba(2,6,23,.1);
+  }
+  
+  /* Top bar */
+  .topbar{background:var(--surf);padding:16px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .topbar h1{margin:0;font-size:1.35rem;font-weight:700}
+  .topbar-date{font-size:.9rem;color:var(--muted)}
+  
+  /* KPI row + profile */
+  .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:12px}
+  .kpi-card{display:flex;background:var(--surf);border-radius:12px;box-shadow:var(--shadow);padding:14px;border:none;cursor:pointer}
+  .kpi-card:hover{box-shadow:var(--shadow-lg)}
+  .kpi-icon{flex:0 0 42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;margin-right:10px}
+  .bg-indigo{background:#6366f1}.bg-sky{background:#0ea5e9}.bg-orange{background:#f97316}.bg-emerald{background:#10b981}
+  .kpi-content{display:flex;flex-direction:column;flex:1}
+  .kpi-title{font-size:.82rem;color:var(--muted)}
+  .kpi-value{font-size:1.55rem;font-weight:700;line-height:1.2}
+  .kpi-bar{height:3px;border-radius:2px;background:var(--tint);position:relative;margin-top:6px}
+  .kpi-bar::after{content:"";position:absolute;height:3px;background:var(--primary);border-radius:2px;width:var(--pct,0%);top:0;left:0}
+  
+  /* Profile card: isolated styling (matches teacher/student look) */
+  .profile-kpi{position:relative;overflow:hidden;background:var(--surf);border-radius:12px;box-shadow:var(--shadow);padding:14px;display:flex;align-items:center;gap:12px}
+  .profile-kpi::before{content:"";position:absolute;right:-20%;top:-50%;width:280px;height:160px;border-radius:999px;background:radial-gradient(120px 60px at 60% 40%, #e9ecff, transparent 60%);pointer-events:none}
+  .pkp-avatar{flex:0 0 56px;height:56px;border-radius:50%;overflow:hidden;background:#e9ecff;display:flex;align-items:center;justify-content:center}
+  .pkp-avatar img{width:100%;height:100%;object-fit:cover}
+  .pkp-initials{font-weight:700;font-size:1.1rem;color:#1f2937}
+  .pkp-body{flex:1;min-width:0}
+  .pkp-name{margin:0;font-size:1rem;font-weight:600}
+  .pkp-sub{margin:2px 0;color:var(--muted);font-size:.82rem}
+  .pkp-meta{display:flex;gap:10px;color:var(--muted);font-size:.75rem}
+  .switch-label{margin-right:6px}
+  .select{padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:#fff}
+  
+  /* Cards */
+  .card{background:var(--surf);border-radius:12px;box-shadow:var(--shadow);display:flex;flex-direction:column}
+  .card-header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border)}
+  .card-header h3{margin:0;font-size:.98rem;font-weight:600;display:flex;align-items:center;gap:8px}
+  
+  /* Pills */
+  .seg{display:inline-flex;border-radius:6px;background:var(--tint);overflow:hidden}
+  .seg-btn{border:none;background:none;padding:4px 10px;font-size:.78rem;cursor:pointer;color:var(--muted)}
+  .seg-btn.active{background:#264487;color:#fff}
+  .chip-btn{font-size:.74rem;padding:3px 8px;border-radius:6px;border:1px solid var(--border);background:#fff;cursor:pointer}
+  .chip-btn.success{border-color:#10b981;color:#10b981}
+  .chip-btn.warn{border-color:#f97316;color:#f97316}
+  
+  /* ===== Row-2 grid: equal height to the tallest (Calendar) ===== */
+  .grid-3{
+    display:grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap:12px;
+    margin-bottom:8px;               /* tighter gap above Row-3 */
+    align-items: stretch;            /* ← makes every child match tallest one */
+  }
+  
+  /* Only the three Row-2 cards participate in stretch */
+  .grid-assign > .card.eq{
+    display:flex;
+    flex-direction:column;
+    min-height:0;                    /* allow shrinking to row height */
+  }
+  
+  /* Their headers stay natural height */
+  .grid-assign > .card.eq .card-header{flex:0 0 auto}
+  
+  /* Their content fills remaining height & scrolls if needed */
+  #cardNotifications .list,
+  #cardTeam .chart-wrap,
+  #cardCalendar .mini-cal{
+    flex:1 1 auto;
+    min-height:0;
+    overflow:auto;
+  }
+  
+  /* Lists */
+  .list{display:flex;flex-direction:column}
+  .list-item{display:flex;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border)}
+  .list-body{flex:1;min-width:0}
+  .list-body h4{margin:0;font-size:.9rem;font-weight:600}
+  .list-body p{margin:0;font-size:.75rem;color:var(--muted)}
+  .btn-group{display:flex;gap:6px}
+  
+  /* Calendar bits (compact so row height stays sensible) */
+  .mini-cal{padding:10px}
+  .cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .cal-weekdays,.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);text-align:center}
+  .cal-weekdays span{font-size:.7rem;color:var(--muted)}
+  .cal-grid .day{border-radius:6px;padding:4px;min-height:46px;display:flex;flex-direction:column;align-items:center}
+  .cal-grid .day:hover{background:#f3f6ff;cursor:pointer}
+  .cal-grid .day .num{font-size:.78rem;margin-bottom:2px}
+  .dots{display:flex;gap:2px}
+  .dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+  .dot.blue{background:#3b82f6}.dot.green{background:#10b981}.dot.red{background:#ef4444}
+  #cardCalendar .upcoming{flex:0 0 auto}
+  
+  /* ===== Row-3 (Assignment Manager) pulled up tight ===== */
+  #cardAssignAll{margin-top:8px}
+  .table-wrap{overflow-x:auto}
+  .table{width:100%;border-collapse:collapse;font-size:.85rem}
+  .table th,.table td{border-bottom:1px solid var(--border);padding:8px 10px;text-align:left}
+  .table th{background:#f2f5ff;font-weight:600}
+  .table .chip{font-size:.7rem;padding:2px 6px;border-radius:4px}
+  .chip.danger{background:#fee2e2;color:#b91c1c}
+  .chip.amber{background:#fef3c7;color:#b45309}
+  .chip.success{background:#d1fae5;color:#065f46}
+  .chip.warn{background:#fde68a;color:#92400e}
+  .chip.info{background:#e0f2fe;color:#0369a1}
+  .chip.gray{background:#f3f4f6;color:#374151}
+  .table-actions{padding:10px;display:flex;gap:8px}
+  .btn{padding:4px 8px;border:none;border-radius:6px;cursor:pointer}
+  .btn.xs{font-size:.75rem}
+  .btn.success{background:#10b981;color:#fff}
+  .btn.warn{background:#f97316;color:#fff}
+  
+  /* Responsive */
+  @media (max-width:1024px){
+    .kpi-row{grid-template-columns:repeat(2,1fr)}
+    .grid-3{grid-template-columns:1fr 1fr}
+  }
+  @media (max-width:640px){
+    .grid-3{grid-template-columns:1fr}
+  }
+/* —— Remove the phantom band inside Row-2 grid (no layout changes) —— */
+.ems-dashboard .grid-3.grid-assign{
+    /* release any forced height from the theme */
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  
+    /* stop track packing that creates the big space */
+    align-content: start !important;            /* was likely space-between/center */
+    place-content: start stretch !important;    /* reset shorthand completely */
+    grid-auto-rows: auto !important;            /* no tall implicit rows */
+    row-gap: 12px !important;                   /* keep your small gap */
+  }
+  
+  /* if the base theme set it on the element with the 'main' tag */
+  main.grid-3.grid-assign{
+    height: auto !important;
+    min-height: 0 !important;
+  }
+  
+  /* safety: no child is spanning to a second row */
+  .ems-dashboard .grid-assign > *{
+    grid-row: auto !important;
+  }
+  

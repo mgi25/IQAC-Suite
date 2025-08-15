@@ -5194,3 +5194,10 @@ def settings_pso_po_management(request):
     
     return render(request, 'core/settings_pso_po_management.html', context)
 
+@login_required
+def cdl_head_dashboard(request):
+    return render(request, "core/cdl_head_dashboard.html")
+
+@login_required
+def cdl_work_dashboard(request):
+    return render(request, "core/cdl_work_dashboard.html")
