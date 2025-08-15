@@ -19,7 +19,7 @@ def chat(messages: List[Dict[str, str]], system: Optional[str] = None,
     base = getattr(settings, "OLLAMA_BASE", os.getenv("OLLAMA_BASE"))
     if not base:
         raise AIError("OLLAMA_BASE not configured")
-    timeout = getattr(settings, "AI_HTTP_TIMEOUT", int(os.getenv("AI_HTTP_TIMEOUT", 30)))
+    timeout = getattr(settings, "AI_HTTP_TIMEOUT", int(os.getenv("AI_HTTP_TIMEOUT", 120)))
     model_name = model or getattr(settings, "OLLAMA_MODEL", os.getenv("OLLAMA_MODEL"))
     if not model_name:
         raise AIError("OLLAMA_MODEL not configured")
@@ -31,11 +31,14 @@ def chat(messages: List[Dict[str, str]], system: Optional[str] = None,
         resp = requests.post(
             f"{base}/v1/chat/completions",
             json={"model": model_name, "messages": full_messages},
-            timeout=timeout,
+            timeout=(5, timeout),
         )
         resp.raise_for_status()
         data = resp.json()
         return data["choices"][0]["message"]["content"].strip()
+    except requests.Timeout as exc:
+        logger.error("Ollama request timed out after %ss", timeout)
+        raise AIError(f"Ollama request timed out after {timeout}s") from exc
     except requests.RequestException as exc:
         logger.error("Ollama request failed: %s", exc)
         raise AIError(f"Ollama request failed: {exc}") from exc

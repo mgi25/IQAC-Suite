@@ -23,17 +23,25 @@ def _ollama_available(base: str, timeout: int = 2) -> bool:
 def _ollama_chat(messages, system=None, model=None, temperature=0.2, timeout=None, base=None):
     base = base or _get("OLLAMA_BASE", "http://127.0.0.1:11434")
     model = model or _get("OLLAMA_MODEL", "llama3")
-    timeout = timeout or int(_get("AI_HTTP_TIMEOUT", "20"))
+    timeout = timeout or int(_get("AI_HTTP_TIMEOUT", "120"))
 
     payload = {
         "model": model,
         "messages": ([{"role": "system", "content": system}] if system else []) + messages,
         "temperature": temperature,
     }
-    r = requests.post(f"{base}/v1/chat/completions", json=payload, timeout=timeout)
-    r.raise_for_status()
     try:
+        r = requests.post(
+            f"{base}/v1/chat/completions",
+            json=payload,
+            timeout=(5, timeout),
+        )
+        r.raise_for_status()
         return r.json()["choices"][0]["message"]["content"]
+    except requests.Timeout as e:
+        raise AIError(f"Ollama request timed out after {timeout}s") from e
+    except requests.RequestException as e:
+        raise AIError(f"Ollama request failed: {e}") from e
     except Exception as e:
         raise AIError(f"Ollama unexpected response: {r.text[:400]} ({e})")
 
@@ -45,7 +53,7 @@ def _openrouter_chat(messages, system=None, model=None, temperature=0.2, timeout
         raise AIError("OpenRouter API key missing")
 
     or_model = model or _get("OPENROUTER_MODEL", "qwen/qwen3.5:free")
-    timeout = timeout or int(_get("AI_HTTP_TIMEOUT", "20"))
+    timeout = timeout or int(_get("AI_HTTP_TIMEOUT", "120"))
     headers = {
         "Authorization": f"Bearer {api_key}",
         "HTTP-Referer": "https://iqac.local",
@@ -56,10 +64,19 @@ def _openrouter_chat(messages, system=None, model=None, temperature=0.2, timeout
         "messages": ([{"role": "system", "content": system}] if system else []) + messages,
         "temperature": temperature,
     }
-    r = requests.post("https://openrouter.ai/api/v1/chat/completions", json=payload, headers=headers, timeout=timeout)
-    r.raise_for_status()
     try:
+        r = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            json=payload,
+            headers=headers,
+            timeout=(5, timeout),
+        )
+        r.raise_for_status()
         return r.json()["choices"][0]["message"]["content"]
+    except requests.Timeout as e:
+        raise AIError(f"OpenRouter request timed out after {timeout}s") from e
+    except requests.RequestException as e:
+        raise AIError(f"OpenRouter request failed: {e}") from e
     except Exception as e:
         raise AIError(f"OpenRouter unexpected response: {r.text[:400]} ({e})")
 
