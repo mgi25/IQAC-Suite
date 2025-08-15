@@ -24,7 +24,11 @@ function initializeUserManagement() {
     
     // Initialize tab functionality
     initializeTabs();
-    
+
+    // Setup academic year dropdowns
+    setupAcademicYearSelectors('students');
+    setupAcademicYearSelectors('faculty');
+
     // Initialize upload forms
     initializeUploadForms();
     
@@ -145,6 +149,38 @@ function updateResultsContent(tabName, content) {
 }
 
 // =============================================================================
+// ACADEMIC YEAR SELECTORS
+// =============================================================================
+
+function setupAcademicYearSelectors(prefix) {
+    const startSelect = document.getElementById(`${prefix}-start-year`);
+    const endSelect = document.getElementById(`${prefix}-end-year`);
+    const hiddenInput = document.getElementById(`${prefix}-academic-year`);
+    if (!startSelect || !endSelect || !hiddenInput) return;
+
+    const currentYear = new Date().getFullYear();
+
+    for (let y = currentYear - 5; y <= currentYear + 5; y++) {
+        startSelect.add(new Option(y, y));
+    }
+
+    for (let y = currentYear - 4; y <= currentYear + 6; y++) {
+        endSelect.add(new Option(y, y));
+    }
+
+    startSelect.value = currentYear;
+    endSelect.value = currentYear + 1;
+
+    function sync() {
+        hiddenInput.value = `${startSelect.value}-${endSelect.value}`;
+    }
+
+    startSelect.addEventListener('change', sync);
+    endSelect.addEventListener('change', sync);
+    sync();
+}
+
+// =============================================================================
 // UPLOAD FORMS
 // =============================================================================
 
@@ -169,6 +205,14 @@ function initializeUploadForms() {
 }
 
 function handleFormSubmit(form, type) {
+    // Ensure academic year is combined from dropdowns
+    const startYear = form.querySelector(`#${type}-start-year`);
+    const endYear = form.querySelector(`#${type}-end-year`);
+    const academicYear = form.querySelector(`#${type}-academic-year`);
+    if (startYear && endYear && academicYear) {
+        academicYear.value = `${startYear.value}-${endYear.value}`;
+    }
+
     const formData = new FormData(form);
     const submitBtn = form.querySelector('.upload-btn');
     const originalText = submitBtn.innerHTML;

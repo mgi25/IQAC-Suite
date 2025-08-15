@@ -259,6 +259,15 @@ class AutosaveProposalTests(TestCase):
         self.assertEqual(ids_after, {self.f1.id, self.f2.id})
         self.assertEqual(proposal.status, EventProposal.Status.SUBMITTED)
 
+    def test_autosave_proposal_invalid_json(self):
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data="not json",
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("Invalid JSON", resp.json().get("error", ""))
+
 
 class EventProposalOrganizationPrefillTests(TestCase):
     def setUp(self):

@@ -82,7 +82,7 @@ window.AutosaveManager = (function() {
                 // ignore JSON parse errors
             }
             if (!res.ok) {
-                return Promise.reject(data);
+                return Promise.reject(data || res.status);
             }
             return data;
         })
@@ -93,13 +93,9 @@ window.AutosaveManager = (function() {
                 document.dispatchEvent(new Event('autosave:success'));
                 return data;
             }
-            document.dispatchEvent(new CustomEvent('autosave:error', {detail: data}));
             return Promise.reject(data);
         })
         .catch(err => {
-            if (!err || !err.errors) {
-                console.error('Autosave error:', err);
-            }
             document.dispatchEvent(new CustomEvent('autosave:error', {detail: err}));
             return Promise.reject(err);
         });
@@ -176,4 +172,37 @@ window.AutosaveManager = (function() {
         clearLocal
     };
 })();
+
+// Simple autosave helper used by AI generation
+async function autosave() {
+    try {
+        const form = document.querySelector('form');
+        const formData = new FormData(form);
+        const payload = {};
+        formData.forEach((value, key) => {
+            if (payload[key] !== undefined) {
+                if (!Array.isArray(payload[key])) {
+                    payload[key] = [payload[key]];
+                }
+                payload[key].push(value);
+            } else {
+                payload[key] = value;
+            }
+        });
+        const res = await fetch('/suite/autosave-proposal/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': window.AUTOSAVE_CSRF,
+            },
+            body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+            console.warn('autosave failed', res.status);
+        }
+    } catch (e) {
+        console.warn('autosave exception', e);
+    }
+}
+window.autosave = autosave;
 

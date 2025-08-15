@@ -20,33 +20,52 @@ def _ollama_available(base: str, timeout: int = 2) -> bool:
         return False
 
 
-def _ollama_chat(messages, system=None, model=None, temperature=0.2, timeout=None, base=None):
+def _ollama_chat(
+    messages,
+    system=None,
+    model=None,
+    temperature=0.2,
+    timeout=None,
+    base=None,
+    options=None,
+):
     base = base or _get("OLLAMA_BASE", "http://127.0.0.1:11434")
     model = model or _get("OLLAMA_MODEL", "llama3")
-    timeout = timeout or int(_get("AI_HTTP_TIMEOUT", "120"))
+    timeout = int(timeout or _get("AI_HTTP_TIMEOUT", "120"))
 
     payload = {
         "model": model,
         "messages": ([{"role": "system", "content": system}] if system else []) + messages,
         "temperature": temperature,
+        "stream": False,
     }
+    opts = {"num_predict": 300}
+    if isinstance(options, dict):
+        opts.update(options)
+    payload["options"] = opts
+
     try:
         r = requests.post(
             f"{base}/v1/chat/completions",
             json=payload,
-            timeout=(5, timeout),
+            timeout=timeout,
         )
         r.raise_for_status()
-        return r.json()["choices"][0]["message"]["content"]
+        data = r.json()
+        if "choices" in data and data["choices"]:
+            return data["choices"][0]["message"]["content"]
+        if "message" in data and "content" in data["message"]:
+            return data["message"]["content"]
+        raise AIError(f"Unexpected Ollama response: {data}")
     except requests.Timeout as e:
         raise AIError(f"Ollama request timed out after {timeout}s") from e
     except requests.RequestException as e:
         raise AIError(f"Ollama request failed: {e}") from e
     except Exception as e:
-        raise AIError(f"Ollama unexpected response: {r.text[:400]} ({e})")
+        raise AIError(str(e))
 
 
-def _openrouter_chat(messages, system=None, model=None, temperature=0.2, timeout=None, api_key=None):
+def _openrouter_chat(messages, system=None, model=None, temperature=0.2, timeout=None, api_key=None, options=None):
     api_key = api_key or _get("OPENROUTER_API_KEY", "")
     if not api_key:
         # no key -> skip gracefully
@@ -81,7 +100,7 @@ def _openrouter_chat(messages, system=None, model=None, temperature=0.2, timeout
         raise AIError(f"OpenRouter unexpected response: {r.text[:400]} ({e})")
 
 
-def chat(messages, system=None, model=None, temperature=0.2, timeout=None):
+def chat(messages, system=None, model=None, temperature=0.2, timeout=None, options=None):
     """
     Main entry point:
     - Honors AI_BACKEND (default OLLAMA)
@@ -108,10 +127,26 @@ def chat(messages, system=None, model=None, temperature=0.2, timeout=None):
             if b == "OLLAMA":
                 if not _ollama_available(ollama_base, timeout=2):
                     raise AIError(f"Ollama not reachable at {ollama_base}")
-                return _ollama_chat(messages, system=system, model=model, temperature=temperature, timeout=timeout, base=ollama_base)
+                return _ollama_chat(
+                    messages,
+                    system=system,
+                    model=model,
+                    temperature=temperature,
+                    timeout=timeout,
+                    base=ollama_base,
+                    options=options,
+                )
 
             if b == "OPENROUTER":
-                return _openrouter_chat(messages, system=system, model=model, temperature=temperature, timeout=timeout, api_key=or_key)
+                return _openrouter_chat(
+                    messages,
+                    system=system,
+                    model=model,
+                    temperature=temperature,
+                    timeout=timeout,
+                    api_key=or_key,
+                    options=options,
+                )
 
         except Exception as e:
             last_err = e

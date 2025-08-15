@@ -95,9 +95,9 @@
 
         <form method="post" enctype="multipart/form-data" id="proposal-form" autocomplete="off">
             {% csrf_token %}
-            <textarea name="need_analysis" hidden>{{ need_analysis.content|default_if_none:'' }}</textarea>
-            <textarea name="objectives" hidden>{{ objectives.content|default_if_none:'' }}</textarea>
-            <textarea name="outcomes" hidden>{{ outcomes.content|default_if_none:'' }}</textarea>
+            <textarea id="id_need_analysis" name="need_analysis" hidden>{{ need_analysis.content|default_if_none:'' }}</textarea>
+            <textarea id="id_objectives" name="objectives" hidden>{{ objectives.content|default_if_none:'' }}</textarea>
+            <textarea id="id_learning_outcomes" name="outcomes" hidden>{{ outcomes.content|default_if_none:'' }}</textarea>
             <textarea name="flow" hidden>{{ flow.content|default_if_none:'' }}</textarea>
 
             <div class="form-panel" id="form-panel">
