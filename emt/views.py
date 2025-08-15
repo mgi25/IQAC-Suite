@@ -7,7 +7,7 @@ import json
 import re
 from urllib.parse import urlparse
 import requests
-from suite import ai_client
+from suite import ollama_client
 import time
 from bs4 import BeautifulSoup
 from django.db.models import Q
@@ -1770,13 +1770,15 @@ OUT_PROMPT = "List 3-5 expected learning outcomes for participants as bullet poi
 def generate_need_analysis(request):
     ctx = _basic_info_context(request.POST)
     if not ctx:
-        return JsonResponse({"ok": False, "error": "No context"}, status=400)
+        return JsonResponse({"error": "No context"}, status=400)
     try:
-        text = ai_client.chat([{ "role": "user", "content": ctx }], system=NEED_PROMPT)
-        return JsonResponse({"ok": True, "text": text})
-    except ai_client.AIError as exc:
+        text = ollama_client.chat([
+            {"role": "user", "content": ctx}
+        ], system=NEED_PROMPT)
+        return JsonResponse({"text": text})
+    except ollama_client.AIError as exc:
         logger.error("Need analysis generation failed: %s", exc)
-        return JsonResponse({"ok": False, "error": str(exc)}, status=503)
+        return JsonResponse({"error": str(exc)}, status=503)
 
 
 @login_required
@@ -1784,13 +1786,15 @@ def generate_need_analysis(request):
 def generate_objectives(request):
     ctx = _basic_info_context(request.POST)
     if not ctx:
-        return JsonResponse({"ok": False, "error": "No context"}, status=400)
+        return JsonResponse({"error": "No context"}, status=400)
     try:
-        text = ai_client.chat([{ "role": "user", "content": ctx }], system=OBJ_PROMPT)
-        return JsonResponse({"ok": True, "text": text})
-    except ai_client.AIError as exc:
+        text = ollama_client.chat([
+            {"role": "user", "content": ctx}
+        ], system=OBJ_PROMPT)
+        return JsonResponse({"text": text})
+    except ollama_client.AIError as exc:
         logger.error("Objectives generation failed: %s", exc)
-        return JsonResponse({"ok": False, "error": str(exc)}, status=503)
+        return JsonResponse({"error": str(exc)}, status=503)
 
 
 @login_required
