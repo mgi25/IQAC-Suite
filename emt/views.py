@@ -1770,7 +1770,7 @@ OUT_PROMPT = "List 3-5 expected learning outcomes for participants as bullet poi
 def generate_need_analysis(request):
     ctx = _basic_info_context(request.POST)
     if not ctx:
-        return JsonResponse({"error": "No context"}, status=400)
+        return JsonResponse({"ok": False, "error": "No context"}, status=400)
     try:
         messages = [{"role": "user", "content": f"{NEED_PROMPT}\n\n{ctx}"}]
         timeout = getattr(settings, "AI_HTTP_TIMEOUT", 60)
@@ -1779,10 +1779,10 @@ def generate_need_analysis(request):
             system="You write crisp academic content for university event proposals.",
             timeout=timeout,
         )
-        return JsonResponse({"text": text})
+        return JsonResponse({"ok": True, "text": text})
     except AIError as exc:
         logger.error("Need analysis generation failed: %s", exc)
-        return JsonResponse({"error": str(exc)}, status=503)
+        return JsonResponse({"ok": False, "error": str(exc)}, status=503)
     except Exception as exc:
         logger.error("Need analysis generation unexpected error: %s", exc)
         return JsonResponse({"error": f"Unexpected error: {exc}"}, status=500)
@@ -1793,7 +1793,7 @@ def generate_need_analysis(request):
 def generate_objectives(request):
     ctx = _basic_info_context(request.POST)
     if not ctx:
-        return JsonResponse({"error": "No context"}, status=400)
+        return JsonResponse({"ok": False, "error": "No context"}, status=400)
     try:
         messages = [{"role": "user", "content": f"{OBJ_PROMPT}\n\n{ctx}"}]
         timeout = getattr(settings, "AI_HTTP_TIMEOUT", 60)
@@ -1802,13 +1802,13 @@ def generate_objectives(request):
             system="You write measurable, outcome-focused objectives aligned to higher-education events.",
             timeout=timeout,
         )
-        return JsonResponse({"text": text})
+        return JsonResponse({"ok": True, "text": text})
     except AIError as exc:
         logger.error("Objectives generation failed: %s", exc)
-        return JsonResponse({"error": str(exc)}, status=503)
+        return JsonResponse({"ok": False, "error": str(exc)}, status=503)
     except Exception as exc:
         logger.error("Objectives generation unexpected error: %s", exc)
-        return JsonResponse({"error": f"Unexpected error: {exc}"}, status=500)
+        return JsonResponse({"ok": False, "error": f"Unexpected error: {exc}"}, status=500)
 
 
 @login_required
