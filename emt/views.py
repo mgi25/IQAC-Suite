@@ -42,10 +42,6 @@ from emt.utils import (
     get_downstream_optional_candidates,
 )
 from emt.models import ApprovalStep
-import os
-OLLAMA_BASE = os.getenv("OLLAMA_BASE", "http://127.0.0.1:11434")
-GEN_MODEL   = os.getenv("OLLAMA_GEN_MODEL", "qwen2.5:7b-instruct-q4_0")
-CRITIC_MODEL = os.getenv("OLLAMA_CRITIC_MODEL", "llama3.2:3b-instruct-q4_0")
 
 # ---------------------------------------------------------------------------
 # Role name constants for lookup to avoid hardcoded strings
@@ -1720,26 +1716,6 @@ def admin_reports_view(request):
     except Exception as e:
         print(f"Error in admin_reports_view: {e}")
         return HttpResponse(f"An error occurred: {e}", status=500)
-def _ollama_chat(model, system, user, max_tokens=220, temp=0.4):
-    body = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-        "temperature": temp,
-        "max_tokens": max_tokens,
-    }
-    r = requests.post(
-        f"{OLLAMA_BASE}/v1/chat/completions",
-        headers={"Content-Type": "application/json"},
-        data=json.dumps(body),
-        timeout=60,
-    )
-    r.raise_for_status()
-    return r.json()["choices"][0]["message"]["content"].strip()
-
-
 def _basic_info_context(data):
     parts = []
     title = (data.get("title") or "").strip()
@@ -1785,7 +1761,7 @@ def generate_need_analysis(request):
         return JsonResponse({"ok": False, "error": str(exc)}, status=503)
     except Exception as exc:
         logger.error("Need analysis generation unexpected error: %s", exc)
-        return JsonResponse({"error": f"Unexpected error: {exc}"}, status=500)
+        return JsonResponse({"ok": False, "error": f"Unexpected error: {exc}"}, status=500)
 
 
 @login_required
@@ -1818,8 +1794,17 @@ def generate_expected_outcomes(request):
     if not ctx:
         return JsonResponse({"ok": False, "error": "No context"}, status=400)
     try:
-        text = _ollama_chat(GEN_MODEL, OUT_PROMPT, ctx, max_tokens=200, temp=0.4)
+        messages = [{"role": "user", "content": f"{OUT_PROMPT}\n\n{ctx}"}]
+        timeout = getattr(settings, "AI_HTTP_TIMEOUT", 60)
+        text = chat(
+            messages,
+            system="You write measurable expected outcomes for higher-education events.",
+            timeout=timeout,
+        )
         return JsonResponse({"ok": True, "text": text})
-    except Exception as exc:
+    except AIError as exc:
         logger.error("Expected outcomes generation failed: %s", exc)
-        return JsonResponse({"ok": False, "error": "AI service unavailable"}, status=503)
+        return JsonResponse({"ok": False, "error": str(exc)}, status=503)
+    except Exception as exc:
+        logger.error("Expected outcomes generation unexpected error: %s", exc)
+        return JsonResponse({"ok": False, "error": f"Unexpected error: {exc}"}, status=500)

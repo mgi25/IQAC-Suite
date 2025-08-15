@@ -1859,7 +1859,7 @@ function getWhyThisEventForm() {
                         body: fd
                     });
                     const data = await resp.json();
-                    if (resp.ok && data.ok) {
+                    if (data.ok) {
                         textarea.val(data.text);
                         textarea.trigger('input');
                     } else {
