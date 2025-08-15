@@ -5200,4 +5200,25 @@ def cdl_head_dashboard(request):
 
 @login_required
 def cdl_work_dashboard(request):
-    return render(request, "core/cdl_work_dashboard.html")
+    ctx = {
+        "member_inbox": [],
+        "member_work": [],
+        "member_events": [],
+        "member_stats_30d": {"ontime": None, "firstpass": None, "availability": None},
+    }
+    return render(request, "core/cdl_work_dashboard.html", ctx)
+
+def cdl_create_availability(request):
+    return HttpResponse("Create Availability (stub)")
+
+def cdl_brand_kit(request):
+    return HttpResponse("Brand Kit (stub)")
+
+def cdl_templates_posters(request):
+    return HttpResponse("Poster Templates (stub)")
+
+def cdl_templates_certificates(request):
+    return HttpResponse("Certificate Templates (stub)")
+
+def cdl_media_guide(request):
+    return HttpResponse("Media Naming Guide (stub)")
