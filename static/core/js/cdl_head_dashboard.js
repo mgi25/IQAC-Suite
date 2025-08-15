@@ -1,251 +1,252 @@
-/* CDL Head Dashboard – mirrors dashboard.js behavior */
 (function () {
     const $ = (s, r = document) => r.querySelector(s);
     const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
-    const debounce = (fn,ms=120)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; };
   
-    // ----- KPI quick filters (optional no-ops for now) -----
-    $('#kpiActive')?.addEventListener('click', ()=> filterQueue('all'));
-    $('#kpiAssetsPending')?.addEventListener('click', ()=> filterQueue('media'));
-    $('#kpiOverload')?.addEventListener('click', ()=> filterQueue('overload'));
-    $('#kpiEventsSupported')?.addEventListener('click', ()=> location.hash = '#events');
+    const NOTIFS = [
+      {id:101, type:'poster',       title:'Business Summit — Poster',       priority:'Urgent',  due:'2025-08-18'},
+      {id:102, type:'certificate',  title:'Tech Fest — Certificates',       priority:'Normal',  due:'2025-08-20'},
+      {id:103, type:'coverage',     title:'AI Workshop — Coverage',         priority:'Normal',  due:'2025-08-19'},
+      {id:104, type:'media',        title:'Cultural Night — Media Upload',  priority:'Urgent',  due:'2025-08-17'},
+    ];
+    let ASSIGN_LIST = [];
   
-    // ----- Queue filter buttons -----
-    function filterQueue(type){
-      const items = $$('#cdlQueue .list-item');
-      items.forEach(it=>{
-        const t = it.dataset.type || '';
-        if(type==='all') it.style.display='';
-        else if(type==='overload') it.style.display=''; // head-specific; could highlight instead
-        else it.style.display = (t===type)?'':'none';
+    const EVENTS = (()=>{
+      try { return JSON.parse(document.getElementById('calendarEventsJson').textContent) || []; }
+      catch { return [
+        {id:1, title:'Coverage: Business Summit', date:'2025-08-18', type:'coverage', member:'Priya'},
+        {id:2, title:'Poster Approval: Tech Fest', date:'2025-08-20', type:'approval'},
+        {id:3, title:'Coverage: Cultural Night', date:'2025-08-17', type:'coverage', member:'John'},
+      ]; }
+    })();
+  
+    function computeKPIs(){
+      const totalActive = NOTIFS.length + ASSIGN_LIST.length;
+      const assetsPending = 0;
+      const unassignedTasks = ASSIGN_LIST.filter(x=>!x.assignee).length;
+      const eventsSupported = 0;
+      $('#valActive').textContent = totalActive;
+      $('#valAssetsPending').textContent = assetsPending;
+      $('#valUnassigned').textContent = unassignedTasks;
+      $('#valEvents').textContent = eventsSupported;
+    }
+  
+    // KPIs shortcuts
+    $('#kpiActive')?.addEventListener('click', ()=> document.querySelector('#cardNotifications')?.scrollIntoView({behavior:'smooth'}));
+    $('#kpiUnassigned')?.addEventListener('click', ()=>{ setAMFilter('unassigned'); document.querySelector('#cardAssignAll')?.scrollIntoView({behavior:'smooth'}); });
+  
+    // Notifications
+    let currentNotifFilter = 'all';
+    function renderNotifications(filter='all'){
+      const list = $('#notifList');
+      const empty = $('#notifEmpty');
+      const rows = NOTIFS
+        .filter(n => filter==='all' ? true : n.type === filter.slice(0,-1))
+        .map(n => `
+          <article class="list-item" data-id="${n.id}" data-type="${n.type}">
+            <div class="bullet under_review"><i class="fa-regular fa-bell"></i></div>
+            <div class="list-body">
+              <h4>${n.title}</h4>
+              <p>Priority: ${n.priority} · Due: ${fmt(n.due)}</p>
+            </div>
+            <div class="btn-group">
+              <button class="chip-btn success" data-nact="approve"><i class="fa-solid fa-check"></i> Approve</button>
+              <button class="chip-btn warn" data-nact="decline"><i class="fa-solid fa-xmark"></i> Decline</button>
+            </div>
+          </article>
+        `).join('');
+      list.innerHTML = rows;
+      empty.style.display = rows ? 'none' : 'block';
+  
+      list.querySelectorAll('[data-nact]').forEach(btn=>{
+        btn.addEventListener('click', e=>{
+          const item = e.currentTarget.closest('.list-item');
+          const id = +item.dataset.id;
+          const act = e.currentTarget.dataset.nact;
+  
+          if (act==='approve') {
+            const n = NOTIFS.find(x=>x.id===id);
+            if (n) {
+              ASSIGN_LIST.unshift({
+                id:n.id, event:n.title.split(' — ')[0],
+                type:n.type, priority:n.priority, due:n.due,
+                assignee:null, status:'Pending', rev:0
+              });
+            }
+            const idx = NOTIFS.findIndex(x=>x.id===id);
+            if (idx>-1) NOTIFS.splice(idx,1);
+            renderNotifications(currentNotifFilter);
+            renderAssignTable();
+            computeKPIs();
+          }
+  
+          if (act==='decline') {
+            const idx = NOTIFS.findIndex(x=>x.id===id);
+            if (idx>-1) NOTIFS.splice(idx,1);
+            renderNotifications(currentNotifFilter);
+            computeKPIs();
+          }
+        });
       });
     }
-    $$('.seg-btn[data-cdl-filter]').forEach(btn=>{
-      btn.addEventListener('click', e=>{
-        $$('.seg-btn[data-cdl-filter]').forEach(b=>b.classList.remove('active'));
+    $$('.seg-btn[data-nf]').forEach(b=>{
+      b.addEventListener('click', e=>{
+        $$('.seg-btn[data-nf]').forEach(x=>x.classList.remove('active'));
         e.currentTarget.classList.add('active');
-        filterQueue(e.currentTarget.dataset.cdlFilter);
+        currentNotifFilter = e.currentTarget.dataset.nf;
+        renderNotifications(currentNotifFilter);
       });
     });
   
-    // ----- Donut: Backlog (by type) / Coverage Readiness -----
-    const ctx = $('#donutChart')?.getContext('2d');
-    const COLORS = ['#6366f1','#f59e0b','#10b981','#ef4444'];
-    let donut;
+    // Assignment Manager
+    let amFilter = 'all';
+    function setAMFilter(f){ amFilter = f; $$('.seg-btn[data-am]').forEach(b=> b.classList.toggle('active', b.dataset.am===f)); renderAssignTable(); }
   
-    function renderDonut(labels, data) {
-      if (!ctx) return;
-      donut?.destroy();
-      donut = new Chart(ctx, {
-        type: 'doughnut',
-        data: { labels, datasets: [{ data, backgroundColor: COLORS, borderWidth: 0, cutout: '70%' }] },
-        options: { plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: true, layout:{padding:10} }
+    function renderAssignTable(){
+      const tb = $('#assignBody');
+      const now = new Date();
+      const rows = ASSIGN_LIST
+        .filter(r=>{
+          if (amFilter==='all') return true;
+          if (amFilter==='unassigned') return !r.assignee;
+          if (amFilter==='urgent') return r.priority==='Urgent';
+          if (amFilter==='due24'){ const ms = new Date(r.due) - now; return ms>=0 && ms<=24*60*60*1000; }
+          return true;
+        })
+        .map(r=>{
+          const pr = r.priority==='Urgent' ? 'danger' : 'amber';
+          const st = r.status==='Pending' ? 'warn' : (r.status==='In Review' ? 'info' : (r.status==='Approved'?'success':'gray'));
+          const ass = r.assignee ? r.assignee : '<span class="chip gray">Unassigned</span>';
+          return `
+          <tr data-id="${r.id}">
+            <td><input type="checkbox" class="amRow"></td>
+            <td>${r.event}</td>
+            <td>${cap(r.type)}</td>
+            <td><span class="chip ${pr}">${r.priority}</span></td>
+            <td>${fmt(r.due)}</td>
+            <td>${ass}</td>
+            <td><span class="chip ${st}">${r.status}</span></td>
+            <td>${r.rev}</td>
+            <td class="ta-right">
+              <button class="btn xs" data-am="assign">Assign</button>
+              <button class="btn xs success" data-am="approve">Approve</button>
+              <button class="btn xs warn" data-am="return">Return</button>
+            </td>
+          </tr>`;
+        }).join('');
+      tb.innerHTML = rows || `<tr><td colspan="9">No items</td></tr>`;
+  
+      tb.querySelectorAll('[data-am]').forEach(b=>{
+        b.addEventListener('click', e=>{
+          const tr = e.currentTarget.closest('tr');
+          const id = +tr.dataset.id;
+          const act = e.currentTarget.dataset.am;
+          const row = ASSIGN_LIST.find(x=>x.id===id);
+          if (!row) return;
+          if (act==='assign'){ row.assignee = prompt('Assign to (name)?') || row.assignee; }
+          if (act==='approve'){ row.status = 'Approved'; }
+          if (act==='return'){ row.status = 'Returned'; row.rev += 1; }
+          renderAssignTable(); computeKPIs();
+        });
       });
-      const legend = $('#donutLegend');
-      if (legend) legend.innerHTML = labels.map((l,i)=>
-        `<div class="legend-row"><span class="legend-dot" style="background:${COLORS[i]}"></span><span>${l}</span><strong style="margin-left:auto">${data[i]}%</strong></div>`
-      ).join('');
     }
   
-    async function loadBacklog() {
-      try{
-        const res = await fetch('/api/cdl/backlog/', { headers:{'X-Requested-With':'XMLHttpRequest'}});
-        const j = await res.json();
-        renderDonut(j.labels, j.percentages);
-      }catch{
-        // fallback demo: Poster/Certificate/Coverage/Other
-        renderDonut(['Posters','Certificates','Coverage','Other'], [46, 28, 18, 8]);
-      }
-      const title = $('#perfTitle'); if (title) title.textContent = 'Backlog by Type';
+    $$('.seg-btn[data-am]').forEach(b=> b.addEventListener('click', ()=> setAMFilter(b.dataset.am)));
+    $('#amSelectAll')?.addEventListener('change', e=> $$('#assignBody .amRow').forEach(cb=> cb.checked = e.target.checked));
+    $('#amBulkAssign')?.addEventListener('click', ()=>{ const name = prompt('Assign selected to (name)?'); if(!name) return; getSel().forEach(id=>{ const r=ASSIGN_LIST.find(x=>x.id===id); if(r) r.assignee=name; }); renderAssignTable(); computeKPIs(); });
+    $('#amBulkApprove')?.addEventListener('click', ()=>{ getSel().forEach(id=>{ const r=ASSIGN_LIST.find(x=>x.id===id); if(r) r.status='Approved'; }); renderAssignTable(); computeKPIs(); });
+    $('#amBulkReturn')?.addEventListener('click', ()=>{ getSel().forEach(id=>{ const r=ASSIGN_LIST.find(x=>x.id===id); if(r){ r.status='Returned'; r.rev+=1; } }); renderAssignTable(); computeKPIs(); });
+    const getSel = ()=> $$('#assignBody .amRow:checked').map(cb=> +cb.closest('tr').dataset.id);
+  
+    // Team Analytics
+    let teamChart;
+    function buildTeamChart(labels, data, title){
+      const ctx = $('#teamChart'); if(!ctx) return;
+      teamChart?.destroy();
+      teamChart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets:[{ data, borderWidth:0 }] },
+        options: { plugins:{legend:{display:false}}, responsive:true, maintainAspectRatio:false, scales:{y:{beginAtZero:true}} }
+      });
+      $('#teamTitle').textContent = title;
     }
+    function viewWorkload(){ buildTeamChart(['John','Priya','Aarav','Meera'], [5,8,3,6], 'Workload Distribution'); }
+    function viewOnTime(){ buildTeamChart(['John','Priya','Aarav','Meera'], [82,74,91,69], 'On-time Completion (%)'); }
+    function viewFirstPass(){ buildTeamChart(['John','Priya','Aarav','Meera'], [64,71,55,77], 'First-pass Approval (%)'); }
+    $$('.seg-btn[data-view]').forEach(b=>{
+      b.addEventListener('click', e=>{
+        $$('.seg-btn[data-view]').forEach(x=>x.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        const v = e.currentTarget.dataset.view;
+        if(v==='workload') viewWorkload();
+        if(v==='ontime') viewOnTime();
+        if(v==='firstpass') viewFirstPass();
+      });
+    });
   
-    async function loadCoverageReadiness() {
-      try{
-        const res = await fetch('/api/cdl/coverage-readiness/', { headers:{'X-Requested-With':'XMLHttpRequest'}});
-        const j = await res.json();
-        renderDonut(j.labels, j.percentages);
-      }catch{
-        // fallback demo: Ready / Missing Brief / Unassigned / Conflict
-        renderDonut(['Ready','Missing Brief','Unassigned','Conflict'], [62, 14, 18, 6]);
-      }
-      const title = $('#perfTitle'); if (title) title.textContent = 'Coverage Readiness';
-    }
-  
-    $$('.seg-btn[data-view]').forEach(b => b.addEventListener('click', e => {
-      $$('.seg-btn[data-view]').forEach(x => x.classList.remove('active'));
-      e.currentTarget.classList.add('active');
-      (e.currentTarget.dataset.view === 'performance' ? loadBacklog() : loadCoverageReadiness()).then(syncHeights);
-    }));
-  
-    // ----- Calendar (same as your file) -----
+    // Calendar
     let calRef = new Date();
     const fmt2 = v => String(v).padStart(2,'0');
-    const isSame = (a,b)=>a.getFullYear()==b.getFullYear()&&a.getMonth()==b.getMonth()&&a.getDate()==b.getDate();
+    const titleEl = $('#calTitle'), gridEl = $('#calGrid'), upcoming = $('#upcomingWrap');
   
-    function buildCalendar() {
-      const headTitle = $('#calTitle');
-      const grid = $('#calGrid');
-      if(!grid || !headTitle) return;
-      headTitle.textContent = calRef.toLocaleString(undefined,{month:'long', year:'numeric'});
+    function buildCalendar(){
+      if(!gridEl||!titleEl) return;
+      titleEl.textContent = calRef.toLocaleString(undefined,{month:'long',year:'numeric'});
       const first = new Date(calRef.getFullYear(), calRef.getMonth(), 1);
       const last  = new Date(calRef.getFullYear(), calRef.getMonth()+1, 0);
       const startIdx = first.getDay();
       const prevLast = new Date(calRef.getFullYear(), calRef.getMonth(), 0).getDate();
-  
       const cells = [];
-      for(let i=startIdx-1;i>=0;i--){ cells.push({text: prevLast - i, date:null, muted:true}); }
+      for(let i=startIdx-1;i>=0;i--) cells.push({t: prevLast - i, iso:null, muted:true});
       for(let d=1; d<=last.getDate(); d++){
-        const dt = new Date(calRef.getFullYear(), calRef.getMonth(), d);
-        cells.push({text:d, date:dt, muted:false});
+        const iso = `${calRef.getFullYear()}-${fmt2(calRef.getMonth()+1)}-${fmt2(d)}`;
+        cells.push({t:d, iso, muted:false});
       }
-      while(cells.length % 7 !== 0){ cells.push({text: cells.length%7+1, date:null, muted:true}); }
+      while(cells.length%7!==0) cells.push({t:'',iso:null, muted:true});
   
-      grid.innerHTML = cells.map(c=>{
-        const today = c.date && isSame(c.date, new Date());
-        const iso = c.date ? `${c.date.getFullYear()}-${fmt2(c.date.getMonth()+1)}-${fmt2(c.date.getDate())}` : '';
-        return `<div class="day${c.muted?' muted':''}${today?' today':''}" data-date="${iso}">${c.text}</div>`;
+      gridEl.innerHTML = cells.map(c=>{
+        const dots = buildDots(c.iso);
+        return `<div class="day${c.muted?' muted':''}" data-date="${c.iso||''}">
+          <div class="num">${c.t}</div>
+          <div class="dots">${dots}</div>
+        </div>`;
       }).join('');
   
-      grid.querySelectorAll('.day[data-date]').forEach(el=>{
-        el.addEventListener('click', ()=> openDay(new Date(el.dataset.date)));
-      });
+      $$('#calGrid .day[data-date]').forEach(d=> d.addEventListener('click', ()=> openDay(d.dataset.date)));
     }
-  
-    function openDay(day){
-      const yyyy = day.getFullYear(), mm = fmt2(day.getMonth()+1), dd = fmt2(day.getDate());
-      const dateStr = `${yyyy}-${mm}-${dd}`;
-      const list = $('#upcomingWrap'); if (!list) return;
-      const items = (window.DASHBOARD_EVENTS||[]).filter(e => e.date === dateStr);
-      list.innerHTML = items.length
-        ? items.map(e => `<div class="u-item"><div>${e.title}</div><a class="chip-btn" href="/proposal/${e.id}/detail/"><i class="fa-regular fa-eye"></i> View</a></div>`).join('')
-        : `<div class="empty">No items for ${day.toLocaleDateString()}</div>`;
+    function buildDots(iso){
+      if(!iso) return '';
+      const list = EVENTS.filter(e=>e.date===iso);
+      const hasConflict = (()=>{ const m={}; list.forEach(e=>{ if(e.member){ m[e.member]=(m[e.member]||0)+1; }}); return Object.values(m).some(v=>v>1); })();
+      return list.map(e=>`<span class="dot ${e.type==='coverage'?'blue':'green'}"></span>`).join('') + (hasConflict? `<span class="dot red" title="Conflict"></span>`:'');
     }
-  
-    $('#calPrev')?.addEventListener('click', ()=>{ calRef = new Date(calRef.getFullYear(), calRef.getMonth()-1, 1); buildCalendar(); syncHeights(); });
-    $('#calNext')?.addEventListener('click', ()=>{ calRef = new Date(calRef.getFullYear(), calRef.getMonth()+1, 1); buildCalendar(); syncHeights(); });
-    $('#addEventBtn')?.addEventListener('click', (e) => {
-      const scope = $('#visibilitySelect')?.value || 'all';
+    function openDay(iso){
+      const items = EVENTS.filter(e=>e.date===iso);
+      upcoming.innerHTML = items.length ? items.map(e=>`
+        <div class="u-item">
+          <div>${e.title}</div>
+          <a class="chip-btn" href="/proposal/${e.id}/detail/"><i class="fa-regular fa-eye"></i> View</a>
+        </div>
+      `).join('') : `<div class="empty">No items for ${new Date(iso).toLocaleDateString()}</div>`;
+    }
+    $('#calPrev')?.addEventListener('click', ()=>{ calRef = new Date(calRef.getFullYear(), calRef.getMonth()-1, 1); buildCalendar(); });
+    $('#calNext')?.addEventListener('click', ()=>{ calRef = new Date(calRef.getFullYear(), calRef.getMonth()+1, 1); buildCalendar(); });
+    $('#addEventBtn')?.addEventListener('click', (e)=>{
+      const scope = $('#calFilter')?.value || 'all';
       e.currentTarget.href = `/suite/submit/?via=dashboard&scope=${encodeURIComponent(scope)}`;
     });
   
-    // ----- Heatmap (same) -----
-    function renderHeatmap(){
-      const wrap = $('#heatmapContainer'); if (!wrap) return;
-      const cols = 53, rows = 7;
-      const grid = document.createElement('div'); grid.className='hm-grid';
-      for (let c=0;c<cols;c++){
-        const col = document.createElement('div'); col.className='hm-col';
-        for (let r=0;r<rows;r++){
-          const cell = document.createElement('div'); cell.className='hm-cell';
-          const v = Math.random();
-          if (v>0.8) cell.classList.add('l4'); else if (v>0.6) cell.classList.add('l3'); else if (v>0.35) cell.classList.add('l2'); else if (v>0.18) cell.classList.add('l1');
-          col.appendChild(cell);
-        }
-        grid.appendChild(col);
-      }
-      wrap.innerHTML=''; const box = document.createElement('div'); box.className='heatmap'; box.appendChild(grid); wrap.appendChild(box);
-      fitHeatmap();
-    }
-    function fitHeatmap(){
-      const wrap = $('#heatmapContainer'); if(!wrap) return;
-      const cols = 53, rows = 7, gap = 3;
-      const cs = getComputedStyle(wrap);
-      const availW = wrap.clientWidth  - (parseFloat(cs.paddingLeft)||0) - (parseFloat(cs.paddingRight)||0);
-      const availH = wrap.clientHeight - (parseFloat(cs.paddingTop)||0)  - (parseFloat(cs.paddingBottom)||0);
-      const size = Math.max(4, Math.floor(Math.min(
-        (availW - (cols - 1) * gap) / cols,
-        (availH - (rows - 1) * gap) / rows
-      )));
-      wrap.style.setProperty('--hm-size', size + 'px');
-      wrap.style.setProperty('--hm-gap',  gap  + 'px');
-    }
+    // Utils
+    function cap(s){ return s ? s.charAt(0).toUpperCase()+s.slice(1) : s; }
+    function fmt(iso){ const d=new Date(iso); return d.toLocaleString(undefined,{month:'short',day:'2-digit'}); }
   
-    // ----- To-do (same) -----
-    const todoKey = 'ems.todo.cdl.head';
-    function loadTodos(){
-      const list = $('#todoList'); if(!list) return;
-      const data = JSON.parse(localStorage.getItem(todoKey)||'[]');
-      list.innerHTML = data.map((t,i)=>`
-        <li data-i="${i}">
-          <input type="checkbox" ${t.done?'checked':''}>
-          <span>${t.text}</span>
-          <button class="rm" title="Remove"><i class="fa-regular fa-trash-can"></i></button>
-        </li>`).join('');
-      list.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
-        cb.addEventListener('change',e=>{
-          const i = +e.target.closest('li').dataset.i;
-          data[i].done = e.target.checked;
-          localStorage.setItem(todoKey, JSON.stringify(data));
-        });
-      });
-      list.querySelectorAll('.rm').forEach(btn=>{
-        btn.addEventListener('click',e=>{
-          const i = +e.currentTarget.closest('li').dataset.i;
-          data.splice(i,1); localStorage.setItem(todoKey, JSON.stringify(data)); loadTodos(); syncHeights();
-        });
-      });
-    }
-    $('#addTodo')?.addEventListener('click',()=>{
-      const text = prompt('New to-do'); if(!text) return;
-      const data = JSON.parse(localStorage.getItem(todoKey)||'[]');
-      data.unshift({text,done:false}); localStorage.setItem(todoKey, JSON.stringify(data));
-      loadTodos(); syncHeights();
+    document.addEventListener('DOMContentLoaded', ()=>{
+      computeKPIs();
+      renderNotifications('all');
+      setAMFilter('all');
+      renderAssignTable();
+      viewWorkload();
+      buildCalendar();
+      openDay(new Date().toISOString().slice(0,10));
     });
-  
-    // ----- Equal heights (same) -----
-    function syncHeights(){
-      const isDesktop = window.innerWidth > 1200;
-      const root = document.documentElement;
-      const perf = $('#cardPerformance');
-      const acts = $('#cardActions');
-      const cal  = $('#cardCalendar');
-      const todo = $('#cardTodo');
-      const todoList = $('#todoList');
-      const todoHeader = $('#cardTodo .card-header');
-      const contrib = $('#cardContribution');
-  
-      if(!isDesktop){
-        ['--calH','--contribH','--todoBodyH'].forEach(v=>root.style.removeProperty(v));
-        [perf, acts, cal, todo].forEach(el=>{ if(el){ el.style.height=''; el.style.minHeight=''; }});
-        if(todoList){ todoList.style.height=''; todoList.style.overflowY=''; }
-        return;
-      }
-  
-      if (cal) {
-        const calH = Math.ceil(cal.getBoundingClientRect().height);
-        root.style.setProperty('--calH', calH + 'px');
-        cal.style.height  = calH + 'px';
-        if (acts) acts.style.height = calH + 'px';
-        if (perf) perf.style.height = calH + 'px';
-      }
-  
-      if (contrib && todo && todoHeader && todoList) {
-        const contribH = Math.ceil(contrib.getBoundingClientRect().height);
-        root.style.setProperty('--contribH', contribH + 'px');
-        todo.style.height = contribH + 'px';
-  
-        const cs = getComputedStyle(todo);
-        const padV = (parseFloat(cs.paddingTop)||0)+(parseFloat(cs.paddingBottom)||0);
-        const borderV = (parseFloat(cs.borderTopWidth)||0)+(parseFloat(cs.borderBottomWidth)||0);
-        const headerH = Math.ceil(todoHeader.getBoundingClientRect().height);
-        const bodyH = Math.max(0, contribH - headerH - padV - borderV);
-  
-        root.style.setProperty('--todoBodyH', bodyH + 'px');
-        todoList.style.height = bodyH + 'px';
-        todoList.style.overflowY = 'auto';
-      }
-      fitHeatmap();
-    }
-  
-    // ----- Boot -----
-    document.addEventListener('DOMContentLoaded', () => {
-      loadBacklog();          // default view
-      buildCalendar(); openDay(new Date());
-      renderHeatmap();
-      loadTodos();
-      requestAnimationFrame(()=>{ syncHeights(); });
-    });
-    window.addEventListener('load', ()=>syncHeights());
-    window.addEventListener('resize', debounce(syncHeights, 150));
   })();
   
