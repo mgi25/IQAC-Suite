@@ -75,14 +75,15 @@ window.AutosaveManager = (function() {
             body: JSON.stringify(formData)
         })
         .then(async res => {
+            if (!res.ok) {
+                console.warn('autosave failed', res.status);
+                return Promise.reject(res.status);
+            }
             let data = null;
             try {
                 data = await res.json();
             } catch (e) {
                 // ignore JSON parse errors
-            }
-            if (!res.ok) {
-                return Promise.reject(data);
             }
             return data;
         })
@@ -97,9 +98,7 @@ window.AutosaveManager = (function() {
             return Promise.reject(data);
         })
         .catch(err => {
-            if (!err || !err.errors) {
-                console.error('Autosave error:', err);
-            }
+            console.warn('autosave exception', err);
             document.dispatchEvent(new CustomEvent('autosave:error', {detail: err}));
             return Promise.reject(err);
         });
@@ -176,4 +175,22 @@ window.AutosaveManager = (function() {
         clearLocal
     };
 })();
+
+// Simple autosave helper used by AI generation
+async function autosave() {
+    try {
+        const res = await fetch('/suite/autosave-proposal/', {
+            method: 'POST',
+            body: new FormData(document.querySelector('form'))
+        });
+        if (!res.ok) {
+            console.warn('autosave failed', res.status);
+            return;
+        }
+        // const data = await res.json(); // optional
+    } catch (e) {
+        console.warn('autosave exception', e);
+    }
+}
+window.autosave = autosave;
 

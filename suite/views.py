@@ -3,11 +3,11 @@ import json
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
+from django.conf import settings
 from .ai_client import chat, AIError
 from .prompts import (
     SYSTEM_WHY_EVENT,
     user_prompt_wyhevent,
-    SYSTEM_NEED,
     SYSTEM_OBJECTIVES,
     SYSTEM_LEARNING,
 )
@@ -31,7 +31,12 @@ def _sanitize(text: str, facts: dict) -> str:
 def generate_why_event(request):
     facts = collect_basic_facts(request)
     try:
-        result = chat([{"role": "user", "content": user_prompt_wyhevent(facts)}], system=SYSTEM_WHY_EVENT)
+        result = chat(
+            [{"role": "user", "content": user_prompt_wyhevent(facts)}],
+            system=SYSTEM_WHY_EVENT,
+            timeout=getattr(settings, "AI_HTTP_TIMEOUT", 120),
+            options={"num_predict": 300},
+        )
         data = parse_model_json(result)
         need = _sanitize(data.get("need_analysis", "").strip(), facts)
         objectives = [o.strip() for o in data.get("objectives", [])]
@@ -52,11 +57,28 @@ def generate_why_event(request):
 @login_required
 @require_POST
 def generate_need_analysis(request):
-    facts = collect_basic_facts(request)
+    topic = (
+        request.POST.get("topic")
+        or request.POST.get("event_title")
+        or request.POST.get("title")
+        or ""
+    ).strip()
+
+    system = (
+        "You write concise academic text for university proposals using ONLY provided facts. "
+        "No invented surveys/stats/quotes/partners/dates. Unknowns -> [TBD]. 120–180 words."
+    )
+    messages = [
+        {"role": "user", "content": f"Need Analysis for: {topic}. Keep it fact-only."}
+    ]
+
     try:
-        prompt = f"facts = {facts}\nTask: Write a need analysis. No invented claims or numbers not in facts."
-        text = chat([{"role": "user", "content": prompt}], system=SYSTEM_NEED)
-        text = _sanitize(text, facts)
+        text = chat(
+            messages,
+            system=system,
+            timeout=getattr(settings, "AI_HTTP_TIMEOUT", 120),
+            options={"num_predict": 300},
+        ).strip()
         return JsonResponse({"ok": True, "field": "need_analysis", "value": text})
     except AIError as e:
         logger.error("generate_need_analysis failed: %s", e)
@@ -71,7 +93,12 @@ def generate_objectives(request):
     facts = collect_basic_facts(request)
     try:
         prompt = f"facts = {facts}\nTask: 4–6 objectives. No numbers unless in facts."
-        text = chat([{"role": "user", "content": prompt}], system=SYSTEM_OBJECTIVES)
+        text = chat(
+            [{"role": "user", "content": prompt}],
+            system=SYSTEM_OBJECTIVES,
+            timeout=getattr(settings, "AI_HTTP_TIMEOUT", 120),
+            options={"num_predict": 300},
+        )
         bullets = [b.strip(" •-*0123456789.").strip() for b in text.splitlines() if b.strip()]
         return JsonResponse({"ok": True, "field": "objectives", "value": bullets})
     except AIError as e:
@@ -87,7 +114,12 @@ def generate_learning_outcomes(request):
     facts = collect_basic_facts(request)
     try:
         prompt = f"facts = {facts}\nTask: 3–5 learning outcomes. Bloom verbs. No numbers unless in facts."
-        text = chat([{"role": "user", "content": prompt}], system=SYSTEM_LEARNING)
+        text = chat(
+            [{"role": "user", "content": prompt}],
+            system=SYSTEM_LEARNING,
+            timeout=getattr(settings, "AI_HTTP_TIMEOUT", 120),
+            options={"num_predict": 300},
+        )
         bullets = [b.strip(" •-*0123456789.").strip() for b in text.splitlines() if b.strip()]
         return JsonResponse({"ok": True, "field": "learning_outcomes", "value": bullets})
     except AIError as e:
