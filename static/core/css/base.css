@@ -175,8 +175,8 @@ body.command-center-layout {
 
 .notification-badge {
   position: absolute;
-  top: -0.25rem;
-  right: -0.25rem;
+  top: -0.4rem;
+  right: -0.4rem;
   background: #ef4444;
   color: var(--white);
   font-size: 0.75rem;
@@ -198,9 +198,9 @@ body.command-center-layout {
   justify-content: center;
   background: transparent;
   padding: 0;
-  border-radius: 0;
-  width: auto;
-  height: auto;
+  border-radius: var(--border-radius);
+  width: 32px;
+  height: 32px;
 }
 
 .notification-btn:hover {
@@ -208,7 +208,7 @@ body.command-center-layout {
 }
 
 .notification-btn i {
-  font-size: 1.5rem;
+  font-size: 1.75rem;
 }
 
 .notification-dropdown {
