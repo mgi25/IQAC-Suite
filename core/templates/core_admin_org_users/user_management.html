@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Manage Users: {{ org.name }}{% endblock %}
+
+{% block head_extra %}
+  <link rel="stylesheet" href="{% static 'core/css/admin_user_management.css' %}?v=2.0">
+{% endblock %}
+
+{% block content %}
+<div class="user-management-container">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1>User Management</h1>
+  </div>
+
+  <!-- Organization Info Banner -->
+  <div class="organization-info" data-org-id="{{ org.id }}" data-org-name="{{ org.name }}">
+    <div class="org-icon">
+      <i class="fas fa-building"></i>
+    </div>
+    <div class="org-name">{{ org.name }}</div>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="nav-tabs">
+    <button class="nav-tab active" data-tab="students">
+      <i class="tab-icon fas fa-graduation-cap"></i>
+      Add Students
+    </button>
+    <button class="nav-tab" data-tab="faculty">
+      <i class="tab-icon fas fa-chalkboard-teacher"></i>
+      Add Faculty
+    </button>
+  </div>
+
+  <!-- Students Tab Content -->
+  <div id="students-tab" class="tab-content active">
+    <div class="dual-pane-layout">
+      
+      <!-- Upload Pane -->
+      <div class="upload-pane">
+        <div class="pane-header">
+          <span>Bulk Upload Students</span>
+          <button class="pane-toggle" title="Collapse">
+            <i class="fas fa-chevron-up"></i>
+          </button>
+        </div>
+        <div class="pane-content">
+          <form id="students-upload-form" class="upload-form">
+            {% csrf_token %}
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="students-class-name">Class Name</label>
+                <input type="text" id="students-class-name" name="class_name" placeholder="BSc-A" required>
+              </div>
+              <div class="form-group">
+                <label for="students-academic-year">Academic Year</label>
+                <input type="text" id="students-academic-year" name="academic_year" placeholder="2025-2026" required>
+              </div>
+            </div>
+            
+            <div class="form-group full-width">
+              <label for="students-csv-file">CSV File</label>
+              <input type="file" id="students-csv-file" name="csv_file" accept=".csv" required>
+            </div>
+            
+            <button type="submit" class="upload-btn">
+              <i class="fas fa-upload"></i>
+              Upload Students
+            </button>
+            
+            <div class="upload-tips">
+              <p><strong>CSV Format:</strong> register_no, name, email, role</p>
+              <p><a href="{% url 'admin_org_users_csv_template' org.id %}?role=student" class="template-link">
+                <i class="fas fa-download"></i> Download Template
+              </a></p>
+              <p><small>Supported roles: student, faculty, tutor (case-insensitive)</small></p>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Results Pane -->
+      <div class="results-pane">
+        <div class="results-header">
+          <h3 class="results-title">Classes Overview</h3>
+          <div class="results-actions">
+            <button class="filter-toggle active" data-filter="active">Active</button>
+            <button class="filter-toggle" data-filter="archived">Archived</button>
+          </div>
+        </div>
+        <div class="results-content">
+          <!-- Content will be loaded dynamically -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Faculty Tab Content -->
+  <div id="faculty-tab" class="tab-content">
+    <div class="dual-pane-layout">
+      
+      <!-- Upload Pane -->
+      <div class="upload-pane">
+        <div class="pane-header">
+          <span>Bulk Upload Faculty</span>
+          <button class="pane-toggle" title="Collapse">
+            <i class="fas fa-chevron-up"></i>
+          </button>
+        </div>
+        <div class="pane-content">
+          <form id="faculty-upload-form" class="upload-form">
+            {% csrf_token %}
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="faculty-academic-year">Academic Year</label>
+                <input type="text" id="faculty-academic-year" name="academic_year" placeholder="2025-2026" required>
+              </div>
+            </div>
+            
+            <div class="form-group full-width">
+              <label for="faculty-csv-file">CSV File</label>
+              <input type="file" id="faculty-csv-file" name="csv_file" accept=".csv" required>
+            </div>
+            
+            <button type="submit" class="upload-btn">
+              <i class="fas fa-upload"></i>
+              Upload Faculty
+            </button>
+            
+            <div class="upload-tips">
+              <p><strong>CSV Format:</strong> emp_id, name, email, role</p>
+              <p><a href="{% url 'admin_org_users_csv_template' org.id %}?role=faculty" class="template-link">
+                <i class="fas fa-download"></i> Download Template
+              </a></p>
+              <p><small>Supported roles: student, faculty, tutor (case-insensitive)</small></p>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Results Pane -->
+      <div class="results-pane">
+        <div class="results-header">
+          <h3 class="results-title">Faculty Overview</h3>
+          <div class="results-actions">
+            <button class="filter-toggle active" data-filter="active">Active</button>
+            <button class="filter-toggle" data-filter="archived">Archived</button>
+          </div>
+        </div>
+        <div class="results-content">
+          <!-- Content will be loaded dynamically -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast Notification Container -->
+<div id="toast-notification" class="toast"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'core/js/admin_user_management.js' %}?v=2.0"></script>
+{% endblock %}
