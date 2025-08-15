@@ -8,6 +8,23 @@
     $('#kpiAchievements')?.addEventListener('click', ()=> location.hash = '#achievements');
     $('#kpiClubs')?.addEventListener('click', ()=> location.hash = '#profile&tab=clubs');
     $('#kpiActivityScore')?.addEventListener('click', ()=> location.hash = '#profile&tab=score');
+
+    // Performance/Contribution tab switching
+    document.addEventListener('click', (e) => {
+      if (e.target.matches('[data-view="performance"]')) {
+        e.preventDefault();
+        document.querySelectorAll('[data-view]').forEach(btn => btn.classList.remove('active'));
+        e.target.classList.add('active');
+        $('#perfTitle').textContent = 'Performance Analytics';
+        loadPerformance();
+      } else if (e.target.matches('[data-view="contribution"]')) {
+        e.preventDefault();
+        document.querySelectorAll('[data-view]').forEach(btn => btn.classList.remove('active'));
+        e.target.classList.add('active');
+        $('#perfTitle').textContent = 'Event Contributions';
+        loadContribution();
+      }
+    });
   
     // Donut
     let donut;
@@ -23,29 +40,123 @@
         options: { plugins: { legend: { display:false } }, responsive:true, maintainAspectRatio:true, layout:{padding:10} }
       });
       const legend = $('#donutLegend');
-      if (legend) legend.innerHTML = labels.map((l,i)=>
-        `<div class="legend-row"><span class="legend-dot" style="background:${COLORS[i]}"></span><span>${l}</span><strong style="margin-left:auto">${data[i]}%</strong></div>`
-      ).join('');
+      if (legend) legend.innerHTML = labels.map((l,i)=>{
+        const val = typeof data[i] === 'number' ? Math.round(data[i]*10)/10 : data[i];
+        return `<div class="legend-row"><span class="legend-dot" style="background:${COLORS[i]}"></span><span>${l}</span><strong style="margin-left:auto">${val}%</strong></div>`;
+      }).join('');
     }
   
     async function loadPerformance(){
       try{
-        const res = await fetch('/api/student/graduate-attributes/', { headers:{'X-Requested-With':'XMLHttpRequest'} });
-        const j = await res.json();                 // {labels:[], percentages:[]}
-        renderDonut(j.labels, j.percentages);
+        const res = await fetch('/api/student/performance-data/', { headers:{'X-Requested-With':'XMLHttpRequest'} });
+        const j = await res.json();
+        
+        // Update performance statistics in the UI if needed
+        if (j.total_events !== undefined) {
+          // You can update KPI cards here if they exist
+          const totalEventsEl = $('#totalEvents');
+          if (totalEventsEl) totalEventsEl.textContent = j.total_events;
+          
+          const participationRateEl = $('#participationRate');
+          if (participationRateEl) participationRateEl.textContent = j.participation_rate + '%';
+        }
+        
+        // Use actual participation data for donut chart
+        const labels = ['Participated', 'Not Participated'];
+        const data = [j.participation_rate, 100 - j.participation_rate];
+        renderDonut(labels, data);
       }catch{
         renderDonut(['Critical Thinking','Leadership','Communication','Teamwork'], [30,30,25,15]);
+      }
+    }
+
+    async function loadRecentActivity() {
+      try {
+        const res = await fetch('/api/user/events-data/', { headers: {'X-Requested-With': 'XMLHttpRequest'} });
+        const j = await res.json();
+        
+        const actionsCard = document.querySelector('#cardActions .list');
+        if (actionsCard && j.events) {
+          if (j.events.length > 0) {
+            actionsCard.innerHTML = j.events.slice(0, 5).map(event => `
+              <article class="list-item">
+                <div class="bullet"><i class="fa-solid fa-circle-check"></i></div>
+                <div class="list-body">
+                  <h4>${event.title}</h4>
+                  <p>${event.description} - ${event.created_at}</p>
+                  <small>Status: ${event.status}</small>
+                </div>
+              </article>
+            `).join('');
+          } else {
+            actionsCard.innerHTML = '<div class="empty">No recent activity.</div>';
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load recent activity:', error);
       }
     }
   
     async function loadContribution(){
       try{
-        const res = await fetch('/api/student/contribution-summary/', { headers:{'X-Requested-With':'XMLHttpRequest'} });
-        const j = await res.json();                 // {labels:[], percentages:[]}
-        renderDonut(j.labels, j.percentages);
+        const res = await fetch('/api/student/contributions/', { headers:{'X-Requested-With':'XMLHttpRequest'} });
+        const j = await res.json();
+        
+        // Render GitHub-style contribution heatmap
+        renderGitHubStyleHeatmap(j.contributions);
       }catch{
         renderDonut(['Events','Roles','Leadership','Other'], [55,25,15,5]);
       }
+    }
+
+    function renderGitHubStyleHeatmap(contributions) {
+      const wrap = $('#heatmapContainer'); 
+      if (!wrap || !contributions) return;
+      
+      const cols = 53, rows = 7;
+      const grid = document.createElement('div'); 
+      grid.className = 'hm-grid';
+      
+      // Create contribution map for quick lookup
+      const contribMap = {};
+      contributions.forEach(c => {
+        contribMap[c.date] = c.level;
+      });
+      
+      // Calculate start date (52 weeks ago)
+      const today = new Date();
+      const startDate = new Date(today);
+      startDate.setDate(today.getDate() - (52 * 7));
+      
+      let currentDate = new Date(startDate);
+      
+      for (let c = 0; c < cols; c++) {
+        const col = document.createElement('div'); 
+        col.className = 'hm-col';
+        
+        for (let r = 0; r < rows; r++) {
+          const cell = document.createElement('div'); 
+          cell.className = 'hm-cell';
+          
+          const dateStr = currentDate.toISOString().split('T')[0];
+          const level = contribMap[dateStr] || 0;
+          
+          if (level > 0) {
+            cell.classList.add(`l${level}`);
+            cell.title = `${dateStr}: ${level} contribution${level > 1 ? 's' : ''}`;
+          } else {
+            cell.title = `${dateStr}: No contributions`;
+          }
+          
+          col.appendChild(cell);
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+        grid.appendChild(col);
+      }
+      
+      wrap.innerHTML = '';
+      wrap.appendChild(grid);
+      fitHeatmap();
     }
   
     $$('.seg-btn').forEach(b=>b.addEventListener('click',e=>{
@@ -56,12 +167,15 @@
       (v==='performance'? loadPerformance(): loadContribution()).then(syncHeights);
     }));
   
-    // Calendar
-    let calRef = new Date();
+  // Calendar
+  let calRef = new Date();
+  let currentCategory = 'all';
+  let privateTasksKey = 'ems.privateTasks';
+  let eventIndexByDate = new Map();
     const fmt2 = v => String(v).padStart(2,'0');
     const isSame = (a,b)=>a.getFullYear()==b.getFullYear()&&a.getMonth()==b.getMonth()&&a.getDate()==b.getDate();
   
-    function buildCalendar(){
+  function buildCalendar(){
       const headTitle = $('#calTitle'), grid = $('#calGrid');
       if(!grid||!headTitle) return;
       headTitle.textContent = calRef.toLocaleString(undefined,{month:'long', year:'numeric'});
@@ -79,14 +193,17 @@
       }
       while(cells.length % 7 !== 0){ cells.push({text: cells.length%7+1, date:null, muted:true}); }
   
+      const eventDates = new Set(eventIndexByDate.keys());
+      const privateTasks = new Set(JSON.parse(localStorage.getItem(privateTasksKey)||'[]'));
       grid.innerHTML = cells.map(c=>{
         const today = c.date && isSame(c.date, new Date());
         const iso = c.date ? `${c.date.getFullYear()}-${fmt2(c.date.getMonth()+1)}-${fmt2(c.date.getDate())}` : '';
-        return `<div class="day${c.muted?' muted':''}${today?' today':''}" data-date="${iso}">${c.text}</div>`;
+        const hasEvent = iso && (eventDates.has(iso) || (currentCategory==='private' && privateTasks.has(iso)));
+        return `<div class="day${c.muted?' muted':''}${today?' today':''}${hasEvent?' has-event':''}" data-date="${iso}">${c.text}</div>`;
       }).join('');
   
       grid.querySelectorAll('.day[data-date]').forEach(el=>{
-        el.addEventListener('click', ()=> openDay(new Date(el.dataset.date)));
+        el.addEventListener('click', ()=> onDayClick(new Date(el.dataset.date)));
       });
     }
   
@@ -96,12 +213,151 @@
       const list = $('#upcomingWrap'); if(!list) return;
       const items = (window.DASHBOARD_EVENTS||[]).filter(e => e.date === dateStr);
       list.innerHTML = items.length
-        ? items.map(e => `<div class="u-item"><div>${e.title}</div><a class="chip-btn" href="/proposal/${e.id}/detail/"><i class="fa-regular fa-eye"></i> View</a></div>`).join('')
+        ? items.map(e => {
+            const viewBtn = e.view_url ? `<a class="chip-btn" href="${e.view_url}"><i class="fa-regular fa-eye"></i> View</a>` : '';
+            const addBtn = !e.past && e.gcal_url ? `<a class="chip-btn" target="_blank" rel="noopener" href="${e.gcal_url}"><i class="fa-regular fa-calendar-plus"></i> Add to Google</a>` : '';
+            return `<div class="u-item"><div>${e.title}</div><div style="display:flex;gap:8px;">${viewBtn}${addBtn}</div></div>`;
+          }).join('')
         : `<div class="empty">No events for ${day.toLocaleDateString()}</div>`;
+    }
+
+    function onDayClick(day){
+      const yyyy=day.getFullYear(), mm=String(day.getMonth()+1).padStart(2,'0'), dd=String(day.getDate()).padStart(2,'0');
+      const dateStr = `${yyyy}-${mm}-${dd}`;
+      if (currentCategory === 'private'){
+        // Show confirmation modal first
+        showPrivateCalendarConfirmation(day);
+        return;
+      }
+      // Show event details and highlight in event viewer
+      showEventDetails(day);
+      openDay(day);
+    }
+
+    function showPrivateCalendarConfirmation(day) {
+      const modal = $('#confirmationModal');
+      modal.style.display = 'flex';
+      
+      $('#cancelConfirm').onclick = () => {
+        modal.style.display = 'none';
+        showEventDetails(day);
+        openDay(day);
+      };
+      
+      $('#confirmOpen').onclick = () => {
+        modal.style.display = 'none';
+        const yyyy = day.getFullYear(), mm = String(day.getMonth()+1).padStart(2,'0'), dd = String(day.getDate()).padStart(2,'0');
+        const dateStr = `${yyyy}-${mm}-${dd}`;
+        const ymd = `${yyyy}${mm}${dd}`;
+        const url = `https://www.google.com/calendar/render?action=TEMPLATE&dates=${ymd}/${ymd}&sf=true&output=xml`;
+        window.open(url, '_blank', 'noopener');
+        
+        const tasks = new Set(JSON.parse(localStorage.getItem(privateTasksKey)||'[]'));
+        tasks.add(dateStr);
+        localStorage.setItem(privateTasksKey, JSON.stringify(Array.from(tasks)));
+        buildCalendar();
+        showEventDetails(day);
+        openDay(day);
+      };
+    }
+
+    function showEventDetails(day) {
+      const yyyy = day.getFullYear(), mm = String(day.getMonth()+1).padStart(2,'0'), dd = String(day.getDate()).padStart(2,'0');
+      const dateStr = `${yyyy}-${mm}-${dd}`;
+      const content = $('#eventDetailsContent');
+      const clearBtn = $('#clearEventDetails');
+      
+      if (!content) return;
+      
+      const events = (window.DASHBOARD_EVENTS||[]).filter(e => e.date === dateStr);
+      
+      if (events.length > 0) {
+        content.innerHTML = events.map(e => `
+          <div class="event-detail-item">
+            <div class="event-detail-title">${e.title}</div>
+            <div class="event-detail-meta">
+              <i class="fa-regular fa-clock"></i> ${e.datetime ? new Date(e.datetime).toLocaleString() : 'All day'}
+              ${e.venue ? `<br><i class="fa-solid fa-location-dot"></i> ${e.venue}` : ''}
+            </div>
+            <div class="event-detail-actions">
+              ${e.view_url ? `<a class="chip-btn" href="${e.view_url}"><i class="fa-regular fa-eye"></i> View</a>` : ''}
+              ${!e.past && e.gcal_url ? `<a class="chip-btn" target="_blank" href="${e.gcal_url}"><i class="fa-regular fa-calendar-plus"></i> Add to Google</a>` : ''}
+            </div>
+          </div>
+        `).join('');
+        clearBtn.style.display = 'inline-flex';
+      } else {
+        content.innerHTML = `<div class="empty">No events for ${day.toLocaleDateString()}</div>`;
+        clearBtn.style.display = 'none';
+      }
     }
   
     $('#calPrev')?.addEventListener('click', ()=>{ calRef = new Date(calRef.getFullYear(), calRef.getMonth()-1, 1); buildCalendar(); syncHeights(); });
     $('#calNext')?.addEventListener('click', ()=>{ calRef = new Date(calRef.getFullYear(), calRef.getMonth()+1, 1); buildCalendar(); syncHeights(); });
+
+    // Add event button - now opens modal instead
+    $('#addEventBtn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      showEventCreationModal();
+    });
+
+    // Clear event details
+    $('#clearEventDetails')?.addEventListener('click', () => {
+      $('#eventDetailsContent').innerHTML = '<div class="empty">Click on an event in the calendar to view details</div>';
+      $('#clearEventDetails').style.display = 'none';
+    });
+
+    function showEventCreationModal() {
+      const modal = $('#eventCreationModal');
+      modal.style.display = 'flex';
+      
+      // Load places
+      loadPlaces('#eventVenue');
+      
+      // Handle form submission
+      $('#eventCreationForm').onsubmit = async (e) => {
+        e.preventDefault();
+        // This would redirect to the actual event creation page
+        window.location.href = `/suite/submit/?via=dashboard`;
+      };
+      
+      // Handle close events
+      $('#closeEventModal').onclick = () => modal.style.display = 'none';
+      $('#cancelEvent').onclick = () => modal.style.display = 'none';
+    }
+
+    async function loadPlaces(selector) {
+      try {
+        const response = await fetch('/api/dashboard/places/', { headers: {'X-Requested-With':'XMLHttpRequest'} });
+        const data = await response.json();
+        const select = $(selector);
+        if (select) {
+          select.innerHTML = '<option value="">Select venue...</option>' + 
+            data.places.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+        }
+      } catch (ex) {
+        console.error('Failed to load places:', ex);
+      }
+    }
+
+  // No visibility dropdown on student; default to 'all'
+  currentCategory = 'all';
+
+    async function loadCalendarData(){
+      try{
+        const res = await fetch(`/api/calendar/?category=${encodeURIComponent(currentCategory)}`, { headers:{'X-Requested-With':'XMLHttpRequest'} });
+        const j = await res.json();
+        window.DASHBOARD_EVENTS = j.items || [];
+        eventIndexByDate = new Map();
+        (window.DASHBOARD_EVENTS||[]).forEach(e=>{
+          if (!e.date) return;
+          const list = eventIndexByDate.get(e.date) || [];
+          list.push(e);
+          eventIndexByDate.set(e.date, list);
+        });
+      }catch{ window.DASHBOARD_EVENTS = []; eventIndexByDate = new Map(); }
+  buildCalendar();
+    }
   
     // Heatmap
     function renderHeatmap(){
@@ -141,13 +397,12 @@
       const isDesktop = window.innerWidth > 1200;
       const root=document.documentElement;
       const perf=$('#cardPerformance'), acts=$('#cardActions'), cal=$('#cardCalendar');
-      const todo=$('#cardTodo'), todoList=$('#todoList'), todoHeader=$('#cardTodo .card-header');
+      const eventDetails=$('#cardEventDetails');
       const contrib=$('#cardContribution');
   
       if(!isDesktop){
-        ['--calH','--contribH','--todoBodyH'].forEach(v=>root.style.removeProperty(v));
-        [perf,acts,cal,todo].forEach(el=>{ if(el){ el.style.height=''; el.style.minHeight=''; }});
-        if(todoList){ todoList.style.height=''; todoList.style.overflowY=''; }
+        ['--calH','--contribH','--eventDetailsH'].forEach(v=>root.style.removeProperty(v));
+        [perf,acts,cal,eventDetails].forEach(el=>{ if(el){ el.style.height=''; el.style.minHeight=''; }});
         return;
       }
   
@@ -159,28 +414,45 @@
         if(perf) perf.style.height=calH+'px';
       }
   
-      if (contrib && todo && todoHeader && todoList){
+      if (contrib && eventDetails){
         const contribH=Math.ceil(contrib.getBoundingClientRect().height);
         root.style.setProperty('--contribH', contribH+'px');
-        todo.style.height=contribH+'px';
-        const cs=getComputedStyle(todo);
-        const padV=(parseFloat(cs.paddingTop)||0)+(parseFloat(cs.paddingBottom)||0);
-        const borderV=(parseFloat(cs.borderTopWidth)||0)+(parseFloat(cs.borderBottomWidth)||0);
-        const headerH=Math.ceil(todoHeader.getBoundingClientRect().height);
-        const bodyH=Math.max(0, contribH - headerH - padV - borderV);
-        root.style.setProperty('--todoBodyH', bodyH+'px');
-        todoList.style.height=bodyH+'px';
-        todoList.style.overflowY='auto';
+        eventDetails.style.height=contribH+'px';
       }
       fitHeatmap();
     }
   
     const debounce=(fn,ms=120)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);}};
   
+    // Tab switching for Performance/Contribution
+    document.addEventListener('click', (e) => {
+      if (e.target.matches('[data-view]')) {
+        const view = e.target.dataset.view;
+        const parent = e.target.closest('.card');
+        
+        // Update active button
+        parent.querySelectorAll('.seg-btn').forEach(btn => btn.classList.remove('active'));
+        e.target.classList.add('active');
+        
+        // Update title and load appropriate data
+        const title = parent.querySelector('#perfTitle');
+        if (view === 'performance') {
+          if (title) title.textContent = 'Performance Metrics';
+          loadPerformance();
+        } else if (view === 'contribution') {
+          if (title) title.textContent = 'Yearly Contribution';
+          loadContribution();
+        }
+      }
+    });
+
     document.addEventListener('DOMContentLoaded', ()=>{
       loadPerformance();
-      buildCalendar(); openDay(new Date());
-      renderHeatmap();
+      loadRecentActivity();
+      loadCalendarData();
+      // Heatmap will be populated by contributions API with event-date aggregation
+      // Fallback visual if API fails is handled inside loadContribution
+      loadContribution();
       requestAnimationFrame(()=>{ syncHeights(); });
     });
     window.addEventListener('load', ()=>syncHeights());

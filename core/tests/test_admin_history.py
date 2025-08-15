@@ -31,10 +31,18 @@ class AdminHistoryFilterTests(TestCase):
         self.assertNotContains(resp, 'alice')
 
     def test_shows_activity_for_all_users(self):
-        """Ensure history lists actions performed by all users, not only admins."""
+        """The admin page should expose actions for every user on the system."""
+
+        # Add an explicit log entry for the admin to prove we don't filter on
+        # the logged-in user.
+        ActivityLog.objects.create(user=self.admin, action='reset', description='admin-only')
+
         url = reverse('admin_history')
         resp = self.client.get(url)
-        # Both users' actions should be visible in the table
+
+        # Admin, alice and bob should all appear in the table.
+        self.assertContains(resp, 'admin')
+        self.assertContains(resp, 'reset')
         self.assertContains(resp, 'alice')
         self.assertContains(resp, 'login')
         self.assertContains(resp, 'bob')

@@ -1,9 +1,15 @@
+import logging
+
 from django.conf import settings
 from django.shortcuts import redirect
 from django.urls import reverse
-from core.models import RoleAssignment
-from emt.models import Student
 from django.contrib.auth import get_user_model
+
+from core.models import ActivityLog, RoleAssignment
+from emt.models import Student
+
+
+logger = logging.getLogger(__name__)
 
 
 class ImpersonationMiddleware:
@@ -88,3 +94,37 @@ class RegistrationRequiredMiddleware:
         if profile and profile.role:
             return True
         return RoleAssignment.objects.filter(user=user).exists()
+
+
+class ActivityLogMiddleware:
+    """Persist a log entry for each state-changing request.
+
+    This middleware records POST/PUT/PATCH/DELETE requests performed by
+    authenticated users so administrators can audit changes across the
+    application via the ``ActivityLog`` model.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+
+        try:
+            if (
+                request.user.is_authenticated
+                and request.method not in {"GET", "HEAD", "OPTIONS", "TRACE"}
+                and not request.path.startswith(settings.STATIC_URL)
+                and not request.path.startswith(settings.MEDIA_URL)
+            ):
+                ActivityLog.objects.create(
+                    user=request.user,
+                    action=f"{request.method} {request.path}",
+                    ip_address=request.META.get("REMOTE_ADDR"),
+                )
+        except Exception:  # pragma: no cover - logging should never break the request
+            logger.exception(
+                "Failed to log activity for %s %s", request.method, request.path
+            )
+
+        return response

@@ -21,16 +21,24 @@
 
   <!-- TOP ROW -->
   <section class="kpi-row">
-    <button class="kpi-card" id="kpiEvents">
-      <div class="kpi-icon bg-indigo"><i class="fa-solid fa-people-group"></i></div>
+    <button class="kpi-card" id="kpiOrganizations">
+      <div class="kpi-icon bg-indigo"><i class="fa-solid fa-building-columns"></i></div>
       <div class="kpi-content">
-        <span class="kpi-title">Events Participated</span>
-        <span class="kpi-value">{{ participated_events_count|default:0 }}</span>
+        <span class="kpi-title">No. of Organizations</span>
+        <span class="kpi-value">{{ org_count|default:0 }}</span>
+      </div>
+    </button>
+
+    <button class="kpi-card" id="kpiUpcoming">
+      <div class="kpi-icon bg-sky"><i class="fa-regular fa-calendar"></i></div>
+      <div class="kpi-content">
+        <span class="kpi-title">Upcoming Events</span>
+        <span class="kpi-value">{{ upcoming_events_count|default:0 }}</span>
       </div>
     </button>
 
     <button class="kpi-card" id="kpiAchievements">
-      <div class="kpi-icon bg-sky"><i class="fa-solid fa-trophy"></i></div>
+      <div class="kpi-icon bg-orange"><i class="fa-solid fa-trophy"></i></div>
       <div class="kpi-content">
         <span class="kpi-title">Achievements</span>
         <span class="kpi-value">{{ achievements_count|default:0 }}</span>
@@ -38,18 +46,10 @@
     </button>
 
     <button class="kpi-card" id="kpiClubs">
-      <div class="kpi-icon bg-orange"><i class="fa-solid fa-users-rays"></i></div>
+      <div class="kpi-icon bg-emerald"><i class="fa-solid fa-users-rays"></i></div>
       <div class="kpi-content">
         <span class="kpi-title">Clubs Joined</span>
         <span class="kpi-value">{{ clubs_count|default:0 }}</span>
-      </div>
-    </button>
-
-    <button class="kpi-card" id="kpiActivityScore">
-      <div class="kpi-icon bg-emerald"><i class="fa-solid fa-bolt"></i></div>
-      <div class="kpi-content">
-        <span class="kpi-title">Activity Score</span>
-        <span class="kpi-value">{{ activity_score|default:0 }}%</span>
       </div>
     </button>
 
@@ -120,6 +120,9 @@
     <section class="card eq" id="cardCalendar">
       <div class="card-header">
         <h3><i class="fa-regular fa-calendar"></i> Calendar</h3>
+        <div class="header-actions">
+          <a href="#" class="chip-btn" id="addEventBtn"><i class="fa-solid fa-plus"></i> + New Event</a>
+        </div>
       </div>
       <div class="mini-cal" id="miniCalendar">
         <div class="cal-head">
@@ -132,7 +135,7 @@
         </div>
         <div class="cal-grid" id="calGrid"></div>
       </div>
-      <div id="upcomingWrap" class="upcoming"></div>
+  <!-- Removed extra sections under calendar for a cleaner UI -->
     </section>
 
     <!-- Heatmap -->
@@ -141,20 +144,15 @@
       <div id="heatmapContainer" class="heatmap"></div>
     </section>
 
-    <!-- My Event Proposals -->
-    <section class="card eq" id="cardTodo">
+    <!-- Event Details Viewer - replaces Event Proposals -->
+    <section class="card eq" id="cardEventDetails">
       <div class="card-header">
-        <h3><i class="fa-regular fa-square-check"></i> My Event Proposals</h3>
+        <h3><i class="fa-regular fa-calendar-days"></i> Event Details</h3>
+        <button class="chip-btn" id="clearEventDetails" style="display: none;"><i class="fa-solid fa-times"></i> Clear</button>
       </div>
-      <ul id="todoList" class="todo">
-        {% if proposals %}
-          {% for p in proposals %}
-            <li>{{ p.title }} – <strong>{{ p.status }}</strong></li>
-          {% endfor %}
-        {% else %}
-          <li>No proposals yet.</li>
-        {% endif %}
-      </ul>
+      <div id="eventDetailsContent" class="event-details-content">
+        <div class="empty">Click on an event in the calendar to view details</div>
+      </div>
     </section>
   </main>
 
@@ -162,6 +160,64 @@
   <script>
     try{window.DASHBOARD_EVENTS=JSON.parse(document.getElementById('calendarEventsJson').textContent);}catch{window.DASHBOARD_EVENTS=[];}
   </script>
+
+  <!-- Confirmation Modal -->
+  <div id="confirmationModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <h3><i class="fa-solid fa-question-circle"></i> Open in Google Calendar?</h3>
+      <p>Do you want to open this event in Google Calendar?</p>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="cancelConfirm">No, Stay Here</button>
+        <button class="btn-primary" id="confirmOpen">Yes, Open Google Calendar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Event Creation Modal -->
+  <div id="eventCreationModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-calendar-plus"></i> Create New Event</h3>
+        <button class="modal-close" id="closeEventModal">&times;</button>
+      </div>
+      <form id="eventCreationForm">
+        <div class="form-group">
+          <label for="eventTitle">Event Title *</label>
+          <input type="text" id="eventTitle" required placeholder="Enter event title">
+        </div>
+        
+        <div class="form-group">
+          <label for="eventDescription">Description</label>
+          <textarea id="eventDescription" rows="3" placeholder="Event description..."></textarea>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="eventDate">Date *</label>
+            <input type="date" id="eventDate" required>
+          </div>
+          <div class="form-group">
+            <label for="eventTime">Time *</label>
+            <input type="time" id="eventTime" required>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="eventVenue">Venue</label>
+          <select id="eventVenue">
+            <option value="">Select venue...</option>
+          </select>
+        </div>
+        
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="cancelEvent">Cancel</button>
+          <button type="submit" class="btn-primary">
+            <i class="fa-solid fa-calendar-plus"></i> Create Event
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 {% endblock %}
 

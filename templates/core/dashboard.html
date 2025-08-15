@@ -85,32 +85,15 @@
     <!-- Actions (col 1) -->
     <section class="card eq" id="cardActions">
       <div class="card-header">
-        <h3><i class="fa-solid fa-inbox"></i> Actions</h3>
+        <h3><i class="fa-solid fa-inbox"></i> Actions & Proposals</h3>
         <a class="link-muted" href="#" data-go-tab="events">View all</a>
       </div>
-      <div class="list">
-        {% with actionable=user_proposals %}
-          {% if actionable %}
-            {% for proposal in actionable %}
-              {% if proposal.status == 'submitted' or proposal.status == 'under_review' or proposal.status == 'returned' %}
-              <article class="list-item">
-                <div class="bullet {{ proposal.status|lower }}">
-                  {% if proposal.status == 'under_review' %}<i class="fa-regular fa-clock"></i>
-                  {% elif proposal.status == 'returned' %}<i class="fa-solid fa-rotate-left"></i>
-                  {% else %}<i class="fa-regular fa-file-lines"></i>{% endif %}
-                </div>
-                <div class="list-body">
-                  <h4>{{ proposal.event_title }}</h4>
-                  <p>{{ proposal.get_status_display }}</p>
-                </div>
-                <a href="{% url 'emt:proposal_status_detail' proposal.id %}" class="chip-btn"><i class="fa-regular fa-eye"></i> Open</a>
-              </article>
-              {% endif %}
-            {% endfor %}
-          {% else %}
-            <div class="empty">Nothing needs attention.</div>
-          {% endif %}
-        {% endwith %}
+      <div class="list" id="actionsList">
+        <!-- Dynamic: populated by /api/user/proposals -->
+        <div class="proposal-tracker-section" id="proposalTracker">
+          <h4><i class="fa-solid fa-file-lines"></i> My Proposals</h4>
+          <div id="proposalsList"><div class="empty">Loading…</div></div>
+        </div>
       </div>
     </section>
 
@@ -125,9 +108,12 @@
           </div>
         </div>
       </div>
-      <div class="chart-wrap donut">
+      <div class="chart-wrap donut" id="chartContainer" style="cursor: pointer;">
         <canvas id="donutChart"></canvas>
         <div class="chart-legend" id="donutLegend"></div>
+        <div class="chart-click-hint" style="text-align: center; font-size: 12px; color: #666; margin-top: 10px;">
+          <i class="fa-solid fa-hand-pointer"></i> Click to view proposal tracking
+        </div>
       </div>
     </section>
 
@@ -139,9 +125,9 @@
           <select id="visibilitySelect" class="select">
             <option value="all">All</option>
             <option value="private">Private</option>
-            <option value="staff">Teachers</option>
+            <option value="faculty">Faculty</option>
           </select>
-          <a href="/suite/submit/?via=dashboard" class="chip-btn" id="addEventBtn"><i class="fa-solid fa-plus"></i> Add</a>
+          <a href="/suite/submit/?via=dashboard" class="chip-btn" id="addEventBtn"><i class="fa-solid fa-plus"></i>  New Event</a>
         </div>
       </div>
       <div class="mini-cal" id="miniCalendar">
@@ -165,13 +151,15 @@
         <div id="heatmapContainer" class="heatmap"></div>
       </section>      
 
-    <!-- To‑do (col 3, row 2) -->
-    <section class="card eq" id="cardTodo">
+    <!-- Event Details Viewer (col 3, row 2) - replaces To-do -->
+    <section class="card eq" id="cardEventDetails">
       <div class="card-header">
-        <h3><i class="fa-regular fa-square-check"></i> To-do</h3>
-        <button class="chip-btn" id="addTodo"><i class="fa-solid fa-plus"></i> Add</button>
+        <h3><i class="fa-regular fa-calendar-days"></i> Event Details</h3>
+        <button class="chip-btn" id="clearEventDetails" style="display: none;"><i class="fa-solid fa-times"></i> Clear</button>
       </div>
-      <ul id="todoList" class="todo"></ul>
+      <div id="eventDetailsContent" class="event-details-content">
+        <div class="empty">Click on an event in the calendar to view details</div>
+      </div>
     </section>
   </main>
 
@@ -179,6 +167,119 @@
   <script>
     try{window.DASHBOARD_EVENTS=JSON.parse(document.getElementById('calendarEventsJson').textContent);}catch{window.DASHBOARD_EVENTS=[];}
   </script>
+
+  <!-- Confirmation Modal -->
+  <div id="confirmationModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <h3><i class="fa-solid fa-question-circle"></i> Open in Google Calendar?</h3>
+      <p>Do you want to open this event in Google Calendar?</p>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="cancelConfirm">No, Stay Here</button>
+        <button class="btn-primary" id="confirmOpen">Yes, Open Google Calendar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Faculty Meeting Form Modal -->
+  <div id="facultyMeetingModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-calendar-plus"></i> Schedule Faculty Meeting</h3>
+        <button class="modal-close" id="closeFacultyModal">&times;</button>
+      </div>
+      <form id="facultyMeetingForm" method="post">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="meetingTitle">Meeting Title *</label>
+          <input type="text" id="meetingTitle" required placeholder="Enter meeting title">
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="meetingDate">Date *</label>
+            <input type="date" id="meetingDate" required>
+          </div>
+          <div class="form-group">
+            <label for="meetingTime">Time *</label>
+            <input type="time" id="meetingTime" required value="09:00">
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="meetingPlace">Place/Venue</label>
+          <select id="meetingPlace">
+            <option value="">Select venue...</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="meetingParticipants">Participants</label>
+          <select id="meetingParticipants" multiple>
+            <option value="">Loading participants...</option>
+          </select>
+          <small>Hold Ctrl/Cmd to select multiple participants</small>
+        </div>
+        
+        <div class="form-group">
+          <label for="meetingNotes">Additional Notes</label>
+          <textarea id="meetingNotes" rows="3" placeholder="Meeting agenda, notes, etc."></textarea>
+        </div>
+        
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="cancelMeeting">Cancel</button>
+          <button type="submit" class="btn-primary">
+            <i class="fa-solid fa-calendar-plus"></i> Schedule Meeting
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Event Creation Modal -->
+  <div id="eventCreationModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-calendar-plus"></i> Create New Event</h3>
+        <button class="modal-close" id="closeEventModal">&times;</button>
+      </div>
+      <form id="eventCreationForm">
+        <div class="form-group">
+          <label for="eventTitle">Event Title *</label>
+          <input type="text" id="eventTitle" required placeholder="Enter event title">
+        </div>
+        
+        <div class="form-group">
+          <label for="eventDescription">Description</label>
+          <textarea id="eventDescription" rows="3" placeholder="Event description..."></textarea>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="eventDate">Date *</label>
+            <input type="date" id="eventDate" required>
+          </div>
+          <div class="form-group">
+            <label for="eventTime">Time *</label>
+            <input type="time" id="eventTime" required>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="eventVenue">Venue</label>
+          <select id="eventVenue">
+            <option value="">Select venue...</option>
+          </select>
+        </div>
+        
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="cancelEvent">Cancel</button>
+          <button type="submit" class="btn-primary">
+            <i class="fa-solid fa-calendar-plus"></i> Create Event
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 {% endblock %}
 

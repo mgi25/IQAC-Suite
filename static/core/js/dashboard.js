@@ -36,14 +36,16 @@
       }
     });
     const legend = $('#donutLegend');
-    if (legend) legend.innerHTML = labels.map((l,i)=>
-      `<div class="legend-row"><span class="legend-dot" style="background:${COLORS[i]}"></span><span>${l}</span><strong style="margin-left:auto">${data[i]}%</strong></div>`
-    ).join('');
+    if (legend) legend.innerHTML = labels.map((l,i)=>{
+      const raw = data[i];
+      const val = typeof raw === 'number' ? (Math.round(raw*10)/10).toFixed(1) : raw;
+      return `<div class="legend-row"><span class="legend-dot" style="background:${COLORS[i]}"></span><span>${l}</span><strong style="margin-left:auto">${val}%</strong></div>`;
+    }).join('');
   }
 
   async function loadPerformance() {
     try{
-      const res = await fetch('/api/student-performance/', { headers: { 'X-Requested-With':'XMLHttpRequest' }});
+      const res = await fetch('/api/student/performance-data/', { headers: { 'X-Requested-With':'XMLHttpRequest' }});
       const j = await res.json();
       renderDonut(j.labels, j.percentages);
     }catch{
@@ -52,11 +54,48 @@
   }
   async function loadContribution() {
     try{
-      const res = await fetch('/api/event-contribution-summary/', { headers: { 'X-Requested-With':'XMLHttpRequest' }});
+      const res = await fetch('/api/event-contribution/', { headers: { 'X-Requested-With':'XMLHttpRequest' }});
       const j = await res.json();
-      renderDonut(j.labels, j.percentages);
+      const pct = Number(j.overall_percentage) || 0;
+      renderDonut(['My Contribution','Other'], [pct, Math.max(0, 100 - pct)]);
     }catch{
       renderDonut(['Organized','Participated','Reviewed','Other'], [45, 35, 15, 5]);
+    }
+  }
+
+  async function loadRecentEvents() {
+    try {
+      const res = await fetch('/api/user/events-data/', { headers: { 'X-Requested-With': 'XMLHttpRequest' }});
+      const j = await res.json();
+      
+      // Update the static actions list with dynamic data if needed
+      const actionsList = $('#actionsList');
+      if (actionsList && j.events) {
+        // Find the proposal tracker section and keep it
+        const proposalTracker = actionsList.querySelector('#proposalTracker');
+        
+        // Add recent events to the top of the actions list
+        const recentEventsHtml = j.events.slice(0, 3).map(event => `
+          <article class="list-item">
+            <div class="bullet ${event.status.toLowerCase()}">
+              <i class="fa-regular fa-calendar"></i>
+            </div>
+            <div class="list-body">
+              <h4>${event.title}</h4>
+              <p>${event.organization} - ${event.created_at}</p>
+            </div>
+            <span class="chip-btn">${event.status}</span>
+          </article>
+        `).join('');
+        
+        // Insert recent events before existing content
+        if (recentEventsHtml) {
+          const existingContent = actionsList.innerHTML;
+          actionsList.innerHTML = recentEventsHtml + existingContent;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load recent events:', error);
     }
   }
 
@@ -71,6 +110,9 @@
 
   // Calendar
   let calRef = new Date();
+  let currentCategory = 'all';
+  let privateTasksKey = 'ems.privateTasks';
+  let eventIndexByDate = new Map();
   const fmt2 = v => String(v).padStart(2,'0');
   const isSame = (a,b)=>a.getFullYear()==b.getFullYear()&&a.getMonth()==b.getMonth()&&a.getDate()==b.getDate();
 
@@ -94,14 +136,20 @@
     }
     while(cells.length % 7 !== 0){ cells.push({text: cells.length%7+1, date:null, muted:true}); }
 
+    // compute dates that have events (or private tasks)
+    const eventDates = new Set(eventIndexByDate.keys());
+    const privateTasks = new Set(JSON.parse(localStorage.getItem(privateTasksKey)||'[]'));
+
     grid.innerHTML = cells.map(c=>{
       const today = c.date && isSame(c.date, new Date());
       const iso = c.date ? `${c.date.getFullYear()}-${fmt2(c.date.getMonth()+1)}-${fmt2(c.date.getDate())}` : '';
-      return `<div class="day${c.muted?' muted':''}${today?' today':''}" data-date="${iso}">${c.text}</div>`;
+      const hasEvent = iso && (eventDates.has(iso) || (currentCategory==='private' && privateTasks.has(iso)));
+      const markerClass = hasEvent ? (currentCategory==='faculty' ? ' has-meeting' : ' has-event') : '';
+      return `<div class="day${c.muted?' muted':''}${today?' today':''}${markerClass}" data-date="${iso}">${c.text}</div>`;
     }).join('');
 
     grid.querySelectorAll('.day[data-date]').forEach(el=>{
-      el.addEventListener('click', ()=> openDay(new Date(el.dataset.date)));
+      el.addEventListener('click', ()=> onDayClick(new Date(el.dataset.date)));
     });
   }
 
@@ -111,38 +159,401 @@
     const list = $('#upcomingWrap'); if (!list) return;
     const items = (window.DASHBOARD_EVENTS||[]).filter(e => e.date === dateStr);
     list.innerHTML = items.length
-      ? items.map(e => `<div class="u-item"><div>${e.title}</div><a class="chip-btn" href="/proposal/${e.id}/detail/"><i class="fa-regular fa-eye"></i> View</a></div>`).join('')
+      ? items.map(e => {
+          const viewBtn = e.view_url ? `<a class="chip-btn" href="${e.view_url}"><i class="fa-regular fa-eye"></i> View</a>` : '';
+          const addBtn = !e.past && e.gcal_url ? `<a class="chip-btn" target="_blank" rel="noopener" href="${e.gcal_url}"><i class="fa-regular fa-calendar-plus"></i> Add to Google</a>` : '';
+          return `<div class="u-item"><div>${e.title}</div><div style="display:flex;gap:8px;">${viewBtn}${addBtn}</div></div>`;
+        }).join('')
       : `<div class="empty">No events for ${day.toLocaleDateString()}</div>`;
+  }
+
+  function onDayClick(day){
+    const yyyy = day.getFullYear(), mm = String(day.getMonth()+1).padStart(2,'0'), dd = String(day.getDate()).padStart(2,'0');
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+    
+    if (currentCategory === 'private'){
+      // Show confirmation modal first
+      showPrivateCalendarConfirmation(day);
+      return;
+    }
+    
+    if (currentCategory === 'faculty'){
+      // If there are meetings on this date, show details; else open meeting form
+      const hasItems = eventIndexByDate.has(dateStr);
+      if (hasItems){
+        showEventDetails(day);
+        openDay(day);
+      } else {
+        showFacultyMeetingForm(day);
+      }
+      return;
+    }
+    
+    // Show event details and highlight in event viewer
+    showEventDetails(day);
+    openDay(day);
+  }
+
+  function showPrivateCalendarConfirmation(day) {
+    const modal = $('#confirmationModal');
+    modal.style.display = 'flex';
+    
+    $('#cancelConfirm').onclick = () => {
+      modal.style.display = 'none';
+      showEventDetails(day);
+      openDay(day);
+    };
+    
+    $('#confirmOpen').onclick = () => {
+      modal.style.display = 'none';
+      const yyyy = day.getFullYear(), mm = String(day.getMonth()+1).padStart(2,'0'), dd = String(day.getDate()).padStart(2,'0');
+      const dateStr = `${yyyy}-${mm}-${dd}`;
+      const ymd = `${yyyy}${mm}${dd}`;
+      const url = `https://www.google.com/calendar/render?action=TEMPLATE&dates=${ymd}/${ymd}&sf=true&output=xml`;
+      window.open(url, '_blank', 'noopener');
+      
+      const tasks = new Set(JSON.parse(localStorage.getItem(privateTasksKey)||'[]'));
+      tasks.add(dateStr);
+      localStorage.setItem(privateTasksKey, JSON.stringify(Array.from(tasks)));
+      buildCalendar();
+      showEventDetails(day);
+      openDay(day);
+    };
+  }
+
+  function showFacultyMeetingForm(day) {
+    const modal = $('#facultyMeetingModal');
+    const form = $('#facultyMeetingForm');
+    
+    // Set default date
+    const yyyy = day.getFullYear(), mm = String(day.getMonth()+1).padStart(2,'0'), dd = String(day.getDate()).padStart(2,'0');
+    $('#meetingDate').value = `${yyyy}-${mm}-${dd}`;
+    
+    modal.style.display = 'flex';
+    
+    // Load dynamic data
+    loadPlaces('#meetingPlace');
+    loadPeople('#meetingParticipants');
+    
+    // Handle form submission
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      await submitFacultyMeeting(form, modal);
+    };
+    
+    // Handle close events
+    $('#closeFacultyModal').onclick = () => modal.style.display = 'none';
+    $('#cancelMeeting').onclick = () => modal.style.display = 'none';
+  }
+
+  async function submitFacultyMeeting(form, modal) {
+    const formData = new FormData(form);
+    const title = $('#meetingTitle').value;
+    const date = $('#meetingDate').value;
+    const time = $('#meetingTime').value;
+    const place = $('#meetingPlace').value;
+    const notes = $('#meetingNotes').value;
+    
+  // Collect selected participant display names (keep as array)
+  const participants = Array.from($('#meetingParticipants').selectedOptions).map(opt => opt.text);
+    
+    try {
+      // Get user's organizations
+      const orgRes = await fetch('/api/event-contribution-data?org=all', {
+        headers:{'X-Requested-With':'XMLHttpRequest', 'Accept': 'application/json'},
+        credentials: 'same-origin'
+      });
+      let orgData;
+      try {
+        orgData = await orgRes.json();
+      } catch (e) {
+        const txt = await orgRes.text();
+        if (orgRes.status === 403 && /csrf|forbidden/i.test(txt)) {
+          throw new Error('CSRF or permission issue while loading organizations. Please refresh and try again.');
+        }
+        if (orgRes.redirected || /<title>Log in/i.test(txt)) {
+          throw new Error('Session expired. Please log in again.');
+        }
+        throw new Error('Failed to load organizations (non-JSON response).');
+      }
+      const orgs = orgData.organizations || [];
+      
+      let orgId = orgs[0]?.id;
+      if (orgs.length > 1) {
+        const msg = 'Choose organization:\n' + orgs.map((o,i)=>`${i+1}. ${o.name}`).join('\n');
+        const sel = parseInt(prompt(msg)||'1', 10);
+        if (!isNaN(sel) && orgs[sel-1]) orgId = orgs[sel-1].id;
+      }
+      
+      if (!orgId) throw new Error('No organization selected');
+      
+      const when = new Date(`${date}T${time}`).toISOString();
+      
+      const response = await fetch('/api/calendar/faculty/create/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': getCsrfToken()
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          title,
+          organization_id: orgId,
+          scheduled_at: when,
+          place,
+          // Send as array; backend will ", ".join()
+          participants: participants,
+          description: notes
+        })
+      });
+      
+      // Try to parse JSON safely; handle HTML/redirect responses
+      const ct = (response.headers.get('content-type') || '').toLowerCase();
+      if (response.ok && ct.includes('application/json')) {
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error || 'Unknown error');
+        modal.style.display = 'none';
+        form.reset();
+        await loadCalendarData();
+        showSuccessMessage('Meeting scheduled successfully!');
+      } else {
+        // Non-JSON or error status
+        if (ct.includes('application/json')) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to create meeting');
+        } else {
+          const text = await response.text();
+          if (response.status === 403 && /csrf/i.test(text)) {
+            throw new Error('CSRF validation failed. Please refresh the page and try again.');
+          }
+          if (response.redirected || /<title>Log in/i.test(text)) {
+            throw new Error('Session expired. Please log in again.');
+          }
+          throw new Error('Server returned a non-JSON response. Please try again.');
+        }
+      }
+    } catch (ex) {
+      alert(`Error: ${ex.message}`);
+    }
+  }
+
+  // Minimal CSRF cookie reader compatible with Django
+  function getCsrfToken() {
+    const name = 'csrftoken=';
+    const cookies = document.cookie ? document.cookie.split(';') : [];
+    for (let c of cookies) {
+      c = c.trim();
+      if (c.startsWith(name)) return decodeURIComponent(c.substring(name.length));
+    }
+    return '';
+  }
+
+  function showEventDetails(day) {
+    const yyyy = day.getFullYear(), mm = String(day.getMonth()+1).padStart(2,'0'), dd = String(day.getDate()).padStart(2,'0');
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+    const content = $('#eventDetailsContent');
+    const clearBtn = $('#clearEventDetails');
+    
+    if (!content) return;
+    
+    const events = (window.DASHBOARD_EVENTS||[]).filter(e => e.date === dateStr);
+    
+    if (events.length > 0) {
+      content.innerHTML = events.map(e => `
+        <div class="event-detail-item">
+          <div class="event-detail-title">${e.title}</div>
+          <div class="event-detail-meta">
+            <i class="fa-regular fa-clock"></i> ${e.datetime ? new Date(e.datetime).toLocaleString() : 'All day'}
+            ${e.venue ? `<br><i class="fa-solid fa-location-dot"></i> ${e.venue}` : ''}
+          </div>
+          <div class="event-detail-actions">
+            ${e.view_url ? `<a class="chip-btn" href="${e.view_url}"><i class="fa-regular fa-eye"></i> View</a>` : ''}
+            ${!e.past && e.gcal_url ? `<a class="chip-btn" target="_blank" href="${e.gcal_url}"><i class="fa-regular fa-calendar-plus"></i> Add to Google</a>` : ''}
+          </div>
+        </div>
+      `).join('');
+      clearBtn.style.display = 'inline-flex';
+    } else {
+      content.innerHTML = `<div class="empty">No events for ${day.toLocaleDateString()}</div>`;
+      clearBtn.style.display = 'none';
+    }
   }
 
   $('#calPrev')?.addEventListener('click', ()=>{ calRef = new Date(calRef.getFullYear(), calRef.getMonth()-1, 1); buildCalendar(); syncHeights(); });
   $('#calNext')?.addEventListener('click', ()=>{ calRef = new Date(calRef.getFullYear(), calRef.getMonth()+1, 1); buildCalendar(); syncHeights(); });
 
-  // Add event scope passthrough
+  // Add event scope passthrough - now opens modal instead
   $('#addEventBtn')?.addEventListener('click', (e) => {
-    const scope = $('#visibilitySelect')?.value || 'all';
-    e.currentTarget.href = `/suite/submit/?via=dashboard&scope=${encodeURIComponent(scope)}`;
+    e.preventDefault();
+    showEventCreationModal();
   });
 
-  // Heatmap
-  // Heatmap (fills card)
-function renderHeatmap(){
-  const wrap = $('#heatmapContainer'); if (!wrap) return;
-  const cols = 53, rows = 7;
-  const grid = document.createElement('div'); grid.className='hm-grid';
-  for (let c=0;c<cols;c++){
-    const col = document.createElement('div'); col.className='hm-col';
-    for (let r=0;r<rows;r++){
-      const cell = document.createElement('div'); cell.className='hm-cell';
-      const v = Math.random();
-      if (v>0.8) cell.classList.add('l4'); else if (v>0.6) cell.classList.add('l3'); else if (v>0.35) cell.classList.add('l2'); else if (v>0.18) cell.classList.add('l1');
-      col.appendChild(cell);
-    }
-    grid.appendChild(col);
+  // Chart click handler for proposal tracking
+  $('#chartContainer')?.addEventListener('click', () => {
+    loadAndShowProposals();
+  });
+
+  // Clear event details
+  $('#clearEventDetails')?.addEventListener('click', () => {
+    $('#eventDetailsContent').innerHTML = '<div class="empty">Click on an event in the calendar to view details</div>';
+    $('#clearEventDetails').style.display = 'none';
+  });
+
+  function showEventCreationModal() {
+    const modal = $('#eventCreationModal');
+    modal.style.display = 'flex';
+    
+    // Load places
+    loadPlaces('#eventVenue');
+    
+    // Handle form submission
+    $('#eventCreationForm').onsubmit = async (e) => {
+      e.preventDefault();
+      // This would redirect to the actual event creation page
+      const scope = $('#visibilitySelect')?.value || 'all';
+      window.location.href = `/suite/submit/?via=dashboard&scope=${encodeURIComponent(scope)}`;
+    };
+    
+    // Handle close events
+    $('#closeEventModal').onclick = () => modal.style.display = 'none';
+    $('#cancelEvent').onclick = () => modal.style.display = 'none';
   }
-  wrap.innerHTML=''; wrap.appendChild(grid);
-  fitHeatmap();
-}
+
+  async function loadPlaces(selector) {
+    try {
+      const response = await fetch('/api/dashboard/places/', { headers: {'X-Requested-With':'XMLHttpRequest', 'Accept': 'application/json'} });
+      const data = await response.json();
+      const select = $(selector);
+      if (select) {
+        select.innerHTML = '<option value="">Select venue...</option>' + 
+          data.places.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+      }
+    } catch (ex) {
+      console.error('Failed to load places:', ex);
+    }
+  }
+
+  async function loadPeople(selector) {
+    try {
+      const response = await fetch('/api/dashboard/people/', { headers: {'X-Requested-With':'XMLHttpRequest', 'Accept': 'application/json'} });
+      const data = await response.json();
+      const select = $(selector);
+      if (select) {
+        select.innerHTML = data.people.map(p => 
+          `<option value="${p.id}">${p.name} (${p.role})</option>`
+        ).join('');
+      }
+    } catch (ex) {
+      console.error('Failed to load people:', ex);
+    }
+  }
+
+  async function loadAndShowProposals() {
+    try {
+      const response = await fetch('/api/user/proposals/', { headers: {'X-Requested-With':'XMLHttpRequest'} });
+      const data = await response.json();
+      
+      const tracker = $('#proposalTracker');
+      const list = $('#proposalsList');
+      
+      if (data.proposals && data.proposals.length > 0) {
+        const seen = new Set();
+        const uniq = [];
+        for (const p of data.proposals){
+          const key = (p.title||'').trim().toLowerCase();
+          if (seen.has(key)) continue; seen.add(key); uniq.push(p);
+        }
+        list.innerHTML = uniq.map(p => `
+          <article class="list-item">
+            <div class="bullet ${p.status}"><i class="fa-regular fa-file-lines"></i></div>
+            <div class="list-body">
+              <h4>${p.title}</h4>
+              <p>${p.status_display}</p>
+            </div>
+            <a href="${p.view_url}" class="chip-btn"><i class="fa-regular fa-eye"></i> View</a>
+          </article>
+        `).join('');
+        tracker.style.display = 'block';
+      } else {
+        list.innerHTML = '<div class="empty">No proposals found</div>';
+        tracker.style.display = 'block';
+      }
+    } catch (ex) {
+      console.error('Failed to load proposals:', ex);
+    }
+  }
+
+  function showSuccessMessage(message) {
+    // Simple success message - could be enhanced with a toast system
+    const temp = document.createElement('div');
+    temp.style.cssText = 'position:fixed;top:20px;right:20px;background:#10b981;color:white;padding:12px 16px;border-radius:6px;z-index:1001;';
+    temp.textContent = message;
+    document.body.appendChild(temp);
+    setTimeout(() => document.body.removeChild(temp), 3000);
+  }
+
+  // Dropdown filtering
+  $('#visibilitySelect')?.addEventListener('change', (e)=>{
+    currentCategory = e.target.value || 'all';
+    loadCalendarData();
+  });
+
+  async function loadCalendarData(){
+    try{
+      const res = await fetch(`/api/calendar/?category=${encodeURIComponent(currentCategory)}`, { headers:{'X-Requested-With':'XMLHttpRequest'} });
+      const j = await res.json();
+      window.DASHBOARD_EVENTS = j.items || [];
+      // index by date for quick highlight
+      eventIndexByDate = new Map();
+      (window.DASHBOARD_EVENTS||[]).forEach(e=>{
+        if (!e.date) return;
+        const list = eventIndexByDate.get(e.date) || [];
+        list.push(e);
+        eventIndexByDate.set(e.date, list);
+      });
+    }catch{ window.DASHBOARD_EVENTS = []; eventIndexByDate = new Map(); }
+    buildCalendar(); openDay(new Date());
+  }
+
+  // Heatmap
+  async function renderHeatmap(){
+    const wrap = $('#heatmapContainer'); if (!wrap) return;
+    try{
+      const res = await fetch('/api/student/contributions/', { headers:{'X-Requested-With':'XMLHttpRequest'} });
+      const j = await res.json();
+      const contributions = j.contributions || [];
+      // Build GitHub-style grid
+      const cols = 53, rows = 7;
+      const grid = document.createElement('div'); grid.className='hm-grid';
+      // Map date->level
+      const map = Object.create(null);
+      contributions.forEach(c=>{ map[c.date] = c.level; });
+      // Start 52 weeks back
+      const today = new Date();
+      const start = new Date(today); start.setDate(today.getDate() - (52*7));
+      let cur = new Date(start);
+      for (let c=0; c<cols; c++){
+        const col = document.createElement('div'); col.className='hm-col';
+        for (let r=0; r<rows; r++){
+          const cell = document.createElement('div'); cell.className='hm-cell';
+          const dateStr = cur.toISOString().split('T')[0];
+          const lvl = map[dateStr] || 0;
+          if (lvl>0) cell.classList.add(`l${lvl}`);
+          cell.title = lvl>0 ? `${dateStr}: ${lvl} contribution${lvl>1?'s':''}` : `${dateStr}: No contributions`;
+          col.appendChild(cell);
+          cur.setDate(cur.getDate()+1);
+        }
+        grid.appendChild(col);
+      }
+      wrap.innerHTML=''; wrap.appendChild(grid);
+      fitHeatmap();
+    }catch{
+      // graceful no-op on failure
+      wrap.innerHTML = '<div class="empty">No contribution data</div>';
+    }
+  }
 
 function fitHeatmap(){
   const wrap = $('#heatmapContainer'); if(!wrap) return;
@@ -159,45 +570,7 @@ function fitHeatmap(){
 }
 
 
-  // To-do (local only)
-  const todoKey = 'ems.todo';
-  function loadTodos(){
-    const list = $('#todoList'); if(!list) return;
-    const data = JSON.parse(localStorage.getItem(todoKey)||'[]');
-    list.innerHTML = data.map((t,i)=>`
-      <li data-i="${i}">
-        <input type="checkbox" ${t.done?'checked':''}>
-        <span>${t.text}</span>
-        <button class="rm" title="Remove"><i class="fa-regular fa-trash-can"></i></button>
-      </li>`).join('');
-
-    list.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
-      cb.addEventListener('change',e=>{
-        const i = +e.target.closest('li').dataset.i;
-        data[i].done = e.target.checked;
-        localStorage.setItem(todoKey, JSON.stringify(data));
-      });
-    });
-
-    list.querySelectorAll('.rm').forEach(btn=>{
-      btn.addEventListener('click',e=>{
-        const i = +e.currentTarget.closest('li').dataset.i;
-        data.splice(i,1);
-        localStorage.setItem(todoKey, JSON.stringify(data));
-        loadTodos();
-        syncHeights();
-      });
-    });
-  }
-
-  $('#addTodo')?.addEventListener('click',()=>{
-    const text = prompt('New to-do'); if(!text) return;
-    const data = JSON.parse(localStorage.getItem(todoKey)||'[]');
-    data.unshift({text,done:false});
-    localStorage.setItem(todoKey, JSON.stringify(data));
-    loadTodos();
-    syncHeights();
-  });
+  // To-do functionality removed - replaced with event details viewer
 
   function syncHeights(){
     const isDesktop = window.innerWidth > 1200;
@@ -205,15 +578,12 @@ function fitHeatmap(){
     const perf = $('#cardPerformance');
     const acts = $('#cardActions');
     const cal  = $('#cardCalendar');
-    const todo = $('#cardTodo');
-    const todoList = $('#todoList');
-    const todoHeader = $('#cardTodo .card-header');
+    const eventDetails = $('#cardEventDetails');
     const contrib = $('#cardContribution');
   
     if(!isDesktop){
-      ['--calH','--contribH','--todoBodyH'].forEach(v=>root.style.removeProperty(v));
-      [perf, acts, cal, todo].forEach(el=>{ if(el){ el.style.height=''; el.style.minHeight=''; }});
-      if(todoList){ todoList.style.height=''; todoList.style.overflowY=''; }
+      ['--calH','--contribH','--eventDetailsH'].forEach(v=>root.style.removeProperty(v));
+      [perf, acts, cal, eventDetails].forEach(el=>{ if(el){ el.style.height=''; el.style.minHeight=''; }});
       return;
     }
   
@@ -226,21 +596,11 @@ function fitHeatmap(){
       if (perf) perf.style.height = calH + 'px';
     }
   
-    // 2) To‑do equals Contribution; body scrolls
-    if (contrib && todo && todoHeader && todoList) {
+    // 2) Event Details equals Contribution
+    if (contrib && eventDetails) {
       const contribH = Math.ceil(contrib.getBoundingClientRect().height);
       root.style.setProperty('--contribH', contribH + 'px');
-      todo.style.height = contribH + 'px';
-  
-      const cs = getComputedStyle(todo);
-      const padV = (parseFloat(cs.paddingTop)||0)+(parseFloat(cs.paddingBottom)||0);
-      const borderV = (parseFloat(cs.borderTopWidth)||0)+(parseFloat(cs.borderBottomWidth)||0);
-      const headerH = Math.ceil(todoHeader.getBoundingClientRect().height);
-      const bodyH = Math.max(0, contribH - headerH - padV - borderV);
-  
-      root.style.setProperty('--todoBodyH', bodyH + 'px');
-      todoList.style.height = bodyH + 'px';
-      todoList.style.overflowY = 'auto';
+      eventDetails.style.height = contribH + 'px';
     }
     fitHeatmap();
   }  
@@ -250,9 +610,10 @@ function fitHeatmap(){
   // Boot
   document.addEventListener('DOMContentLoaded', () => {
     loadPerformance();
-    buildCalendar(); openDay(new Date());
+  loadAndShowProposals();
+    loadRecentEvents();
+    loadCalendarData();
     renderHeatmap();
-    loadTodos();
     requestAnimationFrame(()=>{ syncHeights(); });
   });
 

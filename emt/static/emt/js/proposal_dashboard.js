@@ -14,6 +14,7 @@ $(document).ready(function() {
     let audienceClassMap = {};
     let firstErrorField = null;
     const autoFillEnabled = new URLSearchParams(window.location.search).has('autofill');
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
     // Demo data used for rapid prototyping. Remove once real data is wired.
     const AUTO_FILL_DATA = {
@@ -224,6 +225,9 @@ $(document).ready(function() {
             }
             if (section === 'income') {
                 setupIncomeSection();
+            }
+            if (section === 'why-this-event') {
+                setupWhyThisEventAI();
             }
             setupFormFieldSync();
             setupTextSectionStorage();
@@ -1149,6 +1153,7 @@ function getWhyThisEventForm() {
                 <div class="input-group">
                     <label for="need-analysis-modern">Need Analysis - Why is this event necessary? *</label>
                     <textarea id="need-analysis-modern" rows="4" required placeholder="Explain why this event is necessary, what gap it fills, and its relevance to the target audience..."></textarea>
+                    <button type="button" id="btn-ai-need" class="btn">Generate with AI</button>
                     <div class="help-text">Provide a detailed explanation of why this event is important.</div>
                 </div>
             </div>
@@ -1157,6 +1162,7 @@ function getWhyThisEventForm() {
                 <div class="input-group">
                     <label for="objectives-modern">Objectives - What do you aim to achieve? *</label>
                     <textarea id="objectives-modern" rows="4" required placeholder="• Objective 1: ...&#10;• Objective 2: ...&#10;• Objective 3: ..."></textarea>
+                    <button type="button" id="btn-ai-objectives" class="btn">Generate with AI</button>
                     <div class="help-text">List 3-5 clear, measurable objectives.</div>
                 </div>
             </div>
@@ -1165,6 +1171,7 @@ function getWhyThisEventForm() {
                 <div class="input-group">
                     <label for="outcomes-modern">Expected Learning Outcomes - What results do you expect? *</label>
                     <textarea id="outcomes-modern" rows="4" required placeholder="What specific results, skills, or benefits will participants gain?"></textarea>
+                    <button type="button" id="btn-ai-outcomes" class="btn">Generate with AI</button>
                     <div class="help-text">Describe the tangible benefits for participants.</div>
                 </div>
             </div>
@@ -1810,6 +1817,59 @@ function getWhyThisEventForm() {
 
             el.addEventListener('input', () => {
                 localStorage.setItem(key, el.value);
+            });
+        });
+    }
+
+    function collectBasicInfo() {
+        const getVal = (modernSelector, djangoName) => {
+            const modern = $(modernSelector);
+            if (modern.length && modern.val()) return modern.val();
+            return $(`#django-basic-info [name="${djangoName}"]`).val() || '';
+        };
+        return {
+            title: getVal('#event-title-modern', 'event_title'),
+            audience: getVal('#target-audience-modern', 'target_audience'),
+            focus: getVal('#event-focus-type-modern', 'event_focus_type'),
+            venue: getVal('#venue-modern', 'venue')
+        };
+    }
+
+    function setupWhyThisEventAI() {
+        const cfg = [
+            {btn: '#btn-ai-need', field: '#need-analysis-modern', url: window.AI_NEED_URL},
+            {btn: '#btn-ai-objectives', field: '#objectives-modern', url: window.AI_OBJECTIVES_URL},
+            {btn: '#btn-ai-outcomes', field: '#outcomes-modern', url: window.AI_OUTCOMES_URL}
+        ];
+
+        cfg.forEach(({btn, field, url}) => {
+            $(btn).off('click').on('click', async function() {
+                const textarea = $(field);
+                const payload = collectBasicInfo();
+                payload.context = textarea.val();
+                const btnEl = $(this);
+                const original = btnEl.text();
+                btnEl.prop('disabled', true).text('Generating...');
+                try {
+                    const fd = new FormData();
+                    Object.entries(payload).forEach(([k, v]) => fd.append(k, v || ''));
+                    const resp = await fetch(url, {
+                        method: 'POST',
+                        headers: {'X-CSRFToken': csrftoken},
+                        body: fd
+                    });
+                    const data = await resp.json();
+                    if (data.ok) {
+                        textarea.val(data.text);
+                        textarea.trigger('input');
+                    } else {
+                        showNotification(data.error || 'Generation failed', 'error');
+                    }
+                } catch (err) {
+                    showNotification('AI request failed', 'error');
+                } finally {
+                    btnEl.prop('disabled', false).text(original);
+                }
             });
         });
     }

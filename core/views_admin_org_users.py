@@ -52,17 +52,21 @@ def entrypoint(request):
 @user_passes_test(lambda u: u.is_superuser)
 def select_role(request, org_id):
     """
-    Page shown after clicking 'Add Users' for a specific organization.
-    Lets admin choose Student or Faculty. Then redirects to the right flow.
+    Unified user management interface with tabbed layout.
+    Replaces the old role selection with a comprehensive management page.
     """
     org = get_object_or_404(Organization, pk=org_id)
+    
+    # Handle direct POST requests from old form submissions for backward compatibility
     if request.method == "POST":
         role = request.POST.get("role")
         if role == "student":
             return redirect("admin_org_users_students", org_id=org.id)
         if role == "faculty":
             return redirect("admin_org_users_faculty", org_id=org.id)
-    return render(request, "core_admin_org_users/select_role.html", {"org": org})
+    
+    # Return the new unified interface
+    return render(request, "core_admin_org_users/user_management.html", {"org": org})
 
 
 @user_passes_test(lambda u: u.is_superuser)

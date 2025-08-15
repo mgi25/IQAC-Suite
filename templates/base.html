@@ -39,6 +39,12 @@
   <div class="top-utility-bar">
     <div class="utility-bar-flex" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
       <div class="utility-left" style="display: flex; align-items: center; gap: 1rem;">
+        <button id="sidebarToggle" aria-label="Toggle sidebar" style="background:transparent;border:none;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;">
+          <span style="display:inline-block;width:18px;height:2px;background:#fff;position:relative;">
+            <span style="content:'';position:absolute;left:0;top:-6px;width:18px;height:2px;background:#fff"></span>
+            <span style="content:'';position:absolute;left:0;top:6px;width:18px;height:2px;background:#fff"></span>
+          </span>
+        </button>
         <div class="app-logo" style="display: flex; align-items: center; gap: 0.75rem;">
           <img src="{% static 'core/img/campus-logo.png' %}" alt="CHRIST University" class="logo-img">
           <span class="app-name">Event Management Suite</span>
@@ -55,7 +61,7 @@
       <div class="utility-right" style="display: flex; align-items: center; gap: 1.5rem;">
         <div class="notification-section">
           <button class="utility-btn notification-btn" id="notificationBtn" aria-label="Notifications">
-            <i class="fas fa-bell"></i>
+            <i class="fa-solid fa-bell"></i>
             {% if notifications and notifications|length > 0 %}
             <span class="notification-badge" id="notificationBadge">{{ notifications|length }}</span>
             {% endif %}
@@ -72,7 +78,7 @@
                 {% for notification in notifications %}
                 <div class="notification-item {% if not notification.is_read %}unread{% endif %}">
                   <div class="notification-icon">
-                    <i class="fas fa-{{ notification.icon|default:'bell' }}"></i>
+                    <i class="fa-solid fa-{{ notification.icon|default:'bell' }}"></i>
                   </div>
                   <div class="notification-content">
                     <div class="notification-title">{{ notification.title }}</div>
@@ -375,6 +381,12 @@
             if (icon) icon.classList.add('rotated');
           }
         });
+      });
+
+      // Sidebar toggle (hamburger)
+      const sidebarToggle = document.getElementById('sidebarToggle');
+      sidebarToggle?.addEventListener('click', function(){
+        document.body.classList.toggle('sidebar-collapsed');
       });
 
       // Universal Search Functionality
