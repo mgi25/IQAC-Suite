@@ -4737,7 +4737,11 @@ def is_superuser(u):
 @user_passes_test(is_superuser)
 def class_rosters(request, org_id):
     org = get_object_or_404(Organization, pk=org_id)
-    year = request.GET.get("year") or request.session.get("active_year")
+    year = request.GET.get("year")
+    if year:
+        request.session["active_year"] = year
+    else:
+        year = request.session.get("active_year")
 
     qs = RoleAssignment.objects.filter(
         organization=org,
@@ -4764,7 +4768,11 @@ def class_rosters(request, org_id):
 @user_passes_test(is_superuser)
 def class_roster_detail(request, org_id, class_name):
     org = get_object_or_404(Organization, pk=org_id)
-    year = request.GET.get("year") or request.session.get("active_year")
+    year = request.GET.get("year")
+    if year:
+        request.session["active_year"] = year
+    else:
+        year = request.session.get("active_year")
     q = request.GET.get("q", "").strip()
 
     ras = RoleAssignment.objects.select_related("user", "role").filter(
