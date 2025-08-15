@@ -646,6 +646,8 @@ def submit_speaker_profile(request, proposal_id):
 def submit_expense_details(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id,
                                  submitted_by=request.user)
+    # Track wizard state for breadcrumb/progress UI
+    request.session["proposal_step"] = "expense_details"
     ExpenseFS = modelformset_factory(
         ExpenseDetail, form=ExpenseDetailForm, extra=1, can_delete=True
     )
@@ -660,7 +662,9 @@ def submit_expense_details(request, proposal_id):
                 obj.save()
             for obj in formset.deleted_objects:
                 obj.delete()
-
+            # Move wizard to CDL support step and notify user
+            request.session["proposal_step"] = "cdl_support"
+            messages.info(request, "Expense details saved. Proceed to CDL Support.")
             return redirect("emt:submit_cdl_support", proposal_id=proposal.id)
     else:
         formset = ExpenseFS(queryset=ExpenseDetail.objects.filter(
@@ -676,6 +680,8 @@ def submit_expense_details(request, proposal_id):
 @login_required
 def submit_cdl_support(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
+    # Ensure wizard/breadcrumb reflects final step
+    request.session["proposal_step"] = "cdl_support"
     instance = getattr(proposal, "cdl_support", None)
 
     if request.method == "POST":
