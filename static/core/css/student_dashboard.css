@@ -106,6 +106,11 @@
   .hm-grid{display:grid;grid-auto-flow:column;grid-auto-columns:min-content;gap:var(--hm-gap,3px)}
   .hm-col{display:grid;grid-template-rows:repeat(7,var(--hm-size,10px));gap:var(--hm-gap,3px)}
   .hm-cell{width:var(--hm-size,10px);height:var(--hm-size,10px);border-radius:2px;background:#e5e7eb}
+  /* Blue levels for heatmap */
+  .hm-cell.l1{background:#cfe3ff}
+  .hm-cell.l2{background:#9fc7ff}
+  .hm-cell.l3{background:#6faaff}
+  .hm-cell.l4{background:#264487}
   
   /* helpers */
   .link-muted{color:var(--muted);text-decoration:none}
@@ -275,6 +280,8 @@
   .event-details-content {
     padding: 14px 16px;
     min-height: 120px;
+  max-height: calc(var(--contribH, 380px) - 80px);
+  overflow: auto;
   }
   
   .event-detail-item {
@@ -305,4 +312,6 @@
   
   /* neutralize bootstrap */
   .ems-dashboard .btn,.ems-dashboard .btn-primary{all:unset}
+  /* Scroll long lists to keep cards aligned */
+  #cardActions .list{max-height: var(--calH, 380px); overflow:auto}
   
