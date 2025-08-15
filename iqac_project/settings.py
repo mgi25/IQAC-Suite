@@ -33,11 +33,11 @@ def _env(key: str, default=None, cast=None):
 AI_BACKEND       = _env("AI_BACKEND", default="OLLAMA")  # OLLAMA | OPENROUTER
 OLLAMA_BASE      = _env("OLLAMA_BASE", default="http://127.0.0.1:11434")
 OLLAMA_MODEL     = _env("OLLAMA_MODEL", default="llama3")  # guarantees a default
-AI_HTTP_TIMEOUT  = _env("AI_HTTP_TIMEOUT", default="20")
+AI_HTTP_TIMEOUT  = _env("AI_HTTP_TIMEOUT", default="120")
 try:
     AI_HTTP_TIMEOUT = int(AI_HTTP_TIMEOUT)
 except Exception:
-    AI_HTTP_TIMEOUT = 20
+    AI_HTTP_TIMEOUT = 120
 
 # Optional: generator/critic models if used elsewhere in code
 OLLAMA_GEN_MODEL    = _env("OLLAMA_GEN_MODEL", default=OLLAMA_MODEL)

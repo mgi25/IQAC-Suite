@@ -4,6 +4,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth.models import User
 from suite import ai_client
+import requests
 
 
 class AIGenerationTests(TestCase):
@@ -58,3 +59,15 @@ class AIGenerationTests(TestCase):
         data = resp.json()
         self.assertTrue(data['ok'])
         self.assertEqual(data['text'], 'out text')
+
+    @patch('suite.ai_client._ollama_available', return_value=True)
+    @patch('suite.ai_client.requests.post')
+    def test_generate_need_analysis_timeout(self, mock_post, mock_avail):
+        mock_post.side_effect = requests.Timeout
+        resp = self.client.post(reverse('emt:generate_need_analysis'), {
+            'title': 'T',
+            'audience': 'Students'
+        })
+        self.assertEqual(resp.status_code, 503)
+        data = resp.json()
+        self.assertIn('timed out', data['error'])
