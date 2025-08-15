@@ -248,6 +248,10 @@ $(document).ready(function() {
             clearValidationErrors();
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
+                const actInput = document.getElementById('num-activities-modern');
+                if (actInput && actInput.value) {
+                    actInput.dispatchEvent(new Event('input'));
+                }
             }
             if (autoFillEnabled) {
                 autofillTestData(section);
