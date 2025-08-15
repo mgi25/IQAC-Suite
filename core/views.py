@@ -229,9 +229,20 @@ def dashboard(request):
             Q(submitted_by=user) | Q(faculty_incharges=user)
         ).distinct()
 
-        upcoming_events_count = finalized_events.filter(
-            event_datetime__gte=timezone.now()
-        ).count()
+        # Upcoming events: prefer user's organizations if student; otherwise count all finalized upcoming
+        now_dt = timezone.now()
+        today = timezone.localdate()
+        if is_student:
+            user_org_ids = list(roles.filter(organization__isnull=False).values_list('organization_id', flat=True))
+            upcoming_events_count = finalized_events.filter(
+                Q(organization_id__in=user_org_ids),
+            ).filter(
+                Q(event_datetime__gte=now_dt) | Q(event_start_date__gte=today)
+            ).count()
+        else:
+            upcoming_events_count = finalized_events.filter(
+                Q(event_datetime__gte=now_dt) | Q(event_start_date__gte=today)
+            ).count()
 
         organized_events_count = EventProposal.objects.filter(submitted_by=user).count()
 
@@ -269,6 +280,16 @@ def dashboard(request):
 
     # ---- student-only bindings ----
     participated_events_count = my_events.count() if is_student else 0
+    # Count distinct organizations for current user (for student KPI)
+    try:
+        org_count = (
+            roles.filter(organization__isnull=False)
+            .values_list('organization_id', flat=True)
+            .distinct()
+            .count()
+        )
+    except Exception:
+        org_count = 0
     achievements_count = 0
     clubs_count = 0
     activity_score = 0
@@ -297,6 +318,7 @@ def dashboard(request):
         "activity_score": activity_score,
         "recent_activity": recent_activity,
         "proposals": proposals_min,
+    "org_count": org_count,
     }
 
         # --- robust template selection + debug ---
@@ -2540,17 +2562,30 @@ def api_student_contributions(request):
     start_date = end_date - timedelta(days=365)
 
     # Unified queryset across roles using EventProposal with OR conditions
-    qp = models.Q(created_at__date__gte=start_date, created_at__date__lte=end_date)
     assoc = (
         models.Q(submitted_by=user) |
         models.Q(faculty_incharges=user) |
         models.Q(participants__user=user)
     )
-    qs = EventProposal.objects.filter(qp & assoc).distinct()
+    # Prefer actual event date (event_datetime/event_start_date); fallback to created_at
+    date_window = (
+        models.Q(event_datetime__date__gte=start_date, event_datetime__date__lte=end_date)
+        | models.Q(event_start_date__gte=start_date, event_start_date__lte=end_date)
+        | models.Q(created_at__date__gte=start_date, created_at__date__lte=end_date)
+    )
+    qs = EventProposal.objects.filter(assoc & date_window).distinct()
 
-    # Aggregate counts per day
+    # Compute a date expression choosing event date first
+    date_expr = models.Case(
+        models.When(event_datetime__isnull=False, then=TruncDate('event_datetime')),
+        models.When(event_start_date__isnull=False, then=models.F('event_start_date')),
+        default=TruncDate('created_at'),
+        output_field=models.DateField(),
+    )
+
+    # Aggregate counts per chosen date
     contributions_map = {}
-    daily = qs.annotate(date=TruncDate('created_at')).values('date').annotate(count=models.Count('id'))
+    daily = qs.annotate(date=date_expr).values('date').annotate(count=models.Count('id'))
     for row in daily:
         date_obj = row["date"]
         date_str = date_obj.strftime("%Y-%m-%d") if hasattr(date_obj, "strftime") else str(date_obj)
