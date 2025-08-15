@@ -2636,10 +2636,11 @@ def api_user_events_data(request):
     
     events_data = []
     for event in events.order_by('-created_at')[:10]:  # Latest 10 events
+        desc = getattr(event, 'description', '') or ''
         events_data.append({
             'id': event.id,
             'title': event.event_title,
-            'description': event.description[:100] + '...' if len(event.description) > 100 else event.description,
+            'description': desc[:100] + '...' if len(desc) > 100 else desc,
             'status': event.status,
             'created_at': event.created_at.strftime('%Y-%m-%d %H:%M'),
             'organization': event.organization.name if event.organization else 'N/A'
