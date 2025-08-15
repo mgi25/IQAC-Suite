@@ -135,6 +135,37 @@ class AIGenerationTests(TestCase):
         self.assertEqual(data['learning_outcomes'], ['l1'])
 
     @patch('suite.views.chat')
+    def test_generate_why_event_string_lists(self, mock_chat):
+        mock_chat.return_value = json.dumps({
+            'need_analysis': 'need',
+            'objectives': '1. o1\n2. o2',
+            'learning_outcomes': '• l1\n• l2'
+        })
+        resp = self.client.post(reverse('emt:generate_why_event'), {'title': 'T'})
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data['ok'])
+        self.assertEqual(data['need_analysis'], 'need')
+        self.assertEqual(data['objectives'], ['o1', 'o2'])
+        self.assertEqual(data['learning_outcomes'], ['l1', 'l2'])
+
+    @patch('suite.views.chat')
+    def test_generate_why_event_missing_fields(self, mock_chat):
+        mock_chat.side_effect = [
+            json.dumps({'need_analysis': 'need'}),
+            'obj1\nobj2',
+            'out1\nout2',
+        ]
+        resp = self.client.post(reverse('emt:generate_why_event'), {'title': 'T'})
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data['ok'])
+        self.assertEqual(data['need_analysis'], 'need')
+        self.assertEqual(data['objectives'], ['obj1', 'obj2'])
+        self.assertEqual(data['learning_outcomes'], ['out1', 'out2'])
+        self.assertEqual(mock_chat.call_count, 3)
+
+    @patch('suite.views.chat')
     def test_generate_why_event_empty_response(self, mock_chat):
         mock_chat.return_value = ""
         resp = self.client.post(reverse('emt:generate_why_event'), {'title': 'T'})

@@ -26,6 +26,24 @@ def _sanitize(text: str, facts: dict) -> str:
     text = enforce_no_unverified_numbers(text, allowed_numbers_from_facts(facts))
     return text
 
+
+def _bullets(value, facts):
+    """Normalize model output into a list of sanitized bullet strings."""
+    if isinstance(value, str):
+        items = value.splitlines()
+    elif isinstance(value, list):
+        items = value
+    else:
+        items = []
+    return [
+        _sanitize(
+            b.strip().lstrip("•-*0123456789. "),
+            facts,
+        )
+        for b in items
+        if b and b.strip()
+    ]
+
 @login_required
 @require_POST
 def generate_why_event(request):
@@ -39,14 +57,55 @@ def generate_why_event(request):
         )
         data = parse_model_json(result)
         need = _sanitize(data.get("need_analysis", "").strip(), facts)
-        objectives = [o.strip() for o in data.get("objectives", [])]
-        outcomes = [o.strip() for o in data.get("learning_outcomes", [])]
-        return JsonResponse({
-            "ok": True,
-            "need_analysis": need,
-            "objectives": objectives,
-            "learning_outcomes": outcomes,
-        })
+
+        objectives = _bullets(data.get("objectives", []), facts)
+        if not objectives:
+            try:
+                prompt = (
+                    f"facts = {facts}\n"
+                    "Task: 4–6 objectives. No numbers unless in facts."
+                )
+                obj_text = chat(
+                    [{"role": "user", "content": prompt}],
+                    system=SYSTEM_OBJECTIVES,
+                    timeout=getattr(settings, "AI_HTTP_TIMEOUT", 120),
+                    options={"num_predict": 300},
+                )
+                objectives = _bullets(obj_text, facts)
+            except AIError as e2:
+                logger.error(
+                    "generate_why_event objectives fallback failed: %s", e2
+                )
+                objectives = []
+
+        outcomes = _bullets(data.get("learning_outcomes", []), facts)
+        if not outcomes:
+            try:
+                prompt = (
+                    f"facts = {facts}\n"
+                    "Task: 3–5 learning outcomes. Bloom verbs. No numbers unless in facts."
+                )
+                out_text = chat(
+                    [{"role": "user", "content": prompt}],
+                    system=SYSTEM_LEARNING,
+                    timeout=getattr(settings, "AI_HTTP_TIMEOUT", 120),
+                    options={"num_predict": 300},
+                )
+                outcomes = _bullets(out_text, facts)
+            except AIError as e3:
+                logger.error(
+                    "generate_why_event outcomes fallback failed: %s", e3
+                )
+                outcomes = []
+
+        return JsonResponse(
+            {
+                "ok": True,
+                "need_analysis": need,
+                "objectives": objectives,
+                "learning_outcomes": outcomes,
+            }
+        )
     except AIError as e:
         logger.error("generate_why_event failed: %s", e)
         return JsonResponse({"ok": False, "error": str(e)}, status=503)
