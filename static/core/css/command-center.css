@@ -461,30 +461,30 @@
 
   .notification-btn {
     position: relative !important;
-    width: 40px !important;
-    height: 40px !important;
-    border-radius: 50% !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    background: var(--gray-100) !important;
+    background: transparent !important;
     color: var(--gray-700) !important;
-    transition: background 0.2s ease !important;
+    transition: color 0.2s ease !important;
     padding: 0 !important;
+    border-radius: 0 !important;
+    width: auto !important;
+    height: auto !important;
   }
 
   .notification-btn:hover {
-    background: var(--gray-200) !important;
+    background: none !important;
   }
 
   .notification-btn i {
-    font-size: 1.25rem !important;
+    font-size: 1.5rem !important;
   }
-  
+
   .notification-badge {
     position: absolute !important;
-    top: 0.25rem !important;
-    right: 0.25rem !important;
+    top: -0.25rem !important;
+    right: -0.25rem !important;
     background: #ef4444 !important;
     color: var(--white) !important;
     font-size: 0.75rem !important;
