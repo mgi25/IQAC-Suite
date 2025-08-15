@@ -40,9 +40,10 @@
         options: { plugins: { legend: { display:false } }, responsive:true, maintainAspectRatio:true, layout:{padding:10} }
       });
       const legend = $('#donutLegend');
-      if (legend) legend.innerHTML = labels.map((l,i)=>
-        `<div class="legend-row"><span class="legend-dot" style="background:${COLORS[i]}"></span><span>${l}</span><strong style="margin-left:auto">${data[i]}%</strong></div>`
-      ).join('');
+      if (legend) legend.innerHTML = labels.map((l,i)=>{
+        const val = typeof data[i] === 'number' ? Math.round(data[i]*10)/10 : data[i];
+        return `<div class="legend-row"><span class="legend-dot" style="background:${COLORS[i]}"></span><span>${l}</span><strong style="margin-left:auto">${val}%</strong></div>`;
+      }).join('');
     }
   
     async function loadPerformance(){
@@ -339,11 +340,8 @@
       }
     }
 
-    // Dropdown filtering (student view has no dropdown by default; noop if missing)
-    $('#visibilitySelect')?.addEventListener('change', (e)=>{
-      currentCategory = e.target.value || 'all';
-      loadCalendarData();
-    });
+  // No visibility dropdown on student; default to 'all'
+  currentCategory = 'all';
 
     async function loadCalendarData(){
       try{
@@ -358,7 +356,7 @@
           eventIndexByDate.set(e.date, list);
         });
       }catch{ window.DASHBOARD_EVENTS = []; eventIndexByDate = new Map(); }
-      buildCalendar(); openDay(new Date());
+  buildCalendar();
     }
   
     // Heatmap
@@ -452,7 +450,9 @@
       loadPerformance();
       loadRecentActivity();
       loadCalendarData();
-      renderHeatmap();
+      // Heatmap will be populated by contributions API with event-date aggregation
+      // Fallback visual if API fails is handled inside loadContribution
+      loadContribution();
       requestAnimationFrame(()=>{ syncHeights(); });
     });
     window.addEventListener('load', ()=>syncHeights());
