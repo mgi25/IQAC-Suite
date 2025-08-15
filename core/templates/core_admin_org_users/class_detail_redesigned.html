@@ -195,24 +195,6 @@
       opacity: 0.3;
     }
     
-    .status-badge {
-      padding: 0.25rem 0.75rem;
-      border-radius: 12px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      color: white;
-      display: inline-block;
-    }
-    
-    .status-active { 
-      background-color: var(--success-color); 
-    }
-    
-    .status-inactive { 
-      background-color: var(--danger-color); 
-    }
-    
     @media (max-width: 768px) {
       .class-detail-container {
         padding: 0.75rem;
@@ -397,7 +379,7 @@
 
 {% block scripts %}
 <script>
-  // Add loading states and interactions
+  // Add confirmation dialogs and smooth interactions
   document.addEventListener('DOMContentLoaded', function() {
     // Add loading states to buttons
     const forms = document.querySelectorAll('form');
