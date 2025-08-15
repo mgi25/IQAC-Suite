@@ -121,6 +121,20 @@ class AIGenerationTests(TestCase):
         self.assertEqual(data['learning_outcomes'], ['l1'])
 
     @patch('suite.views.chat')
+    def test_generate_why_event_trailing_commas(self, mock_chat):
+        mock_chat.return_value = (
+            '{"need_analysis": "need", "objectives": ["o1",], '
+            '"learning_outcomes": ["l1"],}'
+        )
+        resp = self.client.post(reverse('emt:generate_why_event'), {'title': 'T'})
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data['ok'])
+        self.assertEqual(data['need_analysis'], 'need')
+        self.assertEqual(data['objectives'], ['o1'])
+        self.assertEqual(data['learning_outcomes'], ['l1'])
+
+    @patch('suite.views.chat')
     def test_generate_why_event_empty_response(self, mock_chat):
         mock_chat.return_value = ""
         resp = self.client.post(reverse('emt:generate_why_event'), {'title': 'T'})

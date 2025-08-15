@@ -1,4 +1,6 @@
-import re, json
+import re, json, logging
+
+logger = logging.getLogger(__name__)
 
 BAD_PHRASES = [
     r"\baccording to\b",
@@ -54,4 +56,8 @@ def parse_model_json(s: str) -> dict:
     if not match:
         raise ValueError("No JSON object found in model response")
 
-    return json.loads(match.group(0))
+    json_str = match.group(0)
+    cleaned = re.sub(r",\s*(?=[}\]])", "", json_str)
+    if cleaned != json_str:
+        logger.debug("Removed trailing commas from model JSON")
+    return json.loads(cleaned)
