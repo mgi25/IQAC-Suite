@@ -79,7 +79,7 @@ body {
     position: relative;
     cursor: pointer;
     font-size: 1.75rem;
-    color: var(--text-secondary);
+    color: var(--primary-color);
     width: 42px;
     height: 42px;
     display: grid;
