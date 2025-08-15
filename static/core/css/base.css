@@ -209,6 +209,7 @@ body.command-center-layout {
 
 .notification-btn i {
   font-size: 1.75rem;
+  color: var(--gold-accent);
 }
 
 .notification-dropdown {
