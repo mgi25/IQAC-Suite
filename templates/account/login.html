@@ -1,5 +1,5 @@
 {% load static %}
-{% load socialaccount %}
+{% load socialaccount %}{% get_providers as socialaccount_providers %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -44,10 +44,13 @@
         Only use <strong>Christ Credentials</strong> to access this app
       </p>
 
-      <a href="{% provider_login_url 'google' method='oauth2' process='login' %}" class="google-login-btn">
-        <img src="https://developers.google.com/identity/images/g-logo.png" width="18" height="18" />
-        Continue With Google
-      </a>
+      {% if socialaccount_providers %}
+        {% providers_media_js %}
+        <a href="{% provider_login_url 'google' method='oauth2' process='login' %}" class="google-login-btn">
+          <img src="https://developers.google.com/identity/images/g-logo.png" width="18" height="18" />
+          Continue With Google
+        </a>
+      {% endif %}
 
       <div class="info-panel">
         <ul class="info-list">
