@@ -1149,29 +1149,29 @@ $(document).ready(function() {
 function getWhyThisEventForm() {
     return `
         <div class="form-grid">
+            <div class="form-row full-width" style="text-align:right;">
+                <button type="button" id="btn-generate-why" class="btn">Generate with AI</button>
+            </div>
             <div class="form-row full-width">
                 <div class="input-group">
                     <label for="need-analysis-modern">Need Analysis - Why is this event necessary? *</label>
                     <textarea id="need-analysis-modern" rows="4" required placeholder="Explain why this event is necessary, what gap it fills, and its relevance to the target audience..."></textarea>
-                    <button type="button" id="btn-ai-need" class="btn">Generate with AI</button>
                     <div class="help-text">Provide a detailed explanation of why this event is important.</div>
                 </div>
             </div>
-            
+
             <div class="form-row full-width">
                 <div class="input-group">
                     <label for="objectives-modern">Objectives - What do you aim to achieve? *</label>
                     <textarea id="objectives-modern" rows="4" required placeholder="• Objective 1: ...&#10;• Objective 2: ...&#10;• Objective 3: ..."></textarea>
-                    <button type="button" id="btn-ai-objectives" class="btn">Generate with AI</button>
                     <div class="help-text">List 3-5 clear, measurable objectives.</div>
                 </div>
             </div>
-            
+
             <div class="form-row full-width">
                 <div class="input-group">
                     <label for="outcomes-modern">Expected Learning Outcomes - What results do you expect? *</label>
                     <textarea id="outcomes-modern" rows="4" required placeholder="What specific results, skills, or benefits will participants gain?"></textarea>
-                    <button type="button" id="btn-ai-outcomes" class="btn">Generate with AI</button>
                     <div class="help-text">Describe the tangible benefits for participants.</div>
                 </div>
             </div>
@@ -2517,4 +2517,75 @@ function getWhyThisEventForm() {
 
     console.log('Dashboard initialized successfully! 🚀');
     console.log('All original functionality preserved with new UI');
+});
+
+function getCookie(name){const v=`; ${document.cookie}`.split(`; ${name}=`);if(v.length===2)return v.pop().split(';').shift();}
+function val(sel){return document.querySelector(sel)?.value?.trim()||"";}
+function arr(sel){return Array.from(document.querySelectorAll(sel)).map(x=>x.value).filter(Boolean);}
+
+function collectFactsFromForm(){
+  return {
+    organization_type: val('#id_organization_type') || val('#id_type_of_organisation'),
+    department: val('#id_department'),
+    committees_collaborations: arr('input[name="committees_collaborations"]'),
+    event_title: val('#id_event_title') || val('#id_title'),
+    target_audience: val('#id_target_audience'),
+    event_focus_type: val('#id_event_focus_type') || val('#id_focus'),
+    location: val('#id_location'),
+    start_date: val('#id_start_date'),
+    end_date: val('#id_end_date'),
+    academic_year: val('#id_academic_year'),
+    pos_pso_management: val('#id_pos_pso_management') || val('#id_pos_pso'),
+    sdg_goals: arr('select#id_sdg_goals option:checked').map(o=>o.textContent.trim()),
+    num_activities: val('#id_num_activities'),
+    student_coordinators: arr('input[name="student_coordinators"]'),
+    faculty_incharges: arr('input[name="faculty_incharges"]'),
+    additional_context: val('#id_additional_context')
+  };
+}
+
+function applyBullets(field, items){
+  const el = document.querySelector(`#id_${field}`);
+  const text = (items || []).map(i=>`• ${i}`).join('\n');
+  if (window.CKEDITOR && CKEDITOR.instances[`id_${field}`]) {
+    CKEDITOR.instances[`id_${field}`].setData((CKEDITOR.instances[`id_${field}`].getData()?'<p></p>':'') + text.replace(/\n/g,'<br>'));
+  } else if (el) {
+    el.value = text;
+    el.dispatchEvent(new Event('input',{bubbles:true}));
+  }
+}
+
+function applyText(field, text){
+  const el = document.querySelector(`#id_${field}`);
+  if (window.CKEDITOR && CKEDITOR.instances[`id_${field}`]) {
+    CKEDITOR.instances[`id_${field}`].setData(text);
+  } else if (el) {
+    el.value = text;
+    el.dispatchEvent(new Event('input',{bubbles:true}));
+  }
+}
+
+async function generateWhyEvent(){
+  const btn = document.querySelector('#btn-generate-why') || this;
+  const orig = btn?.innerHTML; if (btn) btn.innerHTML='Generating…';
+  try{
+    const facts = collectFactsFromForm();
+    const body = new URLSearchParams(Object.entries(facts));
+    const res = await fetch('/suite/generate-why-event/', {
+      method:'POST',
+      headers:{'X-CSRFToken':getCookie('csrftoken')},
+      body
+    });
+    const data = await res.json();
+    if(!res.ok || !data.ok){ alert(data.error || 'Generation failed'); return; }
+    applyText('need_analysis', data.need_analysis || '');
+    applyBullets('objectives', data.objectives || []);
+    applyBullets('learning_outcomes', data.learning_outcomes || []);
+    if (typeof window.autosave === 'function') window.autosave();
+  }catch(e){ console.error(e); alert('Generation failed'); }
+  finally{ if(btn) btn.innerHTML = orig || 'Generate with AI'; }
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  const b = document.querySelector('#btn-generate-why');
+  if (b && !b._wired){ b.addEventListener('click', generateWhyEvent); b._wired = true; }
 });
