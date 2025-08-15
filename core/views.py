@@ -2131,11 +2131,17 @@ def admin_reports_view(request):
 @login_required
 @admin_required
 def admin_history(request):
-    """List activity log entries for administrators with search and filtering."""
+    """List activity log entries for administrators.
 
-    # Fetch activity from all users so administrators can audit
-    # actions across the entire system, not just their own.
-    logs = ActivityLog.objects.select_related("user").all()
+    The history table is intended as an audit log for the whole site, so it
+    must display actions performed by **all** users rather than only the
+    requesting administrator. We therefore start with a queryset containing
+    every :class:`ActivityLog` record and then apply any filtering based on
+    the request parameters.
+    """
+
+    # Begin with activity from every user.
+    logs = ActivityLog.objects.select_related("user")
 
     # Text search across user name, username, action and description
     query = request.GET.get("q", "").strip()
