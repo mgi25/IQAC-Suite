@@ -2578,3 +2578,74 @@ function showCard(field, content){
     card.textContent = content;
   }
 }
+
+// Inject generated text into the real field/editor and trigger autosave
+function applyGeneratedToField(field, text) {
+  const id = `id_${field}`;
+
+  if (window.CKEDITOR && CKEDITOR.instances[id]) {
+    CKEDITOR.instances[id].setData(text);
+    return;
+  }
+  if (window.ClassicEditor && window._editors && window._editors[field]) {
+    window._editors[field].setData(text);
+    return;
+  }
+  if (window.tinymce && tinymce.get(id)) {
+    tinymce.get(id).setContent(text);
+    return;
+  }
+  if (window.Quill && window._quills && window._quills[field]) {
+    const q = window._quills[field];
+    q.setText("");
+    q.clipboard.dangerouslyPasteHTML(0, text);
+    return;
+  }
+  const el = document.getElementById(id);
+  if (el) {
+    el.value = text;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+}
+
+async function onGenerateNeedAnalysis(e) {
+  e?.preventDefault?.();
+  const btn = e?.currentTarget;
+  const original = btn?.innerHTML;
+  if (btn) btn.innerHTML = 'Generating…';
+
+  try {
+    const title = document.querySelector('#id_event_title')?.value
+               || document.querySelector('#id_title')?.value
+               || '';
+
+    const res = await fetch('/suite/generate-need-analysis/', {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [,''])[1],
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({ topic: title })
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+    applyGeneratedToField(data.field || 'need_analysis', data.value || data.text || '');
+    if (typeof window.autosave === 'function') window.autosave();
+  } catch (err) {
+    console.error('Generation failed:', err);
+    alert(`All AI backends failed: ${err.message || err}`);
+  } finally {
+    if (btn) btn.innerHTML = original || 'Generate with AI';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.querySelector('#btn-generate-need-analysis');
+  if (btn && !btn._wired) {
+    btn.addEventListener('click', onGenerateNeedAnalysis);
+    btn._wired = true;
+  }
+});
