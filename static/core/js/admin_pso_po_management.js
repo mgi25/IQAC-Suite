@@ -571,36 +571,149 @@ function displayOutcomes(outcomes, type) {
     outcomes.forEach(outcome => {
         const item = document.createElement('div');
         item.className = 'outcome-item';
-        item.innerHTML = `
-            <div class="outcome-text">${outcome.description}</div>
-            <div class="outcome-actions">
-                <button class="edit-outcome-btn" data-outcome-id="${outcome.id}" data-description="${outcome.description.replace(/"/g, '&quot;')}" data-type="${type}">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="delete-outcome-btn" data-outcome-id="${outcome.id}" data-type="${type}">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        `;
-        
-        // Add event listeners for the buttons
-        const editBtn = item.querySelector('.edit-outcome-btn');
-        const deleteBtn = item.querySelector('.delete-outcome-btn');
-        
-        editBtn.addEventListener('click', function() {
-            const outcomeId = this.dataset.outcomeId;
-            const description = this.dataset.description.replace(/&quot;/g, '"');
-            const type = this.dataset.type;
-            editOutcome(outcomeId, description, type);
-        });
-        
-        deleteBtn.addEventListener('click', function() {
-            const outcomeId = this.dataset.outcomeId;
-            const type = this.dataset.type;
-            deleteOutcome(outcomeId, type);
-        });
-        
+        item.dataset.outcomeId = outcome.id;
+        item.dataset.type = type;
+
+        const text = document.createElement('div');
+        text.className = 'outcome-text';
+        text.textContent = outcome.description;
+        text.title = 'Click edit to modify';
+
+        const actions = document.createElement('div');
+        actions.className = 'outcome-actions';
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'edit-outcome-btn';
+        editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+        editBtn.addEventListener('click', () => enterInlineEdit(item, text, outcome.id, type));
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'delete-outcome-btn';
+        delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+        delBtn.addEventListener('click', () => inlineDeleteOutcome(item, outcome.id, type));
+
+        actions.appendChild(editBtn);
+        actions.appendChild(delBtn);
+
+        item.appendChild(text);
+        item.appendChild(actions);
         list.appendChild(item);
+    });
+}
+
+function enterInlineEdit(item, textEl, outcomeId, type){
+    if(item.classList.contains('editing')) return;
+    item.classList.add('editing');
+    const original = textEl.textContent;
+    const ta = document.createElement('textarea');
+    ta.className = 'inline-editor';
+    ta.value = original;
+    ta.rows = Math.min(6, Math.max(2, Math.ceil(original.length/80)));
+    ta.style.width = '100%';
+    ta.style.resize = 'vertical';
+    textEl.replaceWith(ta);
+    ta.focus();
+
+    const actions = item.querySelector('.outcome-actions');
+    const prev = actions.innerHTML;
+    actions.innerHTML = '';
+
+    const save = document.createElement('button');
+    save.className = 'btn-inline-save';
+    save.textContent = 'Save';
+    const cancel = document.createElement('button');
+    cancel.className = 'btn-inline-cancel';
+    cancel.textContent = 'Cancel';
+
+    const error = document.createElement('div');
+    error.className = 'inline-error';
+    error.style.display = 'none';
+    error.textContent = 'Description can\'t be empty';
+    item.appendChild(error);
+
+    const exitEdit = () => {
+        const restored = document.createElement('div');
+        restored.className = 'outcome-text';
+        restored.textContent = original;
+        ta.replaceWith(restored);
+        actions.innerHTML = prev;
+        item.classList.remove('editing');
+        // Rebind handlers on restored buttons
+        const editBtn = actions.querySelector('.edit-outcome-btn');
+        const delBtn = actions.querySelector('.delete-outcome-btn');
+        editBtn?.addEventListener('click', () => enterInlineEdit(item, restored, outcomeId, type));
+        delBtn?.addEventListener('click', () => inlineDeleteOutcome(item, outcomeId, type));
+        error.remove();
+    };
+
+    cancel.addEventListener('click', exitEdit);
+    ta.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ e.preventDefault(); exitEdit(); }});
+    save.addEventListener('click', () => {
+        const val = (ta.value||'').trim();
+        if(!val){ error.style.display='block'; return; }
+        // PUT via unified endpoint
+        fetch('/core/api/manage-program-outcomes/',{
+            method:'PUT', headers:{'Content-Type':'application/json','X-CSRFToken':getCsrfToken()},
+            body: JSON.stringify({ outcome_id: outcomeId, type: (type==='pos'?'PO':'PSO'), description: val })
+        }).then(r=>r.json()).then(data=>{
+            if(data.success){
+                const restored = document.createElement('div');
+                restored.className = 'outcome-text';
+                restored.textContent = data.outcome?.description || val;
+                ta.replaceWith(restored);
+                actions.innerHTML = prev;
+                item.classList.remove('editing');
+                const editBtn = actions.querySelector('.edit-outcome-btn');
+                const delBtn = actions.querySelector('.delete-outcome-btn');
+                editBtn?.addEventListener('click', () => enterInlineEdit(item, restored, outcomeId, type));
+                delBtn?.addEventListener('click', () => inlineDeleteOutcome(item, outcomeId, type));
+                error.remove();
+                showNotification('Outcome updated', 'success');
+                updateOutcomeCounts();
+            }else{
+                error.textContent = data.error || 'Update failed';
+                error.style.display='block';
+            }
+        }).catch(ex=>{
+            error.textContent = 'Network error';
+            error.style.display='block';
+        });
+    });
+
+    actions.appendChild(save);
+    actions.appendChild(cancel);
+}
+
+function inlineDeleteOutcome(item, outcomeId, type){
+    // Inline confirmation UI (no blocking popups)
+    const actions = item.querySelector('.outcome-actions');
+    const prev = actions.innerHTML;
+    actions.innerHTML = '';
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = 'btn-inline-delete confirm';
+    confirmBtn.textContent = 'Confirm Delete';
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn-inline-cancel';
+    cancelBtn.textContent = 'Cancel';
+    actions.appendChild(confirmBtn);
+    actions.appendChild(cancelBtn);
+
+    const restore = () => { actions.innerHTML = prev; };
+    cancelBtn.addEventListener('click', restore);
+    confirmBtn.addEventListener('click', ()=>{
+        fetch('/core/api/manage-program-outcomes/',{
+            method:'DELETE', headers:{'Content-Type':'application/json','X-CSRFToken':getCsrfToken()},
+            body: JSON.stringify({ outcome_id: outcomeId, type: (type==='pos'?'PO':'PSO') })
+        }).then(r=>r.json()).then(data=>{
+            if(data.success){
+                item.remove();
+                showNotification('Outcome deleted', 'success');
+                updateOutcomeCounts();
+            }else{
+                showNotification(data.error || 'Delete failed', 'error');
+                restore();
+            }
+        }).catch(()=> { showNotification('Network error', 'error'); restore(); });
     });
 }
 
@@ -718,72 +831,53 @@ function switchTab(tabName) {
     });
 }
 
-function loadOutcomes(programId, type) {
-    const endpoint = type === 'pos' ? 
-        `/api/programs/${programId}/pos/` : 
-        `/api/programs/${programId}/psos/`;
-        
-    fetch(endpoint)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                displayOutcomes(data.outcomes, type);
-            }
-        })
-        .catch(error => {
-            console.error(`Error loading ${type}:`, error);
-        });
-}
-
 function displayOutcomes(outcomes, type) {
     const listId = type === 'pos' ? 'posList' : 'psosList';
     const list = document.getElementById(listId);
-    if (!list) return;
-
+    
+    if (!list) {
+        console.error(`List element ${listId} not found`);
+        return;
+    }
+    
     list.innerHTML = '';
+    
+    if (!outcomes || outcomes.length === 0) {
+        list.innerHTML = '<div class="no-outcomes">No outcomes added yet.</div>';
+        return;
+    }
     
     outcomes.forEach(outcome => {
         const item = document.createElement('div');
         item.className = 'outcome-item';
-        item.innerHTML = `
-            <div class="outcome-text">${outcome.description}</div>
-            <div class="outcome-actions">
-                <button class="edit-outcome-btn" data-outcome-id="${outcome.id}" data-description="${outcome.description.replace(/"/g, '&quot;')}" data-type="${type}">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="delete-outcome-btn" data-outcome-id="${outcome.id}" data-type="${type}">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        `;
-        
-        // Add event listeners for the buttons
-        const editBtn = item.querySelector('.edit-outcome-btn');
-        const deleteBtn = item.querySelector('.delete-outcome-btn');
-        
-        editBtn.addEventListener('click', function() {
-            const outcomeId = this.dataset.outcomeId;
-            const description = this.dataset.description.replace(/&quot;/g, '"');
-            const type = this.dataset.type;
-            editOutcome(outcomeId, description, type);
-        });
-        
-        deleteBtn.addEventListener('click', function() {
-            const outcomeId = this.dataset.outcomeId;
-            const type = this.dataset.type;
-            deleteOutcome(outcomeId, type);
-        });
-        
+        item.dataset.outcomeId = outcome.id;
+        item.dataset.type = type;
+
+        const text = document.createElement('div');
+        text.className = 'outcome-text';
+        text.textContent = outcome.description;
+        text.title = 'Click edit to modify';
+
+        const actions = document.createElement('div');
+        actions.className = 'outcome-actions';
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'edit-outcome-btn';
+        editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+        editBtn.addEventListener('click', () => enterInlineEdit(item, text, outcome.id, type));
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'delete-outcome-btn';
+        delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+        delBtn.addEventListener('click', () => inlineDeleteOutcome(item, outcome.id, type));
+
+        actions.appendChild(editBtn);
+        actions.appendChild(delBtn);
+
+        item.appendChild(text);
+        item.appendChild(actions);
         list.appendChild(item);
     });
-    
-    // Setup add button
-    const addBtn = document.getElementById(type === 'pos' ? 'addPOBtn' : 'addPSOBtn');
-    if (addBtn) {
-        addBtn.onclick = function() {
-            addOutcome(type);
-        };
-    }
 }
 
 function addOutcome(type) {
