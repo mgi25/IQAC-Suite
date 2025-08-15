@@ -2542,7 +2542,10 @@ async function generateWhyEvent(){
     const body = new URLSearchParams(Object.entries(facts));
     const res = await fetch('/suite/generate-why-event/', {
       method:'POST',
-      headers:{'X-CSRFToken':getCookie('csrftoken')},
+      headers:{
+        'X-CSRFToken':getCookie('csrftoken'),
+        'Content-Type':'application/x-www-form-urlencoded'
+      },
       body
     });
     const data = await res.json();
@@ -2562,8 +2565,16 @@ function showCard(field, content){
   const card = document.querySelector(`#ai-${field}`);
   if (!card) return;
   if (Array.isArray(content)){
+    if (!content.length){
+      card.innerHTML = '';
+      return;
+    }
     card.innerHTML = '<ul>' + content.map(i=>`<li>${i}</li>`).join('') + '</ul>';
   } else {
+    if (!content){
+      card.textContent = '';
+      return;
+    }
     card.textContent = content;
   }
 }
