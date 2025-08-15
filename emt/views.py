@@ -1773,7 +1773,12 @@ def generate_need_analysis(request):
         return JsonResponse({"error": "No context"}, status=400)
     try:
         messages = [{"role": "user", "content": f"{NEED_PROMPT}\n\n{ctx}"}]
-        text = chat(messages, system="You write crisp academic content for university event proposals.")
+        timeout = getattr(settings, "AI_HTTP_TIMEOUT", 60)
+        text = chat(
+            messages,
+            system="You write crisp academic content for university event proposals.",
+            timeout=timeout,
+        )
         return JsonResponse({"text": text})
     except AIError as exc:
         logger.error("Need analysis generation failed: %s", exc)
@@ -1791,7 +1796,12 @@ def generate_objectives(request):
         return JsonResponse({"error": "No context"}, status=400)
     try:
         messages = [{"role": "user", "content": f"{OBJ_PROMPT}\n\n{ctx}"}]
-        text = chat(messages, system="You write measurable, outcome-focused objectives aligned to higher-education events.")
+        timeout = getattr(settings, "AI_HTTP_TIMEOUT", 60)
+        text = chat(
+            messages,
+            system="You write measurable, outcome-focused objectives aligned to higher-education events.",
+            timeout=timeout,
+        )
         return JsonResponse({"text": text})
     except AIError as exc:
         logger.error("Objectives generation failed: %s", exc)
