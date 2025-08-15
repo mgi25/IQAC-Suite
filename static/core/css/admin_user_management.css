@@ -652,3 +652,32 @@
 .hidden {
   display: none;
 }
+
+/* =============================================================================
+   USER TABLE STYLES
+   ============================================================================= */
+
+.admin-users-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-users-table thead th {
+  background-color: var(--primary-color);
+  color: #fff;
+  font-weight: 600;
+}
+
+.admin-users-table th,
+.admin-users-table td {
+  padding: 0.75rem;
+  vertical-align: middle;
+}
+
+.admin-users-table tbody tr:nth-child(even) {
+  background-color: var(--light-grey);
+}
+
+.admin-users-table tbody tr:hover {
+  background-color: var(--primary-light);
+}
