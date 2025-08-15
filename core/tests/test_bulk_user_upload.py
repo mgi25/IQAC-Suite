@@ -113,6 +113,33 @@ class BulkUserUploadTests(TestCase):
         ra = RoleAssignment.objects.get(user=existing, organization=self.org)
         self.assertEqual(ra.role.name, 'student')
 
+    def test_bulk_upload_overrides_existing_role(self):
+        user = User.objects.create_user('john', 'john@example.com', 'pass')
+        faculty_role = OrganizationRole.objects.create(
+            organization=self.org, name='faculty'
+        )
+        OrganizationMembership.objects.create(
+            user=user,
+            organization=self.org,
+            academic_year='2024-2025',
+            role='faculty',
+            is_primary=True,
+            is_active=True,
+        )
+        RoleAssignment.objects.create(
+            user=user,
+            organization=self.org,
+            role=faculty_role,
+            academic_year='2024-2025',
+        )
+
+        self.client.force_login(self.admin)
+        self._upload()
+
+        ras = RoleAssignment.objects.filter(user=user, organization=self.org)
+        self.assertEqual(ras.count(), 1)
+        self.assertEqual(ras.first().role.name, 'student')
+
 
 class BulkFacultyUploadTests(TestCase):
     def setUp(self):

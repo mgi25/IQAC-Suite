@@ -332,6 +332,9 @@ def upload_csv(request, org_id):
                     mem.save(update_fields=fields_to_update)
                     memberships_updated += 1
 
+            RoleAssignment.objects.filter(
+                user=user, organization=org
+            ).exclude(role=org_role).delete()
             RoleAssignment.objects.update_or_create(
                 user=user,
                 organization=org,
