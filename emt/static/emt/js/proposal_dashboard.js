@@ -594,13 +594,19 @@ $(document).ready(function() {
 
         $('#outcomeCancel').off('click').on('click', () => modal.removeClass('show'));
         $('#outcomeSave').off('click').on('click', () => {
-            const selected = modal.find('input[type=checkbox]:checked').map((_, cb) => cb.value).get();
-            const existing = posField.val().trim();
-            const value = existing ? existing + '\n' + selected.join('\n') : selected.join('\n');
+            const selected = modal
+                .find('input[type=checkbox]:checked')
+                .map((_, cb) => cb.value)
+                .get();
+
+            // Replace existing content with newly selected outcomes
+            const value = selected.join('\n');
             posField.val(value).trigger('input').trigger('change');
+
             if (djangoPosField.length) {
                 djangoPosField.val(value).trigger('input').trigger('change');
             }
+
             modal.removeClass('show');
         });
     }
