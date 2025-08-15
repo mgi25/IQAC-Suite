@@ -2,7 +2,9 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 from django.urls import reverse
 
-from core.models import OrganizationType, Organization, OrganizationRole
+from django.core.files.uploadedfile import SimpleUploadedFile
+
+from core.models import OrganizationType, Organization, OrganizationRole, Class
 
 
 class AdminUserManagementRoleFilterTests(TestCase):
@@ -47,3 +49,42 @@ class AdminUserManagementRoleDisplayTests(TestCase):
             count=1,
             html=True,
         )
+
+
+class BulkUploadClassActivationTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser("admin", "admin@example.com", "pass")
+        self.client.force_login(self.admin)
+
+        org_type = OrganizationType.objects.create(name="Department")
+        self.org = Organization.objects.create(name="Org One", org_type=org_type)
+        OrganizationRole.objects.create(organization=self.org, name="student")
+
+    def test_bulk_upload_reactivates_archived_class(self):
+        cls = Class.objects.create(
+            organization=self.org,
+            code="BSc-A",
+            name="BSc-A",
+            academic_year="2025-2026",
+            is_active=False,
+        )
+
+        csv_content = (
+            "register_no,name,email,role\n"
+            "23112001,Alen Jin Shibu,alen@example.com,student\n"
+        ).encode("utf-8")
+        upload = SimpleUploadedFile("students.csv", csv_content, content_type="text/csv")
+
+        url = reverse("admin_org_users_upload_csv", args=[self.org.id])
+        resp = self.client.post(
+            url,
+            {
+                "class_name": "BSc-A",
+                "academic_year": "2025-2026",
+                "csv_file": upload,
+            },
+        )
+        self.assertEqual(resp.status_code, 302)
+
+        cls.refresh_from_db()
+        self.assertTrue(cls.is_active)
