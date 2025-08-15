@@ -1,24 +1,51 @@
-from pathlib import Path
-import os
 import logging
-from dotenv import load_dotenv
 import dj_database_url
 
-load_dotenv()
-BASE_DIR = Path(__file__).resolve().parent.parent
+# ---- .env loader (django-environ if available, else os.getenv) ----
+import os
+from pathlib import Path
 
-# ---------------------------------------------------------------------------
-# AI backend configuration
-# ---------------------------------------------------------------------------
-AI_BACKEND = os.getenv("AI_BACKEND", "OLLAMA").upper()  # OLLAMA | OPENROUTER
-OLLAMA_BASE = os.getenv("OLLAMA_BASE", "http://127.0.0.1:11434")
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL")
-AI_HTTP_TIMEOUT = int(os.getenv("AI_HTTP_TIMEOUT", "60"))
+BASE_DIR = Path(__file__).resolve().parent.parent  # ensure BASE_DIR is defined
 
-_logger = logging.getLogger(__name__)
-if AI_BACKEND == "OPENROUTER" and not OPENROUTER_API_KEY:
-    _logger.warning("OpenRouter backend selected but OPENROUTER_API_KEY is missing")
+try:
+    import environ
+    env = environ.Env()
+    environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
+except Exception:
+    env = None
+
+def _env(key: str, default=None, cast=None):
+    """Unified env reader: prefer django-environ, fallback to os.getenv, then default."""
+    if env:
+        try:
+            return env(key) if cast is None else cast(env(key))
+        except Exception:
+            pass
+    val = os.getenv(key, default)
+    if cast and isinstance(val, str):
+        try:
+            return cast(val)
+        except Exception:
+            return default
+    return val
+
+# ---- AI config with safe defaults ----
+AI_BACKEND       = _env("AI_BACKEND", default="OLLAMA")  # OLLAMA | OPENROUTER
+OLLAMA_BASE      = _env("OLLAMA_BASE", default="http://127.0.0.1:11434")
+OLLAMA_MODEL     = _env("OLLAMA_MODEL", default="llama3")  # guarantees a default
+AI_HTTP_TIMEOUT  = _env("AI_HTTP_TIMEOUT", default="20")
+try:
+    AI_HTTP_TIMEOUT = int(AI_HTTP_TIMEOUT)
+except Exception:
+    AI_HTTP_TIMEOUT = 20
+
+# Optional: generator/critic models if used elsewhere in code
+OLLAMA_GEN_MODEL    = _env("OLLAMA_GEN_MODEL", default=OLLAMA_MODEL)
+OLLAMA_CRITIC_MODEL = _env("OLLAMA_CRITIC_MODEL", default=OLLAMA_MODEL)
+
+# Optional cloud fallback (only used if key provided or AI_BACKEND='OPENROUTER')
+OPENROUTER_API_KEY = _env("OPENROUTER_API_KEY", default="")
+OPENROUTER_MODEL   = _env("OPENROUTER_MODEL", default="qwen/qwen3.5:free")
 
 # SECRET_KEY loaded from environment with a development fallback
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-…')
