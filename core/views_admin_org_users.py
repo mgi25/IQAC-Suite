@@ -312,6 +312,18 @@ def upload_csv(request, org_id):
                     profile.register_no = reg
                     profile.save(update_fields=["register_no"])
 
+            # Prevent duplicate memberships for the same role across organizations
+            OrganizationMembership.objects.filter(
+                user=user,
+                role=org_role.name,
+                academic_year=ay,
+            ).exclude(organization=org).delete()
+            RoleAssignment.objects.filter(
+                user=user,
+                role__name=org_role.name,
+                academic_year=ay,
+            ).exclude(organization=org).delete()
+
             mem, mem_created = OrganizationMembership.objects.get_or_create(
                 user=user,
                 organization=org,
