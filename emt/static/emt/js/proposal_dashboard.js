@@ -1622,17 +1622,6 @@ function getWhyThisEventForm() {
                         Add all income sources for your event
                     </div>
                 </div>
-
-                <div class="form-row full-width">
-                    <div class="submit-section">
-                        <button type="submit" name="final_submit" class="btn-submit" id="submit-proposal-btn" disabled>
-                            Submit Proposal
-                        </button>
-                        <div class="submit-help-text">
-                            Review all sections before submitting
-                        </div>
-                    </div>
-                </div>
             </div>
         `;
     }
@@ -2023,11 +2012,13 @@ function getWhyThisEventForm() {
     }
 
     function updateSubmitButton() {
+        const btn = $('#submit-proposal-btn');
+        if (!btn.length) return;
         const requiredSections = Object.keys(sectionProgress).filter(section => !optionalSections.includes(section));
         const completedSections = requiredSections.filter(section => sectionProgress[section] === true).length;
 
         if (completedSections === requiredSections.length) {
-            $('#submit-proposal-btn').prop('disabled', false);
+            btn.prop('disabled', false);
             $('.submit-section').addClass('ready');
         }
     }
