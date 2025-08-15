@@ -75,15 +75,14 @@ window.AutosaveManager = (function() {
             body: JSON.stringify(formData)
         })
         .then(async res => {
-            if (!res.ok) {
-                console.warn('autosave failed', res.status);
-                return Promise.reject(res.status);
-            }
             let data = null;
             try {
                 data = await res.json();
             } catch (e) {
                 // ignore JSON parse errors
+            }
+            if (!res.ok) {
+                return Promise.reject(data || res.status);
             }
             return data;
         })
@@ -94,11 +93,9 @@ window.AutosaveManager = (function() {
                 document.dispatchEvent(new Event('autosave:success'));
                 return data;
             }
-            document.dispatchEvent(new CustomEvent('autosave:error', {detail: data}));
             return Promise.reject(data);
         })
         .catch(err => {
-            console.warn('autosave exception', err);
             document.dispatchEvent(new CustomEvent('autosave:error', {detail: err}));
             return Promise.reject(err);
         });
