@@ -4,7 +4,8 @@ from django.urls import reverse_lazy
 from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
     EventExpectedOutcomes, TentativeFlow, SpeakerProfile,
-    ExpenseDetail, EventReport, EventReportAttachment, CDLSupport
+    ExpenseDetail, EventReport, EventReportAttachment, CDLSupport,
+    CDLCertificateRecipient,
 )
 from core.models import (
     Organization,
@@ -273,26 +274,84 @@ class EventReportAttachmentForm(forms.ModelForm):
 
 
 class CDLSupportForm(forms.ModelForm):
-    support_options = forms.MultipleChoiceField(
+    """Form for capturing CDL support requirements during proposal submission."""
+
+    poster_choice = forms.ChoiceField(
+        choices=CDLSupport.PosterChoice.choices,
+        widget=forms.RadioSelect,
+        required=False,
+    )
+    certificate_choice = forms.ChoiceField(
+        choices=CDLSupport.CertificateChoice.choices,
+        widget=forms.RadioSelect,
+        required=False,
+    )
+    other_services = forms.MultipleChoiceField(
         choices=[
-            ("media", "Media Support"),
-            ("poster", "Poster Support"),
-            ("certificates", "Certificates"),
+            ("photography", "Event Photography"),
+            ("videography", "Event Videography"),
+            ("digital_board", "Digital Board Display"),
+            ("voluntary_cards", "Voluntary Cards"),
         ],
         required=False,
         widget=forms.CheckboxSelectMultiple,
     )
 
+    poster_required = forms.BooleanField(
+        required=False, label="Do you need a poster for your event?"
+    )
+    poster_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+
+    certificates_required = forms.BooleanField(
+        required=False, label="Do you need certificates for this event?"
+    )
+    certificate_help = forms.BooleanField(
+        required=False, label="Do you need CDL help with event certificates?"
+    )
+
     class Meta:
         model = CDLSupport
-        fields = ["needs_support", "blog_content", "poster_link", "support_options"]
+        fields = [
+            "needs_support",
+            "poster_required",
+            "poster_choice",
+            "organization_name",
+            "poster_time",
+            "poster_date",
+            "poster_venue",
+            "resource_person_name",
+            "resource_person_designation",
+            "poster_event_title",
+            "poster_summary",
+            "poster_design_link",
+            "other_services",
+            "certificates_required",
+            "certificate_help",
+            "certificate_choice",
+            "certificate_design_link",
+            "blog_content",
+        ]
         widgets = {
             "blog_content": forms.Textarea(attrs={"rows": 6}),
+            "poster_summary": forms.Textarea(attrs={"rows": 4}),
         }
 
+    def clean_poster_summary(self):
+        text = self.cleaned_data.get("poster_summary", "").strip()
+        if text and len(text.split()) > 150:
+            raise forms.ValidationError("Summary must be 150 words or fewer.")
+        return text
     def clean_blog_content(self):
         text = self.cleaned_data.get("blog_content", "").strip()
-        if text:
-            if len(text.split()) > 150:
-                raise forms.ValidationError("Blog content must be 150 words or fewer.")
+        if text and len(text.split()) > 150:
+            raise forms.ValidationError("Blog content must be 150 words or fewer.")
         return text
+
+
+class CertificateRecipientForm(forms.ModelForm):
+    class Meta:
+        model = CDLCertificateRecipient
+        fields = ["name", "role", "certificate_type"]

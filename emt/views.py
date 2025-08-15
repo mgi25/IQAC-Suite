@@ -683,7 +683,7 @@ def submit_cdl_support(request, proposal_id):
         if form.is_valid():
             support = form.save(commit=False)
             support.proposal = proposal
-            support.support_options = form.cleaned_data.get("support_options", [])
+            support.other_services = form.cleaned_data.get("other_services", [])
             support.save()
 
             proposal.status = "submitted"
@@ -697,7 +697,7 @@ def submit_cdl_support(request, proposal_id):
     else:
         initial = {}
         if instance:
-            initial["support_options"] = instance.support_options
+            initial["other_services"] = instance.other_services
         form = CDLSupportForm(instance=instance, initial=initial)
 
     return render(request, "emt/cdl_support.html", {"form": form, "proposal": proposal})
