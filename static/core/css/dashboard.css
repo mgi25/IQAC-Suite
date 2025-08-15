@@ -207,7 +207,7 @@
 
   
   /* list */
-  .list{padding:14px 18px}
+  .list{padding:14px 18px; max-height: calc(var(--calH) - 70px); overflow-y: auto}
   .empty{padding:32px 0;text-align:center;color:var(--muted);font-size:15px}
   .list-item{display:flex;gap:14px;align-items:center;padding:14px;border-radius:10px;border:1px solid var(--border);background:#fff;margin-bottom:10px}
   .bullet{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#eef2ff;color:#4f46e5}
@@ -238,6 +238,7 @@
   .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
   .day{padding:6px 2px;text-align:center;border-radius:6px;font-size:13px;cursor:pointer;transition:all .2s;position:relative}
   .day.has-event::after{content:"";position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:#e74c3c}
+  .day.has-meeting::after{content:"";position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:6px;height:6px;border-radius:50%;background:#0ea5e9}
   .day:hover{background:var(--subtle)}.day.today{background:var(--primary);color:#fff;font-weight:600}.day.muted{opacity:.4}
   
   /* upcoming */
@@ -272,6 +273,11 @@
   border-radius: 2px;
   background: #e5e7eb;
 }
+/* Blue theme levels */
+.hm-cell.l1{ background:#bfdbfe; }
+.hm-cell.l2{ background:#93c5fd; }
+.hm-cell.l3{ background:#60a5fa; }
+.hm-cell.l4{ background:#3b82f6; }
 
   
   /* helpers */
@@ -439,10 +445,7 @@
   }
   
   /* Event Details Content */
-  .event-details-content {
-    padding: 14px 16px;
-    min-height: 120px;
-  }
+  .event-details-content { padding: 14px 16px; min-height: 120px; max-height: calc(var(--contribH) - 70px); overflow-y: auto }
   
   .event-detail-item {
     padding: 12px;
@@ -472,9 +475,11 @@
   
   /* Proposal Tracker */
   .proposal-tracker-section {
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 1px solid var(--border);
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  max-height: calc(var(--calH) - 140px);
+  overflow-y: auto;
   }
   
   .proposal-tracker-section h4 {

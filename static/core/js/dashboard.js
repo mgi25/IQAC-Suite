@@ -36,9 +36,11 @@
       }
     });
     const legend = $('#donutLegend');
-    if (legend) legend.innerHTML = labels.map((l,i)=>
-      `<div class="legend-row"><span class="legend-dot" style="background:${COLORS[i]}"></span><span>${l}</span><strong style="margin-left:auto">${data[i]}%</strong></div>`
-    ).join('');
+    if (legend) legend.innerHTML = labels.map((l,i)=>{
+      const raw = data[i];
+      const val = typeof raw === 'number' ? (Math.round(raw*10)/10).toFixed(1) : raw;
+      return `<div class="legend-row"><span class="legend-dot" style="background:${COLORS[i]}"></span><span>${l}</span><strong style="margin-left:auto">${val}%</strong></div>`;
+    }).join('');
   }
 
   async function loadPerformance() {
@@ -142,7 +144,8 @@
       const today = c.date && isSame(c.date, new Date());
       const iso = c.date ? `${c.date.getFullYear()}-${fmt2(c.date.getMonth()+1)}-${fmt2(c.date.getDate())}` : '';
       const hasEvent = iso && (eventDates.has(iso) || (currentCategory==='private' && privateTasks.has(iso)));
-      return `<div class="day${c.muted?' muted':''}${today?' today':''}${hasEvent?' has-event':''}" data-date="${iso}">${c.text}</div>`;
+      const markerClass = hasEvent ? (currentCategory==='faculty' ? ' has-meeting' : ' has-event') : '';
+      return `<div class="day${c.muted?' muted':''}${today?' today':''}${markerClass}" data-date="${iso}">${c.text}</div>`;
     }).join('');
 
     grid.querySelectorAll('.day[data-date]').forEach(el=>{
@@ -175,8 +178,14 @@
     }
     
     if (currentCategory === 'faculty'){
-      // Show faculty meeting form
-      showFacultyMeetingForm(day);
+      // If there are meetings on this date, show details; else open meeting form
+      const hasItems = eventIndexByDate.has(dateStr);
+      if (hasItems){
+        showEventDetails(day);
+        openDay(day);
+      } else {
+        showFacultyMeetingForm(day);
+      }
       return;
     }
     
@@ -450,7 +459,13 @@
       const list = $('#proposalsList');
       
       if (data.proposals && data.proposals.length > 0) {
-        list.innerHTML = data.proposals.map(p => `
+        const seen = new Set();
+        const uniq = [];
+        for (const p of data.proposals){
+          const key = (p.title||'').trim().toLowerCase();
+          if (seen.has(key)) continue; seen.add(key); uniq.push(p);
+        }
+        list.innerHTML = uniq.map(p => `
           <article class="list-item">
             <div class="bullet ${p.status}"><i class="fa-regular fa-file-lines"></i></div>
             <div class="list-body">
