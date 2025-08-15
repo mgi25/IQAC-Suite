@@ -2663,8 +2663,49 @@ textarea {
     .activities-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .form-row {
         grid-template-columns: 1fr;
     }
+}
+
+/* AI suggestion cards */
+.ai-loading {
+    background: #f1f5f9;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    text-align: center;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    color: #475569;
+}
+
+.ai-suggestion-card {
+    background: #f8fafc;
+    border-left: 4px solid var(--primary-blue);
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    color: #334155;
+}
+
+.ai-suggestion-card:empty {
+    display: none;
+}
+
+.ai-suggestion-card ul {
+    margin: 0;
+    padding-left: 1.25rem;
+}
+
+.ai-suggestion-card .apply-ai-suggestion {
+    margin-top: 0.5rem;
+    background: var(--primary-blue);
+    color: #fff;
+    border: none;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
 }

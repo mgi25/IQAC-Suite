@@ -353,7 +353,13 @@ def autosave_proposal(request):
     if request.method != "POST":
         return JsonResponse({"error": "Invalid request"}, status=400)
 
-    data = json.loads(request.body.decode("utf-8"))
+    try:
+        raw = request.body.decode("utf-8")
+        data = json.loads(raw) if raw else {}
+    except json.JSONDecodeError:
+        logger.debug("autosave_proposal invalid json: %s", raw)
+        return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
+
     logger.debug("autosave_proposal payload: %s", data)
 
     # Replace department logic with generic organization
@@ -374,7 +380,7 @@ def autosave_proposal(request):
         
         # Don't autosave if proposal is already submitted
         if proposal and proposal.status != "draft":
-            return JsonResponse({"success": False, "error": "Cannot modify submitted proposal"}, status=400)
+            return JsonResponse({"success": False, "error": "Cannot modify submitted proposal"})
 
     form = EventProposalForm(data, instance=proposal, user=request.user)
     faculty_ids = data.get("faculty_incharges") or []
@@ -389,7 +395,7 @@ def autosave_proposal(request):
 
     if not form.is_valid():
         logger.debug("autosave_proposal form errors: %s", form.errors)
-        return JsonResponse({"success": False, "errors": form.errors}, status=400)
+        return JsonResponse({"success": False, "errors": form.errors})
 
     proposal = form.save(commit=False)
     proposal.submitted_by = request.user
@@ -496,7 +502,7 @@ def autosave_proposal(request):
 
     if errors:
         logger.debug("autosave_proposal dynamic errors: %s", errors)
-        return JsonResponse({"success": False, "errors": errors}, status=400)
+        return JsonResponse({"success": False, "errors": errors})
 
     _save_activities(proposal, data)
     _save_speakers(proposal, data, request.FILES)

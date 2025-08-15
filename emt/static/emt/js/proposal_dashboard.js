@@ -1150,32 +1150,35 @@ function getWhyThisEventForm() {
     return `
         <div class="form-grid">
             <div class="form-row full-width">
+                <div id="ai-suggestion-status" class="ai-loading">Generating AI suggestions...</div>
+            </div>
+            <div class="form-row full-width">
                 <div class="input-group">
                     <label for="need-analysis-modern">Need Analysis - Why is this event necessary? *</label>
                     <textarea id="need-analysis-modern" rows="4" required placeholder="Explain why this event is necessary, what gap it fills, and its relevance to the target audience..."></textarea>
-                    <button type="button" id="btn-ai-need" class="btn">Generate with AI</button>
+                    <div class="ai-suggestion-card" id="ai-need-analysis"></div>
                     <div class="help-text">Provide a detailed explanation of why this event is important.</div>
                 </div>
             </div>
-            
+
             <div class="form-row full-width">
                 <div class="input-group">
                     <label for="objectives-modern">Objectives - What do you aim to achieve? *</label>
                     <textarea id="objectives-modern" rows="4" required placeholder="• Objective 1: ...&#10;• Objective 2: ...&#10;• Objective 3: ..."></textarea>
-                    <button type="button" id="btn-ai-objectives" class="btn">Generate with AI</button>
+                    <div class="ai-suggestion-card" id="ai-objectives"></div>
                     <div class="help-text">List 3-5 clear, measurable objectives.</div>
                 </div>
             </div>
-            
+
             <div class="form-row full-width">
                 <div class="input-group">
                     <label for="outcomes-modern">Expected Learning Outcomes - What results do you expect? *</label>
                     <textarea id="outcomes-modern" rows="4" required placeholder="What specific results, skills, or benefits will participants gain?"></textarea>
-                    <button type="button" id="btn-ai-outcomes" class="btn">Generate with AI</button>
+                    <div class="ai-suggestion-card" id="ai-learning-outcomes"></div>
                     <div class="help-text">Describe the tangible benefits for participants.</div>
                 </div>
             </div>
-            
+
             <div class="form-row full-width">
                 <div class="save-section-container">
                     <button type="button" class="btn-save-section">Save & Continue</button>
@@ -1836,42 +1839,8 @@ function getWhyThisEventForm() {
     }
 
     function setupWhyThisEventAI() {
-        const cfg = [
-            {btn: '#btn-ai-need', field: '#need-analysis-modern', url: window.AI_NEED_URL},
-            {btn: '#btn-ai-objectives', field: '#objectives-modern', url: window.AI_OBJECTIVES_URL},
-            {btn: '#btn-ai-outcomes', field: '#outcomes-modern', url: window.AI_OUTCOMES_URL}
-        ];
-
-        cfg.forEach(({btn, field, url}) => {
-            $(btn).off('click').on('click', async function() {
-                const textarea = $(field);
-                const payload = collectBasicInfo();
-                payload.context = textarea.val();
-                const btnEl = $(this);
-                const original = btnEl.text();
-                btnEl.prop('disabled', true).text('Generating...');
-                try {
-                    const fd = new FormData();
-                    Object.entries(payload).forEach(([k, v]) => fd.append(k, v || ''));
-                    const resp = await fetch(url, {
-                        method: 'POST',
-                        headers: {'X-CSRFToken': csrftoken},
-                        body: fd
-                    });
-                    const data = await resp.json();
-                    if (data.ok) {
-                        textarea.val(data.text);
-                        textarea.trigger('input');
-                    } else {
-                        showNotification(data.error || 'Generation failed', 'error');
-                    }
-                } catch (err) {
-                    showNotification('AI request failed', 'error');
-                } finally {
-                    btnEl.prop('disabled', false).text(original);
-                }
-            });
-        });
+        // Automatically generate AI suggestions when the section loads
+        generateWhyEvent();
     }
 
     // ===== STATUS & PROGRESS FUNCTIONS - PRESERVED =====
@@ -2517,4 +2486,190 @@ function getWhyThisEventForm() {
 
     console.log('Dashboard initialized successfully! 🚀');
     console.log('All original functionality preserved with new UI');
+});
+
+function getCookie(name){const v=`; ${document.cookie}`.split(`; ${name}=`);if(v.length===2)return v.pop().split(';').shift();}
+function val(sel){return document.querySelector(sel)?.value?.trim()||"";}
+function arr(sel){return Array.from(document.querySelectorAll(sel)).map(x=>x.value).filter(Boolean);}
+
+function collectFactsFromForm(){
+  return {
+    organization_type: val('#id_organization_type') || val('#id_type_of_organisation'),
+    department: val('#id_department'),
+    committees_collaborations: arr('input[name="committees_collaborations"]'),
+    event_title: val('#id_event_title') || val('#id_title'),
+    target_audience: val('#id_target_audience'),
+    event_focus_type: val('#id_event_focus_type') || val('#id_focus'),
+    location: val('#id_location'),
+    start_date: val('#id_start_date'),
+    end_date: val('#id_end_date'),
+    academic_year: val('#id_academic_year'),
+    pos_pso_management: val('#id_pos_pso_management') || val('#id_pos_pso'),
+    sdg_goals: arr('select#id_sdg_goals option:checked').map(o=>o.textContent.trim()),
+    num_activities: val('#id_num_activities'),
+    student_coordinators: arr('input[name="student_coordinators"]'),
+    faculty_incharges: arr('input[name="faculty_incharges"]'),
+    additional_context: val('#id_additional_context')
+  };
+}
+
+function applyBullets(field, items){
+  const el = document.querySelector(`#id_${field}`);
+  const text = (items || []).map(i=>`• ${i}`).join('\n');
+  if (window.CKEDITOR && CKEDITOR.instances[`id_${field}`]) {
+    CKEDITOR.instances[`id_${field}`].setData((CKEDITOR.instances[`id_${field}`].getData()?'<p></p>':'') + text.replace(/\n/g,'<br>'));
+  } else if (el) {
+    el.value = text;
+    el.dispatchEvent(new Event('input',{bubbles:true}));
+  }
+}
+
+function applyText(field, text){
+  const el = document.querySelector(`#id_${field}`);
+  if (window.CKEDITOR && CKEDITOR.instances[`id_${field}`]) {
+    CKEDITOR.instances[`id_${field}`].setData(text);
+  } else if (el) {
+    el.value = text;
+    el.dispatchEvent(new Event('input',{bubbles:true}));
+  }
+}
+
+async function generateWhyEvent(){
+  const status = document.querySelector('#ai-suggestion-status');
+  if(status) status.style.display = 'block';
+  try{
+    const facts = collectFactsFromForm();
+    const body = new URLSearchParams(Object.entries(facts));
+    const res = await fetch('/suite/generate-why-event/', {
+      method:'POST',
+      headers:{
+        'X-CSRFToken':getCookie('csrftoken'),
+        'Content-Type':'application/x-www-form-urlencoded'
+      },
+      body
+    });
+    const data = await res.json();
+    if(!res.ok || !data.ok){ alert(data.error || 'Generation failed'); return; }
+    applyText('need_analysis', data.need_analysis || '');
+    applyBullets('objectives', data.objectives || []);
+    applyBullets('learning_outcomes', data.learning_outcomes || []);
+    showCard('need-analysis', data.need_analysis || '');
+    showCard('objectives', data.objectives || []);
+    showCard('learning-outcomes', data.learning_outcomes || []);
+    if (typeof window.autosave === 'function') window.autosave();
+  }catch(e){ console.error(e); alert('Generation failed'); }
+  finally{ if(status) status.style.display = 'none'; }
+}
+
+function showCard(field, content){
+  const card = document.querySelector(`#ai-${field}`);
+  if (!card) return;
+
+  const fieldMap = {
+    'need-analysis': 'need-analysis-modern',
+    'objectives': 'objectives-modern',
+    'learning-outcomes': 'outcomes-modern'
+  };
+  const target = document.getElementById(fieldMap[field]);
+
+  if (Array.isArray(content)){
+    if (!content.length){
+      card.innerHTML = '';
+      return;
+    }
+    const listHtml = '<ul>' + content.map(i=>`<li>${i}</li>`).join('') + '</ul>';
+    const text = content.map(i=>`• ${i}`).join('\n');
+    card.innerHTML = `${listHtml}<button type="button" class="apply-ai-suggestion">Apply</button>`;
+    const btn = card.querySelector('button');
+    if (btn && target){
+      btn.addEventListener('click', () => {
+        target.value = text;
+        target.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    }
+  } else {
+    if (!content){
+      card.textContent = '';
+      return;
+    }
+    card.innerHTML = `<p>${content}</p><button type="button" class="apply-ai-suggestion">Apply</button>`;
+    const btn = card.querySelector('button');
+    if (btn && target){
+      btn.addEventListener('click', () => {
+        target.value = content;
+        target.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    }
+  }
+}
+
+// Inject generated text into the real field/editor and trigger autosave
+function applyGeneratedToField(field, text) {
+  const id = `id_${field}`;
+
+  if (window.CKEDITOR && CKEDITOR.instances[id]) {
+    CKEDITOR.instances[id].setData(text);
+    return;
+  }
+  if (window.ClassicEditor && window._editors && window._editors[field]) {
+    window._editors[field].setData(text);
+    return;
+  }
+  if (window.tinymce && tinymce.get(id)) {
+    tinymce.get(id).setContent(text);
+    return;
+  }
+  if (window.Quill && window._quills && window._quills[field]) {
+    const q = window._quills[field];
+    q.setText("");
+    q.clipboard.dangerouslyPasteHTML(0, text);
+    return;
+  }
+  const el = document.getElementById(id);
+  if (el) {
+    el.value = text;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+}
+
+async function onGenerateNeedAnalysis(e) {
+  e?.preventDefault?.();
+  const btn = e?.currentTarget;
+  const original = btn?.innerHTML;
+  if (btn) btn.innerHTML = 'Generating…';
+
+  try {
+    const title = document.querySelector('#id_event_title')?.value
+               || document.querySelector('#id_title')?.value
+               || '';
+
+    const res = await fetch('/suite/generate-need-analysis/', {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [,''])[1],
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({ topic: title })
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+    applyGeneratedToField(data.field || 'need_analysis', data.value || data.text || '');
+    if (typeof window.autosave === 'function') window.autosave();
+  } catch (err) {
+    console.error('Generation failed:', err);
+    alert(`All AI backends failed: ${err.message || err}`);
+  } finally {
+    if (btn) btn.innerHTML = original || 'Generate with AI';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.querySelector('#btn-generate-need-analysis');
+  if (btn && !btn._wired) {
+    btn.addEventListener('click', onGenerateNeedAnalysis);
+    btn._wired = true;
+  }
 });

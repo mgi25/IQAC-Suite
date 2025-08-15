@@ -2645,10 +2645,11 @@ def api_user_events_data(request):
     
     events_data = []
     for event in events.order_by('-created_at')[:10]:  # Latest 10 events
+        desc = getattr(event, 'description', '') or ''
         events_data.append({
             'id': event.id,
             'title': event.event_title,
-            'description': event.description[:100] + '...' if len(event.description) > 100 else event.description,
+            'description': desc[:100] + '...' if len(desc) > 100 else desc,
             'status': event.status,
             'created_at': event.created_at.strftime('%Y-%m-%d %H:%M'),
             'organization': event.organization.name if event.organization else 'N/A'
@@ -4745,7 +4746,11 @@ def is_superuser(u):
 @user_passes_test(is_superuser)
 def class_rosters(request, org_id):
     org = get_object_or_404(Organization, pk=org_id)
-    year = request.GET.get("year") or request.session.get("active_year")
+    year = request.GET.get("year")
+    if year:
+        request.session["active_year"] = year
+    else:
+        year = request.session.get("active_year")
 
     qs = RoleAssignment.objects.filter(
         organization=org,
@@ -4772,7 +4777,11 @@ def class_rosters(request, org_id):
 @user_passes_test(is_superuser)
 def class_roster_detail(request, org_id, class_name):
     org = get_object_or_404(Organization, pk=org_id)
-    year = request.GET.get("year") or request.session.get("active_year")
+    year = request.GET.get("year")
+    if year:
+        request.session["active_year"] = year
+    else:
+        year = request.session.get("active_year")
     q = request.GET.get("q", "").strip()
 
     ras = RoleAssignment.objects.select_related("user", "role").filter(
