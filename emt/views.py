@@ -485,13 +485,10 @@ def autosave_proposal(request):
         rate = data.get(f"income_rate_{in_idx}")
         amount = data.get(f"income_amount_{in_idx}")
         missing = {}
-        if particulars or participants or rate or amount:
+        # Only require particulars and amount; participants and rate are optional
+        if any([particulars, participants, rate, amount]):
             if not particulars:
                 missing["particulars"] = "This field is required."
-            if not participants:
-                missing["participants"] = "This field is required."
-            if not rate:
-                missing["rate"] = "This field is required."
             if not amount:
                 missing["amount"] = "This field is required."
         if missing:

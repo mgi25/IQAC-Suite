@@ -268,6 +268,22 @@ class AutosaveProposalTests(TestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertIn("Invalid JSON", resp.json().get("error", ""))
 
+    def test_autosave_income_optional_fields(self):
+        payload = self._payload()
+        payload.update({
+            "income_particulars_0": "Registration Fees",
+            "income_amount_0": "5000",
+        })
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data.get("success"))
+        self.assertNotIn("errors", data)
+
 
 class EventProposalOrganizationPrefillTests(TestCase):
     def setUp(self):
