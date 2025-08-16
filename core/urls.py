@@ -285,6 +285,7 @@ urlpatterns = [
      # CDL Work dashboard (you already have these two)
     path("cdl/head/", views.cdl_head_dashboard, name="cdl_head_dashboard"),
     path("cdl/member/", views.cdl_member_dashboard, name="cdl_member_dashboard"),
+    path("cdl/work/", views.cdl_work_dashboard, name="cdl_work_dashboard"),
 
     # NEW: make the template links resolve
     path("cdl/availability/new/", views.cdl_create_availability, name="create_availability"),

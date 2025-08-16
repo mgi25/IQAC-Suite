@@ -4784,6 +4784,12 @@ def cdl_member_dashboard(request):
     }
     return render(request, "cdl/cdl_member_dashboard.html", ctx)
 
+@login_required
+def cdl_work_dashboard(request):
+    if not (request.user.is_superuser or request.user.groups.filter(name="CDL_MEMBER").exists()):
+        return HttpResponseForbidden()
+    return render(request, "core/cdl_work_dashboard.html")
+
 def cdl_create_availability(request):
     return HttpResponse("Create Availability (stub)")
 
