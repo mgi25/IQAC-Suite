@@ -1,4 +1,6 @@
-from typing import Dict, Any
+import json
+from pathlib import Path
+from typing import Dict, Any, List
 
 # Extract from POST for simplicity; frontend will send these (with fallbacks)
 BASIC_FIELDS = [
@@ -10,7 +12,21 @@ BASIC_FIELDS = [
     "additional_context",
 ]
 
-def collect_basic_facts(request) -> Dict[str, Any]:
+CONFIG_DIR = Path(__file__).resolve().parent / "field_config"
+
+
+def load_fields(task: str) -> List[str]:
+    """Load the minimal field list for a given AI task."""
+    path = CONFIG_DIR / f"{task}.json"
+    try:
+        with path.open() as fh:
+            data = json.load(fh)
+        return data.get("fields", [])
+    except FileNotFoundError:
+        return []
+
+
+def collect_basic_facts(request, field_names: List[str] | None = None) -> Dict[str, Any]:
     get = request.POST.get
     facts = {
         "organization_type": get("organization_type", "") or "[TBD]",
@@ -31,4 +47,6 @@ def collect_basic_facts(request) -> Dict[str, Any]:
         "faculty_incharges": request.POST.getlist("faculty_incharges[]") or [],
         "additional_context": get("additional_context", ""),
     }
+    if field_names is not None:
+        facts = {k: facts[k] for k in field_names if k in facts}
     return facts

@@ -11,7 +11,7 @@ from .prompts import (
     SYSTEM_OBJECTIVES,
     SYSTEM_LEARNING,
 )
-from .facts import collect_basic_facts
+from .facts import collect_basic_facts, load_fields
 from .ai_safety import (
     strip_unverifiable_phrases,
     allowed_numbers_from_facts,
@@ -47,7 +47,8 @@ def _bullets(value, facts):
 @login_required
 @require_POST
 def generate_why_event(request):
-    facts = collect_basic_facts(request)
+    fields = load_fields("why_event")
+    facts = collect_basic_facts(request, fields)
     try:
         result = chat(
             [{"role": "user", "content": user_prompt_wyhevent(facts)}],
@@ -116,20 +117,20 @@ def generate_why_event(request):
 @login_required
 @require_POST
 def generate_need_analysis(request):
-    topic = (
+    fields = load_fields("need_analysis")
+    facts = collect_basic_facts(request, fields)
+    topic = facts.get("event_title", (
         request.POST.get("topic")
-        or request.POST.get("event_title")
         or request.POST.get("title")
         or ""
-    ).strip()
+    ).strip())
 
     system = (
         "You write concise academic text for university proposals using ONLY provided facts. "
         "No invented surveys/stats/quotes/partners/dates. Unknowns -> [TBD]. 120–180 words."
     )
-    messages = [
-        {"role": "user", "content": f"Need Analysis for: {topic}. Keep it fact-only."}
-    ]
+    prompt = f"facts = {facts}\nNeed Analysis for: {topic}. Keep it fact-only."
+    messages = [{"role": "user", "content": prompt}]
 
     try:
         text = chat(
@@ -149,7 +150,8 @@ def generate_need_analysis(request):
 @login_required
 @require_POST
 def generate_objectives(request):
-    facts = collect_basic_facts(request)
+    fields = load_fields("objectives")
+    facts = collect_basic_facts(request, fields)
     try:
         prompt = f"facts = {facts}\nTask: 4–6 objectives. No numbers unless in facts."
         text = chat(
@@ -170,7 +172,8 @@ def generate_objectives(request):
 @login_required
 @require_POST
 def generate_learning_outcomes(request):
-    facts = collect_basic_facts(request)
+    fields = load_fields("learning_outcomes")
+    facts = collect_basic_facts(request, fields)
     try:
         prompt = f"facts = {facts}\nTask: 3–5 learning outcomes. Bloom verbs. No numbers unless in facts."
         text = chat(
