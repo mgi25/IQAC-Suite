@@ -97,11 +97,13 @@ class RegistrationRequiredMiddleware:
 
 
 class ActivityLogMiddleware:
-    """Persist a log entry for each state-changing request.
+    """Persist a log entry for each authenticated request.
 
-    This middleware records POST/PUT/PATCH/DELETE requests performed by
-    authenticated users so administrators can audit changes across the
-    application via the ``ActivityLog`` model.
+    Previously the audit log only captured state-changing HTTP verbs which
+    meant simple page views or button clicks issuing ``GET`` requests were not
+    recorded.  For a bank-level history table we want to retain a trail for
+    every action a user performs, so this middleware now logs all requests
+    except those for static/media assets.
     """
 
     def __init__(self, get_response):
@@ -113,14 +115,20 @@ class ActivityLogMiddleware:
         try:
             if (
                 request.user.is_authenticated
-                and request.method not in {"GET", "HEAD", "OPTIONS", "TRACE"}
                 and not request.path.startswith(settings.STATIC_URL)
                 and not request.path.startswith(settings.MEDIA_URL)
             ):
+                params = request.GET if request.method == "GET" else request.POST
+                params = {
+                    k: v for k, v in params.items() if k.lower() != "csrfmiddlewaretoken"
+                }
+                description = "&".join(f"{k}={v}" for k, v in params.items())
                 ActivityLog.objects.create(
                     user=request.user,
                     action=f"{request.method} {request.path}",
+                    description=description or "",
                     ip_address=request.META.get("REMOTE_ADDR"),
+                    metadata=params or None,
                 )
         except Exception:  # pragma: no cover - logging should never break the request
             logger.exception(
