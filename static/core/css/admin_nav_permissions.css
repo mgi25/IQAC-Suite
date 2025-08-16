@@ -19,8 +19,24 @@
 .sp-field {
   flex: 1;
 }
-.sp-items {
-  display: grid;
-  grid-template-columns: repeat(auto-fill,minmax(200px,1fr));
+
+.dual-list {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.dual-list-column {
+  flex: 1;
+}
+
+.dual-list select {
+  width: 100%;
+  min-height: 250px;
+}
+
+.dual-list-buttons {
+  display: flex;
+  flex-direction: column;
   gap: 0.5rem;
 }
