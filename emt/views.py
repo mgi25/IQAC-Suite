@@ -700,7 +700,7 @@ def submit_cdl_support(request, proposal_id):
             build_approval_chain(proposal)
 
             messages.success(request, "Your event proposal has been submitted for approval.")
-            return redirect("dashboard")
+            return redirect("emt:proposal_status_detail", proposal_id=proposal.id)
     else:
         initial = {}
         if instance:
