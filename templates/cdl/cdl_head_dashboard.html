@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}CDL Head Dashboard{% endblock %}
+{% block content %}
+<h1>CDL Head Dashboard</h1>
+<div class="row text-center my-4">
+  <div class="col">
+    <div class="card"><div class="card-body">
+      <h5>Total Active Requests</h5><p>{{ metrics.active_requests|default:0 }}</p>
+    </div></div>
+  </div>
+  <div class="col">
+    <div class="card"><div class="card-body">
+      <h5>Assets Delivery Pending</h5><p>{{ metrics.assets_pending|default:0 }}</p>
+    </div></div>
+  </div>
+  <div class="col">
+    <div class="card"><div class="card-body">
+      <h5>Unassigned Tasks</h5><p>{{ metrics.unassigned|default:0 }}</p>
+    </div></div>
+  </div>
+  <div class="col">
+    <div class="card"><div class="card-body">
+      <h5>Total Events Supported</h5><p>{{ metrics.events_supported|default:0 }}</p>
+    </div></div>
+  </div>
+</div>
+<div class="card mb-4">
+  <div class="card-header">Notifications</div>
+  <div class="card-body">
+    <ul class="list-group">
+      {% for n in notifications %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">{{ n }}<span><button class="btn btn-sm btn-success">Approve</button> <button class="btn btn-sm btn-danger">Decline</button></span></li>
+      {% empty %}<li class="list-group-item text-muted">No notifications</li>{% endfor %}
+    </ul>
+  </div>
+</div>
+<div class="card">
+  <div class="card-header">Calendar</div>
+  <div class="card-body">Calendar placeholder</div>
+</div>
+{% endblock %}

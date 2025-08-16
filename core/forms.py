@@ -2,7 +2,15 @@ from django import forms
 from django.db.models import Q
 import json
 
-from .models import RoleAssignment, OrganizationRole, Organization, OrganizationType
+from .models import (
+    RoleAssignment,
+    OrganizationRole,
+    Organization,
+    OrganizationType,
+    CDLRequest,
+    CertificateBatch,
+    CDLMessage,
+)
 
 class RoleAssignmentForm(forms.ModelForm):
     class Meta:
@@ -120,3 +128,87 @@ class OrgUsersCSVUploadForm(forms.Form):
         widget=forms.TextInput(attrs={"placeholder": "2025-2026"})
     )
     csv_file = forms.FileField(label="CSV File")
+
+
+# ────────────────────────────────────────────────────────────────
+#  CDL FORMS
+# ────────────────────────────────────────────────────────────────
+class CDLRequestForm(forms.ModelForm):
+    """Form capturing CDL requirements during proposal submission."""
+
+    class Meta:
+        model = CDLRequest
+        exclude = ("proposal", "created_at", "updated_at")
+
+    def clean(self):
+        cleaned = super().clean()
+
+        wants_cdl = cleaned.get("wants_cdl")
+        need_poster = cleaned.get("need_poster")
+        need_certificate_any = cleaned.get("need_certificate_any")
+        need_certificate_cdl = cleaned.get("need_certificate_cdl")
+        poster_mode = cleaned.get("poster_mode")
+        certificate_mode = cleaned.get("certificate_mode")
+        poster_summary = cleaned.get("poster_summary", "")
+
+        if wants_cdl and need_poster:
+            required_fields = [
+                "poster_organization_name",
+                "poster_time",
+                "poster_date",
+                "poster_venue",
+                "poster_resource_person",
+                "poster_resource_designation",
+                "poster_title",
+                "poster_summary",
+                "poster_design_link",
+            ]
+            for field in required_fields:
+                if not cleaned.get(field):
+                    self.add_error(field, "This field is required")
+
+            # summary ~150 words
+            if poster_summary:
+                words = poster_summary.split()
+                if len(words) < 120 or len(words) > 180:
+                    self.add_error(
+                        "poster_summary", "Summary must be around 150 words"
+                    )
+
+            if not poster_mode:
+                self.add_error("poster_mode", "Select a poster option")
+
+        if need_certificate_any:
+            if need_certificate_cdl and not certificate_mode:
+                self.add_error("certificate_mode", "Select certificate option")
+            if need_certificate_cdl and certificate_mode == CDLRequest.CertificateMode.CORRECT_EXISTING and not cleaned.get(
+                "certificate_design_link"
+            ):
+                self.add_error("certificate_design_link", "Provide design link")
+
+        if (
+            wants_cdl
+            and need_poster
+            and need_certificate_cdl
+            and poster_mode
+            and certificate_mode
+        ):
+            if not cleaned.get("combined_design_link"):
+                self.add_error(
+                    "combined_design_link",
+                    "Provide combined design link when poster and certificate are via CDL",
+                )
+
+        return cleaned
+
+
+class CertificateBatchUploadForm(forms.ModelForm):
+    class Meta:
+        model = CertificateBatch
+        fields = ["csv_file"]
+
+
+class CDLMessageForm(forms.ModelForm):
+    class Meta:
+        model = CDLMessage
+        fields = ["body", "file", "sent_via_email"]
