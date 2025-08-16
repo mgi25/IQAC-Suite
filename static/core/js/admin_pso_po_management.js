@@ -517,9 +517,10 @@ function loadOutcomesForOrganization(orgId) {
 
 function loadProgramOutcomes(programId) {
     console.log('Loading outcomes for program:', programId);
+    const archived = document.getElementById('showArchivedToggle')?.checked ? '&archived=1' : '';
     
     // Load POs
-    fetch(`/core/api/program-outcomes/${programId}/?type=PO`)
+    fetch(`/core/api/program-outcomes/${programId}/?type=PO${archived}`)
         .then(response => {
             console.log('POs API response status:', response.status);
             if (!response.ok) {
@@ -537,7 +538,7 @@ function loadProgramOutcomes(programId) {
         });
     
     // Load PSOs
-    fetch(`/core/api/program-outcomes/${programId}/?type=PSO`)
+    fetch(`/core/api/program-outcomes/${programId}/?type=PSO${archived}`)
         .then(response => {
             console.log('PSOs API response status:', response.status);
             if (!response.ok) {
@@ -576,6 +577,8 @@ function displayOutcomes(outcomes, type) {
         item.className = 'outcome-item';
         item.dataset.outcomeId = outcome.id;
         item.dataset.type = type;
+        const isArchived = String(outcome.status||'').toLowerCase() === 'archived';
+        if (isArchived) item.classList.add('archived');
 
         const text = document.createElement('div');
         text.className = 'outcome-text';
@@ -592,8 +595,18 @@ function displayOutcomes(outcomes, type) {
 
         const delBtn = document.createElement('button');
         delBtn.className = 'delete-outcome-btn';
-        delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+        delBtn.title = 'Archive';
+        delBtn.innerHTML = '<i class="fas fa-archive"></i>';
         delBtn.addEventListener('click', () => inlineDeleteOutcome(item, outcome.id, type));
+
+        if (isArchived) {
+            const restoreBtn = document.createElement('button');
+            restoreBtn.className = 'restore-outcome-btn';
+            restoreBtn.title = 'Restore';
+            restoreBtn.innerHTML = '<i class="fas fa-undo"></i>';
+            restoreBtn.addEventListener('click', () => restoreArchivedOutcome(outcome.id, type));
+            actions.appendChild(restoreBtn);
+        }
 
         actions.appendChild(editBtn);
         actions.appendChild(delBtn);
@@ -694,7 +707,7 @@ function inlineDeleteOutcome(item, outcomeId, type){
     actions.innerHTML = '';
     const confirmBtn = document.createElement('button');
     confirmBtn.className = 'btn-inline-delete confirm';
-    confirmBtn.textContent = 'Confirm Delete';
+    confirmBtn.textContent = 'Confirm Archive';
     const cancelBtn = document.createElement('button');
     cancelBtn.className = 'btn-inline-cancel';
     cancelBtn.textContent = 'Cancel';
@@ -709,15 +722,34 @@ function inlineDeleteOutcome(item, outcomeId, type){
             body: JSON.stringify({ outcome_id: outcomeId, type: (type==='pos'?'PO':'PSO') })
         }).then(r=>r.json()).then(data=>{
             if(data.success){
-                item.remove();
-                showNotification('Outcome deleted', 'success');
+                item.classList.add('archived');
+                showNotification('Outcome archived', 'success');
                 updateOutcomeCounts();
+                // If viewing only active, remove it from the list
+                const archived = document.getElementById('showArchivedToggle')?.checked;
+                if (!archived) item.remove();
             }else{
                 showNotification(data.error || 'Delete failed', 'error');
                 restore();
             }
         }).catch(()=> { showNotification('Network error', 'error'); restore(); });
     });
+}
+
+function restoreArchivedOutcome(outcomeId, type){
+    fetch('/core/api/manage-program-outcomes/',{
+        method:'PATCH', headers:{'Content-Type':'application/json','X-CSRFToken':getCsrfToken()},
+        body: JSON.stringify({ outcome_id: outcomeId, type: (type==='pos'?'PO':'PSO') })
+    }).then(r=>r.json()).then(data=>{
+        if(data.success){
+            showNotification('Outcome restored', 'success');
+            const panel = document.getElementById('outcomesPanel');
+            const orgId = panel?.dataset?.orgId;
+            if (orgId) loadOutcomesForOrganization(orgId);
+        }else{
+            showNotification(data.error || 'Restore failed', 'error');
+        }
+    }).catch(()=> showNotification('Network error', 'error'));
 }
 
 function displayEmptyOutcomes() {

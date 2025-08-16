@@ -198,6 +198,10 @@
 .outcomes-fullpage { margin-top: 20px; }
 .outcomes-fullpage-header { background: #fff; border-radius: 10px; padding: 16px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display:flex; align-items:center; justify-content:space-between; }
 .outcomes-fullpage-header h2 { margin: 0; font-size: 1.35rem; color: #1f2937; }
+.outcome-item.archived { opacity: 0.65; filter: grayscale(0.2); }
+.outcome-item.archived .outcome-text { text-decoration: line-through; }
+.restore-outcome-btn { background: #e0f2fe; color: #075985; border: 1px solid #bae6fd; margin-left: 6px; }
+.restore-outcome-btn:hover { background: #bae6fd; }
 .outcomes-fullpage-header .subtext { color:#6b7280; margin: 4px 0 0; font-size: .9rem; }
 .outcomes-fullpage .btn-outline { background:#fff; color:#1e60b1; border:1px solid #1e60b1; padding:8px 12px; border-radius:6px; }
 .outcomes-fullpage .btn-outline:hover { background:#f0f6ff; }
