@@ -14,6 +14,11 @@ urlpatterns = [
     path('register/', views.registration_form, name='registration_form'),
 
     # ────────────────────────────────────────────────
+    # Profile Management
+    # ────────────────────────────────────────────────
+    path('my-profile/', views.my_profile, name='my_profile'),
+
+    # ────────────────────────────────────────────────
     # General Dashboard and Proposal Views
     # ────────────────────────────────────────────────
     path('', views.dashboard, name='dashboard'),

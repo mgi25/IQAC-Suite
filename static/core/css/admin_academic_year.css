@@ -1,142 +1,450 @@
 /* Academic Year Settings Page Styles */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-body {
-  background: linear-gradient(135deg, #f5f9ff 0%, #e8f4fd 100%);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  min-height: 100vh;
-  margin: 0;
-  padding: 0;
+:root {
+  --primary: #264487;
+  --primary-light: #e8f0f9;
+  --primary-dark: #164c8d;
+  --ink: #0f172a;
+  --muted: #64748b;
+  --border: #e5e7eb;
+  --surf: #ffffff;
+  --subtle: #f8fafc;
+  --shadow: 0 8px 24px rgba(2,6,23,.06);
+  --shadow-lg: 0 12px 40px rgba(2,6,23,.1);
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #3b82f6;
 }
 
-.academic-year-settings-container {
-  max-width: 800px;
+/* Layout */
+.main-container {
+  width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 80px 1rem 2rem 1rem;
+  padding: 24px;
 }
 
-.academic-year-card {
-  background: #fff;
+/* Page Header */
+.page-header {
+  margin-bottom: 32px;
+}
+
+.page-header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.breadcrumb a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.breadcrumb-separator {
+  color: var(--muted);
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.page-header h1 i {
+  color: var(--primary);
+}
+
+.page-description {
+  margin: 8px 0 0 0;
+  font-size: 16px;
+  color: var(--muted);
+}
+
+/* Content Grid */
+.content-grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: 1fr;
+}
+
+/* Cards */
+.card {
+  background: var(--surf);
+  border: 1px solid var(--border);
   border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(20, 40, 150, 0.08);
-  padding: 2rem 2.5rem;
-  border: 1px solid rgba(22, 95, 178, 0.1);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: all 0.2s ease;
 }
 
-.card-title {
-  text-align: center;
-  margin-top: 0;
-  font-size: 1.8rem;
+.card:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--subtle);
+}
+
+.card-header h3 {
+  margin: 0;
+  font-size: 18px;
   font-weight: 700;
-  color: #165fb2;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.year-form {
-  margin-top: 1.5rem;
+.card-header h3 i {
+  color: var(--primary);
+}
+
+.card-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.card-body {
+  padding: 24px;
+}
+
+/* Form Styles */
+.academic-year-form {
   display: flex;
   flex-direction: column;
-  gap: 1.2rem;
+  gap: 24px;
 }
 
-.form-row {
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 8px;
 }
 
-.form-row label {
+.form-label {
   font-weight: 600;
-  color: #22315a;
+  color: var(--ink);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.form-row input {
-  padding: 0.75rem 1rem;
-  border: 1px solid #dfe3e8;
+.form-label i {
+  color: var(--primary);
+  font-size: 12px;
+}
+
+.form-control {
+  padding: 12px 16px;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  font-size: 1rem;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  font-size: 16px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  background: var(--surf);
 }
 
-.form-row input:focus {
-  border-color: #1064c8;
-  box-shadow: 0 0 0 3px rgba(16, 100, 200, 0.15);
+.form-control:focus {
   outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
 }
 
 .form-actions {
-  text-align: center;
-  margin-top: 1rem;
-}
-
-.btn-save {
-  display: inline-block;
-  padding: 0.75rem 1.8rem;
-  background: #1064c8;
-  color: #fff;
-  border: none;
-  border-radius: 24px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(16, 100, 200, 0.2);
-  transition: background 0.2s, box-shadow 0.2s;
-}
-
-.btn-save:hover {
-  background: #164799;
-  box-shadow: 0 4px 12px rgba(16, 100, 200, 0.3);
-}
-
-.year-list {
-  margin-top: 2rem;
-}
-
-.list-title {
-  font-size: 1.4rem;
-  margin-bottom: 1rem;
-  color: #165fb2;
-  font-weight: 600;
-}
-
-.year-card {
-  background: #fff;
-  border: 1px solid #dfe3e8;
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-  margin-bottom: 0.75rem;
   display: flex;
+  gap: 12px;
+  justify-content: flex-start;
+  margin-top: 8px;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: var(--border);
+  color: var(--ink);
+}
+
+.btn-secondary:hover {
+  background: var(--muted);
+  color: white;
+}
+
+.btn-sm {
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.btn-outline-primary {
+  background: transparent;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+}
+
+.btn-outline-primary:hover {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-outline-warning {
+  background: transparent;
+  color: var(--warning);
+  border: 1px solid var(--warning);
+}
+
+.btn-outline-warning:hover {
+  background: var(--warning);
+  color: white;
+}
+
+.btn-outline-success {
+  background: transparent;
+  color: var(--success);
+  border: 1px solid var(--success);
+}
+
+.btn-outline-success:hover {
+  background: var(--success);
+  color: white;
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-info {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.badge-secondary {
+  background: var(--border);
+  color: var(--muted);
+}
+
+/* Years List */
+.years-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.year-item {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surf);
+  transition: all 0.2s ease;
+}
+
+.year-item:hover {
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(38, 68, 135, 0.1);
+}
+
+.year-item.active {
+  border-left: 4px solid var(--success);
+}
+
+.year-item.archived {
+  border-left: 4px solid var(--muted);
+  opacity: 0.8;
+}
+
+.year-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.year-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.year-dates {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.date-range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.date-range i {
+  color: var(--primary);
+}
+
+.archived-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--border);
+  color: var(--muted);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.year-actions {
+  display: flex;
+  gap: 8px;
   align-items: center;
 }
 
-.year-actions a,
-.year-actions button {
-  margin-left: 0.5rem;
-  text-decoration: none;
-  padding: 0.4rem 0.8rem;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  border: none;
+/* Empty States */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--muted);
+}
+
+.empty-state.small {
+  padding: 24px;
+}
+
+.empty-icon {
+  font-size: 48px;
+  color: var(--border);
+  margin-bottom: 16px;
+}
+
+.empty-state h4 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* Collapsible */
+.collapsible {
   cursor: pointer;
+  user-select: none;
 }
 
-.btn-edit {
-  background: #1064c8;
-  color: #fff;
+.collapse-icon {
+  transition: transform 0.2s ease;
 }
 
-.btn-archive {
-  background: #c8102e;
-  color: #fff;
+.card-body.collapse {
+  display: none;
 }
 
-.btn-restore {
-  background: #28a745;
-  color: #fff;
+.card-body.collapse.show {
+  display: block;
 }
 
-@media (max-width: 600px) {
-  .academic-year-card {
-    padding: 1.5rem 1.25rem;
+/* Responsive Design */
+@media (max-width: 768px) {
+  .main-container {
+    padding: 16px;
   }
-}
+  
+  .page-header h1 {
+    font-size: 24px;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .year-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .year-actions {
+    align-self: stretch;
+    justify-content: flex-end;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .btn {
+    justify-content: center;
+

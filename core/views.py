@@ -122,6 +122,20 @@ def custom_logout(request):
 
 
 @login_required
+def my_profile(request):
+    """Display user's profile page with basic info, achievements, and roles."""
+    context = {
+        'user': request.user,
+        'user_achievements': [],  # Will be populated later when we add achievements
+        'user_organizations': [],  # Will be populated later when we add organizations
+        'total_events': 47,  # Placeholder for now
+        'years_active': 0,  # Placeholder for now
+        'profile_completion_percentage': 33,  # Placeholder for now
+    }
+    return render(request, 'core/my_profile.html', context)
+
+
+@login_required
 def registration_form(request):
     """Collect registration number and role assignments for a user."""
     user = request.user
