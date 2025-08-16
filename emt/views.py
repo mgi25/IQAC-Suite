@@ -1452,7 +1452,11 @@ def review_approval_step(request, step_id):
 
 @login_required
 def submit_event_report(request, proposal_id):
-    proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
+    proposal = get_object_or_404(
+        EventProposal.objects.prefetch_related("activities"),
+        id=proposal_id,
+        submitted_by=request.user,
+    )
 
     # Only allow if no report exists yet
     report, created = EventReport.objects.get_or_create(proposal=proposal)
@@ -1486,6 +1490,7 @@ def submit_event_report(request, proposal_id):
         "proposal": proposal,
         "form": form,
         "formset": formset,
+        "activities": proposal.activities.all(),
     }
     return render(request, "emt/submit_event_report.html", context)
 

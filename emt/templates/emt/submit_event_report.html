@@ -249,9 +249,9 @@
                             <div class="input-group">
                                 <label>Activities from Original Proposal</label>
                                 <div class="activities-reference-card">
-                                    {% if proposal.activities.all %}
+                                    {% if activities %}
                                         <div class="activities-grid">
-                                            {% for activity in proposal.activities.all %}
+                                            {% for activity in activities %}
                                                 <div class="activity-reference-item">
                                                     <div class="activity-title">{{ activity.name }}</div>
                                                     <div class="activity-date">{{ activity.date|date:"M d, Y" }}</div>
@@ -260,7 +260,7 @@
                                         </div>
                                         <div class="activities-summary">
                                             <small class="text-muted">
-                                                Total: {{ proposal.activities.count }} activit{{ proposal.activities.count|pluralize:"y,ies" }} planned
+                                                Total: {{ activities|length }} activit{{ activities|length|pluralize:"y,ies" }} planned
                                             </small>
                                         </div>
                                     {% else %}
