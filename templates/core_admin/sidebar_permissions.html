@@ -1,0 +1,315 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sidebar Permissions</title>
+  <!-- Tailwind CSS is assumed to be loaded globally -->
+  <style>
+    .scroll-thin::-webkit-scrollbar { width: 4px; }
+    .scroll-thin::-webkit-scrollbar-track { background: transparent; }
+    .scroll-thin::-webkit-scrollbar-thumb { background-color: rgb(203 213 225); border-radius: 8px; }
+  </style>
+</head>
+<body class="min-h-full">
+  <main class="max-w-6xl mx-auto px-6 py-8" x-data="permissionsPage">
+    <header class="flex items-center justify-between mb-6">
+      <h1 class="text-2xl font-semibold text-slate-800">Sidebar Permissions</h1>
+      <div class="relative" id="helpTooltip">
+        <button type="button" class="p-2 text-slate-500 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full" aria-describedby="help-content">
+          <span class="sr-only">Help</span>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 18h.01"></path><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+        </button>
+        <div id="help-content" class="absolute right-0 mt-2 w-64 p-3 rounded-lg bg-white shadow-xl text-sm text-slate-700 hidden" role="tooltip">
+          Use the lists to assign modules. Select items and use the arrows to move them between lists.
+        </div>
+      </div>
+    </header>
+
+    <form id="permissionsForm" method="post" action="{% url 'core_admin_sidebar_permissions' %}" class="space-y-6">
+      {% csrf_token %}
+      <input type="hidden" name="assigned_order" id="assigned_order" value="[]">
+
+      <div class="flex flex-col gap-4 md:flex-row md:items-end">
+        <div class="flex-1">
+          <label for="userSelect" class="block text-sm font-medium text-slate-700">User</label>
+          <select id="userSelect" name="user_id" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:ring-blue-500 focus:border-blue-500">
+            <option value="">Select user...</option>
+            {% for u in users %}
+            <option value="{{ u.id }}" {% if selected_user_id == u.id %}selected{% endif %}>{{ u.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="flex-1">
+          <label for="roleSelect" class="block text-sm font-medium text-slate-700">Role</label>
+          <select id="roleSelect" name="role_id" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:ring-blue-500 focus:border-blue-500">
+            <option value="">Select role...</option>
+            {% for r in roles %}
+            <option value="{{ r.id }}" {% if selected_role_id == r.id %}selected{% endif %}>{{ r.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="flex-1">
+          <label for="globalSearch" class="block text-sm font-medium text-slate-700">Search modules</label>
+          <input id="globalSearch" type="text" placeholder="Search modules..." class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:ring-blue-500 focus:border-blue-500" autocomplete="off">
+        </div>
+        <div class="flex-shrink-0">
+          <button type="submit" id="saveBtn" class="mt-1 inline-flex items-center px-4 py-2 rounded-md bg-blue-600 text-white font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all" disabled>
+            <span id="saveText">Save</span>
+            <svg id="saveSpinner" class="hidden ml-2 w-4 h-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Available -->
+        <div class="rounded-2xl bg-white shadow-xl p-5 flex flex-col">
+          <h2 class="text-lg font-medium text-slate-800 mb-2">Available (<span id="availableCount">0</span>)</h2>
+          <ul id="availableList" tabindex="0" class="flex-1 overflow-y-auto scroll-thin rounded-md border border-slate-200 divide-y divide-slate-100" aria-label="Available modules"></ul>
+          <div id="availableEmpty" class="hidden flex-1 items-center justify-center text-slate-500 text-sm">No modules <span class="ml-1" aria-hidden="true">📭</span></div>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex flex-col items-center justify-center gap-3">
+          <button type="button" id="addBtn" class="px-3 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Add selected">
+            Add &rarr;</button>
+          <button type="button" id="removeBtn" class="px-3 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Remove selected">&larr; Remove</button>
+          <button type="button" id="moveUpBtn" class="px-3 py-2 bg-slate-200 text-slate-700 rounded shadow hover:bg-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Move up">&uarr; Move Up</button>
+          <button type="button" id="moveDownBtn" class="px-3 py-2 bg-slate-200 text-slate-700 rounded shadow hover:bg-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Move down">&darr; Move Down</button>
+          <div class="flex gap-2 mt-2">
+            <button type="button" id="selectAllBtn" class="px-2 py-1 text-xs bg-slate-100 rounded hover:bg-slate-200" aria-label="Select all">Select all</button>
+            <button type="button" id="clearBtn" class="px-2 py-1 text-xs bg-slate-100 rounded hover:bg-slate-200" aria-label="Clear selection">Clear</button>
+          </div>
+        </div>
+
+        <!-- Assigned -->
+        <div class="rounded-2xl bg-white shadow-xl p-5 flex flex-col">
+          <h2 class="text-lg font-medium text-slate-800 mb-2">Assigned (<span id="assignedCount">0</span>)</h2>
+          <ul id="assignedList" tabindex="0" class="flex-1 overflow-y-auto scroll-thin rounded-md border border-slate-200 divide-y divide-slate-100" aria-label="Assigned modules"></ul>
+          <div id="assignedEmpty" class="hidden flex-1 items-center justify-center text-slate-500 text-sm">No modules <span class="ml-1" aria-hidden="true">📭</span></div>
+        </div>
+      </div>
+    </form>
+
+    <div id="toastContainer" class="fixed top-4 right-4 space-y-2" aria-live="polite" aria-atomic="true"></div>
+  </main>
+
+  <script>
+    (function(){
+      const $ = (sel, ctx=document) => ctx.querySelector(sel);
+      const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
+      const debounce = (fn, d=150) => { let t; return (...a)=>{clearTimeout(t); t=setTimeout(()=>fn(...a),d);} };
+      const toast = (msg, type='success') => {
+        const container = $('#toastContainer');
+        const el = document.createElement('div');
+        el.className = `px-4 py-2 rounded shadow text-sm text-white bg-${type==='error'?'red':'green'}-600`;
+        el.textContent = msg;
+        container.appendChild(el);
+        setTimeout(()=>{el.classList.add('opacity-0','translate-x-4');},2500);
+        setTimeout(()=>{el.remove();},3000);
+      };
+
+      const availableData = JSON.parse('{{ available_permissions|safe|escapejs }}'.replace(/&quot;/g,'"'));
+      const assignedData = JSON.parse('{{ assigned_permissions|safe|escapejs }}'.replace(/&quot;/g,'"'));
+
+      let available = [...availableData];
+      let assigned = [...assignedData];
+      let lastAvailableIndex = null;
+      let lastAssignedIndex = null;
+
+      const availableList = $('#availableList');
+      const assignedList = $('#assignedList');
+      const availableEmpty = $('#availableEmpty');
+      const assignedEmpty = $('#assignedEmpty');
+      const availableCount = $('#availableCount');
+      const assignedCount = $('#assignedCount');
+      const searchInput = $('#globalSearch');
+      const saveBtn = $('#saveBtn');
+      const saveText = $('#saveText');
+      const saveSpinner = $('#saveSpinner');
+      const form = $('#permissionsForm');
+
+      const render = () => {
+        const search = searchInput.value.trim().toLowerCase();
+        const availFrag = document.createDocumentFragment();
+        const assignedFrag = document.createDocumentFragment();
+        let availVisible = 0, assignedVisible = 0;
+
+        available.forEach((p,i)=>{
+          const match = !search || p.label.toLowerCase().includes(search);
+          if(match){
+            availVisible++;
+            const li = document.createElement('li');
+            li.dataset.id = p.id;
+            li.dataset.index = i;
+            li.className = 'flex items-center gap-2 px-3 py-2 hover:bg-slate-50 cursor-pointer';
+            const cb = document.createElement('input');
+            cb.type='checkbox';
+            cb.className='h-4 w-4 text-blue-600 rounded focus:ring-blue-500';
+            cb.tabIndex=-1;
+            const lbl = document.createElement('span');
+            lbl.textContent=p.label;
+            li.append(cb,lbl);
+            availFrag.appendChild(li);
+          }
+        });
+        availableList.innerHTML='';
+        availableList.appendChild(availFrag);
+        availableCount.textContent = available.length;
+        availableEmpty.classList.toggle('hidden', available.length !== 0);
+
+        assigned.forEach((p,i)=>{
+          const match = !search || p.label.toLowerCase().includes(search);
+          if(match){
+            assignedVisible++;
+            const li = document.createElement('li');
+            li.dataset.id = p.id;
+            li.dataset.index = i;
+            li.className = 'flex items-center gap-2 px-3 py-2 hover:bg-slate-50 cursor-pointer';
+            const cb = document.createElement('input');
+            cb.type='checkbox';
+            cb.className='h-4 w-4 text-blue-600 rounded focus:ring-blue-500';
+            cb.tabIndex=-1;
+            const lbl = document.createElement('span');
+            lbl.textContent=p.label;
+            li.append(cb,lbl);
+            assignedFrag.appendChild(li);
+          }
+        });
+        assignedList.innerHTML='';
+        assignedList.appendChild(assignedFrag);
+        assignedCount.textContent = assigned.length;
+        assignedEmpty.classList.toggle('hidden', assigned.length !== 0);
+
+        saveBtn.disabled = !hasChanges();
+      };
+
+      const hasChanges = () => {
+        const orig = assignedData.map(p=>p.id).join(',');
+        const curr = assigned.map(p=>p.id).join(',');
+        return orig !== curr || selectedUserId() !== '{{selected_user_id|default:""}}' || selectedRoleId() !== '{{selected_role_id|default:""}}';
+      };
+
+      const getSelected = (listEl) => $$('li', listEl).filter(li=>$('input',li).checked);
+      const selectedUserId = () => $('#userSelect').value;
+      const selectedRoleId = () => $('#roleSelect').value;
+
+      const move = (sourceArr, targetArr, selectedEls) => {
+        const ids = selectedEls.map(li=>li.dataset.id);
+        const moved = [];
+        sourceArr = sourceArr.filter(p=>{ if(ids.includes(p.id)){ moved.push(p); return false;} return true; });
+        targetArr.push(...moved);
+        return [sourceArr, targetArr, moved.length];
+      };
+
+      const removeByIds = (arr, ids) => arr.filter(p=>!ids.includes(p.id));
+
+      const shiftSelect = (listEl, li, lastIndexHolder) => {
+        const items = $$('li', listEl);
+        const idx = items.indexOf(li);
+        if(lastIndexHolder.value!==null && event.shiftKey){
+          const [start,end]=[lastIndexHolder.value,idx].sort((a,b)=>a-b);
+          for(let i=start;i<=end;i++){ $('input',items[i]).checked = true; }
+        }else{
+          $('input',li).checked = !$('input',li).checked;
+        }
+        lastIndexHolder.value = idx;
+      };
+
+      availableList.addEventListener('click',e=>{
+        const li = e.target.closest('li');
+        if(!li) return;
+        shiftSelect(availableList,li,{ get value(){return lastAvailableIndex;}, set value(v){lastAvailableIndex=v;} });
+      });
+      assignedList.addEventListener('click',e=>{
+        const li = e.target.closest('li');
+        if(!li) return;
+        shiftSelect(assignedList,li,{ get value(){return lastAssignedIndex;}, set value(v){lastAssignedIndex=v;} });
+      });
+
+      $('#addBtn').addEventListener('click',()=>{
+        const selected = getSelected(availableList);
+        if(!selected.length) return;
+        const ids = selected.map(li=>li.dataset.id);
+        const [src,tgt,count] = move(available,assigned,selected);
+        available=src; assigned=tgt;
+        toast(`${count} items added`);
+        render();
+      });
+      $('#removeBtn').addEventListener('click',()=>{
+        const selected = getSelected(assignedList);
+        if(!selected.length) return;
+        const ids = selected.map(li=>li.dataset.id);
+        const removed = assigned.filter(p=>ids.includes(p.id));
+        assigned = removeByIds(assigned, ids);
+        available.push(...removed);
+        toast(`${removed.length} items removed`);
+        render();
+      });
+
+      $('#moveUpBtn').addEventListener('click',()=>{
+        const sel = getSelected(assignedList).map(li=>parseInt(li.dataset.index));
+        sel.sort((a,b)=>a-b);
+        sel.forEach(i=>{ if(i>0){ [assigned[i-1],assigned[i]]=[assigned[i],assigned[i-1]]; }});
+        render();
+      });
+      $('#moveDownBtn').addEventListener('click',()=>{
+        const sel = getSelected(assignedList).map(li=>parseInt(li.dataset.index));
+        sel.sort((a,b)=>b-a);
+        sel.forEach(i=>{ if(i<assigned.length-1){ [assigned[i+1],assigned[i]]=[assigned[i],assigned[i+1]]; }});
+        render();
+      });
+
+      $('#selectAllBtn').addEventListener('click',()=>{
+        const focused = document.activeElement===assignedList?assignedList:availableList;
+        $$('input',focused).forEach(cb=>cb.checked=true);
+      });
+      $('#clearBtn').addEventListener('click',()=>{
+        $$('input',availableList).forEach(cb=>cb.checked=false);
+        $$('input',assignedList).forEach(cb=>cb.checked=false);
+      });
+
+      searchInput.addEventListener('input',debounce(()=>render()));
+
+      availableList.addEventListener('keydown',e=>{
+        if(e.key==='Enter'){ $('#addBtn').click(); }
+      });
+      assignedList.addEventListener('keydown',e=>{
+        if(e.key==='Delete' || e.key==='Backspace'){ $('#removeBtn').click(); }
+      });
+
+      $('#userSelect').addEventListener('change',e=>{
+        if(e.target.value){ $('#roleSelect').value=''; }
+        render();
+      });
+      $('#roleSelect').addEventListener('change',e=>{
+        if(e.target.value){ $('#userSelect').value=''; }
+        render();
+      });
+
+      form.addEventListener('submit',e=>{
+        e.preventDefault();
+        if(!selectedUserId() && !selectedRoleId()){
+          toast('Select a user or role','error');
+          return;
+        }
+        if(!assigned.length && !confirm('No modules assigned. Continue?')){
+          return;
+        }
+        $('#assigned_order').value = JSON.stringify(assigned.map(p=>p.id));
+        saveBtn.disabled=true;
+        saveText.textContent='Saving...';
+        saveSpinner.classList.remove('hidden');
+        form.submit();
+      });
+
+      // Help tooltip
+      $('#helpTooltip button').addEventListener('focus',()=>{$('#help-content').classList.remove('hidden');});
+      $('#helpTooltip button').addEventListener('blur',()=>{$('#help-content').classList.add('hidden');});
+
+      render();
+    })();
+  </script>
+</body>
+</html>
