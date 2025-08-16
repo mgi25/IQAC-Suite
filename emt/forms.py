@@ -5,7 +5,7 @@ from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
     EventExpectedOutcomes, TentativeFlow, SpeakerProfile,
     ExpenseDetail, EventReport, EventReportAttachment, CDLSupport,
-    CDLCertificateRecipient,
+    CDLCertificateRecipient, CDLMessage,
 )
 from core.models import (
     Organization,
@@ -355,3 +355,9 @@ class CertificateRecipientForm(forms.ModelForm):
     class Meta:
         model = CDLCertificateRecipient
         fields = ["name", "role", "certificate_type"]
+
+
+class CDLMessageForm(forms.ModelForm):
+    class Meta:
+        model = CDLMessage
+        fields = ["message", "file"]

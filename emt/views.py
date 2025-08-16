@@ -15,12 +15,13 @@ from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
     EventExpectedOutcomes, TentativeFlow, EventActivity,
     ExpenseDetail, IncomeDetail, SpeakerProfile, EventReport,
-    EventReportAttachment, CDLSupport, Student
+    EventReportAttachment, CDLSupport, CDLCertificateRecipient, CDLMessage, Student
 )
 from .forms import (
     EventProposalForm, NeedAnalysisForm, ExpectedOutcomesForm,
     ObjectivesForm, TentativeFlowForm, SpeakerProfileForm,
-    ExpenseDetailForm,EventReportForm, EventReportAttachmentForm, CDLSupportForm
+    ExpenseDetailForm,EventReportForm, EventReportAttachmentForm, CDLSupportForm,
+    CertificateRecipientForm, CDLMessageForm
 )
 from django.forms import modelformset_factory
 from core.models import (
@@ -707,6 +708,51 @@ def submit_cdl_support(request, proposal_id):
         form = CDLSupportForm(instance=instance, initial=initial)
 
     return render(request, "emt/cdl_support.html", {"form": form, "proposal": proposal})
+
+
+@login_required
+def cdl_post_event(request, proposal_id):
+    proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
+    support = getattr(proposal, "cdl_support", None)
+    if not support:
+        return redirect("emt:proposal_status_detail", proposal_id=proposal_id)
+
+    recipient_form = CertificateRecipientForm()
+    message_form = CDLMessageForm()
+
+    if request.method == "POST":
+        if "add_recipient" in request.POST:
+            recipient_form = CertificateRecipientForm(request.POST)
+            if recipient_form.is_valid():
+                recipient = recipient_form.save(commit=False)
+                recipient.support = support
+                recipient.save()
+                messages.success(request, "Recipient added")
+                return redirect("emt:cdl_post_event", proposal_id=proposal_id)
+        elif "send_message" in request.POST:
+            message_form = CDLMessageForm(request.POST, request.FILES)
+            if message_form.is_valid():
+                msg = message_form.save(commit=False)
+                msg.support = support
+                msg.sender = request.user
+                msg.save()
+                messages.success(request, "Message sent")
+                return redirect("emt:cdl_post_event", proposal_id=proposal_id)
+
+    recipients = support.certificate_recipients.all()
+    messages_qs = support.messages.select_related("sender").all()
+    return render(
+        request,
+        "emt/cdl_post_event.html",
+        {
+            "proposal": proposal,
+            "support": support,
+            "recipient_form": recipient_form,
+            "message_form": message_form,
+            "recipients": recipients,
+            "messages": messages_qs,
+        },
+    )
 
 
 
