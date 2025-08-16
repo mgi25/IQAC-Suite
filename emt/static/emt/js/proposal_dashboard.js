@@ -1622,6 +1622,13 @@ function getWhyThisEventForm() {
                         Add all income sources for your event
                     </div>
                 </div>
+
+                <div class="form-row full-width">
+                    <div class="save-section-container">
+                        <button type="button" class="btn-save-section">Save & Continue</button>
+                        <div class="save-help-text">Complete this section to unlock the next one</div>
+                    </div>
+                </div>
             </div>
         `;
     }
@@ -1765,9 +1772,15 @@ function getWhyThisEventForm() {
 
                         const nextSection = getNextSection(currentExpandedCard);
                         if (nextSection) {
-                            $(`.proposal-nav .nav-link[data-section="${nextSection}"]`).removeClass('disabled');
+                            const nextLink = $(`.proposal-nav .nav-link[data-section="${nextSection}"]`);
+                            nextLink.removeClass('disabled');
+                            const nextUrl = nextLink.data('url');
                             setTimeout(() => {
-                                openFormPanel(nextSection);
+                                if (nextUrl) {
+                                    window.location.href = nextUrl;
+                                } else {
+                                    openFormPanel(nextSection);
+                                }
                             }, 1000);
                         }
                     })
