@@ -113,6 +113,65 @@ class BulkUserUploadTests(TestCase):
         ra = RoleAssignment.objects.get(user=existing, organization=self.org)
         self.assertEqual(ra.role.name, 'student')
 
+    def test_bulk_upload_overrides_existing_role(self):
+        user = User.objects.create_user('john', 'john@example.com', 'pass')
+        faculty_role = OrganizationRole.objects.create(
+            organization=self.org, name='faculty'
+        )
+        OrganizationMembership.objects.create(
+            user=user,
+            organization=self.org,
+            academic_year='2024-2025',
+            role='faculty',
+            is_primary=True,
+            is_active=True,
+        )
+        RoleAssignment.objects.create(
+            user=user,
+            organization=self.org,
+            role=faculty_role,
+            academic_year='2024-2025',
+        )
+
+        self.client.force_login(self.admin)
+        self._upload()
+
+        ras = RoleAssignment.objects.filter(user=user, organization=self.org)
+        self.assertEqual(ras.count(), 1)
+        self.assertEqual(ras.first().role.name, 'student')
+
+    def test_bulk_upload_moves_user_between_orgs(self):
+        """Uploading the same user to a new organization should replace old membership."""
+        self.client.force_login(self.admin)
+
+        # Initial upload to first organization
+        self._upload()
+
+        org2 = Organization.objects.create(name='Commerce', org_type=self.org.org_type)
+
+        csv_content = (
+            "register_no,name,email,role\n"
+            "001,John Doe,john@example.com,student\n"
+        )
+        file = SimpleUploadedFile('users.csv', csv_content.encode('utf-8'), content_type='text/csv')
+        url = reverse('admin_org_users_upload_csv', args=[org2.id])
+        data = {
+            'class_name': 'B',
+            'academic_year': '2024-2025',
+            'csv_file': file,
+        }
+        referer = f'http://testserver/core-admin/org-users/{org2.id}/students/'
+        self.client.post(url, data, follow=True, HTTP_REFERER=referer)
+
+        user = User.objects.get(email='john@example.com')
+        self.assertEqual(OrganizationMembership.objects.filter(user=user).count(), 1)
+        mem = OrganizationMembership.objects.get(user=user)
+        self.assertEqual(mem.organization, org2)
+        self.assertEqual(mem.role, 'student')
+        ra = RoleAssignment.objects.get(user=user)
+        self.assertEqual(ra.organization, org2)
+        self.assertEqual(ra.role.name, 'student')
+
 
 class BulkFacultyUploadTests(TestCase):
     def setUp(self):

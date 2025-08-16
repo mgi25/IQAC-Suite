@@ -9,11 +9,15 @@ $(document).ready(function() {
         'schedule': false,
         'speakers': false,
         'expenses': false,
-        'income': false
+        'income': false,
+        'cdl-support': false
     };
+    const optionalSections = ['speakers', 'expenses', 'income', 'cdl-support'];
     let audienceClassMap = {};
     let firstErrorField = null;
     const autoFillEnabled = new URLSearchParams(window.location.search).has('autofill');
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const originalFormAction = $('#proposal-form').attr('action') || '';
 
     // Demo data used for rapid prototyping. Remove once real data is wired.
     const AUTO_FILL_DATA = {
@@ -61,6 +65,14 @@ $(document).ready(function() {
 
     const getRandom = arr => arr[Math.floor(Math.random() * arr.length)];
 
+    function updateCdlNavLink(proposalId) {
+        if (!proposalId) return;
+        const link = $('.proposal-nav .nav-link[data-section="cdl-support"]');
+        const url = `/emt/cdl-support/${proposalId}/`;
+        link.data('url', url);
+        link.attr('data-url', url);
+    }
+
     initializeDashboard();
 
     function initializeDashboard() {
@@ -69,6 +81,9 @@ $(document).ready(function() {
         loadExistingData();
         checkForExistingErrors();
         enablePreviouslyVisitedSections();
+        if (window.PROPOSAL_ID) {
+            updateCdlNavLink(window.PROPOSAL_ID);
+        }
         $('#autofill-btn').on('click', () => autofillTestData(currentExpandedCard));
         if (!$('.form-errors-banner').length) {
             setTimeout(() => {
@@ -88,13 +103,14 @@ $(document).ready(function() {
             }
         });
         
-        // Enable the next section only if the previous section is completed
-        const sectionOrder = ['basic-info', 'why-this-event', 'schedule', 'speakers', 'expenses', 'income'];
+        // Enable the next section if the previous section is completed
+        // or if the previous section is optional
+        const sectionOrder = ['basic-info', 'why-this-event', 'schedule', 'speakers', 'expenses', 'income', 'cdl-support'];
         for (let i = 0; i < sectionOrder.length - 1; i++) {
             const currentSection = sectionOrder[i];
             const nextSection = sectionOrder[i + 1];
-            
-            if (sectionProgress[currentSection] === true) {
+
+            if (sectionProgress[currentSection] === true || optionalSections.includes(currentSection)) {
                 $(`.proposal-nav .nav-link[data-section="${nextSection}"]`).removeClass('disabled');
             }
         }
@@ -111,6 +127,7 @@ $(document).ready(function() {
     $('.proposal-nav .nav-link').on('click', function(e) {
             e.preventDefault();
             const section = $(this).data('section');
+
             const currentOrder = parseInt($(`.proposal-nav .nav-link[data-section="${currentExpandedCard}"]`).data('order')) || 0;
             const targetOrder = parseInt($(this).data('order')) || 0;
             
@@ -141,8 +158,10 @@ $(document).ready(function() {
                         showNotification('Please complete all required fields in the current section first.', 'error');
                         return;
                     }
+                    // Mark current section as complete when moving to the next
+                    markSectionComplete(currentExpandedCard);
                 }
-                
+
                 $(this).removeClass('disabled');
                 activateSection(section);
             } else {
@@ -195,6 +214,38 @@ $(document).ready(function() {
         $('#main-title').text(sectionData.title);
         $('#main-subtitle').text(sectionData.subtitle);
 
+        const formEl = $('#proposal-form');
+        if (section === 'cdl-support') {
+            const url = $('.proposal-nav .nav-link[data-section="cdl-support"]').data('url');
+            if (url) {
+                formEl.attr('action', url);
+                fetch(url)
+                    .then(res => res.text())
+                    .then(html => {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const cdlForm = doc.querySelector('#cdl-form');
+                        $('#form-panel-content').html(cdlForm ? cdlForm.innerHTML : html);
+                        setupCDLForm();
+                        setupFormFieldSync();
+                        setupTextSectionStorage();
+                        clearValidationErrors();
+                        if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                            window.AutosaveManager.reinitialize();
+                        }
+                        updateSubmitButton();
+                    })
+                    .catch(() => {
+                        $('#form-panel-content').html('<div class="form-grid"><p>Failed to load CDL Support form.</p></div>');
+                    });
+            } else {
+                $('#form-panel-content').html('<div class="form-grid"><p>CDL Support form not available.</p></div>');
+            }
+            return;
+        } else {
+            formEl.attr('action', originalFormAction);
+        }
+
         // Load content for all sections, including basic-info
         let formContent = '';
         switch (section) {
@@ -225,11 +276,18 @@ $(document).ready(function() {
             if (section === 'income') {
                 setupIncomeSection();
             }
+            if (section === 'why-this-event') {
+                setupWhyThisEventAI();
+            }
             setupFormFieldSync();
             setupTextSectionStorage();
             clearValidationErrors();
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
+                const actInput = document.getElementById('num-activities-modern');
+                if (actInput && actInput.value) {
+                    actInput.dispatchEvent(new Event('input'));
+                }
             }
             if (autoFillEnabled) {
                 autofillTestData(section);
@@ -244,7 +302,8 @@ $(document).ready(function() {
             'schedule': { title: 'Schedule', subtitle: 'Event timeline, sessions, flow' },
             'speakers': { title: 'Speaker Profiles', subtitle: 'Names, expertise, brief bio, etc.' },
             'expenses': { title: 'Expenses', subtitle: 'Budget, funding source, justification' },
-            'income': { title: 'Details of Income', subtitle: 'Registration fees, sponsorship, participation rates' }
+            'income': { title: 'Details of Income', subtitle: 'Registration fees, sponsorship, participation rates' },
+            'cdl-support': { title: 'CDL Support', subtitle: 'Poster, certificates, other details' }
         };
         return sections[section] || { title: 'Section', subtitle: 'Complete this section' };
     }
@@ -590,13 +649,19 @@ $(document).ready(function() {
 
         $('#outcomeCancel').off('click').on('click', () => modal.removeClass('show'));
         $('#outcomeSave').off('click').on('click', () => {
-            const selected = modal.find('input[type=checkbox]:checked').map((_, cb) => cb.value).get();
-            const existing = posField.val().trim();
-            const value = existing ? existing + '\n' + selected.join('\n') : selected.join('\n');
+            const selected = modal
+                .find('input[type=checkbox]:checked')
+                .map((_, cb) => cb.value)
+                .get();
+
+            // Replace existing content with newly selected outcomes
+            const value = selected.join('\n');
             posField.val(value).trigger('input').trigger('change');
+
             if (djangoPosField.length) {
                 djangoPosField.val(value).trigger('input').trigger('change');
             }
+
             modal.removeClass('show');
         });
     }
@@ -1146,29 +1211,35 @@ function getWhyThisEventForm() {
     return `
         <div class="form-grid">
             <div class="form-row full-width">
+                <div id="ai-suggestion-status" class="ai-loading">Generating AI suggestions...</div>
+            </div>
+            <div class="form-row full-width">
                 <div class="input-group">
                     <label for="need-analysis-modern">Need Analysis - Why is this event necessary? *</label>
                     <textarea id="need-analysis-modern" rows="4" required placeholder="Explain why this event is necessary, what gap it fills, and its relevance to the target audience..."></textarea>
+                    <div class="ai-suggestion-card" id="ai-need-analysis"></div>
                     <div class="help-text">Provide a detailed explanation of why this event is important.</div>
                 </div>
             </div>
-            
+
             <div class="form-row full-width">
                 <div class="input-group">
                     <label for="objectives-modern">Objectives - What do you aim to achieve? *</label>
                     <textarea id="objectives-modern" rows="4" required placeholder="• Objective 1: ...&#10;• Objective 2: ...&#10;• Objective 3: ..."></textarea>
+                    <div class="ai-suggestion-card" id="ai-objectives"></div>
                     <div class="help-text">List 3-5 clear, measurable objectives.</div>
                 </div>
             </div>
-            
+
             <div class="form-row full-width">
                 <div class="input-group">
                     <label for="outcomes-modern">Expected Learning Outcomes - What results do you expect? *</label>
                     <textarea id="outcomes-modern" rows="4" required placeholder="What specific results, skills, or benefits will participants gain?"></textarea>
+                    <div class="ai-suggestion-card" id="ai-learning-outcomes"></div>
                     <div class="help-text">Describe the tangible benefits for participants.</div>
                 </div>
             </div>
-            
+
             <div class="form-row full-width">
                 <div class="save-section-container">
                     <button type="button" class="btn-save-section">Save & Continue</button>
@@ -1589,13 +1660,9 @@ function getWhyThisEventForm() {
                 </div>
 
                 <div class="form-row full-width">
-                    <div class="submit-section">
-                        <button type="submit" name="final_submit" class="btn-submit" id="submit-proposal-btn" disabled>
-                            Submit Proposal
-                        </button>
-                        <div class="submit-help-text">
-                            Review all sections before submitting
-                        </div>
+                    <div class="save-section-container">
+                        <button type="button" class="btn-save-section">Save & Continue</button>
+                        <div class="save-help-text">Complete this section to unlock the next one</div>
                     </div>
                 </div>
             </div>
@@ -1727,7 +1794,37 @@ function getWhyThisEventForm() {
             showEmptyState();
         }
     }
-    
+
+    // ===== CDL SUPPORT SECTION FUNCTIONALITY =====
+    function setupCDLForm() {
+        const needsSupport = $('#id_needs_support');
+        const cdlSections = $('#cdl-sections');
+        const posterRequired = $('#id_poster_required');
+        const posterDetails = $('#poster-details');
+        const certificatesRequired = $('#id_certificates_required');
+        const certificatesDetails = $('#certificates-details');
+        const certificateHelp = $('#id_certificate_help');
+        const certificateHelpDetails = $('#certificate-help-details');
+
+        function toggle(el, show) {
+            if (el && el.length) {
+                el.toggle(show);
+            }
+        }
+
+        needsSupport.on('change', () => toggle(cdlSections, needsSupport.prop('checked')));
+        toggle(cdlSections, needsSupport.prop('checked'));
+
+        posterRequired.on('change', () => toggle(posterDetails, posterRequired.prop('checked')));
+        toggle(posterDetails, posterRequired.prop('checked'));
+
+        certificatesRequired.on('change', () => toggle(certificatesDetails, certificatesRequired.prop('checked')));
+        toggle(certificatesDetails, certificatesRequired.prop('checked'));
+
+        certificateHelp.on('change', () => toggle(certificateHelpDetails, certificateHelp.prop('checked')));
+        toggle(certificateHelpDetails, certificateHelp.prop('checked'));
+    }
+
     // ===== SAVE SECTION FUNCTIONALITY - FULLY PRESERVED =====
     function saveCurrentSection() {
         if (!currentExpandedCard) return;
@@ -1741,9 +1838,15 @@ function getWhyThisEventForm() {
 
                         const nextSection = getNextSection(currentExpandedCard);
                         if (nextSection) {
-                            $(`.proposal-nav .nav-link[data-section="${nextSection}"]`).removeClass('disabled');
+                            const nextLink = $(`.proposal-nav .nav-link[data-section="${nextSection}"]`);
+                            nextLink.removeClass('disabled');
+                            const nextUrl = nextLink.data('url');
                             setTimeout(() => {
-                                openFormPanel(nextSection);
+                                if (nextUrl && nextSection !== 'cdl-support') {
+                                    window.location.href = nextUrl;
+                                } else {
+                                    openFormPanel(nextSection);
+                                }
                             }, 1000);
                         }
                     })
@@ -1764,7 +1867,7 @@ function getWhyThisEventForm() {
 
     // ===== SECTION NAVIGATION - PRESERVED =====
     function getNextSection(currentSection) {
-        const sectionOrder = ['basic-info', 'why-this-event', 'schedule', 'speakers', 'expenses', 'income'];
+        const sectionOrder = ['basic-info', 'why-this-event', 'schedule', 'speakers', 'expenses', 'income', 'cdl-support'];
         const currentIndex = sectionOrder.indexOf(currentSection);
         return currentIndex < sectionOrder.length - 1 ? sectionOrder[currentIndex + 1] : null;
     }
@@ -1812,6 +1915,25 @@ function getWhyThisEventForm() {
                 localStorage.setItem(key, el.value);
             });
         });
+    }
+
+    function collectBasicInfo() {
+        const getVal = (modernSelector, djangoName) => {
+            const modern = $(modernSelector);
+            if (modern.length && modern.val()) return modern.val();
+            return $(`#django-basic-info [name="${djangoName}"]`).val() || '';
+        };
+        return {
+            title: getVal('#event-title-modern', 'event_title'),
+            audience: getVal('#target-audience-modern', 'target_audience'),
+            focus: getVal('#event-focus-type-modern', 'event_focus_type'),
+            venue: getVal('#venue-modern', 'venue')
+        };
+    }
+
+    function setupWhyThisEventAI() {
+        // Automatically generate AI suggestions when the section loads
+        generateWhyEvent();
     }
 
     // ===== STATUS & PROGRESS FUNCTIONS - PRESERVED =====
@@ -1969,11 +2091,13 @@ function getWhyThisEventForm() {
     }
 
     function updateSubmitButton() {
-        const completedSections = Object.values(sectionProgress).filter(status => status === true).length;
-        const totalSections = Object.keys(sectionProgress).length;
-        
-        if (completedSections === totalSections) {
-            $('#submit-proposal-btn').prop('disabled', false);
+        const btn = $('#submit-proposal-btn');
+        if (!btn.length) return;
+        const requiredSections = Object.keys(sectionProgress).filter(section => !optionalSections.includes(section));
+        const completedSections = requiredSections.filter(section => sectionProgress[section] === true).length;
+
+        if (completedSections === requiredSections.length) {
+            btn.prop('disabled', false);
             $('.submit-section').addClass('ready');
         }
     }
@@ -2252,10 +2376,11 @@ function getWhyThisEventForm() {
 
     // ===== PROGRESS BAR FUNCTION - PRESERVED =====
     function updateProgressBar() {
-        const completedSections = Object.values(sectionProgress).filter(status => status === true).length;
-        const totalSections = Object.keys(sectionProgress).length;
+        const sections = Object.keys(sectionProgress).filter(section => !optionalSections.includes(section));
+        const completedSections = sections.filter(section => sectionProgress[section] === true).length;
+        const totalSections = sections.length;
         const progressPercent = Math.round((completedSections / totalSections) * 100);
-        
+
         // Update any progress indicators in new UI
         console.log(`Progress: ${progressPercent}% (${completedSections}/${totalSections} sections complete)`);
         
@@ -2430,7 +2555,12 @@ function getWhyThisEventForm() {
             indicator.find('.indicator-text').text('Saving...');
         });
 
-        $(document).on('autosave:success', function() {
+        $(document).on('autosave:success', function(e) {
+            const detail = e.originalEvent && e.originalEvent.detail;
+            if (detail && detail.proposalId) {
+                window.PROPOSAL_ID = detail.proposalId;
+                updateCdlNavLink(detail.proposalId);
+            }
             const indicator = $('#autosave-indicator');
             indicator.removeClass('saving error').addClass('saved');
             indicator.find('.indicator-text').text('Saved');
@@ -2457,4 +2587,190 @@ function getWhyThisEventForm() {
 
     console.log('Dashboard initialized successfully! 🚀');
     console.log('All original functionality preserved with new UI');
+});
+
+function getCookie(name){const v=`; ${document.cookie}`.split(`; ${name}=`);if(v.length===2)return v.pop().split(';').shift();}
+function val(sel){return document.querySelector(sel)?.value?.trim()||"";}
+function arr(sel){return Array.from(document.querySelectorAll(sel)).map(x=>x.value).filter(Boolean);}
+
+function collectFactsFromForm(){
+  return {
+    organization_type: val('#id_organization_type') || val('#id_type_of_organisation'),
+    department: val('#id_department'),
+    committees_collaborations: arr('input[name="committees_collaborations"]'),
+    event_title: val('#id_event_title') || val('#id_title'),
+    target_audience: val('#id_target_audience'),
+    event_focus_type: val('#id_event_focus_type') || val('#id_focus'),
+    location: val('#id_location'),
+    start_date: val('#id_start_date'),
+    end_date: val('#id_end_date'),
+    academic_year: val('#id_academic_year'),
+    pos_pso_management: val('#id_pos_pso_management') || val('#id_pos_pso'),
+    sdg_goals: arr('select#id_sdg_goals option:checked').map(o=>o.textContent.trim()),
+    num_activities: val('#id_num_activities'),
+    student_coordinators: arr('input[name="student_coordinators"]'),
+    faculty_incharges: arr('input[name="faculty_incharges"]'),
+    additional_context: val('#id_additional_context')
+  };
+}
+
+function applyBullets(field, items){
+  const el = document.querySelector(`#id_${field}`);
+  const text = (items || []).map(i=>`• ${i}`).join('\n');
+  if (window.CKEDITOR && CKEDITOR.instances[`id_${field}`]) {
+    CKEDITOR.instances[`id_${field}`].setData((CKEDITOR.instances[`id_${field}`].getData()?'<p></p>':'') + text.replace(/\n/g,'<br>'));
+  } else if (el) {
+    el.value = text;
+    el.dispatchEvent(new Event('input',{bubbles:true}));
+  }
+}
+
+function applyText(field, text){
+  const el = document.querySelector(`#id_${field}`);
+  if (window.CKEDITOR && CKEDITOR.instances[`id_${field}`]) {
+    CKEDITOR.instances[`id_${field}`].setData(text);
+  } else if (el) {
+    el.value = text;
+    el.dispatchEvent(new Event('input',{bubbles:true}));
+  }
+}
+
+async function generateWhyEvent(){
+  const status = document.querySelector('#ai-suggestion-status');
+  if(status) status.style.display = 'block';
+  try{
+    const facts = collectFactsFromForm();
+    const body = new URLSearchParams(Object.entries(facts));
+    const res = await fetch('/suite/generate-why-event/', {
+      method:'POST',
+      headers:{
+        'X-CSRFToken':getCookie('csrftoken'),
+        'Content-Type':'application/x-www-form-urlencoded'
+      },
+      body
+    });
+    const data = await res.json();
+    if(!res.ok || !data.ok){ alert(data.error || 'Generation failed'); return; }
+    applyText('need_analysis', data.need_analysis || '');
+    applyBullets('objectives', data.objectives || []);
+    applyBullets('learning_outcomes', data.learning_outcomes || []);
+    showCard('need-analysis', data.need_analysis || '');
+    showCard('objectives', data.objectives || []);
+    showCard('learning-outcomes', data.learning_outcomes || []);
+    if (typeof window.autosave === 'function') window.autosave();
+  }catch(e){ console.error(e); alert('Generation failed'); }
+  finally{ if(status) status.style.display = 'none'; }
+}
+
+function showCard(field, content){
+  const card = document.querySelector(`#ai-${field}`);
+  if (!card) return;
+
+  const fieldMap = {
+    'need-analysis': 'need-analysis-modern',
+    'objectives': 'objectives-modern',
+    'learning-outcomes': 'outcomes-modern'
+  };
+  const target = document.getElementById(fieldMap[field]);
+
+  if (Array.isArray(content)){
+    if (!content.length){
+      card.innerHTML = '';
+      return;
+    }
+    const listHtml = '<ul>' + content.map(i=>`<li>${i}</li>`).join('') + '</ul>';
+    const text = content.map(i=>`• ${i}`).join('\n');
+    card.innerHTML = `${listHtml}<button type="button" class="apply-ai-suggestion">Apply</button>`;
+    const btn = card.querySelector('button');
+    if (btn && target){
+      btn.addEventListener('click', () => {
+        target.value = text;
+        target.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    }
+  } else {
+    if (!content){
+      card.textContent = '';
+      return;
+    }
+    card.innerHTML = `<p>${content}</p><button type="button" class="apply-ai-suggestion">Apply</button>`;
+    const btn = card.querySelector('button');
+    if (btn && target){
+      btn.addEventListener('click', () => {
+        target.value = content;
+        target.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    }
+  }
+}
+
+// Inject generated text into the real field/editor and trigger autosave
+function applyGeneratedToField(field, text) {
+  const id = `id_${field}`;
+
+  if (window.CKEDITOR && CKEDITOR.instances[id]) {
+    CKEDITOR.instances[id].setData(text);
+    return;
+  }
+  if (window.ClassicEditor && window._editors && window._editors[field]) {
+    window._editors[field].setData(text);
+    return;
+  }
+  if (window.tinymce && tinymce.get(id)) {
+    tinymce.get(id).setContent(text);
+    return;
+  }
+  if (window.Quill && window._quills && window._quills[field]) {
+    const q = window._quills[field];
+    q.setText("");
+    q.clipboard.dangerouslyPasteHTML(0, text);
+    return;
+  }
+  const el = document.getElementById(id);
+  if (el) {
+    el.value = text;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+}
+
+async function onGenerateNeedAnalysis(e) {
+  e?.preventDefault?.();
+  const btn = e?.currentTarget;
+  const original = btn?.innerHTML;
+  if (btn) btn.innerHTML = 'Generating…';
+
+  try {
+    const title = document.querySelector('#id_event_title')?.value
+               || document.querySelector('#id_title')?.value
+               || '';
+
+    const res = await fetch('/suite/generate-need-analysis/', {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [,''])[1],
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({ topic: title })
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+    applyGeneratedToField(data.field || 'need_analysis', data.value || data.text || '');
+    if (typeof window.autosave === 'function') window.autosave();
+  } catch (err) {
+    console.error('Generation failed:', err);
+    alert(`All AI backends failed: ${err.message || err}`);
+  } finally {
+    if (btn) btn.innerHTML = original || 'Generate with AI';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.querySelector('#btn-generate-need-analysis');
+  if (btn && !btn._wired) {
+    btn.addEventListener('click', onGenerateNeedAnalysis);
+    btn._wired = true;
+  }
 });

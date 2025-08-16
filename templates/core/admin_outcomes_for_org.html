@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'core/css/admin_master_data.css' %}">
+<link rel="stylesheet" href="{% static 'core/css/admin_pso_po_management.css' %}">
+
+<div class="main-container">
+  <div class="page-header">
+    <h1 class="page-title">Manage Outcomes for {{ organization.name }}</h1>
+  </div>
+
+  <section id="outcomesPanel" class="outcomes-fullpage">
+    <div class="outcomes-fullpage-header">
+      <div class="header-left">
+        <h2>Manage Outcomes for <span id="modal-org-name">{{ organization.name }}</span></h2>
+        <p class="subtext">Inline editing with instant save. Use the add boxes to create new outcomes.</p>
+      </div>
+      <div class="header-actions">
+        <a class="btn-outline" href="{% url 'admin_pso_po_management' %}">Back to list</a>
+        <label style="margin-left:12px; display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
+          <input type="checkbox" id="showArchivedToggle"> View Archived
+        </label>
+      </div>
+    </div>
+    <div class="outcomes-fullpage-grid">
+      <div class="outcomes-column">
+        <div class="column-card">
+          <div class="column-header"><h3>PROGRAMME OUTCOMES (POs)</h3></div>
+          <div class="column-body">
+            <div class="outcomes-list" id="posList"></div>
+            <div class="add-outcome-inline">
+              <textarea id="newPOInput" rows="3" placeholder="Add new Programme Outcome..." class="outcome-input large"></textarea>
+              <button class="add-outcome-btn" id="addPOBtn"><i class="fas fa-plus"></i> Add PO</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="outcomes-column">
+        <div class="column-card">
+          <div class="column-header"><h3>PROGRAMME SPECIFIC OUTCOMES (PSOs)</h3></div>
+          <div class="column-body">
+            <div class="outcomes-list" id="psosList"></div>
+            <div class="add-outcome-inline">
+              <textarea id="newPSOInput" rows="3" placeholder="Add new Programme Specific Outcome..." class="outcome-input large"></textarea>
+              <button class="add-outcome-btn" id="addPSOBtn"><i class="fas fa-plus"></i> Add PSO</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script src="{% static 'core/js/admin_pso_po_management.js' %}"></script>
+<script>
+  // Seed the panel with the selected org and load
+  document.addEventListener('DOMContentLoaded', function(){
+    const panel = document.getElementById('outcomesPanel');
+    if (panel) {
+      panel.dataset.orgId = '{{ organization.id }}';
+      panel.dataset.orgName = '{{ organization.name|escapejs }}';
+    }
+    if (typeof loadOutcomesForOrganization === 'function' && panel && panel.dataset.orgId) {
+      const id = Number(panel.dataset.orgId);
+      if (id) loadOutcomesForOrganization(id);
+    }
+    const toggle = document.getElementById('showArchivedToggle');
+    if (toggle) {
+      toggle.addEventListener('change', function(){
+        const id = Number(panel?.dataset?.orgId);
+        if (id) loadOutcomesForOrganization(id);
+      });
+    }
+  });
+</script>
+{% endblock %}

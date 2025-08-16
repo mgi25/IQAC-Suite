@@ -31,7 +31,7 @@
     <table class="data-table">
       <thead>
         <tr>
-          <th>#</th>
+          <th>S.on</th>
           <th>Organization</th>
           <th>Type</th>
           <th>Status</th>
@@ -62,16 +62,16 @@
               <td>
                 <div class="outcomes-cell">
                   <div class="outcome-counts">
-                    <span class="po-count" data-org-id="{{ org.id }}">
+                    <a class="po-count" href="{% url 'admin_outcomes_for_org' org.id %}" data-org-id="{{ org.id }}">
                       <span class="count">0</span> POs
-                    </span>
-                    <span class="pso-count" data-org-id="{{ org.id }}">
+                    </a>
+                    <a class="pso-count" href="{% url 'admin_outcomes_for_org' org.id %}" data-org-id="{{ org.id }}">
                       <span class="count">0</span> PSOs
-                    </span>
+                    </a>
                   </div>
-                  <button class="edit-outcomes-btn" data-org-id="{{ org.id }}" data-org-name="{{ org.name }}">
+                  <a class="edit-outcomes-btn" href="{% url 'admin_outcomes_for_org' org.id %}">
                     <i class="fas fa-edit"></i> Edit
-                  </button>
+                  </a>
                 </div>
               </td>
               <td>
@@ -92,99 +92,10 @@
     </table>
   </div>
 
-  <!-- Outcomes Management Modal -->
-  <div id="outcomesModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Manage Outcomes for <span id="modal-org-name"></span></h3>
-        <button class="close">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="outcomes-container">
-          <!-- Programme Outcomes Card -->
-          <div class="outcome-card po-card">
-            <div class="card-header">
-              <h4>PROGRAMME OUTCOMES (POS)</h4>
-            </div>
-            <div class="card-body">
-              <div class="outcomes-list" id="posList">
-                <!-- POs will be loaded here -->
-              </div>
-              <div class="add-outcome-section">
-                <input type="text" id="newPOInput" placeholder="Add new Programme Outcome..." class="outcome-input">
-                <button class="add-outcome-btn" id="addPOBtn">
-                  <i class="fas fa-plus"></i> ADD PO
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Programme Specific Outcomes Card -->
-          <div class="outcome-card pso-card">
-            <div class="card-header">
-              <h4>PROGRAMME SPECIFIC OUTCOMES (PSOS)</h4>
-            </div>
-            <div class="card-body">
-              <div class="outcomes-list" id="psosList">
-                <!-- PSOs will be loaded here -->
-              </div>
-              <div class="add-outcome-section">
-                <input type="text" id="newPSOInput" placeholder="Add new Programme Specific Outcome..." class="outcome-input">
-                <button class="add-outcome-btn" id="addPSOBtn">
-                  <i class="fas fa-plus"></i> ADD PSO
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- Dedicated outcomes page is used; embedded panel removed. -->
 </div>
 
-<!-- Edit Outcome Modal -->
-<div id="editOutcomeModal" class="modal">
-  <div class="modal-content small">
-    <div class="modal-header">
-      <h3>Edit <span id="editOutcomeType"></span></h3>
-      <button class="close">&times;</button>
-    </div>
-    <div class="modal-body">
-      <form id="editOutcomeForm">
-        <div class="form-group">
-          <label for="editOutcomeText">Outcome Description</label>
-          <textarea id="editOutcomeText" rows="4" required placeholder="Enter outcome description..."></textarea>
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn-cancel">Cancel</button>
-          <button type="submit" class="btn-save">Save Changes</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<!-- Add Outcome Modal -->
-<div id="addOutcomeModal" class="modal">
-  <div class="modal-content small">
-    <div class="modal-header">
-      <h3>Add <span id="addOutcomeType"></span></h3>
-      <button class="close">&times;</button>
-    </div>
-    <div class="modal-body">
-      <form id="addOutcomeForm">
-        <div class="form-group">
-          <label for="addOutcomeText">Outcome Description</label>
-          <textarea id="addOutcomeText" rows="4" required placeholder="Enter outcome description..."></textarea>
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn-cancel">Cancel</button>
-          <button type="submit" class="btn-save">Add <span id="addOutcomeButtonText"></span></button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
+<!-- Removed outcome modals; using full-page inline panel -->
 
 <!-- User Assignment Modal -->
 <div id="assignUserModal" class="modal">

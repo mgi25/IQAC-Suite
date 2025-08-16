@@ -175,8 +175,8 @@ body.command-center-layout {
 
 .notification-badge {
   position: absolute;
-  top: 0.25rem;
-  right: 0.25rem;
+  top: -0.4rem;
+  right: -0.4rem;
   background: #ef4444;
   color: var(--white);
   font-size: 0.75rem;
@@ -185,6 +185,141 @@ body.command-center-layout {
   border-radius: 10px;
   min-width: 18px;
   text-align: center;
+}
+
+.notification-section {
+  position: relative;
+}
+
+.notification-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  padding: 0;
+  border-radius: var(--border-radius);
+  width: 32px;
+  height: 32px;
+}
+
+.notification-btn:hover {
+  background: none;
+}
+
+.notification-btn i {
+  font-size: 1.75rem;
+  color: var(--gold-accent);
+}
+
+.notification-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  background: var(--white);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--gray-200);
+  width: 320px;
+  max-height: 500px;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 1000;
+}
+
+.notification-dropdown.active {
+  display: flex;
+}
+
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.notification-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.mark-all-read {
+  background: none;
+  border: none;
+  color: var(--christ-blue);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.notification-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.notification-item {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.notification-item.unread {
+  background: var(--gray-50);
+}
+
+.notification-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--gray-200);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--christ-blue);
+}
+
+.notification-icon i {
+  font-size: 0.875rem;
+}
+
+.notification-content {
+  flex: 1;
+}
+
+.notification-title {
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin-bottom: 0.125rem;
+}
+
+.notification-text {
+  font-size: 0.8125rem;
+  color: var(--gray-600);
+}
+
+.notification-time {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  margin-top: 0.25rem;
+}
+
+.notification-footer {
+  text-align: center;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--gray-200);
+}
+
+.notification-footer .view-all-link {
+  color: var(--christ-blue);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.notification-footer .view-all-link:hover {
+  text-decoration: underline;
 }
 
 .profile-section {
@@ -785,3 +920,4 @@ body.command-center-layout {
   background: #fff4e5;
   color: #b45309;
 }
+.tbd{background:#fff3cd;padding:0 2px;border-radius:3px}

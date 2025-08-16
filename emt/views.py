@@ -7,6 +7,7 @@ import json
 import re
 from urllib.parse import urlparse
 import requests
+from suite.ai_client import chat, AIError
 import time
 from bs4 import BeautifulSoup
 from django.db.models import Q
@@ -14,12 +15,13 @@ from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
     EventExpectedOutcomes, TentativeFlow, EventActivity,
     ExpenseDetail, IncomeDetail, SpeakerProfile, EventReport,
-    EventReportAttachment, CDLSupport, Student
+    EventReportAttachment, CDLSupport, CDLCertificateRecipient, CDLMessage, Student
 )
 from .forms import (
     EventProposalForm, NeedAnalysisForm, ExpectedOutcomesForm,
     ObjectivesForm, TentativeFlowForm, SpeakerProfileForm,
-    ExpenseDetailForm,EventReportForm, EventReportAttachmentForm, CDLSupportForm
+    ExpenseDetailForm,EventReportForm, EventReportAttachmentForm, CDLSupportForm,
+    CertificateRecipientForm, CDLMessageForm
 )
 from django.forms import modelformset_factory
 from core.models import (
@@ -352,7 +354,13 @@ def autosave_proposal(request):
     if request.method != "POST":
         return JsonResponse({"error": "Invalid request"}, status=400)
 
-    data = json.loads(request.body.decode("utf-8"))
+    try:
+        raw = request.body.decode("utf-8")
+        data = json.loads(raw) if raw else {}
+    except json.JSONDecodeError:
+        logger.debug("autosave_proposal invalid json: %s", raw)
+        return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
+
     logger.debug("autosave_proposal payload: %s", data)
 
     # Replace department logic with generic organization
@@ -373,7 +381,7 @@ def autosave_proposal(request):
         
         # Don't autosave if proposal is already submitted
         if proposal and proposal.status != "draft":
-            return JsonResponse({"success": False, "error": "Cannot modify submitted proposal"}, status=400)
+            return JsonResponse({"success": False, "error": "Cannot modify submitted proposal"})
 
     form = EventProposalForm(data, instance=proposal, user=request.user)
     faculty_ids = data.get("faculty_incharges") or []
@@ -388,7 +396,7 @@ def autosave_proposal(request):
 
     if not form.is_valid():
         logger.debug("autosave_proposal form errors: %s", form.errors)
-        return JsonResponse({"success": False, "errors": form.errors}, status=400)
+        return JsonResponse({"success": False, "errors": form.errors})
 
     proposal = form.save(commit=False)
     proposal.submitted_by = request.user
@@ -478,13 +486,10 @@ def autosave_proposal(request):
         rate = data.get(f"income_rate_{in_idx}")
         amount = data.get(f"income_amount_{in_idx}")
         missing = {}
-        if particulars or participants or rate or amount:
+        # Only require particulars and amount; participants and rate are optional
+        if any([particulars, participants, rate, amount]):
             if not particulars:
                 missing["particulars"] = "This field is required."
-            if not participants:
-                missing["participants"] = "This field is required."
-            if not rate:
-                missing["rate"] = "This field is required."
             if not amount:
                 missing["amount"] = "This field is required."
         if missing:
@@ -495,7 +500,7 @@ def autosave_proposal(request):
 
     if errors:
         logger.debug("autosave_proposal dynamic errors: %s", errors)
-        return JsonResponse({"success": False, "errors": errors}, status=400)
+        return JsonResponse({"success": False, "errors": errors})
 
     _save_activities(proposal, data)
     _save_speakers(proposal, data, request.FILES)
@@ -642,6 +647,8 @@ def submit_speaker_profile(request, proposal_id):
 def submit_expense_details(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id,
                                  submitted_by=request.user)
+    # Track wizard state for breadcrumb/progress UI
+    request.session["proposal_step"] = "expense_details"
     ExpenseFS = modelformset_factory(
         ExpenseDetail, form=ExpenseDetailForm, extra=1, can_delete=True
     )
@@ -656,7 +663,9 @@ def submit_expense_details(request, proposal_id):
                 obj.save()
             for obj in formset.deleted_objects:
                 obj.delete()
-
+            # Move wizard to CDL support step and notify user
+            request.session["proposal_step"] = "cdl_support"
+            messages.info(request, "Expense details saved. Proceed to CDL Support.")
             return redirect("emt:submit_cdl_support", proposal_id=proposal.id)
     else:
         formset = ExpenseFS(queryset=ExpenseDetail.objects.filter(
@@ -672,6 +681,8 @@ def submit_expense_details(request, proposal_id):
 @login_required
 def submit_cdl_support(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
+    # Ensure wizard/breadcrumb reflects final step
+    request.session["proposal_step"] = "cdl_support"
     instance = getattr(proposal, "cdl_support", None)
 
     if request.method == "POST":
@@ -679,7 +690,7 @@ def submit_cdl_support(request, proposal_id):
         if form.is_valid():
             support = form.save(commit=False)
             support.proposal = proposal
-            support.support_options = form.cleaned_data.get("support_options", [])
+            support.other_services = form.cleaned_data.get("other_services", [])
             support.save()
 
             proposal.status = "submitted"
@@ -689,14 +700,59 @@ def submit_cdl_support(request, proposal_id):
             build_approval_chain(proposal)
 
             messages.success(request, "Your event proposal has been submitted for approval.")
-            return redirect("dashboard")
+            return redirect("emt:proposal_status_detail", proposal_id=proposal.id)
     else:
         initial = {}
         if instance:
-            initial["support_options"] = instance.support_options
+            initial["other_services"] = instance.other_services
         form = CDLSupportForm(instance=instance, initial=initial)
 
     return render(request, "emt/cdl_support.html", {"form": form, "proposal": proposal})
+
+
+@login_required
+def cdl_post_event(request, proposal_id):
+    proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
+    support = getattr(proposal, "cdl_support", None)
+    if not support:
+        return redirect("emt:proposal_status_detail", proposal_id=proposal_id)
+
+    recipient_form = CertificateRecipientForm()
+    message_form = CDLMessageForm()
+
+    if request.method == "POST":
+        if "add_recipient" in request.POST:
+            recipient_form = CertificateRecipientForm(request.POST)
+            if recipient_form.is_valid():
+                recipient = recipient_form.save(commit=False)
+                recipient.support = support
+                recipient.save()
+                messages.success(request, "Recipient added")
+                return redirect("emt:cdl_post_event", proposal_id=proposal_id)
+        elif "send_message" in request.POST:
+            message_form = CDLMessageForm(request.POST, request.FILES)
+            if message_form.is_valid():
+                msg = message_form.save(commit=False)
+                msg.support = support
+                msg.sender = request.user
+                msg.save()
+                messages.success(request, "Message sent")
+                return redirect("emt:cdl_post_event", proposal_id=proposal_id)
+
+    recipients = support.certificate_recipients.all()
+    messages_qs = support.messages.select_related("sender").all()
+    return render(
+        request,
+        "emt/cdl_post_event.html",
+        {
+            "proposal": proposal,
+            "support": support,
+            "recipient_form": recipient_form,
+            "message_form": message_form,
+            "recipients": recipients,
+            "messages": messages_qs,
+        },
+    )
 
 
 
@@ -1052,102 +1108,6 @@ def autosave_need_analysis(request):
         return JsonResponse({'success': True})
     return JsonResponse({'success': False}, status=400)
 
-# ---------------------------------------------------------------------------
-# AI Need Analysis generation
-# ---------------------------------------------------------------------------
-SYSTEM_PROMPT = "Write a concise, factual Need Analysis (80–140 words)."
-
-
-def _call_openrouter(ctx: str) -> str:
-    model = settings.OPENROUTER_MODEL
-    api_key = settings.OPENROUTER_API_KEY
-    if not api_key or not model:
-        raise RuntimeError("OpenRouter credentials not configured")
-    url = "https://openrouter.ai/api/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": ctx},
-        ],
-        "max_tokens": 220,
-        "temperature": 0.4,
-    }
-    start = time.time()
-    try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=30)
-        resp.raise_for_status()
-        data = resp.json()
-        text = data["choices"][0]["message"]["content"].strip()
-        latency = time.time() - start
-        logger.info(
-            "openrouter model=%s latency=%.2fs input_len=%d output_len=%d",
-            model,
-            latency,
-            len(ctx),
-            len(text),
-        )
-        return text
-    except (requests.RequestException, KeyError, ValueError) as exc:
-        logger.error("OpenRouter request failed: %s", exc)
-        raise RuntimeError("OpenRouter request failed") from exc
-
-
-def _call_local(ctx: str) -> str:
-    base = settings.LOCAL_AI_BASE_URL
-    model = settings.LOCAL_AI_MODEL
-    if not base or not model:
-        raise RuntimeError("Local AI configuration missing")
-    url = base.rstrip("/") + "/v1/chat/completions"
-    headers = {"Content-Type": "application/json"}
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": ctx},
-        ],
-        "max_tokens": 220,
-        "temperature": 0.4,
-    }
-    start = time.time()
-    try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=30)
-        resp.raise_for_status()
-        data = resp.json()
-        text = data["choices"][0]["message"]["content"].strip()
-        latency = time.time() - start
-        logger.info(
-            "local model=%s latency=%.2fs input_len=%d output_len=%d",
-            model,
-            latency,
-            len(ctx),
-            len(text),
-        )
-        return text
-    except (requests.RequestException, KeyError, ValueError) as exc:
-        logger.error("Local AI request failed: %s", exc)
-        raise RuntimeError("Local AI request failed") from exc
-
-
-@login_required
-@require_POST
-def generate_need_analysis(request):
-    ctx = (request.POST.get("context", "") or "")[:3000]
-    if not ctx.strip():
-        return JsonResponse({"ok": False, "error": "No context provided"}, status=400)
-    try:
-        if settings.AI_BACKEND == "LOCAL_HTTP":
-            text = _call_local(ctx)
-        else:
-            text = _call_openrouter(ctx)
-        return JsonResponse({"ok": True, "text": text})
-    except Exception as exc:
-        logger.error("Need analysis generation failed: %s", exc)
-        return JsonResponse({"ok": False, "error": "AI service unavailable"}, status=503)
 @login_required
 def api_organizations(request):
     q = request.GET.get("q", "").strip()
@@ -1811,3 +1771,95 @@ def admin_reports_view(request):
     except Exception as e:
         print(f"Error in admin_reports_view: {e}")
         return HttpResponse(f"An error occurred: {e}", status=500)
+def _basic_info_context(data):
+    parts = []
+    title = (data.get("title") or "").strip()
+    if title:
+        parts.append(f"Event title: {title}")
+    audience = (data.get("audience") or "").strip()
+    if audience:
+        parts.append(f"Target audience: {audience}")
+    focus = (data.get("focus") or "").strip()
+    if focus:
+        parts.append(f"Event focus: {focus}")
+    venue = (data.get("venue") or "").strip()
+    if venue:
+        parts.append(f"Location: {venue}")
+    existing = (data.get("context") or "").strip()
+    if existing:
+        parts.append(f"Existing text:\n{existing}")
+    return "\n".join(parts)[:3000]
+
+
+NEED_PROMPT = "Write a concise, factual Need Analysis (80–140 words) for the event." 
+OBJ_PROMPT = "Provide 3-5 clear objectives for the event as bullet points." 
+OUT_PROMPT = "List 3-5 expected learning outcomes for participants as bullet points." 
+
+
+@login_required
+@require_POST
+def generate_need_analysis(request):
+    ctx = _basic_info_context(request.POST)
+    if not ctx:
+        return JsonResponse({"ok": False, "error": "No context"}, status=400)
+    try:
+        messages = [{"role": "user", "content": f"{NEED_PROMPT}\n\n{ctx}"}]
+        timeout = getattr(settings, "AI_HTTP_TIMEOUT", 60)
+        text = chat(
+            messages,
+            system="You write crisp academic content for university event proposals.",
+            timeout=timeout,
+        )
+        return JsonResponse({"ok": True, "text": text})
+    except AIError as exc:
+        logger.error("Need analysis generation failed: %s", exc)
+        return JsonResponse({"ok": False, "error": str(exc)}, status=503)
+    except Exception as exc:
+        logger.error("Need analysis generation unexpected error: %s", exc)
+        return JsonResponse({"ok": False, "error": f"Unexpected error: {exc}"}, status=500)
+
+
+@login_required
+@require_POST
+def generate_objectives(request):
+    ctx = _basic_info_context(request.POST)
+    if not ctx:
+        return JsonResponse({"ok": False, "error": "No context"}, status=400)
+    try:
+        messages = [{"role": "user", "content": f"{OBJ_PROMPT}\n\n{ctx}"}]
+        timeout = getattr(settings, "AI_HTTP_TIMEOUT", 60)
+        text = chat(
+            messages,
+            system="You write measurable, outcome-focused objectives aligned to higher-education events.",
+            timeout=timeout,
+        )
+        return JsonResponse({"ok": True, "text": text})
+    except AIError as exc:
+        logger.error("Objectives generation failed: %s", exc)
+        return JsonResponse({"ok": False, "error": str(exc)}, status=503)
+    except Exception as exc:
+        logger.error("Objectives generation unexpected error: %s", exc)
+        return JsonResponse({"ok": False, "error": f"Unexpected error: {exc}"}, status=500)
+
+
+@login_required
+@require_POST
+def generate_expected_outcomes(request):
+    ctx = _basic_info_context(request.POST)
+    if not ctx:
+        return JsonResponse({"ok": False, "error": "No context"}, status=400)
+    try:
+        messages = [{"role": "user", "content": f"{OUT_PROMPT}\n\n{ctx}"}]
+        timeout = getattr(settings, "AI_HTTP_TIMEOUT", 60)
+        text = chat(
+            messages,
+            system="You write measurable expected outcomes for higher-education events.",
+            timeout=timeout,
+        )
+        return JsonResponse({"ok": True, "text": text})
+    except AIError as exc:
+        logger.error("Expected outcomes generation failed: %s", exc)
+        return JsonResponse({"ok": False, "error": str(exc)}, status=503)
+    except Exception as exc:
+        logger.error("Expected outcomes generation unexpected error: %s", exc)
+        return JsonResponse({"ok": False, "error": f"Unexpected error: {exc}"}, status=500)

@@ -52,17 +52,21 @@ def entrypoint(request):
 @user_passes_test(lambda u: u.is_superuser)
 def select_role(request, org_id):
     """
-    Page shown after clicking 'Add Users' for a specific organization.
-    Lets admin choose Student or Faculty. Then redirects to the right flow.
+    Unified user management interface with tabbed layout.
+    Replaces the old role selection with a comprehensive management page.
     """
     org = get_object_or_404(Organization, pk=org_id)
+    
+    # Handle direct POST requests from old form submissions for backward compatibility
     if request.method == "POST":
         role = request.POST.get("role")
         if role == "student":
             return redirect("admin_org_users_students", org_id=org.id)
         if role == "faculty":
             return redirect("admin_org_users_faculty", org_id=org.id)
-    return render(request, "core_admin_org_users/select_role.html", {"org": org})
+    
+    # Return the new unified interface
+    return render(request, "core_admin_org_users/user_management.html", {"org": org})
 
 
 @user_passes_test(lambda u: u.is_superuser)
@@ -171,8 +175,11 @@ def upload_csv(request, org_id):
             organization=org,
             academic_year=ay,
             code=class_name,
-            defaults={"name": class_name},
+            defaults={"name": class_name, "is_active": True},
         )
+        if not cls.is_active:
+            cls.is_active = True
+            cls.save(update_fields=["is_active"])
 
     f = request.FILES["csv_file"]
     if not f.name.lower().endswith(".csv"):
@@ -305,6 +312,18 @@ def upload_csv(request, org_id):
                     profile.register_no = reg
                     profile.save(update_fields=["register_no"])
 
+            # Prevent duplicate memberships for the same role across organizations
+            OrganizationMembership.objects.filter(
+                user=user,
+                role=org_role.name,
+                academic_year=ay,
+            ).exclude(organization=org).delete()
+            RoleAssignment.objects.filter(
+                user=user,
+                role__name=org_role.name,
+                academic_year=ay,
+            ).exclude(organization=org).delete()
+
             mem, mem_created = OrganizationMembership.objects.get_or_create(
                 user=user,
                 organization=org,
@@ -325,6 +344,9 @@ def upload_csv(request, org_id):
                     mem.save(update_fields=fields_to_update)
                     memberships_updated += 1
 
+            RoleAssignment.objects.filter(
+                user=user, organization=org
+            ).exclude(role=org_role).delete()
             RoleAssignment.objects.update_or_create(
                 user=user,
                 organization=org,

@@ -47,11 +47,24 @@
           </span>
         {% endif %}
       </div>
+    
       <div class="pkp-body">
         <h1 class="pkp-name">{{ request.user.get_full_name|default:request.user.username }}</h1>
         <h2 class="pkp-sub">{{ request.user.email }}</h2>
+    
+        <!-- 🔽 Added Switch User Dropdown -->
+        <div class="pkp-actions">
+          <label class="switch-label" for="roleSwitch">Switch to:</label>
+          <select id="roleSwitch" class="switch-select">
+            <option value="" selected>Choose CDL view…</option>
+            <option value="{% url 'cdl_head_dashboard' %}">CDL Head Dashboard</option>
+            <option value="{% url 'cdl_work_dashboard' %}">CDL Team Dashboard</option>
+          </select>
+        </div>                      
+        <!-- 🔼 End Switch User -->
       </div>
     </div>
+    
   </section>
 
   <main class="grid-3">
@@ -133,24 +146,16 @@
 
 {% block scripts_extra %}
 <script>
-  // Hard-override any previous export listeners so it always opens the backend page
   document.addEventListener('DOMContentLoaded', function () {
-    const fixExport = () => {
-      const btn = document.getElementById('btnExport');
-      if (!btn) return;
-      const clean = btn.cloneNode(true);            // strips any existing JS listeners that trigger CSV
-      clean.setAttribute('href', "{% url 'data_export_filter' %}");
-      clean.removeAttribute('data-try');
-      btn.replaceWith(clean);
-    };
-    fixExport();
-    window.addEventListener('load', fixExport);
-    setTimeout(fixExport, 0);
-  });
+    // existing export/proposals fixes can stay above…
 
-  // Ensure proposals link uses direct navigation
-  document.getElementById('viewAllProposals')?.addEventListener('click', function(e){
-    // no preventDefault -> normal navigation to /core-admin/event-proposals/
+    const select = document.getElementById('roleSwitch');
+    if (select) {
+      select.addEventListener('change', function () {
+        const target = this.value.trim();
+        if (target) window.location.href = target;
+      });
+    }
   });
 </script>
 {% endblock %}

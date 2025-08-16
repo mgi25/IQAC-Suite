@@ -70,6 +70,15 @@
                     </div>
                 </a>
             </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link disabled" data-section="cdl-support" data-order="7" data-url="{% if proposal.id %}{% url 'emt:submit_cdl_support' proposal.id %}{% endif %}">
+                    <span class="nav-number">7</span>
+                    <div class="nav-content">
+                        <div class="nav-item-title">CDL Support</div>
+                        <div class="nav-item-subtitle">Upload poster, certificates, and related files.</div>
+                    </div>
+                </a>
+            </li>
         </ul>
     </nav>
 
@@ -95,9 +104,9 @@
 
         <form method="post" enctype="multipart/form-data" id="proposal-form" autocomplete="off">
             {% csrf_token %}
-            <textarea name="need_analysis" hidden>{{ need_analysis.content|default_if_none:'' }}</textarea>
-            <textarea name="objectives" hidden>{{ objectives.content|default_if_none:'' }}</textarea>
-            <textarea name="outcomes" hidden>{{ outcomes.content|default_if_none:'' }}</textarea>
+            <textarea id="id_need_analysis" name="need_analysis" hidden>{{ need_analysis.content|default_if_none:'' }}</textarea>
+            <textarea id="id_objectives" name="objectives" hidden>{{ objectives.content|default_if_none:'' }}</textarea>
+            <textarea id="id_learning_outcomes" name="outcomes" hidden>{{ outcomes.content|default_if_none:'' }}</textarea>
             <textarea name="flow" hidden>{{ flow.content|default_if_none:'' }}</textarea>
 
             <div class="form-panel" id="form-panel">
@@ -212,7 +221,7 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="num-activities-modern">Number of Activities</label>
-                                <input type="number" id="num-activities-modern" min="1" max="50" placeholder="Enter number of activities">
+                                <input type="number" id="num-activities-modern" name="num_activities" min="1" max="50" placeholder="Enter number of activities">
                                 <div class="help-text">How many activities will your event include?</div>
                             </div>
                             <div class="input-group">
@@ -374,6 +383,9 @@
         window.EXISTING_SPEAKERS = {{ speakers_json|safe }};
         window.EXISTING_EXPENSES = {{ expenses_json|safe }};
         window.EXISTING_INCOME = {{ income_json|default:'[]'|safe }};
+        window.AI_NEED_URL = "{% url 'emt:generate_need_analysis' %}";
+        window.AI_OBJECTIVES_URL = "{% url 'emt:generate_objectives' %}";
+        window.AI_OUTCOMES_URL = "{% url 'emt:generate_expected_outcomes' %}";
     </script>
     <script src="{% static 'emt/js/autosave_draft.js' %}"></script>
     <script src="{% static 'emt/js/proposal_dashboard.js' %}"></script>

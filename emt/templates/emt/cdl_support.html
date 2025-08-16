@@ -12,30 +12,72 @@
   <div class="header">
     <h1>CDL Support for "{{ proposal.event_title }}"</h1>
     <p>Request assistance from the Content Development Lab</p>
+    <p class="workflow-hint">This is the final step after entering income details.</p>
   </div>
 
+  <nav class="wizard-progress">
+    <span>Step 8 of 8</span>
+  </nav>
+
   <div class="page-content">
-    <form method="post">
+    <form method="post" id="cdl-form">
       {% csrf_token %}
       <div class="section">
         <div class="input-group">
           {{ form.needs_support.label_tag }} {{ form.needs_support }}
         </div>
-        <div class="input-group">
-          {{ form.blog_content.label_tag }}
-          {{ form.blog_content }}
-          <small class="help-text">Provide up to 150 words.</small>
-        </div>
-        <div class="input-group">
-          {{ form.poster_link.label_tag }} {{ form.poster_link }}
-        </div>
-        <div class="input-group">
-          {{ form.support_options.label_tag }}
-          {{ form.support_options }}
+
+        <div id="cdl-sections" style="display:none;">
+          <details>
+            <summary>Poster Support</summary>
+            <div class="input-group">
+              {{ form.poster_required.label_tag }} {{ form.poster_required }}
+            </div>
+            <div id="poster-details" style="display:none;">
+              <div class="input-group">{{ form.poster_choice.label_tag }} {{ form.poster_choice }}</div>
+              <div class="input-group">{{ form.organization_name.label_tag }} {{ form.organization_name }}</div>
+              <div class="input-group">{{ form.poster_time.label_tag }} {{ form.poster_time }}</div>
+              <div class="input-group">{{ form.poster_date.label_tag }} {{ form.poster_date }}</div>
+              <div class="input-group">{{ form.poster_venue.label_tag }} {{ form.poster_venue }}</div>
+              <div class="input-group">{{ form.resource_person_name.label_tag }} {{ form.resource_person_name }}</div>
+              <div class="input-group">{{ form.resource_person_designation.label_tag }} {{ form.resource_person_designation }}</div>
+              <div class="input-group">{{ form.poster_event_title.label_tag }} {{ form.poster_event_title }}</div>
+              <div class="input-group">{{ form.poster_summary.label_tag }} {{ form.poster_summary }}</div>
+              <div class="input-group">{{ form.poster_design_link.label_tag }} {{ form.poster_design_link }}</div>
+              <p class="help-text">If requesting both poster and certificate, provide a single design file with poster on page 1 and certificate on page 2.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Other CDL Services</summary>
+            <div class="input-group">{{ form.other_services.label_tag }} {{ form.other_services }}</div>
+          </details>
+
+          <details>
+            <summary>Certificates</summary>
+            <div class="input-group">{{ form.certificates_required.label_tag }} {{ form.certificates_required }}</div>
+            <div id="certificates-details" style="display:none;">
+              <div class="input-group">{{ form.certificate_help.label_tag }} {{ form.certificate_help }}</div>
+              <div id="certificate-help-details" style="display:none;">
+                <div class="input-group">{{ form.certificate_choice.label_tag }} {{ form.certificate_choice }}</div>
+                <div class="input-group">{{ form.certificate_design_link.label_tag }} {{ form.certificate_design_link }}</div>
+                <p class="help-text">Use the same design file as poster if both are requested (page 2 for certificate).</p>
+              </div>
+            </div>
+          </details>
+
+          <details>
+            <summary>Blog Content</summary>
+            <div class="input-group">
+              {{ form.blog_content.label_tag }}
+              {{ form.blog_content }}
+              <small class="help-text">Provide up to 150 words.</small>
+            </div>
+          </details>
         </div>
       </div>
       <div class="input-group">
-        <button type="submit" class="btn">Submit</button>
+        <button type="submit" class="btn btn-submit" id="submit-proposal-btn">Submit Proposal</button>
       </div>
     </form>
   </div>
@@ -47,6 +89,37 @@
     window.PROPOSAL_ID = "{{ proposal.id|default:'' }}";
     window.AUTOSAVE_URL = "{% url 'emt:autosave_proposal' %}";
     window.AUTOSAVE_CSRF = "{{ csrf_token }}";
+
+    const needsSupport = document.getElementById('id_needs_support');
+    const cdlSections = document.getElementById('cdl-sections');
+    const posterRequired = document.getElementById('id_poster_required');
+    const posterDetails = document.getElementById('poster-details');
+    const certificatesRequired = document.getElementById('id_certificates_required');
+    const certificatesDetails = document.getElementById('certificates-details');
+    const certificateHelp = document.getElementById('id_certificate_help');
+    const certificateHelpDetails = document.getElementById('certificate-help-details');
+
+    function toggle(el, show) { el.style.display = show ? '' : 'none'; }
+
+    needsSupport.addEventListener('change', () => {
+      toggle(cdlSections, needsSupport.checked);
+    });
+    toggle(cdlSections, needsSupport.checked);
+
+    posterRequired.addEventListener('change', () => {
+      toggle(posterDetails, posterRequired.checked);
+    });
+    toggle(posterDetails, posterRequired.checked);
+
+    certificatesRequired.addEventListener('change', () => {
+      toggle(certificatesDetails, certificatesRequired.checked);
+    });
+    toggle(certificatesDetails, certificatesRequired.checked);
+
+    certificateHelp.addEventListener('change', () => {
+      toggle(certificateHelpDetails, certificateHelp.checked);
+    });
+    toggle(certificateHelpDetails, certificateHelp.checked);
   </script>
   <script src="{% static 'emt/js/autosave_draft.js' %}"></script>
 {% endblock %}

@@ -1,28 +1,51 @@
-from pathlib import Path
-import os
 import logging
-from dotenv import load_dotenv
 import dj_database_url
 
-load_dotenv()
-BASE_DIR = Path(__file__).resolve().parent.parent
+# ---- .env loader (django-environ if available, else os.getenv) ----
+import os
+from pathlib import Path
 
-# ---------------------------------------------------------------------------
-# AI backend configuration
-# ---------------------------------------------------------------------------
-AI_BACKEND = os.getenv("AI_BACKEND", "OPENROUTER").upper()
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL")
-LOCAL_AI_BASE_URL = os.getenv("LOCAL_AI_BASE_URL")
-LOCAL_AI_MODEL = os.getenv("LOCAL_AI_MODEL")
+BASE_DIR = Path(__file__).resolve().parent.parent  # ensure BASE_DIR is defined
 
-_logger = logging.getLogger(__name__)
-if AI_BACKEND == "OPENROUTER":
-    if not OPENROUTER_API_KEY or not OPENROUTER_MODEL:
-        _logger.warning("OpenRouter backend selected but OPENROUTER_API_KEY or OPENROUTER_MODEL is missing")
-elif AI_BACKEND == "LOCAL_HTTP":
-    if not LOCAL_AI_BASE_URL or not LOCAL_AI_MODEL:
-        _logger.warning("LOCAL_HTTP backend selected but LOCAL_AI_BASE_URL or LOCAL_AI_MODEL is missing")
+try:
+    import environ
+    env = environ.Env()
+    environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
+except Exception:
+    env = None
+
+def _env(key: str, default=None, cast=None):
+    """Unified env reader: prefer django-environ, fallback to os.getenv, then default."""
+    if env:
+        try:
+            return env(key) if cast is None else cast(env(key))
+        except Exception:
+            pass
+    val = os.getenv(key, default)
+    if cast and isinstance(val, str):
+        try:
+            return cast(val)
+        except Exception:
+            return default
+    return val
+
+# ---- AI config with safe defaults ----
+AI_BACKEND       = _env("AI_BACKEND", default="OLLAMA")  # OLLAMA | OPENROUTER
+OLLAMA_BASE      = _env("OLLAMA_BASE", default="http://127.0.0.1:11434")
+OLLAMA_MODEL     = _env("OLLAMA_MODEL", default="llama3")  # guarantees a default
+AI_HTTP_TIMEOUT  = _env("AI_HTTP_TIMEOUT", default="120")
+try:
+    AI_HTTP_TIMEOUT = int(AI_HTTP_TIMEOUT)
+except Exception:
+    AI_HTTP_TIMEOUT = 120
+
+# Optional: generator/critic models if used elsewhere in code
+OLLAMA_GEN_MODEL    = _env("OLLAMA_GEN_MODEL", default=OLLAMA_MODEL)
+OLLAMA_CRITIC_MODEL = _env("OLLAMA_CRITIC_MODEL", default=OLLAMA_MODEL)
+
+# Optional cloud fallback (only used if key provided or AI_BACKEND='OPENROUTER')
+OPENROUTER_API_KEY = _env("OPENROUTER_API_KEY", default="")
+OPENROUTER_MODEL   = _env("OPENROUTER_MODEL", default="qwen/qwen3.5:free")
 
 # SECRET_KEY loaded from environment with a development fallback
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-…')
@@ -65,6 +88,7 @@ INSTALLED_APPS = [
     'transcript',
 ]
 
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 # ──────────────────────────────────────────────────────────────────────────────
 # MIDDLEWARE
 # ──────────────────────────────────────────────────────────────────────────────
@@ -76,6 +100,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'core.middleware.ImpersonationMiddleware',
     'allauth.account.middleware.AccountMiddleware',  # ← allauth middleware
+    'core.middleware.ActivityLogMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -114,11 +139,16 @@ WSGI_APPLICATION = 'iqac_project.wsgi.application'
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default=os.getenv('DATABASE_URL', 'sqlite:///db.sqlite3')
-    )
-}
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+if DATABASE_URL:
+    DATABASES = {"default": dj_database_url.config(default=DATABASE_URL, conn_max_age=600)}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -130,7 +160,7 @@ AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
-SITE_ID = 1 # Must match ID in django_site table
+SITE_ID = int(os.getenv("SITE_ID", "2"))
 
 
 LOGIN_URL = '/accounts/login/'

@@ -14,6 +14,11 @@ urlpatterns = [
     path('register/', views.registration_form, name='registration_form'),
 
     # ────────────────────────────────────────────────
+    # Profile Management
+    # ────────────────────────────────────────────────
+    path('my-profile/', views.my_profile, name='my_profile'),
+
+    # ────────────────────────────────────────────────
     # General Dashboard and Proposal Views
     # ────────────────────────────────────────────────
     path('', views.dashboard, name='dashboard'),
@@ -56,6 +61,7 @@ urlpatterns = [
     path('core-admin/user-roles/role/<int:role_id>/update/', views.update_org_role, name='update_org_role'),
     path('core-admin/user-roles/role/<int:role_id>/toggle/', views.toggle_org_role, name='toggle_org_role'),
     path('core-admin/user-roles/role/<int:role_id>/delete/', views.delete_org_role, name='delete_org_role'),
+    path('core-admin/user-roles/role/<int:role_id>/restore/', views.restore_org_role, name='restore_org_role'),
 
     # ────────────────────────────────────────────────
     # Admin - Event Proposals
@@ -111,6 +117,8 @@ urlpatterns = [
     # ────────────────────────────────────────────────
     #path('core-admin/outcomes/', views.admin_outcome_dashboard, name='admin_outcome_dashboard'),
     path('core-admin/pso-po/', views.admin_pso_po_management, name='admin_pso_po_management'),
+    # Dedicated page to manage outcomes for a single organization
+    path('core-admin/pso-po/org/<int:org_id>/', views.admin_outcomes_for_org, name='admin_outcomes_for_org'),
     #path('core-admin/sdg-goals/', views.admin_sdg_management, name='admin_sdg_management'),
     path('core-admin/pso-po/data/<str:org_type>/<int:org_id>/', views.get_pso_po_data, name='get_pso_po_data'),
     path('core-admin/pso-po/add/<str:outcome_type>/', views.add_outcome, name='add_outcome'),
@@ -272,5 +280,28 @@ urlpatterns = [
     path('settings/pso-po-management/', views.settings_pso_po_management,name='settings_pso_po_management'),
 
      path('dashboard/', views.dashboard, name='dashboard'),
-     path('dashboard/', views.dashboard, name='dashboard_alt')
+
+     # CDL Work dashboard (you already have these two)
+    path("cdl/head/", views.cdl_head_dashboard, name="cdl_head_dashboard"),
+    path("cdl/member/", views.cdl_member_dashboard, name="cdl_member_dashboard"),
+
+    # NEW: make the template links resolve
+    path("cdl/availability/new/", views.cdl_create_availability, name="create_availability"),
+    path("cdl/resources/brand-kit/", views.cdl_brand_kit, name="brand_kit"),
+    path("cdl/resources/templates/posters/", views.cdl_templates_posters, name="templates_posters"),
+    path("cdl/resources/templates/certificates/", views.cdl_templates_certificates, name="templates_certificates"),
+    path("cdl/resources/media-guide/", views.cdl_media_guide, name="media_guide"),
+    path("proposal/<int:proposal_id>/cdl/", views.submit_proposal_cdl, name="submit_proposal_cdl"),
+    path(
+        "proposal/<int:proposal_id>/cdl/certificates/",
+        views.post_event_certificates_tab,
+        name="post_event_certificates",
+    ),
+    path(
+        "proposal/<int:proposal_id>/cdl/thread/",
+        views.cdl_thread,
+        name="cdl_thread",
+    ),
+
+
 ]

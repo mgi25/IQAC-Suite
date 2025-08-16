@@ -1,8 +1,25 @@
 {# Placeholder stub: renders only if your backend sets a session flag #}
 {% if is_impersonating and impersonated_user %}
-<div class="impersonation-banner"
-     style="background:#fff7ed;border:1px solid #fdba74;color:#9a3412;padding:8px 12px;border-radius:8px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
-  <span>Impersonating {{ impersonated_user.get_full_name|default:impersonated_user.username }}</span>
-  <a href="{% url 'stop_impersonation' %}" style="font-weight:600;color:#7c2d12;text-decoration:underline">Stop</a>
+<div class="impersonation-banner" style="background:#fff; border:1px solid #fde68a; color:#7c2d12; padding:6px 10px; border-radius:8px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 4px rgba(0,0,0,.05)">
+  <span class="impersonation-label">Impersonating {{ impersonated_user.get_full_name|default:impersonated_user.username }}</span>
+  <a href="{% url 'stop_impersonation' %}" class="impersonation-stop" style="font-weight:700; color:#ffffff; text-decoration:none; border:1px solid #dc2626; padding:4px 10px; border-radius:6px; background:#dc2626; box-shadow:0 1px 2px rgba(0,0,0,.1)">Stop</a>
 </div>
+<script>
+  // Ensure Stop button remains visible when sidebar is collapsed: hide label on narrow widths
+  (function(){
+  function adjustImpersonationLabel(){
+      const label = document.querySelector('.impersonation-label');
+      const sideCollapsed = document.body.classList.contains('sidebar-collapsed');
+      if (!label) return;
+      label.style.display = sideCollapsed ? 'none' : '';
+    }
+    document.addEventListener('DOMContentLoaded', adjustImpersonationLabel);
+    document.addEventListener('click', function(e){
+      if (e.target && e.target.id === 'sidebarToggle') {
+        setTimeout(adjustImpersonationLabel, 50);
+      }
+    });
+    window.addEventListener('resize', adjustImpersonationLabel);
+  })();
+  </script>
 {% endif %}

@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}CDL — Member Dashboard{% endblock %}
+
+{% block head_extra %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<!-- EXACTLY the same CSS as the head dashboard -->
+<link rel="stylesheet" href="{% static 'core/css/cdl_work_dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'core/css/cdl_head_dashboard.css' %}">
+
+{# Intentionally keep member CSS empty (see step 2). Cache-bust anyway #}
+{% now "U" as ts %}
+<link rel="stylesheet" href="{% static 'core/css/cdl_work_dashboard.css' %}?v={{ ts }}">
+{% endblock %}
+
+{% block content %}
+<div id="cdl-member" class="ems-dashboard">
+  <!-- Topbar (same markup) -->
+  <header class="topbar">
+    <div>
+      <h1>CDL — Member Dashboard</h1>
+      <span class="topbar-date">{% now "F j, Y · l" %}</span>
+    </div>
+    <div class="header-actions">
+      <a class="chip-btn" href="{% url 'create_availability' %}">
+        <i class="fa-regular fa-calendar-plus"></i> Add Availability
+      </a>
+    </div>
+  </header>
+
+  <!-- Row 1 (same shells: kpi-row + profile-kpi) -->
+  <section class="kpi-row">
+    <button class="kpi-card" id="kpiAssignedBtn">
+      <div class="kpi-icon bg-indigo"><i class="fa-solid fa-inbox"></i></div>
+      <div class="kpi-content">
+        <span class="kpi-title">Assigned to Me</span>
+        <span class="kpi-value" id="valAssigned">0</span>
+        <span class="kpi-bar" style="--pct:60%"></span>
+      </div>
+    </button>
+
+    <button class="kpi-card" id="kpiDueTodayBtn">
+      <div class="kpi-icon bg-sky"><i class="fa-regular fa-bell"></i></div>
+      <div class="kpi-content">
+        <span class="kpi-title">Due Today</span>
+        <span class="kpi-value" id="valDueToday">0</span>
+        <span class="kpi-bar" style="--pct:45%"></span>
+      </div>
+    </button>
+
+    <button class="kpi-card" id="kpiWaitingBtn">
+      <div class="kpi-icon bg-orange"><i class="fa-solid fa-hourglass-half"></i></div>
+      <div class="kpi-content">
+        <span class="kpi-title">Waiting on Reviewer</span>
+        <span class="kpi-value" id="valWaiting">0</span>
+        <span class="kpi-bar" style="--pct:35%"></span>
+      </div>
+    </button>
+
+    <button class="kpi-card" id="kpiReworkBtn">
+      <div class="kpi-icon bg-emerald"><i class="fa-solid fa-rotate-left"></i></div>
+      <div class="kpi-content">
+        <span class="kpi-title">Rework Required</span>
+        <span class="kpi-value" id="valRework">0</span>
+        <span class="kpi-bar" style="--pct:70%"></span>
+      </div>
+    </button>
+
+    <div class="profile-kpi">
+      <div class="pkp-avatar">
+        {% if user.profile and user.profile.photo %}
+          <img src="{{ user.profile.photo.url }}" alt="{{ user.get_full_name|default:user.username }}">
+        {% else %}
+          <span class="pkp-initials">
+            {% if user.first_name %}{{ user.first_name.0|upper }}{% if user.last_name %}{{ user.last_name.0|upper }}{% endif %}{% else %}{{ user.username.0|upper }}{% endif %}
+          </span>
+        {% endif %}
+      </div>
+      <div class="pkp-body">
+        <h1 class="pkp-name">{{ user.get_full_name|default:"Admin" }}</h1>
+        <p class="pkp-sub">{{ user.email|default:"admin@gmail.com" }}</p>
+        <div class="pkp-meta">
+          <span>Role: <strong>CDL Member</strong></span>
+          <span>Dept: <strong>Centre for Digital Learning</strong></span>
+        </div>
+        <div class="pkp-meta">
+          <span>On-time (30d): <strong id="pfOntime">—</strong></span>
+          <span>First-pass (30d): <strong id="pfFirstpass">—</strong></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Row 2 (same grid & card shells) -->
+  <main class="grid-3 grid-assign">
+    <section class="card eq" id="cardInbox">
+      <div class="card-header">
+        <h3><i class="fa-regular fa-bell"></i> My Inbox</h3>
+        <div class="header-actions">
+          <div class="seg">
+            <button class="seg-btn active" data-nf="all">All</button>
+            <button class="seg-btn" data-nf="poster">Posters</button>
+            <button class="seg-btn" data-nf="certificate">Certificates</button>
+            <button class="seg-btn" data-nf="coverage">Coverage</button>
+            <button class="seg-btn" data-nf="media">Media</button>
+          </div>
+        </div>
+      </div>
+      <div class="list" id="inboxList"></div>
+      <div class="empty muted" id="inboxEmpty" style="display:none;padding:12px;">No items</div>
+    </section>
+
+    <section class="card eq" id="cardProgress">
+      <div class="card-header">
+        <h3><i class="fa-solid fa-chart-line"></i> My Progress</h3>
+        <div class="header-actions">
+          <div class="seg">
+            <button class="seg-btn active" data-view="workload">This Week</button>
+            <button class="seg-btn" data-view="ontime">On-time %</button>
+            <button class="seg-btn" data-view="firstpass">First-pass %</button>
+          </div>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="memberChart" height="150"></canvas>
+      </div>
+    </section>
+
+    <section class="card eq" id="cardCalendar">
+      <div class="card-header">
+        <h3><i class="fa-regular fa-calendar"></i> My Calendar</h3>
+        <div class="header-actions">
+          <a href="{% url 'create_availability' %}" class="chip-btn"><i class="fa-solid fa-plus"></i> Add</a>
+        </div>
+      </div>
+
+      <div class="mini-cal" id="miniCalendar">
+        <div class="cal-head">
+          <button class="cal-nav" id="calPrev" aria-label="Prev"><i class="fa-solid fa-chevron-left"></i></button>
+          <div id="calTitle">Month YYYY</div>
+          <button class="cal-nav" id="calNext" aria-label="Next"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+        <div class="cal-weekdays"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+      <div class="cal-legend">
+        <span class="dot blue"></span> Coverage
+        <span class="dot green"></span> Task/Approval
+      </div>
+      <div id="upcomingWrap" class="upcoming"></div>
+    </section>
+  </main>
+
+  <!-- Row 3 (same table markup) -->
+  <section class="card" id="cardWorkboard">
+    <div class="card-header">
+      <h3><i class="fa-solid fa-table-list"></i> My Workboard</h3>
+      <div class="header-actions">
+        <div class="seg">
+          <select id="wbStatus" class="select">
+            <option value="">All statuses</option>
+            <option value="in_progress">In Progress</option>
+            <option value="waiting">Waiting on Reviewer</option>
+            <option value="returned">Returned</option>
+            <option value="pending">Pending</option>
+          </select>
+          <select id="wbDue" class="select">
+            <option value="">Any due</option>
+            <option value="today">Due today</option>
+            <option value="week">Due this week</option>
+            <option value="overdue">Overdue</option>
+          </select>
+          <input type="search" id="wbSearch" class="input" placeholder="Search event, type, status…">
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table compact">
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="wbAll"></th>
+            <th>Event</th>
+            <th>Type</th>
+            <th>Priority</th>
+            <th>Due</th>
+            <th>Status</th>
+            <th>Rev</th>
+            <th class="ta-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="workTable"></tbody>
+      </table>
+    </div>
+
+    <div class="table-actions">
+      <button class="btn xs" id="bulkUpload"><i class="fa-solid fa-upload"></i> Bulk Upload</button>
+      <button class="btn xs success" id="bulkSubmit"><i class="fa-solid fa-paper-plane"></i> Bulk Submit</button>
+      <button class="btn xs warn" id="bulkHelp"><i class="fa-regular fa-circle-question"></i> Bulk Help</button>
+    </div>
+  </section>
+
+  {{ member_inbox|default:"[]"|json_script:"memberInboxJson" }}
+  {{ member_work|default:"[]"|json_script:"memberWorkJson" }}
+  {{ member_events|default:"[]"|json_script:"memberEventsJson" }}
+  {{ member_stats_30d|default:"{}"|json_script:"memberStatsJson" }}
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+{% now "U" as ts %}
+<script src="{% static 'core/js/cdl_work_dashboard.js' %}?v={{ ts }}"></script>
+{% endblock %}

@@ -21,16 +21,24 @@
 
   <!-- TOP ROW -->
   <section class="kpi-row">
-    <button class="kpi-card" id="kpiEvents">
-      <div class="kpi-icon bg-indigo"><i class="fa-solid fa-people-group"></i></div>
+    <button class="kpi-card" id="kpiOrganizations">
+      <div class="kpi-icon bg-indigo"><i class="fa-solid fa-building-columns"></i></div>
       <div class="kpi-content">
-        <span class="kpi-title">Events Participated</span>
-        <span class="kpi-value">{{ participated_events_count|default:0 }}</span>
+        <span class="kpi-title">No. of Organizations</span>
+        <span class="kpi-value">{{ org_count|default:0 }}</span>
+      </div>
+    </button>
+
+    <button class="kpi-card" id="kpiUpcoming">
+      <div class="kpi-icon bg-sky"><i class="fa-regular fa-calendar"></i></div>
+      <div class="kpi-content">
+        <span class="kpi-title">Upcoming Events</span>
+        <span class="kpi-value">{{ upcoming_events_count|default:0 }}</span>
       </div>
     </button>
 
     <button class="kpi-card" id="kpiAchievements">
-      <div class="kpi-icon bg-sky"><i class="fa-solid fa-trophy"></i></div>
+      <div class="kpi-icon bg-orange"><i class="fa-solid fa-trophy"></i></div>
       <div class="kpi-content">
         <span class="kpi-title">Achievements</span>
         <span class="kpi-value">{{ achievements_count|default:0 }}</span>
@@ -38,18 +46,10 @@
     </button>
 
     <button class="kpi-card" id="kpiClubs">
-      <div class="kpi-icon bg-orange"><i class="fa-solid fa-users-rays"></i></div>
+      <div class="kpi-icon bg-emerald"><i class="fa-solid fa-users-rays"></i></div>
       <div class="kpi-content">
         <span class="kpi-title">Clubs Joined</span>
         <span class="kpi-value">{{ clubs_count|default:0 }}</span>
-      </div>
-    </button>
-
-    <button class="kpi-card" id="kpiActivityScore">
-      <div class="kpi-icon bg-emerald"><i class="fa-solid fa-bolt"></i></div>
-      <div class="kpi-content">
-        <span class="kpi-title">Activity Score</span>
-        <span class="kpi-value">{{ activity_score|default:0 }}%</span>
       </div>
     </button>
 
@@ -121,11 +121,7 @@
       <div class="card-header">
         <h3><i class="fa-regular fa-calendar"></i> Calendar</h3>
         <div class="header-actions">
-          <select id="visibilitySelect" class="select">
-            <option value="all">All</option>
-            <option value="private">Private</option>
-          </select>
-          <a href="#" class="chip-btn" id="addEventBtn"><i class="fa-solid fa-plus"></i> + New Event</a>
+          <a href="#" class="chip-btn" id="addEventBtn"><i class="fa-solid fa-plus"></i> New Event</a>
         </div>
       </div>
       <div class="mini-cal" id="miniCalendar">
@@ -139,7 +135,7 @@
         </div>
         <div class="cal-grid" id="calGrid"></div>
       </div>
-      <div id="upcomingWrap" class="upcoming"></div>
+  <!-- Removed extra sections under calendar for a cleaner UI -->
     </section>
 
     <!-- Heatmap -->
