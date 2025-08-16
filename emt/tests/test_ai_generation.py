@@ -1,6 +1,6 @@
 import json
 from unittest.mock import patch
-from django.test import TestCase
+from django.test import TestCase, RequestFactory
 from django.urls import reverse
 from django.contrib.auth.models import User
 from suite import ai_client
@@ -11,6 +11,7 @@ class AIGenerationTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('u', 'u@example.com', 'p')
         self.client.force_login(self.user)
+        self.factory = RequestFactory()
 
     @patch('suite.views.chat')
     def test_generate_need_analysis(self, mock_chat):
@@ -220,3 +221,14 @@ class AIGenerationTests(TestCase):
     def test_why_event_get_not_allowed(self):
         resp = self.client.get(reverse('emt:generate_why_event'))
         self.assertEqual(resp.status_code, 405)
+
+    def test_collect_basic_facts_filters_fields(self):
+        from suite.facts import collect_basic_facts
+        req = self.factory.post('/', {
+            'event_title': 'T',
+            'target_audience': 'Students',
+            'location': 'Hall',
+            'department': 'Science',
+        })
+        facts = collect_basic_facts(req, ['event_title', 'location'])
+        self.assertEqual(facts, {'event_title': 'T', 'location': 'Hall'})

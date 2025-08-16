@@ -1,0 +1,10 @@
+{
+  "fields": [
+    "event_title",
+    "target_audience",
+    "event_focus_type",
+    "location",
+    "start_date",
+    "end_date"
+  ]
+}

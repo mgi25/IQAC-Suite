@@ -1316,6 +1316,62 @@ def admin_settings_dashboard(request):
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
+def admin_sidebar_permissions(request):
+    """Allow admin to configure sidebar items per user or role."""
+    from django.contrib.auth.models import User
+
+    roles = ["admin", "faculty", "student"]
+    users = User.objects.all().order_by("username")
+
+    nav_items = [
+        ("dashboard", "Dashboard"),
+        ("events", "Event Management Suite"),
+        ("transcript", "Graduate Transcript"),
+        ("cdl", "CDL"),
+        ("pso_psos", "POs & PSOs Management"),
+        ("user_management", "User Management"),
+        ("event_proposals", "Event Proposals"),
+        ("reports", "Reports"),
+        ("settings", "Settings"),
+    ]
+
+    selected_user = request.GET.get("user")
+    selected_role = request.GET.get("role")
+    permission = None
+    from .models import SidebarPermission
+    if selected_user:
+        permission = SidebarPermission.objects.filter(user_id=selected_user).first()
+    elif selected_role:
+        permission = SidebarPermission.objects.filter(role=selected_role).first()
+
+    if request.method == "POST":
+        target_user = request.POST.get("user") or None
+        target_role = request.POST.get("role") or ""
+        items = request.POST.getlist("items")
+
+        permission, _ = SidebarPermission.objects.get_or_create(
+            user_id=target_user if target_user else None,
+            role=target_role,
+        )
+        permission.items = items
+        permission.save()
+        messages.success(request, "Sidebar permissions updated")
+        logger.info("Sidebar permissions updated for user=%s role=%s", target_user, target_role)
+        return redirect("admin_sidebar_permissions")
+
+    context = {
+        "roles": roles,
+        "users": users,
+        "nav_items": nav_items,
+        "permission": permission,
+        "selected_user": selected_user,
+        "selected_role": selected_role,
+    }
+    return render(request, "core/admin_sidebar_permissions.html", context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
 def admin_academic_year_settings(request):
     """Add and manage academic years.
 
@@ -4727,6 +4783,12 @@ def cdl_member_dashboard(request):
         "member_stats_30d": {"ontime": None, "firstpass": None, "availability": None},
     }
     return render(request, "cdl/cdl_member_dashboard.html", ctx)
+
+@login_required
+def cdl_work_dashboard(request):
+    if not (request.user.is_superuser or request.user.groups.filter(name="CDL_MEMBER").exists()):
+        return HttpResponseForbidden()
+    return render(request, "core/cdl_work_dashboard.html")
 
 def cdl_create_availability(request):
     return HttpResponse("Create Availability (stub)")

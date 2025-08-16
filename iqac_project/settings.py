@@ -123,6 +123,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.notifications',
                 'core.context_processors.active_academic_year',
+                'core.context_processors.sidebar_permissions',
             ],
             'libraries': {
                 'dict_filters': 'core.templatetags.dict_filters',

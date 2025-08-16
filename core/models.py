@@ -713,3 +713,16 @@ class CertificateEntry(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.role})"  # pragma: no cover
+
+class SidebarPermission(models.Model):
+    """Stores allowed sidebar navigation items for a user or role."""
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE)
+    role = models.CharField(max_length=50, blank=True)
+    items = models.JSONField(default=list, blank=True)
+
+    class Meta:
+        unique_together = ("user", "role")
+
+    def __str__(self):
+        target = self.user.username if self.user else self.role or "(unspecified)"
+        return f"Sidebar permissions for {target}"

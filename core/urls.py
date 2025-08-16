@@ -91,6 +91,7 @@ urlpatterns = [
     path('core-admin/master-data/', views.admin_master_data, name='admin_master_data'),
     path('core-admin/master-data-dashboard/', views.master_data_dashboard, name='master_data_dashboard'),
     path('core-admin/settings/', views.admin_settings_dashboard, name='admin_settings'),
+    path('core-admin/sidebar-permissions/', views.admin_sidebar_permissions, name='admin_sidebar_permissions'),
     path('core-admin/settings/<str:model_name>/add/', views.admin_master_data_add, name='admin_settings_add'),
     path('core-admin/settings/<str:model_name>/<int:pk>/edit/', views.admin_master_data_edit, name='admin_settings_edit'),
     path('core-admin/settings/<str:model_name>/<int:pk>/delete/', views.admin_master_data_delete, name='admin_settings_delete'),
@@ -284,6 +285,7 @@ urlpatterns = [
      # CDL Work dashboard (you already have these two)
     path("cdl/head/", views.cdl_head_dashboard, name="cdl_head_dashboard"),
     path("cdl/member/", views.cdl_member_dashboard, name="cdl_member_dashboard"),
+    path("cdl/work/", views.cdl_work_dashboard, name="cdl_work_dashboard"),
 
     # NEW: make the template links resolve
     path("cdl/availability/new/", views.cdl_create_availability, name="create_availability"),
