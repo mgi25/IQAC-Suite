@@ -5,7 +5,15 @@ from django.urls import path
 from django.shortcuts import redirect
 from django.contrib import messages
 
-from .models import SDGGoal, log_impersonation_start
+from .models import (
+    SDGGoal,
+    log_impersonation_start,
+    CDLRequest,
+    CDLCommunicationThread,
+    CDLMessage,
+    CertificateBatch,
+    CertificateEntry,
+)
 
 
 class ImpersonationUserAdmin(BaseUserAdmin):
@@ -42,3 +50,8 @@ class ImpersonationUserAdmin(BaseUserAdmin):
 admin.site.unregister(User)
 admin.site.register(User, ImpersonationUserAdmin)
 admin.site.register(SDGGoal)
+admin.site.register(CDLRequest)
+admin.site.register(CDLCommunicationThread)
+admin.site.register(CDLMessage)
+admin.site.register(CertificateBatch)
+admin.site.register(CertificateEntry)

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}CDL Certificates{% endblock %}
+{% block content %}
+<h1>Certificates (CDL) for "{{ proposal.event_title }}"</h1>
+<form method="post" enctype="multipart/form-data" class="mb-4">
+  {% csrf_token %}
+  {{ form.csv_file.label_tag }} {{ form.csv_file }}
+  <button class="btn btn-primary" type="submit">Upload</button>
+</form>
+{% for batch in batches %}
+  <h3>Batch {{ forloop.counter }} - {{ batch.get_ai_check_status_display }}</h3>
+  <form method="post" class="mb-3">
+    {% csrf_token %}
+    <input type="hidden" name="confirm_batch" value="{{ batch.id }}">
+    {% if batch.ai_check_status == 'passed' %}
+      <button class="btn btn-success btn-sm">Confirm &amp; Send to CDL</button>
+    {% endif %}
+  </form>
+  <table class="table table-bordered">
+    <tr><th>Name</th><th>Role</th><th>AI</th><th>Errors</th></tr>
+    {% for e in batch.entries.all %}
+      <tr>
+        <td>{{ e.name }}</td>
+        <td>{{ e.get_role_display }}</td>
+        <td>{% if e.ai_valid %}✅{% else %}❌{% endif %}</td>
+        <td>{{ e.ai_errors }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="4" class="text-center">No entries</td></tr>
+    {% endfor %}
+  </table>
+{% empty %}
+  <p class="text-muted">No batches uploaded yet.</p>
+{% endfor %}
+{% endblock %}

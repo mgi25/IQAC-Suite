@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}CDL Support{% endblock %}
+{% block content %}
+<h1>CDL Support for "{{ proposal.event_title }}"</h1>
+<form method="post">
+  {% csrf_token %}
+  <div class="form-check form-switch mb-3">
+    {{ form.wants_cdl }}
+    <label class="form-check-label" for="{{ form.wants_cdl.id_for_label }}">Do you need CDL support for this event?</label>
+  </div>
+  <div id="cdl-sections" style="display:none;">
+    <div class="accordion" id="cdlAccordion">
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="posterHead">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#posterCollapse">Poster</button>
+        </h2>
+        <div id="posterCollapse" class="accordion-collapse collapse" data-bs-parent="#cdlAccordion">
+          <div class="accordion-body">
+            <div class="form-check mb-2">
+              {{ form.need_poster }}
+              <label class="form-check-label" for="{{ form.need_poster.id_for_label }}">Do you need a poster for your event?</label>
+            </div>
+            <div id="poster-fields" style="display:none;">
+              <div class="mb-3">{{ form.poster_mode.label_tag }} {{ form.poster_mode }}</div>
+              <div class="mb-3">{{ form.poster_organization_name.label_tag }} {{ form.poster_organization_name }}</div>
+              <div class="mb-3">{{ form.poster_time.label_tag }} {{ form.poster_time }}</div>
+              <div class="mb-3">{{ form.poster_date.label_tag }} {{ form.poster_date }}</div>
+              <div class="mb-3">{{ form.poster_venue.label_tag }} {{ form.poster_venue }}</div>
+              <div class="mb-3">{{ form.poster_resource_person.label_tag }} {{ form.poster_resource_person }}</div>
+              <div class="mb-3">{{ form.poster_resource_designation.label_tag }} {{ form.poster_resource_designation }}</div>
+              <div class="mb-3">{{ form.poster_title.label_tag }} {{ form.poster_title }}</div>
+              <div class="mb-3">{{ form.poster_summary.label_tag }} {{ form.poster_summary }}</div>
+              <div class="mb-3">{{ form.poster_design_link.label_tag }} {{ form.poster_design_link }}</div>
+              <div class="form-check">{{ form.poster_final_approved }} {{ form.poster_final_approved.label_tag }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="certHead">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#certCollapse">Certificates</button>
+        </h2>
+        <div id="certCollapse" class="accordion-collapse collapse" data-bs-parent="#cdlAccordion">
+          <div class="accordion-body">
+            <div class="form-check mb-2">
+              {{ form.need_certificate_any }}
+              <label class="form-check-label" for="{{ form.need_certificate_any.id_for_label }}">Do you need certificates for this event?</label>
+            </div>
+            <div id="cert-fields-any" style="display:none;">
+              <div class="form-check mb-2">
+                {{ form.need_certificate_cdl }}
+                <label class="form-check-label" for="{{ form.need_certificate_cdl.id_for_label }}">Do you need CDL help with event certificates?</label>
+              </div>
+              <div id="cert-fields-cdl" style="display:none;">
+                <div class="mb-3">{{ form.certificate_mode.label_tag }} {{ form.certificate_mode }}</div>
+                <div class="mb-3">{{ form.certificate_design_link.label_tag }} {{ form.certificate_design_link }}<small class="form-text text-muted">Canva or other link</small></div>
+                <div class="mb-3">{{ form.combined_design_link.label_tag }} {{ form.combined_design_link }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="svcHead">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#svcCollapse">Other Services</button>
+        </h2>
+        <div id="svcCollapse" class="accordion-collapse collapse" data-bs-parent="#cdlAccordion">
+          <div class="accordion-body">
+            <div class="form-check">{{ form.svc_photography }} {{ form.svc_photography.label_tag }}</div>
+            <div class="form-check">{{ form.svc_videography }} {{ form.svc_videography.label_tag }}</div>
+            <div class="form-check">{{ form.svc_digital_board }} {{ form.svc_digital_board.label_tag }}</div>
+            <div class="form-check">{{ form.svc_voluntary_cards }} {{ form.svc_voluntary_cards.label_tag }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <button type="submit" class="btn btn-primary mt-3">Save</button>
+</form>
+<script>
+  function toggleDisplay(cb, target){
+    document.getElementById(target).style.display = cb.checked ? '' : 'none';
+  }
+  const wants = document.getElementById('{{ form.wants_cdl.id_for_label }}');
+  const poster = document.getElementById('{{ form.need_poster.id_for_label }}');
+  const certAny = document.getElementById('{{ form.need_certificate_any.id_for_label }}');
+  const certCDL = document.getElementById('{{ form.need_certificate_cdl.id_for_label }}');
+  wants.addEventListener('change', ()=>toggleDisplay(wants,'cdl-sections'));
+  poster.addEventListener('change', ()=>toggleDisplay(poster,'poster-fields'));
+  certAny.addEventListener('change', ()=>toggleDisplay(certAny,'cert-fields-any'));
+  certCDL.addEventListener('change', ()=>toggleDisplay(certCDL,'cert-fields-cdl'));
+  toggleDisplay(wants,'cdl-sections');
+  toggleDisplay(poster,'poster-fields');
+  toggleDisplay(certAny,'cert-fields-any');
+  toggleDisplay(certCDL,'cert-fields-cdl');
+</script>
+{% endblock %}
