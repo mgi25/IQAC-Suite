@@ -455,7 +455,7 @@ document.addEventListener('DOMContentLoaded', function(){
       return `
           <!-- Organization Information Section -->
           <div class="form-section-header">
-              <h3>🏢 Organization Details</h3>
+              <h3>Organization Details</h3>
           </div>
           
           <div class="form-row">
@@ -473,7 +473,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
           <!-- Event Information Section -->
           <div class="form-section-header">
-              <h3>🎯 Event Information</h3>
+              <h3>Event Information</h3>
           </div>
 
           <div class="form-row full-width">
@@ -499,7 +499,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
           <!-- Schedule & Academic Information Section -->
           <div class="form-section-header">
-              <h3>📅 Schedule & Academic Information</h3>
+              <h3>Schedule & Academic Information</h3>
           </div>
 
           <div class="form-row">
@@ -546,7 +546,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
           <!-- Additional Information Section -->
           <div class="form-section-header">
-              <h3>📝 Additional Information</h3>
+              <h3>Additional Information</h3>
           </div>
 
           <div class="form-row">
@@ -590,7 +590,7 @@ document.addEventListener('DOMContentLoaded', function(){
       return `
           <!-- Attendance Information Section -->
           <div class="form-section-header">
-              <h3>👥 Attendance Information</h3>
+              <h3>Attendance Information</h3>
           </div>
           
           <div class="form-row">
@@ -621,7 +621,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
           <!-- Organizing Committee Section -->
           <div class="form-section-header">
-              <h3>👨‍💼 Organizing Committee</h3>
+              <h3>Organizing Committee</h3>
           </div>
           
           <div class="form-row full-width">
@@ -635,7 +635,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
           <!-- Speaker Information Section -->
           <div class="form-section-header">
-              <h3>🎤 Speaker Information</h3>
+              <h3>Speaker Information</h3>
           </div>
 
           <div class="form-row full-width">
@@ -674,7 +674,7 @@ document.addEventListener('DOMContentLoaded', function(){
       return `
           <!-- Event Summary Section -->
           <div class="form-section-header">
-              <h3>📝 Event Summary</h3>
+              <h3>Event Summary</h3>
           </div>
           
           <div class="form-row full-width">
@@ -693,7 +693,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
           <!-- Event Highlights Section -->
           <div class="form-section-header">
-              <h3>✨ Key Highlights</h3>
+              <h3>Key Highlights</h3>
           </div>
 
           <div class="form-row">
@@ -726,7 +726,7 @@ document.addEventListener('DOMContentLoaded', function(){
       return `
           <!-- Learning Outcomes Section -->
           <div class="form-section-header">
-              <h3>🎯 Learning Outcomes</h3>
+              <h3>Learning Outcomes</h3>
           </div>
           
           <div class="form-row full-width">
@@ -740,7 +740,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
           <!-- Feedback and Assessment Section -->
           <div class="form-section-header">
-              <h3>📊 Feedback and Assessment</h3>
+              <h3>Feedback and Assessment</h3>
           </div>
 
           <div class="form-row">
@@ -760,7 +760,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
           <!-- Impact Assessment Section -->
           <div class="form-section-header">
-              <h3>🌟 Impact Assessment</h3>
+              <h3>Impact Assessment</h3>
           </div>
 
           <div class="form-row full-width">
@@ -787,7 +787,7 @@ document.addEventListener('DOMContentLoaded', function(){
       return `
           <!-- Objective Achievement Analysis Section -->
           <div class="form-section-header">
-              <h3>🎯 Objective Achievement Analysis</h3>
+              <h3>Objective Achievement Analysis</h3>
           </div>
           
           <div class="form-row full-width">
@@ -801,7 +801,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
           <!-- Strengths and Challenges Analysis Section -->
           <div class="form-section-header">
-              <h3>💪 Strengths and Challenges Analysis</h3>
+              <h3>Strengths and Challenges Analysis</h3>
           </div>
 
           <div class="form-row">
@@ -821,7 +821,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
           <!-- Effectiveness Analysis Section -->
           <div class="form-section-header">
-              <h3>📊 Effectiveness Analysis</h3>
+              <h3>Effectiveness Analysis</h3>
           </div>
 
           <div class="form-row full-width">
@@ -835,7 +835,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
           <!-- Lessons Learned Section -->
           <div class="form-section-header">
-              <h3>💡 Lessons Learned and Insights</h3>
+              <h3>Lessons Learned and Insights</h3>
           </div>
 
           <div class="form-row full-width">
@@ -867,7 +867,7 @@ document.addEventListener('DOMContentLoaded', function(){
       return `
           <!-- POs and PSOs Section -->
           <div class="form-section-header">
-              <h3>🎯 Program Outcomes & Program Specific Outcomes</h3>
+              <h3>Program Outcomes & Program Specific Outcomes</h3>
           </div>
           
           <div class="form-row full-width">
@@ -881,7 +881,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
           <!-- Graduate Attributes Section -->
           <div class="form-section-header">
-              <h3>🎓 Graduate Attributes & Contemporary Requirements</h3>
+              <h3>Graduate Attributes & Contemporary Requirements</h3>
           </div>
           
           <div class="form-row">
