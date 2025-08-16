@@ -28,6 +28,64 @@ SDG_GOALS = [
 #  New Generic Organization Models
 # ───────────────────────────────
 
+class ActiveManager(models.Manager):
+    """Default manager that excludes archived records."""
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        # Only apply if model has a status field
+        if hasattr(self.model, "status"):
+            return qs.filter(status="active")
+        return qs
+
+
+class AllObjectsManager(models.Manager):
+    """Manager that returns all objects including archived."""
+    pass
+
+
+class ArchivableModel(models.Model):
+    """
+    Abstract base model to provide unified archive behavior instead of permanent deletion.
+
+    Fields:
+    - status: 'active' | 'archived'
+    - archived_at, archived_by: metadata for audit and potential restoration.
+    """
+
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Active"
+        ARCHIVED = "archived", "Archived"
+
+    status = models.CharField(
+        max_length=16, choices=Status.choices, default=Status.ACTIVE, db_index=True
+    )
+    archived_at = models.DateTimeField(null=True, blank=True)
+    archived_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="archived_%(class)ss"
+    )
+
+    # Managers
+    objects = ActiveManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        abstract = True
+
+    def archive(self, by: User | None = None):
+        if self.status != self.Status.ARCHIVED:
+            self.status = self.Status.ARCHIVED
+            self.archived_at = timezone.now()
+            self.archived_by = by
+            self.save(update_fields=["status", "archived_at", "archived_by"]) 
+
+    def restore(self):
+        if self.status != self.Status.ACTIVE:
+            self.status = self.Status.ACTIVE
+            # keep archived_at/by for audit history
+            self.save(update_fields=["status"]) 
+
+
 class OrganizationType(models.Model):
     name = models.CharField(max_length=100, unique=True)
     is_active = models.BooleanField(default=True)
@@ -56,9 +114,10 @@ class Organization(models.Model):
     def __str__(self):
         return f"{self.name} ({self.org_type.name})"
 
-class OrganizationRole(models.Model):
+class OrganizationRole(ArchivableModel):
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
+    # Deprecated in favor of `status`; retained for backward compatibility
     is_active = models.BooleanField(default=True)
     description = models.TextField(blank=True, null=True)  # <-- Add this line
 
@@ -213,19 +272,19 @@ class Report(models.Model):
 #  Programs & Outcomes
 # ───────────────────────────────
 
-class Program(models.Model):
+class Program(ArchivableModel):
     name = models.CharField(max_length=150, unique=True)
     organization = models.ForeignKey(Organization, on_delete=models.SET_NULL, null=True, blank=True)
     def __str__(self):
         return self.name
 
-class ProgramOutcome(models.Model):
+class ProgramOutcome(ArchivableModel):
     program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name="pos")
     description = models.TextField()
     def __str__(self):
         return f"PO - {self.program.name}"
 
-class ProgramSpecificOutcome(models.Model):
+class ProgramSpecificOutcome(ArchivableModel):
     program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name="psos")
     description = models.TextField()
     def __str__(self):
@@ -296,7 +355,7 @@ class SDGGoal(models.Model):
 #  Approval Flow Templates & Config
 # ───────────────────────────────
 
-class ApprovalFlowTemplate(models.Model):
+class ApprovalFlowTemplate(ArchivableModel):
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="approval_flow_templates")
     step_order = models.PositiveIntegerField()
     role_required = models.CharField(max_length=50)  # e.g., "faculty", "hod"

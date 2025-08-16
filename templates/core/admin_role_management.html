@@ -27,6 +27,13 @@
                 </div>
             </div>
             <div class="card-body">
+                <!-- Active/Archived toggle -->
+                <div class="mb-3 text-center">
+                    <div class="btn-group" role="group" aria-label="Status toggle">
+                        <a href="?org_type_id={{ selected_org_type.id }}" class="btn btn-sm {% if not show_archived %}btn-primary{% else %}btn-outline-primary{% endif %}">Active</a>
+                        <a href="?org_type_id={{ selected_org_type.id }}&archived=1" class="btn btn-sm {% if show_archived %}btn-primary{% else %}btn-outline-primary{% endif %}">Archived</a>
+                    </div>
+                </div>
                 {% if organizations and organizations.0 %}
                 <!-- Add New Role Form -->
                 <div class="add-role-section">
@@ -36,9 +43,6 @@
                         <div class="row">
                             <div class="col-md-6 mb-2">
                                 <input type="text" name="name" class="form-control" placeholder="Role Name" required>
-                            </div>
-                            <div class="col-md-6 mb-2">
-                                <input type="text" name="description" class="form-control" placeholder="Description (optional)">
                             </div>
                         </div>
                         <div class="text-center mt-2">
@@ -73,25 +77,28 @@
                             <tr class="align-middle text-center">
                                 <td><strong>{{ role.name }}</strong></td>
                                 <td>
-                                    {% if role.is_active %}
-                                        <span class="badge badge-primary">Active</span>
+                                    {% if role.status == 'archived' %}
+                                        <span class="badge badge-secondary">Archived</span>
                                     {% else %}
-                                        <span class="badge badge-secondary">Inactive</span>
+                                        <span class="badge badge-primary">Active</span>
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <form method="post" action="{% url 'toggle_org_role' role.id %}" class="d-inline">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-sm btn-warning">
-                                            {% if role.is_active %}Deactivate{% else %}Activate{% endif %}
-                                        </button>
-                                    </form>
-                                    <form method="post" action="{% url 'delete_org_role' role.id %}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this role? This action cannot be undone.');">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-sm btn-danger">
-                                            <i class="fas fa-trash"></i> Delete
-                                        </button>
-                                    </form>
+                                    {% if show_archived %}
+                                        <form method="post" action="{% url 'restore_org_role' role.id %}" class="d-inline" onsubmit="return confirm('Restore this archived role across all organizations of this type?');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-success">
+                                                <i class="fas fa-undo"></i> Restore
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <form method="post" action="{% url 'delete_org_role' role.id %}" class="d-inline" onsubmit="return confirm('Archive this role across all organizations of this type?');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-warning">
+                                                <i class="fas fa-archive"></i> Archive
+                                            </button>
+                                        </form>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% empty %}
@@ -99,8 +106,10 @@
                                 <td colspan="3" class="text-center">
                                     <div style="padding: 2rem;">
                                         <i class="fas fa-users" style="font-size: 3rem; color: var(--gray-400); margin-bottom: 1rem;"></i>
-                                        <h5 style="color: var(--gray-500);">No roles found</h5>
+                                        <h5 style="color: var(--gray-500);">No {% if show_archived %}archived{% else %}active{% endif %} roles found</h5>
+                                        {% if not show_archived %}
                                         <p style="color: var(--gray-400);">Add your first role using the form above.</p>
+                                        {% endif %}
                                     </div>
                                 </td>
                             </tr>
@@ -125,6 +134,13 @@
                 </div>
             </div>
             <div class="card-body">
+                <!-- Active/Archived toggle -->
+                <div class="mb-3 text-center">
+                    <div class="btn-group" role="group" aria-label="Status toggle">
+                        <a href="{% url 'admin_role_management_org' selected_organization.id %}" class="btn btn-sm {% if not show_archived %}btn-primary{% else %}btn-outline-primary{% endif %}">Active</a>
+                        <a href="{% url 'admin_role_management_org' selected_organization.id %}?archived=1" class="btn btn-sm {% if show_archived %}btn-primary{% else %}btn-outline-primary{% endif %}">Archived</a>
+                    </div>
+                </div>
                 <div class="section-header">
                     <h5><i class="fas fa-list"></i> Defined Roles</h5>
                 </div>
@@ -134,16 +150,34 @@
                             <tr class="text-center">
                                 <th>Role Name</th>
                                 <th>Status</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for role in roles %}
                             <tr class="text-center">
                                 <td>{{ role.name }}</td>
-                                <td>{% if role.is_active %}<span class="badge badge-primary">Active</span>{% else %}<span class="badge badge-secondary">Inactive</span>{% endif %}</td>
+                                <td>{% if role.status == 'archived' %}<span class="badge badge-secondary">Archived</span>{% else %}<span class="badge badge-primary">Active</span>{% endif %}</td>
+                                <td>
+                                    {% if show_archived %}
+                                        <form method="post" action="{% url 'restore_org_role' role.id %}" class="d-inline" onsubmit="return confirm('Restore this archived role?');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-success">
+                                                <i class="fas fa-undo"></i> Restore
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <form method="post" action="{% url 'delete_org_role' role.id %}" class="d-inline" onsubmit="return confirm('Archive this role?');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-warning">
+                                                <i class="fas fa-archive"></i> Archive
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </td>
                             </tr>
                             {% empty %}
-                            <tr><td colspan="2" class="text-center">No roles found.</td></tr>
+                            <tr><td colspan="3" class="text-center">No {% if show_archived %}archived{% else %}active{% endif %} roles found.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -269,14 +303,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Enhanced confirm dialogs for delete
-    const deleteButtons = document.querySelectorAll('form[action*="delete_org_role"] button[type="submit"]');
-    deleteButtons.forEach(btn => {
+    // Enhanced confirm dialogs for archive
+    const archiveButtons = document.querySelectorAll('form[action*="delete_org_role"] button[type="submit"]');
+    archiveButtons.forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
-            const roleName = this.closest('tr').querySelector('td:first-child strong').textContent;
-            
-            if (confirm(`Are you sure you want to delete the role "${roleName}"?\n\nThis action cannot be undone and will remove the role from all users.`)) {
+            const firstCell = this.closest('tr').querySelector('td:first-child');
+            const strong = firstCell ? firstCell.querySelector('strong') : null;
+            const roleName = strong ? strong.textContent : (firstCell ? firstCell.textContent.trim() : 'this role');
+
+            if (confirm(`Archive the role "${roleName}" across the selected scope?`)) {
                 this.closest('form').submit();
             }
         });

@@ -562,7 +562,12 @@ def admin_role_management(request, organization_id=None):
     if organization_id:
         # Direct access to one organization's roles
         org = get_object_or_404(Organization, id=organization_id)
-        roles = OrganizationRole.objects.filter(organization=org).order_by('name')
+        show_archived = request.GET.get('archived') in ("1", "true", "True")
+        base_qs = OrganizationRole.all_objects if show_archived else OrganizationRole.objects
+        roles = base_qs.filter(organization=org)
+        if show_archived:
+            roles = roles.filter(status='archived')
+        roles = roles.order_by('name')
         assignments = (
             RoleAssignment.objects.filter(organization=org)
             .select_related("user", "role")
@@ -573,7 +578,8 @@ def admin_role_management(request, organization_id=None):
             'selected_organization': org,
             'roles': roles,
             'role_assignments': assignments,
-            'step': 'single_org_roles'
+            'step': 'single_org_roles',
+            'show_archived': show_archived,
         }
         return render(request, "core/admin_role_management.html", context)
     
@@ -583,6 +589,7 @@ def admin_role_management(request, organization_id=None):
         if org_type_id:
             # Show UNIQUE roles from this org type (no duplicates)
             org_type = get_object_or_404(OrganizationType, id=org_type_id)
+            show_archived = request.GET.get('archived') in ("1", "true", "True")
             
             # Get all organizations of this type for the add form
             organizations = Organization.objects.filter(
@@ -591,20 +598,26 @@ def admin_role_management(request, organization_id=None):
             ).order_by('name')
             
             # Get UNIQUE role names (deduplicated) from all organizations of this type
-            unique_role_names = OrganizationRole.objects.filter(
+            base_qs = OrganizationRole.all_objects if show_archived else OrganizationRole.objects
+            role_names_qs = base_qs.filter(
                 organization__org_type=org_type,
                 organization__is_active=True
-            ).values_list('name', flat=True).distinct().order_by('name')
+            )
+            if show_archived:
+                role_names_qs = role_names_qs.filter(status='archived')
+            unique_role_names = role_names_qs.values_list('name', flat=True).distinct().order_by('name')
             
-            # For each unique role name, get one representative role object
+            # For each unique role name, get one representative role object (matching the status view)
             unique_roles = []
             for role_name in unique_role_names:
-                # Get the first role with this name from this org type
-                role = OrganizationRole.objects.filter(
+                role_qs = base_qs.filter(
                     organization__org_type=org_type,
                     organization__is_active=True,
                     name=role_name
-                ).select_related('organization').first()
+                )
+                if show_archived:
+                    role_qs = role_qs.filter(status='archived')
+                role = role_qs.select_related('organization').first()
                 if role:
                     unique_roles.append(role)
             
@@ -612,7 +625,8 @@ def admin_role_management(request, organization_id=None):
                 'selected_org_type': org_type,
                 'roles': unique_roles,  # Now deduplicated
                 'organizations': organizations,
-                'step': 'org_type_roles'
+                'step': 'org_type_roles',
+                'show_archived': show_archived,
             }
             return render(request, "core/admin_role_management.html", context)
         
@@ -633,7 +647,6 @@ def add_org_role(request, organization_id):
     """Add role to ALL organizations of the same type"""
     org = get_object_or_404(Organization, id=organization_id)
     name = request.POST.get("name", "").strip()
-    description = request.POST.get("description", "").strip()
 
     if not name:
         messages.error(request, "Role name is required.")
@@ -644,7 +657,6 @@ def add_org_role(request, organization_id):
         organization__org_type=org.org_type,
         name__iexact=name
     ).first()
-    
     if existing_role:
         messages.warning(request, f"Role '{name}' already exists for {org.org_type.name}s.")
         return redirect(f"{reverse('admin_role_management')}?org_type_id={org.org_type.id}")
@@ -664,7 +676,6 @@ def add_org_role(request, organization_id):
                 organization=target_org,
                 name=name,
                 is_active=True
-                # Remove description if not in model
             )
     return redirect(f"{reverse('admin_role_management')}?org_type_id={org.org_type.id}")
 
@@ -672,7 +683,7 @@ def add_org_role(request, organization_id):
 @user_passes_test(lambda u: u.is_superuser)
 @require_POST
 def add_role(request):
-    """Add a role by organization or organization type (used by tests)."""
+    """Add a role by organization or organization type (used by tests and legacy UI)."""
     name = request.POST.get("name", "").strip()
     org_id = request.POST.get("org_id")
     org_type_id = request.POST.get("org_type_id")
@@ -691,7 +702,7 @@ def add_role(request):
         redirect_url = reverse("admin_role_management")
 
     for org in orgs:
-        if not OrganizationRole.objects.filter(organization=org, name__iexact=name).exists():
+        if not OrganizationRole.all_objects.filter(organization=org, name__iexact=name).exists():
             OrganizationRole.objects.create(organization=org, name=name, is_active=True)
 
     return HttpResponseRedirect(redirect_url)
@@ -740,18 +751,22 @@ def toggle_org_role(request, role_id):
 @user_passes_test(lambda u: u.is_superuser)
 @require_POST
 def delete_org_role(request, role_id):
-    """Delete this role from ALL organizations of the same type"""
+    """Archive this role across ALL organizations of the same type (no hard delete)"""
     role = get_object_or_404(OrganizationRole, id=role_id)
     org_type = role.organization.org_type
     role_name = role.name
     
-    # Delete all roles with this name from all organizations of this type
-    deleted_count = OrganizationRole.objects.filter(
+    # Archive all roles with this name from all organizations of this type
+    roles_qs = OrganizationRole.all_objects.filter(
         organization__org_type=org_type,
         name__iexact=role_name
-    ).delete()[0]
-    
-    messages.success(request, f"Role '{role_name}' deleted from {deleted_count} {org_type.name}(s).")
+    )
+    archived_count = 0
+    for r in roles_qs:
+        if r.status != r.Status.ARCHIVED:
+            r.archive(by=request.user)
+            archived_count += 1
+    messages.success(request, f"Role '{role_name}' archived for {archived_count} {org_type.name}(s).")
     return redirect(f"{reverse('admin_role_management')}?org_type_id={org_type.id}")
 
 # ===================================================================
@@ -991,30 +1006,28 @@ def event_proposal_action(request, proposal_id):
 @user_passes_test(lambda u: u.is_staff)
 def admin_reports(request):
     reports = Report.objects.select_related('submitted_by').all().order_by('-created_at')
-    return render(request, 'core/admin_reports.html', {
-        'reports': reports,
-    })
+    context = {"reports": reports}
+    return render(request, 'core/admin_reports.html', context)
 
-@login_required
-@user_passes_test(lambda u: u.is_staff)
-def admin_reports_approve(request, report_id):
-    report = get_object_or_404(Report, id=report_id)
-    report.status = 'approved'
-    report.save()
-    messages.success(request, f"Report '{report.title}' approved.")
-    return HttpResponseRedirect(reverse('admin_reports'))
+@user_passes_test(lambda u: u.is_superuser)
+@require_POST
+def restore_org_role(request, role_id):
+    """Restore this role across ALL organizations of the same type (from archived)."""
+    role = get_object_or_404(OrganizationRole.all_objects, id=role_id)
+    org_type = role.organization.org_type
+    role_name = role.name
 
-@login_required
-@user_passes_test(lambda u: u.is_staff)
-def admin_reports_reject(request, report_id):
-    report = get_object_or_404(Report, id=report_id)
-    report.status = 'rejected'
-    report.save()
-    messages.warning(request, f"Report '{report.title}' rejected.")
-    return HttpResponseRedirect(reverse('admin_reports'))
-
-def cdl_dashboard(request):
-    return render(request, 'emt/cdl_dashboard.html')
+    roles_qs = OrganizationRole.all_objects.filter(
+        organization__org_type=org_type,
+        name__iexact=role_name,
+        status='archived'
+    )
+    restored = 0
+    for r in roles_qs:
+        r.restore()
+        restored += 1
+    messages.success(request, f"Role '{role_name}' restored for {restored} {org_type.name}(s).")
+    return redirect(f"{reverse('admin_role_management')}?org_type_id={org_type.id}&archived=1")
 
 STATUSES = ['submitted', 'under_review', 'approved', 'rejected']
 
@@ -1531,7 +1544,7 @@ def admin_outcomes_for_org(request, org_id: int):
     return render(request, "core/admin_outcomes_for_org.html", {"organization": org})
 
 @popso_program_access_required
-@require_http_methods(["GET", "POST", "PUT", "DELETE"])
+@require_http_methods(["GET", "POST", "PUT", "DELETE", "PATCH"])
 def manage_program_outcomes(request, program_id=None):
     """API endpoint for managing Program Outcomes (POs and PSOs) - Enhanced for assigned users"""
     from .models import Program, ProgramOutcome, ProgramSpecificOutcome, POPSOAssignment
@@ -1642,8 +1655,38 @@ def manage_program_outcomes(request, program_id=None):
                 if not has_assignment:
                     return JsonResponse({'success': False, 'error': 'Not authorized for this program'}, status=403)
                 
-            outcome.delete()
-            return JsonResponse({'success': True})
+            # Archive instead of permanent delete
+            outcome.archive(by=request.user)
+            return JsonResponse({'success': True, 'archived': True})
+        except (ProgramOutcome.DoesNotExist, ProgramSpecificOutcome.DoesNotExist, KeyError, json.JSONDecodeError):
+            return JsonResponse({'success': False, 'error': 'Invalid data'})
+    elif request.method == "PATCH":
+        # Restore archived outcome
+        try:
+            data = json.loads(request.body)
+            outcome_type = data.get('type', '').upper()
+            if outcome_type == 'PO':
+                outcome = ProgramOutcome.all_objects.get(id=data['outcome_id'])
+            elif outcome_type == 'PSO':
+                outcome = ProgramSpecificOutcome.all_objects.get(id=data['outcome_id'])
+            else:
+                return JsonResponse({'success': False, 'error': 'Invalid outcome type'})
+
+            # Authorization: same as update
+            program = outcome.program
+            if not request.user.is_superuser:
+                if not program.organization:
+                    return JsonResponse({'success': False, 'error': 'Program has no organization'}, status=403)
+                has_assignment = POPSOAssignment.objects.filter(
+                    assigned_user=request.user,
+                    organization=program.organization,
+                    is_active=True
+                ).exists()
+                if not has_assignment:
+                    return JsonResponse({'success': False, 'error': 'Not authorized for this program'}, status=403)
+
+            outcome.restore()
+            return JsonResponse({'success': True, 'restored': True})
         except (ProgramOutcome.DoesNotExist, ProgramSpecificOutcome.DoesNotExist, KeyError, json.JSONDecodeError):
             return JsonResponse({'success': False, 'error': 'Invalid data'})
 
@@ -1791,17 +1834,35 @@ def save_approval_flow(request, org_id):
     steps = data.get('steps', [])
     require_first = data.get('require_faculty_incharge_first', False)
     org = Organization.objects.get(id=org_id)
-    ApprovalFlowTemplate.objects.filter(organization=org).delete()
+    # Upsert steps to avoid unique_together conflicts and keep history
+    existing_steps = {s.step_order: s for s in ApprovalFlowTemplate.all_objects.filter(organization=org)}
+    provided_orders = set()
     for idx, step in enumerate(steps, 1):
         if not step.get('role_required'):
             continue
-        ApprovalFlowTemplate.objects.create(
-            organization=org,
-            step_order=idx,
-            role_required=step['role_required'],
-            user_id=step.get('user_id'),
-            optional=step.get('optional', False)
-        )
+        provided_orders.add(idx)
+        current = existing_steps.get(idx)
+        if current:
+            current.role_required = step.get('role_required')
+            current.user_id = step.get('user_id')
+            current.optional = step.get('optional', False)
+            # If it was archived, restore it
+            if getattr(current, 'status', None) == getattr(current, 'Status').ARCHIVED:
+                current.restore()
+            else:
+                current.save(update_fields=['role_required', 'user_id', 'optional'])
+        else:
+            ApprovalFlowTemplate.objects.create(
+                organization=org,
+                step_order=idx,
+                role_required=step.get('role_required'),
+                user_id=step.get('user_id'),
+                optional=step.get('optional', False)
+            )
+    # Archive any steps that are no longer present
+    for order, obj in existing_steps.items():
+        if order not in provided_orders and obj.status != obj.Status.ARCHIVED:
+            obj.archive(by=request.user)
 
     config, _ = ApprovalFlowConfig.objects.get_or_create(organization=org)
     config.require_faculty_incharge_first = require_first
@@ -1820,8 +1881,14 @@ def api_approval_flow_steps(request, org_id):
 @csrf_exempt
 @user_passes_test(lambda u: u.is_superuser)
 def delete_approval_flow(request, org_id):
-    ApprovalFlowTemplate.objects.filter(organization_id=org_id).delete()
-    return JsonResponse({'success': True})
+    # Archive all approval flow steps for org instead of deleting
+    steps = ApprovalFlowTemplate.all_objects.filter(organization_id=org_id)
+    count = 0
+    for step in steps:
+        if step.status != step.Status.ARCHIVED:
+            step.archive(by=request.user)
+            count += 1
+    return JsonResponse({'success': True, 'archived': count})
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def search_users(request):
@@ -2120,19 +2187,20 @@ def add_outcome(request, outcome_type):
 @csrf_exempt
 @user_passes_test(lambda u: u.is_superuser)
 def delete_outcome(request, outcome_type, outcome_id):
-    """Delete a PO or PSO"""
+    """Archive a PO or PSO (legacy endpoint)."""
     try:
         from .models import ProgramOutcome, ProgramSpecificOutcome
         
         if outcome_type == 'po':
-            outcome = ProgramOutcome.objects.get(id=outcome_id)
+            outcome = ProgramOutcome.all_objects.get(id=outcome_id)
         elif outcome_type == 'pso':
-            outcome = ProgramSpecificOutcome.objects.get(id=outcome_id)
+            outcome = ProgramSpecificOutcome.all_objects.get(id=outcome_id)
         else:
             return JsonResponse({'success': False, 'error': 'Invalid outcome type'})
         
-        outcome.delete()
-        return JsonResponse({'success': True})
+        if outcome.status != getattr(outcome, 'Status').ARCHIVED:
+            outcome.archive(by=request.user)
+        return JsonResponse({'success': True, 'archived': True})
         
     except (ProgramOutcome.DoesNotExist, ProgramSpecificOutcome.DoesNotExist):
         return JsonResponse({'success': False, 'error': 'Outcome not found'})
@@ -2166,6 +2234,37 @@ def admin_reports_view(request):
     except Exception as e:
         print(f"Error in admin_reports_view: {e}")
         return HttpResponse(f"An error occurred: {e}", status=500)
+
+
+@login_required
+@admin_required
+def admin_reports_approve(request, report_id: int):
+    """Approve a core Report and redirect back to the reports list.
+
+    Template links use GET, so accept GET and POST. Only core Report items
+    (without a related proposal) get Approve/Reject actions.
+    """
+    report = get_object_or_404(Report, id=report_id)
+    # Only transition if currently submitted; otherwise just no-op update
+    if getattr(report, "status", None) == "submitted":
+        report.status = "approved"
+        report.save(update_fields=["status"])
+    return redirect("admin_reports")
+
+
+@login_required
+@admin_required
+def admin_reports_reject(request, report_id: int):
+    """Reject a core Report and redirect back to the reports list.
+
+    Template links use GET, so accept GET and POST. Optionally, a feedback
+    message could be added later via POST; for now we just set status.
+    """
+    report = get_object_or_404(Report, id=report_id)
+    if getattr(report, "status", None) == "submitted":
+        report.status = "rejected"
+        report.save(update_fields=["status"])
+    return redirect("admin_reports")
 
 
 @login_required
@@ -2635,25 +2734,14 @@ def api_student_contributions(request):
 @login_required
 @require_GET
 def api_user_events_data(request):
-    """API endpoint to fetch user's event data"""
+    """Return ONLY events proposed by the current user (for tracking)."""
     user = request.user
-    
-    # Get user's organization assignments
-    user_orgs = RoleAssignment.objects.filter(user=user).values_list('organization', flat=True)
-    
-    # Get events based on user role
-    if user.is_staff or RoleAssignment.objects.filter(user=user, role__name__in=['Admin', 'Faculty']).exists():
-        # Faculty/Admin can see all events in their organizations
-        events = EventProposal.objects.filter(organization__in=user_orgs)
-    else:
-        # Students see events they can participate in
-        events = EventProposal.objects.filter(
-            organization__in=user_orgs,
-            status='approved'
-        )
-    
+
+    # Only include events created/proposed by the logged-in user
+    events = EventProposal.objects.filter(submitted_by=user).order_by('-created_at')[:10]
+
     events_data = []
-    for event in events.order_by('-created_at')[:10]:  # Latest 10 events
+    for event in events:
         desc = getattr(event, 'description', '') or ''
         events_data.append({
             'id': event.id,
@@ -4696,8 +4784,7 @@ def api_organization_programs(request, org_id):
 @require_http_methods(["GET"])
 def api_program_outcomes(request, program_id):
     """API endpoint to get outcomes for a program - Enhanced for assigned users"""
-    from .models import POPSOAssignment, Program
-    
+    from .models import POPSOAssignment, Program, ProgramOutcome, ProgramSpecificOutcome
     try:
         # Check authorization for non-superusers
         if not request.user.is_superuser:
@@ -4709,28 +4796,45 @@ def api_program_outcomes(request, program_id):
                         organization=program.organization,
                         is_active=True
                     ).exists()
-                    
                     if not has_assignment:
                         return JsonResponse({'error': 'Not authorized for this program'}, status=403)
             except Program.DoesNotExist:
                 return JsonResponse({'error': 'Program not found'}, status=404)
-        
+
         outcome_type = request.GET.get('type', '').upper()
-        
+        show_archived = request.GET.get('archived') in ("1", "true", "True")
+
         if outcome_type == 'PO':
-            outcomes = ProgramOutcome.objects.filter(program_id=program_id).values(
-                'id', 'description'
-            )
+            base_qs = ProgramOutcome.all_objects if show_archived else ProgramOutcome.objects
+            outcomes = base_qs.filter(program_id=program_id)
+            if show_archived:
+                outcomes = outcomes.filter(status='archived')
+            outcomes = outcomes.values('id', 'description', 'status')
+            return JsonResponse(list(outcomes), safe=False)
         elif outcome_type == 'PSO':
-            outcomes = ProgramSpecificOutcome.objects.filter(program_id=program_id).values(
-                'id', 'description'
-            )
+            base_qs = ProgramSpecificOutcome.all_objects if show_archived else ProgramSpecificOutcome.objects
+            outcomes = base_qs.filter(program_id=program_id)
+            if show_archived:
+                outcomes = outcomes.filter(status='archived')
+            outcomes = outcomes.values('id', 'description', 'status')
+            return JsonResponse(list(outcomes), safe=False)
         else:
             # If no type specified, return both POs and PSOs
             program = Program.objects.get(id=program_id)
-            pos = [{'id': po.id, 'description': po.description} for po in program.pos.all()]
-            psos = [{'id': pso.id, 'description': pso.description} for pso in program.psos.all()]
-            
+            if show_archived:
+                pos_qs = ProgramOutcome.all_objects.filter(program=program, status='archived')
+                pso_qs = ProgramSpecificOutcome.all_objects.filter(program=program, status='archived')
+            else:
+                pos_qs = program.pos.all()
+                pso_qs = program.psos.all()
+            pos = [
+                {'id': po.id, 'description': po.description, 'status': getattr(po, 'status', 'active')}
+                for po in pos_qs
+            ]
+            psos = [
+                {'id': pso.id, 'description': pso.description, 'status': getattr(pso, 'status', 'active')}
+                for pso in pso_qs
+            ]
             return JsonResponse({
                 'program': {
                     'id': program.id,
@@ -4740,12 +4844,9 @@ def api_program_outcomes(request, program_id):
                 'pos': pos,
                 'psos': psos
             })
-        
-        return JsonResponse(list(outcomes), safe=False)
-    
     except Exception as e:
-        logger.error(f"Error fetching {outcome_type}s for program {program_id}: {str(e)}")
-        return JsonResponse({'error': f'Failed to fetch {outcome_type}s'}, status=500)
+        logger.error(f"Error fetching program outcomes for program {program_id}: {str(e)}")
+        return JsonResponse({'error': 'Failed to fetch outcomes'}, status=500)
 
 def is_superuser(u):
     return u.is_superuser
@@ -5247,6 +5348,11 @@ def cdl_brand_kit(request):
 
 def cdl_templates_posters(request):
     return HttpResponse("Poster Templates (stub)")
+
+@login_required
+def cdl_dashboard(request):
+    """Entry point for CDL dashboard; default to head dashboard for now."""
+    return render(request, "core/cdl_head_dashboard.html")
 
 def cdl_templates_certificates(request):
     return HttpResponse("Certificate Templates (stub)")

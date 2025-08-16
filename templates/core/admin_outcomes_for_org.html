@@ -18,6 +18,9 @@
       </div>
       <div class="header-actions">
         <a class="btn-outline" href="{% url 'admin_pso_po_management' %}">Back to list</a>
+        <label style="margin-left:12px; display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
+          <input type="checkbox" id="showArchivedToggle"> View Archived
+        </label>
       </div>
     </div>
     <div class="outcomes-fullpage-grid">
@@ -61,6 +64,13 @@
     if (typeof loadOutcomesForOrganization === 'function' && panel && panel.dataset.orgId) {
       const id = Number(panel.dataset.orgId);
       if (id) loadOutcomesForOrganization(id);
+    }
+    const toggle = document.getElementById('showArchivedToggle');
+    if (toggle) {
+      toggle.addEventListener('change', function(){
+        const id = Number(panel?.dataset?.orgId);
+        if (id) loadOutcomesForOrganization(id);
+      });
     }
   });
 </script>
