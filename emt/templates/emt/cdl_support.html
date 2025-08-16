@@ -44,6 +44,7 @@
               <div class="input-group">{{ form.poster_event_title.label_tag }} {{ form.poster_event_title }}</div>
               <div class="input-group">{{ form.poster_summary.label_tag }} {{ form.poster_summary }}</div>
               <div class="input-group">{{ form.poster_design_link.label_tag }} {{ form.poster_design_link }}</div>
+              <p class="help-text">If requesting both poster and certificate, provide a single design file with poster on page 1 and certificate on page 2.</p>
             </div>
           </details>
 
@@ -60,6 +61,7 @@
               <div id="certificate-help-details" style="display:none;">
                 <div class="input-group">{{ form.certificate_choice.label_tag }} {{ form.certificate_choice }}</div>
                 <div class="input-group">{{ form.certificate_design_link.label_tag }} {{ form.certificate_design_link }}</div>
+                <p class="help-text">Use the same design file as poster if both are requested (page 2 for certificate).</p>
               </div>
             </div>
           </details>
