@@ -267,10 +267,16 @@ urlpatterns = [
     
     # Data Export URLs
     path('data-export-filter/', views.data_export_filter_view, name='data_export_filter'),
-    path('api/filter-suggestions/', views.filter_suggestions_api, name='filter_suggestions_api'),
-    path('api/execute-filter/', views.execute_filter_api, name='execute_filter_api'),
-    path('api/export-data/csv/', views.export_data_csv, name='export_data_csv'),
-    path('api/export-data/excel/', views.export_data_excel, name='export_data_excel'),
+    path('api/org-types/', views.api_org_types, name='api_org_types'),
+    path('api/orgs-by-type/', views.api_orgs_by_type, name='api_orgs_by_type'),
+    path('api/filter-meta/<str:category>/', views.api_filter_meta, name='api_filter_meta'),
+    path('api/search/', views.api_search, name='api_search'),
+    path('api/export/csv/', views.api_export_csv, name='api_export_csv'),
+    path('api/export/excel/', views.api_export_excel, name='api_export_excel'),
+    path('api/summary/quick/', views.api_quick_summary, name='api_quick_summary'),
+    
+    
+    
     path('settings/pso-po-management/', views.settings_pso_po_management,name='settings_pso_po_management'),
 
      path('dashboard/', views.dashboard, name='dashboard'),

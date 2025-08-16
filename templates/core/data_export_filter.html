@@ -1,274 +1,285 @@
 {# templates/core/data_export_filter.html #}
 {% extends "base.html" %}
 {% load static %}
-
-{% block title %}Advanced Data Export & Filter - IQAC Suite{% endblock %}
+{% block title %}Advanced Data Export & Filter — IQAC Suite{% endblock %}
 
 {% block head_extra %}
-<!-- DataTables CSS + Buttons (CDN) -->
+<!-- DataTables CSS + Buttons -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
-/* ---------- Layout & Theme ---------- */
-* { margin:0; padding:0; box-sizing:border-box; }
-html,body { height:100%; }
-body {
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
-  color:#2d3748;
-  -webkit-font-smoothing:antialiased;
-  -moz-osx-font-smoothing:grayscale;
+/* ---------- Basic layout ---------- */
+.container-wrap {
+  max-width: 1400px;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+  color: #1f2937;
+  background: #f8fafc;
+  min-height: 100vh;
 }
+.header-card {
+  background: #ffffff;
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+.header-left h1 { margin:0; font-size:1.25rem; letter-spacing: -0.01em; }
+.header-left p { margin:0; color:#6b7280; font-size:0.95rem; }
 
-/* Container */
-.export-container {
-  max-width:1400px;
-  margin: 28px auto;
-  padding: 20px;
-}
-
-/* Header */
-.export-header {
-  background: rgba(255,255,255,0.96);
-  border-radius:16px;
-  padding: 28px;
-  position:relative;
-  overflow:hidden;
-  box-shadow: 0 18px 40px rgba(0,0,0,0.08);
-  border: 1px solid rgba(255,255,255,0.12);
-}
-.export-header::before {
-  content: "";
-  position:absolute;
-  left:0;right:0;top:0;height:6px;
-  background: linear-gradient(90deg,#667eea,#764ba2,#f093fb,#f5576c);
-  background-size:200% 100%;
-  mix-blend-mode:screen;
-  opacity:0.95;
-}
-.export-title {
-  font-size: 1.95rem;
-  font-weight: 800;
+/* top controls */
+.controls {
   display:flex;
   gap:12px;
   align-items:center;
-  color: #1a202c;
-  letter-spacing: -0.02em;
+  flex-wrap:wrap;
+  margin:12px 0;
 }
-.export-title i { font-size: 1.25rem; color: #667eea; }
-.export-subtitle { margin-top:8px; color:#485058; opacity:0.95; }
-
-/* Filter card */
-.filter-section {
-  margin-top:18px;
-  background: rgba(255,255,255,0.96);
-  padding:16px;
-  border-radius:12px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.06);
-  border: 1px solid rgba(255,255,255,0.06);
+.category-tabs { display:flex; gap:8px; }
+.tab-btn {
+  border-radius: 8px;
+  padding: 0.75rem 1.25rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: #475569;
+  transition: all 0.2s ease;
 }
-.section-title { font-size:1.15rem; font-weight:700; display:flex;gap:10px;align-items:center;color:#293241;margin-bottom:12px; }
-
-/* Quick filters */
-.quick-filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
-.quick-filter-btn {
-  padding:8px 12px;
-  border-radius:999px;
-  border:1px solid rgba(102,126,234,0.12);
-  background: rgba(102,126,234,0.06);
-  color:#1f2937;
-  cursor:pointer;
-  font-weight:700;
-  font-size:0.92rem;
-  display:inline-flex;
-  gap:8px;
-  align-items:center;
-  transition: transform .12s ease, box-shadow .12s ease;
+.tab-btn:hover {
+  background: #f8fafc;
+  transform: translateY(-1px);
 }
-.quick-filter-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(102,126,234,0.08); }
-.quick-filter-btn.active { background: linear-gradient(135deg,#667eea,#764ba2); color:white; border:none; }
+.tab-btn.active {
+  background: #1e40af;
+  color: #ffffff;
+  border-color: #1e40af;
+  box-shadow: 0 4px 6px -1px rgba(30, 64, 175, 0.1), 0 2px 4px -1px rgba(30, 64, 175, 0.06);
+}
+.control-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.control-btn:hover {
+  background: #f8fafc;
+  transform: translateY(-1px);
+}
+.control-btn.primary {
+  background: #1e40af;
+  color: #ffffff;
+  border-color: #1e40af;
+}
+.control-btn.primary:hover {
+  background: #1e3a8a;
+}
+.controls-right {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
 
-/* Search input & suggestions */
-.search-container { position:relative; margin-bottom:12px; }
+/* search input + filter icon */
+.search-row { display:flex; gap:8px; align-items:center; width:100%; }
 .search-input {
-  width:100%;
-  padding:12px 14px 12px 44px;
-  border-radius:12px;
+  flex:1;
+  padding:10px 14px;
+  border-radius:10px;
   border:1px solid #e6eef8;
-  font-size:1rem;
-  background:rgba(255,255,255,0.96);
   box-shadow: inset 0 1px 0 rgba(0,0,0,0.02);
 }
-.search-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:#667eea; font-size:14px; }
-.suggestions-dropdown {
-  position:absolute;
-  left:0; right:0;
-  top: calc(100% + 8px);
-  background:white;
-  border-radius:10px;
-  box-shadow:0 10px 30px rgba(0,0,0,0.12);
-  max-height:280px;
-  overflow:auto;
-  z-index:1200;
-  display:none;
-  padding:8px;
-}
-.suggestion-item { padding:10px 12px; cursor:pointer; border-radius:8px; }
-.suggestion-item:hover { background:#f3f6ff; }
-.suggestion-category { font-size:0.72rem; color:#4c66d6; font-weight:800; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.06em; }
-.suggestion-label { font-weight:700; color:#222; }
-
-/* Active filters chips */
-.active-filters { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; margin-bottom:6px; align-items:center; min-height:42px;}
-.filter-chip {
-  background: linear-gradient(135deg,#667eea,#764ba2);
-  color:white;
-  padding:8px 10px;
-  border-radius:999px;
-  font-weight:700;
-  display:inline-flex;
-  gap:8px;
-  align-items:center;
-  font-size:0.9rem;
-}
-.filter-chip .remove-filter { background: rgba(255,255,255,0.15); border:none; color:white; width:22px; height:22px; border-radius:50%; cursor:pointer; font-weight:700; }
-
-/* Results */
-.results-section { margin-top:14px; background: rgba(255,255,255,0.96); padding:12px; border-radius:12px; box-shadow: 0 10px 30px rgba(0,0,0,0.06); border:1px solid rgba(255,255,255,0.06); }
-.results-header { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:8px; }
-.results-count { font-weight:800; color:#1f2937; display:flex; gap:8px; align-items:center; }
-.export-controls { display:flex; gap:8px; align-items:center; }
-
-.export-btn {
-  padding:8px 12px;
-  border-radius:10px;
-  border:none;
-  color:white;
-  cursor:pointer;
-  font-weight:700;
-  display:inline-flex;
-  gap:8px;
-  align-items:center;
-}
-.dataTables_scrollBody {
-    overflow-y: auto !important;
-    overflow-x: auto !important;
+.filter-icon {
+  width:44px; height:44px; display:inline-grid; place-items:center;
+  border-radius:10px; background:#fff; border:1px solid #e6eef8; cursor:pointer;
 }
 
-.dataTables_scrollHead {
-    background: white;
-    position: sticky;
-    top: 0;
-    z-index: 5;
+/* active filters chips */
+.active-filters { 
+  display: flex; 
+  gap: 0.5rem; 
+  flex-wrap: wrap; 
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+.filter-chip { 
+  background: #f1f5f9;
+  color: #334155;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+.filter-chip:hover {
+  background: #f8fafc;
+  transform: translateY(-1px);
+}
+.filter-chip .remove { 
+  background: transparent;
+  border: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+.filter-chip .remove:hover {
+  background: #e2e8f0;
+  color: #334155;
 }
 
-.dataTables_scrollBody::-webkit-scrollbar {
-    height: 8px;
-    background-color: #f1f1f1;
+/* results card */
+.results-card {
+  margin-top: 1.5rem;
+  background: #ffffff;
+  padding: 1.5rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+}
+.results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+.results-count { 
+  font-weight: 700;
+  color: #1e40af;
+  font-size: 1.125rem;
 }
 
-.dataTables_scrollBody::-webkit-scrollbar-thumb {
-    background-color: #2c5aa0;
-    border-radius: 4px;
-}
+/* offcanvas (filter drawer) tweaks */
+.offcanvas-backdrop.show { opacity:0.35; }
+.offcanvas-body .form-group { margin-bottom:12px; }
 
-.export-btn.csv { background:#2563eb; } /* blue */
-.export-btn.excel { background:#16a34a; } /* green */
-
-/* Loading and empty */
-.loading-indicator { text-align:center; padding:16px; display:none; color:#475569; }
-.empty-state { text-align:center; padding:28px; color:#60708a; }
-
-/* Results preview area */
-.results-preview { background: rgba(247,250,252,0.72); border-radius:10px; padding:10px; overflow:auto; }
-
-/* Small responsive tweaks */
+/* small responsive */
 @media (max-width:900px) {
-  .export-header { padding:16px; }
-  .export-title { font-size:1.4rem; }
-  .quick-filter-btn { font-size:0.88rem; padding:6px 10px; }
+  .controls { flex-direction:column; align-items:stretch; }
+  .search-row { width:100%; }
 }
-
-/* DataTables tweaks */
-.dataTables_wrapper .dt-buttons { margin-bottom: 8px; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="export-container">
-  <div class="export-header">
-    <div style="display:flex; gap:12px; align-items:center; justify-content:space-between;">
-      <div>
-        <h1 class="export-title"><i class="fas fa-filter" aria-hidden="true"></i> Advanced Data Export & Analytics</h1>
-        <div class="export-subtitle">Powerful search, intelligent filtering, and seamless data export — results shown below and available for export.</div>
-      </div>
-      <div style="display:flex; gap:12px; align-items:center;">
-        {# Optional action icons could go here #}
-        <img src="{% static 'core/img/logo-small.png' %}" alt="logo" style="height:38px; opacity:0.9;">
-      </div>
+<div class="container-wrap">
+  <div class="header-card">
+    <div class="header-left">
+      <h1><i class="bx bx-filter" style="color:#667eea; margin-right:8px;"></i> Advanced Data Export & Filter</h1>
+      <p>Search across Events, Users, Reports and Organizations. Open the filters drawer to refine results.</p>
+    </div>
+    <div>
+      <img src="{% static 'core/img/logo-small.png' %}" alt="logo" style="height:42px; opacity:0.95;">
     </div>
   </div>
 
-  <div class="filter-section" role="region" aria-label="Filters">
-    <h3 class="section-title"><i class="fas fa-search" aria-hidden="true"></i> Smart Search & Filtering</h3>
-
-    <div class="quick-filters" id="quickFilters" aria-hidden="false">
-      <!-- kept only working/validated quick filters -->
-      <button class="quick-filter-btn" data-filter="profile_role:faculty"><i class="fas fa-chalkboard-teacher" aria-hidden="true"></i> Faculty Members</button>
-      <button class="quick-filter-btn" data-filter="profile_role:student"><i class="fas fa-user-graduate" aria-hidden="true"></i> Students</button>
-      <button class="quick-filter-btn" data-filter="date_range:30_days"><i class="fas fa-clock" aria-hidden="true"></i> Last 30 Days</button>
-      <button class="quick-filter-btn" data-filter="date_range:academic_year"><i class="fas fa-school" aria-hidden="true"></i> This Academic Year</button>
+  <div class="controls" role="region" aria-label="search controls">
+    <div class="category-tabs" role="tablist" aria-label="Category selector">
+      <button class="tab-btn active" data-category="events" role="tab" aria-selected="true">Events</button>
+      <button class="tab-btn" data-category="users" role="tab" aria-selected="false">Users</button>
+      <button class="tab-btn" data-category="reports" role="tab" aria-selected="false">Reports</button>
+      <button class="tab-btn" data-category="organizations" role="tab" aria-selected="false">Organizations</button>
     </div>
 
-    <div class="search-container" role="search" aria-label="Global search">
-      <i class="fas fa-search search-icon" aria-hidden="true"></i>
-      <input id="mainSearch" class="search-input" type="text" placeholder="Search anything (name, org, event, report) — Press Enter to search" aria-label="Search input">
-      <div id="suggestionsDropdown" class="suggestions-dropdown" role="listbox" aria-hidden="true"></div>
-    </div>
-
-    <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
-      <div style="font-weight:700; color:#3b4252;">Filter Logic:</div>
-      <button class="logic-btn" data-logic="AND" style="padding:6px 10px; border-radius:8px; border:1px solid #e6eef8; background:#fff; font-weight:800;">AND</button>
-      <button class="logic-btn" data-logic="OR" style="padding:6px 10px; border-radius:8px; border:1px solid #e6eef8; background:#fff; font-weight:800;">OR</button>
-      <div style="margin-left:auto; font-size:0.9rem; color:#475569;">Tip: press <kbd>Enter</kbd> to search text globally</div>
-    </div>
-
-    <div class="active-filters" id="activeFilters" aria-live="polite">
-      <div class="empty-filters" style="padding:8px; background:rgba(160,174,192,0.06); border-radius:8px;">
-        <i class="fas fa-info-circle" aria-hidden="true"></i> No filters applied. Use quick filters or search.
-      </div>
+    <div class="controls-right">
+      <button id="openFilters" class="control-btn primary" title="Open filters" aria-label="Open filters">
+        <i class="bx bx-filter-alt"></i>
+        Filters
+      </button>
+      <button id="exportCsv" class="control-btn" title="Export CSV">
+        <i class="bx bx-download"></i>
+        CSV
+      </button>
+      <button id="exportExcel" class="control-btn" title="Export Excel">
+        <i class="bx bx-spreadsheet"></i>
+        Excel
+      </button>
     </div>
   </div>
 
-  <div class="results-section" role="region" aria-label="Results">
+  <div class="active-filters" id="activeFilters" aria-live="polite">
+    <!-- chips inserted dynamically -->
+  </div>
+
+  <div class="results-card">
     <div class="results-header">
-      <div class="results-count" id="resultsCount"><i class="fas fa-database" style="color:#667eea;"></i> Ready to search</div>
-      <div class="export-controls">
-        <button id="exportCsvBackend" class="export-btn csv" title="Export CSV (server)" aria-label="Export CSV">Export CSV (Server)</button>
-        <button id="exportExcelBackend" class="export-btn excel" title="Export Excel (server)" aria-label="Export Excel">Export Excel (Server)</button>
+      <div class="results-count" id="resultsCount">Ready — select category or apply filters</div>
+      <div>
+        <small id="resultsMeta" style="color:#6b7280;"></small>
       </div>
     </div>
 
-    <div id="loadingIndicator" class="loading-indicator" role="status" aria-hidden="true">
-      <div style="width:40px;height:40px;border:4px solid rgba(102,126,234,0.12);border-top:4px solid #667eea;border-radius:50%;margin:0 auto 10px; animation:spin 1s linear infinite;"></div>
-      <div><strong>Searching — fetching results...</strong></div>
-    </div>
-
-    <div class="results-preview" id="resultsPreview" aria-live="polite">
-      <div class="empty-state">
-        <i class="fas fa-search" style="font-size:40px;color:#667eea;display:block;margin-bottom:8px;"></i>
-        <h3>Ready to Explore Data</h3>
-        <p>Apply filters or use the search bar to discover insights — results will appear here and be interactive.</p>
-      </div>
+    <div style="width:100%; overflow:auto;">
+      <table id="resultsTable" class="display nowrap" style="width:100%;">
+        <thead><tr id="resultsHead"></tr></thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
     </div>
   </div>
 </div>
 
-{# CSRF token is included as hidden input so JS can read it if needed #}
-<form style="display:none;">{% csrf_token %}</form>
+{# Filter Drawer (Bootstrap offcanvas) #}
+<div class="offcanvas offcanvas-end" tabindex="-1" id="filterDrawer" aria-labelledby="filterDrawerLabel">
+  <div class="offcanvas-header">
+    <h5 id="filterDrawerLabel">Filters</h5>
+    <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body">
+    <form id="filterForm">
+      <div id="filterFields">
+        <!-- dynamic fields inserted here -->
+      </div>
 
-<!-- jQuery + DataTables + Buttons CDN -->
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button type="button" id="applyFilters" class="tab-btn">Apply</button>
+        <button type="button" id="clearFilters" class="tab-btn">Clear</button>
+        <div style="margin-left:auto; color:#6b7280; align-self:center;"><small>Filters are server-side</small></div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# CSRF token so JS can read if required #}
+<form style="display:none;">{% csrf_token %}</form>
+{% endblock %}
+
+{% block scripts %}
+<!-- Dependencies -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
@@ -277,415 +288,563 @@ body {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.11.0/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
 /* eslint-disable no-undef */
 (function () {
-  // DOM elements
-  const searchInput = document.getElementById('mainSearch');
-  const suggestionsDropdown = document.getElementById('suggestionsDropdown');
-  const quickFilterBtns = document.querySelectorAll('.quick-filter-btn');
-  const activeFiltersContainer = document.getElementById('activeFilters');
-  const resultsPreview = document.getElementById('resultsPreview');
-  const resultsCountElt = document.getElementById('resultsCount');
-  const loadingIndicator = document.getElementById('loadingIndicator');
-  const exportCsvBackend = document.getElementById('exportCsvBackend');
-  const exportExcelBackend = document.getElementById('exportExcelBackend');
-  const logicButtons = document.querySelectorAll('.logic-btn');
+  // ---------------------
+  // Helpers
+  // ---------------------
+  const csrftoken = (() => {
+    const input = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    if (input) return input.value;
+    const m = document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)');
+    return m ? m.pop() : '';
+  })();
 
-  // State
-  let suggestions = [];
-  let filters = []; // { raw, type, value, label }
-  let filterLogic = 'AND';
-  let currentDataTable = null;
-
-  // CSRF helper (tries hidden form token then cookie)
-  function getCSRF() {
-    // first try the hidden input
-    const tokenInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
-    if (tokenInput && tokenInput.value) return tokenInput.value;
-    // fallback to cookie
-    const name = 'csrftoken';
-    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-    return match ? match[2] : '';
-  }
-  const CSRF = getCSRF();
-
-  // Init
-  fetchSuggestions();
-  bindQuickFilters();
-  bindSearch();
-  bindLogicButtons();
-  bindBackendExports();
-
-  // ---------- fetch suggestions ----------
-  async function fetchSuggestions() {
-    try {
-      const resp = await fetch('/api/filter-suggestions/');
-      if (!resp.ok) throw new Error('Failed fetching suggestions');
-      suggestions = await resp.json();
-    } catch (err) {
-      // fallback small set
-      suggestions = [
-        { category: 'Users', label: 'Faculty Members', filter: 'profile_role:faculty', description: 'All faculty members' },
-        { category: 'Users', label: 'Students', filter: 'profile_role:student', description: 'All students' },
-        { category: 'Date Range', label: 'Last 30 Days', filter: 'date_range:30_days', description: 'Data from last 30 days' },
-        { category: 'Date Range', label: 'This Academic Year', filter: 'date_range:academic_year', description: 'This academic year' },
-      ];
+  function apiUrl(name, param) {
+    // Map to view names in your urls.py; adapt prefix if needed
+    const map = {
+      'org_types': "{% url 'api_org_types' %}",
+      'orgs_by_type': "{% url 'api_orgs_by_type' %}",    // expecting query param or will append ?org_type_id=
+      'filter_meta': "{% url 'api_filter_meta' 'events' %}", // we will replace last segment
+      'search': "{% url 'api_search' %}",
+      'export_csv': "{% url 'api_export_csv' %}",
+      'export_excel': "{% url 'api_export_excel' %}",
+      'page': "{% url 'data_export_filter' %}"
+    };
+    if (name === 'orgs_by_type') {
+      // use query param for compatibility with your view
+      return "{% url 'api_orgs_by_type' %}?org_type_id=" + encodeURIComponent(param || '');
     }
+    if (name === 'filter_meta') {
+      // replace last segment by category
+      const base = "{% url 'api_filter_meta' 'events' %}";
+      if (!param) return base.replace('events', 'events');
+      return base.replace('events', param);
+    }
+    return map[name];
   }
 
-  // ---------- Quick filters ----------
-  function bindQuickFilters() {
-    quickFilterBtns.forEach(btn => {
+  function requestJSON(url, opts={}) {
+    return fetch(url, Object.assign({
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken }
+    }, opts)).then(res => {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    });
+  }
+
+  function postJSON(url, payload) {
+    return requestJSON(url, { method: 'POST', body: JSON.stringify(payload) });
+  }
+
+  function downloadBlob(response, filename) {
+    return response.blob().then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  // ---------------------
+  // State
+  // ---------------------
+  let currentCategory = 'events';
+  let appliedFilters = []; // array of { type, value, label }
+  let dt = null;
+
+  // DOM
+  const tabBtns = document.querySelectorAll('.tab-btn[data-category]');
+  const searchInput = document.getElementById('globalSearch');
+  const openFiltersBtn = document.getElementById('openFilters');
+  const filterDrawerEl = document.getElementById('filterDrawer');
+  const filterDrawer = new bootstrap.Offcanvas(filterDrawerEl);
+  const filterFieldsContainer = document.getElementById('filterFields');
+  const applyFiltersBtn = document.getElementById('applyFilters');
+  const clearFiltersBtn = document.getElementById('clearFilters');
+  const activeFiltersEl = document.getElementById('activeFilters');
+  const resultsCount = document.getElementById('resultsCount');
+  const resultsMeta = document.getElementById('resultsMeta');
+  const resultsHead = document.getElementById('resultsHead');
+  const resultsBody = document.getElementById('resultsBody');
+  const exportCsvBtn = document.getElementById('exportCsv');
+  const exportExcelBtn = document.getElementById('exportExcel');
+
+  // ---------------------
+  // Initialization
+  // ---------------------
+  function init() {
+    bindTabs();
+    bindSearch();
+    bindDrawer();
+    bindExport();
+    loadInitialResults(); // show all events by default
+  }
+
+  function bindTabs() {
+    tabBtns.forEach(btn => {
       btn.addEventListener('click', () => {
-        const raw = btn.dataset.filter;
-        // toggle active appearance
-        btn.classList.toggle('active');
-        if (filters.some(f => f.raw === raw)) {
-          // remove filter
-          filters = filters.filter(f => f.raw !== raw);
-        } else {
-          addFilterFromRaw(raw, /*noRender*/ true);
-        }
+        tabBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentCategory = btn.dataset.category;
+        appliedFilters = []; // clear filters by default when switching category
         renderActiveFilters();
-        executeSearch();
+        loadInitialResults();
       });
     });
   }
 
-  function addFilterFromRaw(raw, skipDuplicateToast) {
-    if (!raw) return;
-    if (filters.some(f => f.raw === raw)) {
-      if (!skipDuplicateToast) showToast('Filter already applied', 'info');
-      return;
-    }
-    const [type, ...rest] = raw.split(':');
-    const value = rest.join(':') || 'true';
-    const match = suggestions.find(s => s.filter === raw);
-    const label = match ? match.label : `${type}: ${value}`;
-    filters.push({ raw, type, value: String(value), label });
-    renderActiveFilters();
-  }
-
-  // ---------- Search & suggestions ----------
   function bindSearch() {
-    searchInput.addEventListener('input', (e) => {
-      handleSearchInput(e.target.value);
-    });
-
     searchInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
+        // add free-text as a search filter (type: search)
         const q = searchInput.value.trim();
-        if (!q) return;
-        addSearchFilter(q);
-        searchInput.value = '';
-        hideSuggestions();
-      } else if (e.key === 'Escape') {
-        hideSuggestions();
-      }
-    });
-
-    document.addEventListener('click', (e) => {
-      if (!searchInput.contains(e.target) && !suggestionsDropdown.contains(e.target)) {
-        hideSuggestions();
-      }
-    });
-  }
-
-  function handleSearchInput(text) {
-    const q = (text || '').trim().toLowerCase();
-    if (q.length < 2) {
-      hideSuggestions();
-      return;
-    }
-    const list = suggestions.filter(s =>
-      (s.label || '').toLowerCase().includes(q) ||
-      (s.description || '').toLowerCase().includes(q) ||
-      (s.category || '').toLowerCase().includes(q) ||
-      (s.filter || '').toLowerCase().includes(q)
-    ).slice(0, 12);
-
-    showSuggestions(list, q);
-  }
-
-  function showSuggestions(list, q) {
-    if (!list.length) {
-      suggestionsDropdown.style.display = 'none';
-      suggestionsDropdown.innerHTML = '';
-      return;
-    }
-    let html = '';
-    let currentCategory = '';
-    list.forEach(item => {
-      if (item.category !== currentCategory) {
-        html += `<div class="suggestion-item" style="background:transparent; cursor:default;"><div class="suggestion-category">${escapeHtml(item.category)}</div></div>`;
-        currentCategory = item.category;
-      }
-      html += `<div class="suggestion-item" role="option" data-filter="${escapeHtml(item.filter)}"><div class="suggestion-label">${highlight(item.label || '', q)}</div><div style="font-size:.85rem;color:#6b7280;margin-top:6px;">${highlight(item.description || '', q)}</div></div>`;
-    });
-    html += `<div class="suggestion-item" data-filter="search:__raw__${encodeURIComponent(q)}" style="font-style:italic;color:#4b5563;">Search for "<strong>${escapeHtml(q)}</strong>" across all data</div>`;
-    suggestionsDropdown.innerHTML = html;
-    suggestionsDropdown.style.display = 'block';
-    suggestionsDropdown.setAttribute('aria-hidden', 'false');
-
-    suggestionsDropdown.querySelectorAll('.suggestion-item[data-filter]').forEach(el => {
-      el.addEventListener('click', () => {
-        const raw = el.dataset.filter;
-        if (raw.startsWith('search:__raw__')) {
-          const qterm = decodeURIComponent(raw.replace('search:__raw__', ''));
-          addSearchFilter(qterm);
-        } else {
-          addFilterFromRaw(raw);
+        if (q) {
+          // update or add search filter
+          const idx = appliedFilters.findIndex(f => f.type === 'search');
+          if (idx >= 0) appliedFilters.splice(idx,1);
+          appliedFilters.push({ type: 'search', value: q, label: `Search: ${q}` });
+          renderActiveFilters();
+          doSearch();
+          searchInput.value = '';
         }
-        searchInput.value = '';
-        hideSuggestions();
-        executeSearch();
-      });
+      }
     });
   }
 
-  function hideSuggestions() {
-    suggestionsDropdown.style.display = 'none';
-    suggestionsDropdown.innerHTML = '';
-    suggestionsDropdown.setAttribute('aria-hidden', 'true');
+  function bindDrawer() {
+    openFiltersBtn.addEventListener('click', () => {
+      // fetch filter meta for current category
+      const url = apiUrl('filter_meta', currentCategory);
+      fetch(url, { headers: { 'X-CSRFToken': csrftoken } })
+        .then(res => res.json())
+        .then(meta => {
+          buildFilterFieldsForCategory(currentCategory, meta.filters || {});
+          filterDrawer.show();
+        })
+        .catch(err => {
+          console.error('filter meta error', err);
+          // still build generic fields
+          buildFilterFieldsForCategory(currentCategory, {});
+          filterDrawer.show();
+        });
+    });
+
+    applyFiltersBtn.addEventListener('click', () => {
+      // read values from filter form
+      const newFilters = readFiltersFromForm();
+      appliedFilters = appliedFilters.filter(f => f.type === 'search'); // keep only search if present
+      // merge new filters
+      newFilters.forEach(f => {
+        // avoid duplicates by type/value
+        if (!appliedFilters.some(x => x.type === f.type && String(x.value) === String(f.value))) appliedFilters.push(f);
+      });
+      renderActiveFilters();
+      filterDrawer.hide();
+      doSearch();
+    });
+
+    clearFiltersBtn.addEventListener('click', () => {
+      // clear form inputs
+      filterFieldsContainer.innerHTML = '';
+      appliedFilters = appliedFilters.filter(f => f.type === 'search'); // keep search only
+      renderActiveFilters();
+    });
   }
 
-  function addSearchFilter(query) {
-    const raw = `search:${query}`;
-    if (filters.some(f => f.raw === raw)) { showToast('Filter already applied', 'info'); return; }
-    filters.push({ raw, type: 'search', value: query, label: `Search: ${query}` });
-    renderActiveFilters();
-    executeSearch();
+  // ---------------------
+  // Build dynamic filter fields
+  // ---------------------
+  function buildFilterFieldsForCategory(category, meta) {
+    filterFieldsContainer.innerHTML = '';
+    // Common: Organization Type -> Organization
+    const orgTypeDiv = document.createElement('div');
+    orgTypeDiv.className = 'form-group';
+    orgTypeDiv.innerHTML = `<label class="form-label">Organization Type</label>
+      <select id="ff_org_type" class="form-select"><option value="">-- any --</option></select>`;
+    filterFieldsContainer.appendChild(orgTypeDiv);
+
+    const orgDiv = document.createElement('div');
+    orgDiv.className = 'form-group';
+    orgDiv.innerHTML = `<label class="form-label">Organization</label>
+      <select id="ff_org" class="form-select"><option value="">-- any --</option></select>`;
+    filterFieldsContainer.appendChild(orgDiv);
+
+    // populate org types
+    const otUrl = "{% url 'api_org_types' %}";
+    fetch(otUrl, { headers: { 'X-CSRFToken': csrftoken } })
+      .then(r => r.json())
+      .then(list => {
+        const sel = document.getElementById('ff_org_type');
+        list.forEach(it => {
+          const o = document.createElement('option');
+          o.value = it.id; o.textContent = it.name;
+          sel.appendChild(o);
+        });
+        // if user already had an applied org_type filter, restore selection
+        const existing = appliedFilters.find(f => f.type === 'organization_type');
+        if (existing) sel.value = existing.value;
+      });
+
+    document.getElementById('ff_org_type').addEventListener('change', (e) => {
+      const id = e.target.value;
+      const sel = document.getElementById('ff_org');
+      sel.innerHTML = '<option value="">-- any --</option>';
+      if (!id) return;
+      // call api_orgs_by_type?org_type_id=
+      const url = "{% url 'api_orgs_by_type' %}" + '?org_type_id=' + encodeURIComponent(id);
+      fetch(url, { headers: { 'X-CSRFToken': csrftoken } })
+        .then(r => r.json())
+        .then(list => {
+          list.forEach(it => {
+            const o = document.createElement('option');
+            o.value = it.id; o.textContent = it.name;
+            sel.appendChild(o);
+          });
+          // restore if applied
+          const existing = appliedFilters.find(f => f.type === 'organization' && String(f.parent) === String(id));
+          if (existing) sel.value = existing.value;
+        });
+    });
+
+    // Category-specific fields
+    if (category === 'events') {
+      // statuses and boolean flags and date ranges
+      const statuses = meta.statuses || [];
+      const statusDiv = document.createElement('div');
+      statusDiv.className = 'form-group';
+      let opts = '<option value="">-- any --</option>';
+      statuses.forEach(s => opts += `<option value="${s.value}">${s.label}</option>`);
+      statusDiv.innerHTML = `<label>Status</label><select id="ff_status" class="form-select">${opts}</select>`;
+      filterFieldsContainer.appendChild(statusDiv);
+
+      const flagsDiv = document.createElement('div');
+      flagsDiv.className = 'form-group';
+      flagsDiv.innerHTML = `<label>Flags</label>
+        <div style="display:flex; gap:8px; margin-top:6px;">
+          <label class="form-check"><input id="ff_big" type="checkbox"> Big Event</label>
+          <label class="form-check"><input id="ff_finance" type="checkbox"> Needs Finance</label>
+        </div>`;
+      filterFieldsContainer.appendChild(flagsDiv);
+
+      const dateDiv = document.createElement('div');
+      dateDiv.className = 'form-group';
+      dateDiv.innerHTML = `<label>Date range</label>
+        <select id="ff_date" class="form-select">
+          <option value="">-- any --</option>
+          <option value="7_days">Last 7 days</option>
+          <option value="30_days">Last 30 days</option>
+          <option value="this_month">This month</option>
+          <option value="this_year">This year</option>
+          <option value="academic_year">This academic year</option>
+        </select>`;
+      filterFieldsContainer.appendChild(dateDiv);
+    }
+
+    if (category === 'users') {
+      // role + active
+      const roles = meta.roles || [];
+      const roleDiv = document.createElement('div');
+      roleDiv.className = 'form-group';
+      let opts = '<option value="">-- any --</option>';
+      roles.forEach(r => opts += `<option value="${r.value}">${r.label}</option>`);
+      roleDiv.innerHTML = `<label>Role</label><select id="ff_role" class="form-select">${opts}</select>`;
+      filterFieldsContainer.appendChild(roleDiv);
+
+      const actDiv = document.createElement('div');
+      actDiv.className = 'form-group';
+      actDiv.innerHTML = `<label>Active</label>
+        <select id="ff_active" class="form-select">
+          <option value="">-- any --</option>
+          <option value="true">Active</option>
+          <option value="false">Inactive</option>
+        </select>`;
+      filterFieldsContainer.appendChild(actDiv);
+    }
+
+    if (category === 'reports') {
+      const rtypes = meta.report_types || [];
+      const rDiv = document.createElement('div');
+      rDiv.className = 'form-group';
+      let opts = '<option value="">-- any --</option>';
+      rtypes.forEach(r => opts += `<option value="${r.value}">${r.label}</option>`);
+      rDiv.innerHTML = `<label>Report Type</label><select id="ff_report_type" class="form-select">${opts}</select>`;
+      filterFieldsContainer.appendChild(rDiv);
+
+      const stDiv = document.createElement('div');
+      stDiv.className = 'form-group';
+      let statusOpts = '<option value="">-- any --</option>';
+      (meta.statuses || []).forEach(s => statusOpts += `<option value="${s.value}">${s.label}</option>`);
+      stDiv.innerHTML = `<label>Status</label><select id="ff_report_status" class="form-select">${statusOpts}</select>`;
+      filterFieldsContainer.appendChild(stDiv);
+
+      const dateDiv = document.createElement('div');
+      dateDiv.className = 'form-group';
+      dateDiv.innerHTML = `<label>Date range</label>
+        <select id="ff_report_date" class="form-select">
+          <option value="">-- any --</option>
+          <option value="7_days">Last 7 days</option>
+          <option value="30_days">Last 30 days</option>
+          <option value="this_month">This month</option>
+          <option value="this_year">This year</option>
+          <option value="academic_year">This academic year</option>
+        </select>`;
+      filterFieldsContainer.appendChild(dateDiv);
+    }
+
+    if (category === 'organizations') {
+      const activeDiv = document.createElement('div');
+      activeDiv.className = 'form-group';
+      activeDiv.innerHTML = `<label>Active</label>
+        <select id="ff_org_active" class="form-select">
+          <option value="">-- any --</option>
+          <option value="true">Active</option>
+          <option value="false">Inactive</option>
+        </select>`;
+      filterFieldsContainer.appendChild(activeDiv);
+    }
+
+    // restore previous applied values (if any)
+    restoreFormValuesFromAppliedFilters();
   }
 
-  // ---------- Active filters UI ----------
+  function restoreFormValuesFromAppliedFilters() {
+    // organization_type
+    const ot = appliedFilters.find(f => f.type === 'organization_type');
+    if (ot) {
+      const sel = document.getElementById('ff_org_type');
+      if (sel) sel.value = ot.value;
+      // trigger change to load orgs
+      if (sel) sel.dispatchEvent(new Event('change'));
+    }
+    const org = appliedFilters.find(f => f.type === 'organization');
+    if (org) {
+      const sel = document.getElementById('ff_org');
+      if (sel) sel.value = org.value;
+    }
+    // other fields for each category
+    appliedFilters.forEach(f => {
+      if (f.type === 'status' && document.getElementById('ff_status')) document.getElementById('ff_status').value = f.value;
+      if (f.type === 'date_range' && document.getElementById('ff_date')) document.getElementById('ff_date').value = f.value;
+      if (f.type === 'flag' && f.value === 'is_big_event' && document.getElementById('ff_big')) document.getElementById('ff_big').checked = true;
+      if (f.type === 'flag' && f.value === 'needs_finance_approval' && document.getElementById('ff_finance')) document.getElementById('ff_finance').checked = true;
+      if (f.type === 'role' && document.getElementById('ff_role')) document.getElementById('ff_role').value = f.value;
+      if (f.type === 'active' && document.getElementById('ff_active')) document.getElementById('ff_active').value = f.value;
+      if (f.type === 'report_type' && document.getElementById('ff_report_type')) document.getElementById('ff_report_type').value = f.value;
+      if (f.type === 'report_status' && document.getElementById('ff_report_status')) document.getElementById('ff_report_status').value = f.value;
+      if (f.type === 'org_active' && document.getElementById('ff_org_active')) document.getElementById('ff_org_active').value = f.value;
+    });
+  }
+
+  // ---------------------
+  // Reading filters form -> normalize into appliedFilters entries
+  // ---------------------
+  function readFiltersFromForm() {
+    const out = [];
+    const otEl = document.getElementById('ff_org_type');
+    if (otEl && otEl.value) out.push({ type: 'organization_type', value: otEl.value, label: `Org type: ${otEl.options[otEl.selectedIndex].text}` });
+
+    const orgEl = document.getElementById('ff_org');
+    if (orgEl && orgEl.value) out.push({ type: 'organization', value: orgEl.value, parent: (otEl?otEl.value:null), label: `Org: ${orgEl.options[orgEl.selectedIndex].text}` });
+
+    // category specific
+    if (currentCategory === 'events') {
+      const s = document.getElementById('ff_status'); if (s && s.value) out.push({ type: 'status', value: s.value, label: `Status: ${s.options[s.selectedIndex].text}` });
+      const d = document.getElementById('ff_date'); if (d && d.value) out.push({ type: 'date_range', value: d.value, label: `Date: ${d.options[d.selectedIndex].text}` });
+      const big = document.getElementById('ff_big'); if (big && big.checked) out.push({ type: 'flag', value: 'is_big_event', label: 'Big event' });
+      const fin = document.getElementById('ff_finance'); if (fin && fin.checked) out.push({ type: 'flag', value: 'needs_finance_approval', label: 'Needs finance' });
+    }
+    if (currentCategory === 'users') {
+      const r = document.getElementById('ff_role'); if (r && r.value) out.push({ type: 'role', value: r.value, label: `Role: ${r.options[r.selectedIndex].text}` });
+      const a = document.getElementById('ff_active'); if (a && a.value) out.push({ type: 'active', value: a.value, label: `Active: ${a.options[a.selectedIndex].text}` });
+    }
+    if (currentCategory === 'reports') {
+      const rt = document.getElementById('ff_report_type'); if (rt && rt.value) out.push({ type: 'report_type', value: rt.value, label: `Report Type: ${rt.options[rt.selectedIndex].text}` });
+      const rs = document.getElementById('ff_report_status'); if (rs && rs.value) out.push({ type: 'status', value: rs.value, label: `Status: ${rs.options[rs.selectedIndex].text}` });
+      const rd = document.getElementById('ff_report_date'); if (rd && rd.value) out.push({ type: 'date_range', value: rd.value, label: `Date: ${rd.options[rd.selectedIndex].text}` });
+    }
+    if (currentCategory === 'organizations') {
+      const oa = document.getElementById('ff_org_active'); if (oa && oa.value) out.push({ type: 'active', value: oa.value, label: `Active: ${oa.options[oa.selectedIndex].text}` });
+    }
+    return out;
+  }
+
+  // ---------------------
+  // Active filters UI
+  // ---------------------
   function renderActiveFilters() {
-    if (!filters.length) {
-      activeFiltersContainer.innerHTML = `<div class="empty-filters" style="padding:8px;background:rgba(160,174,192,0.06);border-radius:8px;"><i class="fas fa-info-circle"></i> No filters applied. Use quick filters or search.</div>`;
-      // remove quick filter active class if none selected
-      quickFilterBtns.forEach(b => {
-        if (filters.every(f => !b.dataset.filter || !filters.some(x => x.raw === b.dataset.filter))) {
-          b.classList.remove('active');
-        }
-      });
+    activeFiltersEl.innerHTML = '';
+    if (!appliedFilters.length) {
+      activeFiltersEl.innerHTML = '<div style="color:#6b7280;">No filters applied — open drawer to add filters.</div>';
+      resultsCount.textContent = 'No filters applied — showing all records for category: ' + currentCategory;
       return;
     }
-    activeFiltersContainer.innerHTML = filters.map((f, idx) => `
-      <div class="filter-chip" title="${escapeHtml(f.raw)}">
-        <span>${escapeHtml(f.label)}</span>
-        <button class="remove-filter" title="Remove" data-idx="${idx}">&times;</button>
-      </div>
-    `).join('');
-    activeFiltersContainer.querySelectorAll('.remove-filter').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const idx = Number(e.currentTarget.dataset.idx);
-        const raw = filters[idx] && filters[idx].raw;
-        filters.splice(idx, 1);
-        // also remove matching quick-filter active if any
-        quickFilterBtns.forEach(b => { if (b.dataset.filter === raw) b.classList.remove('active'); });
+    appliedFilters.forEach((f, idx) => {
+      const chip = document.createElement('div');
+      chip.className = 'filter-chip';
+      chip.innerHTML = `<span>${f.label || (f.type+':'+f.value)}</span><button class="remove" data-idx="${idx}" aria-label="remove">&times;</button>`;
+      activeFiltersEl.appendChild(chip);
+      chip.querySelector('.remove').addEventListener('click', () => {
+        appliedFilters.splice(idx,1);
         renderActiveFilters();
-        executeSearch();
+        doSearch();
       });
     });
   }
 
-  // ---------- Logic buttons ----------
-  function bindLogicButtons() {
-    logicButtons.forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        logicButtons.forEach(b => b.style.background = '#fff');
-        e.currentTarget.style.background = 'linear-gradient(135deg,#667eea,#764ba2)';
-        filterLogic = e.currentTarget.dataset.logic || 'AND';
-        if (filters.length) executeSearch();
-      });
+  // ---------------------
+  // Search & render results
+  // ---------------------
+  function loadInitialResults() {
+    // when category changes we show all records (no filters) — matches request
+    appliedFilters = appliedFilters.filter(f => f.type === 'search'); // only keep search if any
+    renderActiveFilters();
+    doSearch();
+  }
+
+  function doSearch() {
+    // build payload
+    const payload = {
+      category: currentCategory,
+      q: null,
+      filters: appliedFilters.map(f => ({ type: f.type, value: f.value }))
+    };
+    // if a search filter exists (type:search) put q instead of filter entry for cleaner server handling
+    const sf = appliedFilters.find(f => f.type === 'search');
+    if (sf) {
+      payload.q = sf.value;
+      // remove search entry from filters for server filter list
+      payload.filters = payload.filters.filter(p => p.type !== 'search');
+    }
+
+    // call API
+    fetch("{% url 'api_search' %}", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+      body: JSON.stringify(payload)
+    }).then(r => {
+      if (!r.ok) throw new Error('Search failed: ' + r.status);
+      return r.json();
+    }).then(data => {
+      const rows = data.results || [];
+      renderResults(rows, data.total || rows.length);
+    }).catch(err => {
+      console.error(err);
+      resultsHead.innerHTML = '';
+      resultsBody.innerHTML = `<tr><td colspan="10">Search failed. Check console.</td></tr>`;
     });
-    // set default AND style
-    const defaultBtn = document.querySelector('.logic-btn[data-logic="AND"]');
-    if (defaultBtn) defaultBtn.style.background = 'linear-gradient(135deg,#667eea,#764ba2)';
   }
 
-  // ---------- Execute search (backend) ----------
-  async function executeSearch() {
-    if (!filters.length) {
-      clearResultsPreview();
-      return;
+  function renderResults(rows, total) {
+    // destroy DataTable if exists
+    if ($.fn.dataTable && $.fn.dataTable.isDataTable('#resultsTable')) {
+      $('#resultsTable').DataTable().clear().destroy();
+      $('#resultsHead').empty(); $('#resultsBody').empty();
     }
 
-    showLoading(true);
-
-    const payloadFilters = filters.map(f => ({ type: f.type, value: String(f.value), label: f.label || f.raw }));
-
-    try {
-      const resp = await fetch('/api/execute-filter/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-        body: JSON.stringify({ filters: payloadFilters, logic: filterLogic, unlimited: true })
-      });
-      if (!resp.ok) {
-        const text = await resp.text();
-        throw new Error('Server returned ' + resp.status + ' - ' + text);
-      }
-      const data = await resp.json();
-      const results = Array.isArray(data.results) ? data.results : (data.results || []);
-      renderResultsTable(results);
-      showToast(`Found ${results.length} records`, 'success');
-    } catch (err) {
-      console.error('Search error:', err);
-      showToast('Search failed. Check console for details.', 'error');
-      clearResultsPreview();
-    } finally {
-      showLoading(false);
-    }
-  }
-
-  // ---------- DataTable rendering ----------
-  function renderResultsTable(rows) {
-    resultsPreview.innerHTML = '';
-    if (!rows || !rows.length) {
-      resultsCountElt.innerHTML = `<i class="fas fa-database" style="color:#667eea;"></i> 0 records found`;
-      resultsPreview.innerHTML = `<div class="empty-state"><i class="fas fa-search-minus" style="font-size:36px;color:#667eea;"></i><h3>No Results Found</h3><p>Try different filters or search terms.</p></div>`;
-      destroyDataTable();
-      return;
+    // Build header from union of keys (stable order)
+    let keys = [];
+    if (rows.length) {
+      const set = new Set();
+      rows.forEach(r => Object.keys(r).forEach(k => set.add(k)));
+      keys = Array.from(set);
     }
 
-    // collect header order deterministically
-    const headersSet = new Set();
-    rows.forEach(r => Object.keys(r).forEach(k => headersSet.add(k)));
-    const headers = Array.from(headersSet);
-
-    const tableId = 'dynamicResultsTable';
-    let html = `<table id="${tableId}" class="display nowrap" style="width:100%"><thead><tr>`;
-    headers.forEach(h => html += `<th>${formatHeader(h)}</th>`);
-    html += `</tr></thead><tbody>`;
-    rows.forEach(r => {
-      html += '<tr>';
-      headers.forEach(h => {
-        let cell = (r[h] === null || r[h] === undefined) ? '' : r[h];
-        // basic string conversion
-        html += `<td>${escapeHtml(String(cell))}</td>`;
-      });
-      html += '</tr>';
-    });
-    html += `</tbody></table>`;
-    resultsPreview.innerHTML = html;
-
-    resultsCountElt.innerHTML = `<i class="fas fa-database" style="color:#667eea;"></i> ${rows.length.toLocaleString()} records found`;
-    // init datatable
-    setTimeout(() => initDataTable('#' + tableId), 10);
-  }
-
-  function formatHeader(h) {
-    return h.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  }
-
-  function destroyDataTable() {
-    if (currentDataTable) {
-      try { currentDataTable.destroy(true); } catch (e) { /* ignore */ }
-      currentDataTable = null;
-      // remove table DOM left-over classes
-      const existing = document.querySelector('.dataTables_wrapper');
-      if (existing && existing.parentNode && existing.parentNode.id === 'resultsPreview') {
-        // leave as is; initialization will recreate wrapper
-      }
+    // fallback header for empty dataset per category
+    if (!keys.length) {
+      keys = (currentCategory === 'events') ? ['id','title','status','organization','created_at'] :
+             (currentCategory === 'users') ? ['id','username','full_name','email','role','organization'] :
+             (currentCategory === 'reports') ? ['id','title','report_type','status','organization'] :
+             ['id','name','org_type','is_active'];
     }
-  }
 
-  function initDataTable(selector) {
-    destroyDataTable();
-    // eslint-disable-next-line no-undef
-    currentDataTable = $(selector).DataTable({
+    // header row
+    resultsHead.innerHTML = keys.map(k => `<th>${k.replace(/_/g,' ').replace(/\b\w/g,c => c.toUpperCase())}</th>`).join('');
+
+    // body rows
+    resultsBody.innerHTML = rows.map(r => {
+      return '<tr>' + keys.map(k => `<td>${escapeHtml(r[k] == null ? '' : r[k])}</td>`).join('') + '</tr>';
+    }).join('');
+
+    // init DataTable
+    dt = $('#resultsTable').DataTable({
+      dom: 'Bfrtip',
+      buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],
       scrollX: true,
-      responsive: true,
-      dom: 'Bflrtip',
-      buttons: [
-        { extend: 'copyHtml5', text: 'Copy' },
-        { extend: 'csvHtml5', text: 'CSV' },
-        { extend: 'excelHtml5', text: 'Excel' },
-        { extend: 'pdfHtml5', text: 'PDF' },
-        { extend: 'print', text: 'Print' }
-      ],
       pageLength: 25,
-      lengthMenu: [10, 25, 50, 100, 250],
       order: []
     });
+
+    resultsCount.textContent = `${total.toLocaleString()} records`;
+    resultsMeta.textContent = `Category: ${currentCategory.charAt(0).toUpperCase()+currentCategory.slice(1)}`;
   }
 
-  // ---------- Backend export (uses same filter payload) ----------
-  function bindBackendExports() {
-    exportCsvBackend.addEventListener('click', async () => {
-      if (!filters.length) { showToast('No filters applied.', 'warning'); return; }
-      const payload = filters.map(f => ({ type: f.type, value: String(f.value), label: f.label || f.raw }));
-      try {
-        const resp = await fetch('/api/export-data/csv/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-          body: JSON.stringify({ filters: payload, logic: filterLogic })
-        });
-        if (!resp.ok) throw new Error('Export failed: ' + resp.status);
-        const blob = await resp.blob();
+  // ---------------------
+  // Export handlers
+  // ---------------------
+  function bindExport() {
+    exportCsvBtn.addEventListener('click', () => {
+      const payload = {
+        category: currentCategory,
+        filters: appliedFilters.map(f => ({ type: f.type, value: f.value }))
+      };
+      // include q if search
+      const s = appliedFilters.find(f => f.type === 'search');
+      if (s) payload.q = s.value;
+      fetch("{% url 'api_export_csv' %}", {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'X-CSRFToken': csrftoken },
+        body: JSON.stringify(payload)
+      }).then(r => {
+        if (!r.ok) throw new Error('Export failed: ' + r.status);
+        return r.blob();
+      }).then(blob => {
+        const fileName = `${currentCategory}_export_${new Date().toISOString().slice(0,10)}.csv`;
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `export_${new Date().toISOString().slice(0,10)}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
+        const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); a.remove();
         URL.revokeObjectURL(url);
-        showToast('CSV exported (server)', 'success');
-      } catch (err) {
-        console.error(err);
-        showToast('Backend CSV export failed', 'error');
-      }
+      }).catch(err => {
+        console.error('CSV export err', err);
+        alert('CSV export failed — check console.');
+      });
     });
 
-    exportExcelBackend.addEventListener('click', async () => {
-      if (!filters.length) { showToast('No filters applied.', 'warning'); return; }
-      const payload = filters.map(f => ({ type: f.type, value: String(f.value), label: f.label || f.raw }));
-      try {
-        const resp = await fetch('/api/export-data/excel/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-          body: JSON.stringify({ filters: payload, logic: filterLogic })
-        });
-        if (!resp.ok) throw new Error('Export failed: ' + resp.status);
-        const blob = await resp.blob();
+    exportExcelBtn.addEventListener('click', () => {
+      const payload = {
+        category: currentCategory,
+        filters: appliedFilters.map(f => ({ type: f.type, value: f.value }))
+      };
+      const s = appliedFilters.find(f => f.type === 'search');
+      if (s) payload.q = s.value;
+      fetch("{% url 'api_export_excel' %}", {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'X-CSRFToken': csrftoken },
+        body: JSON.stringify(payload)
+      }).then(r => {
+        if (!r.ok) throw new Error('Export failed: ' + r.status);
+        return r.blob();
+      }).then(blob => {
+        const fileName = `${currentCategory}_export_${new Date().toISOString().slice(0,10)}.xlsx`;
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `export_${new Date().toISOString().slice(0,10)}.xlsx`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
+        const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); a.remove();
         URL.revokeObjectURL(url);
-        showToast('Excel exported (server)', 'success');
-      } catch (err) {
-        console.error(err);
-        showToast('Backend Excel export failed', 'error');
-      }
+      }).catch(err => {
+        console.error('Excel export err', err);
+        alert('Excel export failed — check console.');
+      });
     });
-
-
   }
 
-  // ---------- Helpers ----------
-  function clearResultsPreview() {
-    resultsPreview.innerHTML = `<div class="empty-state"><i class="fas fa-search" style="font-size:40px;color:#667eea;display:block;margin-bottom:8px;"></i><h3>Ready to Explore Data</h3><p>Apply filters or use the search bar to discover insights from your datasets. Results will appear here and be interactive.</p></div>`;
-    resultsCountElt.innerHTML = `<i class="fas fa-database" style="color:#667eea;"></i> Ready to search`;
-    destroyDataTable();
-  }
-
-  function showLoading(state) {
-    loadingIndicator.style.display = state ? 'block' : 'none';
-    if (state) {
-      resultsPreview.style.opacity = '0.4';
-      resultsPreview.setAttribute('aria-busy', 'true');
-    } else {
-      resultsPreview.style.opacity = '1';
-      resultsPreview.setAttribute('aria-busy', 'false');
-    }
-  }
-
+  // ---------------------
+  // Utilities
+  // ---------------------
   function escapeHtml(str) {
     if (str === null || str === undefined) return '';
     return String(str).replace(/[&<>"'`=\/]/g, function (s) {
@@ -693,45 +852,8 @@ body {
     });
   }
 
-  function highlight(text, q) {
-    if (!q) return escapeHtml(text);
-    try {
-      const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig');
-      return escapeHtml(text).replace(re, '<mark style="background:#667eea;color:#fff;padding:0 4px;border-radius:3px;">$1</mark>');
-    } catch (err) {
-      return escapeHtml(text);
-    }
-  }
-
-  function showToast(message, type = 'info') {
-    const colors = { success: '#16a34a', error: '#e53e3e', warning: '#f97316', info: '#2563eb' };
-    const icon = { success: 'check-circle', error: 'exclamation-circle', warning: 'exclamation-triangle', info: 'info-circle' };
-    const el = document.createElement('div');
-    el.style.position = 'fixed';
-    el.style.right = '20px';
-    el.style.top = '20px';
-    el.style.padding = '10px 14px';
-    el.style.borderRadius = '8px';
-    el.style.color = '#fff';
-    el.style.zIndex = 99999;
-    el.style.background = colors[type] || colors.info;
-    el.style.boxShadow = '0 8px 20px rgba(0,0,0,0.12)';
-    el.style.fontWeight = '700';
-    el.innerHTML = `<i class="fas fa-${icon[type] || 'info-circle'}" style="margin-right:8px;"></i> ${escapeHtml(message)}`;
-    document.body.appendChild(el);
-    setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3000);
-  }
-  $('#resultsTable').DataTable({
-        dom: 'Bfrtip',
-        buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],
-        scrollY: "60vh",
-        scrollX: true,
-        scrollCollapse: true,
-        fixedHeader: true,
-        paging: true,
-        responsive: false
-    });
-
+  // Start
+  init();
 })();
 </script>
 {% endblock %}
