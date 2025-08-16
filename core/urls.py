@@ -56,6 +56,7 @@ urlpatterns = [
     path('core-admin/user-roles/role/<int:role_id>/update/', views.update_org_role, name='update_org_role'),
     path('core-admin/user-roles/role/<int:role_id>/toggle/', views.toggle_org_role, name='toggle_org_role'),
     path('core-admin/user-roles/role/<int:role_id>/delete/', views.delete_org_role, name='delete_org_role'),
+    path('core-admin/user-roles/role/<int:role_id>/restore/', views.restore_org_role, name='restore_org_role'),
 
     # ────────────────────────────────────────────────
     # Admin - Event Proposals

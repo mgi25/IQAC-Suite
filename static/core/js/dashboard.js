@@ -610,8 +610,9 @@ function fitHeatmap(){
   // Boot
   document.addEventListener('DOMContentLoaded', () => {
     loadPerformance();
-  loadAndShowProposals();
-    loadRecentEvents();
+    loadAndShowProposals();
+    // Removed recent events feed to keep only user's proposals in Actions & Proposals
+    // loadRecentEvents();
     loadCalendarData();
     renderHeatmap();
     requestAnimationFrame(()=>{ syncHeights(); });
