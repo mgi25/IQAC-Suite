@@ -17,6 +17,7 @@ $(document).ready(function() {
     let firstErrorField = null;
     const autoFillEnabled = new URLSearchParams(window.location.search).has('autofill');
     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const originalFormAction = $('#proposal-form').attr('action') || '';
 
     // Demo data used for rapid prototyping. Remove once real data is wired.
     const AUTO_FILL_DATA = {
@@ -116,14 +117,6 @@ $(document).ready(function() {
             e.preventDefault();
             const section = $(this).data('section');
 
-            if (section === 'cdl-support') {
-                const url = $(this).data('url');
-                if (url) {
-                    window.location.href = url;
-                }
-                return;
-            }
-
             const currentOrder = parseInt($(`.proposal-nav .nav-link[data-section="${currentExpandedCard}"]`).data('order')) || 0;
             const targetOrder = parseInt($(this).data('order')) || 0;
             
@@ -209,6 +202,38 @@ $(document).ready(function() {
         const sectionData = getSectionData(section);
         $('#main-title').text(sectionData.title);
         $('#main-subtitle').text(sectionData.subtitle);
+
+        const formEl = $('#proposal-form');
+        if (section === 'cdl-support') {
+            const url = $('.proposal-nav .nav-link[data-section="cdl-support"]').data('url');
+            if (url) {
+                formEl.attr('action', url);
+                fetch(url)
+                    .then(res => res.text())
+                    .then(html => {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const cdlForm = doc.querySelector('#cdl-form');
+                        $('#form-panel-content').html(cdlForm ? cdlForm.innerHTML : html);
+                        setupCDLForm();
+                        setupFormFieldSync();
+                        setupTextSectionStorage();
+                        clearValidationErrors();
+                        if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                            window.AutosaveManager.reinitialize();
+                        }
+                        updateSubmitButton();
+                    })
+                    .catch(() => {
+                        $('#form-panel-content').html('<div class="form-grid"><p>Failed to load CDL Support form.</p></div>');
+                    });
+            } else {
+                $('#form-panel-content').html('<div class="form-grid"><p>CDL Support form not available.</p></div>');
+            }
+            return;
+        } else {
+            formEl.attr('action', originalFormAction);
+        }
 
         // Load content for all sections, including basic-info
         let formContent = '';
@@ -1758,7 +1783,37 @@ function getWhyThisEventForm() {
             showEmptyState();
         }
     }
-    
+
+    // ===== CDL SUPPORT SECTION FUNCTIONALITY =====
+    function setupCDLForm() {
+        const needsSupport = $('#id_needs_support');
+        const cdlSections = $('#cdl-sections');
+        const posterRequired = $('#id_poster_required');
+        const posterDetails = $('#poster-details');
+        const certificatesRequired = $('#id_certificates_required');
+        const certificatesDetails = $('#certificates-details');
+        const certificateHelp = $('#id_certificate_help');
+        const certificateHelpDetails = $('#certificate-help-details');
+
+        function toggle(el, show) {
+            if (el && el.length) {
+                el.toggle(show);
+            }
+        }
+
+        needsSupport.on('change', () => toggle(cdlSections, needsSupport.prop('checked')));
+        toggle(cdlSections, needsSupport.prop('checked'));
+
+        posterRequired.on('change', () => toggle(posterDetails, posterRequired.prop('checked')));
+        toggle(posterDetails, posterRequired.prop('checked'));
+
+        certificatesRequired.on('change', () => toggle(certificatesDetails, certificatesRequired.prop('checked')));
+        toggle(certificatesDetails, certificatesRequired.prop('checked'));
+
+        certificateHelp.on('change', () => toggle(certificateHelpDetails, certificateHelp.prop('checked')));
+        toggle(certificateHelpDetails, certificateHelp.prop('checked'));
+    }
+
     // ===== SAVE SECTION FUNCTIONALITY - FULLY PRESERVED =====
     function saveCurrentSection() {
         if (!currentExpandedCard) return;
@@ -1776,7 +1831,7 @@ function getWhyThisEventForm() {
                             nextLink.removeClass('disabled');
                             const nextUrl = nextLink.data('url');
                             setTimeout(() => {
-                                if (nextUrl) {
+                                if (nextUrl && nextSection !== 'cdl-support') {
                                     window.location.href = nextUrl;
                                 } else {
                                     openFormPanel(nextSection);
