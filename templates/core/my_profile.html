@@ -1,0 +1,324 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Profile - IQAC Suite{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'core/css/profile.css' %}">
+<main class="main-content">
+  <!-- Profile Header -->
+  <div class="profile-header-section">
+    <div class="profile-header-container">
+      <div class="profile-avatar-section">
+        <div class="profile-avatar-large">
+          <div class="avatar-placeholder">{{ user.get_full_name|default:user.username|slice:":1"|upper }}</div>
+          <div class="avatar-overlay">
+            <i class="fas fa-camera"></i>
+          </div>
+        </div>
+      </div>
+      <div class="profile-info-section">
+        <h1 class="profile-title">{{ user.get_full_name|default:user.username }}</h1>
+        <p class="profile-subtitle">{{ user.email }}</p>
+        <div class="profile-stats-grid">
+          <div class="stat-card">
+            <div class="stat-number">{{ total_events|default:"47" }}</div>
+            <div class="stat-label">Events</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">{{ user_organizations|length|default:"0" }}</div>
+            <div class="stat-label">Organizations</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">{{ user_achievements|length|default:"0" }}</div>
+            <div class="stat-label">Achievements</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">{{ years_active|default:"0" }}</div>
+            <div class="stat-label">Years Active</div>
+          </div>
+        </div>
+      </div>
+      <div class="profile-completion-section">
+        <div class="completion-label">Profile Completion</div>
+        <div class="completion-bar-container">
+          <div class="completion-bar">
+            <div class="completion-fill" style="width: 85%"></div>
+          </div>
+          <span class="completion-percentage">85%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <div class="profile-tabs-section">
+    <div class="profile-tabs-container">
+      <nav class="profile-tabs-nav">
+        <button class="tab-btn active" onclick="showTab('basic-info')">
+          <i class="fas fa-user"></i>
+          Basic Info
+        </button>
+        <button class="tab-btn" onclick="showTab('achievements')">
+          <i class="fas fa-trophy"></i>
+          Achievements
+        </button>
+        <button class="tab-btn" onclick="showTab('roles')">
+          <i class="fas fa-users-cog"></i>
+          Roles & Organizations
+        </button>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Content Section -->
+  <div class="profile-content-section">
+    <!-- Basic Info Tab -->
+    <div id="basic-info" class="tab-content-panel active">
+      <div class="content-grid">
+        <!-- Personal Information -->
+        <div class="content-card">
+          <div class="card-header">
+            <div class="header-icon">
+              <i class="fas fa-user"></i>
+            </div>
+            <h2>Personal Information</h2>
+            <button class="edit-btn">
+              <i class="fas fa-edit"></i>
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="info-grid">
+              <div class="info-row">
+                <div class="info-item">
+                  <div class="info-label">
+                    <i class="fas fa-user"></i>
+                    Full Name
+                  </div>
+                  <div class="info-value">{{ user.get_full_name|default:"Admin" }}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">
+                    <i class="fas fa-at"></i>
+                    Username
+                  </div>
+                  <div class="info-value">{{ user.username|default:"admin@gmail.com" }}</div>
+                </div>
+              </div>
+              <div class="info-row">
+                <div class="info-item">
+                  <div class="info-label">
+                    <i class="fas fa-calendar-plus"></i>
+                    Date Joined
+                  </div>
+                  <div class="info-value">{{ user.date_joined|date:"F d, Y"|default:"June 20, 2025" }}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">
+                    <i class="fas fa-clock"></i>
+                    Last Login
+                  </div>
+                  <div class="info-value">{{ user.last_login|date:"F d, Y - g:i A"|default:"August 16, 2025 - 3:45 AM" }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Account Status & Quick Actions -->
+        <div class="content-card">
+          <div class="card-header">
+            <div class="header-icon">
+              <i class="fas fa-shield-alt"></i>
+            </div>
+            <h2>Account Status</h2>
+          </div>
+          <div class="card-body">
+            <div class="status-list">
+              <div class="status-item">
+                <div class="status-indicator active">
+                  <i class="fas fa-check"></i>
+                </div>
+                <div class="status-content">
+                  <div class="status-title">Account Active</div>
+                  <div class="status-description">Your account is in good standing</div>
+                </div>
+              </div>
+              <div class="status-item">
+                <div class="status-indicator verified">
+                  <i class="fas fa-envelope-check"></i>
+                </div>
+                <div class="status-content">
+                  <div class="status-title">Email Verified</div>
+                  <div class="status-description">Your email address is verified</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="content-card full-width">
+          <div class="card-header">
+            <div class="header-icon">
+              <i class="fas fa-bolt"></i>
+            </div>
+            <h2>Quick Actions</h2>
+          </div>
+          <div class="card-body">
+            <div class="actions-grid">
+              <button class="btn btn-secondary">
+                <i class="fas fa-key"></i>
+                Change Password
+              </button>
+              <button class="btn btn-secondary">
+                <i class="fas fa-download"></i>
+                Download Data
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Achievements Tab -->
+    <div id="achievements" class="tab-content-panel">
+      <div class="content-card full-width">
+        <div class="card-header">
+          <div class="header-icon">
+            <i class="fas fa-trophy"></i>
+          </div>
+          <h2>My Achievements</h2>
+          <button class="btn btn-primary">
+            <i class="fas fa-plus"></i>
+            Add Achievement
+          </button>
+        </div>
+        <div class="card-body">
+          {% if user_achievements %}
+            <div class="achievements-grid">
+              {% for achievement in user_achievements %}
+              <div class="achievement-card">
+                <div class="achievement-header">
+                  <div class="achievement-icon">
+                    <i class="fas fa-trophy"></i>
+                  </div>
+                  <div class="achievement-actions">
+                    <button class="action-btn">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="action-btn">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="achievement-content">
+                  <h4>{{ achievement.title }}</h4>
+                  <div class="achievement-meta">
+                    <div class="meta-item">
+                      <i class="fas fa-calendar"></i>
+                      <span>{{ achievement.date_achieved|date:"M d, Y" }}</span>
+                    </div>
+                    <div class="meta-item">
+                      <i class="fas fa-building"></i>
+                      <span>{{ achievement.issuing_organization }}</span>
+                    </div>
+                  </div>
+                  {% if achievement.description %}
+                  <div class="achievement-description">
+                    {{ achievement.description }}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="empty-state">
+              <div class="empty-icon">
+                <i class="fas fa-trophy"></i>
+              </div>
+              <div class="empty-content">
+                <h3>No Achievements Yet</h3>
+                <p>Start building your achievement portfolio by adding your accomplishments and recognitions.</p>
+                <button class="btn btn-primary btn-lg">
+                  <i class="fas fa-plus"></i>
+                  Add Your First Achievement
+                </button>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Roles & Organizations Tab -->
+    <div id="roles" class="tab-content-panel">
+      <div class="content-card full-width">
+        <div class="card-header">
+          <div class="header-icon">
+            <i class="fas fa-users-cog"></i>
+          </div>
+          <h2>Roles & Organizations</h2>
+          <button class="btn btn-primary">
+            <i class="fas fa-plus"></i>
+            Join Organization
+          </button>
+        </div>
+        <div class="card-body">
+          {% if user_organizations %}
+            <div class="organizations-grid">
+              {% for org in user_organizations %}
+              <div class="organization-card">
+                <div class="org-header">
+                  <div class="org-icon">
+                    <i class="fas fa-building"></i>
+                  </div>
+                  <div class="org-info">
+                    <h4>{{ org.name }}</h4>
+                    <div class="org-badge">{{ org.type }}</div>
+                  </div>
+                  <div class="org-actions">
+                    <button class="action-btn">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="action-btn">
+                      <i class="fas fa-cog"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="org-details">
+                  <div class="detail-item">
+                    <i class="fas fa-user-tag"></i>
+                    <span>{{ org.user_role|default:"Member" }}</span>
+                  </div>
+                  <div class="detail-item">
+                    <i class="fas fa-calendar-plus"></i>
+                    <span>Joined {{ org.joined_date|date:"M Y" }}</span>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="empty-state">
+              <div class="empty-icon">
+                <i class="fas fa-users-cog"></i>
+              </div>
+              <div class="empty-content">
+                <h3>No Organizations</h3>
+                <p>You are not currently associated with any organizations. Join organizations to collaborate and contribute.</p>
+                <button class="btn btn-primary btn-lg">
+                  <i class="fas fa-plus"></i>
+                  Join Your First Organization
+                </button>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+<script src="{% static 'core/js/profile.js' %}"></script>
+{% endblock %}
