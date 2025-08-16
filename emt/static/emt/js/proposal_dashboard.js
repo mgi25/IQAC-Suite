@@ -65,6 +65,14 @@ $(document).ready(function() {
 
     const getRandom = arr => arr[Math.floor(Math.random() * arr.length)];
 
+    function updateCdlNavLink(proposalId) {
+        if (!proposalId) return;
+        const link = $('.proposal-nav .nav-link[data-section="cdl-support"]');
+        const url = `/emt/cdl-support/${proposalId}/`;
+        link.data('url', url);
+        link.attr('data-url', url);
+    }
+
     initializeDashboard();
 
     function initializeDashboard() {
@@ -73,6 +81,9 @@ $(document).ready(function() {
         loadExistingData();
         checkForExistingErrors();
         enablePreviouslyVisitedSections();
+        if (window.PROPOSAL_ID) {
+            updateCdlNavLink(window.PROPOSAL_ID);
+        }
         $('#autofill-btn').on('click', () => autofillTestData(currentExpandedCard));
         if (!$('.form-errors-banner').length) {
             setTimeout(() => {
@@ -2544,7 +2555,12 @@ function getWhyThisEventForm() {
             indicator.find('.indicator-text').text('Saving...');
         });
 
-        $(document).on('autosave:success', function() {
+        $(document).on('autosave:success', function(e) {
+            const detail = e.originalEvent && e.originalEvent.detail;
+            if (detail && detail.proposalId) {
+                window.PROPOSAL_ID = detail.proposalId;
+                updateCdlNavLink(detail.proposalId);
+            }
             const indicator = $('#autosave-indicator');
             indicator.removeClass('saving error').addClass('saved');
             indicator.find('.indicator-text').text('Saved');
