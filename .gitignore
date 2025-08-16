@@ -43,6 +43,8 @@ emt.txt
 # Allow Node package manifests
 !package.json
 !package-lock.json
+# Include AI field configuration
+!suite/field_config/*.json
 
 media/
 
