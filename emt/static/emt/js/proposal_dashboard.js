@@ -277,7 +277,7 @@ $(document).ready(function() {
                 setupIncomeSection();
             }
             if (section === 'why-this-event') {
-                setupWhyThisEventAI();
+                // setupWhyThisEventAI(); // AI suggestions disabled
             }
             setupFormFieldSync();
             setupTextSectionStorage();
@@ -1211,13 +1211,13 @@ function getWhyThisEventForm() {
     return `
         <div class="form-grid">
             <div class="form-row full-width">
-                <div id="ai-suggestion-status" class="ai-loading">Generating AI suggestions...</div>
+                <!-- <div id="ai-suggestion-status" class="ai-loading">Generating AI suggestions...</div> -->
             </div>
             <div class="form-row full-width">
                 <div class="input-group">
                     <label for="need-analysis-modern">Need Analysis - Why is this event necessary? *</label>
                     <textarea id="need-analysis-modern" rows="4" required placeholder="Explain why this event is necessary, what gap it fills, and its relevance to the target audience..."></textarea>
-                    <div class="ai-suggestion-card" id="ai-need-analysis"></div>
+                    <!-- <div class="ai-suggestion-card" id="ai-need-analysis"></div> -->
                     <div class="help-text">Provide a detailed explanation of why this event is important.</div>
                 </div>
             </div>
@@ -1226,7 +1226,7 @@ function getWhyThisEventForm() {
                 <div class="input-group">
                     <label for="objectives-modern">Objectives - What do you aim to achieve? *</label>
                     <textarea id="objectives-modern" rows="4" required placeholder="• Objective 1: ...&#10;• Objective 2: ...&#10;• Objective 3: ..."></textarea>
-                    <div class="ai-suggestion-card" id="ai-objectives"></div>
+                    <!-- <div class="ai-suggestion-card" id="ai-objectives"></div> -->
                     <div class="help-text">List 3-5 clear, measurable objectives.</div>
                 </div>
             </div>
@@ -1235,7 +1235,7 @@ function getWhyThisEventForm() {
                 <div class="input-group">
                     <label for="outcomes-modern">Expected Learning Outcomes - What results do you expect? *</label>
                     <textarea id="outcomes-modern" rows="4" required placeholder="What specific results, skills, or benefits will participants gain?"></textarea>
-                    <div class="ai-suggestion-card" id="ai-learning-outcomes"></div>
+                    <!-- <div class="ai-suggestion-card" id="ai-learning-outcomes"></div> -->
                     <div class="help-text">Describe the tangible benefits for participants.</div>
                 </div>
             </div>
@@ -1932,8 +1932,8 @@ function getWhyThisEventForm() {
     }
 
     function setupWhyThisEventAI() {
-        // Automatically generate AI suggestions when the section loads
-        generateWhyEvent();
+        // AI suggestions are temporarily disabled
+        // generateWhyEvent();
     }
 
     // ===== STATUS & PROGRESS FUNCTIONS - PRESERVED =====
@@ -2635,7 +2635,7 @@ function applyText(field, text){
   }
 }
 
-async function generateWhyEvent(){
+/*async function generateWhyEvent(){
   const status = document.querySelector('#ai-suggestion-status');
   if(status) status.style.display = 'block';
   try{
@@ -2702,7 +2702,7 @@ function showCard(field, content){
       });
     }
   }
-}
+}*/
 
 // Inject generated text into the real field/editor and trigger autosave
 function applyGeneratedToField(field, text) {
@@ -2733,7 +2733,7 @@ function applyGeneratedToField(field, text) {
   }
 }
 
-async function onGenerateNeedAnalysis(e) {
+/*async function onGenerateNeedAnalysis(e) {
   e?.preventDefault?.();
   const btn = e?.currentTarget;
   const original = btn?.innerHTML;
@@ -2773,4 +2773,4 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', onGenerateNeedAnalysis);
     btn._wired = true;
   }
-});
+});*/
