@@ -302,6 +302,9 @@
           <a href="{% url 'admin_history' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_history' or request.resolver_match.url_name == 'admin_history_detail' %}active{% endif %}">
             <i class="fas fa-history"></i> History
           </a>
+          <a href="{% url 'admin_sidebar_permissions' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_sidebar_permissions' %}active{% endif %}">
+            <i class="fas fa-bars"></i> Sidebar Permissions
+          </a>
         </div>
       </div>
         {% endif %}
