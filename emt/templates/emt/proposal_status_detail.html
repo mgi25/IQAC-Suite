@@ -162,6 +162,9 @@
     {% if proposal.status == 'rejected' %}
       <a href="{% url 'emt:submit_proposal_with_pk' proposal.id %}" class="edit-btn">Edit Proposal →</a>
     {% endif %}
+    {% if proposal.cdl_support and proposal.cdl_support.needs_support %}
+      <a href="{% url 'emt:cdl_post_event' proposal.id %}" class="edit-btn">CDL Post-Event →</a>
+    {% endif %}
     <a href="{% url 'dashboard' %}" class="back-btn">
       ← Back to Dashboard
     </a>

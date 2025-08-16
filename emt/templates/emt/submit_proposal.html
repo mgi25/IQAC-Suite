@@ -70,6 +70,15 @@
                     </div>
                 </a>
             </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link disabled" data-section="cdl-support" data-order="7" data-url="{% if proposal.id %}{% url 'emt:submit_cdl_support' proposal.id %}{% endif %}">
+                    <span class="nav-number">7</span>
+                    <div class="nav-content">
+                        <div class="nav-item-title">CDL Support</div>
+                        <div class="nav-item-subtitle">Upload poster, certificates, and related files.</div>
+                    </div>
+                </a>
+            </li>
         </ul>
     </nav>
 
@@ -212,7 +221,7 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="num-activities-modern">Number of Activities</label>
-                                <input type="number" id="num-activities-modern" min="1" max="50" placeholder="Enter number of activities">
+                                <input type="number" id="num-activities-modern" name="num_activities" min="1" max="50" placeholder="Enter number of activities">
                                 <div class="help-text">How many activities will your event include?</div>
                             </div>
                             <div class="input-group">

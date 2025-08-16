@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}CDL Member Dashboard{% endblock %}
+{% block content %}
+<h1>CDL Member Dashboard</h1>
+<div class="row text-center my-4">
+  <div class="col"><div class="card"><div class="card-body"><h5>Assigned to Me</h5><p>{{ metrics.assigned|default:0 }}</p></div></div></div>
+  <div class="col"><div class="card"><div class="card-body"><h5>Due Today</h5><p>{{ metrics.due_today|default:0 }}</p></div></div></div>
+  <div class="col"><div class="card"><div class="card-body"><h5>Waiting on Reviewer</h5><p>{{ metrics.waiting|default:0 }}</p></div></div></div>
+  <div class="col"><div class="card"><div class="card-body"><h5>Rework Required</h5><p>{{ metrics.rework|default:0 }}</p></div></div></div>
+</div>
+<div class="card mb-4">
+  <div class="card-header">My Inbox</div>
+  <div class="card-body">
+    <ul class="list-group">
+      {% for n in inbox %}
+        <li class="list-group-item">{{ n }}</li>
+      {% empty %}<li class="list-group-item text-muted">Empty</li>{% endfor %}
+    </ul>
+  </div>
+</div>
+<div class="card">
+  <div class="card-header">Workboard</div>
+  <div class="card-body">Workboard placeholder</div>
+</div>
+{% endblock %}

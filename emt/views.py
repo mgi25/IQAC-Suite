@@ -15,12 +15,13 @@ from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
     EventExpectedOutcomes, TentativeFlow, EventActivity,
     ExpenseDetail, IncomeDetail, SpeakerProfile, EventReport,
-    EventReportAttachment, CDLSupport, Student
+    EventReportAttachment, CDLSupport, CDLCertificateRecipient, CDLMessage, Student
 )
 from .forms import (
     EventProposalForm, NeedAnalysisForm, ExpectedOutcomesForm,
     ObjectivesForm, TentativeFlowForm, SpeakerProfileForm,
-    ExpenseDetailForm,EventReportForm, EventReportAttachmentForm, CDLSupportForm
+    ExpenseDetailForm,EventReportForm, EventReportAttachmentForm, CDLSupportForm,
+    CertificateRecipientForm, CDLMessageForm
 )
 from django.forms import modelformset_factory
 from core.models import (
@@ -485,13 +486,10 @@ def autosave_proposal(request):
         rate = data.get(f"income_rate_{in_idx}")
         amount = data.get(f"income_amount_{in_idx}")
         missing = {}
-        if particulars or participants or rate or amount:
+        # Only require particulars and amount; participants and rate are optional
+        if any([particulars, participants, rate, amount]):
             if not particulars:
                 missing["particulars"] = "This field is required."
-            if not participants:
-                missing["participants"] = "This field is required."
-            if not rate:
-                missing["rate"] = "This field is required."
             if not amount:
                 missing["amount"] = "This field is required."
         if missing:
@@ -649,6 +647,8 @@ def submit_speaker_profile(request, proposal_id):
 def submit_expense_details(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id,
                                  submitted_by=request.user)
+    # Track wizard state for breadcrumb/progress UI
+    request.session["proposal_step"] = "expense_details"
     ExpenseFS = modelformset_factory(
         ExpenseDetail, form=ExpenseDetailForm, extra=1, can_delete=True
     )
@@ -663,7 +663,9 @@ def submit_expense_details(request, proposal_id):
                 obj.save()
             for obj in formset.deleted_objects:
                 obj.delete()
-
+            # Move wizard to CDL support step and notify user
+            request.session["proposal_step"] = "cdl_support"
+            messages.info(request, "Expense details saved. Proceed to CDL Support.")
             return redirect("emt:submit_cdl_support", proposal_id=proposal.id)
     else:
         formset = ExpenseFS(queryset=ExpenseDetail.objects.filter(
@@ -679,6 +681,8 @@ def submit_expense_details(request, proposal_id):
 @login_required
 def submit_cdl_support(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
+    # Ensure wizard/breadcrumb reflects final step
+    request.session["proposal_step"] = "cdl_support"
     instance = getattr(proposal, "cdl_support", None)
 
     if request.method == "POST":
@@ -686,7 +690,7 @@ def submit_cdl_support(request, proposal_id):
         if form.is_valid():
             support = form.save(commit=False)
             support.proposal = proposal
-            support.support_options = form.cleaned_data.get("support_options", [])
+            support.other_services = form.cleaned_data.get("other_services", [])
             support.save()
 
             proposal.status = "submitted"
@@ -696,14 +700,59 @@ def submit_cdl_support(request, proposal_id):
             build_approval_chain(proposal)
 
             messages.success(request, "Your event proposal has been submitted for approval.")
-            return redirect("dashboard")
+            return redirect("emt:proposal_status_detail", proposal_id=proposal.id)
     else:
         initial = {}
         if instance:
-            initial["support_options"] = instance.support_options
+            initial["other_services"] = instance.other_services
         form = CDLSupportForm(instance=instance, initial=initial)
 
     return render(request, "emt/cdl_support.html", {"form": form, "proposal": proposal})
+
+
+@login_required
+def cdl_post_event(request, proposal_id):
+    proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
+    support = getattr(proposal, "cdl_support", None)
+    if not support:
+        return redirect("emt:proposal_status_detail", proposal_id=proposal_id)
+
+    recipient_form = CertificateRecipientForm()
+    message_form = CDLMessageForm()
+
+    if request.method == "POST":
+        if "add_recipient" in request.POST:
+            recipient_form = CertificateRecipientForm(request.POST)
+            if recipient_form.is_valid():
+                recipient = recipient_form.save(commit=False)
+                recipient.support = support
+                recipient.save()
+                messages.success(request, "Recipient added")
+                return redirect("emt:cdl_post_event", proposal_id=proposal_id)
+        elif "send_message" in request.POST:
+            message_form = CDLMessageForm(request.POST, request.FILES)
+            if message_form.is_valid():
+                msg = message_form.save(commit=False)
+                msg.support = support
+                msg.sender = request.user
+                msg.save()
+                messages.success(request, "Message sent")
+                return redirect("emt:cdl_post_event", proposal_id=proposal_id)
+
+    recipients = support.certificate_recipients.all()
+    messages_qs = support.messages.select_related("sender").all()
+    return render(
+        request,
+        "emt/cdl_post_event.html",
+        {
+            "proposal": proposal,
+            "support": support,
+            "recipient_form": recipient_form,
+            "message_form": message_form,
+            "recipients": recipients,
+            "messages": messages_qs,
+        },
+    )
 
 
 

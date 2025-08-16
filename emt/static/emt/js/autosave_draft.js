@@ -18,19 +18,35 @@ window.AutosaveManager = (function() {
         }
     }
 
-    function saveLocal() {
-        const data = {};
+    function collectFieldData() {
+        const grouped = {};
         fields.forEach(f => {
-            if (!f.disabled && f.name) {
-                if (f.type === 'checkbox' || f.type === 'radio') {
-                    data[f.name] = f.checked;
-                } else if (f.multiple) {
-                    data[f.name] = Array.from(f.selectedOptions).map(o => o.value);
+            if (f.disabled || !f.name) return;
+            (grouped[f.name] ||= []).push(f);
+        });
+        const data = {};
+        Object.entries(grouped).forEach(([name, inputs]) => {
+            const field = inputs[0];
+            if (field.type === 'checkbox') {
+                if (inputs.length > 1) {
+                    data[name] = inputs.filter(i => i.checked).map(i => i.value);
                 } else {
-                    data[f.name] = f.value;
+                    data[name] = field.checked;
                 }
+            } else if (field.type === 'radio') {
+                const checked = inputs.find(i => i.checked);
+                if (checked) data[name] = checked.value;
+            } else if (field.multiple) {
+                data[name] = Array.from(field.selectedOptions).map(o => o.value);
+            } else {
+                data[name] = field.value;
             }
         });
+        return data;
+    }
+
+    function saveLocal() {
+        const data = collectFieldData();
         if (proposalId) {
             data._proposal_id = proposalId;
         }
@@ -48,18 +64,7 @@ window.AutosaveManager = (function() {
             return Promise.resolve();
         }
 
-        const formData = {};
-        fields.forEach(f => {
-            if (!f.disabled && f.name) {
-                if (f.type === 'checkbox' || f.type === 'radio') {
-                    formData[f.name] = f.checked;
-                } else if (f.multiple) {
-                    formData[f.name] = Array.from(f.selectedOptions).map(o => o.value);
-                } else {
-                    formData[f.name] = f.value;
-                }
-            }
-        });
+        const formData = collectFieldData();
         if (proposalId) {
             formData['proposal_id'] = proposalId;
         }
@@ -89,8 +94,9 @@ window.AutosaveManager = (function() {
         .then(data => {
             if (data && data.success && data.proposal_id) {
                 proposalId = data.proposal_id;
+                window.PROPOSAL_ID = data.proposal_id;
                 saveLocal();
-                document.dispatchEvent(new Event('autosave:success'));
+                document.dispatchEvent(new CustomEvent('autosave:success', {detail: {proposalId: data.proposal_id}}));
                 return data;
             }
             return Promise.reject(data);
@@ -122,17 +128,23 @@ window.AutosaveManager = (function() {
         const saved = getSavedData();
 
         fields.forEach(f => {
-            // Load saved data for new fields if empty
             if (saved.hasOwnProperty(f.name)) {
-                if (f.type === 'checkbox' || f.type === 'radio') {
-                    f.checked = saved[f.name];
+                const val = saved[f.name];
+                if (f.type === 'checkbox') {
+                    if (Array.isArray(val)) {
+                        f.checked = val.includes(f.value);
+                    } else {
+                        f.checked = !!val;
+                    }
+                } else if (f.type === 'radio') {
+                    f.checked = val === f.value;
                 } else if (f.multiple) {
-                    const values = saved[f.name] || [];
+                    const values = Array.isArray(val) ? val : [val];
                     Array.from(f.options).forEach(o => {
                         o.selected = values.includes(o.value);
                     });
                 } else if (!f.value) {
-                    f.value = saved[f.name];
+                    f.value = val;
                 }
             }
             bindField(f);

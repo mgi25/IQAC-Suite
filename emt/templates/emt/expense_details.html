@@ -14,6 +14,10 @@
     <p>Please enter all expenses related to this event</p>
   </div>
 
+  <nav class="wizard-progress">
+    <span>Step 7 of 8</span>
+  </nav>
+
   <div class="page-content">
     <form method="post">
       {% csrf_token %}
@@ -39,6 +43,10 @@
         <button type="submit" class="btn">Save &amp; Continue</button>
       </div>
     </form>
+
+    <div class="input-group">
+      <a href="{% url 'emt:submit_cdl_support' proposal.id %}" class="btn">Proceed to CDL Support</a>
+    </div>
   </div>
 </div>
 {% endblock %}

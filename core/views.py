@@ -38,11 +38,20 @@ from .models import (
 )
 from emt.models import EventProposal, Student
 from django.views.decorators.http import require_GET, require_POST
-from .models import ApprovalFlowTemplate, ApprovalFlowConfig
+from .models import (
+    ApprovalFlowTemplate,
+    ApprovalFlowConfig,
+    CDLRequest,
+    CertificateBatch,
+    CDLCommunicationThread,
+    CDLMessage,
+    CertificateEntry,
+)
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from .decorators import admin_required
 from .models import FacultyMeeting
+from .forms import CDLRequestForm, CertificateBatchUploadForm, CDLMessageForm
 
 logger = logging.getLogger(__name__)
 
@@ -5328,17 +5337,22 @@ def settings_pso_po_management(request):
 
 @login_required
 def cdl_head_dashboard(request):
-    return render(request, "core/cdl_head_dashboard.html")
+    if not (request.user.is_superuser or request.user.groups.filter(name="CDL_HEAD").exists()):
+        return HttpResponseForbidden()
+    return render(request, "cdl/cdl_head_dashboard.html")
+
 
 @login_required
-def cdl_work_dashboard(request):
+def cdl_member_dashboard(request):
+    if not (request.user.is_superuser or request.user.groups.filter(name="CDL_MEMBER").exists()):
+        return HttpResponseForbidden()
     ctx = {
         "member_inbox": [],
         "member_work": [],
         "member_events": [],
         "member_stats_30d": {"ontime": None, "firstpass": None, "availability": None},
     }
-    return render(request, "core/cdl_work_dashboard.html", ctx)
+    return render(request, "cdl/cdl_member_dashboard.html", ctx)
 
 def cdl_create_availability(request):
     return HttpResponse("Create Availability (stub)")
@@ -5359,3 +5373,140 @@ def cdl_templates_certificates(request):
 
 def cdl_media_guide(request):
     return HttpResponse("Media Naming Guide (stub)")
+
+
+# ────────────────────────────────────────────────────────────────
+#  CDL WORKFLOWS
+# ────────────────────────────────────────────────────────────────
+
+def user_can_access_proposal(request, proposal):
+    return request.user.is_superuser or proposal.submitted_by == request.user
+
+
+@login_required
+def submit_proposal_cdl(request, proposal_id):
+    proposal = get_object_or_404(EventProposal, pk=proposal_id)
+    if not user_can_access_proposal(request, proposal):
+        return HttpResponseForbidden()
+
+    cdl_req, _ = CDLRequest.objects.get_or_create(proposal=proposal)
+
+    if request.method == "POST":
+        form = CDLRequestForm(request.POST, instance=cdl_req)
+        if form.is_valid():
+            form.save()
+            if form.cleaned_data.get("wants_cdl"):
+                CDLCommunicationThread.objects.get_or_create(proposal=proposal)
+            messages.success(request, "CDL details saved")
+            return redirect("proposal_detail", proposal_id=proposal.id)
+    else:
+        form = CDLRequestForm(instance=cdl_req)
+
+    return render(
+        request,
+        "cdl/submit_proposal_cdl.html",
+        {"form": form, "proposal": proposal},
+    )
+
+
+def run_ai_validation(batch):
+    """Simple synchronous validator for certificate entries."""
+    status = CertificateBatch.AIStatus.PASSED
+    for entry in batch.entries.all():
+        errors = []
+        if not entry.name.strip():
+            errors.append("Name is empty")
+        if entry.role not in CertificateEntry.Role.values:
+            errors.append("Invalid role")
+        if errors:
+            entry.ai_valid = False
+            entry.ai_errors = ", ".join(errors)
+            status = CertificateBatch.AIStatus.FAILED
+        else:
+            entry.ai_valid = True
+            entry.ai_errors = ""
+        entry.save()
+    batch.ai_check_status = status
+    batch.save()
+
+
+@login_required
+def post_event_certificates_tab(request, proposal_id):
+    proposal = get_object_or_404(EventProposal, pk=proposal_id)
+    if not user_can_access_proposal(request, proposal):
+        return HttpResponseForbidden()
+
+    if request.method == "POST" and "csv_file" in request.FILES:
+        form = CertificateBatchUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            batch = form.save(commit=False)
+            batch.proposal = proposal
+            batch.save()
+
+            import csv, io
+
+            file_data = io.StringIO(request.FILES["csv_file"].read().decode("utf-8"))
+            reader = csv.DictReader(file_data)
+            for row in reader:
+                CertificateEntry.objects.create(
+                    batch=batch,
+                    name=row.get("name", "").strip(),
+                    role=row.get("role", "OTHER").strip() or "OTHER",
+                    custom_role_text=row.get("custom", "").strip(),
+                )
+            run_ai_validation(batch)
+            messages.success(request, "Batch uploaded")
+            return redirect("post_event_certificates", proposal_id=proposal.id)
+    elif request.method == "POST" and request.POST.get("confirm_batch"):
+        batch = get_object_or_404(
+            CertificateBatch, pk=request.POST["confirm_batch"], proposal=proposal
+        )
+        for entry in batch.entries.filter(ai_valid=True):
+            entry.ready_for_cdl = True
+            entry.save()
+        messages.success(request, "Entries marked ready for CDL")
+        return redirect("post_event_certificates", proposal_id=proposal.id)
+    else:
+        form = CertificateBatchUploadForm()
+
+    batches = proposal.certificate_batches.all()
+    return render(
+        request,
+        "cdl/post_event_certificates.html",
+        {"proposal": proposal, "form": form, "batches": batches},
+    )
+
+
+@login_required
+def cdl_thread(request, proposal_id):
+    proposal = get_object_or_404(EventProposal, pk=proposal_id)
+    if not user_can_access_proposal(request, proposal) and not (
+        request.user.is_superuser
+        or request.user.groups.filter(name__in=["CDL_HEAD", "CDL_MEMBER"]).exists()
+    ):
+        return HttpResponseForbidden()
+
+    thread, _ = CDLCommunicationThread.objects.get_or_create(proposal=proposal)
+
+    if request.method == "POST":
+        form = CDLMessageForm(request.POST, request.FILES)
+        if form.is_valid():
+            msg = form.save(commit=False)
+            msg.thread = thread
+            msg.author = request.user
+            msg.save()
+            messages.success(request, "Message posted")
+            return redirect("cdl_thread", proposal_id=proposal.id)
+    else:
+        form = CDLMessageForm()
+
+    return render(
+        request,
+        "cdl/thread.html",
+        {
+            "thread": thread,
+            "messages": thread.messages.select_related("author"),
+            "form": form,
+            "proposal": proposal,
+        },
+    )

@@ -277,7 +277,7 @@ urlpatterns = [
 
      # CDL Work dashboard (you already have these two)
     path("cdl/head/", views.cdl_head_dashboard, name="cdl_head_dashboard"),
-    path("cdl/work/", views.cdl_work_dashboard, name="cdl_work_dashboard"),
+    path("cdl/member/", views.cdl_member_dashboard, name="cdl_member_dashboard"),
 
     # NEW: make the template links resolve
     path("cdl/availability/new/", views.cdl_create_availability, name="create_availability"),
@@ -285,6 +285,17 @@ urlpatterns = [
     path("cdl/resources/templates/posters/", views.cdl_templates_posters, name="templates_posters"),
     path("cdl/resources/templates/certificates/", views.cdl_templates_certificates, name="templates_certificates"),
     path("cdl/resources/media-guide/", views.cdl_media_guide, name="media_guide"),
+    path("proposal/<int:proposal_id>/cdl/", views.submit_proposal_cdl, name="submit_proposal_cdl"),
+    path(
+        "proposal/<int:proposal_id>/cdl/certificates/",
+        views.post_event_certificates_tab,
+        name="post_event_certificates",
+    ),
+    path(
+        "proposal/<int:proposal_id>/cdl/thread/",
+        views.cdl_thread,
+        name="cdl_thread",
+    ),
 
 
 ]

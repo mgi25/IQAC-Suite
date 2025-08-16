@@ -9,12 +9,15 @@ $(document).ready(function() {
         'schedule': false,
         'speakers': false,
         'expenses': false,
-        'income': false
+        'income': false,
+        'cdl-support': false
     };
+    const optionalSections = ['speakers', 'expenses', 'income', 'cdl-support'];
     let audienceClassMap = {};
     let firstErrorField = null;
     const autoFillEnabled = new URLSearchParams(window.location.search).has('autofill');
     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const originalFormAction = $('#proposal-form').attr('action') || '';
 
     // Demo data used for rapid prototyping. Remove once real data is wired.
     const AUTO_FILL_DATA = {
@@ -62,6 +65,14 @@ $(document).ready(function() {
 
     const getRandom = arr => arr[Math.floor(Math.random() * arr.length)];
 
+    function updateCdlNavLink(proposalId) {
+        if (!proposalId) return;
+        const link = $('.proposal-nav .nav-link[data-section="cdl-support"]');
+        const url = `/emt/cdl-support/${proposalId}/`;
+        link.data('url', url);
+        link.attr('data-url', url);
+    }
+
     initializeDashboard();
 
     function initializeDashboard() {
@@ -70,6 +81,9 @@ $(document).ready(function() {
         loadExistingData();
         checkForExistingErrors();
         enablePreviouslyVisitedSections();
+        if (window.PROPOSAL_ID) {
+            updateCdlNavLink(window.PROPOSAL_ID);
+        }
         $('#autofill-btn').on('click', () => autofillTestData(currentExpandedCard));
         if (!$('.form-errors-banner').length) {
             setTimeout(() => {
@@ -89,13 +103,14 @@ $(document).ready(function() {
             }
         });
         
-        // Enable the next section only if the previous section is completed
-        const sectionOrder = ['basic-info', 'why-this-event', 'schedule', 'speakers', 'expenses', 'income'];
+        // Enable the next section if the previous section is completed
+        // or if the previous section is optional
+        const sectionOrder = ['basic-info', 'why-this-event', 'schedule', 'speakers', 'expenses', 'income', 'cdl-support'];
         for (let i = 0; i < sectionOrder.length - 1; i++) {
             const currentSection = sectionOrder[i];
             const nextSection = sectionOrder[i + 1];
-            
-            if (sectionProgress[currentSection] === true) {
+
+            if (sectionProgress[currentSection] === true || optionalSections.includes(currentSection)) {
                 $(`.proposal-nav .nav-link[data-section="${nextSection}"]`).removeClass('disabled');
             }
         }
@@ -112,6 +127,7 @@ $(document).ready(function() {
     $('.proposal-nav .nav-link').on('click', function(e) {
             e.preventDefault();
             const section = $(this).data('section');
+
             const currentOrder = parseInt($(`.proposal-nav .nav-link[data-section="${currentExpandedCard}"]`).data('order')) || 0;
             const targetOrder = parseInt($(this).data('order')) || 0;
             
@@ -142,8 +158,10 @@ $(document).ready(function() {
                         showNotification('Please complete all required fields in the current section first.', 'error');
                         return;
                     }
+                    // Mark current section as complete when moving to the next
+                    markSectionComplete(currentExpandedCard);
                 }
-                
+
                 $(this).removeClass('disabled');
                 activateSection(section);
             } else {
@@ -196,6 +214,38 @@ $(document).ready(function() {
         $('#main-title').text(sectionData.title);
         $('#main-subtitle').text(sectionData.subtitle);
 
+        const formEl = $('#proposal-form');
+        if (section === 'cdl-support') {
+            const url = $('.proposal-nav .nav-link[data-section="cdl-support"]').data('url');
+            if (url) {
+                formEl.attr('action', url);
+                fetch(url)
+                    .then(res => res.text())
+                    .then(html => {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const cdlForm = doc.querySelector('#cdl-form');
+                        $('#form-panel-content').html(cdlForm ? cdlForm.innerHTML : html);
+                        setupCDLForm();
+                        setupFormFieldSync();
+                        setupTextSectionStorage();
+                        clearValidationErrors();
+                        if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                            window.AutosaveManager.reinitialize();
+                        }
+                        updateSubmitButton();
+                    })
+                    .catch(() => {
+                        $('#form-panel-content').html('<div class="form-grid"><p>Failed to load CDL Support form.</p></div>');
+                    });
+            } else {
+                $('#form-panel-content').html('<div class="form-grid"><p>CDL Support form not available.</p></div>');
+            }
+            return;
+        } else {
+            formEl.attr('action', originalFormAction);
+        }
+
         // Load content for all sections, including basic-info
         let formContent = '';
         switch (section) {
@@ -234,6 +284,10 @@ $(document).ready(function() {
             clearValidationErrors();
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
+                const actInput = document.getElementById('num-activities-modern');
+                if (actInput && actInput.value) {
+                    actInput.dispatchEvent(new Event('input'));
+                }
             }
             if (autoFillEnabled) {
                 autofillTestData(section);
@@ -248,7 +302,8 @@ $(document).ready(function() {
             'schedule': { title: 'Schedule', subtitle: 'Event timeline, sessions, flow' },
             'speakers': { title: 'Speaker Profiles', subtitle: 'Names, expertise, brief bio, etc.' },
             'expenses': { title: 'Expenses', subtitle: 'Budget, funding source, justification' },
-            'income': { title: 'Details of Income', subtitle: 'Registration fees, sponsorship, participation rates' }
+            'income': { title: 'Details of Income', subtitle: 'Registration fees, sponsorship, participation rates' },
+            'cdl-support': { title: 'CDL Support', subtitle: 'Poster, certificates, other details' }
         };
         return sections[section] || { title: 'Section', subtitle: 'Complete this section' };
     }
@@ -594,13 +649,19 @@ $(document).ready(function() {
 
         $('#outcomeCancel').off('click').on('click', () => modal.removeClass('show'));
         $('#outcomeSave').off('click').on('click', () => {
-            const selected = modal.find('input[type=checkbox]:checked').map((_, cb) => cb.value).get();
-            const existing = posField.val().trim();
-            const value = existing ? existing + '\n' + selected.join('\n') : selected.join('\n');
+            const selected = modal
+                .find('input[type=checkbox]:checked')
+                .map((_, cb) => cb.value)
+                .get();
+
+            // Replace existing content with newly selected outcomes
+            const value = selected.join('\n');
             posField.val(value).trigger('input').trigger('change');
+
             if (djangoPosField.length) {
                 djangoPosField.val(value).trigger('input').trigger('change');
             }
+
             modal.removeClass('show');
         });
     }
@@ -1599,13 +1660,9 @@ function getWhyThisEventForm() {
                 </div>
 
                 <div class="form-row full-width">
-                    <div class="submit-section">
-                        <button type="submit" name="final_submit" class="btn-submit" id="submit-proposal-btn" disabled>
-                            Submit Proposal
-                        </button>
-                        <div class="submit-help-text">
-                            Review all sections before submitting
-                        </div>
+                    <div class="save-section-container">
+                        <button type="button" class="btn-save-section">Save & Continue</button>
+                        <div class="save-help-text">Complete this section to unlock the next one</div>
                     </div>
                 </div>
             </div>
@@ -1737,7 +1794,37 @@ function getWhyThisEventForm() {
             showEmptyState();
         }
     }
-    
+
+    // ===== CDL SUPPORT SECTION FUNCTIONALITY =====
+    function setupCDLForm() {
+        const needsSupport = $('#id_needs_support');
+        const cdlSections = $('#cdl-sections');
+        const posterRequired = $('#id_poster_required');
+        const posterDetails = $('#poster-details');
+        const certificatesRequired = $('#id_certificates_required');
+        const certificatesDetails = $('#certificates-details');
+        const certificateHelp = $('#id_certificate_help');
+        const certificateHelpDetails = $('#certificate-help-details');
+
+        function toggle(el, show) {
+            if (el && el.length) {
+                el.toggle(show);
+            }
+        }
+
+        needsSupport.on('change', () => toggle(cdlSections, needsSupport.prop('checked')));
+        toggle(cdlSections, needsSupport.prop('checked'));
+
+        posterRequired.on('change', () => toggle(posterDetails, posterRequired.prop('checked')));
+        toggle(posterDetails, posterRequired.prop('checked'));
+
+        certificatesRequired.on('change', () => toggle(certificatesDetails, certificatesRequired.prop('checked')));
+        toggle(certificatesDetails, certificatesRequired.prop('checked'));
+
+        certificateHelp.on('change', () => toggle(certificateHelpDetails, certificateHelp.prop('checked')));
+        toggle(certificateHelpDetails, certificateHelp.prop('checked'));
+    }
+
     // ===== SAVE SECTION FUNCTIONALITY - FULLY PRESERVED =====
     function saveCurrentSection() {
         if (!currentExpandedCard) return;
@@ -1751,9 +1838,15 @@ function getWhyThisEventForm() {
 
                         const nextSection = getNextSection(currentExpandedCard);
                         if (nextSection) {
-                            $(`.proposal-nav .nav-link[data-section="${nextSection}"]`).removeClass('disabled');
+                            const nextLink = $(`.proposal-nav .nav-link[data-section="${nextSection}"]`);
+                            nextLink.removeClass('disabled');
+                            const nextUrl = nextLink.data('url');
                             setTimeout(() => {
-                                openFormPanel(nextSection);
+                                if (nextUrl && nextSection !== 'cdl-support') {
+                                    window.location.href = nextUrl;
+                                } else {
+                                    openFormPanel(nextSection);
+                                }
                             }, 1000);
                         }
                     })
@@ -1774,7 +1867,7 @@ function getWhyThisEventForm() {
 
     // ===== SECTION NAVIGATION - PRESERVED =====
     function getNextSection(currentSection) {
-        const sectionOrder = ['basic-info', 'why-this-event', 'schedule', 'speakers', 'expenses', 'income'];
+        const sectionOrder = ['basic-info', 'why-this-event', 'schedule', 'speakers', 'expenses', 'income', 'cdl-support'];
         const currentIndex = sectionOrder.indexOf(currentSection);
         return currentIndex < sectionOrder.length - 1 ? sectionOrder[currentIndex + 1] : null;
     }
@@ -1998,11 +2091,13 @@ function getWhyThisEventForm() {
     }
 
     function updateSubmitButton() {
-        const completedSections = Object.values(sectionProgress).filter(status => status === true).length;
-        const totalSections = Object.keys(sectionProgress).length;
-        
-        if (completedSections === totalSections) {
-            $('#submit-proposal-btn').prop('disabled', false);
+        const btn = $('#submit-proposal-btn');
+        if (!btn.length) return;
+        const requiredSections = Object.keys(sectionProgress).filter(section => !optionalSections.includes(section));
+        const completedSections = requiredSections.filter(section => sectionProgress[section] === true).length;
+
+        if (completedSections === requiredSections.length) {
+            btn.prop('disabled', false);
             $('.submit-section').addClass('ready');
         }
     }
@@ -2281,10 +2376,11 @@ function getWhyThisEventForm() {
 
     // ===== PROGRESS BAR FUNCTION - PRESERVED =====
     function updateProgressBar() {
-        const completedSections = Object.values(sectionProgress).filter(status => status === true).length;
-        const totalSections = Object.keys(sectionProgress).length;
+        const sections = Object.keys(sectionProgress).filter(section => !optionalSections.includes(section));
+        const completedSections = sections.filter(section => sectionProgress[section] === true).length;
+        const totalSections = sections.length;
         const progressPercent = Math.round((completedSections / totalSections) * 100);
-        
+
         // Update any progress indicators in new UI
         console.log(`Progress: ${progressPercent}% (${completedSections}/${totalSections} sections complete)`);
         
@@ -2459,7 +2555,12 @@ function getWhyThisEventForm() {
             indicator.find('.indicator-text').text('Saving...');
         });
 
-        $(document).on('autosave:success', function() {
+        $(document).on('autosave:success', function(e) {
+            const detail = e.originalEvent && e.originalEvent.detail;
+            if (detail && detail.proposalId) {
+                window.PROPOSAL_ID = detail.proposalId;
+                updateCdlNavLink(detail.proposalId);
+            }
             const indicator = $('#autosave-indicator');
             indicator.removeClass('saving error').addClass('saved');
             indicator.find('.indicator-text').text('Saved');

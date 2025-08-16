@@ -18,6 +18,7 @@ urlpatterns = [
     path('speaker-profile/<int:proposal_id>/', views.submit_speaker_profile, name='submit_speaker_profile'),
     path('expense-details/<int:proposal_id>/', views.submit_expense_details, name='submit_expense_details'),
     path('cdl-support/<int:proposal_id>/', views.submit_cdl_support, name='submit_cdl_support'),
+    path('cdl/post-event/<int:proposal_id>/', views.cdl_post_event, name='cdl_post_event'),
     path('proposal-status/<int:proposal_id>/', views.proposal_status_detail, name='proposal_status_detail'),
     path('autosave-proposal/', views.autosave_proposal, name='autosave_proposal'),
     path('autosave-need-analysis/', views.autosave_need_analysis, name='autosave_need_analysis'),

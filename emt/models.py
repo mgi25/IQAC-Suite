@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.conf import settings
 from django.utils import timezone
 from core.models import Organization, SDGGoal
 
@@ -285,26 +286,106 @@ class MediaRequest(models.Model):
 #  CDL SUPPORT REQUEST
 # ────────────────────────────────────────────────────────────────
 class CDLSupport(models.Model):
-    """Optional support request from CDL while submitting a proposal."""
+    """Optional support request from CDL while submitting a proposal.
 
-    SUPPORT_CHOICES = [
-        ("media", "Media Support"),
-        ("poster", "Poster Support"),
-        ("certificates", "Certificates"),
-    ]
+    The model stores information gathered in two phases:
+    pre‑event requirements (posters, certificates and other services) and
+    post‑event certificate processing.
+    """
+
+    class PosterChoice(models.TextChoices):
+        CDL_CREATE = "cdl_create", "Ask CDL to make the poster"
+        PROVIDE_DESIGN = "provide_design", "Provide my own poster design"
+
+    class CertificateChoice(models.TextChoices):
+        CDL_CREATE = "cdl_create", "Ask CDL to make the certificate"
+        PROVIDE_TEMPLATE = "provide_template", "Provide my own certificate template"
 
     proposal = models.OneToOneField(
         EventProposal,
         on_delete=models.CASCADE,
         related_name="cdl_support",
     )
+
+    # General toggle for CDL support
     needs_support = models.BooleanField(default=False)
+
+    # ─── Poster Details ─────────────────────────────────────────────
+    poster_required = models.BooleanField(default=False)
+    poster_choice = models.CharField(
+        max_length=20, choices=PosterChoice.choices, blank=True
+    )
+    organization_name = models.CharField(max_length=255, blank=True)
+    poster_time = models.CharField(max_length=100, blank=True)
+    poster_date = models.DateField(null=True, blank=True)
+    poster_venue = models.CharField(max_length=255, blank=True)
+    resource_person_name = models.CharField(max_length=255, blank=True)
+    resource_person_designation = models.CharField(max_length=255, blank=True)
+    poster_event_title = models.CharField(max_length=255, blank=True)
+    poster_summary = models.TextField(blank=True)
+    poster_design_link = models.URLField(blank=True)
+
+    # ─── Other CDL Services ─────────────────────────────────────────
+    other_services = models.JSONField(default=list, blank=True)
+
+    # ─── Certificate Requirements ───────────────────────────────────
+    certificates_required = models.BooleanField(default=False)
+    certificate_help = models.BooleanField(default=False)
+    certificate_choice = models.CharField(
+        max_length=20, choices=CertificateChoice.choices, blank=True
+    )
+    certificate_design_link = models.URLField(blank=True)
+
+    # Optional pre-event blog content (unchanged requirement)
     blog_content = models.TextField(blank=True)
-    poster_link = models.URLField(blank=True)
-    support_options = models.JSONField(default=list, blank=True)
 
     def __str__(self):
         return f"CDL Support for {self.proposal.event_title}"
+
+
+# ────────────────────────────────────────────────────────────────
+#  CDL CERTIFICATE RECIPIENTS (POST-EVENT)
+# ────────────────────────────────────────────────────────────────
+class CDLCertificateRecipient(models.Model):
+    class CertificateType(models.TextChoices):
+        CORE_TEAM = "core_team", "Core Team Member"
+        EVENT_HEAD = "event_head", "Event Head / Coordinator"
+        PARTICIPANT = "participant", "Participant"
+        OTHER = "other", "Other"
+
+    support = models.ForeignKey(
+        CDLSupport, on_delete=models.CASCADE, related_name="certificate_recipients"
+    )
+    name = models.CharField(max_length=255)
+    role = models.CharField(max_length=255, blank=True)
+    certificate_type = models.CharField(
+        max_length=30, choices=CertificateType.choices
+    )
+    ai_approved = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.get_certificate_type_display()})"
+
+
+# ────────────────────────────────────────────────────────────────
+#  CDL COMMUNICATION THREAD
+# ────────────────────────────────────────────────────────────────
+class CDLMessage(models.Model):
+    support = models.ForeignKey(
+        CDLSupport, on_delete=models.CASCADE, related_name="messages"
+    )
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    message = models.TextField(blank=True)
+    file = models.FileField(upload_to="cdl_messages/", null=True, blank=True)
+    via_email = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"Message by {self.sender} on {self.created_at:%Y-%m-%d}"
 
 # ────────────────────────────────────────────────────────────────
 #  EVENT REPORT
