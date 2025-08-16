@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'core/css/admin_nav_permissions.css' %}">
+<div class="sidebar-permissions-bg">
+  <div class="sidebar-permissions-container">
+    <h1 class="mb-4">Sidebar Permissions</h1>
+    <form method="post">
+      {% csrf_token %}
+      <div class="sp-selection-row">
+        <div class="sp-field">
+          <label for="user_select">User</label>
+          <select name="user" id="user_select" class="form-select">
+            <option value="">-- Select User --</option>
+            {% for u in users %}
+            <option value="{{ u.id }}" {% if selected_user|default:'' == u.id|stringformat:'s' %}selected{% endif %}>{{ u.username }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="sp-field">
+          <label for="role_select">Role</label>
+          <select name="role" id="role_select" class="form-select">
+            <option value="">-- Select Role --</option>
+            {% for r in roles %}
+            <option value="{{ r }}" {% if selected_role == r %}selected{% endif %}>{{ r|capfirst }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="sp-items">
+        {% for key,label in nav_items %}
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" value="{{ key }}" id="item_{{ key }}" name="items" {% if permission and key in permission.items %}checked{% endif %}>
+          <label class="form-check-label" for="item_{{ key }}">{{ label }}</label>
+        </div>
+        {% endfor %}
+      </div>
+      <button type="submit" class="btn btn-primary mt-3">Save</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

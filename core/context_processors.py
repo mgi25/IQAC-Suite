@@ -3,6 +3,7 @@ from django.db.models import Q
 from datetime import timedelta
 from emt.models import EventProposal
 from transcript.models import get_active_academic_year
+from .models import SidebarPermission
 
 def notifications(request):
     """Return proposal-related notifications for the logged-in user."""
@@ -48,3 +49,20 @@ def notifications(request):
 def active_academic_year(request):
     """Provide the active academic year to all templates."""
     return {"active_academic_year": get_active_academic_year()}
+
+
+def sidebar_permissions(request):
+    """Provide allowed sidebar items for the current user or role."""
+    if not request.user.is_authenticated:
+        return {"allowed_nav_items": None}
+    items = None
+    perm = SidebarPermission.objects.filter(user=request.user).first()
+    if perm:
+        items = perm.items
+    else:
+        role = request.session.get("role")
+        if role:
+            perm = SidebarPermission.objects.filter(role=role).first()
+            if perm:
+                items = perm.items
+    return {"allowed_nav_items": items}
