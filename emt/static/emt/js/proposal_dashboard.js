@@ -13,7 +13,6 @@ $(document).ready(function() {
         'cdl-support': false
     };
     const optionalSections = ['speakers', 'expenses', 'income', 'cdl-support'];
-    let audienceClassMap = {};
     let firstErrorField = null;
     const autoFillEnabled = new URLSearchParams(window.location.search).has('autofill');
     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
@@ -668,10 +667,8 @@ $(document).ready(function() {
 
     function setupAudienceModal() {
         const audienceField = $('#target-audience-modern');
-        const classIdsField = $('#target-audience-class-ids');
         const djangoOrgSelect = $('#django-basic-info [name="organization"]');
         const modal = $('#audienceModal');
-        const container = $('#audienceOptions');
 
         if (!audienceField.length || !djangoOrgSelect.length || !modal.length) return;
 
@@ -679,14 +676,6 @@ $(document).ready(function() {
         $(document).off('click', '#target-audience-modern').on('click', '#target-audience-modern', openAudienceModal);
 
         $('#audienceCancel').off('click').on('click', () => modal.removeClass('show'));
-        $('#audienceSave').off('click').on('click', () => {
-            const selected = modal.find('input[name="audience-user"]:checked').map((_, cb) => $(cb).data('name')).get();
-            audienceField.val(selected.join(', ')).trigger('change').trigger('input');
-            if (classIdsField.length) {
-                classIdsField.val('').trigger('change').trigger('input');
-            }
-            modal.removeClass('show');
-        });
     }
 
     function openAudienceModal() {
@@ -694,19 +683,46 @@ $(document).ready(function() {
         const container = $('#audienceOptions');
         const djangoOrgSelect = $('#django-basic-info [name="organization"]');
         const classIdsField = $('#target-audience-class-ids');
+        const audienceField = $('#target-audience-modern');
         const preselected = classIdsField.length && classIdsField.val()
             ? classIdsField.val().split(',').map(s => s.trim()).filter(Boolean)
             : [];
+
         modal.addClass('show');
-        $('#audienceSave').hide();
+
+        let available = [];
+        let selected = [];
+        let currentType = null;
+
         container.html(`
             <div class="audience-type-selector">
                 <button type="button" data-type="students">Students</button>
                 <button type="button" data-type="faculty">Faculty</button>
             </div>
-            <div id="audienceList">Select an option above.</div>
+            <div class="dual-list" style="display:none;">
+                <select id="audienceAvailable" multiple></select>
+                <div class="dual-list-controls">
+                    <button type="button" id="audienceAdd">&gt;</button>
+                    <button type="button" id="audienceRemove">&lt;</button>
+                </div>
+                <select id="audienceSelected" multiple></select>
+            </div>
         `);
-        const list = $('#audienceList');
+
+        const listContainer = container.find('.dual-list');
+        const availableSelect = container.find('#audienceAvailable');
+        const selectedSelect = container.find('#audienceSelected');
+
+        function renderLists() {
+            availableSelect.empty();
+            selectedSelect.empty();
+            available.forEach(item => {
+                availableSelect.append($('<option>').val(item.id).text(item.name));
+            });
+            selected.forEach(item => {
+                selectedSelect.append($('<option>').val(item.id).text(item.name));
+            });
+        }
 
         function collectOrgIds() {
             const primaryOrgId = djangoOrgSelect.val();
@@ -725,163 +741,100 @@ $(document).ready(function() {
             return orgIds;
         }
 
-        function loadStudentView(preselectIds) {
-            const orgIds = collectOrgIds();
-            if (!orgIds.length) { list.text('Select an organization first.'); return; }
-            list.text('Loading...');
-            Promise.all(orgIds.map(o =>
-                fetch(`${window.API_CLASSES_BASE}${o.id}/`, { credentials: 'include' })
-                    .then(r => r.json().then(data => ({ org: o, data })))
-            ))
-            .then(results => {
-                audienceClassMap = {};
-                results.forEach(res => {
-                    const { org, data } = res;
-                    if (data.success && data.classes.length) {
-                        data.classes.forEach(cls => {
-                            audienceClassMap[cls.id] = { ...cls, org_name: org.name };
-                        });
-                    }
-                });
-                renderStudentSelection(preselectIds, list);
-            })
-            .catch(() => { list.text('Error loading.'); });
-        }
-
         container.find('button[data-type]').on('click', function() {
-            const type = $(this).data('type');
+            currentType = $(this).data('type');
+            available = [];
+            selected = [];
+            listContainer.show();
+            $('#audienceSave').show();
             const orgIds = collectOrgIds();
-            if (!orgIds.length) { list.text('Select an organization first.'); return; }
-
-            if (type === 'students') {
-                $('#audienceSave').hide();
-                list.text('Loading...');
+            if (!orgIds.length) {
+                availableSelect.html('<option>Select an organization first.</option>');
+                return;
+            }
+            if (currentType === 'students') {
                 Promise.all(orgIds.map(o =>
                     fetch(`${window.API_CLASSES_BASE}${o.id}/`, { credentials: 'include' })
                         .then(r => r.json().then(data => ({ org: o, data })))
                 ))
                 .then(results => {
-                    audienceClassMap = {};
-                    renderClassSelection(results, list, preselected);
+                    results.forEach(res => {
+                        const { org, data } = res;
+                        if (data.success && data.classes.length) {
+                            data.classes.forEach(cls => {
+                                const item = { id: String(cls.id), name: `${cls.name} (${org.name})` };
+                                if (preselected.includes(String(cls.id))) {
+                                    selected.push(item);
+                                } else {
+                                    available.push(item);
+                                }
+                            });
+                        }
+                    });
+                    renderLists();
                 })
-                .catch(() => { list.text('Error loading.'); });
+                .catch(() => {
+                    availableSelect.html('<option>Error loading</option>');
+                });
             } else {
-                $('#audienceSave').show();
-                list.empty();
                 Promise.all(orgIds.map(o =>
                     fetch(`${window.API_FACULTY}?org_id=${o.id}`, { credentials: 'include' })
                         .then(r => r.json().then(data => ({ org: o, data })))
                 ))
                 .then(results => {
-                    let hasAny = false;
                     results.forEach(res => {
                         const { org, data } = res;
-                        if (data.length) {
-                            hasAny = true;
-                            const orgHeader = $('<div class="audience-org-header">').text(org.name);
-                            list.append(orgHeader);
-                            data.forEach(f => {
-                                const name = f.text.replace(/\s*\(.*?\)\s*$/, '');
-                                const label = `${name} (${org.name})`;
-                                const cb = $('<input type="checkbox" name="audience-user">').val(f.id).data('name', label);
-                                const lbl = $('<label>').append(cb).append(' ' + label);
-                                list.append(lbl).append('<br>');
-                            });
-                        }
+                        data.forEach(f => {
+                            const name = f.text.replace(/\s*\(.*?\)\s*$/, '');
+                            const item = { id: String(f.id), name: `${name} (${org.name})` };
+                            available.push(item);
+                        });
                     });
-                    if (!hasAny) list.text('No faculty found.');
+                    renderLists();
                 })
-                .catch(() => { list.text('Error loading.'); });
-            }
-        });
-
-        if (preselected.length) {
-            loadStudentView(preselected);
-        }
-    }
-
-    function renderClassSelection(results, list, preselected = []) {
-        list.empty();
-        let hasAny = false;
-        const selectAll = $('<label class="audience-select-all"><input type="checkbox" id="audienceSelectAllClasses"> Select All Classes</label>');
-        list.append(selectAll);
-        results.forEach(res => {
-            const { org, data } = res;
-            if (data.success && data.classes.length) {
-                hasAny = true;
-                const orgHeader = $('<div class="audience-org-header">').text(org.name);
-                list.append(orgHeader);
-                data.classes.forEach(cls => {
-                    audienceClassMap[cls.id] = { ...cls, org_name: org.name };
-                    const lbl = $('<label class="audience-class-choice">');
-                    const cb = $('<input type="checkbox" class="audience-class-choice-cb">').val(cls.id);
-                    if (preselected.includes(String(cls.id))) {
-                        cb.prop('checked', true);
-                    }
-                    lbl.append(cb).append(' ' + cls.name);
-                    list.append(lbl).append('<br>');
+                .catch(() => {
+                    availableSelect.html('<option>Error loading</option>');
                 });
             }
         });
-        if (!hasAny) {
-            list.text('No classes found.');
-            return;
+
+        container.on('click', '#audienceAdd', function() {
+            const ids = availableSelect.val() || [];
+            ids.forEach(id => {
+                const idx = available.findIndex(it => it.id === id);
+                if (idx > -1) {
+                    selected.push(available[idx]);
+                    available.splice(idx, 1);
+                }
+            });
+            renderLists();
+        });
+
+        container.on('click', '#audienceRemove', function() {
+            const ids = selectedSelect.val() || [];
+            ids.forEach(id => {
+                const idx = selected.findIndex(it => it.id === id);
+                if (idx > -1) {
+                    available.push(selected[idx]);
+                    selected.splice(idx, 1);
+                }
+            });
+            renderLists();
+        });
+
+        if (preselected.length) {
+            container.find('button[data-type="students"]').click();
         }
-        $('#audienceSelectAllClasses').on('change', function() {
-            list.find('.audience-class-choice-cb').prop('checked', $(this).is(':checked'));
-        });
-        const continueBtn = $('<button type="button" class="btn-continue">Continue</button>');
-        list.append(continueBtn);
-        continueBtn.on('click', function() {
-            const selected = list.find('.audience-class-choice-cb:checked').map((_, cb) => $(cb).val()).get();
-            if (!selected.length) {
-                alert('Please select at least one class.');
-                return;
-            }
-            const audienceField = $('#target-audience-modern');
-            const classIdsField = $('#target-audience-class-ids');
-            const names = selected.map(id => {
-                const cls = audienceClassMap[id];
-                return cls ? `${cls.name} (${cls.org_name})` : '';
-            });
-            audienceField.val(names.join(', ')).trigger('change').trigger('input');
-            classIdsField.val(selected.join(',')).trigger('change').trigger('input');
-            renderStudentSelection(selected, list);
-        });
-    }
 
-    function renderStudentSelection(selectedIds, list) {
-        list.empty();
-        $('#audienceSave').show();
-        selectedIds.forEach(id => {
-            const cls = audienceClassMap[id];
-            if (!cls) return;
-            const classLbl = $('<label class="audience-class">');
-            const classCb = $('<input type="checkbox" class="audience-class-cb" checked>').val(id);
-            classLbl.append(classCb).append(' ' + cls.name);
-            const studentsDiv = $('<div class="audience-students" style="margin-left:1em;"></div>');
-            cls.students.forEach(st => {
-                const stCb = $('<input type="checkbox" name="audience-user" checked>').val(st.id).data('name', st.name);
-                const stLbl = $('<label>').append(stCb).append(' ' + st.name);
-                studentsDiv.append(stLbl).append('<br>');
-            });
-            list.append(classLbl).append('<br>').append(studentsDiv);
-            classCb.on('change', function() {
-                studentsDiv.find('input[type=checkbox]').prop('checked', $(this).is(':checked'));
-            });
-        });
-
-        const audienceField = $('#target-audience-modern');
-        const classIdsField = $('#target-audience-class-ids');
         $('#audienceSave').off('click').on('click', () => {
-            const selectedClasses = list.find('.audience-class-cb:checked').map((_, cb) => $(cb).val()).get();
-            const names = selectedClasses.map(id => {
-                const cls = audienceClassMap[id];
-                return cls ? `${cls.name} (${cls.org_name})` : '';
-            });
+            const names = selected.map(it => it.name);
             audienceField.val(names.join(', ')).trigger('change').trigger('input');
-            classIdsField.val(selectedClasses.join(',')).trigger('change').trigger('input');
-            $('#audienceModal').removeClass('show');
+            if (currentType === 'students') {
+                classIdsField.val(selected.map(it => it.id).join(',')).trigger('change').trigger('input');
+            } else {
+                classIdsField.val('').trigger('change').trigger('input');
+            }
+            modal.removeClass('show');
         });
     }
 
