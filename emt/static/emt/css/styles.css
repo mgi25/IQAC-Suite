@@ -2183,8 +2183,8 @@
 
 /* Audience modal enhancements */
 #audienceModal .modal-content {
-    max-width: 650px;
-    width: 90%;
+    max-width: 800px;
+    width: 95%;
 }
 
 #audienceModal .audience-type-selector {
@@ -2237,6 +2237,7 @@
     display: flex;
     gap: 1rem;
     margin-top: 1rem;
+    align-items: center;
 }
 
 #audienceModal .dual-list-column {
@@ -2250,8 +2251,8 @@
 }
 
 #audienceModal .dual-list select {
-    width: 200px;
-    min-height: 200px;
+    width: 260px;
+    min-height: 260px;
 }
 
 #audienceModal .dual-list-controls {
@@ -2270,6 +2271,7 @@
     display: flex;
     gap: 0.5rem;
     margin-top: 1rem;
+    align-items: center;
 }
 
 #audienceModal .audience-custom input {
