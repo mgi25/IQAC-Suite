@@ -1,12 +1,17 @@
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.contrib.auth.signals import user_logged_in
 from django.utils import timezone
 from datetime import timedelta
 from core.models import ActivityLog
+from core import signals
 
 class AdminHistoryFilterTests(TestCase):
     def setUp(self):
+        post_save.disconnect(signals.create_or_update_user_profile, sender=User)
+        user_logged_in.disconnect(signals.assign_role_on_login)
         self.admin = User.objects.create_superuser('admin', 'admin@example.com', 'pass')
         self.client.login(username='admin', password='pass')
         self.u1 = User.objects.create_user('alice')
@@ -16,6 +21,10 @@ class AdminHistoryFilterTests(TestCase):
         log1.save()
         self.log1 = log1
         self.log2 = ActivityLog.objects.create(user=self.u2, action='logout', description='second')
+
+    def tearDown(self):
+        post_save.connect(signals.create_or_update_user_profile, sender=User)
+        user_logged_in.connect(signals.assign_role_on_login)
 
     def test_search_filters_results(self):
         url = reverse('admin_history')
