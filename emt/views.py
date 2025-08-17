@@ -1493,6 +1493,9 @@ def submit_event_report(request, proposal_id):
             report.save()
             form.save_m2m()
 
+            # Save activities from the submitted report
+            _save_activities(proposal, request.POST)
+
             # Save attachments
             instances = formset.save(commit=False)
             for obj in instances:
@@ -1507,8 +1510,11 @@ def submit_event_report(request, proposal_id):
         form = EventReportForm(instance=report)
         formset = AttachmentFormSet(queryset=report.attachments.all())
 
-    # Fetch activities from the proposal for reference in the report form
-    activities = proposal.activities.all()
+    # Fetch activities for editing in the report form
+    activities = [
+        {"name": a["name"], "date": a["date"].isoformat()}
+        for a in proposal.activities.values("name", "date")
+    ]
 
     # Pre-fill context with proposal info for readonly/preview display
     context = {
@@ -1516,6 +1522,7 @@ def submit_event_report(request, proposal_id):
         "form": form,
         "formset": formset,
         "activities": activities,
+        "activities_json": json.dumps(activities),
     }
     return render(request, "emt/submit_event_report.html", context)
 

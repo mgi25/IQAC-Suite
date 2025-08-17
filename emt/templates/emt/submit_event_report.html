@@ -245,34 +245,8 @@
                             <h3>Activities Information</h3>
                         </div>
 
-                        <div class="form-row full-width">
-                            <div class="input-group">
-                                <label>Activities from Original Proposal</label>
-                                <div class="activities-reference-card">
-                                    {% if activities %}
-                                        <div class="activities-grid">
-                                            {% for activity in activities %}
-                                                <div class="activity-reference-item">
-                                                    <div class="activity-title">{{ activity.name }}</div>
-                                                    <div class="activity-date">{{ activity.date|date:"M d, Y" }}</div>
-                                                </div>
-                                            {% endfor %}
-                                        </div>
-                                        <div class="activities-summary">
-                                            <small class="text-muted">
-                                                Total: {{ activities|length }} activit{{ activities|length|pluralize:"y,ies" }} planned
-                                            </small>
-                                        </div>
-                                    {% else %}
-                                        <div class="no-activities-message">
-                                            <i class="info-icon"></i>
-                                            <span>No activities were defined in the original proposal</span>
-                                        </div>
-                                    {% endif %}
-                                </div>
-                                <div class="help-text">Reference: Activities planned in the original proposal</div>
-                            </div>
-                        </div>
+                        <!-- Dynamic activities section -->
+                        <div id="dynamic-activities-section" class="full-width"></div>
 
                         <!-- Save Section -->
                         <div class="form-row full-width">
