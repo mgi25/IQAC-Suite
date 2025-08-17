@@ -260,6 +260,36 @@ class AutosaveProposalTests(TestCase):
         self.assertEqual(ids_after, {self.f1.id, self.f2.id})
         self.assertEqual(proposal.status, EventProposal.Status.SUBMITTED)
 
+    def test_autosave_preserves_activities_when_not_provided(self):
+        payload = self._payload()
+        payload.update(
+            {
+                "num_activities": "1",
+                "activity_name_1": "Meet",
+                "activity_date_1": "2025-08-17",
+            }
+        )
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        pid = resp.json()["proposal_id"]
+        proposal = EventProposal.objects.get(id=pid)
+        self.assertEqual(proposal.activities.count(), 1)
+
+        payload2 = self._payload()
+        payload2["proposal_id"] = pid
+        resp2 = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(payload2),
+            content_type="application/json",
+        )
+        self.assertEqual(resp2.status_code, 200)
+        proposal.refresh_from_db()
+        self.assertEqual(proposal.activities.count(), 1)
+
     def test_autosave_proposal_invalid_json(self):
         resp = self.client.post(
             reverse("emt:autosave_proposal"),

@@ -2183,8 +2183,8 @@
 
 /* Audience modal enhancements */
 #audienceModal .modal-content {
-    max-width: 650px;
-    width: 90%;
+    max-width: 800px;
+    width: 95%;
 }
 
 #audienceModal .audience-type-selector {
@@ -2231,6 +2231,56 @@
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 500;
+}
+
+#audienceModal .dual-list {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    align-items: flex-start;
+}
+
+#audienceModal .dual-list-column {
+    display: flex;
+    flex-direction: column;
+}
+
+#audienceModal .dual-list-column input[type="text"] {
+    margin-bottom: 0.5rem;
+    padding: 0.25rem 0.5rem;
+}
+
+#audienceModal .dual-list select {
+    width: 260px;
+    min-height: 260px;
+}
+
+#audienceModal .dual-list-controls {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+#audienceModal .dual-list-controls button {
+    padding: 0.25rem 0.5rem;
+    width: 2.5rem;
+}
+
+#audienceModal .audience-custom {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    align-items: center;
+}
+
+#audienceModal .audience-custom input {
+    flex: 1;
+    padding: 0.5rem;
+}
+
+#audienceModal .audience-custom button {
+    padding: 0.5rem 1rem;
 }
 
 /* ===========================================

@@ -525,6 +525,27 @@ class ActivityLog(models.Model):
     def __str__(self):
         return f"{self.timestamp} - {self.user} - {self.action}"
 
+    def generate_description(self):
+        """Build a detailed description if none is provided."""
+        params = {}
+        ua = None
+        if isinstance(self.metadata, dict):
+            ua = self.metadata.get("user_agent")
+            params = {k: v for k, v in self.metadata.items() if k != "user_agent"}
+        params_str = ", ".join(f"{k}={v}" for k, v in params.items()) or "none"
+        ip = self.ip_address or "unknown"
+        username = self.user.username if self.user else "anonymous"
+        ua_str = f" User-Agent: {ua}." if ua else ""
+        return (
+            f"User {username} performed {self.action}. "
+            f"Params: {params_str}. IP: {ip}.{ua_str}"
+        )
+
+    def save(self, *args, **kwargs):
+        if not self.description:
+            self.description = self.generate_description()
+        super().save(*args, **kwargs)
+
 # Enhanced views with logging
 def log_impersonation_start(request, target_user):
     """Log when impersonation starts"""
@@ -539,9 +560,12 @@ def log_impersonation_start(request, target_user):
     ActivityLog.objects.create(
         user=request.user,
         action="impersonation_start",
-        description=f"Started impersonating {target_user.username}",
+        description=(
+            f"Started impersonating {target_user.username}. IP: {ip}. "
+            f"User-Agent: {ua}."
+        ),
         ip_address=ip,
-        metadata={"target_user": target_user.id},
+        metadata={"target_user": target_user.id, "user_agent": ua},
     )
 
 def log_impersonation_end(request):
@@ -557,12 +581,20 @@ def log_impersonation_end(request):
             if log_entry:
                 log_entry.ended_at = timezone.now()
                 log_entry.save()
+                ip = request.META.get('REMOTE_ADDR')
+                ua = request.META.get('HTTP_USER_AGENT', '')
                 ActivityLog.objects.create(
                     user=log_entry.original_user,
                     action="impersonation_end",
-                    description=f"Stopped impersonating {log_entry.impersonated_user.username}",
-                    ip_address=request.META.get('REMOTE_ADDR'),
-                    metadata={"target_user": log_entry.impersonated_user.id},
+                    description=(
+                        f"Stopped impersonating {log_entry.impersonated_user.username}. "
+                        f"IP: {ip}. User-Agent: {ua}."
+                    ),
+                    ip_address=ip,
+                    metadata={
+                        "target_user": log_entry.impersonated_user.id,
+                        "user_agent": ua,
+                    },
                 )
         except Exception:
             pass  # Handle gracefully

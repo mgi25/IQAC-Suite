@@ -140,9 +140,11 @@ def _save_text_sections(proposal, data):
 
 
 def _save_activities(proposal, data):
-    proposal.activities.all().delete()
     pattern = re.compile(r"^activity_(?:name|date)_(\d+)$")
     indices = sorted({int(m.group(1)) for key in data.keys() if (m := pattern.match(key))})
+    if not indices:
+        return
+    proposal.activities.all().delete()
     for index in indices:
         name = data.get(f"activity_name_{index}")
         date = data.get(f"activity_date_{index}")
@@ -1134,18 +1136,34 @@ def api_faculty(request):
 
     users = (
         users
+        .prefetch_related("role_assignments__organization")
         .filter(
             Q(first_name__icontains=q)
             | Q(last_name__icontains=q)
             | Q(email__icontains=q)
         )
         .distinct()
-        .order_by("first_name")[:20]
+        .order_by("role_assignments__organization__name", "first_name")[:20]
     )
-    return JsonResponse(
-        [{"id": u.id, "text": f"{u.get_full_name() or u.username} ({u.email})"} for u in users],
-        safe=False
-    )
+
+    data = []
+    for u in users:
+        assignment = (
+            u.role_assignments
+            .filter(role__name__icontains="faculty", organization__isnull=False)
+            .select_related("organization")
+            .first()
+        )
+        dept = assignment.organization.name if assignment else ""
+        full_name = u.get_full_name() or u.username
+        data.append({
+            "id": u.id,
+            "name": full_name,
+            "department": dept,
+            "text": f"{full_name} ({u.email})",
+        })
+
+    return JsonResponse(data, safe=False)
 
 
 @login_required
@@ -1183,6 +1201,8 @@ def api_students(request):
 @require_http_methods(["GET"])
 def api_classes(request, org_id):
     """Return classes and their students for an organization."""
+    q = request.GET.get("q", "").strip()
+
     try:
         classes = (
             Class.objects
@@ -1190,6 +1210,8 @@ def api_classes(request, org_id):
             .prefetch_related('students__user')
             .order_by('name')
         )
+        if q:
+            classes = classes.filter(name__icontains=q)
         data = []
         for cls in classes:
             students = [
@@ -1452,7 +1474,11 @@ def review_approval_step(request, step_id):
 
 @login_required
 def submit_event_report(request, proposal_id):
-    proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
+    proposal = get_object_or_404(
+        EventProposal.objects.prefetch_related("activities"),
+        id=proposal_id,
+        submitted_by=request.user,
+    )
 
     # Only allow if no report exists yet
     report, created = EventReport.objects.get_or_create(proposal=proposal)
@@ -1466,6 +1492,9 @@ def submit_event_report(request, proposal_id):
             report.proposal = proposal
             report.save()
             form.save_m2m()
+
+            # Save activities from the submitted report
+            _save_activities(proposal, request.POST)
 
             # Save attachments
             instances = formset.save(commit=False)
@@ -1481,11 +1510,19 @@ def submit_event_report(request, proposal_id):
         form = EventReportForm(instance=report)
         formset = AttachmentFormSet(queryset=report.attachments.all())
 
+    # Fetch activities for editing in the report form
+    activities = [
+        {"name": a.name, "date": a.date.isoformat()}
+        for a in proposal.activities.all()
+    ]
+
     # Pre-fill context with proposal info for readonly/preview display
     context = {
         "proposal": proposal,
         "form": form,
         "formset": formset,
+        "activities": activities,
+        "activities_json": json.dumps(activities),
     }
     return render(request, "emt/submit_event_report.html", context)
 
