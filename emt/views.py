@@ -1507,12 +1507,17 @@ def submit_event_report(request, proposal_id):
         form = EventReportForm(instance=report)
         formset = AttachmentFormSet(queryset=report.attachments.all())
 
+    # Fetch activities from the proposal for reference in the report form
+    activities = list(
+        EventActivity.objects.filter(proposal=proposal).order_by("date", "id")
+    )
+
     # Pre-fill context with proposal info for readonly/preview display
     context = {
         "proposal": proposal,
         "form": form,
         "formset": formset,
-        "activities": proposal.activities.all(),
+        "activities": activities,
     }
     return render(request, "emt/submit_event_report.html", context)
 
