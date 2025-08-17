@@ -744,7 +744,6 @@ $(document).ready(function() {
             selected.forEach(item => {
                 selectedSelect.append($('<option>').val(item.id).text(item.name));
             });
-            filterOptions($('#audienceAvailableSearch'), availableSelect);
             filterOptions($('#audienceSelectedSearch'), selectedSelect);
         }
 
@@ -765,13 +764,8 @@ $(document).ready(function() {
             return orgIds;
         }
 
-        container.find('button[data-type]').on('click', function() {
-            currentType = $(this).data('type');
+        function loadAvailable(term = '') {
             available = [];
-            selected = [];
-            listContainer.show();
-            customContainer.show();
-            $('#audienceSave').show();
             const orgIds = collectOrgIds();
             if (!orgIds.length) {
                 availableSelect.html('<option>Select an organization first.</option>');
@@ -779,7 +773,7 @@ $(document).ready(function() {
             }
             if (currentType === 'students') {
                 Promise.all(orgIds.map(o =>
-                    fetch(`${window.API_CLASSES_BASE}${o.id}/`, { credentials: 'include' })
+                    fetch(`${window.API_CLASSES_BASE}${o.id}/?q=${encodeURIComponent(term)}`, { credentials: 'include' })
                         .then(r => r.json().then(data => ({ org: o, data })))
                 ))
                 .then(results => {
@@ -788,9 +782,9 @@ $(document).ready(function() {
                         if (data.success && data.classes.length) {
                             data.classes.forEach(cls => {
                                 const item = { id: String(cls.id), name: `${cls.name} (${org.name})` };
-                                if (preselected.includes(String(cls.id))) {
+                                if (preselected.includes(String(cls.id)) && !selected.some(it => it.id === String(cls.id))) {
                                     selected.push(item);
-                                } else {
+                                } else if (!selected.some(it => it.id === String(cls.id))) {
                                     available.push(item);
                                 }
                             });
@@ -801,26 +795,38 @@ $(document).ready(function() {
                 .catch(() => {
                     availableSelect.html('<option>Error loading</option>');
                 });
-            } else {
+            } else if (currentType === 'faculty') {
                 Promise.all(orgIds.map(o =>
-                    fetch(`${window.API_FACULTY}?org_id=${o.id}`, { credentials: 'include' })
+                    fetch(`${window.API_FACULTY}?org_id=${o.id}&q=${encodeURIComponent(term)}`, { credentials: 'include' })
                         .then(r => r.json().then(data => ({ org: o, data })))
                 ))
                 .then(results => {
                     results.forEach(res => {
-                        const { org, data } = res;
+                        const { data } = res;
                         data.forEach(f => {
-                            const name = f.text.replace(/\s*\(.*?\)\s*$/, '');
-                            const item = { id: String(f.id), name: `${name} (${org.name})` };
-                            available.push(item);
+                            const item = { id: String(f.id), name: `${f.department || ''} - ${f.name}` };
+                            if (!selected.some(it => it.id === item.id)) {
+                                available.push(item);
+                            }
                         });
                     });
+                    available.sort((a, b) => a.name.localeCompare(b.name));
                     renderLists();
                 })
                 .catch(() => {
                     availableSelect.html('<option>Error loading</option>');
                 });
             }
+        }
+
+        container.find('button[data-type]').on('click', function() {
+            currentType = $(this).data('type');
+            available = [];
+            selected = [];
+            listContainer.show();
+            customContainer.show();
+            $('#audienceSave').show();
+            loadAvailable('');
         });
 
         container.on('click', '#audienceAdd', function() {
@@ -873,7 +879,8 @@ $(document).ready(function() {
         });
 
         container.on('input', '#audienceAvailableSearch', function() {
-            filterOptions($(this), availableSelect);
+            const term = $(this).val().trim();
+            if (currentType) loadAvailable(term);
         });
 
         container.on('input', '#audienceSelectedSearch', function() {

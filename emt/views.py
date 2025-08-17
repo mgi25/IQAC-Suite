@@ -1136,18 +1136,34 @@ def api_faculty(request):
 
     users = (
         users
+        .prefetch_related("role_assignments__organization")
         .filter(
             Q(first_name__icontains=q)
             | Q(last_name__icontains=q)
             | Q(email__icontains=q)
         )
         .distinct()
-        .order_by("first_name")[:20]
+        .order_by("role_assignments__organization__name", "first_name")[:20]
     )
-    return JsonResponse(
-        [{"id": u.id, "text": f"{u.get_full_name() or u.username} ({u.email})"} for u in users],
-        safe=False
-    )
+
+    data = []
+    for u in users:
+        assignment = (
+            u.role_assignments
+            .filter(role__name__icontains="faculty", organization__isnull=False)
+            .select_related("organization")
+            .first()
+        )
+        dept = assignment.organization.name if assignment else ""
+        full_name = u.get_full_name() or u.username
+        data.append({
+            "id": u.id,
+            "name": full_name,
+            "department": dept,
+            "text": f"{full_name} ({u.email})",
+        })
+
+    return JsonResponse(data, safe=False)
 
 
 @login_required
@@ -1185,6 +1201,8 @@ def api_students(request):
 @require_http_methods(["GET"])
 def api_classes(request, org_id):
     """Return classes and their students for an organization."""
+    q = request.GET.get("q", "").strip()
+
     try:
         classes = (
             Class.objects
@@ -1192,6 +1210,8 @@ def api_classes(request, org_id):
             .prefetch_related('students__user')
             .order_by('name')
         )
+        if q:
+            classes = classes.filter(name__icontains=q)
         data = []
         for cls in classes:
             students = [
