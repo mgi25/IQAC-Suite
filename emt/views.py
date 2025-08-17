@@ -140,9 +140,11 @@ def _save_text_sections(proposal, data):
 
 
 def _save_activities(proposal, data):
-    proposal.activities.all().delete()
     pattern = re.compile(r"^activity_(?:name|date)_(\d+)$")
     indices = sorted({int(m.group(1)) for key in data.keys() if (m := pattern.match(key))})
+    if not indices:
+        return
+    proposal.activities.all().delete()
     for index in indices:
         name = data.get(f"activity_name_{index}")
         date = data.get(f"activity_date_{index}")
