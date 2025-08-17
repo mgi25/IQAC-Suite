@@ -33,7 +33,19 @@ class Migration(migrations.Migration):
                 'ordering': ['-started_at'],
             },
         ),
-        migrations.DeleteModel(
-            name='EventProposal',
+        # `EventProposal` was removed previously. On some databases the
+        # table may already be absent, which would cause `DeleteModel` to
+        # fail. Dropping it conditionally keeps the migration idempotent
+        # and lets it run even if the table doesn't exist.
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    "DROP TABLE IF EXISTS core_eventproposal",
+                    reverse_sql=migrations.RunSQL.noop,
+                ),
+            ],
+            state_operations=[
+                migrations.DeleteModel(name='EventProposal'),
+            ],
         ),
     ]
