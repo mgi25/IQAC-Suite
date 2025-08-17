@@ -1,0 +1,551 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Profile - Faculty Dashboard{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'core/css/profile.css' %}">
+<link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
+
+<div class="dashboard-profile-container">
+  <!-- Navigation Bar -->
+  <div class="dashboard-nav-bar">
+    <div class="nav-left">
+      <a href="{% url 'dashboard' %}" class="back-btn">
+        <i class="fas fa-arrow-left"></i>
+        <span>Back to Dashboard</span>
+      </a>
+    </div>
+    <div class="nav-center">
+      <h1 class="nav-title">Faculty Profile</h1>
+    </div>
+    <div class="nav-right">
+      <span class="user-badge faculty-badge">
+        <i class="fas fa-chalkboard-user"></i>
+        Faculty
+      </span>
+    </div>
+  </div>
+
+  <!-- Profile Header -->
+  <div class="profile-header-section faculty-header">
+    <div class="profile-header-container">
+      <div class="profile-left-section">
+        <div class="profile-avatar-section">
+          <div class="profile-avatar-large faculty-avatar">
+            <div class="avatar-placeholder">{{ user.get_full_name|default:user.username|slice:":1"|upper }}</div>
+          </div>
+          <button class="avatar-edit-btn">
+            <i class="fas fa-camera"></i>
+          </button>
+        </div>
+        <div class="profile-basic-info">
+          <h1 class="profile-title">{{ user.get_full_name|default:user.username }}</h1>
+          <p class="profile-subtitle">{{ user.email }}</p>
+          {% if user.profile.role %}
+          <p class="profile-role">
+            <i class="fas fa-user-tie"></i>
+            {{ user.profile.get_role_display }}
+          </p>
+          {% endif %}
+          <div class="profile-completion-section">
+            <div class="completion-label">Profile Completion</div>
+            <div class="completion-bar-container">
+              <div class="completion-bar">
+                <div class="completion-fill" style="width: {{ profile_completion_percentage }}%"></div>
+              </div>
+              <span class="completion-percentage">{{ profile_completion_percentage }}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="profile-stats-section">
+        <div class="profile-stats-grid faculty-stats">
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-user-graduate"></i>
+            </div>
+            <div class="stat-content">
+              <div class="stat-number">{{ students_count|default:"0" }}</div>
+              <div class="stat-label">STUDENTS</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-chalkboard"></i>
+            </div>
+            <div class="stat-content">
+              <div class="stat-number">{{ classes_count|default:"0" }}</div>
+              <div class="stat-label">CLASSES</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-calendar-check"></i>
+            </div>
+            <div class="stat-content">
+              <div class="stat-number">{{ total_events|default:"0" }}</div>
+              <div class="stat-label">EVENTS ORGANIZED</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-clock"></i>
+            </div>
+            <div class="stat-content">
+              <div class="stat-number">{{ years_active|default:"0" }}</div>
+              <div class="stat-label">YEARS ACTIVE</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <div class="profile-tabs-section">
+    <div class="profile-tabs-container">
+      <nav class="profile-tabs-nav">
+        <button class="tab-btn active" onclick="showTab('professional-info')">
+          <i class="fas fa-user-tie"></i>
+          <span>Professional Info</span>
+        </button>
+        <button class="tab-btn" onclick="showTab('classes')">
+          <i class="fas fa-chalkboard"></i>
+          <span>My Classes</span>
+        </button>
+        <button class="tab-btn" onclick="showTab('students')">
+          <i class="fas fa-user-graduate"></i>
+          <span>My Students</span>
+        </button>
+        <button class="tab-btn" onclick="showTab('events')">
+          <i class="fas fa-calendar-alt"></i>
+          <span>Events Organized</span>
+        </button>
+        <button class="tab-btn" onclick="showTab('organizations')">
+          <i class="fas fa-building"></i>
+          <span>Organizations</span>
+        </button>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Content Section -->
+  <div class="profile-content-section">
+    <!-- Professional Info Tab -->
+    <div id="professional-info" class="tab-content-panel active">
+      <div class="content-row">
+        <!-- Personal Information -->
+        <div class="content-card large-card">
+          <div class="card-header">
+            <div class="header-left">
+              <div class="header-icon">
+                <i class="fas fa-user"></i>
+              </div>
+              <h2>Personal Information</h2>
+            </div>
+            <button class="edit-btn" onclick="editPersonalInfo()">
+              <i class="fas fa-edit"></i>
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="info-grid-expanded">
+              <div class="info-section">
+                <div class="info-item-large">
+                  <div class="info-label">
+                    <i class="fas fa-user"></i>
+                    <span>Full Name</span>
+                  </div>
+                  <div class="info-value">{{ user.get_full_name|default:"Not Set" }}</div>
+                </div>
+                <div class="info-item-large">
+                  <div class="info-label">
+                    <i class="fas fa-at"></i>
+                    <span>Email</span>
+                  </div>
+                  <div class="info-value">{{ user.email|default:"Not Set" }}</div>
+                </div>
+              </div>
+              <div class="info-section">
+                <div class="info-item-large">
+                  <div class="info-label">
+                    <i class="fas fa-user-tie"></i>
+                    <span>Role</span>
+                  </div>
+                  <div class="info-value">{{ user.profile.get_role_display|default:"Faculty" }}</div>
+                </div>
+                <div class="info-item-large">
+                  <div class="info-label">
+                    <i class="fas fa-calendar-plus"></i>
+                    <span>Date Joined</span>
+                  </div>
+                  <div class="info-value">{{ user.date_joined|date:"F d, Y"|default:"Unknown" }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Professional Status -->
+        <div class="content-card medium-card">
+          <div class="card-header">
+            <div class="header-left">
+              <div class="header-icon">
+                <i class="fas fa-shield-alt"></i>
+              </div>
+              <h2>Professional Status</h2>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="status-list-compact">
+              <div class="status-item-large">
+                <div class="status-indicator active">
+                  <i class="fas fa-check"></i>
+                </div>
+                <div class="status-content">
+                  <div class="status-title">Faculty Member</div>
+                  <div class="status-description">Active faculty in good standing</div>
+                </div>
+              </div>
+              <div class="status-item-large">
+                <div class="status-indicator verified">
+                  <i class="fas fa-graduation-cap"></i>
+                </div>
+                <div class="status-content">
+                  <div class="status-title">Teaching Access</div>
+                  <div class="status-description">Authorized to manage classes and students</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Classes Tab -->
+    <div id="classes" class="tab-content-panel">
+      <div class="content-row">
+        <div class="content-card full-width-card">
+          <div class="card-header">
+            <div class="header-left">
+              <div class="header-icon">
+                <i class="fas fa-chalkboard"></i>
+              </div>
+              <h2>My Classes</h2>
+            </div>
+            <div class="header-actions">
+              <button class="btn btn-secondary" onclick="exportClasses()">
+                <i class="fas fa-download"></i>
+                Export List
+              </button>
+            </div>
+          </div>
+          <div class="card-body full-height">
+            {% if my_classes %}
+              <div class="classes-grid-expanded">
+                {% for class in my_classes %}
+                <div class="class-card-large">
+                  <div class="class-header">
+                    <div class="class-icon">
+                      <i class="fas fa-chalkboard"></i>
+                    </div>
+                    <div class="class-info">
+                      <h4>{{ class.name }}</h4>
+                      <div class="class-code">{{ class.code }}</div>
+                    </div>
+                    <div class="class-actions">
+                      <button class="action-btn" onclick="viewClass({{ class.id }})">
+                        <i class="fas fa-eye"></i>
+                      </button>
+                      <button class="action-btn" onclick="manageClass({{ class.id }})">
+                        <i class="fas fa-cog"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="class-details">
+                    <div class="detail-item">
+                      <i class="fas fa-users"></i>
+                      <span>{{ class.students.count }} Students</span>
+                    </div>
+                    {% if class.academic_year %}
+                    <div class="detail-item">
+                      <i class="fas fa-calendar"></i>
+                      <span>{{ class.academic_year }}</span>
+                    </div>
+                    {% endif %}
+                    {% if class.organization %}
+                    <div class="detail-item">
+                      <i class="fas fa-building"></i>
+                      <span>{{ class.organization.name }}</span>
+                    </div>
+                    {% endif %}
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="empty-state-expanded">
+                <div class="empty-icon">
+                  <i class="fas fa-chalkboard"></i>
+                </div>
+                <div class="empty-content">
+                  <h3>No Classes Assigned</h3>
+                  <p>You don't have any classes assigned yet. Contact your department head or administrator to get class assignments.</p>
+                  <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to Dashboard</span>
+                  </a>
+                </div>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Students Tab -->
+    <div id="students" class="tab-content-panel">
+      <div class="content-row">
+        <div class="content-card full-width-card">
+          <div class="card-header">
+            <div class="header-left">
+              <div class="header-icon">
+                <i class="fas fa-user-graduate"></i>
+              </div>
+              <h2>My Students</h2>
+            </div>
+            <div class="header-actions">
+              <button class="btn btn-secondary" onclick="exportStudents()">
+                <i class="fas fa-download"></i>
+                Export List
+              </button>
+            </div>
+          </div>
+          <div class="card-body full-height">
+            {% if my_students %}
+              <div class="students-grid-expanded">
+                {% for student in my_students %}
+                <div class="student-card-large">
+                  <div class="student-header">
+                    <div class="student-avatar">
+                      <div class="avatar-placeholder small">
+                        {{ student.user.get_full_name|default:student.user.username|slice:":1"|upper }}
+                      </div>
+                    </div>
+                    <div class="student-info">
+                      <h4>{{ student.user.get_full_name|default:student.user.username }}</h4>
+                      <div class="student-email">{{ student.user.email }}</div>
+                      {% if student.registration_number %}
+                      <div class="student-reg">{{ student.registration_number }}</div>
+                      {% endif %}
+                    </div>
+                    <div class="student-actions">
+                      <button class="action-btn" onclick="viewStudent({{ student.id }})">
+                        <i class="fas fa-eye"></i>
+                      </button>
+                      <button class="action-btn" onclick="contactStudent({{ student.id }})">
+                        <i class="fas fa-envelope"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="student-details">
+                    {% if student.department %}
+                    <div class="detail-item">
+                      <i class="fas fa-building-columns"></i>
+                      <span>{{ student.department }}</span>
+                    </div>
+                    {% endif %}
+                    {% if student.academic_year %}
+                    <div class="detail-item">
+                      <i class="fas fa-calendar"></i>
+                      <span>{{ student.academic_year }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="detail-item">
+                      <i class="fas fa-clock"></i>
+                      <span>Last active: {{ student.user.last_login|timesince }} ago</span>
+                    </div>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="empty-state-expanded">
+                <div class="empty-icon">
+                  <i class="fas fa-user-graduate"></i>
+                </div>
+                <div class="empty-content">
+                  <h3>No Students Assigned</h3>
+                  <p>You don't have any students assigned as mentees yet. Student assignments are typically managed by the department or administration.</p>
+                  <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to Dashboard</span>
+                  </a>
+                </div>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Events Tab -->
+    <div id="events" class="tab-content-panel">
+      <div class="content-row">
+        <div class="content-card full-width-card">
+          <div class="card-header">
+            <div class="header-left">
+              <div class="header-icon">
+                <i class="fas fa-calendar-check"></i>
+              </div>
+              <h2>Events Organized</h2>
+            </div>
+            <div class="header-actions">
+              <a href="{% url 'emt:event_proposal_form' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i>
+                New Event
+              </a>
+            </div>
+          </div>
+          <div class="card-body full-height">
+            {% if organized_events %}
+              <div class="events-grid-expanded">
+                {% for event in organized_events %}
+                <div class="event-card-large faculty-event">
+                  <div class="event-header">
+                    <div class="event-icon">
+                      <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <div class="event-info">
+                      <h4>{{ event.event_title }}</h4>
+                      <div class="event-meta">
+                        {% if event.event_datetime %}
+                        <span class="meta-item">
+                          <i class="fas fa-clock"></i>
+                          {{ event.event_datetime|date:"M d, Y" }}
+                        </span>
+                        {% endif %}
+                        {% if event.venue %}
+                        <span class="meta-item">
+                          <i class="fas fa-map-marker-alt"></i>
+                          {{ event.venue }}
+                        </span>
+                        {% endif %}
+                      </div>
+                    </div>
+                    <div class="event-status">
+                      <span class="status-badge status-{{ event.status }}">
+                        {{ event.get_status_display }}
+                      </span>
+                    </div>
+                  </div>
+                  {% if event.description %}
+                  <div class="event-description">
+                    {{ event.description|truncatewords:20 }}
+                  </div>
+                  {% endif %}
+                  <div class="event-actions">
+                    <button class="btn btn-sm btn-secondary" onclick="viewEvent({{ event.id }})">
+                      <i class="fas fa-eye"></i> View
+                    </button>
+                    {% if event.status == 'draft' %}
+                    <button class="btn btn-sm btn-primary" onclick="editEvent({{ event.id }})">
+                      <i class="fas fa-edit"></i> Edit
+                    </button>
+                    {% endif %}
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="empty-state-expanded">
+                <div class="empty-icon">
+                  <i class="fas fa-calendar-alt"></i>
+                </div>
+                <div class="empty-content">
+                  <h3>No Events Organized</h3>
+                  <p>You haven't organized any events yet. Start by creating your first event proposal and managing the event lifecycle.</p>
+                  <a href="{% url 'emt:event_proposal_form' %}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-plus"></i>
+                    <span>Create Your First Event</span>
+                  </a>
+                </div>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Organizations Tab -->
+    <div id="organizations" class="tab-content-panel">
+      <div class="content-row">
+        <div class="content-card full-width-card">
+          <div class="card-header">
+            <div class="header-left">
+              <div class="header-icon">
+                <i class="fas fa-building"></i>
+              </div>
+              <h2>My Organizations</h2>
+            </div>
+          </div>
+          <div class="card-body full-height">
+            {% if user_organizations %}
+              <div class="organizations-grid-expanded">
+                {% for org in user_organizations %}
+                <div class="organization-card-large">
+                  <div class="org-header">
+                    <div class="org-icon">
+                      <i class="fas fa-building"></i>
+                    </div>
+                    <div class="org-info">
+                      <h4>{{ org.name }}</h4>
+                      <div class="org-badge">{{ org.org_type.name }}</div>
+                    </div>
+                    <div class="org-actions">
+                      <button class="action-btn" onclick="viewOrganization({{ org.id }})">
+                        <i class="fas fa-eye"></i>
+                      </button>
+                      <button class="action-btn" onclick="manageOrganization({{ org.id }})">
+                        <i class="fas fa-cog"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="org-details">
+                    <div class="detail-item">
+                      <i class="fas fa-user-tie"></i>
+                      <span>Faculty Member</span>
+                    </div>
+                    <div class="detail-item">
+                      <i class="fas fa-users"></i>
+                      <span>{{ org.role_assignments.count }} Members</span>
+                    </div>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="empty-state-expanded">
+                <div class="empty-icon">
+                  <i class="fas fa-building"></i>
+                </div>
+                <div class="empty-content">
+                  <h3>No Organizations</h3>
+                  <p>You are not currently associated with any organizations. Contact your administrator to be added to relevant departments or committees.</p>
+                  <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to Dashboard</span>
+                  </a>
+                </div>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="{% static 'core/js/profile.js' %}"></script>
+<script src="{% static 'core/js/faculty_profile.js' %}"></script>
+{% endblock %}
