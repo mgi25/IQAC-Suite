@@ -17,6 +17,14 @@ urlpatterns = [
     # Profile Management
     # ────────────────────────────────────────────────
     path('my-profile/', views.my_profile, name='my_profile'),
+    
+    # Profile API endpoints
+    path('api/profile/update/', views.api_update_profile, name='api_update_profile'),
+    path('api/profile/update-avatar/', views.api_update_avatar, name='api_update_avatar'),
+    path('api/profile/get-events/', views.api_get_user_events, name='api_get_user_events'),
+    path('api/profile/achievements/', views.api_manage_achievements, name='api_manage_achievements'),
+    path('api/profile/student/academic-info/', views.api_update_student_academic, name='api_update_student_academic'),
+    path('api/profile/faculty/professional-info/', views.api_update_faculty_professional, name='api_update_faculty_professional'),
 
     # ────────────────────────────────────────────────
     # General Dashboard and Proposal Views

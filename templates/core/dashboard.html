@@ -75,6 +75,16 @@
             <span>Rank: <strong>{{ user.rank|default:"—" }}</strong></span>
             <span>Classes: <strong>{{ classes_count|default:0 }}</strong></span>
           </h3>
+          <div class="pkp-actions">
+            <a href="{% url 'my_profile' %}?from_dashboard=true" class="btn btn-profile-primary">
+              <i class="fas fa-user-cog"></i>
+              <span>View Profile</span>
+            </a>
+            <a href="{% url 'my_profile' %}?from_dashboard=true&tab=edit" class="btn btn-profile-secondary">
+              <i class="fas fa-edit"></i>
+              <span>Edit Profile</span>
+            </a>
+          </div>
         </div>
       </div>
       

@@ -132,16 +132,149 @@ def custom_logout(request):
 
 @login_required
 def my_profile(request):
-    """Display user's profile page with basic info, achievements, and roles."""
+    """Display user's role-specific profile page with dashboard integration."""
+    user = request.user
+    
+    # ---- role / domain detection ----
+    roles = RoleAssignment.objects.filter(user=user).select_related('role', 'organization')
+    role_lc = [ra.role.name.lower() for ra in roles]
+
+    if user.is_superuser:
+        return redirect('admin_dashboard')
+
+    email = (user.email or "").lower()
+    is_student = ('student' in role_lc) or email.endswith('@christuniversity.in')
+    
+    # Determine if this is accessed from dashboard (check for 'from_dashboard' parameter)
+    from_dashboard = request.GET.get('from_dashboard', False)
+    
+    # Base context for all users
     context = {
-        'user': request.user,
-        'user_achievements': [],  # Will be populated later when we add achievements
-        'user_organizations': [],  # Will be populated later when we add organizations
-        'total_events': 47,  # Placeholder for now
-        'years_active': 0,  # Placeholder for now
-        'profile_completion_percentage': 33,  # Placeholder for now
+        'user': user,
+        'is_student': is_student,
+        'from_dashboard': from_dashboard,
+        'user_role': 'student' if is_student else 'faculty',
     }
-    return render(request, 'core/my_profile.html', context)
+    
+    if is_student:
+        # Student-specific data
+        try:
+            student_profile = Student.objects.get(user=user)
+            context.update({
+                'student_profile': student_profile,
+                'registration_number': student_profile.registration_number,
+                'department': getattr(student_profile, 'department', None),
+                'academic_year': getattr(student_profile, 'academic_year', None),
+            })
+        except Student.DoesNotExist:
+            context.update({
+                'student_profile': None,
+                'registration_number': None,
+                'department': None,
+                'academic_year': None,
+            })
+        
+        # Student-specific achievements and organizations
+        participated_events = EventProposal.objects.filter(
+            Q(participants__user=user) | Q(submitted_by=user)
+        ).distinct()
+        
+        user_org_ids = list(roles.filter(organization__isnull=False).values_list('organization_id', flat=True))
+        user_organizations = Organization.objects.filter(id__in=user_org_ids)
+        
+        context.update({
+            'user_achievements': [],  # Placeholder for achievements system
+            'user_organizations': user_organizations,
+            'participated_events': participated_events,
+            'total_events': participated_events.count(),
+            'org_count': user_organizations.count(),
+            'years_active': calculate_years_active(user),
+            'profile_completion_percentage': calculate_student_profile_completion(user, context),
+        })
+        
+        template = 'core/student_profile.html' if from_dashboard else 'core/my_profile.html'
+        
+    else:
+        # Faculty-specific data
+        my_students = Student.objects.filter(mentor=user)
+        my_classes = Class.objects.filter(teacher=user, is_active=True)
+        organized_events = EventProposal.objects.filter(submitted_by=user)
+        
+        context.update({
+            'my_students': my_students,
+            'my_classes': my_classes,
+            'organized_events': organized_events,
+            'students_count': my_students.count(),
+            'classes_count': my_classes.count(),
+            'total_events': organized_events.count(),
+            'user_organizations': Organization.objects.filter(
+                id__in=roles.filter(organization__isnull=False).values_list('organization_id', flat=True)
+            ),
+            'years_active': calculate_years_active(user),
+            'profile_completion_percentage': calculate_faculty_profile_completion(user, context),
+        })
+        
+        template = 'core/faculty_profile.html' if from_dashboard else 'core/my_profile.html'
+    
+    return render(request, template, context)
+
+
+def calculate_years_active(user):
+    """Calculate how many years the user has been active."""
+    if user.date_joined:
+        delta = timezone.now() - user.date_joined
+        return delta.days // 365
+    return 0
+
+
+def calculate_student_profile_completion(user, context):
+    """Calculate profile completion percentage for students."""
+    completion_factors = []
+    
+    # Basic profile info (40%)
+    if user.first_name and user.last_name:
+        completion_factors.append(20)
+    if user.email:
+        completion_factors.append(10)
+    if context.get('registration_number'):
+        completion_factors.append(10)
+    
+    # Academic info (30%)
+    if context.get('department'):
+        completion_factors.append(15)
+    if context.get('academic_year'):
+        completion_factors.append(15)
+    
+    # Activity participation (30%)
+    if context.get('total_events', 0) > 0:
+        completion_factors.append(20)
+    if context.get('org_count', 0) > 0:
+        completion_factors.append(10)
+    
+    return sum(completion_factors)
+
+
+def calculate_faculty_profile_completion(user, context):
+    """Calculate profile completion percentage for faculty."""
+    completion_factors = []
+    
+    # Basic profile info (50%)
+    if user.first_name and user.last_name:
+        completion_factors.append(25)
+    if user.email:
+        completion_factors.append(15)
+    if hasattr(user, 'profile') and user.profile:
+        completion_factors.append(10)
+    
+    # Professional info (50%)
+    if context.get('classes_count', 0) > 0:
+        completion_factors.append(20)
+    if context.get('students_count', 0) > 0:
+        completion_factors.append(15)
+    if context.get('total_events', 0) > 0:
+        completion_factors.append(15)
+    
+    return sum(completion_factors)
 
 
 @login_required
@@ -4946,3 +5079,317 @@ def cdl_thread(request, proposal_id):
             "proposal": proposal,
         },
     )
+
+
+# ====================================================================
+# Profile API Endpoints
+# ====================================================================
+
+@login_required
+@require_http_methods(["POST"])
+def api_update_profile(request):
+    """Update user profile basic information"""
+    try:
+        data = json.loads(request.body)
+        user = request.user
+        profile = user.profile
+        
+        # Update user fields
+        if 'first_name' in data:
+            user.first_name = data['first_name']
+        if 'last_name' in data:
+            user.last_name = data['last_name']
+        if 'email' in data:
+            user.email = data['email']
+        user.save()
+        
+        # Update profile fields
+        if 'phone' in data:
+            profile.phone = data['phone']
+        if 'date_of_birth' in data:
+            if data['date_of_birth']:
+                profile.date_of_birth = data['date_of_birth']
+        if 'bio' in data:
+            profile.bio = data['bio']
+        if 'emergency_contact' in data:
+            profile.emergency_contact = data['emergency_contact']
+        profile.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Profile updated successfully'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_update_avatar(request):
+    """Update user profile picture"""
+    try:
+        if 'avatar' not in request.FILES:
+            return JsonResponse({
+                'success': False,
+                'message': 'No file provided'
+            }, status=400)
+        
+        avatar = request.FILES['avatar']
+        profile = request.user.profile
+        
+        # Validate file type
+        allowed_types = ['image/jpeg', 'image/jpg', 'image/png']
+        if avatar.content_type not in allowed_types:
+            return JsonResponse({
+                'success': False,
+                'message': 'Only JPEG and PNG files are allowed'
+            }, status=400)
+        
+        # Validate file size (max 5MB)
+        if avatar.size > 5 * 1024 * 1024:
+            return JsonResponse({
+                'success': False,
+                'message': 'File too large. Maximum size is 5MB'
+            }, status=400)
+        
+        # Delete old avatar if exists
+        if profile.profile_picture:
+            old_path = profile.profile_picture.path
+            if os.path.exists(old_path):
+                os.remove(old_path)
+        
+        # Save new avatar
+        profile.profile_picture = avatar
+        profile.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Avatar updated successfully',
+            'avatar_url': profile.profile_picture.url if profile.profile_picture else None
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=400)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_get_user_events(request):
+    """Get user's events based on their role"""
+    try:
+        user = request.user
+        events_data = []
+        
+        # Get events based on user role
+        if hasattr(user, 'student'):
+            # Student events - events they've registered for or attended
+            student = user.student
+            events = EventProposal.objects.filter(
+                Q(students=student) | Q(created_by=user)
+            ).distinct().order_by('-created_at')
+            
+            for event in events:
+                events_data.append({
+                    'id': event.id,
+                    'title': event.title,
+                    'description': event.description,
+                    'event_date': event.event_date.isoformat() if event.event_date else None,
+                    'status': event.status,
+                    'is_creator': event.created_by == user,
+                    'type': 'student_event'
+                })
+        else:
+            # Faculty/Staff events - events they've created or are managing
+            events = EventProposal.objects.filter(
+                created_by=user
+            ).order_by('-created_at')
+            
+            for event in events:
+                events_data.append({
+                    'id': event.id,
+                    'title': event.title,
+                    'description': event.description,
+                    'event_date': event.event_date.isoformat() if event.event_date else None,
+                    'status': event.status,
+                    'participants_count': event.students.count(),
+                    'type': 'faculty_event'
+                })
+        
+        return JsonResponse({
+            'success': True,
+            'events': events_data
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=400)
+
+
+@login_required
+@require_http_methods(["GET", "POST", "DELETE"])
+def api_manage_achievements(request):
+    """Manage user achievements"""
+    try:
+        user = request.user
+        profile = user.profile
+        
+        if request.method == 'GET':
+            # Get achievements
+            achievements = profile.achievements if profile.achievements else []
+            return JsonResponse({
+                'success': True,
+                'achievements': achievements
+            })
+            
+        elif request.method == 'POST':
+            # Add achievement
+            data = json.loads(request.body)
+            achievement = {
+                'title': data.get('title', ''),
+                'description': data.get('description', ''),
+                'date': data.get('date', ''),
+                'category': data.get('category', 'academic'),
+                'id': len(profile.achievements) + 1 if profile.achievements else 1
+            }
+            
+            if not profile.achievements:
+                profile.achievements = []
+            
+            profile.achievements.append(achievement)
+            profile.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Achievement added successfully',
+                'achievement': achievement
+            })
+            
+        elif request.method == 'DELETE':
+            # Delete achievement
+            achievement_id = request.GET.get('id')
+            if not achievement_id:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Achievement ID required'
+                }, status=400)
+            
+            try:
+                achievement_id = int(achievement_id)
+                if profile.achievements:
+                    profile.achievements = [
+                        ach for ach in profile.achievements 
+                        if ach.get('id') != achievement_id
+                    ]
+                    profile.save()
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Achievement deleted successfully'
+                })
+            except ValueError:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Invalid achievement ID'
+                }, status=400)
+                
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_update_student_academic(request):
+    """Update student academic information"""
+    try:
+        if not hasattr(request.user, 'student'):
+            return JsonResponse({
+                'success': False,
+                'message': 'Access denied. Student account required.'
+            }, status=403)
+        
+        data = json.loads(request.body)
+        student = request.user.student
+        
+        # Update student fields
+        if 'registration_number' in data:
+            student.registration_number = data['registration_number']
+        if 'current_semester' in data:
+            student.current_semester = data['current_semester']
+        if 'gpa' in data:
+            student.gpa = float(data['gpa']) if data['gpa'] else None
+        if 'major' in data:
+            student.major = data['major']
+        if 'enrollment_year' in data:
+            student.enrollment_year = int(data['enrollment_year']) if data['enrollment_year'] else None
+        
+        student.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Academic information updated successfully'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_update_faculty_professional(request):
+    """Update faculty professional information"""
+    try:
+        # Check if user is faculty/staff using same logic as my_profile
+        user = request.user
+        roles = RoleAssignment.objects.filter(user=user).select_related('role', 'organization')
+        role_lc = [ra.role.name.lower() for ra in roles]
+        email = (user.email or "").lower()
+        is_student = ('student' in role_lc) or email.endswith('@christuniversity.in')
+        
+        if is_student:
+            return JsonResponse({
+                'success': False,
+                'message': 'Access denied. Faculty/Staff account required.'
+            }, status=403)
+        
+        data = json.loads(request.body)
+        profile = request.user.profile
+        
+        # Update profile fields for faculty
+        if 'department' in data:
+            profile.department = data['department']
+        if 'position' in data:
+            profile.position = data['position']
+        if 'office_location' in data:
+            profile.office_location = data['office_location']
+        if 'office_hours' in data:
+            profile.office_hours = data['office_hours']
+        if 'research_interests' in data:
+            profile.research_interests = data['research_interests']
+        
+        profile.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Professional information updated successfully'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=400)
