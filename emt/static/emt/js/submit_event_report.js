@@ -1414,6 +1414,11 @@ function setupDynamicActivities() {
         : [];
     let activities = [...initialActivities];
 
+    // Ensure at least one blank activity row exists on initial load
+    if (activities.length === 0) {
+        activities.push({ activity_name: '', activity_date: '' });
+    }
+
     function render() {
         container.innerHTML = '';
         activities.forEach((act, idx) => {
