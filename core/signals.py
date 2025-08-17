@@ -91,13 +91,19 @@ def log_user_login(sender, request, user, **kwargs):
     """
     Logs a message when a user logs in.
     """
-    ip = request.META.get('REMOTE_ADDR')
-    logger.info(f"User '{user.username}' (ID: {user.id}) logged in from IP address {ip}.")
+    ip = request.META.get('REMOTE_ADDR', 'unknown')
+    ua = request.META.get('HTTP_USER_AGENT', 'unknown')
+    logger.info(
+        f"User '{user.username}' (ID: {user.id}) logged in from IP address {ip} with UA {ua}."
+    )
     ActivityLog.objects.create(
         user=user,
         action="login",
-        description=f"User '{user.username}' logged in.",
+        description=(
+            f"User '{user.username}' logged in. IP: {ip}. User-Agent: {ua}."
+        ),
         ip_address=ip,
+        metadata={"user_agent": ua},
     )
     
 @receiver(user_logged_out)
@@ -107,10 +113,17 @@ def log_user_logout(sender, request, user, **kwargs):
     """
     # The user object might be None if the session was destroyed before the signal was sent
     if user:
-        logger.info(f"User '{user.username}' (ID: {user.id}) logged out.")
+        ip = request.META.get('REMOTE_ADDR', 'unknown')
+        ua = request.META.get('HTTP_USER_AGENT', 'unknown')
+        logger.info(
+            f"User '{user.username}' (ID: {user.id}) logged out from IP {ip} with UA {ua}."
+        )
         ActivityLog.objects.create(
             user=user,
             action="logout",
-            description=f"User '{user.username}' logged out.",
-            ip_address=request.META.get('REMOTE_ADDR'),
+            description=(
+                f"User '{user.username}' logged out. IP: {ip}. User-Agent: {ua}."
+            ),
+            ip_address=ip,
+            metadata={"user_agent": ua},
         )
