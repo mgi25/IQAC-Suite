@@ -689,6 +689,7 @@ $(document).ready(function() {
             : [];
 
         modal.addClass('show');
+        $('#audienceSave').hide();
 
         let available = [];
         let selected = [];
@@ -700,18 +701,39 @@ $(document).ready(function() {
                 <button type="button" data-type="faculty">Faculty</button>
             </div>
             <div class="dual-list" style="display:none;">
-                <select id="audienceAvailable" multiple></select>
+                <div class="dual-list-column">
+                    <input type="text" id="audienceAvailableSearch" placeholder="Search available">
+                    <select id="audienceAvailable" multiple></select>
+                </div>
                 <div class="dual-list-controls">
+                    <button type="button" id="audienceAddAll">&raquo;</button>
                     <button type="button" id="audienceAdd">&gt;</button>
                     <button type="button" id="audienceRemove">&lt;</button>
+                    <button type="button" id="audienceRemoveAll">&laquo;</button>
                 </div>
-                <select id="audienceSelected" multiple></select>
+                <div class="dual-list-column">
+                    <input type="text" id="audienceSelectedSearch" placeholder="Search selected">
+                    <select id="audienceSelected" multiple></select>
+                </div>
+            </div>
+            <div class="audience-custom" style="display:none;">
+                <input type="text" id="audienceCustomInput" placeholder="Add custom audience">
+                <button type="button" id="audienceCustomAdd">Add</button>
             </div>
         `);
 
         const listContainer = container.find('.dual-list');
         const availableSelect = container.find('#audienceAvailable');
         const selectedSelect = container.find('#audienceSelected');
+        const customContainer = container.find('.audience-custom');
+
+        function filterOptions(input, select) {
+            const term = input.val().toLowerCase();
+            select.find('option').each(function() {
+                const txt = $(this).text().toLowerCase();
+                $(this).toggle(txt.includes(term));
+            });
+        }
 
         function renderLists() {
             availableSelect.empty();
@@ -722,6 +744,8 @@ $(document).ready(function() {
             selected.forEach(item => {
                 selectedSelect.append($('<option>').val(item.id).text(item.name));
             });
+            filterOptions($('#audienceAvailableSearch'), availableSelect);
+            filterOptions($('#audienceSelectedSearch'), selectedSelect);
         }
 
         function collectOrgIds() {
@@ -746,6 +770,7 @@ $(document).ready(function() {
             available = [];
             selected = [];
             listContainer.show();
+            customContainer.show();
             $('#audienceSave').show();
             const orgIds = collectOrgIds();
             if (!orgIds.length) {
@@ -810,16 +835,61 @@ $(document).ready(function() {
             renderLists();
         });
 
+        container.on('click', '#audienceAddAll', function() {
+            selected = selected.concat(available);
+            available = [];
+            renderLists();
+        });
+
         container.on('click', '#audienceRemove', function() {
             const ids = selectedSelect.val() || [];
             ids.forEach(id => {
                 const idx = selected.findIndex(it => it.id === id);
                 if (idx > -1) {
-                    available.push(selected[idx]);
+                    const item = selected[idx];
+                    if (!item.id.startsWith('custom-')) {
+                        available.push(item);
+                    }
                     selected.splice(idx, 1);
                 }
             });
             renderLists();
+        });
+
+        container.on('click', '#audienceRemoveAll', function() {
+            available = available.concat(selected.filter(it => !it.id.startsWith('custom-')));
+            selected = [];
+            renderLists();
+        });
+
+        container.on('click', '#audienceCustomAdd', function() {
+            const input = $('#audienceCustomInput');
+            const name = input.val().trim();
+            if (name) {
+                selected.push({ id: `custom-${Date.now()}`, name });
+                input.val('');
+                renderLists();
+            }
+        });
+
+        container.on('input', '#audienceAvailableSearch', function() {
+            filterOptions($(this), availableSelect);
+        });
+
+        container.on('input', '#audienceSelectedSearch', function() {
+            filterOptions($(this), selectedSelect);
+        });
+
+        container.on('dblclick', '#audienceSelected option', function() {
+            const id = $(this).val();
+            const idx = selected.findIndex(it => it.id === id);
+            if (idx > -1) {
+                const newName = prompt('Edit name', selected[idx].name);
+                if (newName) {
+                    selected[idx].name = newName.trim();
+                    renderLists();
+                }
+            }
         });
 
         if (preselected.length) {
@@ -830,7 +900,10 @@ $(document).ready(function() {
             const names = selected.map(it => it.name);
             audienceField.val(names.join(', ')).trigger('change').trigger('input');
             if (currentType === 'students') {
-                classIdsField.val(selected.map(it => it.id).join(',')).trigger('change').trigger('input');
+                classIdsField
+                    .val(selected.filter(it => /^\d+$/.test(it.id)).map(it => it.id).join(','))
+                    .trigger('change')
+                    .trigger('input');
             } else {
                 classIdsField.val('').trigger('change').trigger('input');
             }
