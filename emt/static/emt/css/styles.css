@@ -1061,6 +1061,20 @@
     margin-bottom: 0;
 }
 
+/* Proposal activity editor */
+.activity-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 1rem;
+    align-items: flex-end;
+    margin-bottom: 0.5rem;
+}
+
+.activity-row .remove-activity {
+    align-self: center;
+    padding: 0.25rem 0.5rem;
+}
+
 /* Save Section Styling */
 .save-section-container {
     display: flex;

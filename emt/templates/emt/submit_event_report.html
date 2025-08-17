@@ -132,12 +132,9 @@
                             </div>
                         </div>
 
+                        <!-- Hidden field to track number of activities -->
+                        <input type="hidden" id="num-activities-modern" name="num_activities" value="{{ proposal_activities|length }}">
                         <div class="form-row">
-                            <div class="input-group">
-                                <label for="num-activities-modern">Number of Activities</label>
-                                <input type="number" id="num-activities-modern" name="num_activities" value="{{ activities|length }}">
-                                <div class="help-text">Total activities from proposal (editable)</div>
-                            </div>
                             <div class="input-group">
                                 <label for="venue-modern">Venue *</label>
                                 <input type="text" id="venue-modern" name="venue_detail" value="{{ proposal.venue|default:'' }}">
@@ -245,8 +242,22 @@
                             <h3>Activities Information</h3>
                         </div>
 
-                        <!-- Dynamic activities section -->
-                        <div id="dynamic-activities-section" class="full-width"></div>
+                        <!-- Pre-rendered activities from proposal -->
+                        <div id="proposal-activities" class="full-width">
+                            {% for act in proposal_activities %}
+                            <div class="activity-row">
+                                <div class="input-group">
+                                    <label for="activity_name_{{ forloop.counter }}" class="activity-label">Activity {{ forloop.counter }} Name</label>
+                                    <input type="text" id="activity_name_{{ forloop.counter }}" name="activity_name_{{ forloop.counter }}" value="{{ act.activity_name }}">
+                                </div>
+                                <div class="input-group">
+                                    <label for="activity_date_{{ forloop.counter }}" class="date-label">Activity {{ forloop.counter }} Date</label>
+                                    <input type="date" id="activity_date_{{ forloop.counter }}" name="activity_date_{{ forloop.counter }}" value="{{ act.activity_date }}">
+                                </div>
+                                <button type="button" class="remove-activity" data-index="{{ forloop.counter0 }}">Remove</button>
+                            </div>
+                            {% endfor %}
+                        </div>
                         <button type="button" id="add-activity-btn" class="btn btn-secondary mt-2">Add Activity</button>
 
                         <!-- Save Section -->
@@ -317,7 +328,7 @@
         window.API_FACULTY = "#"; // TODO: Add API URLs
         window.API_OUTCOMES_BASE = "#"; // TODO: Add API URLs
         window.SDG_GOALS = {{ sdg_goals_list|default:'[]'|safe }};
-        window.EXISTING_ACTIVITIES = {{ activities_json|safe }};
+        window.PROPOSAL_ACTIVITIES = {{ proposal_activities_json|safe }};
         window.EXISTING_SPEAKERS = {{ speakers_json|default:'[]'|safe }};
         window.PROPOSAL_DATA = {
             department: "{{ proposal.organization.name|default:'' }}",
@@ -327,10 +338,10 @@
             event_focus_type: "{{ proposal.event_focus_type|default:'' }}",
             student_coordinators: "{{ proposal.student_coordinators|default:'' }}",
             academic_year: "{{ proposal.academic_year|default:'2024-2025' }}",
-            num_activities: "{{ activities|length }}",
+            num_activities: "{{ proposal_activities|length }}",
             event_start_date: "{% if proposal.event_start_date %}{{ proposal.event_start_date|date:'Y-m-d' }}{% elif proposal.event_datetime %}{{ proposal.event_datetime|date:'Y-m-d' }}{% endif %}",
             event_end_date: "{% if proposal.event_end_date %}{{ proposal.event_end_date|date:'Y-m-d' }}{% elif proposal.event_datetime %}{{ proposal.event_datetime|date:'Y-m-d' }}{% endif %}",
-            activities: {{ activities_json|default:'[]'|safe }},
+            activities: {{ proposal_activities_json|default:'[]'|safe }},
             speakers: {{ speakers_json|default:'[]'|safe }},
             pos_pso: "{{ proposal.pos_pso|default:'' }}",
             sdg_goals: "{{ proposal.sdg_goals|default:'' }}"
