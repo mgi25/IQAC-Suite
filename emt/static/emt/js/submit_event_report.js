@@ -1405,47 +1405,84 @@ function initializeSectionSpecificHandlers() {
 function setupDynamicActivities() {
     const numActivitiesInput = document.getElementById('num-activities-modern');
     const container = document.getElementById('dynamic-activities-section');
-    if (!numActivitiesInput || !container) return;
+    const addBtn = document.getElementById('add-activity-btn');
+    if (!numActivitiesInput || !container || !addBtn) return;
 
-    const existing = Array.isArray(window.EXISTING_ACTIVITIES)
-        ? window.EXISTING_ACTIVITIES
-        : [];
+    function updateCount() {
+        numActivitiesInput.value = container.querySelectorAll('.dynamic-activity-group').length;
+    }
 
-    function render(count) {
-        const current = Array.from(
-            container.querySelectorAll('.dynamic-activity-group')
-        ).map(group => ({
-            name: group.querySelector('input[name^="activity_name_"]').value,
-            date: group.querySelector('input[name^="activity_date_"]').value,
-        }));
+    function createGroup(index, data = {}) {
+        const group = document.createElement('div');
+        group.className = 'dynamic-activity-group';
+        group.innerHTML = `
+            <div class="input-group">
+                <label for="activity_name_${index}" class="activity-label">Activity ${index} Name</label>
+                <input type="text" id="activity_name_${index}" name="activity_name_${index}" value="${data.name || ''}">
+            </div>
+            <div class="input-group">
+                <label for="activity_date_${index}" class="date-label">Activity ${index} Date</label>
+                <input type="date" id="activity_date_${index}" name="activity_date_${index}" value="${data.date || ''}">
+            </div>
+            <button type="button" class="btn btn-outline-danger btn-sm remove-activity" aria-label="Remove activity">&times;</button>
+        `;
+        container.appendChild(group);
+    }
 
-        container.innerHTML = '';
-        if (isNaN(count) || count <= 0) return;
-
-        for (let i = 1; i <= Math.min(count, 50); i++) {
-            const data = current[i - 1] || existing[i - 1] || {};
-            container.insertAdjacentHTML('beforeend', `
-                <div class="dynamic-activity-group">
-                    <div class="input-group">
-                        <label for="activity_name_${i}">Activity ${i} Name</label>
-                        <input type="text" id="activity_name_${i}" name="activity_name_${i}" value="${data.name || ''}">
-                    </div>
-                    <div class="input-group">
-                        <label for="activity_date_${i}">Activity ${i} Date</label>
-                        <input type="date" id="activity_date_${i}" name="activity_date_${i}" value="${data.date || ''}">
-                    </div>
-                </div>
-            `);
+    // Initialize groups if none were rendered server-side
+    if (!container.querySelector('.dynamic-activity-group')) {
+        const existing = Array.isArray(window.EXISTING_ACTIVITIES)
+            ? window.EXISTING_ACTIVITIES
+            : Array.isArray(window.PROPOSAL_DATA?.activities)
+                ? window.PROPOSAL_DATA.activities
+                : [];
+        const count = existing.length || parseInt(numActivitiesInput.value, 10) || 0;
+        for (let i = 1; i <= count; i++) {
+            createGroup(i, existing[i - 1]);
         }
     }
 
-    const initialCount = existing.length || parseInt(numActivitiesInput.value, 10) || 0;
-    numActivitiesInput.value = initialCount;
-    render(initialCount);
+    updateCount();
 
-    numActivitiesInput.addEventListener('input', e => {
-        const count = parseInt(e.target.value, 10);
-        render(count);
+    addBtn.addEventListener('click', () => {
+        const index = container.querySelectorAll('.dynamic-activity-group').length + 1;
+        createGroup(index);
+        updateCount();
+    });
+
+    container.addEventListener('click', e => {
+        if (e.target.classList.contains('remove-activity')) {
+            e.target.closest('.dynamic-activity-group').remove();
+            Array.from(container.querySelectorAll('.dynamic-activity-group')).forEach((group, idx) => {
+                const i = idx + 1;
+                group.querySelector('.activity-label').textContent = `Activity ${i} Name`;
+                group.querySelector('.activity-label').setAttribute('for', `activity_name_${i}`);
+                const nameInput = group.querySelector('input[name^="activity_name_"]');
+                nameInput.id = `activity_name_${i}`;
+                nameInput.name = `activity_name_${i}`;
+                const dateLabel = group.querySelector('.date-label');
+                dateLabel.textContent = `Activity ${i} Date`;
+                dateLabel.setAttribute('for', `activity_date_${i}`);
+                const dateInput = group.querySelector('input[name^="activity_date_"]');
+                dateInput.id = `activity_date_${i}`;
+                dateInput.name = `activity_date_${i}`;
+            });
+            updateCount();
+        }
+    });
+
+    numActivitiesInput.addEventListener('change', e => {
+        let count = parseInt(e.target.value, 10);
+        if (isNaN(count) || count < 0) count = 0;
+        let current = container.querySelectorAll('.dynamic-activity-group').length;
+        while (current < count) {
+            createGroup(++current);
+        }
+        while (current > count) {
+            container.removeChild(container.lastElementChild);
+            current--;
+        }
+        updateCount();
     });
 }
 

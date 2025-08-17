@@ -41,15 +41,25 @@ class SubmitEventReportViewTests(TestCase):
             reverse("emt:submit_event_report", args=[self.proposal.id])
         )
         self.assertEqual(response.status_code, 200)
-        # Activity data should be exposed for client-side rendering
-        self.assertContains(response, 'Orientation')
-        self.assertContains(response, '2024-01-01')
+        # Activity inputs should be pre-filled from the proposal
+        self.assertContains(
+            response,
+            'id="activity_name_1" name="activity_name_1" value="Orientation"',
+            html=False,
+        )
+        self.assertContains(
+            response,
+            'id="activity_date_1" name="activity_date_1" value="2024-01-01"',
+            html=False,
+        )
         # Number of activities should be pre-filled
         self.assertContains(
             response,
             'id="num-activities-modern" name="num_activities" value="1"',
             html=False,
         )
+        # Add activity button for dynamic editing
+        self.assertContains(response, 'id="add-activity-btn"')
 
     def test_can_update_activities_via_report_submission(self):
         url = reverse("emt:submit_event_report", args=[self.proposal.id])

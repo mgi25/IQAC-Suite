@@ -241,12 +241,29 @@
                         </div>
 
                         <!-- Activities Information Section -->
-                        <div class="form-section-header">
+                        <div class="form-section-header activities-header">
                             <h3>Activities Information</h3>
+                            <button type="button" id="add-activity-btn" class="btn btn-outline-primary btn-sm">+ Add Activity</button>
                         </div>
 
                         <!-- Dynamic activities section -->
-                        <div id="dynamic-activities-section" class="full-width"></div>
+                        <div id="dynamic-activities-section" class="full-width">
+                            {% if activities %}
+                                {% for activity in activities %}
+                                    <div class="dynamic-activity-group">
+                                        <div class="input-group">
+                                            <label for="activity_name_{{ forloop.counter }}" class="activity-label">Activity {{ forloop.counter }} Name</label>
+                                            <input type="text" id="activity_name_{{ forloop.counter }}" name="activity_name_{{ forloop.counter }}" value="{{ activity.name }}">
+                                        </div>
+                                        <div class="input-group">
+                                            <label for="activity_date_{{ forloop.counter }}" class="date-label">Activity {{ forloop.counter }} Date</label>
+                                            <input type="date" id="activity_date_{{ forloop.counter }}" name="activity_date_{{ forloop.counter }}" value="{{ activity.date }}">
+                                        </div>
+                                        <button type="button" class="btn btn-outline-danger btn-sm remove-activity" aria-label="Remove activity">&times;</button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
 
                         <!-- Save Section -->
                         <div class="form-row full-width">

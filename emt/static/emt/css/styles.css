@@ -2759,3 +2759,21 @@ textarea {
     cursor: pointer;
     font-size: 0.8rem;
 }
+
+/* --- Enhanced dynamic activities controls --- */
+.activities-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dynamic-activity-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 1rem;
+    align-items: end;
+}
+
+.dynamic-activity-group .remove-activity {
+    margin-top: 1.5rem;
+}
