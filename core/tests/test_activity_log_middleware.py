@@ -34,8 +34,8 @@ class ActivityLogMiddlewareTests(TestCase):
         self.assertEqual(log.metadata, {'foo': 'bar'})
         self.assertEqual(
             log.description,
-            'User alice performed POST /some/path. Params: foo=bar. IP: 127.0.0.1. '
-            'User-Agent: TestAgent/1.0. Status: 200'
+            'User alice performed POST /some/path. View: /some/path. Params: foo=bar. '
+            'IP: 127.0.0.1. User-Agent: TestAgent/1.0. Status: 200. Referrer: unknown'
         )
 
     def test_creates_log_for_get_request(self):
@@ -54,6 +54,6 @@ class ActivityLogMiddlewareTests(TestCase):
         self.assertEqual(log.metadata, {'q': 'test'})
         self.assertEqual(
             log.description,
-            'User alice performed GET /some/path. Params: q=test. IP: 127.0.0.1. '
-            'User-Agent: TestAgent/1.0. Status: 200'
+            'User alice performed GET /some/path. View: /some/path. Params: q=test. '
+            'IP: 127.0.0.1. User-Agent: TestAgent/1.0. Status: 200. Referrer: unknown'
         )
