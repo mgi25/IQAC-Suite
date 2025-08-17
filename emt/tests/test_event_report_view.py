@@ -43,3 +43,25 @@ class SubmitEventReportViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Orientation")
 
+    def test_can_update_activities_via_report_submission(self):
+        url = reverse("emt:submit_event_report", args=[self.proposal.id])
+        data = {
+            "actual_event_type": "Seminar",
+            "report_signed_date": "2024-01-10",
+            "num_activities": "2",
+            "activity_name_1": "Session 1",
+            "activity_date_1": "2024-01-02",
+            "activity_name_2": "Session 2",
+            "activity_date_2": "2024-01-03",
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 302)
+        activities = list(EventActivity.objects.filter(proposal=self.proposal).order_by("date"))
+        self.assertEqual(len(activities), 2)
+        self.assertEqual(activities[0].name, "Session 1")
+        self.assertEqual(activities[1].name, "Session 2")
+
