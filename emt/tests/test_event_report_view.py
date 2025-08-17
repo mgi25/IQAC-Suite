@@ -50,6 +50,8 @@ class SubmitEventReportViewTests(TestCase):
             'id="num-activities-modern" name="num_activities" value="1"',
             html=False,
         )
+        # Add activity button for dynamic editing
+        self.assertContains(response, 'id="add-activity-btn"')
 
     def test_can_update_activities_via_report_submission(self):
         url = reverse("emt:submit_event_report", args=[self.proposal.id])
