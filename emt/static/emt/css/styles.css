@@ -2239,6 +2239,16 @@
     margin-top: 1rem;
 }
 
+#audienceModal .dual-list-column {
+    display: flex;
+    flex-direction: column;
+}
+
+#audienceModal .dual-list-column input[type="text"] {
+    margin-bottom: 0.5rem;
+    padding: 0.25rem 0.5rem;
+}
+
 #audienceModal .dual-list select {
     width: 200px;
     min-height: 200px;
@@ -2253,6 +2263,22 @@
 
 #audienceModal .dual-list-controls button {
     padding: 0.25rem 0.5rem;
+    width: 2.5rem;
+}
+
+#audienceModal .audience-custom {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+#audienceModal .audience-custom input {
+    flex: 1;
+    padding: 0.5rem;
+}
+
+#audienceModal .audience-custom button {
+    padding: 0.5rem 1rem;
 }
 
 /* ===========================================
