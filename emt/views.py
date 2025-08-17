@@ -1475,7 +1475,7 @@ def review_approval_step(request, step_id):
 @login_required
 def submit_event_report(request, proposal_id):
     proposal = get_object_or_404(
-        EventProposal.objects.prefetch_related("activities"),
+        EventProposal,
         id=proposal_id,
         submitted_by=request.user,
     )
@@ -1511,9 +1511,10 @@ def submit_event_report(request, proposal_id):
         formset = AttachmentFormSet(queryset=report.attachments.all())
 
     # Fetch activities for editing in the report form
+    activities_qs = EventActivity.objects.filter(proposal=proposal)
     proposal_activities = [
         {"activity_name": a.name, "activity_date": a.date.isoformat()}
-        for a in proposal.activities.all()
+        for a in activities_qs
     ]
 
     # Pre-fill context with proposal info for readonly/preview display

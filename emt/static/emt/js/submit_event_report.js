@@ -1408,8 +1408,9 @@ function setupDynamicActivities() {
     const addBtn = document.getElementById('add-activity-btn');
     if (!numInput || !container || !addBtn) return;
 
+    // Initialize activities from server-provided data
     let activities = Array.isArray(window.PROPOSAL_ACTIVITIES)
-        ? window.PROPOSAL_ACTIVITIES
+        ? [...window.PROPOSAL_ACTIVITIES]
         : [];
 
     function render() {

@@ -132,6 +132,7 @@
                             </div>
                         </div>
 
+                        <!-- Hidden field to track number of activities -->
                         <input type="hidden" id="num-activities-modern" name="num_activities" value="{{ proposal_activities|length }}">
                         <div class="form-row">
                             <div class="input-group">
@@ -241,7 +242,7 @@
                             <h3>Activities Information</h3>
                         </div>
 
-                        <!-- Dynamic activities section -->
+                        <!-- Pre-rendered activities from proposal -->
                         <div id="proposal-activities" class="full-width">
                             {% for act in proposal_activities %}
                             <div class="activity-row">
