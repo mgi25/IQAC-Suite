@@ -716,9 +716,22 @@ $(document).ready(function() {
                     <select id="audienceSelected" multiple></select>
                 </div>
             </div>
+            <div class="dual-list user-list" id="audienceUserList" style="display:none;">
+                <div class="dual-list-column">
+                    <input type="text" id="userAvailableSearch" placeholder="Search available">
+                    <select id="userAvailable" multiple></select>
+                </div>
+                <div class="dual-list-controls">
+                    <button type="button" id="userAdd">&gt;</button>
+                    <button type="button" id="userRemove">&lt;</button>
+                </div>
+                <div class="dual-list-column">
+                    <input type="text" id="userSelectedSearch" placeholder="Search selected">
+                    <select id="userSelected" multiple></select>
+                </div>
+            </div>
             <div class="audience-custom" style="display:none;">
-                <input type="text" id="audienceCustomInput" placeholder="Add custom audience">
-                <button type="button" id="audienceCustomAdd">Add</button>
+                <select id="audienceCustomInput" placeholder="Add custom audience"></select>
             </div>
         `);
 
@@ -726,6 +739,14 @@ $(document).ready(function() {
         const availableSelect = container.find('#audienceAvailable');
         const selectedSelect = container.find('#audienceSelected');
         const customContainer = container.find('.audience-custom');
+        const userListContainer = container.find('#audienceUserList');
+        const userAvailableSelect = container.find('#userAvailable');
+        const userSelectedSelect = container.find('#userSelected');
+
+        let classStudentMap = {};
+        let departmentFacultyMap = {};
+        let userAvailable = [];
+        let userSelected = [];
 
         function filterOptions(input, select) {
             const term = input.val().toLowerCase();
@@ -745,6 +766,48 @@ $(document).ready(function() {
                 selectedSelect.append($('<option>').val(item.id).text(item.name));
             });
             filterOptions($('#audienceSelectedSearch'), selectedSelect);
+            updateUserLists();
+        }
+
+        function renderUserLists() {
+            userAvailableSelect.empty();
+            userSelectedSelect.empty();
+            userAvailable.forEach(u => {
+                userAvailableSelect.append($('<option>').val(u.id).text(u.name));
+            });
+            userSelected.forEach(u => {
+                userSelectedSelect.append($('<option>').val(u.id).text(u.name));
+            });
+            filterOptions($('#userSelectedSearch'), userSelectedSelect);
+            if (userAvailable.length || userSelected.length) {
+                userListContainer.show();
+            } else {
+                userListContainer.hide();
+            }
+        }
+
+        function updateUserLists() {
+            userAvailable = [];
+            if (currentType === 'students') {
+                selected.forEach(cls => {
+                    (classStudentMap[cls.id] || []).forEach(stu => {
+                        if (!userSelected.some(u => u.id === `stu-${stu.id}`) &&
+                            !userAvailable.some(u => u.id === `stu-${stu.id}`)) {
+                            userAvailable.push({ id: `stu-${stu.id}`, name: stu.name });
+                        }
+                    });
+                });
+            } else if (currentType === 'faculty') {
+                selected.forEach(dept => {
+                    (departmentFacultyMap[dept.id] || []).forEach(f => {
+                        if (!userSelected.some(u => u.id === `fac-${f.id}`) &&
+                            !userAvailable.some(u => u.id === `fac-${f.id}`)) {
+                            userAvailable.push({ id: `fac-${f.id}`, name: f.name });
+                        }
+                    });
+                });
+            }
+            renderUserLists();
         }
 
         function collectOrgIds() {
@@ -772,6 +835,7 @@ $(document).ready(function() {
                 return;
             }
             if (currentType === 'students') {
+                classStudentMap = {};
                 Promise.all(orgIds.map(o =>
                     fetch(`${window.API_CLASSES_BASE}${o.id}/?q=${encodeURIComponent(term)}`, { credentials: 'include' })
                         .then(r => r.json().then(data => ({ org: o, data })))
@@ -781,6 +845,7 @@ $(document).ready(function() {
                         const { org, data } = res;
                         if (data.success && data.classes.length) {
                             data.classes.forEach(cls => {
+                                classStudentMap[String(cls.id)] = cls.students || [];
                                 const item = { id: String(cls.id), name: `${cls.name} (${org.name})` };
                                 if (preselected.includes(String(cls.id)) && !selected.some(it => it.id === String(cls.id))) {
                                     selected.push(item);
@@ -796,20 +861,20 @@ $(document).ready(function() {
                     availableSelect.html('<option>Error loading</option>');
                 });
             } else if (currentType === 'faculty') {
+                departmentFacultyMap = {};
                 Promise.all(orgIds.map(o =>
                     fetch(`${window.API_FACULTY}?org_id=${o.id}&q=${encodeURIComponent(term)}`, { credentials: 'include' })
                         .then(r => r.json().then(data => ({ org: o, data })))
                 ))
                 .then(results => {
                     results.forEach(res => {
-                        const { data } = res;
-                        data.forEach(f => {
-                            const item = { id: String(f.id), name: `${f.department || ''} - ${f.name}` };
-                            if (!selected.some(it => it.id === item.id)) {
-                                available.push(item);
-                            }
+                        res.data.forEach(f => {
+                            const dept = f.department || 'General';
+                            if (!departmentFacultyMap[dept]) departmentFacultyMap[dept] = [];
+                            departmentFacultyMap[dept].push({ id: f.id, name: f.name });
                         });
                     });
+                    available = Object.keys(departmentFacultyMap).map(dept => ({ id: dept, name: dept }));
                     available.sort((a, b) => a.name.localeCompare(b.name));
                     renderLists();
                 })
@@ -868,12 +933,12 @@ $(document).ready(function() {
             renderLists();
         });
 
-        container.on('click', '#audienceCustomAdd', function() {
-            const input = $('#audienceCustomInput');
-            const name = input.val().trim();
-            if (name) {
-                selected.push({ id: `custom-${Date.now()}`, name });
-                input.val('');
+        const customTS = new TomSelect('#audienceCustomInput', {
+            persist: false,
+            create: true,
+            onItemAdd(value, text) {
+                selected.push({ id: `custom-${Date.now()}`, name: text });
+                customTS.clear();
                 renderLists();
             }
         });
@@ -885,6 +950,42 @@ $(document).ready(function() {
 
         container.on('input', '#audienceSelectedSearch', function() {
             filterOptions($(this), selectedSelect);
+        });
+
+        container.on('click', '#userAdd', function() {
+            const ids = userAvailableSelect.val() || [];
+            ids.forEach(id => {
+                const idx = userAvailable.findIndex(u => u.id === id);
+                if (idx > -1) {
+                    userSelected.push(userAvailable[idx]);
+                    userAvailable.splice(idx, 1);
+                }
+            });
+            renderUserLists();
+        });
+
+        container.on('click', '#userRemove', function() {
+            const ids = userSelectedSelect.val() || [];
+            ids.forEach(id => {
+                const idx = userSelected.findIndex(u => u.id === id);
+                if (idx > -1) {
+                    userAvailable.push(userSelected[idx]);
+                    userSelected.splice(idx, 1);
+                }
+            });
+            renderUserLists();
+        });
+
+        container.on('input', '#userAvailableSearch', function() {
+            const term = $(this).val().toLowerCase();
+            userAvailableSelect.find('option').each(function() {
+                const txt = $(this).text().toLowerCase();
+                $(this).toggle(txt.includes(term));
+            });
+        });
+
+        container.on('input', '#userSelectedSearch', function() {
+            filterOptions($(this), userSelectedSelect);
         });
 
         container.on('dblclick', '#audienceSelected option', function() {
@@ -904,7 +1005,7 @@ $(document).ready(function() {
         }
 
         $('#audienceSave').off('click').on('click', () => {
-            const names = selected.map(it => it.name);
+            const names = selected.map(it => it.name).concat(userSelected.map(u => u.name));
             audienceField.val(names.join(', ')).trigger('change').trigger('input');
             if (currentType === 'students') {
                 classIdsField
