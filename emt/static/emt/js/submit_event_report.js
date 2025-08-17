@@ -1407,32 +1407,46 @@ function setupDynamicActivities() {
     const container = document.getElementById('dynamic-activities-section');
     if (!numActivitiesInput || !container) return;
 
+    const existing = Array.isArray(window.EXISTING_ACTIVITIES)
+        ? window.EXISTING_ACTIVITIES
+        : [];
+
     function render(count) {
+        const current = Array.from(
+            container.querySelectorAll('.dynamic-activity-group')
+        ).map(group => ({
+            name: group.querySelector('input[name^="activity_name_"]').value,
+            date: group.querySelector('input[name^="activity_date_"]').value,
+        }));
+
         container.innerHTML = '';
         if (isNaN(count) || count <= 0) return;
+
         for (let i = 1; i <= Math.min(count, 50); i++) {
-            const existing = (window.EXISTING_ACTIVITIES || [])[i - 1] || {};
+            const data = current[i - 1] || existing[i - 1] || {};
             container.insertAdjacentHTML('beforeend', `
                 <div class="dynamic-activity-group">
                     <div class="input-group">
                         <label for="activity_name_${i}">Activity ${i} Name</label>
-                        <input type="text" id="activity_name_${i}" name="activity_name_${i}" value="${existing.name || ''}">
+                        <input type="text" id="activity_name_${i}" name="activity_name_${i}" value="${data.name || ''}">
                     </div>
                     <div class="input-group">
                         <label for="activity_date_${i}">Activity ${i} Date</label>
-                        <input type="date" id="activity_date_${i}" name="activity_date_${i}" value="${existing.date || ''}">
+                        <input type="date" id="activity_date_${i}" name="activity_date_${i}" value="${data.date || ''}">
                     </div>
                 </div>
             `);
         }
     }
 
-    numActivitiesInput.addEventListener('input', (e) => {
+    const initialCount = existing.length || parseInt(numActivitiesInput.value, 10) || 0;
+    numActivitiesInput.value = initialCount;
+    render(initialCount);
+
+    numActivitiesInput.addEventListener('input', e => {
         const count = parseInt(e.target.value, 10);
         render(count);
     });
-
-    render(parseInt(numActivitiesInput.value, 10));
 }
 
 // Initialize section-specific handlers when document is ready

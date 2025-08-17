@@ -1512,8 +1512,8 @@ def submit_event_report(request, proposal_id):
 
     # Fetch activities for editing in the report form
     activities = [
-        {"name": a["name"], "date": a["date"].isoformat()}
-        for a in proposal.activities.values("name", "date")
+        {"name": a.name, "date": a.date.isoformat()}
+        for a in proposal.activities.all()
     ]
 
     # Pre-fill context with proposal info for readonly/preview display
