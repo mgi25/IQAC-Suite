@@ -1508,9 +1508,7 @@ def submit_event_report(request, proposal_id):
         formset = AttachmentFormSet(queryset=report.attachments.all())
 
     # Fetch activities from the proposal for reference in the report form
-    # Using the reverse relation ensures we leverage any prefetched data and
-    # avoids missing activities due to incorrect filtering.
-    activities = list(proposal.activities.all().order_by("date", "id"))
+    activities = proposal.activities.all()
 
     # Pre-fill context with proposal info for readonly/preview display
     context = {

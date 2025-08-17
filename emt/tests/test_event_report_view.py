@@ -29,7 +29,6 @@ class SubmitEventReportViewTests(TestCase):
         self.proposal = EventProposal.objects.create(
             submitted_by=self.user,
             event_title="Sample Event",
-            num_activities=1,
         )
         EventActivity.objects.create(
             proposal=self.proposal,
@@ -37,9 +36,10 @@ class SubmitEventReportViewTests(TestCase):
             date=date(2024, 1, 1),
         )
 
-    def test_activities_rendered_in_report_form(self):
-        resp = self.client.get(
+    def test_activity_name_rendered_in_report_form(self):
+        response = self.client.get(
             reverse("emt:submit_event_report", args=[self.proposal.id])
         )
-        self.assertEqual(resp.status_code, 200)
-        self.assertIn("Orientation", resp.content.decode())
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Orientation")
+

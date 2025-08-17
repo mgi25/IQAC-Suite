@@ -135,7 +135,7 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="num-activities-modern">Number of Activities</label>
-                                <input type="number" id="num-activities-modern" name="num_activities" value="{{ proposal.num_activities|default:1 }}">
+                                <input type="number" id="num-activities-modern" name="num_activities" value="{{ activities|length }}">
                                 <div class="help-text">Total activities from proposal (editable)</div>
                             </div>
                             <div class="input-group">
@@ -352,7 +352,7 @@
             event_focus_type: "{{ proposal.event_focus_type|default:'' }}",
             student_coordinators: "{{ proposal.student_coordinators|default:'' }}",
             academic_year: "{{ proposal.academic_year|default:'2024-2025' }}",
-            num_activities: "{{ proposal.num_activities|default:0 }}",
+            num_activities: "{{ activities|length }}",
             event_start_date: "{% if proposal.event_start_date %}{{ proposal.event_start_date|date:'Y-m-d' }}{% elif proposal.event_datetime %}{{ proposal.event_datetime|date:'Y-m-d' }}{% endif %}",
             event_end_date: "{% if proposal.event_end_date %}{{ proposal.event_end_date|date:'Y-m-d' }}{% elif proposal.event_datetime %}{{ proposal.event_datetime|date:'Y-m-d' }}{% endif %}",
             activities: {{ activities_json|default:'[]'|safe }},
