@@ -122,12 +122,19 @@ class ActivityLogMiddleware:
                 params = {
                     k: v for k, v in params.items() if k.lower() != "csrfmiddlewaretoken"
                 }
-                description = "&".join(f"{k}={v}" for k, v in params.items())
+                params_str = ", ".join(f"{k}={v}" for k, v in params.items()) or "none"
+                ip = request.META.get("REMOTE_ADDR", "unknown")
+                ua = request.META.get("HTTP_USER_AGENT", "unknown")
+                status = getattr(response, "status_code", "unknown")
+                description = (
+                    f"User {request.user.username} performed {request.method} {request.path}. "
+                    f"Params: {params_str}. IP: {ip}. User-Agent: {ua}. Status: {status}"
+                )
                 ActivityLog.objects.create(
                     user=request.user,
                     action=f"{request.method} {request.path}",
-                    description=description or "",
-                    ip_address=request.META.get("REMOTE_ADDR"),
+                    description=description,
+                    ip_address=ip,
                     metadata=params or None,
                 )
         except Exception:  # pragma: no cover - logging should never break the request
