@@ -316,7 +316,7 @@
         window.API_FACULTY = "#"; // TODO: Add API URLs
         window.API_OUTCOMES_BASE = "#"; // TODO: Add API URLs
         window.SDG_GOALS = {{ sdg_goals_list|default:'[]'|safe }};
-        window.EXISTING_ACTIVITIES = {{ activities_json|default:'[]'|safe }};
+        window.EXISTING_ACTIVITIES = {{ activities_json|safe }};
         window.EXISTING_SPEAKERS = {{ speakers_json|default:'[]'|safe }};
         window.PROPOSAL_DATA = {
             department: "{{ proposal.organization.name|default:'' }}",
