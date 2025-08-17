@@ -1404,7 +1404,7 @@ function initializeSectionSpecificHandlers() {
 
 function setupDynamicActivities() {
     const numInput = document.getElementById('num-activities-modern');
-    const container = document.getElementById('proposal-activities');
+    const container = document.getElementById('report-activities');
     const addBtn = document.getElementById('add-activity-btn');
     if (!numInput || !container || !addBtn) return;
 
