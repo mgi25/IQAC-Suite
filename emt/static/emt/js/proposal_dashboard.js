@@ -696,52 +696,61 @@ $(document).ready(function() {
         let currentType = null;
 
         container.html(`
-            <div class="audience-type-selector">
-                <button type="button" data-type="students">Students</button>
-                <button type="button" data-type="faculty">Faculty</button>
+            <div id="audienceStep1">
+                <div class="audience-type-selector">
+                    <button type="button" data-type="students">Students</button>
+                    <button type="button" data-type="faculty">Faculty</button>
+                </div>
+                <div class="dual-list" id="audienceGroupList" style="display:none;">
+                    <div class="dual-list-column">
+                        <input type="text" id="audienceAvailableSearch" placeholder="Search available">
+                        <select id="audienceAvailable" multiple></select>
+                    </div>
+                    <div class="dual-list-controls">
+                        <button type="button" id="audienceAddAll">&raquo;</button>
+                        <button type="button" id="audienceAdd">&gt;</button>
+                        <button type="button" id="audienceRemove">&lt;</button>
+                        <button type="button" id="audienceRemoveAll">&laquo;</button>
+                    </div>
+                    <div class="dual-list-column">
+                        <input type="text" id="audienceSelectedSearch" placeholder="Search selected">
+                        <select id="audienceSelected" multiple></select>
+                    </div>
+                </div>
+                <button type="button" id="audienceContinue" class="btn-continue" style="display:none;">Continue</button>
             </div>
-            <div class="dual-list" style="display:none;">
-                <div class="dual-list-column">
-                    <input type="text" id="audienceAvailableSearch" placeholder="Search available">
-                    <select id="audienceAvailable" multiple></select>
+            <div id="audienceStep2" style="display:none;">
+                <div class="dual-list user-list" id="audienceUserList">
+                    <div class="dual-list-column">
+                        <input type="text" id="userAvailableSearch" placeholder="Search available">
+                        <select id="userAvailable" multiple></select>
+                    </div>
+                    <div class="dual-list-controls">
+                        <button type="button" id="userAdd">&gt;</button>
+                        <button type="button" id="userRemove">&lt;</button>
+                    </div>
+                    <div class="dual-list-column">
+                        <input type="text" id="userSelectedSearch" placeholder="Search selected">
+                        <select id="userSelected" multiple></select>
+                    </div>
                 </div>
-                <div class="dual-list-controls">
-                    <button type="button" id="audienceAddAll">&raquo;</button>
-                    <button type="button" id="audienceAdd">&gt;</button>
-                    <button type="button" id="audienceRemove">&lt;</button>
-                    <button type="button" id="audienceRemoveAll">&laquo;</button>
+                <div class="audience-custom">
+                    <select id="audienceCustomInput" placeholder="Add custom audience"></select>
                 </div>
-                <div class="dual-list-column">
-                    <input type="text" id="audienceSelectedSearch" placeholder="Search selected">
-                    <select id="audienceSelected" multiple></select>
-                </div>
-            </div>
-            <div class="dual-list user-list" id="audienceUserList" style="display:none;">
-                <div class="dual-list-column">
-                    <input type="text" id="userAvailableSearch" placeholder="Search available">
-                    <select id="userAvailable" multiple></select>
-                </div>
-                <div class="dual-list-controls">
-                    <button type="button" id="userAdd">&gt;</button>
-                    <button type="button" id="userRemove">&lt;</button>
-                </div>
-                <div class="dual-list-column">
-                    <input type="text" id="userSelectedSearch" placeholder="Search selected">
-                    <select id="userSelected" multiple></select>
-                </div>
-            </div>
-            <div class="audience-custom" style="display:none;">
-                <select id="audienceCustomInput" placeholder="Add custom audience"></select>
+                <button type="button" id="audienceBack" class="btn-continue">Back</button>
             </div>
         `);
 
-        const listContainer = container.find('.dual-list');
+        const listContainer = container.find('#audienceGroupList');
         const availableSelect = container.find('#audienceAvailable');
         const selectedSelect = container.find('#audienceSelected');
-        const customContainer = container.find('.audience-custom');
         const userListContainer = container.find('#audienceUserList');
         const userAvailableSelect = container.find('#userAvailable');
         const userSelectedSelect = container.find('#userSelected');
+        const step1 = container.find('#audienceStep1');
+        const step2 = container.find('#audienceStep2');
+        const continueBtn = container.find('#audienceContinue');
+        const backBtn = container.find('#audienceBack');
 
         let classStudentMap = {};
         let departmentFacultyMap = {};
@@ -766,7 +775,6 @@ $(document).ready(function() {
                 selectedSelect.append($('<option>').val(item.id).text(item.name));
             });
             filterOptions($('#audienceSelectedSearch'), selectedSelect);
-            updateUserLists();
         }
 
         function renderUserLists() {
@@ -779,11 +787,6 @@ $(document).ready(function() {
                 userSelectedSelect.append($('<option>').val(u.id).text(u.name));
             });
             filterOptions($('#userSelectedSearch'), userSelectedSelect);
-            if (userAvailable.length || userSelected.length) {
-                userListContainer.show();
-            } else {
-                userListContainer.hide();
-            }
         }
 
         function updateUserLists() {
@@ -889,8 +892,9 @@ $(document).ready(function() {
             available = [];
             selected = [];
             listContainer.show();
-            customContainer.show();
-            $('#audienceSave').show();
+            continueBtn.show();
+            step2.hide();
+            $('#audienceSave').hide();
             loadAvailable('');
         });
 
@@ -933,13 +937,28 @@ $(document).ready(function() {
             renderLists();
         });
 
+        continueBtn.on('click', function() {
+            updateUserLists();
+            step1.hide();
+            step2.show();
+            continueBtn.hide();
+            $('#audienceSave').show();
+        });
+
+        backBtn.on('click', function() {
+            step2.hide();
+            step1.show();
+            continueBtn.show();
+            $('#audienceSave').hide();
+        });
+
         const customTS = new TomSelect('#audienceCustomInput', {
             persist: false,
             create: true,
             onItemAdd(value, text) {
-                selected.push({ id: `custom-${Date.now()}`, name: text });
+                userSelected.push({ id: `custom-${Date.now()}`, name: text });
                 customTS.clear();
-                renderLists();
+                renderUserLists();
             }
         });
 
