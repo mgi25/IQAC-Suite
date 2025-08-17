@@ -1403,78 +1403,50 @@ function initializeSectionSpecificHandlers() {
 }
 
 function setupDynamicActivities() {
-    const numActivitiesInput = document.getElementById('num-activities-modern');
-    const container = document.getElementById('dynamic-activities-section');
+    const numInput = document.getElementById('num-activities-modern');
+    const container = document.getElementById('proposal-activities');
     const addBtn = document.getElementById('add-activity-btn');
-    if (!numActivitiesInput || !container || !addBtn) return;
+    if (!numInput || !container || !addBtn) return;
 
-    const existing = Array.isArray(window.EXISTING_ACTIVITIES)
-        ? window.EXISTING_ACTIVITIES
-        : Array.isArray(window.PROPOSAL_DATA?.activities)
-            ? window.PROPOSAL_DATA.activities
-            : [];
+    let activities = Array.isArray(window.PROPOSAL_ACTIVITIES)
+        ? window.PROPOSAL_ACTIVITIES
+        : [];
 
-    function collectValues() {
-        return Array.from(
-            container.querySelectorAll('.dynamic-activity-group')
-        ).map(group => ({
-            name: group.querySelector('input[name^="activity_name_"]').value,
-            date: group.querySelector('input[name^="activity_date_"]').value,
-        }));
-    }
-
-    function render(count, values) {
+    function render() {
         container.innerHTML = '';
-        for (let i = 1; i <= count; i++) {
-            const data = values[i - 1] || existing[i - 1] || {};
-            container.insertAdjacentHTML('beforeend', `
-                <div class="dynamic-activity-group">
-                    <div class="input-group">
-                        <label for="activity_name_${i}" class="activity-label">Activity ${i} Name</label>
-                        <input type="text" id="activity_name_${i}" name="activity_name_${i}" value="${data.name || ''}">
-                    </div>
-                    <div class="input-group">
-                        <label for="activity_date_${i}" class="date-label">Activity ${i} Date</label>
-                        <input type="date" id="activity_date_${i}" name="activity_date_${i}" value="${data.date || ''}">
-                    </div>
-                    <button type="button" class="remove-activity" data-index="${i}">Remove</button>
+        activities.forEach((act, idx) => {
+            const row = document.createElement('div');
+            row.className = 'activity-row';
+            row.innerHTML = `
+                <div class="input-group">
+                    <label for="activity_name_${idx + 1}" class="activity-label">Activity ${idx + 1} Name</label>
+                    <input type="text" id="activity_name_${idx + 1}" name="activity_name_${idx + 1}" value="${act.activity_name || ''}">
                 </div>
-            `);
-        }
-        numActivitiesInput.value = count;
+                <div class="input-group">
+                    <label for="activity_date_${idx + 1}" class="date-label">Activity ${idx + 1} Date</label>
+                    <input type="date" id="activity_date_${idx + 1}" name="activity_date_${idx + 1}" value="${act.activity_date || ''}">
+                </div>
+                <button type="button" class="remove-activity" data-index="${idx}">Remove</button>
+            `;
+            container.appendChild(row);
+        });
+        numInput.value = activities.length;
     }
 
-    container.addEventListener('click', e => {
+    container.addEventListener('click', (e) => {
         if (e.target.classList.contains('remove-activity')) {
             const index = parseInt(e.target.dataset.index, 10);
-            const values = collectValues();
-            values.splice(index - 1, 1);
-            render(values.length, values);
+            activities.splice(index, 1);
+            render();
         }
     });
 
     addBtn.addEventListener('click', () => {
-        const values = collectValues();
-        values.push({ name: '', date: '' });
-        render(values.length, values);
+        activities.push({ activity_name: '', activity_date: '' });
+        render();
     });
 
-    numActivitiesInput.addEventListener('input', e => {
-        let count = parseInt(e.target.value, 10);
-        if (isNaN(count) || count < 0) count = 0;
-        const values = collectValues();
-        if (values.length > count) {
-            values.splice(count);
-        } else {
-            while (values.length < count) {
-                values.push({ name: '', date: '' });
-            }
-        }
-        render(count, values);
-    });
-
-    const initialCount = existing.length || parseInt(numActivitiesInput.value, 10) || 0;
-    render(initialCount, existing);
+    render();
 }
 
 // Initialize section-specific handlers when document is ready
