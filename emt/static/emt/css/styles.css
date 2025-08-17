@@ -2233,6 +2233,28 @@
     font-weight: 500;
 }
 
+#audienceModal .dual-list {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+#audienceModal .dual-list select {
+    width: 200px;
+    min-height: 200px;
+}
+
+#audienceModal .dual-list-controls {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+#audienceModal .dual-list-controls button {
+    padding: 0.25rem 0.5rem;
+}
+
 /* ===========================================
    SUBMIT EVENT REPORT PAGE INLINE STYLES
    Moved from submit_event_report.html template
