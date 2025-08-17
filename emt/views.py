@@ -1511,8 +1511,8 @@ def submit_event_report(request, proposal_id):
         formset = AttachmentFormSet(queryset=report.attachments.all())
 
     # Fetch activities for editing in the report form
-    activities = [
-        {"name": a.name, "date": a.date.isoformat()}
+    proposal_activities = [
+        {"activity_name": a.name, "activity_date": a.date.isoformat()}
         for a in proposal.activities.all()
     ]
 
@@ -1521,8 +1521,8 @@ def submit_event_report(request, proposal_id):
         "proposal": proposal,
         "form": form,
         "formset": formset,
-        "activities": activities,
-        "activities_json": json.dumps(activities),
+        "proposal_activities": proposal_activities,
+        "proposal_activities_json": json.dumps(proposal_activities),
     }
     return render(request, "emt/submit_event_report.html", context)
 
