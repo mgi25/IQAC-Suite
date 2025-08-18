@@ -5,6 +5,7 @@
   2. Statuses are now styled as modern "pills" or "badges".
   3. Added a new style for the "Generated" status.
   4. Minor UI improvements like table row hover effects.
+  5. Updated for full-page layout without container div.
 */
 
 :root {
@@ -32,28 +33,21 @@ body {
   font-family: 'Inter', Arial, sans-serif;
 }
 
-/* --- Layout & Container --- */
-.reports-main-container {
-  max-width: 1100px;
-  margin: 50px auto 0 auto;
-  padding: 36px 32px 32px 32px;
-  background: var(--bg-container);
-  border-radius: 18px;
-  box-shadow: 0 6px 32px 0 rgba(30, 58, 138, 0.07);
-}
-
+/* --- Header Styles (now without container) --- */
 .reports-header-title {
   font-size: 2.2rem;
   font-weight: 700;
   color: var(--primary-dark-blue);
-  margin-bottom: 10px;
+  margin: 50px 0 10px 0;
   letter-spacing: -1px;
+  padding: 0 32px;
 }
 
 .reports-header-desc {
   font-size: 1.05rem;
   color: var(--primary-text);
   margin-bottom: 32px;
+  padding: 0 32px;
 }
 
 /* --- Table Styles --- */
@@ -61,6 +55,7 @@ body {
   overflow-x: auto;
   border-radius: 12px;
   border: 1px solid var(--border-color);
+  margin: 0 32px;
 }
 
 .reports-table {
@@ -151,12 +146,16 @@ body {
 
 /* --- Responsive --- */
 @media (max-width: 700px) {
-  .reports-main-container {
-    padding: 18px 4vw;
-    margin-top: 20px;
-  }
   .reports-header-title {
     font-size: 1.6rem;
+    margin-top: 20px;
+    padding: 0 4vw;
+  }
+  .reports-header-desc {
+    padding: 0 4vw;
+  }
+  .reports-table-wrap {
+    margin: 0 4vw;
   }
   .reports-table {
     font-size: 0.95rem;
