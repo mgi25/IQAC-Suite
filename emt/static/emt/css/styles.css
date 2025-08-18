@@ -2773,3 +2773,306 @@ textarea {
     cursor: pointer;
     font-size: 0.8rem;
 }
+
+/* =====================================
+   CDL SUPPORT SECTION STYLING - MATCHING INCOME SECTION EXACTLY
+   ===================================== */
+
+/* CDL Section Container - Exact Copy of Income Section */
+.cdl-section {
+    padding: 2rem;
+    min-height: calc(100vh - 200px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+    width: 100%;
+    max-width: none;
+}
+
+.cdl-container {
+    margin-bottom: 2rem;
+    width: 100%;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* CDL Empty State - Exact Copy of Income Empty State */
+.cdl-empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border: 2px dashed #cbd5e1;
+    border-radius: 16px;
+    margin: 2rem 0;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    flex-grow: 1;
+}
+
+.cdl-empty-state .empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.cdl-empty-state h4 {
+    color: #475569;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.cdl-empty-state p {
+    color: #64748b;
+    margin: 0;
+}
+
+/* CDL Support Toggle - Simple Toggle Section */
+.cdl-support-toggle {
+    text-align: center;
+    margin: 2rem 0;
+    padding: 2rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    width: 100%;
+}
+
+.cdl-toggle-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    cursor: pointer;
+}
+
+.cdl-toggle-label input[type="checkbox"] {
+    width: 1.5rem;
+    height: 1.5rem;
+    accent-color: var(--primary-blue);
+}
+
+.cdl-toggle-text {
+    color: var(--text-dark);
+}
+
+/* CDL Service Cards - Exact Copy of Income Form Cards */
+.cdl-service-card {
+    width: 100%;
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(38, 68, 135, 0.08);
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.cdl-service-card:hover {
+    box-shadow: 0 8px 30px rgba(38, 68, 135, 0.12);
+    transform: translateY(-2px);
+}
+
+/* CDL Service Header - Exact Copy of Income Form Header */
+.cdl-service-header {
+    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
+    color: white;
+    padding: 1.5rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+}
+
+.cdl-service-header::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='m0 40l40-40h-40v40zm40 0v-40h-40l40 40z'/%3E%3C/g%3E%3C/svg%3E") repeat;
+}
+
+.cdl-service-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+}
+
+.cdl-service-toggle {
+    position: relative;
+    z-index: 1;
+}
+
+.cdl-service-toggle label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.cdl-service-toggle input[type="checkbox"] {
+    width: 1.2rem;
+    height: 1.2rem;
+    accent-color: white;
+}
+
+/* CDL Service Content - Exact Copy of Income Form Content */
+.cdl-service-content {
+    padding: 2rem;
+    background: linear-gradient(135deg, #fafbff 0%, #f8fafc 100%);
+}
+
+.cdl-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 0;
+}
+
+.cdl-form-grid .input-group {
+    margin-bottom: 0;
+}
+
+.cdl-form-grid .input-group label {
+    display: block;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+}
+
+.cdl-form-grid .input-group input[required] + .help-text::before {
+    content: '* ';
+    color: #ef4444;
+    font-weight: 600;
+}
+
+.cdl-form-grid .input-group input,
+.cdl-form-grid .input-group select,
+.cdl-form-grid .input-group textarea {
+    padding: 0.875rem 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    background: white;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.cdl-form-grid .input-group textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.cdl-form-grid .input-group input:focus,
+.cdl-form-grid .input-group select:focus,
+.cdl-form-grid .input-group textarea:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(38, 68, 135, 0.1);
+    transform: translateY(-1px);
+}
+
+.cdl-form-grid .input-group .help-text {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+}
+
+/* CDL Info Banner */
+.cdl-info-banner {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border: 1px solid #93c5fd;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #1e40af;
+    font-size: 0.875rem;
+}
+
+.cdl-info-banner i {
+    color: #3b82f6;
+    font-size: 1rem;
+}
+
+/* Validation States for CDL */
+.cdl-form-grid .input-group.has-error input,
+.cdl-form-grid .input-group.has-error select,
+.cdl-form-grid .input-group.has-error textarea {
+    border-color: #ef4444;
+    background-color: #fef2f2;
+}
+
+.cdl-form-grid .input-group.has-error label {
+    color: #dc2626;
+}
+
+.cdl-form-grid .input-group.is-valid input,
+.cdl-form-grid .input-group.is-valid select,
+.cdl-form-grid .input-group.is-valid textarea {
+    border-color: #10b981;
+    background-color: #f0fdf4;
+}
+
+/* CDL Auto-fill Button - Matching Income Auto-fill */
+#cdl-autofill-btn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.2);
+}
+
+#cdl-autofill-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(16, 185, 129, 0.3);
+}
+
+/* Responsive Design for CDL */
+@media (max-width: 768px) {
+    .cdl-section {
+        margin: 0 1rem;
+    }
+    
+    .cdl-form-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .cdl-service-content {
+        padding: 1.5rem;
+    }
+}

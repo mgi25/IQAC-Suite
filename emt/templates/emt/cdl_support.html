@@ -8,79 +8,199 @@
 {% endblock %}
 
 {% block content %}
-<div class="container">
-  <div class="header">
-    <h1>CDL Support for "{{ proposal.event_title }}"</h1>
-    <p>Request assistance from the Content Development Lab</p>
-    <p class="workflow-hint">This is the final step after entering income details.</p>
+<div class="cdl-section">
+  <!-- Header Section - Matching Income Layout -->
+  <div class="content-header">
+    <h1 class="content-title">CDL Support</h1>
+    <p class="content-subtitle">Poster, certificates, other details</p>
+    <button type="button" id="cdl-autofill-btn" class="btn-draft" style="margin-top:0.5rem;">Auto-Fill Test Data</button>
   </div>
 
-  <nav class="wizard-progress">
-    <span>Step 8 of 8</span>
-  </nav>
+  <form method="post" id="cdl-form">
+    {% csrf_token %}
+    
+    <!-- CDL Container - Matching Income Container -->
+    <div class="cdl-container">
+      
+      <!-- Empty State (Hidden when CDL support is enabled) -->
+      <div class="cdl-empty-state" id="cdl-empty-state">
+        <div class="empty-state-icon">📋</div>
+        <h4>No CDL support requested yet</h4>
+        <p>Enable CDL support to access poster, certificate, and content services</p>
+      </div>
 
-  <div class="page-content">
-    <form method="post" id="cdl-form">
-      {% csrf_token %}
-      <div class="section">
+      <!-- CDL Support Toggle (Always visible) -->
+      <div class="cdl-support-toggle">
         <div class="input-group">
-          {{ form.needs_support.label_tag }} {{ form.needs_support }}
+          <label for="{{ form.needs_support.id_for_label }}" class="cdl-toggle-label">
+            <input type="checkbox" id="{{ form.needs_support.id_for_label }}" name="{{ form.needs_support.name }}" {% if form.needs_support.value %}checked{% endif %}>
+            <span class="cdl-toggle-text">I need CDL support for this event</span>
+          </label>
+          <div class="help-text">Check this box to access Content Development Lab services</div>
         </div>
+      </div>
 
-        <div id="cdl-sections" style="display:none;">
-          <details>
-            <summary>Poster Support</summary>
-            <div class="input-group">
-              {{ form.poster_required.label_tag }} {{ form.poster_required }}
+      <!-- CDL Services (Hidden initially, shown when support is enabled) -->
+      <div id="cdl-services-container" style="display:none;">
+        
+        <!-- Poster Support Card -->
+        <div class="cdl-service-card" id="poster-service-card">
+          <div class="cdl-service-header">
+            <h3 class="cdl-service-title">🎨 Poster Support</h3>
+            <div class="cdl-service-toggle">
+              <label>
+                <input type="checkbox" id="{{ form.poster_required.id_for_label }}" name="{{ form.poster_required.name }}" {% if form.poster_required.value %}checked{% endif %}>
+                <span>Enable</span>
+              </label>
             </div>
-            <div id="poster-details" style="display:none;">
-              <div class="input-group">{{ form.poster_choice.label_tag }} {{ form.poster_choice }}</div>
-              <div class="input-group">{{ form.organization_name.label_tag }} {{ form.organization_name }}</div>
-              <div class="input-group">{{ form.poster_time.label_tag }} {{ form.poster_time }}</div>
-              <div class="input-group">{{ form.poster_date.label_tag }} {{ form.poster_date }}</div>
-              <div class="input-group">{{ form.poster_venue.label_tag }} {{ form.poster_venue }}</div>
-              <div class="input-group">{{ form.resource_person_name.label_tag }} {{ form.resource_person_name }}</div>
-              <div class="input-group">{{ form.resource_person_designation.label_tag }} {{ form.resource_person_designation }}</div>
-              <div class="input-group">{{ form.poster_event_title.label_tag }} {{ form.poster_event_title }}</div>
-              <div class="input-group">{{ form.poster_summary.label_tag }} {{ form.poster_summary }}</div>
-              <div class="input-group">{{ form.poster_design_link.label_tag }} {{ form.poster_design_link }}</div>
-              <p class="help-text">If requesting both poster and certificate, provide a single design file with poster on page 1 and certificate on page 2.</p>
-            </div>
-          </details>
-
-          <details>
-            <summary>Other CDL Services</summary>
-            <div class="input-group">{{ form.other_services.label_tag }} {{ form.other_services }}</div>
-          </details>
-
-          <details>
-            <summary>Certificates</summary>
-            <div class="input-group">{{ form.certificates_required.label_tag }} {{ form.certificates_required }}</div>
-            <div id="certificates-details" style="display:none;">
-              <div class="input-group">{{ form.certificate_help.label_tag }} {{ form.certificate_help }}</div>
-              <div id="certificate-help-details" style="display:none;">
-                <div class="input-group">{{ form.certificate_choice.label_tag }} {{ form.certificate_choice }}</div>
-                <div class="input-group">{{ form.certificate_design_link.label_tag }} {{ form.certificate_design_link }}</div>
-                <p class="help-text">Use the same design file as poster if both are requested (page 2 for certificate).</p>
+          </div>
+          
+          <div class="cdl-service-content" id="poster-details" style="display:none;">
+            <div class="cdl-form-grid">
+              <div class="input-group">
+                <label for="{{ form.poster_choice.id_for_label }}">Poster Choice</label>
+                {{ form.poster_choice }}
+                <div class="help-text">Select your preferred poster style</div>
+              </div>
+              <div class="input-group">
+                <label for="{{ form.organization_name.id_for_label }}">Organization Name</label>
+                {{ form.organization_name }}
+                <div class="help-text">Name of organizing body</div>
+              </div>
+              <div class="input-group">
+                <label for="{{ form.poster_time.id_for_label }}">Event Time</label>
+                {{ form.poster_time }}
+                <div class="help-text">Time for the event</div>
+              </div>
+              <div class="input-group">
+                <label for="{{ form.poster_date.id_for_label }}">Event Date</label>
+                {{ form.poster_date }}
+                <div class="help-text">Date of the event</div>
+              </div>
+              <div class="input-group">
+                <label for="{{ form.poster_venue.id_for_label }}">Event Venue</label>
+                {{ form.poster_venue }}
+                <div class="help-text">Location where event will be held</div>
+              </div>
+              <div class="input-group">
+                <label for="{{ form.resource_person_name.id_for_label }}">Resource Person Name</label>
+                {{ form.resource_person_name }}
+                <div class="help-text">Name of the main speaker/presenter</div>
+              </div>
+              <div class="input-group">
+                <label for="{{ form.resource_person_designation.id_for_label }}">Resource Person Designation</label>
+                {{ form.resource_person_designation }}
+                <div class="help-text">Title/position of the resource person</div>
+              </div>
+              <div class="input-group">
+                <label for="{{ form.poster_event_title.id_for_label }}">Event Title for Poster</label>
+                {{ form.poster_event_title }}
+                <div class="help-text">Title as it should appear on poster</div>
+              </div>
+              <div class="input-group">
+                <label for="{{ form.poster_summary.id_for_label }}">Event Summary</label>
+                {{ form.poster_summary }}
+                <div class="help-text">Brief description for the poster</div>
+              </div>
+              <div class="input-group">
+                <label for="{{ form.poster_design_link.id_for_label }}">Design Link/Reference</label>
+                {{ form.poster_design_link }}
+                <div class="help-text">Link to design references or requirements</div>
               </div>
             </div>
-          </details>
-
-          <details>
-            <summary>Blog Content</summary>
-            <div class="input-group">
-              {{ form.blog_content.label_tag }}
-              {{ form.blog_content }}
-              <small class="help-text">Provide up to 150 words.</small>
+            <div class="cdl-info-banner">
+              <i class="fas fa-info-circle"></i>
+              <span>If requesting both poster and certificate, provide a single design file with poster on page 1 and certificate on page 2.</span>
             </div>
-          </details>
+          </div>
+        </div>
+
+        <!-- Certificate Support Card -->
+        <div class="cdl-service-card" id="certificate-service-card">
+          <div class="cdl-service-header">
+            <h3 class="cdl-service-title">🏆 Certificate Support</h3>
+            <div class="cdl-service-toggle">
+              <label>
+                <input type="checkbox" id="{{ form.certificates_required.id_for_label }}" name="{{ form.certificates_required.name }}" {% if form.certificates_required.value %}checked{% endif %}>
+                <span>Enable</span>
+              </label>
+            </div>
+          </div>
+          
+          <div class="cdl-service-content" id="certificates-details" style="display:none;">
+            <div class="cdl-form-grid">
+              <div class="input-group">
+                <label for="{{ form.certificate_help.id_for_label }}">Certificate Design Help</label>
+                <input type="checkbox" id="{{ form.certificate_help.id_for_label }}" name="{{ form.certificate_help.name }}" {% if form.certificate_help.value %}checked{% endif %}>
+                <div class="help-text">Do you need design assistance for certificates?</div>
+              </div>
+            </div>
+            
+            <div id="certificate-help-details" style="display:none;">
+              <div class="cdl-form-grid">
+                <div class="input-group">
+                  <label for="{{ form.certificate_choice.id_for_label }}">Certificate Choice</label>
+                  {{ form.certificate_choice }}
+                  <div class="help-text">Select your preferred certificate style</div>
+                </div>
+                <div class="input-group">
+                  <label for="{{ form.certificate_design_link.id_for_label }}">Design Link/Reference</label>
+                  {{ form.certificate_design_link }}
+                  <div class="help-text">Link to design references or requirements</div>
+                </div>
+              </div>
+              <div class="cdl-info-banner">
+                <i class="fas fa-info-circle"></i>
+                <span>Use the same design file as poster if both are requested (page 2 for certificate).</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Other Services Card -->
+        <div class="cdl-service-card" id="other-services-card">
+          <div class="cdl-service-header">
+            <h3 class="cdl-service-title">🔧 Other CDL Services</h3>
+          </div>
+          
+          <div class="cdl-service-content">
+            <div class="cdl-form-grid">
+              <div class="input-group">
+                <label for="{{ form.other_services.id_for_label }}">Additional Services</label>
+                {{ form.other_services }}
+                <div class="help-text">Describe any other CDL services you need</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Blog Content Card -->
+        <div class="cdl-service-card" id="blog-content-card">
+          <div class="cdl-service-header">
+            <h3 class="cdl-service-title">📝 Blog Content</h3>
+          </div>
+          
+          <div class="cdl-service-content">
+            <div class="cdl-form-grid">
+              <div class="input-group">
+                <label for="{{ form.blog_content.id_for_label }}">Blog Content</label>
+                {{ form.blog_content }}
+                <div class="help-text">Provide up to 150 words for blog content</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="input-group">
-        <button type="submit" class="btn btn-submit" id="submit-proposal-btn">Submit Proposal</button>
+    </div>
+
+    <!-- Save Section - Matching Income Layout -->
+    <div class="form-row full-width">
+      <div class="save-section-container">
+        <button type="submit" class="btn-save-section" id="submit-proposal-btn">SAVE & CONTINUE</button>
+        <div class="save-help-text">Complete this section to unlock the next one</div>
       </div>
-    </form>
-  </div>
+    </div>
+  </form>
 </div>
 {% endblock %}
 
@@ -90,36 +210,183 @@
     window.AUTOSAVE_URL = "{% url 'emt:autosave_proposal' %}";
     window.AUTOSAVE_CSRF = "{{ csrf_token }}";
 
-    const needsSupport = document.getElementById('id_needs_support');
-    const cdlSections = document.getElementById('cdl-sections');
-    const posterRequired = document.getElementById('id_poster_required');
-    const posterDetails = document.getElementById('poster-details');
-    const certificatesRequired = document.getElementById('id_certificates_required');
-    const certificatesDetails = document.getElementById('certificates-details');
-    const certificateHelp = document.getElementById('id_certificate_help');
-    const certificateHelpDetails = document.getElementById('certificate-help-details');
+    // CDL Auto-fill test data
+    const CDL_AUTO_FILL_DATA = {
+        organization_name: "Student Council",
+        poster_time: "10:00 AM - 4:00 PM",
+        poster_date: "2024-03-15",
+        poster_venue: "Main Auditorium",
+        resource_person_name: "Dr. Jane Smith",
+        resource_person_designation: "Professor & Research Director",
+        poster_event_title: "Innovation Summit 2024",
+        poster_summary: "A comprehensive event focusing on emerging technologies and innovation in education.",
+        poster_design_link: "https://example.com/design-reference",
+        certificate_design_link: "https://example.com/certificate-design",
+        other_services: "Need help with social media graphics and event photography coordination.",
+        blog_content: "This innovation summit brings together students, faculty, and industry experts to explore cutting-edge technologies. Participants will engage in workshops, panel discussions, and networking sessions designed to foster creativity and collaboration in the digital age."
+    };
 
-    function toggle(el, show) { el.style.display = show ? '' : 'none'; }
+    // Initialize CDL form functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const needsSupport = document.getElementById('id_needs_support');
+        const cdlEmptyState = document.getElementById('cdl-empty-state');
+        const cdlServicesContainer = document.getElementById('cdl-services-container');
+        const posterRequired = document.getElementById('id_poster_required');
+        const posterDetails = document.getElementById('poster-details');
+        const certificatesRequired = document.getElementById('id_certificates_required');
+        const certificatesDetails = document.getElementById('certificates-details');
+        const certificateHelp = document.getElementById('id_certificate_help');
+        const certificateHelpDetails = document.getElementById('certificate-help-details');
+        const autofillBtn = document.getElementById('cdl-autofill-btn');
 
-    needsSupport.addEventListener('change', () => {
-      toggle(cdlSections, needsSupport.checked);
+        function toggle(el, show) { 
+            if (el) el.style.display = show ? '' : 'none'; 
+        }
+
+        function showEmptyState() {
+            const hasSupport = needsSupport && needsSupport.checked;
+            toggle(cdlEmptyState, !hasSupport);
+            toggle(cdlServicesContainer, hasSupport);
+        }
+
+        // Main CDL support toggle
+        if (needsSupport) {
+            needsSupport.addEventListener('change', () => {
+                showEmptyState();
+            });
+            showEmptyState();
+        }
+
+        // Poster details toggle
+        if (posterRequired) {
+            posterRequired.addEventListener('change', () => {
+                toggle(posterDetails, posterRequired.checked);
+            });
+            toggle(posterDetails, posterRequired.checked);
+        }
+
+        // Certificates details toggle
+        if (certificatesRequired) {
+            certificatesRequired.addEventListener('change', () => {
+                toggle(certificatesDetails, certificatesRequired.checked);
+            });
+            toggle(certificatesDetails, certificatesRequired.checked);
+        }
+
+        // Certificate help details toggle
+        if (certificateHelp) {
+            certificateHelp.addEventListener('change', () => {
+                toggle(certificateHelpDetails, certificateHelp.checked);
+            });
+            toggle(certificateHelpDetails, certificateHelp.checked);
+        }
+
+        // Auto-fill functionality
+        if (autofillBtn) {
+            autofillBtn.addEventListener('click', function() {
+                // Enable CDL support
+                if (needsSupport) {
+                    needsSupport.checked = true;
+                    needsSupport.dispatchEvent(new Event('change'));
+                }
+
+                // Enable poster support
+                setTimeout(() => {
+                    if (posterRequired) {
+                        posterRequired.checked = true;
+                        posterRequired.dispatchEvent(new Event('change'));
+                    }
+
+                    // Enable certificates
+                    if (certificatesRequired) {
+                        certificatesRequired.checked = true;
+                        certificatesRequired.dispatchEvent(new Event('change'));
+                    }
+
+                    // Enable certificate help
+                    setTimeout(() => {
+                        if (certificateHelp) {
+                            certificateHelp.checked = true;
+                            certificateHelp.dispatchEvent(new Event('change'));
+                        }
+
+                        // Fill in all the form fields
+                        setTimeout(() => {
+                            Object.entries(CDL_AUTO_FILL_DATA).forEach(([key, value]) => {
+                                const field = document.getElementById(`id_${key}`);
+                                if (field) {
+                                    field.value = value;
+                                }
+                            });
+
+                            // Show success message
+                            showCDLNotification('Test data filled successfully!', 'success');
+                        }, 100);
+                    }, 100);
+                }, 100);
+            });
+        }
+
+        function showCDLNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `cdl-notification cdl-notification-${type}`;
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+                <span>${message}</span>
+            `;
+            
+            // Add styles
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#10b981' : '#3b82f6'};
+                color: white;
+                padding: 1rem 1.5rem;
+                border-radius: 8px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                font-weight: 500;
+                animation: slideInRight 0.3s ease;
+            `;
+
+            document.body.appendChild(notification);
+
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOutRight 0.3s ease';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        // Add CSS animations for notifications
+        if (!document.getElementById('cdl-notification-styles')) {
+            const style = document.createElement('style');
+            style.id = 'cdl-notification-styles';
+            style.textContent = `
+                @keyframes slideInRight {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes slideOutRight {
+                    from { transform: translateX(0); opacity: 1; }
+                    to { transform: translateX(100%); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // Initialize state on page load
+        showEmptyState();
     });
-    toggle(cdlSections, needsSupport.checked);
-
-    posterRequired.addEventListener('change', () => {
-      toggle(posterDetails, posterRequired.checked);
-    });
-    toggle(posterDetails, posterRequired.checked);
-
-    certificatesRequired.addEventListener('change', () => {
-      toggle(certificatesDetails, certificatesRequired.checked);
-    });
-    toggle(certificatesDetails, certificatesRequired.checked);
-
-    certificateHelp.addEventListener('change', () => {
-      toggle(certificateHelpDetails, certificateHelp.checked);
-    });
-    toggle(certificateHelpDetails, certificateHelp.checked);
   </script>
   <script src="{% static 'emt/js/autosave_draft.js' %}"></script>
 {% endblock %}
