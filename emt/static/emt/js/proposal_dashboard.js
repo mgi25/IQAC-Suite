@@ -1965,17 +1965,98 @@ function getWhyThisEventForm() {
             }
         }
 
-        needsSupport.on('change', () => toggle(cdlSections, needsSupport.prop('checked')));
-        toggle(cdlSections, needsSupport.prop('checked'));
+        // Set up all the toggle functionality
+        if (needsSupport.length) {
+            needsSupport.on('change', () => toggle(cdlSections, needsSupport.prop('checked')));
+            toggle(cdlSections, needsSupport.prop('checked'));
+        }
 
-        posterRequired.on('change', () => toggle(posterDetails, posterRequired.prop('checked')));
-        toggle(posterDetails, posterRequired.prop('checked'));
+        if (posterRequired.length) {
+            posterRequired.on('change', () => toggle(posterDetails, posterRequired.prop('checked')));
+            toggle(posterDetails, posterRequired.prop('checked'));
+        }
 
-        certificatesRequired.on('change', () => toggle(certificatesDetails, certificatesRequired.prop('checked')));
-        toggle(certificatesDetails, certificatesRequired.prop('checked'));
+        if (certificatesRequired.length) {
+            certificatesRequired.on('change', () => toggle(certificatesDetails, certificatesRequired.prop('checked')));
+            toggle(certificatesDetails, certificatesRequired.prop('checked'));
+        }
 
-        certificateHelp.on('change', () => toggle(certificateHelpDetails, certificateHelp.prop('checked')));
-        toggle(certificateHelpDetails, certificateHelp.prop('checked'));
+        if (certificateHelp.length) {
+            certificateHelp.on('change', () => toggle(certificateHelpDetails, certificateHelp.prop('checked')));
+            toggle(certificateHelpDetails, certificateHelp.prop('checked'));
+        }
+
+        // Setup CDL auto-fill functionality
+        setupCDLAutoFill();
+    }
+
+    function setupCDLAutoFill() {
+        const autofillBtn = $('#cdl-autofill-btn');
+        
+        if (autofillBtn.length) {
+            autofillBtn.on('click', function() {
+                // CDL Auto-fill test data
+                const CDL_AUTO_FILL_DATA = {
+                    organization_name: "Student Council",
+                    poster_time: "10:00 AM - 4:00 PM",
+                    poster_date: "2024-03-15",
+                    poster_venue: "Main Auditorium",
+                    resource_person_name: "Dr. Jane Smith",
+                    resource_person_designation: "Professor & Research Director",
+                    poster_event_title: "Innovation Summit 2024",
+                    poster_summary: "A comprehensive event focusing on emerging technologies and innovation in education.",
+                    poster_design_link: "https://example.com/design-reference",
+                    certificate_design_link: "https://example.com/certificate-design",
+                    other_services: "Need help with social media graphics and event photography coordination.",
+                    blog_content: "This innovation summit brings together students, faculty, and industry experts to explore cutting-edge technologies. Participants will engage in workshops, panel discussions, and networking sessions designed to foster creativity and collaboration in the digital age."
+                };
+
+                // Enable CDL support
+                const needsSupport = $('#id_needs_support');
+                if (needsSupport.length) {
+                    needsSupport.prop('checked', true);
+                    needsSupport.trigger('change');
+                }
+
+                // Enable poster support and certificates after a delay
+                setTimeout(() => {
+                    const posterRequired = $('#id_poster_required');
+                    const certificatesRequired = $('#id_certificates_required');
+                    
+                    if (posterRequired.length) {
+                        posterRequired.prop('checked', true);
+                        posterRequired.trigger('change');
+                    }
+
+                    if (certificatesRequired.length) {
+                        certificatesRequired.prop('checked', true);
+                        certificatesRequired.trigger('change');
+                    }
+
+                    // Enable certificate help after another delay
+                    setTimeout(() => {
+                        const certificateHelp = $('#id_certificate_help');
+                        if (certificateHelp.length) {
+                            certificateHelp.prop('checked', true);
+                            certificateHelp.trigger('change');
+                        }
+
+                        // Fill in all the form fields
+                        setTimeout(() => {
+                            Object.entries(CDL_AUTO_FILL_DATA).forEach(([key, value]) => {
+                                const field = $(`#id_${key}`);
+                                if (field.length) {
+                                    field.val(value);
+                                }
+                            });
+
+                            // Show success notification
+                            showNotification('CDL test data filled successfully!', 'success');
+                        }, 100);
+                    }, 100);
+                }, 100);
+            });
+        }
     }
 
     // ===== SAVE SECTION FUNCTIONALITY - FULLY PRESERVED =====
