@@ -139,17 +139,25 @@ def _save_text_sections(proposal, data):
             obj.save()
 
 
-def _save_activities(proposal, data):
+def _save_activities(proposal, data, form=None):
     pattern = re.compile(r"^activity_(?:name|date)_(\d+)$")
     indices = sorted({int(m.group(1)) for key in data.keys() if (m := pattern.match(key))})
     if not indices:
-        return
+        return True
     proposal.activities.all().delete()
+    success = True
     for index in indices:
         name = data.get(f"activity_name_{index}")
         date = data.get(f"activity_date_{index}")
         if name and date:
             EventActivity.objects.create(proposal=proposal, name=name, date=date)
+        elif name or date:
+            msg = f"Activity {index} requires both name and date."
+            logger.warning(msg)
+            if form is not None:
+                form.add_error(None, msg)
+            success = False
+    return success
 
 
 def _save_speakers(proposal, data, files):
@@ -307,42 +315,35 @@ def submit_proposal(request, pk=None):
     if request.method == "POST" and form.is_valid():
         proposal = form.save(commit=False)
         proposal.submitted_by = request.user
-        if "final_submit" in request.POST:
+        is_final = "final_submit" in request.POST
+        if is_final:
             proposal.status = "submitted"
             proposal.submitted_at = timezone.now()
-            proposal.save()
-            form.save_m2m()
-            _save_text_sections(proposal, request.POST)
-            _save_activities(proposal, request.POST)
-            _save_speakers(proposal, request.POST, request.FILES)
-            _save_expenses(proposal, request.POST)
-            _save_income(proposal, request.POST)
-            logger.debug(
-                "Proposal %s saved with faculty %s",
-                proposal.id,
-                list(proposal.faculty_incharges.values_list("id", flat=True)),
-            )
+        else:
+            proposal.status = "draft"
+        proposal.save()
+        form.save_m2m()
+        _save_text_sections(proposal, request.POST)
+        if not _save_activities(proposal, request.POST, form):
+            ctx["form"] = form
+            ctx["proposal"] = proposal
+            return render(request, "emt/submit_proposal.html", ctx)
+        _save_speakers(proposal, request.POST, request.FILES)
+        _save_expenses(proposal, request.POST)
+        _save_income(proposal, request.POST)
+        logger.debug(
+            "Proposal %s saved with faculty %s",
+            proposal.id,
+            list(proposal.faculty_incharges.values_list("id", flat=True)),
+        )
+        if is_final:
             build_approval_chain(proposal)
             messages.success(
                 request,
                 f"Proposal '{proposal.event_title}' submitted.",
             )
             return redirect("emt:proposal_status_detail", proposal_id=proposal.id)
-        else:
-            proposal.status = "draft"
-            proposal.save()
-            form.save_m2m()
-            _save_text_sections(proposal, request.POST)
-            _save_activities(proposal, request.POST)
-            _save_speakers(proposal, request.POST, request.FILES)
-            _save_expenses(proposal, request.POST)
-            _save_income(proposal, request.POST)
-            logger.debug(
-                "Draft proposal %s saved with faculty %s",
-                proposal.id,
-                list(proposal.faculty_incharges.values_list("id", flat=True)),
-            )
-            return redirect("emt:submit_need_analysis", proposal_id=proposal.id)
+        return redirect("emt:submit_need_analysis", proposal_id=proposal.id)
 
     return render(request, "emt/submit_proposal.html", ctx)
 
@@ -1487,14 +1488,11 @@ def submit_event_report(request, proposal_id):
     if request.method == "POST":
         form = EventReportForm(request.POST, instance=report)
         formset = AttachmentFormSet(request.POST, request.FILES, queryset=report.attachments.all())
-        if form.is_valid() and formset.is_valid():
+        if form.is_valid() and formset.is_valid() and _save_activities(proposal, request.POST, form):
             report = form.save(commit=False)
             report.proposal = proposal
             report.save()
             form.save_m2m()
-
-            # Save activities from the submitted report
-            _save_activities(proposal, request.POST)
 
             # Save attachments
             instances = formset.save(commit=False)

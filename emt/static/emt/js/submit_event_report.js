@@ -1404,14 +1404,20 @@ function initializeSectionSpecificHandlers() {
 
 function setupDynamicActivities() {
     const numInput = document.getElementById('num-activities-modern');
-    const container = document.getElementById('proposal-activities');
+    const container = document.getElementById('report-activities');
     const addBtn = document.getElementById('add-activity-btn');
     if (!numInput || !container || !addBtn) return;
 
     // Initialize activities from server-provided data
-    let activities = Array.isArray(window.PROPOSAL_ACTIVITIES)
-        ? [...window.PROPOSAL_ACTIVITIES]
+    const initialActivities = Array.isArray(window.PROPOSAL_ACTIVITIES)
+        ? window.PROPOSAL_ACTIVITIES
         : [];
+    let activities = [...initialActivities];
+
+    // Ensure at least one blank activity row exists on initial load
+    if (activities.length === 0) {
+        activities.push({ activity_name: '', activity_date: '' });
+    }
 
     function render() {
         container.innerHTML = '';
