@@ -345,3 +345,25 @@ py manage.py delete_academic_year 2025-2026
 ```
 
 Replace `2025-2026` with the year you want to delete.
+
+---
+
+## Railway PostgreSQL Migration
+
+Use the provided `migrate_railway_pg.sh` script to migrate data between two Railway-managed PostgreSQL databases.
+
+1. Copy the example environment file and fill in values from Railway's `DATABASE_URL` for both old and new databases:
+
+   ```bash
+   cp .env.example .env
+   # edit .env with your old + new DATABASE_URL
+   ```
+
+2. Run the migration:
+
+   ```bash
+   source .env
+   bash migrate_railway_pg.sh
+   ```
+
+Dependencies: `pg_dump`, `pg_restore`, `psql`.
