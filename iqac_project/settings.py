@@ -2,15 +2,14 @@ from pathlib import Path
 import os
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    BASE_DIR = Path(__file__).resolve().parent.parent
+    load_dotenv(dotenv_path=BASE_DIR / ".env")
 except Exception:
     pass
 import logging
 import dj_database_url
 
 # ---- .env loader (django-environ if available, else os.getenv) ----
-
-BASE_DIR = Path(__file__).resolve().parent.parent  # ensure BASE_DIR is defined
 
 try:
     import environ
