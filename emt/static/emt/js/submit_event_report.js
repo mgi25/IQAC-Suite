@@ -114,6 +114,17 @@ document.addEventListener('DOMContentLoaded', function(){
       actualLocationField.val(window.PROPOSAL_DATA.venue);
   }
   
+  // Debug: Log proposal data
+  console.log('Event Report Initialization - Proposal Data:', window.PROPOSAL_DATA);
+  console.log('Event Report Initialization - Activities:', window.PROPOSAL_ACTIVITIES);
+  console.log('Event Report Initialization - Speakers:', window.EXISTING_SPEAKERS);
+  
+  // Initialize dynamic activities immediately
+  setTimeout(() => {
+      console.log('Initializing dynamic activities...');
+      setupDynamicActivities();
+  }, 100);
+  
   // Navigation handling
   $('.nav-link').on('click', function(e) {
       e.preventDefault();
@@ -191,6 +202,13 @@ document.addEventListener('DOMContentLoaded', function(){
 
       if (sectionName === 'participants-information') {
           populateSpeakersFromProposal();
+      }
+      
+      if (sectionName === 'event-information') {
+          // Initialize activities after content is loaded
+          setTimeout(() => {
+              setupDynamicActivities();
+          }, 100);
       }
 
       // Restore field values if switching back to a section
@@ -543,6 +561,23 @@ document.addEventListener('DOMContentLoaded', function(){
                   <div class="help-text">Select the actual type of event that was conducted</div>
               </div>
           </div>
+
+          <!-- Activities Section -->
+          <div class="form-section-header">
+              <h3>Event Activities</h3>
+          </div>
+
+          <div class="form-row">
+              <div class="input-group">
+                  <label for="num-activities-modern">Number of Activities</label>
+                  <input type="number" id="num-activities-modern" name="num_activities" value="${window.PROPOSAL_DATA ? window.PROPOSAL_DATA.num_activities || 1 : 1}">
+                  <div class="help-text">Total activities from proposal (editable)</div>
+              </div>
+          </div>
+
+          <!-- Dynamic activities section -->
+          <div id="report-activities" class="full-width"></div>
+          <button type="button" id="add-activity-btn" class="btn-add-item" style="display: none;">Add Activity</button>
 
           <!-- Additional Information Section -->
           <div class="form-section-header">
@@ -1008,10 +1043,16 @@ function populateProposalData() {
 
 // Populate speaker reference card with speakers from the original proposal
 function populateSpeakersFromProposal() {
+    console.log('Populating speakers from proposal...');
     const container = document.getElementById('speakers-display');
-    if (!container) return;
+    if (!container) {
+        console.warn('Speakers container not found');
+        return;
+    }
 
-    const speakers = (window.PROPOSAL_DATA && window.PROPOSAL_DATA.speakers) || [];
+    const speakers = (window.PROPOSAL_DATA && window.PROPOSAL_DATA.speakers) || window.EXISTING_SPEAKERS || [];
+    console.log('Speakers data:', speakers);
+    
     if (!speakers.length) {
         container.innerHTML = '<div class="no-speakers-message">No speakers were defined in the original proposal</div>';
         return;
@@ -1021,12 +1062,13 @@ function populateSpeakersFromProposal() {
     speakers.forEach(sp => {
         html += `
             <div class="speaker-reference-item">
-                <div class="speaker-name">${sp.full_name || ''}</div>
-                <div class="speaker-affiliation">${sp.affiliation || ''}</div>
+                <div class="speaker-name">${sp.full_name || sp.name || ''}</div>
+                <div class="speaker-affiliation">${sp.affiliation || sp.organization || ''}</div>
             </div>
         `;
     });
     container.innerHTML = html;
+    console.log('Speakers populated successfully');
 }
 
 // SDG Modal functionality
@@ -1403,23 +1445,52 @@ function initializeSectionSpecificHandlers() {
 }
 
 function setupDynamicActivities() {
+    console.log('Setting up dynamic activities...');
     const numInput = document.getElementById('num-activities-modern');
-    const container = document.getElementById('report-activities');
-    const addBtn = document.getElementById('add-activity-btn');
-    if (!numInput || !container || !addBtn) return;
+    const container = document.getElementById('dynamic-activities-section');
+    
+    console.log('Activities elements:', {
+        numInput: !!numInput,
+        container: !!container
+    });
+    
+    if (!numInput || !container) {
+        console.warn('Activities setup failed - missing elements');
+        return;
+    }
 
-    // Initialize activities from server-provided data
-    const initialActivities = Array.isArray(window.PROPOSAL_ACTIVITIES)
-        ? window.PROPOSAL_ACTIVITIES
-        : [];
-    let activities = [...initialActivities];
+    // Check if activities are already server-rendered
+    const existingRows = container.querySelectorAll('.activity-row');
+    let activities = [];
 
-    // Ensure at least one blank activity row exists on initial load
-    if (activities.length === 0) {
-        activities.push({ activity_name: '', activity_date: '' });
+    // If server-rendered activities exist, preserve them
+    if (existingRows.length > 0) {
+        console.log('Found existing activity rows:', existingRows.length);
+        existingRows.forEach((row, idx) => {
+            const nameInput = row.querySelector(`input[name^="activity_name"]`);
+            const dateInput = row.querySelector(`input[name^="activity_date"]`);
+            activities.push({
+                activity_name: nameInput ? nameInput.value : '',
+                activity_date: dateInput ? dateInput.value : ''
+            });
+        });
+    } else {
+        // Fallback to JavaScript data if no server-rendered activities
+        console.log('No server-rendered activities, using PROPOSAL_ACTIVITIES:', window.PROPOSAL_ACTIVITIES);
+        const initialActivities = Array.isArray(window.PROPOSAL_ACTIVITIES)
+            ? window.PROPOSAL_ACTIVITIES
+            : [];
+        activities = [...initialActivities];
+
+        // Ensure at least one blank activity row exists on initial load
+        if (activities.length === 0) {
+            console.log('No activities found, adding default empty activity');
+            activities.push({ activity_name: '', activity_date: '' });
+        }
     }
 
     function render() {
+        console.log('Rendering activities:', activities);
         container.innerHTML = '';
         activities.forEach((act, idx) => {
             const row = document.createElement('div');
@@ -1438,6 +1509,7 @@ function setupDynamicActivities() {
             container.appendChild(row);
         });
         numInput.value = activities.length;
+        console.log('Activities rendered successfully, count:', activities.length);
     }
 
     container.addEventListener('click', (e) => {
@@ -1448,11 +1520,36 @@ function setupDynamicActivities() {
         }
     });
 
+    // Handle input changes to sync with activities array
+    container.addEventListener('input', (e) => {
+        const input = e.target;
+        if (input.name && input.name.startsWith('activity_')) {
+            const match = input.name.match(/activity_(name|date)_(\d+)/);
+            if (match) {
+                const fieldType = match[1];
+                const index = parseInt(match[2], 10) - 1; // Convert to 0-based index
+                if (activities[index]) {
+                    activities[index][`activity_${fieldType}`] = input.value;
+                }
+            }
+        }
+    });
+
+    // Create and add "Add Activity" button dynamically
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'btn-add-item';
+    addBtn.textContent = 'Add Activity';
+    addBtn.style.marginTop = '0.5rem';
     addBtn.addEventListener('click', () => {
         activities.push({ activity_name: '', activity_date: '' });
         render();
     });
+    
+    // Insert the button after the container
+    container.parentNode.insertBefore(addBtn, container.nextSibling);
 
+    // Always render the activities from proposal data
     render();
 }
 
