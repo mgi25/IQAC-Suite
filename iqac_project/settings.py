@@ -1,11 +1,15 @@
+from pathlib import Path
+import os
+try:
+    from dotenv import load_dotenv
+    BASE_DIR = Path(__file__).resolve().parent.parent
+    load_dotenv(dotenv_path=BASE_DIR / ".env")
+except Exception:
+    pass
 import logging
 import dj_database_url
 
 # ---- .env loader (django-environ if available, else os.getenv) ----
-import os
-from pathlib import Path
-
-BASE_DIR = Path(__file__).resolve().parent.parent  # ensure BASE_DIR is defined
 
 try:
     import environ
@@ -101,6 +105,7 @@ MIDDLEWARE = [
     'core.middleware.ImpersonationMiddleware',
     'allauth.account.middleware.AccountMiddleware',  # ← allauth middleware
     'core.middleware.ActivityLogMiddleware',
+    'core.middleware.EnsureSiteMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -139,17 +144,15 @@ WSGI_APPLICATION = 'iqac_project.wsgi.application'
 # DATABASE
 # ──────────────────────────────────────────────────────────────────────────────
 
-
-DATABASE_URL = os.getenv("DATABASE_URL", "")
-if DATABASE_URL:
-    DATABASES = {"default": dj_database_url.config(default=DATABASE_URL, conn_max_age=600)}
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
+DATABASES = {
+    "default": dj_database_url.config(
+        env="DATABASE_URL",
+        conn_max_age=600,
+        ssl_require=True,
+    )
+}
+if "railway.internal" in DATABASES["default"].get("HOST", ""):
+    raise RuntimeError("Invalid DB host — still pointing to Railway.")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -161,7 +164,7 @@ AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
-SITE_ID = int(os.getenv("SITE_ID", "2"))
+SITE_ID = 2
 
 
 LOGIN_URL = '/accounts/login/'

@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 
 from core.models import ActivityLog, RoleAssignment
 from emt.models import Student
+from .utils import get_or_create_current_site
 
 
 logger = logging.getLogger(__name__)
@@ -149,3 +150,17 @@ class ActivityLogMiddleware:
             )
 
         return response
+
+
+class EnsureSiteMiddleware:
+    """Guarantee a Site object exists for the current request domain."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        try:
+            get_or_create_current_site(request)
+        except Exception:
+            logger.exception("Failed to ensure Site exists")
+        return self.get_response(request)
