@@ -104,6 +104,10 @@
           <h4><i class="fa-solid fa-file-lines"></i> My Proposals</h4>
           <div id="proposalsList"><div class="empty">Loading…</div></div>
         </div>
+        <div class="proposal-tracker-section" id="memberInbox">
+          <h4><i class="fa-solid fa-inbox"></i> My Tasks</h4>
+          <div id="memberTasksList"><div class="empty">Loading…</div></div>
+        </div>
       </div>
     </section>
 
@@ -134,6 +138,7 @@
         <div class="header-actions">
           <select id="visibilitySelect" class="select">
             <option value="all">All</option>
+            <option value="support">Support</option>
             <option value="private">Private</option>
             <option value="faculty">Faculty</option>
           </select>
@@ -290,9 +295,68 @@
       </form>
     </div>
   </div>
+
+  <!-- Event Details Modal with Chat & Assignment -->
+  <div id="eventDetailsModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h3 id="edmTitle"><i class="fa-regular fa-calendar"></i> Event</h3>
+        <button class="modal-close" id="closeEdm" type="button">&times;</button>
+      </div>
+      <div id="edmBody">
+        <div id="edmMeta" style="margin-bottom:12px;color:#475569;font-size:14px"></div>
+        <div class="form-row">
+          <div class="form-group" style="min-height:200px;">
+            <label>Chat</label>
+            <div id="edmChat" style="border:1px solid var(--border);border-radius:8px;padding:10px;max-height:260px;overflow:auto;background:#fff"></div>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+              <input id="edmInput" type="text" placeholder="Type a message..." style="flex:1" />
+              <button type="button" class="chip-btn" id="edmSend"><i class="fa-regular fa-paper-plane"></i> Send</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Assign Task (Head only)</label>
+            <div style="border:1px solid var(--border);border-radius:8px;padding:10px;background:#fff">
+              <div class="form-group">
+                <label for="assignTo">Assign To (User ID)</label>
+                <input id="assignTo" type="number" placeholder="Enter member user ID" />
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="taskType">Task Type</label>
+                  <input id="taskType" type="text" placeholder="e.g., Poster, Certificate, Coverage" />
+                </div>
+                <div class="form-group">
+                  <label for="taskPriority">Priority</label>
+                  <select id="taskPriority">
+                    <option value="low">Low</option>
+                    <option value="normal" selected>Normal</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="taskDeadline">Deadline</label>
+                  <input id="taskDeadline" type="datetime-local" />
+                </div>
+                <div class="form-group">
+                  <label for="taskDesc">Description</label>
+                  <input id="taskDesc" type="text" placeholder="Short description" />
+                </div>
+              </div>
+              <button type="button" class="chip-btn" id="btnAssignTask"><i class="fa-solid fa-user-check"></i> Assign Task</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 {% endblock %}
 
 {% block scripts_extra %}
 <script src="{% static 'core/js/dashboard.js' %}"></script>
-{% endblock %}
+{% endblock %
