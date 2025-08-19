@@ -53,8 +53,6 @@ from .decorators import admin_required
 from .models import FacultyMeeting
 from .forms import CDLRequestForm, CertificateBatchUploadForm, CDLMessageForm
 
-logger = logging.getLogger(__name__)
-
 # ─────────────────────────────────────────────────────────────
 #  Helpers
 # ─────────────────────────────────────────────────────────────
@@ -108,14 +106,8 @@ class RoleAssignmentFormSet(forms.BaseInlineFormSet):
 #  Auth Views
 # ─────────────────────────────────────────────────────────────
 def login_view(request):
+    """Render the login page."""
     return render(request, "core/login.html")
-    if user is not None:
-        login(request, user)
-        
-        # Log the successful login
-        logger.info(f"User '{user.username}' logged in successfully.")
-        
-        return redirect('dashboard')
 
 def login_page(request):
     return render(request, "login.html")

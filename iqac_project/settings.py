@@ -105,6 +105,7 @@ MIDDLEWARE = [
     'core.middleware.ImpersonationMiddleware',
     'allauth.account.middleware.AccountMiddleware',  # ← allauth middleware
     'core.middleware.ActivityLogMiddleware',
+    'core.middleware.EnsureSiteMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
