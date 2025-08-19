@@ -225,6 +225,10 @@ $(document).ready(function() {
                         const doc = parser.parseFromString(html, 'text/html');
                         const cdlForm = doc.querySelector('#cdl-form');
                         $('#form-panel-content').html(cdlForm ? cdlForm.innerHTML : html);
+                        
+                        // Add submit section after CDL form content
+                        addSubmitSection();
+                        
                         setupCDLForm();
                         setupFormFieldSync();
                         setupTextSectionStorage();
@@ -236,13 +240,17 @@ $(document).ready(function() {
                     })
                     .catch(() => {
                         $('#form-panel-content').html('<div class="form-grid"><p>Failed to load CDL Support form.</p></div>');
+                        addSubmitSection(); // Still add submit section even if CDL form fails
                     });
             } else {
                 $('#form-panel-content').html('<div class="form-grid"><p>CDL Support form not available.</p></div>');
+                addSubmitSection(); // Still add submit section
             }
             return;
         } else {
             formEl.attr('action', originalFormAction);
+            // Remove submit section if it exists when not in CDL support
+            removeSubmitSection();
         }
 
         // Load content for all sections, including basic-info
@@ -2309,6 +2317,7 @@ function getWhyThisEventForm() {
         const nextOrder = currentOrder + 1;
         const nextNavLink = $(`.proposal-nav .nav-link[data-order="${nextOrder}"]`);
         console.log('unlockNextSection:', {section, currentOrder, nextOrder, nextNavLinkLength: nextNavLink.length});
+        
         if (nextNavLink.length) {
             if (nextNavLink.hasClass('disabled')) {
                 nextNavLink.removeClass('disabled');
@@ -2320,7 +2329,10 @@ function getWhyThisEventForm() {
                 console.log('unlockNextSection: nextNavLink already enabled', nextNavLink[0]);
             }
         } else {
-            console.warn('unlockNextSection: nextNavLink not found for order', nextOrder);
+            // This is expected for the last section - no more sections to unlock
+            if (nextOrder <= 7) {
+                console.warn('unlockNextSection: nextNavLink not found for order', nextOrder);
+            }
         }
     }
 
@@ -3008,3 +3020,55 @@ document.addEventListener('DOMContentLoaded', () => {
     btn._wired = true;
   }
 });*/
+
+// Functions to manage submit section visibility
+function addSubmitSection() {
+  // Check if submit section already exists
+  if (document.querySelector('.submit-section')) {
+    return;
+  }
+
+  // Find the form content container
+  const formContent = document.querySelector('#form-panel-content');
+  if (!formContent) {
+    console.error('Form content container not found');
+    return;
+  }
+
+  // Create the submit section HTML with proper application styling
+  const submitSectionHTML = `
+    <div class="submit-section">
+      <h5 class="mb-3" style="color: var(--primary-blue); font-weight: 600;">Submit Proposal</h5>
+      <div class="d-flex gap-3 justify-content-center">
+        <button type="button" class="btn-save-section" onclick="saveDraft()">Save as Draft</button>
+        <button type="submit" class="btn-submit">Submit Proposal</button>
+      </div>
+      <p class="submit-help-text">Review all sections before final submission</p>
+    </div>
+  `;
+
+  // Add the submit section to the form content
+  formContent.insertAdjacentHTML('beforeend', submitSectionHTML);
+}
+
+function removeSubmitSection() {
+  const submitSection = document.querySelector('.submit-section');
+  if (submitSection) {
+    submitSection.remove();
+  }
+}
+
+// Function to manually save draft
+function saveDraft() {
+  if (window.autosaveDraft) {
+    window.autosaveDraft().then(() => {
+      alert('Draft saved successfully!');
+    }).catch((error) => {
+      console.error('Failed to save draft:', error);
+      alert('Failed to save draft. Please try again.');
+    });
+  } else {
+    console.error('Autosave function not available');
+    alert('Save function not available. Please try submitting the form.');
+  }
+}
