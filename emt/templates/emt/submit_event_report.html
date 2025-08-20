@@ -237,28 +237,21 @@
                             </div>
                         </div>
 
-                        <!-- Activities Information Section -->
+                        <!-- Activities Section -->
                         <div class="form-section-header">
-                            <h3>Activities Information</h3>
+                            <h3>Activities Planning</h3>
                         </div>
 
-                        <!-- Pre-rendered activities from proposal -->
-                        <div id="report-activities" class="full-width">
-                            {% for act in proposal_activities %}
-                            <div class="activity-row">
-                                <div class="input-group">
-                                    <label for="activity_name_{{ forloop.counter }}" class="activity-label">Activity {{ forloop.counter }} Name</label>
-                                    <input type="text" id="activity_name_{{ forloop.counter }}" name="activity_name_{{ forloop.counter }}" value="{{ act.activity_name }}">
-                                </div>
-                                <div class="input-group">
-                                    <label for="activity_date_{{ forloop.counter }}" class="date-label">Activity {{ forloop.counter }} Date</label>
-                                    <input type="date" id="activity_date_{{ forloop.counter }}" name="activity_date_{{ forloop.counter }}" value="{{ act.activity_date }}">
-                                </div>
-                                <button type="button" class="remove-activity" data-index="{{ forloop.counter0 }}">Remove</button>
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label for="num-activities-modern">Number of Activities</label>
+                                <input type="number" id="num-activities-modern" name="num_activities" min="1" max="50" value="{{ proposal_activities|length }}" placeholder="Enter number of activities">
+                                <div class="help-text">How many activities will your event include?</div>
                             </div>
-                            {% endfor %}
                         </div>
-                        <button type="button" id="add-activity-btn" class="btn btn-secondary mt-2">Add Activity</button>
+
+                        <!-- Dynamic activities section -->
+                        <div id="dynamic-activities-section" class="full-width"></div>
 
                         <!-- Save Section -->
                         <div class="form-row full-width">

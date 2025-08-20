@@ -1525,9 +1525,40 @@ def submit_event_report(request, proposal_id):
     # Fetch activities for editing in the report form
     activities_qs = EventActivity.objects.filter(proposal=proposal)
     proposal_activities = [
-        {"activity_name": a.name, "activity_date": a.date.isoformat()}
+        {
+            "activity_name": a.name, 
+            "activity_date": a.date.strftime('%Y-%m-%d') if a.date else ''
+        }
         for a in activities_qs
     ]
+
+    # Fetch speakers data for editing
+    speakers_qs = SpeakerProfile.objects.filter(proposal=proposal)
+    speakers_json = [
+        {
+            "name": s.full_name,
+            "designation": s.designation,
+            "organization": s.affiliation,
+            "contact": s.contact_email
+        }
+        for s in speakers_qs
+    ]
+
+    # Get or create content sections for the report
+    try:
+        event_summary = report.event_summary
+    except:
+        event_summary = None
+        
+    try:
+        event_outcomes = report.event_outcomes
+    except:
+        event_outcomes = None
+        
+    try:
+        analysis = report.analysis
+    except:
+        analysis = None
 
     # Pre-fill context with proposal info for readonly/preview display
     context = {
@@ -1536,6 +1567,11 @@ def submit_event_report(request, proposal_id):
         "formset": formset,
         "proposal_activities": proposal_activities,
         "proposal_activities_json": json.dumps(proposal_activities),
+        "speakers_json": json.dumps(speakers_json),
+        "sdg_goals_list": [],  # Add SDG goals if needed
+        "event_summary": event_summary,
+        "event_outcomes": event_outcomes,
+        "analysis": analysis,
     }
     return render(request, "emt/submit_event_report.html", context)
 
