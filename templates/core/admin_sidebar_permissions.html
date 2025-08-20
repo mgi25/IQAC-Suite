@@ -2,123 +2,140 @@
 {% load static %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'core/css/admin_nav_permissions.css' %}">
+<style>
+.perm-tree { border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; background: #fff; }
+.perm-module { padding: 10px 12px; border-bottom: 1px dashed #e5e7eb; }
+.perm-module:last-child { border-bottom: 0; }
+.perm-submods { margin-left: 28px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 6px 14px; padding: 8px 0 0; }
+.muted { color: #6b7280; }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="sidebar-permissions-bg">
-  <div class="sidebar-permissions-container">
-    <h1 class="mb-4">Sidebar Permissions</h1>
-    <form method="post" id="sidebar-permission-form">
-      {% csrf_token %}
-      <div class="sp-selection-row">
-        <div class="sp-field">
-          <label for="user_select">User</label>
-          <select name="user" id="user_select" class="form-select">
-            <option value="">-- Select User --</option>
-            {% for u in users %}
-            <option value="{{ u.id }}" {% if selected_user|default:'' == u.id|stringformat:'s' %}selected{% endif %}>{{ u.username }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="sp-field">
-          <label for="role_select">Role</label>
-          <select name="role" id="role_select" class="form-select">
-            <option value="">-- Select Role --</option>
-            {% for r in roles %}
-            <option value="{{ r }}" {% if selected_role == r %}selected{% endif %}>{{ r|capfirst }}</option>
-            {% endfor %}
-          </select>
-        </div>
+<div class="container py-4">
+  <h1 class="h3 mb-3">Sidebar Permissions</h1>
+  <form method="post" id="permForm">
+    {% csrf_token %}
+    <div class="row g-3 align-items-end">
+      <div class="col-sm-4">
+        <label class="form-label">Organization (optional)</label>
+        <select name="organization" id="orgSelect" class="form-select">
+          <option value="">-- All Organizations --</option>
+          {% for org in organizations %}
+          <option value="{{ org.id }}" {% if selected_org and selected_org.id == org.id %}selected{% endif %}>{{ org.name }}</option>
+          {% endfor %}
+        </select>
       </div>
-
-      <div class="dual-list mt-4">
-        <div class="dual-list-column">
-          <label class="form-label" for="available">Available</label>
-          <input type="text" id="available_filter" class="form-control mb-2" placeholder="Filter">
-          <select id="available" class="form-select" multiple>
-            {% for key,label in nav_items %}
-            {% if not permission or key not in permission.items %}
-            <option value="{{ key }}">{{ label }}</option>
-            {% endif %}
-            {% endfor %}
-          </select>
-        </div>
-
-        <div class="dual-list-buttons">
-          <button type="button" id="add_btn" class="btn btn-outline-primary mb-2" aria-label="Add selected">&gt;</button>
-          <button type="button" id="remove_btn" class="btn btn-outline-primary" aria-label="Remove selected">&lt;</button>
-        </div>
-
-        <div class="dual-list-column">
-          <label class="form-label" for="assigned">Assigned</label>
-          <input type="text" id="assigned_filter" class="form-control mb-2" placeholder="Filter">
-          <select id="assigned" name="items" class="form-select" multiple>
-            {% if permission %}
-            {% for key,label in nav_items %}
-              {% if key in permission.items %}
-              <option value="{{ key }}">{{ label }}</option>
-              {% endif %}
-            {% endfor %}
-            {% endif %}
-          </select>
-        </div>
+      <div class="col-sm-4">
+        <label class="form-label">User</label>
+        <select name="user" id="userSelect" class="form-select">
+          <option value="">-- Select User --</option>
+          {% for u in users %}
+          <option value="{{ u.id }}" {% if selected_user|default:'' == u.id|stringformat:'s' %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
+          {% endfor %}
+        </select>
       </div>
-
-      <div class="text-end mt-3">
-        <button type="submit" class="btn btn-primary">Save</button>
+      <div class="col-sm-4">
+        <label class="form-label">Role (fallback)</label>
+        <select name="role" id="roleSelect" class="form-select">
+          <option value="">-- Select Role --</option>
+          {% for r in roles %}
+          <option value="{{ r }}" {% if selected_role == r %}selected{% endif %}>{{ r|capfirst }}</option>
+          {% endfor %}
+        </select>
       </div>
-    </form>
-  </div>
+    </div>
+
+    <input type="hidden" name="items_json" id="items_json">
+
+    <div class="perm-tree mt-4" id="permTree" data-modules='{{ modules_json|safe }}' data-assigned='{{ assigned_json|safe }}'>
+      <!-- Tree rendered by JS -->
+    </div>
+
+    <div class="text-end mt-3">
+      <button type="submit" class="btn btn-primary">Save</button>
+    </div>
+  </form>
 </div>
 {% endblock %}
 
 {% block scripts_extra %}
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-  function moveOptions(from, to) {
-    Array.from(from.selectedOptions).forEach(function (opt) {
-      opt.selected = false;
-      to.add(opt);
-    });
-  }
+  document.addEventListener('DOMContentLoaded', function(){
+    const treeEl = document.getElementById('permTree');
+    const modules = JSON.parse(treeEl.dataset.modules || '{}');
+    const assigned = JSON.parse(treeEl.dataset.assigned || '{}');
+    const itemsField = document.getElementById('items_json');
 
-  const addBtn = document.getElementById('add_btn');
-  const removeBtn = document.getElementById('remove_btn');
-  const available = document.getElementById('available');
-  const assigned = document.getElementById('assigned');
+    function render(){
+      treeEl.innerHTML = '';
+      Object.keys(modules).forEach(slug => {
+        const mod = modules[slug];
+        const modDiv = document.createElement('div');
+        modDiv.className = 'perm-module';
+        const full = Array.isArray(assigned[slug]) && assigned[slug].length === 0; // [] means full
+        const some = Array.isArray(assigned[slug]) && assigned[slug].length > 0;
 
-  addBtn.addEventListener('click', function () {
-    moveOptions(available, assigned);
+        modDiv.innerHTML = `
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="mod_${slug}" ${full?'checked':''}>
+            <label class="form-check-label" for="mod_${slug}">
+              <strong>${mod.label}</strong>
+              <span class="muted">(${mod.submodules.length || 0} submodules)</span>
+            </label>
+          </div>
+        `;
+        const subsWrap = document.createElement('div');
+        subsWrap.className = 'perm-submods';
+        (mod.submodules||[]).forEach(sm => {
+          const checked = some && assigned[slug].includes(sm.slug);
+          const el = document.createElement('div');
+          el.innerHTML = `
+            <div class="form-check">
+              <input class="form-check-input subcb" data-mod="${slug}" value="${sm.slug}" type="checkbox" id="sub_${slug}_${sm.slug}" ${checked?'checked':''} ${full?'disabled':''}>
+              <label class="form-check-label" for="sub_${slug}_${sm.slug}">${sm.label}</label>
+            </div>
+          `;
+          subsWrap.appendChild(el);
+        });
+        modDiv.appendChild(subsWrap);
+
+        treeEl.appendChild(modDiv);
+
+        const modCb = modDiv.querySelector(`#mod_${slug}`);
+        modCb.addEventListener('change', (e)=>{
+          if(e.target.checked){
+            assigned[slug] = []; // full
+            modDiv.querySelectorAll('.subcb').forEach(cb=>{ cb.checked=false; cb.disabled=true; });
+          }else{
+            assigned[slug] = undefined; // remove unless subs set later
+            modDiv.querySelectorAll('.subcb').forEach(cb=>{ cb.disabled=false; });
+          }
+          sync();
+        });
+
+        modDiv.querySelectorAll('.subcb').forEach(cb=>{
+          cb.addEventListener('change', ()=>{
+            const sel = Array.from(modDiv.querySelectorAll('.subcb')).filter(x=>x.checked).map(x=>x.value);
+            if(sel.length){ assigned[slug] = sel; } else { delete assigned[slug]; }
+            // If all selected, you may choose to compress to [] => full. Keep explicit list for clarity.
+            modCb.checked = false;
+            modDiv.querySelectorAll('.subcb').forEach(x=>x.disabled=false);
+            sync();
+          });
+        });
+      });
+
+      sync();
+    }
+
+    function sync(){
+      // Clean undefined keys
+      Object.keys(assigned).forEach(k=>{ if(assigned[k]===undefined){ delete assigned[k]; }});
+      itemsField.value = JSON.stringify(assigned);
+    }
+
+    render();
   });
-
-  removeBtn.addEventListener('click', function () {
-    moveOptions(assigned, available);
-  });
-
-  document.getElementById('sidebar-permission-form').addEventListener('submit', function () {
-    Array.from(assigned.options).forEach(function (opt) {
-      opt.selected = true;
-    });
-  });
-
-  function filterList(input, select) {
-    const term = input.value.toLowerCase();
-    Array.from(select.options).forEach(function (opt) {
-      const show = opt.text.toLowerCase().includes(term);
-      opt.style.display = show ? '' : 'none';
-    });
-  }
-
-  const availableFilter = document.getElementById('available_filter');
-  const assignedFilter = document.getElementById('assigned_filter');
-
-  availableFilter.addEventListener('keyup', function () {
-    filterList(availableFilter, available);
-  });
-  assignedFilter.addEventListener('keyup', function () {
-    filterList(assignedFilter, assigned);
-  });
-});
 </script>
 {% endblock %}

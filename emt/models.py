@@ -448,3 +448,60 @@ class Student(models.Model):
 
     def __str__(self):
         return self.user.get_full_name() or self.user.username
+
+# ────────────────────────────────────────────────────────────────
+#  EVENT TASKS (Assignment Manager)
+# ────────────────────────────────────────────────────────────────
+class EventTask(models.Model):
+    class Priority(models.TextChoices):
+        LOW = 'low', 'Low'
+        NORMAL = 'normal', 'Normal'
+        HIGH = 'high', 'High'
+        URGENT = 'urgent', 'Urgent'
+
+    class Status(models.TextChoices):
+        ASSIGNED = 'assigned', 'Assigned'
+        IN_PROGRESS = 'in_progress', 'In Progress'
+        COMPLETED = 'completed', 'Completed'
+        RETURNED = 'returned', 'Returned'
+
+    proposal = models.ForeignKey(EventProposal, on_delete=models.CASCADE, related_name='tasks')
+    task_type = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    priority = models.CharField(max_length=10, choices=Priority.choices, default=Priority.NORMAL)
+    deadline = models.DateTimeField(null=True, blank=True)
+
+    assigned_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='tasks_created')
+    assigned_to = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tasks_assigned')
+
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.ASSIGNED)
+    progress = models.PositiveIntegerField(default=0, help_text="0-100% progress")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.get_priority_display()} · {self.task_type} for {self.proposal.event_title}"
+
+    @property
+    def event_datetime(self):
+        return self.proposal.event_datetime or None
+
+
+# ────────────────────────────────────────────────────────────────
+#  EVENT CHAT (per proposal thread)
+# ────────────────────────────────────────────────────────────────
+class EventChatMessage(models.Model):
+    proposal = models.ForeignKey(EventProposal, on_delete=models.CASCADE, related_name='chat_messages')
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Chat[{self.proposal_id}] by {self.sender_id} @ {self.created_at:%Y-%m-%d %H:%M}"

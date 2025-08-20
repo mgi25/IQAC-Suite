@@ -747,14 +747,30 @@ class CertificateEntry(models.Model):
         return f"{self.name} ({self.role})"  # pragma: no cover
 
 class SidebarPermission(models.Model):
-    """Stores allowed sidebar navigation items for a user or role."""
+    """Stores allowed sidebar navigation items for a user or role.
+
+    items now stores hierarchical mapping:
+        { module_slug: [sub_slug, ...] }
+    Convention: empty list [] means ALL submodules for that module.
+    """
     user = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE)
+    # Role label (OrganizationRole.name) kept as string to avoid cross-app coupling in this model
     role = models.CharField(max_length=50, blank=True)
-    items = models.JSONField(default=list, blank=True)
+    # Optional organization scope for org-specific permissions
+    organization = models.ForeignKey('Organization', null=True, blank=True, on_delete=models.CASCADE)
+    # Hierarchical items
+    items = models.JSONField(default=dict, blank=True)
 
     class Meta:
-        unique_together = ("user", "role")
+        unique_together = ("user", "role", "organization")
 
     def __str__(self):
-        target = self.user.username if self.user else self.role or "(unspecified)"
+        parts = []
+        if self.user:
+            parts.append(self.user.username)
+        if self.role:
+            parts.append(self.role)
+        if self.organization:
+            parts.append(f"@{self.organization_id}")
+        target = ", ".join(parts) if parts else "(unspecified)"
         return f"Sidebar permissions for {target}"

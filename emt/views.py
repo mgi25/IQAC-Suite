@@ -16,7 +16,8 @@ from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
     EventExpectedOutcomes, TentativeFlow, EventActivity,
     ExpenseDetail, IncomeDetail, SpeakerProfile, EventReport,
-    EventReportAttachment, CDLSupport, CDLCertificateRecipient, CDLMessage, Student
+    EventReportAttachment, CDLSupport, CDLCertificateRecipient, CDLMessage, Student,
+    EventTask, EventChatMessage
 )
 from .forms import (
     EventProposalForm, NeedAnalysisForm, ExpectedOutcomesForm,
@@ -62,7 +63,7 @@ from django.contrib import messages
 from django.utils import timezone
 from django.db import models
 from .models import MediaRequest
-from datetime import timedelta
+from datetime import timedelta, datetime
 from django.utils.timezone import now
 from django.db.models import Sum
 import google.generativeai as genai
@@ -1930,6 +1931,283 @@ def admin_reports_view(request):
         logger.error(f"Error in admin_reports_view: {e}", exc_info=True)
         return HttpResponse(f"An error occurred: {e}", status=500)
 
+# ──────────────────────────────────────────────────────────────
+# Calendar & Events APIs (role-aware)
+# ──────────────────────────────────────────────────────────────
+@login_required
+@require_http_methods(["GET"])
+def api_calendar_role_events(request):
+    """Return events for calendar by user role:
+    - Head: all events requiring support (has CDLSupport.needs_support=True) or status in submitted/under_review
+    - Member: events where user is assigned a task
+    - Proposer: events created by the user
+    Optional filter: ?filter=all|support
+    """
+    user = request.user
+    flt = (request.GET.get('filter') or 'all').lower()
+
+    # Identify roles
+    role_names = set(r.role.name.lower() for r in user.role_assignments.select_related('role'))
+    is_head = any('head' in rn or 'hod' in rn for rn in role_names) or user.is_superuser
+    is_member = any(rn in ("faculty", "member") for rn in role_names)
+
+    items = []
+    base_q = EventProposal.objects.all()
+    if is_head:
+        qs = base_q.filter(
+            models.Q(status__in=[EventProposal.Status.SUBMITTED, EventProposal.Status.UNDER_REVIEW]) |
+            models.Q(cdl_support__needs_support=True)
+        ).distinct()
+        if flt == 'support':
+            qs = qs.filter(cdl_support__needs_support=True)
+    elif is_member:
+        # events with tasks assigned to me
+        qs = base_q.filter(tasks__assigned_to=user).distinct()
+        if flt == 'support':
+            qs = qs.filter(cdl_support__needs_support=True)
+    else:
+        # proposer
+        qs = base_q.filter(submitted_by=user)
+
+    for e in qs:
+        dt = e.event_datetime or (
+            timezone.make_aware(datetime.combine(e.event_start_date, datetime.min.time())) if e.event_start_date else None
+        )
+        if not dt:
+            continue
+        items.append({
+            "id": e.id,
+            "title": e.event_title,
+            "date": dt.date().isoformat(),
+            "datetime": dt.isoformat(),
+            "venue": e.venue or "",
+            "requires_support": bool(getattr(getattr(e, 'cdl_support', None), 'needs_support', False)),
+        })
+    return JsonResponse({"items": items})
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_events_by_date(request):
+    """Fetch events for a given date (YYYY-MM-DD) considering base visibility:
+    - Head: see all with support or pending; else all approved/finalized
+    - Member: tasks assigned to user
+    - Proposer: own events
+    """
+    from django.utils.dateparse import parse_date
+    date_str = request.GET.get('date')
+    if not date_str:
+        return JsonResponse({"items": []})
+    d = parse_date(date_str)
+    if not d:
+        return JsonResponse({"items": []})
+
+    user = request.user
+    role_names = set(r.role.name.lower() for r in user.role_assignments.select_related('role'))
+    is_head = any('head' in rn or 'hod' in rn for rn in role_names) or user.is_superuser
+    is_member = any(rn in ("faculty", "member") for rn in role_names)
+
+    base_q = EventProposal.objects.filter(
+        models.Q(event_datetime__date=d) |
+        models.Q(event_start_date=d)
+    )
+
+    if is_head:
+        qs = base_q
+    elif is_member:
+        qs = base_q.filter(tasks__assigned_to=user)
+    else:
+        qs = base_q.filter(submitted_by=user)
+
+    items = [{
+        "id": e.id,
+        "title": e.event_title,
+        "datetime": (timezone.localtime(e.event_datetime).isoformat() if e.event_datetime else None),
+        "venue": e.venue,
+    } for e in qs]
+    return JsonResponse({"items": items})
+
+
+# ──────────────────────────────────────────────────────────────
+# Task Assignment APIs (Head only)
+# ──────────────────────────────────────────────────────────────
+def _is_head(user):
+    role_names = set(r.role.name.lower() for r in user.role_assignments.select_related('role'))
+    return any('head' in rn or 'hod' in rn for rn in role_names) or user.is_superuser
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_assign_task(request, proposal_id):
+    if not _is_head(request.user):
+        return JsonResponse({"error": "Only Head can assign tasks"}, status=403)
+    proposal = get_object_or_404(EventProposal, id=proposal_id)
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        data = request.POST
+
+    assignee_id = data.get('assigned_to')
+    task_type = (data.get('task_type') or '').strip()
+    priority = (data.get('priority') or 'normal').lower()
+    deadline = data.get('deadline')
+    description = (data.get('description') or '').strip()
+
+    if not assignee_id or not task_type:
+        return JsonResponse({"error": "assigned_to and task_type are required"}, status=400)
+
+    assignee = get_object_or_404(User, id=assignee_id)
+
+    # Validation: busy at that time (overlap if same datetime)
+    event_dt = proposal.event_datetime
+    if event_dt:
+        busy = EventTask.objects.filter(assigned_to=assignee, proposal__event_datetime=event_dt).exists()
+        if busy:
+            return JsonResponse({"error": "Member already has a task at this event time"}, status=400)
+
+    # Validation: workload overload (e.g., > 5 active tasks)
+    active_count = EventTask.objects.filter(assigned_to=assignee, status__in=[EventTask.Status.ASSIGNED, EventTask.Status.IN_PROGRESS]).count()
+    if active_count >= 5:
+        return JsonResponse({"error": "Member has too many active tasks"}, status=400)
+
+    # Create task
+    from django.utils.dateparse import parse_datetime
+    deadline_dt = parse_datetime(deadline) if deadline else None
+    task = EventTask.objects.create(
+        proposal=proposal,
+        task_type=task_type,
+        description=description,
+        priority=priority if priority in dict(EventTask.Priority.choices) else EventTask.Priority.NORMAL,
+        deadline=deadline_dt,
+        assigned_by=request.user,
+        assigned_to=assignee,
+    )
+
+    return JsonResponse({"success": True, "task": {
+        "id": task.id,
+        "task_type": task.task_type,
+        "priority": task.priority,
+        "deadline": task.deadline.isoformat() if task.deadline else None,
+        "status": task.status,
+        "assigned_to": assignee.get_full_name() or assignee.username,
+    }})
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_head_assignment_manager(request):
+    if not _is_head(request.user):
+        return JsonResponse({"error": "Forbidden"}, status=403)
+    status_f = request.GET.get('status')
+    priority_f = request.GET.get('priority')
+    type_f = request.GET.get('type')
+    qs = EventTask.objects.select_related('proposal', 'assigned_to')
+    if status_f:
+        qs = qs.filter(status=status_f)
+    if priority_f:
+        qs = qs.filter(priority=priority_f)
+    if type_f:
+        qs = qs.filter(task_type__iexact=type_f)
+    items = [{
+        "id": t.id,
+        "proposal_id": t.proposal_id,
+        "event_title": t.proposal.event_title,
+        "task_type": t.task_type,
+        "priority": t.priority,
+        "deadline": t.deadline.isoformat() if t.deadline else None,
+        "status": t.status,
+        "assignee": t.assigned_to.get_full_name() or t.assigned_to.username,
+        "progress": t.progress,
+    } for t in qs.order_by('-created_at')]
+    return JsonResponse({"items": items})
+
+
+@login_required
+@require_http_methods(["GET", "POST"]) 
+def api_member_tasks(request):
+    user = request.user
+    if request.method == 'GET':
+        qs = EventTask.objects.filter(assigned_to=user).select_related('proposal')
+        items = [{
+            "id": t.id,
+            "proposal_id": t.proposal_id,
+            "event_title": t.proposal.event_title,
+            "task_type": t.task_type,
+            "priority": t.priority,
+            "deadline": t.deadline.isoformat() if t.deadline else None,
+            "status": t.status,
+            "progress": t.progress,
+        } for t in qs.order_by('-created_at')]
+        return JsonResponse({"items": items})
+
+    # POST: update progress or request rework
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        data = request.POST
+    task_id = data.get('task_id')
+    action = (data.get('action') or '').lower()
+    t = get_object_or_404(EventTask, id=task_id, assigned_to=user)
+    if action == 'progress':
+        progress = int(data.get('progress') or 0)
+        t.progress = max(0, min(100, progress))
+        if t.progress >= 100:
+            t.status = EventTask.Status.COMPLETED
+        else:
+            t.status = EventTask.Status.IN_PROGRESS
+        t.save(update_fields=['progress', 'status', 'updated_at'])
+        return JsonResponse({"success": True})
+    elif action == 'rework':
+        t.status = EventTask.Status.RETURNED
+        t.save(update_fields=['status', 'updated_at'])
+        return JsonResponse({"success": True})
+    return JsonResponse({"error": "Invalid action"}, status=400)
+
+
+# ──────────────────────────────────────────────────────────────
+# Event Chat APIs
+# ──────────────────────────────────────────────────────────────
+def _can_chat(user, proposal: EventProposal) -> bool:
+    # Head can chat on all; proposer on own; assigned members on assigned events
+    if _is_head(user):
+        return True
+    if proposal.submitted_by_id == user.id:
+        return True
+    return EventTask.objects.filter(proposal=proposal, assigned_to=user).exists()
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_event_chat_list(request, proposal_id):
+    p = get_object_or_404(EventProposal, id=proposal_id)
+    if not _can_chat(request.user, p):
+        return JsonResponse({"error": "Forbidden"}, status=403)
+    messages_qs = p.chat_messages.select_related('sender').all()
+    items = [{
+        "id": m.id,
+        "sender": m.sender.get_full_name() or m.sender.username,
+        "sender_role": getattr(getattr(m.sender, 'profile', None), 'role', 'user') or 'user',
+        "message": m.message,
+        "created_at": timezone.localtime(m.created_at).isoformat(),
+    } for m in messages_qs]
+    return JsonResponse({"items": items})
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_event_chat_send(request, proposal_id):
+    p = get_object_or_404(EventProposal, id=proposal_id)
+    if not _can_chat(request.user, p):
+        return JsonResponse({"error": "Forbidden"}, status=403)
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        data = request.POST
+    msg = (data.get('message') or '').strip()
+    if not msg:
+        return JsonResponse({"error": "Message required"}, status=400)
+    m = EventChatMessage.objects.create(proposal=p, sender=request.user, message=msg)
+    return JsonResponse({"success": True, "id": m.id, "created_at": timezone.localtime(m.created_at).isoformat()})
 def _basic_info_context(data):
     parts = []
     title = (data.get("title") or "").strip()

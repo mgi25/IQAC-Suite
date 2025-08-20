@@ -1442,55 +1442,71 @@ def admin_settings_dashboard(request):
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def admin_sidebar_permissions(request):
-    """Allow admin to configure sidebar items per user or role."""
+    """Allow admin to configure sidebar items per user or role with org scope."""
     from django.contrib.auth.models import User
+    from .models import SidebarPermission, Organization
+    from .sidebar import MODULES
+    import json as _json
 
-    roles = ["admin", "faculty", "student"]
+    roles = ["admin", "faculty", "student", "hod", "club_convenor", "event_coordinator", "committee_member", "iqac_member"]
     users = User.objects.all().order_by("username")
+    organizations = Organization.objects.filter(is_active=True).order_by("name")
 
-    nav_items = [
-        ("dashboard", "Dashboard"),
-        ("events", "Event Management Suite"),
-        ("transcript", "Graduate Transcript"),
-        ("cdl", "CDL"),
-        ("pso_psos", "POs & PSOs Management"),
-        ("user_management", "User Management"),
-        ("event_proposals", "Event Proposals"),
-        ("reports", "Reports"),
-        ("settings", "Settings"),
-    ]
+    selected_user = request.GET.get("user") or None
+    selected_role = request.GET.get("role") or ""
+    selected_org_id = request.GET.get("organization") or None
+    selected_org = Organization.objects.filter(id=selected_org_id).first() if selected_org_id else None
 
-    selected_user = request.GET.get("user")
-    selected_role = request.GET.get("role")
-    permission = None
-    from .models import SidebarPermission
-    if selected_user:
-        permission = SidebarPermission.objects.filter(user_id=selected_user).first()
-    elif selected_role:
-        permission = SidebarPermission.objects.filter(role=selected_role).first()
+    # Load existing permission if any
+    permission = SidebarPermission.objects.filter(
+        user_id=selected_user if selected_user else None,
+        role=selected_role,
+        organization=selected_org,
+    ).first()
 
     if request.method == "POST":
         target_user = request.POST.get("user") or None
         target_role = request.POST.get("role") or ""
-        items = request.POST.getlist("items")
+        org_id = request.POST.get("organization") or None
+        target_org = Organization.objects.filter(id=org_id).first() if org_id else None
+        items_json = request.POST.get("items_json") or "{}"
+        try:
+            items = _json.loads(items_json)
+        except Exception:
+            items = {}
 
         permission, _ = SidebarPermission.objects.get_or_create(
             user_id=target_user if target_user else None,
             role=target_role,
+            organization=target_org,
         )
         permission.items = items
         permission.save()
         messages.success(request, "Sidebar permissions updated")
-        logger.info("Sidebar permissions updated for user=%s role=%s", target_user, target_role)
+        logger.info("Sidebar permissions updated for user=%s role=%s org=%s", target_user, target_role, getattr(target_org,'id',None))
         return redirect("admin_sidebar_permissions")
+
+    # Modules JSON for template tree
+    modules_json = {
+        k: {
+            "slug": v.slug,
+            "label": v.label,
+            "icon": v.icon,
+            "url": v.url,
+            "submodules": [{"slug": s.slug, "label": s.label, "url": s.url} for s in v.submodules],
+        } for k, v in MODULES.items()
+    }
+    assigned_json = permission.items if permission else {}
 
     context = {
         "roles": roles,
         "users": users,
-        "nav_items": nav_items,
-        "permission": permission,
+        "organizations": organizations,
         "selected_user": selected_user,
         "selected_role": selected_role,
+        "selected_org": selected_org,
+    "modules_json": _json.dumps(modules_json),
+    "assigned_json": _json.dumps(assigned_json or {}),
     }
     return render(request, "core/admin_sidebar_permissions.html", context)
 
