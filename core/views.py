@@ -1482,7 +1482,12 @@ def admin_sidebar_permissions(request):
         permission.save()
         messages.success(request, "Sidebar permissions updated")
         logger.info("Sidebar permissions updated for user=%s role=%s", target_user, target_role)
-        return redirect("admin_sidebar_permissions")
+        redirect_url = reverse("admin_sidebar_permissions")
+        if target_user:
+            redirect_url += f"?user={target_user}"
+        elif target_role:
+            redirect_url += f"?role={target_role}"
+        return redirect(redirect_url)
 
     context = {
         "roles": roles,

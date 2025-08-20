@@ -76,6 +76,26 @@
 {% block scripts_extra %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+  const userSelect = document.getElementById('user_select');
+  const roleSelect = document.getElementById('role_select');
+
+  userSelect.addEventListener('change', function () {
+    if (this.value) {
+      roleSelect.value = '';
+      window.location = '?user=' + this.value;
+    } else {
+      window.location = window.location.pathname;
+    }
+  });
+
+  roleSelect.addEventListener('change', function () {
+    if (this.value) {
+      userSelect.value = '';
+      window.location = '?role=' + this.value;
+    } else {
+      window.location = window.location.pathname;
+    }
+  });
   function moveOptions(from, to) {
     Array.from(from.selectedOptions).forEach(function (opt) {
       opt.selected = false;
