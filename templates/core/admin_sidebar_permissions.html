@@ -3,6 +3,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'core/css/admin_nav_permissions.css' %}">
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet"/>
 {% endblock %}
 
 {% block content %}
@@ -14,7 +15,7 @@
       <div class="sp-selection-row">
         <div class="sp-field">
           <label for="user_select">User</label>
-          <select name="user" id="user_select" class="form-select">
+          <select name="user" id="user_select" class="form-select" placeholder="Search user...">
             <option value="">-- Select User --</option>
             {% for u in users %}
             <option value="{{ u.id }}" {% if selected_user|default:'' == u.id|stringformat:'s' %}selected{% endif %}>{{ u.username }}</option>
@@ -23,7 +24,7 @@
         </div>
         <div class="sp-field">
           <label for="role_select">Role</label>
-          <select name="role" id="role_select" class="form-select">
+          <select name="role" id="role_select" class="form-select" placeholder="Search role...">
             <option value="">-- Select Role --</option>
             {% for r in roles %}
             <option value="{{ r }}" {% if selected_role == r %}selected{% endif %}>{{ r|capfirst }}</option>
@@ -74,8 +75,13 @@
 {% endblock %}
 
 {% block scripts_extra %}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+  // Enable TomSelect typeahead for user and role selects
+  new TomSelect('#user_select', {allowEmptyOption: true});
+  new TomSelect('#role_select', {allowEmptyOption: true});
+
   function moveOptions(from, to) {
     Array.from(from.selectedOptions).forEach(function (opt) {
       opt.selected = false;

@@ -224,7 +224,7 @@
                                 <label for="attendance-modern">Attendance *</label>
                                 <input type="text" id="attendance-modern" readonly placeholder="Select participants">
                                 <input type="hidden" id="num-participants-modern" name="num_participants" value="{{ form.num_participants.value|default:'' }}">
-                                <div class="help-text">Select attendees; counts update automatically. <a href="{% url 'emt:download_audience_csv' proposal.id %}">Download CSV</a></div>
+                                <div class="help-text">Select attendees; counts update automatically. <a href="{% url 'emt:download_audience_csv' proposal.id %}?type=students">Student CSV</a> | <a href="{% url 'emt:download_audience_csv' proposal.id %}?type=faculty">Faculty CSV</a></div>
                                 {% if form.num_participants.errors %}
                                     <div class="field-error">{{ form.num_participants.errors.0 }}</div>
                                 {% endif %}
@@ -303,8 +303,12 @@
 <!-- Attendance Modal -->
 <div id="attendanceModal" class="attendance-modal">
     <div class="modal-content">
-        <h3>Select Participants</h3>
-        <div id="attendanceOptions" class="attendance-options"></div>
+        <h3>Upload Attendance</h3>
+        <div class="upload-row" style="margin-bottom: 15px;">
+            <label>Student CSV <input type="file" id="studentCsv" accept=".csv"></label>
+            <label style="margin-left:10px;">Faculty CSV <input type="file" id="facultyCsv" accept=".csv"></label>
+        </div>
+        <div id="attendanceList" class="attendance-options"></div>
         <div class="modal-actions" style="margin-top: 20px; text-align: center;">
             <button type="button" id="attendanceCancel" class="btn-draft-section" style="margin-right: 10px;">Cancel</button>
             <button type="button" id="attendanceSave" class="btn-save-section">Save Attendance</button>
@@ -357,5 +361,6 @@
             sdg_goals: "{{ proposal.sdg_goals|default:'' }}"
         };
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <script src="{% static 'emt/js/submit_event_report.js' %}"></script>
 {% endblock %}

@@ -54,15 +54,20 @@ def active_academic_year(request):
 def sidebar_permissions(request):
     """Provide allowed sidebar items for the current user or role."""
     if not request.user.is_authenticated:
-        return {"allowed_nav_items": None}
-    items = None
+        return {"allowed_nav_items": []}
+
+    if request.user.is_superuser or request.session.get("role") == "admin":
+        return {"allowed_nav_items": []}
+
+    items = []
     perm = SidebarPermission.objects.filter(user=request.user).first()
-    if perm:
+    if perm and isinstance(perm.items, list):
         items = perm.items
     else:
         role = request.session.get("role")
         if role:
             perm = SidebarPermission.objects.filter(role=role).first()
-            if perm:
+            if perm and isinstance(perm.items, list):
                 items = perm.items
+
     return {"allowed_nav_items": items}
