@@ -4,6 +4,7 @@ from datetime import timedelta
 from emt.models import EventProposal
 from transcript.models import get_active_academic_year
 from .models import SidebarPermission
+from .sidebar import MODULES, normalize_items
 
 def notifications(request):
     """Return proposal-related notifications for the logged-in user."""
@@ -52,17 +53,55 @@ def active_academic_year(request):
 
 
 def sidebar_permissions(request):
-    """Provide allowed sidebar items for the current user or role."""
+    """Provide allowed sidebar items for the current user or role.
+
+    Returns:
+      allowed_nav_tree: dict normalized hierarchical structure used by base.html
+      allowed_nav_items: legacy flat list for backward checks (derived from tree)
+    """
     if not request.user.is_authenticated:
-        return {"allowed_nav_items": None}
-    items = None
-    perm = SidebarPermission.objects.filter(user=request.user).first()
-    if perm:
-        items = perm.items
-    else:
-        role = request.session.get("role")
-        if role:
-            perm = SidebarPermission.objects.filter(role=role).first()
-            if perm:
-                items = perm.items
-    return {"allowed_nav_items": items}
+        return {"allowed_nav_items": None, "allowed_nav_tree": None, "sidebar_modules": MODULES}
+
+    user = request.user
+    role = request.session.get("role") or getattr(getattr(user, 'profile', None), 'role', '')
+    org_id = request.session.get("active_organization_id")  # optional, if your app sets this
+
+    # Fetch in precedence order: user@org, user global, role@org, role global
+    perms_qs = SidebarPermission.objects.none()
+    try:
+        q = SidebarPermission.objects
+        filters = []
+        if org_id:
+            filters.append(q.filter(user=user, organization_id=org_id))
+            filters.append(q.filter(role=role or '', organization_id=org_id))
+        filters.append(q.filter(user=user, organization__isnull=True))
+        filters.append(q.filter(role=role or '', organization__isnull=True))
+        perms_qs = filters[0]
+        for extra in filters[1:]:
+            perms_qs = perms_qs.union(extra)
+    except Exception:
+        pass
+
+    # Merge items: later entries have lower precedence; apply in our desired order
+    merged: dict = {}
+    for p in perms_qs:
+        data = normalize_items(p.items)
+        for mod, subs in data.items():
+            if mod not in merged:
+                merged[mod] = list(subs)
+            else:
+                # If existing is [], it means full access, keep []
+                if merged[mod] == []:
+                    continue
+                if subs == []:
+                    merged[mod] = []
+                else:
+                    merged[mod] = sorted(list(set(merged[mod]) | set(subs)))
+
+    # Legacy flat list for old checks
+    flat = sorted(merged.keys()) if merged else None
+    return {
+        "allowed_nav_items": flat,
+        "allowed_nav_tree": merged or None,
+        "sidebar_modules": MODULES,
+    }
