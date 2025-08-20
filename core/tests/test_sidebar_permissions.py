@@ -32,3 +32,17 @@ class SidebarPermissionsTests(TestCase):
         request = self._request(session={"role": "student"})
         ctx = sidebar_permissions(request)
         self.assertEqual(ctx["allowed_nav_items"], ["dashboard"])
+
+    def test_superuser_bypasses_permissions(self):
+        self.user.is_superuser = True
+        self.user.save()
+        SidebarPermission.objects.create(user=self.user, items=["dashboard"])
+        request = self._request()
+        ctx = sidebar_permissions(request)
+        self.assertEqual(ctx["allowed_nav_items"], [])
+
+    def test_admin_role_bypasses_permissions(self):
+        SidebarPermission.objects.create(role="admin", items=["dashboard"])
+        request = self._request(session={"role": "admin"})
+        ctx = sidebar_permissions(request)
+        self.assertEqual(ctx["allowed_nav_items"], [])
