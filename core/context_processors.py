@@ -56,6 +56,9 @@ def sidebar_permissions(request):
     if not request.user.is_authenticated:
         return {"allowed_nav_items": []}
 
+    if request.user.is_superuser or request.session.get("role") == "admin":
+        return {"allowed_nav_items": []}
+
     items = []
     perm = SidebarPermission.objects.filter(user=request.user).first()
     if perm and isinstance(perm.items, list):
