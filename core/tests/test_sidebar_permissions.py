@@ -3,6 +3,7 @@ from django.contrib.auth.models import User, AnonymousUser
 
 from core.context_processors import sidebar_permissions
 from core.models import SidebarPermission
+from core.sidebar import MODULES
 
 
 class SidebarPermissionsTests(TestCase):
@@ -39,10 +40,10 @@ class SidebarPermissionsTests(TestCase):
         SidebarPermission.objects.create(user=self.user, items=["dashboard"])
         request = self._request()
         ctx = sidebar_permissions(request)
-        self.assertEqual(ctx["allowed_nav_items"], [])
+        self.assertEqual(ctx["allowed_nav_items"], sorted(MODULES.keys()))
 
     def test_admin_role_bypasses_permissions(self):
         SidebarPermission.objects.create(role="admin", items=["dashboard"])
         request = self._request(session={"role": "admin"})
         ctx = sidebar_permissions(request)
-        self.assertEqual(ctx["allowed_nav_items"], [])
+        self.assertEqual(ctx["allowed_nav_items"], sorted(MODULES.keys()))

@@ -138,14 +138,34 @@ MODULES: Dict[str, Module] = {
 def normalize_items(items: Optional[dict | list]) -> Dict[str, List[str]]:
     """Normalize stored items from legacy list to hierarchical dict.
 
-    - If items is a list (legacy), convert to {key: []} meaning full module.
-    - If items is a dict, ensure values are lists; coerce None to [].
-    - Unknown keys are left as-is (safe forward-compat).
+    The function is tolerant of a few different input shapes:
+
+    - If ``items`` is a list (legacy format), convert to ``{key: []}`` meaning
+      full access to that module.
+    - If ``items`` is a dict, coerce each value to a ``list``. ``None``/``True``
+      (or any other non-iterable value such as a ``Module`` dataclass) becomes
+      ``[]`` meaning all submodules are allowed.
+    - Unknown input types return an empty dict for safety.
     """
+
     if not items:
         return {}
+
     if isinstance(items, list):
+        # Legacy flat list of module slugs
         return {str(k): [] for k in items}
+
     if isinstance(items, dict):
-        return {str(k): ([] if v in (None, True) else list(v)) for k, v in items.items()}
+        normalized: Dict[str, List[str]] = {}
+        for k, v in items.items():
+            if v in (None, True):
+                normalized[str(k)] = []
+            elif isinstance(v, (list, tuple, set)):
+                normalized[str(k)] = list(v)
+            else:
+                # When given Module objects or other non-iterables, treat as
+                # full access to that module
+                normalized[str(k)] = []
+        return normalized
+
     return {}
