@@ -1607,7 +1607,7 @@ def download_audience_csv(request, proposal_id):
         ]
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
 
-    writer = csv.writer(response)
+    writer = csv.writer(response, quoting=csv.QUOTE_MINIMAL)
     writer.writerow(headers)
     for name in names:
         writer.writerow(["", name, "", "", ""])
