@@ -55,16 +55,23 @@ def sidebar_permissions(request):
     """Provide allowed sidebar items for the current user or role."""
     if not request.user.is_authenticated:
         return {"allowed_nav_items": None}
-    if request.user.is_superuser or request.session.get("role") == "admin":
+
+    session_role = request.session.get("role")
+    if request.user.is_superuser or (
+        session_role and session_role.lower() == "admin"
+    ):
         return {"allowed_nav_items": []}
+
     items = None
-    perm = SidebarPermission.objects.filter(user=request.user).first()
+    perm = SidebarPermission.objects.filter(
+        user=request.user, role__in=["", None]
+    ).first()
     if perm:
         items = perm.items
-    else:
-        role = request.session.get("role")
-        if role:
-            perm = SidebarPermission.objects.filter(role=role).first()
-            if perm:
-                items = perm.items
+    elif session_role:
+        perm = SidebarPermission.objects.filter(
+            user__isnull=True, role__iexact=session_role
+        ).first()
+        if perm:
+            items = perm.items
     return {"allowed_nav_items": items}

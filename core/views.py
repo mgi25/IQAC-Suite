@@ -1462,27 +1462,40 @@ def admin_sidebar_permissions(request):
 
     selected_user = request.GET.get("user")
     selected_role = request.GET.get("role")
+    if selected_role:
+        selected_role = selected_role.lower()
     permission = None
     from .models import SidebarPermission
     if selected_user:
         permission = SidebarPermission.objects.filter(user_id=selected_user).first()
     elif selected_role:
-        permission = SidebarPermission.objects.filter(role=selected_role).first()
+        permission = SidebarPermission.objects.filter(
+            user__isnull=True, role__iexact=selected_role
+        ).first()
 
     if request.method == "POST":
         target_user = request.POST.get("user") or None
-        target_role = request.POST.get("role") or ""
+        target_role = (request.POST.get("role") or "").lower()
         items = request.POST.getlist("items")
 
-        permission, _ = SidebarPermission.objects.get_or_create(
-            user_id=target_user if target_user else None,
-            role=target_role,
-        )
+        if target_user:
+            permission, _ = SidebarPermission.objects.get_or_create(
+                user_id=target_user, role=""
+            )
+        else:
+            permission, _ = SidebarPermission.objects.get_or_create(
+                user=None, role=target_role
+            )
         permission.items = items
         permission.save()
         messages.success(request, "Sidebar permissions updated")
         logger.info("Sidebar permissions updated for user=%s role=%s", target_user, target_role)
-        return redirect("admin_sidebar_permissions")
+        redirect_url = reverse("admin_sidebar_permissions")
+        if target_user:
+            redirect_url += f"?user={target_user}"
+        elif target_role:
+            redirect_url += f"?role={target_role}"
+        return redirect(redirect_url)
 
     context = {
         "roles": roles,
