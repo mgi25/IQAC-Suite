@@ -62,6 +62,17 @@ class SidebarPermissionsTests(TestCase):
 
         self.assertEqual(result["allowed_nav_items"], ["events"])
 
+    def test_role_permission_case_insensitive(self):
+        """Role matching should ignore case."""
+        user = User.objects.create_user("eve", password="pass")
+        SidebarPermission.objects.create(role="faculty", items=["events"])
+
+        request = self._get_request(user)
+        request.session["role"] = "Faculty"  # Mixed case
+        result = sidebar_permissions(request)
+
+        self.assertEqual(result["allowed_nav_items"], ["events"])
+
     def test_user_permission_overrides_role(self):
         """User-specific permissions override role permissions."""
         user = User.objects.create_user("carol", password="pass")

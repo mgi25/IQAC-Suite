@@ -1462,16 +1462,18 @@ def admin_sidebar_permissions(request):
 
     selected_user = request.GET.get("user")
     selected_role = request.GET.get("role")
+    if selected_role:
+        selected_role = selected_role.lower()
     permission = None
     from .models import SidebarPermission
     if selected_user:
         permission = SidebarPermission.objects.filter(user_id=selected_user).first()
     elif selected_role:
-        permission = SidebarPermission.objects.filter(role=selected_role).first()
+        permission = SidebarPermission.objects.filter(role__iexact=selected_role).first()
 
     if request.method == "POST":
         target_user = request.POST.get("user") or None
-        target_role = request.POST.get("role") or ""
+        target_role = (request.POST.get("role") or "").lower()
         items = request.POST.getlist("items")
 
         permission, _ = SidebarPermission.objects.get_or_create(
