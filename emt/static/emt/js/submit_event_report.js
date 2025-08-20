@@ -1590,7 +1590,19 @@ function setupAttendanceModal() {
     }
 
     function parseCSV(text) {
-        return text.trim().split(/\r?\n/).slice(1).map(line => line.split(','));
+        if (window.Papa) {
+            const result = Papa.parse(text.trim(), { skipEmptyLines: true });
+            return result.data.slice(1).map(row => {
+                const cells = row.map(c => (c || '').trim());
+                while (cells.length < 5) cells.push('');
+                return cells.slice(0, 5);
+            });
+        }
+        return text.trim().split(/\r?\n/).slice(1).map(line => {
+            const cells = line.split(',').map(c => c.trim());
+            while (cells.length < 5) cells.push('');
+            return cells.slice(0, 5);
+        });
     }
 
     function handleFile(file, type) {
@@ -1598,13 +1610,14 @@ function setupAttendanceModal() {
         const reader = new FileReader();
         reader.onload = e => {
             const rows = parseCSV(e.target.result);
-            rows.forEach(row => {
+            rows.forEach(cells => {
+                const [number, name, class_or_dept, absent, student_volunteer] = cells;
                 const obj = {
-                    number: row[0] || '',
-                    name: row[1] || '',
-                    class_or_dept: row[2] || '',
-                    absent: toBool(row[3]),
-                    student_volunteer: toBool(row[4]),
+                    number,
+                    name,
+                    class_or_dept,
+                    absent: toBool(absent),
+                    student_volunteer: toBool(student_volunteer),
                     type
                 };
                 participants.push(obj);
@@ -1640,11 +1653,11 @@ function setupAttendanceModal() {
             list.html('<p>No participants loaded.</p>');
             return;
         }
-        let html = '<table class="attendance-table"><thead><tr><th>Name</th><th>Reg/Emp No</th><th>Class/Dept</th><th>Absent</th><th>Student Volunteer</th></tr></thead><tbody>';
+        let html = '<table class="attendance-table" style="table-layout: fixed; white-space: nowrap;"><thead><tr><th>Name</th><th>Reg/Emp No</th><th>Class/Dept</th><th>Absent</th><th>Student Volunteer</th></tr></thead><tbody>';
         participants.forEach((p, i) => {
             html += `<tr><td>${p.name}</td><td>${p.number || ''}</td><td>${p.class_or_dept || ''}</td>` +
-                    `<td><input type="checkbox" class="absent-toggle" data-index="${i}" ${p.absent ? 'checked' : ''}></td>` +
-                    `<td><input type="checkbox" class="volunteer-toggle" data-index="${i}" ${p.student_volunteer ? 'checked' : ''}></td></tr>`;
+                    `<td><input type="checkbox" class="absent-toggle" data-index="${i}"${p.absent ? ' checked' : ''}></td>` +
+                    `<td><input type="checkbox" class="volunteer-toggle" data-index="${i}"${p.student_volunteer ? ' checked' : ''}></td></tr>`;
         });
         html += '</tbody></table>';
         list.html(html);

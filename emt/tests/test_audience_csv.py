@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.db.models.signals import post_save
 from django.contrib.auth.signals import user_logged_in
 import json
+import csv
 
 from core.signals import create_or_update_user_profile, assign_role_on_login
 from core.models import OrganizationType, Organization, OrganizationRole, RoleAssignment
@@ -38,13 +39,15 @@ class AudienceCSVViewTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "text/csv")
-        content = response.content.decode()
-        self.assertIn(
-            "Registration No,Full Name,Class,Absent,Student Volunteer",
-            content,
+        reader = csv.reader(response.content.decode().splitlines())
+        rows = list(reader)
+        self.assertEqual(
+            rows[0],
+            ["Registration No", "Full Name", "Class", "Absent", "Student Volunteer"],
         )
-        self.assertIn("Bob", content)
-        self.assertIn("Carol", content)
+        self.assertEqual(rows[1][1], "Bob")
+        self.assertEqual(rows[2][1], "Carol")
+        self.assertEqual(len(rows[1]), 5)
 
     def test_download_faculty_audience_csv(self):
         url = reverse("emt:download_audience_csv", args=[self.proposal.id]) + "?type=faculty"
