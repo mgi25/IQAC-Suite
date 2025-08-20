@@ -37,7 +37,10 @@ class AudienceCSVViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "text/csv")
         content = response.content.decode()
-        self.assertIn("Name,Absent,Student Volunteer", content)
+        self.assertIn(
+            "Reg No/Emp No,Full Name,Class,Absent,Student Volunteer",
+            content,
+        )
         self.assertIn("Bob", content)
         self.assertIn("Carol", content)
 

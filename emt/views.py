@@ -1590,9 +1590,15 @@ def download_audience_csv(request, proposal_id):
     )
 
     writer = csv.writer(response)
-    writer.writerow(["Name", "Absent", "Student Volunteer"])
+    writer.writerow([
+        "Reg No/Emp No",
+        "Full Name",
+        "Class",
+        "Absent",
+        "Student Volunteer",
+    ])
     for name in names:
-        writer.writerow([name, "", ""])
+        writer.writerow(["", name, "", "", ""])
 
     logger.info("Generated audience CSV for proposal %s", proposal_id)
     return response

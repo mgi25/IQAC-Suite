@@ -232,7 +232,7 @@
                             <div class="input-group">
                                 <label for="num-volunteers-modern">Number of student volunteers</label>
                                 <input type="number" id="num-volunteers-modern" name="num_student_volunteers" value="{{ form.num_student_volunteers.value|default:'' }}" min="0" placeholder="Enter number of volunteers">
-                                <div class="help-text"><a href="{% url 'emt:download_audience_csv' proposal.id %}">Download CSV</a></div>
+                                <div class="help-text">Automatically calculated from attendance CSV</div>
                                 {% if form.num_student_volunteers.errors %}
                                     <div class="field-error">{{ form.num_student_volunteers.errors.0 }}</div>
                                 {% endif %}
