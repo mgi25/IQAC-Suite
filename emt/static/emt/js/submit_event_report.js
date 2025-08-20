@@ -1647,6 +1647,14 @@ function setupAttendanceModal() {
         const continueBtn = container.find('#attendanceContinue');
         const backBtn = container.find('#attendanceBack');
 
+        // Prepopulate available users from proposal's target audience
+        const initialAudience = (window.PROPOSAL_DATA && window.PROPOSAL_DATA.target_audience)
+            ? window.PROPOSAL_DATA.target_audience.split(',').map(n => n.trim()).filter(Boolean)
+            : [];
+        initialAudience.forEach((name, idx) => {
+            userAvailable.push({ id: `custom-pre-${idx}`, name });
+        });
+
         function filterOptions(input, select) {
             const term = input.val().toLowerCase();
             select.find('option').each(function() {
@@ -1679,8 +1687,18 @@ function setupAttendanceModal() {
             filterOptions($('#attendeeSelectedSearch'), userSelectedSelect);
         }
 
+        // Show step2 immediately if proposal has predefined audience
+        if (initialAudience.length) {
+            renderUserLists();
+            step1.hide();
+            step2.show();
+            continueBtn.hide();
+            $('#attendanceSave').show();
+        }
+
         function updateUserLists() {
-            userAvailable = [];
+            // Preserve custom entries (predefined audience or manually added)
+            userAvailable = userAvailable.filter(u => u.id.startsWith('custom-'));
             if (currentType === 'students') {
                 selected.forEach(cls => {
                     (classStudentMap[cls.id] || []).forEach(stu => {
