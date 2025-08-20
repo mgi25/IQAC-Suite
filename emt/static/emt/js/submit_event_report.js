@@ -1568,6 +1568,11 @@ function setupAttendanceModal() {
             const existing = JSON.parse(notesField.val());
             attendanceField.val(existing.map(p => p.name).join(', '));
             participantInput.val(existing.length);
+            const volunteerCount = existing.filter(p => {
+                const val = String(p.student_volunteer || "").toLowerCase();
+                return ["yes", "true", "1", "y"].includes(val);
+            }).length;
+            volunteerInput.val(volunteerCount).trigger('change').trigger('input');
         } catch (e) {
             // ignore
         }
@@ -1885,12 +1890,15 @@ function setupAttendanceModal() {
         });
 
         $('#attendanceSave').off('click').on('click', () => {
-            const data = userSelected.map(u => ({ name: u.name }));
+            const data = userSelected.map(u => ({ name: u.name, student_volunteer: u.student_volunteer }));
             notesField.val(JSON.stringify(data)).trigger('change').trigger('input');
             attendanceField.val(data.map(d => d.name).join(', ')).trigger('change').trigger('input');
             participantInput.val(data.length).trigger('change').trigger('input');
-            const volunteers = parseInt(volunteerInput.val(), 10) || 0;
-            volunteerInput.val(volunteers).trigger('change').trigger('input');
+            const volunteerCount = data.filter(d => {
+                const val = String(d.student_volunteer || "").toLowerCase();
+                return ["yes", "true", "1", "y"].includes(val);
+            }).length;
+            volunteerInput.val(volunteerCount).trigger('change').trigger('input');
             modal.removeClass('show');
         });
     }
