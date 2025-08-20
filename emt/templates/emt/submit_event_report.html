@@ -97,6 +97,7 @@
             <textarea name="event_summary" hidden>{{ event_summary.content|default_if_none:'' }}</textarea>
             <textarea name="event_outcomes" hidden>{{ event_outcomes.content|default_if_none:'' }}</textarea>
             <textarea name="analysis" hidden>{{ analysis.content|default_if_none:'' }}</textarea>
+            <textarea name="attendance_notes" id="attendance-data" hidden>{{ form.attendance_notes.value|default:'' }}</textarea>
 
             <div class="form-panel" id="form-panel">
                 <div class="form-panel-content" id="form-panel-content">
@@ -294,6 +295,18 @@
         <div class="modal-actions" style="margin-top: 20px; text-align: center;">
             <button type="button" id="sdgCancel" class="btn-draft-section" style="margin-right: 10px;">Cancel</button>
             <button type="button" id="sdgSave" class="btn-save-section">Save Selection</button>
+        </div>
+    </div>
+</div>
+
+<!-- Attendance Modal -->
+<div id="attendanceModal" class="attendance-modal">
+    <div class="modal-content">
+        <h3>Mark Attendance</h3>
+        <div id="participantsList" class="attendance-list"></div>
+        <div class="modal-actions" style="margin-top: 20px; text-align: center;">
+            <button type="button" id="attendanceCancel" class="btn-draft-section" style="margin-right: 10px;">Cancel</button>
+            <button type="button" id="attendanceSave" class="btn-save-section">Save Attendance</button>
         </div>
     </div>
 </div>

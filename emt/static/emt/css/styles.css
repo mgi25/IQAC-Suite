@@ -2631,6 +2631,43 @@ textarea {
     margin-right: 10px;
 }
 
+/* Attendance Modal */
+.attendance-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.attendance-modal.show {
+    display: flex;
+}
+
+.attendance-modal .modal-content {
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.attendance-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.attendance-row input[type="text"] {
+    flex: 1;
+}
+
 /* Navigation States */
 .nav-link.completed {
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
