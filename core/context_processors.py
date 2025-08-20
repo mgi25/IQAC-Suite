@@ -1,50 +1,59 @@
-from django.utils import timezone
-from django.db.models import Q
 from datetime import timedelta
+
+from django.db.models import Q
+from django.utils import timezone
+
 from emt.models import EventProposal
 from transcript.models import get_active_academic_year
+
 from .models import SidebarPermission
 from .sidebar import MODULES, normalize_items
 
+
 def notifications(request):
-    """Return proposal-related notifications for the logged-in user."""
+    """
+    Return proposal-related notifications for the logged-in user.
+
+    Logic:
+    - Show the user's own proposals.
+    - Include proposals that are NOT FINALIZED, or anything updated in the last 2 days.
+    - Limit to the 10 most recently updated proposals.
+    """
     if not request.user.is_authenticated:
-        return {}
+        return {"notifications": []}
 
     two_days_ago = timezone.now() - timedelta(days=2)
+
     proposals = (
         EventProposal.objects
         .filter(submitted_by=request.user)
         .filter(
-            ~Q(status=EventProposal.Status.FINALIZED) |
-            Q(updated_at__gte=two_days_ago)
+            Q(updated_at__gte=two_days_ago) |
+            ~Q(status=EventProposal.Status.FINALIZED)
         )
-        .order_by('-updated_at')[:10]
+        .order_by("-updated_at")[:10]
     )
 
     notif_list = []
     for p in proposals:
-        """Build notification payloads compatible with the header dropdown."""
+        # Build notification payloads compatible with the header dropdown.
         if p.status == EventProposal.Status.REJECTED:
-            n_type = 'alert'
-            icon = 'triangle-exclamation'
-        elif p.status in [EventProposal.Status.SUBMITTED, EventProposal.Status.UNDER_REVIEW]:
-            n_type = 'reminder'
-            icon = 'clock'
+            n_type, icon = "alert", "triangle-exclamation"
+        elif p.status in (EventProposal.Status.SUBMITTED, EventProposal.Status.UNDER_REVIEW):
+            n_type, icon = "reminder", "clock"
         else:
-            n_type = 'info'
-            icon = 'circle-info'
+            n_type, icon = "info", "circle-info"
 
         notif_list.append({
-            'title': p.event_title or 'Event Proposal',
-            'message': p.get_status_display(),
-            'created_at': p.updated_at,
-            'icon': icon,
-            'type': n_type,
-            'is_read': False,
+            "title": p.event_title or "Event Proposal",
+            "message": p.get_status_display(),
+            "created_at": p.updated_at,
+            "icon": icon,
+            "type": n_type,
+            "is_read": False,  # frontend can toggle this per user-session if needed
         })
 
-    return {'notifications': notif_list}
+    return {"notifications": notif_list}
 
 
 def active_academic_year(request):
@@ -52,56 +61,120 @@ def active_academic_year(request):
     return {"active_academic_year": get_active_academic_year()}
 
 
-def sidebar_permissions(request):
-    """Provide allowed sidebar items for the current user or role.
-
-    Returns:
-      allowed_nav_tree: dict normalized hierarchical structure used by base.html
-      allowed_nav_items: legacy flat list for backward checks (derived from tree)
+def _full_access_tree():
     """
-    if not request.user.is_authenticated:
-        return {"allowed_nav_items": None, "allowed_nav_tree": None, "sidebar_modules": MODULES}
+    Produce a normalized tree that represents FULL access to all sidebar modules.
+    normalize_items() accepts MODULES and returns a canonical dict:
+        { "module_key": [] } meaning [] = all sub-items
+    """
+    return normalize_items(MODULES)
 
-    user = request.user
-    role = request.session.get("role") or getattr(getattr(user, 'profile', None), 'role', '')
-    org_id = request.session.get("active_organization_id")  # optional, if your app sets this
 
-    # Fetch in precedence order: user@org, user global, role@org, role global
-    perms_qs = SidebarPermission.objects.none()
-    try:
-        q = SidebarPermission.objects
-        filters = []
-        if org_id:
-            filters.append(q.filter(user=user, organization_id=org_id))
-            filters.append(q.filter(role=role or '', organization_id=org_id))
-        filters.append(q.filter(user=user, organization__isnull=True))
-        filters.append(q.filter(role=role or '', organization__isnull=True))
-        perms_qs = filters[0]
-        for extra in filters[1:]:
-            perms_qs = perms_qs.union(extra)
-    except Exception:
-        pass
+def _merge_permission_items(perms_qs):
+    """
+    Merge a sequence of SidebarPermission records into a single normalized dict.
 
-    # Merge items: later entries have lower precedence; apply in our desired order
-    merged: dict = {}
-    for p in perms_qs:
-        data = normalize_items(p.items)
+    Rules:
+    - If a module has [] in the merged result, it means FULL access to that module; keep it as [].
+    - Otherwise union the allowed sub-items and sort for stability.
+    """
+    merged = {}
+    for perm in perms_qs:
+        data = normalize_items(perm.items or [])
         for mod, subs in data.items():
             if mod not in merged:
                 merged[mod] = list(subs)
+                continue
+            # Existing is full access → keep full access
+            if merged[mod] == []:
+                continue
+            # Incoming is full access → override to full access
+            if subs == []:
+                merged[mod] = []
             else:
-                # If existing is [], it means full access, keep []
-                if merged[mod] == []:
-                    continue
-                if subs == []:
-                    merged[mod] = []
-                else:
-                    merged[mod] = sorted(list(set(merged[mod]) | set(subs)))
+                merged[mod] = sorted(set(merged[mod]) | set(subs))
+    return merged
 
-    # Legacy flat list for old checks
-    flat = sorted(merged.keys()) if merged else None
-    return {
-        "allowed_nav_items": flat,
-        "allowed_nav_tree": merged or None,
+
+def sidebar_permissions(request):
+    """
+    Provide allowed sidebar items for the current user or role.
+
+    Returns (all keys always present for template simplicity):
+      - allowed_nav_tree: dict normalized hierarchical structure used by base.html
+      - allowed_nav_items: legacy flat list for backward checks (derived from tree)
+      - sidebar_modules: original MODULES for rendering (unchanged)
+
+    Precedence for permission records (highest → lowest):
+      1) user@organization
+      2) user (global)
+      3) role@organization
+      4) role (global)
+
+    Special cases:
+      - Unauthenticated: no access (None values)
+      - Superuser or session role 'admin': full access to everything
+    """
+    context = {
+        "allowed_nav_items": None,
+        "allowed_nav_tree": None,
         "sidebar_modules": MODULES,
     }
+
+    if not request.user.is_authenticated:
+        return context
+
+    user = request.user
+    # Pull role from session first; fall back to user.profile.role if present
+    role = request.session.get("role") or getattr(getattr(user, "profile", None), "role", "")
+    org_id = request.session.get("active_organization_id")
+
+    # Superuser or explicit admin role → full access
+    if user.is_superuser or (role and str(role).lower() == "admin"):
+        tree = _full_access_tree()
+        flat = sorted(tree.keys()) if tree else []
+        context.update({
+            "allowed_nav_tree": tree,
+            "allowed_nav_items": flat,
+        })
+        return context
+
+    # Build precedence-ordered list of queries and evaluate each separately
+    # (Using separate queries avoids DB-specific UNION requirements and is clearer.)
+    perms_ordered = []
+
+    # 1) user@organization
+    if org_id:
+        perms_ordered.extend(
+            SidebarPermission.objects.filter(user=user, organization_id=org_id)
+        )
+
+    # 2) user (global)
+    perms_ordered.extend(
+        SidebarPermission.objects.filter(user=user, organization__isnull=True)
+    )
+
+    # 3) role@organization
+    if role and org_id:
+        perms_ordered.extend(
+            SidebarPermission.objects.filter(role=role, organization_id=org_id)
+        )
+
+    # 4) role (global)
+    if role:
+        perms_ordered.extend(
+            SidebarPermission.objects.filter(role=role, organization__isnull=True)
+        )
+
+    merged = _merge_permission_items(perms_ordered)
+
+    # If nothing matched, default to no access (None) letting templates fall back gracefully.
+    # If you want a safer default (e.g., hide nothing), comment below and set merged = _full_access_tree()
+    if merged:
+        flat = sorted(merged.keys())
+        context.update({
+            "allowed_nav_tree": merged,
+            "allowed_nav_items": flat,
+        })
+
+    return context

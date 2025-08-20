@@ -27,6 +27,7 @@ urlpatterns = [
     path('report-success/<int:proposal_id>/', views.report_success, name='report_success'),
     path('download/pdf/<int:proposal_id>/', views.download_pdf, name='download_pdf'),
     path('download/word/<int:proposal_id>/', views.download_word, name='download_word'),
+    path('download/audience-csv/<int:proposal_id>/', views.download_audience_csv, name='download_audience_csv'),
     path('generated-reports/', views.generated_reports, name='generated_reports'),
     path('view-report/<int:report_id>/', views.view_report, name='view_report'),
 

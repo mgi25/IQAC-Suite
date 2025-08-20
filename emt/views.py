@@ -7,6 +7,7 @@ import json
 import re
 from urllib.parse import urlparse
 import requests
+import csv
 from suite.ai_client import chat, AIError
 import time
 from bs4 import BeautifulSoup
@@ -1574,6 +1575,48 @@ def submit_event_report(request, proposal_id):
         "analysis": analysis,
     }
     return render(request, "emt/submit_event_report.html", context)
+
+
+@login_required
+def download_audience_csv(request, proposal_id):
+    """Provide CSV templates for marking attendance separately for students and faculty."""
+    proposal = get_object_or_404(
+        EventProposal, id=proposal_id, submitted_by=request.user
+    )
+
+    audience_type = request.GET.get("type", "students").lower()
+    names = [n.strip() for n in proposal.target_audience.split(',') if n.strip()]
+
+    response = HttpResponse(content_type="text/csv")
+    if audience_type == "faculty":
+        filename = f"faculty_audience_{proposal_id}.csv"
+        headers = [
+            "Employee No",
+            "Full Name",
+            "Department",
+            "Absent",
+            "Student Volunteer",
+        ]
+    else:
+        filename = f"student_audience_{proposal_id}.csv"
+        headers = [
+            "Registration No",
+            "Full Name",
+            "Class",
+            "Absent",
+            "Student Volunteer",
+        ]
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    writer = csv.writer(response, quoting=csv.QUOTE_MINIMAL)
+    writer.writerow(headers)
+    for name in names:
+        writer.writerow(["", name, "", "", ""])
+
+    logger.info(
+        "Generated %s audience CSV for proposal %s", audience_type, proposal_id
+    )
+    return response
 
 @login_required
 def suite_dashboard(request):
