@@ -221,19 +221,13 @@
 
                         <div class="form-row">
                             <div class="input-group">
-                                <label for="num-participants-modern">Number of Participants</label>
-                                <input type="number" id="num-participants-modern" name="num_participants" value="{{ form.num_participants.value|default:'' }}" min="0" placeholder="Enter total participants">
-                                <div class="help-text">Total number of people who attended the event</div>
+                                <label for="attendance-modern">Attendance *</label>
+                                <input type="text" id="attendance-modern" readonly placeholder="Select participants">
+                                <input type="hidden" id="num-participants-modern" name="num_participants" value="{{ form.num_participants.value|default:'' }}">
+                                <input type="hidden" id="num-volunteers-modern" name="num_student_volunteers" value="{{ form.num_student_volunteers.value|default:'' }}">
+                                <div class="help-text">Select attendees; counts update automatically</div>
                                 {% if form.num_participants.errors %}
                                     <div class="field-error">{{ form.num_participants.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                            <div class="input-group">
-                                <label for="num-volunteers-modern">Number of Student Volunteers</label>
-                                <input type="number" id="num-volunteers-modern" name="num_student_volunteers" value="{{ form.num_student_volunteers.value|default:'' }}" min="0" placeholder="Enter volunteer count">
-                                <div class="help-text">Number of students who volunteered for the event</div>
-                                {% if form.num_student_volunteers.errors %}
-                                    <div class="field-error">{{ form.num_student_volunteers.errors.0 }}</div>
                                 {% endif %}
                             </div>
                         </div>
@@ -302,8 +296,8 @@
 <!-- Attendance Modal -->
 <div id="attendanceModal" class="attendance-modal">
     <div class="modal-content">
-        <h3>Mark Attendance</h3>
-        <div id="participantsList" class="attendance-list"></div>
+        <h3>Select Participants</h3>
+        <div id="attendanceOptions" class="attendance-options"></div>
         <div class="modal-actions" style="margin-top: 20px; text-align: center;">
             <button type="button" id="attendanceCancel" class="btn-draft-section" style="margin-right: 10px;">Cancel</button>
             <button type="button" id="attendanceSave" class="btn-save-section">Save Attendance</button>
@@ -331,7 +325,10 @@
         window.AUTOSAVE_URL = "#"; // TODO: Add autosave URL for reports
         window.AUTOSAVE_CSRF = "{{ csrf_token }}";
         window.API_ORGANIZATIONS = "#"; // TODO: Add API URLs
-        window.API_FACULTY = "#"; // TODO: Add API URLs
+        window.API_CLASSES_BASE = "{% url 'emt:api_classes' 0 %}".split('0/')[0];
+        window.API_FACULTY = "{% url 'emt:api_faculty' %}";
+        window.PROPOSAL_ORG_ID = "{{ proposal.organization.id|default:'' }}";
+        window.PROPOSAL_ORG_NAME = "{{ proposal.organization.name|default:'' }}";
         window.API_OUTCOMES_BASE = "#"; // TODO: Add API URLs
         window.SDG_GOALS = {{ sdg_goals_list|default:'[]'|safe }};
         window.PROPOSAL_ACTIVITIES = {{ proposal_activities_json|safe }};
