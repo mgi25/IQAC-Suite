@@ -7,6 +7,7 @@ import json
 import re
 from urllib.parse import urlparse
 import requests
+import csv
 from suite.ai_client import chat, AIError
 import time
 from bs4 import BeautifulSoup
@@ -1573,6 +1574,28 @@ def submit_event_report(request, proposal_id):
         "analysis": analysis,
     }
     return render(request, "emt/submit_event_report.html", context)
+
+
+@login_required
+def download_audience_csv(request, proposal_id):
+    """Provide a CSV template of proposal audience for marking attendance and volunteers."""
+    proposal = get_object_or_404(
+        EventProposal, id=proposal_id, submitted_by=request.user
+    )
+    names = [n.strip() for n in proposal.target_audience.split(',') if n.strip()]
+
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = (
+        f'attachment; filename="audience_{proposal_id}.csv"'
+    )
+
+    writer = csv.writer(response)
+    writer.writerow(["Name", "Absent", "Student Volunteer"])
+    for name in names:
+        writer.writerow([name, "", ""])
+
+    logger.info("Generated audience CSV for proposal %s", proposal_id)
+    return response
 
 @login_required
 def suite_dashboard(request):
