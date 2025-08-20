@@ -85,6 +85,21 @@ class SidebarPermissionsTests(TestCase):
 
         self.assertEqual(result["allowed_nav_items"], ["dashboard"])
 
+    def test_stale_user_role_record_ignored(self):
+        """A user-specific record with a role should not override role defaults."""
+        role_items = ["events"]
+        SidebarPermission.objects.create(role="faculty", items=role_items)
+        user = User.objects.create_user("erin", password="pass")
+        SidebarPermission.objects.create(
+            user=user, role="faculty", items=["dashboard"]
+        )
+
+        request = self._get_request(user)
+        request.session["role"] = "faculty"
+        result = sidebar_permissions(request)
+
+        self.assertEqual(result["allowed_nav_items"], role_items)
+
     def test_user_specific_role_record_does_not_affect_others(self):
         """A user-specific record with a role should not override role defaults."""
         role_items = ["events"]
