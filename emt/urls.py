@@ -65,4 +65,17 @@ urlpatterns = [
     path('api/organization-types/', views.api_organization_types, name='api_organization_types'),
     path('api/outcomes/<int:org_id>/', views.api_outcomes, name='api_outcomes'),
 
+    # Calendar & role-based events
+    path('api/calendar/role/', views.api_calendar_role_events, name='api_calendar_role_events'),
+    path('api/events/by-date/', views.api_events_by_date, name='api_events_by_date'),
+
+    # Tasks
+    path('api/task/assign/<int:proposal_id>/', views.api_assign_task, name='api_assign_task'),
+    path('api/task/head/assignments/', views.api_head_assignment_manager, name='api_head_assignment_manager'),
+    path('api/task/member/', views.api_member_tasks, name='api_member_tasks'),
+
+    # Event chat
+    path('api/chat/<int:proposal_id>/', views.api_event_chat_list, name='api_event_chat_list'),
+    path('api/chat/<int:proposal_id>/send/', views.api_event_chat_send, name='api_event_chat_send'),
+
 ]

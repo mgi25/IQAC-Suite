@@ -99,19 +99,17 @@
   <main class="grid-3 grid-assign">
     <section class="card eq" id="cardInbox">
       <div class="card-header">
-        <h3><i class="fa-regular fa-bell"></i> My Inbox</h3>
+        <h3><i class="fa-regular fa-bell"></i> <span id="inboxTitle">My Events</span></h3>
         <div class="header-actions">
-          <div class="seg">
-            <button class="seg-btn active" data-nf="all">All</button>
-            <button class="seg-btn" data-nf="poster">Posters</button>
-            <button class="seg-btn" data-nf="certificate">Certificates</button>
-            <button class="seg-btn" data-nf="coverage">Coverage</button>
-            <button class="seg-btn" data-nf="media">Media</button>
-          </div>
+          <select id="eventViewFilter" class="select">
+            <option value="all">All Events</option>
+            <option value="assigned" selected>Assigned to Me</option>
+          </select>
+          <button class="chip-btn" id="clearInbox" style="display:none;"><i class="fa-solid fa-times"></i> Clear All</button>
         </div>
       </div>
       <div class="list" id="inboxList"></div>
-      <div class="empty muted" id="inboxEmpty" style="display:none;padding:12px;">No items</div>
+      <div class="empty muted" id="inboxEmpty" style="display:none;padding:12px;">No events to display</div>
     </section>
 
     <section class="card eq" id="cardProgress">
@@ -134,6 +132,10 @@
       <div class="card-header">
         <h3><i class="fa-regular fa-calendar"></i> My Calendar</h3>
         <div class="header-actions">
+          <select id="cdlWorkCalFilter" class="select">
+            <option value="all">All</option>
+            <option value="support">Support</option>
+          </select>
           <a href="{% url 'create_availability' %}" class="chip-btn"><i class="fa-solid fa-plus"></i> Add</a>
         </div>
       </div>
@@ -154,6 +156,27 @@
       <div id="upcomingWrap" class="upcoming"></div>
     </section>
   </main>
+
+  <!-- Event Details Modal with Chat (Member) -->
+  <div id="cdlWorkEventModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h3><i class="fa-regular fa-calendar"></i> Event</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div id="cdlWorkModalBody">
+        <div id="cdlWorkMeta" style="margin-bottom:12px;color:#475569;font-size:14px"></div>
+        <div class="form-group" style="min-height:200px;">
+          <label>Chat</label>
+          <div id="cdlWorkChatMessages" style="border:1px solid var(--border);border-radius:8px;padding:10px;max-height:260px;overflow:auto;background:#fff"></div>
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <input id="cdlWorkChatInput" type="text" placeholder="Type a message..." style="flex:1" />
+            <button class="chip-btn" id="cdlWorkChatSend"><i class="fa-regular fa-paper-plane"></i> Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Row 3 (same table markup) -->
   <section class="card" id="cardWorkboard">

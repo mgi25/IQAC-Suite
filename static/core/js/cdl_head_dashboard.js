@@ -1,102 +1,197 @@
-(function () {
+  (function () {
     const $ = (s, r = document) => r.querySelector(s);
     const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   
-    const NOTIFS = [
-      {id:101, type:'poster',       title:'Business Summit — Poster',       priority:'Urgent',  due:'2025-08-18'},
-      {id:102, type:'certificate',  title:'Tech Fest — Certificates',       priority:'Normal',  due:'2025-08-20'},
-      {id:103, type:'coverage',     title:'AI Workshop — Coverage',         priority:'Normal',  due:'2025-08-19'},
-      {id:104, type:'media',        title:'Cultural Night — Media Upload',  priority:'Urgent',  due:'2025-08-17'},
-    ];
+    let EVENTS = [];
+    let eventIndexByDate = new Map();
+    let selectedDate = null;
+    let currentFilter = 'all';
     let ASSIGN_LIST = [];
-  
-    const EVENTS = (()=>{
-      try { return JSON.parse(document.getElementById('calendarEventsJson').textContent) || []; }
-      catch { return [
-        {id:1, title:'Coverage: Business Summit', date:'2025-08-18', type:'coverage', member:'Priya'},
-        {id:2, title:'Poster Approval: Tech Fest', date:'2025-08-20', type:'approval'},
-        {id:3, title:'Coverage: Cultural Night', date:'2025-08-17', type:'coverage', member:'John'},
-      ]; }
-    })();
-  
+
     function computeKPIs(){
-      const totalActive = NOTIFS.length + ASSIGN_LIST.length;
-      const assetsPending = 0;
-      const unassignedTasks = ASSIGN_LIST.filter(x=>!x.assignee).length;
-      const eventsSupported = 0;
-      $('#valActive').textContent = totalActive;
-      $('#valAssetsPending').textContent = assetsPending;
-      $('#valUnassigned').textContent = unassignedTasks;
-      $('#valEvents').textContent = eventsSupported;
+      // Fetch dynamic KPI data
+      fetchKPIs();
     }
-  
+
+    async function fetchKPIs() {
+      try {
+        const res = await fetch('/emt/api/head/kpis/', { headers: {'X-Requested-With':'XMLHttpRequest'} });
+        const data = await res.json();
+        $('#valActive').textContent = data.active || 0;
+        $('#valAssetsPending').textContent = data.assets_pending || 0;
+        $('#valUnassigned').textContent = data.unassigned || 0;
+        $('#valEvents').textContent = data.events_supported || 0;
+      } catch {
+        // Fallback to computed values
+        const totalActive = EVENTS.length;
+        const unassignedTasks = ASSIGN_LIST.filter(x=>!x.assignee).length;
+        $('#valActive').textContent = totalActive;
+        $('#valAssetsPending').textContent = 0;
+        $('#valUnassigned').textContent = unassignedTasks;
+        $('#valEvents').textContent = 0;
+      }
+    }
+
     // KPIs shortcuts
     $('#kpiActive')?.addEventListener('click', ()=> document.querySelector('#cardNotifications')?.scrollIntoView({behavior:'smooth'}));
     $('#kpiUnassigned')?.addEventListener('click', ()=>{ setAMFilter('unassigned'); document.querySelector('#cardAssignAll')?.scrollIntoView({behavior:'smooth'}); });
-  
-    // Notifications
-    let currentNotifFilter = 'all';
-    function renderNotifications(filter='all'){
+
+    // Dynamic event notifications
+    async function loadEvents() {
+      try {
+        const filter = currentFilter === 'support' ? 'support' : 'all';
+        const res = await fetch(`/emt/api/calendar/role/?filter=${encodeURIComponent(filter)}`, { headers:{'X-Requested-With':'XMLHttpRequest'} });
+        const j = await res.json();
+        EVENTS = j.events || j.items || [];
+        eventIndexByDate = new Map();
+        EVENTS.forEach(e => {
+          const date = new Date(e.datetime).toISOString().split('T')[0];
+          const arr = eventIndexByDate.get(date) || [];
+          arr.push(e);
+          eventIndexByDate.set(date, arr);
+        });
+        renderNotifications();
+        buildCalendar();
+      } catch {
+        EVENTS = [];
+        eventIndexByDate = new Map();
+        renderNotifications();
+        buildCalendar();
+      }
+    }
+
+    function renderNotifications() {
       const list = $('#notifList');
       const empty = $('#notifEmpty');
-      const rows = NOTIFS
-        .filter(n => filter==='all' ? true : n.type === filter.slice(0,-1))
-        .map(n => `
-          <article class="list-item" data-id="${n.id}" data-type="${n.type}">
-            <div class="bullet under_review"><i class="fa-regular fa-bell"></i></div>
-            <div class="list-body">
-              <h4>${n.title}</h4>
-              <p>Priority: ${n.priority} · Due: ${fmt(n.due)}</p>
-            </div>
-            <div class="btn-group">
-              <button class="chip-btn success" data-nact="approve"><i class="fa-solid fa-check"></i> Approve</button>
-              <button class="chip-btn warn" data-nact="decline"><i class="fa-solid fa-xmark"></i> Decline</button>
-            </div>
-          </article>
-        `).join('');
-      list.innerHTML = rows;
-      empty.style.display = rows ? 'none' : 'block';
-  
-      list.querySelectorAll('[data-nact]').forEach(btn=>{
-        btn.addEventListener('click', e=>{
-          const item = e.currentTarget.closest('.list-item');
-          const id = +item.dataset.id;
-          const act = e.currentTarget.dataset.nact;
-  
-          if (act==='approve') {
-            const n = NOTIFS.find(x=>x.id===id);
-            if (n) {
-              ASSIGN_LIST.unshift({
-                id:n.id, event:n.title.split(' — ')[0],
-                type:n.type, priority:n.priority, due:n.due,
-                assignee:null, status:'Pending', rev:0
-              });
-            }
-            const idx = NOTIFS.findIndex(x=>x.id===id);
-            if (idx>-1) NOTIFS.splice(idx,1);
-            renderNotifications(currentNotifFilter);
-            renderAssignTable();
-            computeKPIs();
-          }
-  
-          if (act==='decline') {
-            const idx = NOTIFS.findIndex(x=>x.id===id);
-            if (idx>-1) NOTIFS.splice(idx,1);
-            renderNotifications(currentNotifFilter);
-            computeKPIs();
+      const clearBtn = $('#clearNotifications');
+      
+      let eventsToShow = [];
+      
+      if (selectedDate) {
+        // Filter events by selected date
+        eventsToShow = EVENTS.filter(e => {
+          const eventDate = new Date(e.datetime).toISOString().split('T')[0];
+          return eventDate === selectedDate;
+        });
+        $('#notifTitle').textContent = `Events for ${new Date(selectedDate).toLocaleDateString()}`;
+        clearBtn.style.display = 'inline-flex';
+      } else {
+        // Show all events based on current filter
+        eventsToShow = EVENTS;
+        $('#notifTitle').textContent = currentFilter === 'support' ? 'Support Required Events' : 'All Events';
+        clearBtn.style.display = 'none';
+      }
+
+      if (eventsToShow.length === 0) {
+        list.innerHTML = '';
+        empty.style.display = 'block';
+        empty.textContent = selectedDate ? 'No events for this date' : 'No events found';
+        return;
+      }
+
+      empty.style.display = 'none';
+      list.innerHTML = eventsToShow.map(e => `
+        <article class="list-item" data-id="${e.id}">
+          <div class="bullet under_review"><i class="fa-regular fa-calendar"></i></div>
+          <div class="list-body">
+            <h4>${esc(e.title || 'Event')}</h4>
+            <p>${e.venue ? esc(e.venue) + ' · ' : ''}${e.datetime ? new Date(e.datetime).toLocaleDateString() : ''}</p>
+          </div>
+          <div class="btn-group">
+            <button class="chip-btn" data-action="chat" data-id="${e.id}"><i class="fa-regular fa-comment"></i> Chat</button>
+            <button class="chip-btn success" data-action="assign" data-id="${e.id}"><i class="fa-solid fa-user-plus"></i> Assign Work</button>
+          </div>
+        </article>
+      `).join('');
+
+      // Add event listeners for the buttons
+      list.querySelectorAll('[data-action]').forEach(btn => {
+        btn.addEventListener('click', e => {
+          const eventId = e.currentTarget.dataset.id;
+          const action = e.currentTarget.dataset.action;
+          
+          if (action === 'chat') {
+            openEventChat(eventId);
+          } else if (action === 'assign') {
+            openAssignModal(eventId);
           }
         });
       });
     }
-    $$('.seg-btn[data-nf]').forEach(b=>{
-      b.addEventListener('click', e=>{
-        $$('.seg-btn[data-nf]').forEach(x=>x.classList.remove('active'));
-        e.currentTarget.classList.add('active');
-        currentNotifFilter = e.currentTarget.dataset.nf;
-        renderNotifications(currentNotifFilter);
-      });
+
+    // Event filter
+    $('#eventViewFilter')?.addEventListener('change', e => {
+      currentFilter = e.target.value;
+      selectedDate = null; // Reset date selection
+      loadEvents();
     });
-  
+
+    // Clear notifications
+    $('#clearNotifications')?.addEventListener('click', () => {
+      selectedDate = null;
+      renderNotifications();
+    });
+
+    // Chat functionality
+    function openEventChat(eventId) {
+      const modal = $('#cdlHeadEventModal');
+      const event = EVENTS.find(e => e.id == eventId);
+      
+      if (!event) return;
+      
+      currentProposalId = eventId;
+      modal.style.display = 'flex';
+      $('#cdlHeadMeta').textContent = `${event.title}${event.datetime ? ' · ' + new Date(event.datetime).toLocaleString() : ''}${event.venue ? ' · ' + event.venue : ''}`;
+      
+      // Hide assignment section, show only chat
+      modal.querySelector('.form-row').style.display = 'block';
+      modal.querySelector('.form-group:last-child').style.display = 'none';
+      
+      loadHeadChat();
+    }
+
+    // Assignment functionality
+    async function openAssignModal(eventId) {
+      const modal = $('#cdlHeadEventModal');
+      const event = EVENTS.find(e => e.id == eventId);
+      
+      if (!event) return;
+      
+      currentProposalId = eventId;
+      modal.style.display = 'flex';
+      $('#cdlHeadMeta').textContent = `Assign Work: ${event.title}`;
+      
+      // Show assignment section, hide chat
+      modal.querySelector('.form-row').style.display = 'block';
+      modal.querySelector('.form-group:first-child').style.display = 'none';
+      modal.querySelector('.form-group:last-child').style.display = 'block';
+      
+      // Load available members
+      await loadMembers();
+    }
+
+    async function loadMembers() {
+      try {
+        const res = await fetch('/api/dashboard/people/', { headers: {'X-Requested-With':'XMLHttpRequest'} });
+        const data = await res.json();
+        
+        // Replace user ID input with dropdown
+        const assignToInput = $('#cdlAssignTo');
+        if (assignToInput) {
+          const select = document.createElement('select');
+          select.id = 'cdlAssignTo';
+          select.innerHTML = '<option value="">Select member...</option>' + 
+            data.people
+              .filter(p => p.role && p.role.toLowerCase().includes('member'))
+              .map(p => `<option value="${p.id}">${p.name} (${p.role})</option>`)
+              .join('');
+          assignToInput.parentNode.replaceChild(select, assignToInput);
+        }
+      } catch (error) {
+        console.error('Failed to load members:', error);
+      }
+    }
+    
     // Assignment Manager
     let amFilter = 'all';
     function setAMFilter(f){ amFilter = f; $$('.seg-btn[data-am]').forEach(b=> b.classList.toggle('active', b.dataset.am===f)); renderAssignTable(); }
@@ -188,7 +283,7 @@
     const fmt2 = v => String(v).padStart(2,'0');
     const titleEl = $('#calTitle'), gridEl = $('#calGrid'), upcoming = $('#upcomingWrap');
   
-    function buildCalendar(){
+  function buildCalendar(){
       if(!gridEl||!titleEl) return;
       titleEl.textContent = calRef.toLocaleString(undefined,{month:'long',year:'numeric'});
       const first = new Date(calRef.getFullYear(), calRef.getMonth(), 1);
@@ -204,29 +299,34 @@
       while(cells.length%7!==0) cells.push({t:'',iso:null, muted:true});
   
       gridEl.innerHTML = cells.map(c=>{
-        const dots = buildDots(c.iso);
-        return `<div class="day${c.muted?' muted':''}" data-date="${c.iso||''}">
+        const has = c.iso && eventIndexByDate.has(c.iso);
+        return `<div class="day${c.muted?' muted':''}${has?' has-event':''}" data-date="${c.iso||''}">
           <div class="num">${c.t}</div>
-          <div class="dots">${dots}</div>
         </div>`;
       }).join('');
   
       $$('#calGrid .day[data-date]').forEach(d=> d.addEventListener('click', ()=> openDay(d.dataset.date)));
     }
-    function buildDots(iso){
-      if(!iso) return '';
-      const list = EVENTS.filter(e=>e.date===iso);
-      const hasConflict = (()=>{ const m={}; list.forEach(e=>{ if(e.member){ m[e.member]=(m[e.member]||0)+1; }}); return Object.values(m).some(v=>v>1); })();
-      return list.map(e=>`<span class="dot ${e.type==='coverage'?'blue':'green'}"></span>`).join('') + (hasConflict? `<span class="dot red" title="Conflict"></span>`:'');
-    }
-    function openDay(iso){
-      const items = EVENTS.filter(e=>e.date===iso);
-      upcoming.innerHTML = items.length ? items.map(e=>`
-        <div class="u-item">
-          <div>${e.title}</div>
-          <a class="chip-btn" href="/proposal/${e.id}/detail/"><i class="fa-regular fa-eye"></i> View</a>
-        </div>
-      `).join('') : `<div class="empty">No items for ${new Date(iso).toLocaleDateString()}</div>`;
+    async function openDay(iso){
+      if(!iso) return;
+      selectedDate = iso;
+      renderNotifications();
+      
+      try{
+        const res = await fetch(`/emt/api/events/by-date/?date=${encodeURIComponent(iso)}`, { headers:{'X-Requested-With':'XMLHttpRequest'} });
+        const j = await res.json();
+        const items = j.items||[];
+        upcoming.innerHTML = items.length ? items.map(e=>`
+          <div class="u-item">
+            <div>${e.title}</div>
+            <button class="chip-btn" data-open="${e.id}"><i class="fa-regular fa-eye"></i> View</button>
+          </div>
+        `).join('') : `<div class="empty">No items for this date</div>`;
+        upcoming.querySelectorAll('[data-open]')
+          .forEach(b=> b.addEventListener('click', ()=> openEventChat(b.getAttribute('data-open'))));
+      }catch{
+        upcoming.innerHTML = `<div class="empty">No items for this date</div>`;
+      }
     }
     $('#calPrev')?.addEventListener('click', ()=>{ calRef = new Date(calRef.getFullYear(), calRef.getMonth()-1, 1); buildCalendar(); });
     $('#calNext')?.addEventListener('click', ()=>{ calRef = new Date(calRef.getFullYear(), calRef.getMonth()+1, 1); buildCalendar(); });
@@ -234,19 +334,71 @@
       const scope = $('#calFilter')?.value || 'all';
       e.currentTarget.href = `/suite/submit/?via=dashboard&scope=${encodeURIComponent(scope)}`;
     });
+
+    // Load calendar data from role-aware endpoint
+    async function loadCalendar(){
+      try{
+        const filter = ($('#calFilter')?.value||'all') === 'support' ? 'support' : 'all';
+        const res = await fetch(`/emt/api/calendar/role/?filter=${encodeURIComponent(filter)}`, { headers:{'X-Requested-With':'XMLHttpRequest'} });
+        const j = await res.json();
+        EVENTS = j.items||[];
+        eventIndexByDate = new Map();
+        (EVENTS||[]).forEach(e=>{ if(!e.date) return; const arr=eventIndexByDate.get(e.date)||[]; arr.push(e); eventIndexByDate.set(e.date, arr); });
+      }catch{ EVENTS=[]; eventIndexByDate=new Map(); }
+      buildCalendar(); 
+      if (!selectedDate) {
+        openDay(new Date().toISOString().slice(0,10));
+      }
+    }
+    $('#calFilter')?.addEventListener('change', loadCalendar);
+
+    // Modal: chat + assign
+    let currentProposalId = null;
+    function openHeadModal(id){
+      openEventChat(id);
+    }
+    $('#cdlHeadCloseModal')?.addEventListener('click', ()=> $('#cdlHeadEventModal').style.display='none');
+    async function loadHeadChat(){
+      const chat = $('#cdlHeadChat'); if(!currentProposalId) return;
+      try{
+        const res = await fetch(`/emt/api/chat/${currentProposalId}/`, { headers:{'X-Requested-With':'XMLHttpRequest'} });
+        const j = await res.json();
+        chat.innerHTML = (j.items||[]).map(m=>`<div class="msg"><div class="who">${m.sender_role||''}</div><div class="text">${m.message}</div></div>`).join('') || '<div class="empty">No messages</div>';
+        chat.scrollTop = chat.scrollHeight;
+      }catch{ chat.innerHTML = '<div class="empty">Cannot load chat</div>'; }
+    }
+    $('#cdlHeadChatSend')?.addEventListener('click', async (e)=>{
+      e.preventDefault(); const inp=$('#cdlHeadChatInput'); const msg=(inp.value||'').trim(); if(!msg||!currentProposalId) return;
+      try{
+        const res = await fetch(`/emt/api/chat/${currentProposalId}/send/`, { method:'POST', headers:{'Content-Type':'application/json','X-Requested-With':'XMLHttpRequest','X-CSRFToken':getCsrfToken()}, body: JSON.stringify({ message: msg }) });
+        const j = await res.json(); if(j.success){ inp.value=''; loadHeadChat(); }
+      }catch{}
+    });
+    $('#cdlHeadAssignBtn')?.addEventListener('click', async (e)=>{
+      e.preventDefault(); if(!currentProposalId) return;
+      const assigned_to=Number($('#cdlAssignTo').value||''); const task_type=($('#cdlTaskType').value||'').trim(); const priority=$('#cdlTaskPriority').value||'normal'; const deadline=$('#cdlTaskDeadline').value||''; const description=($('#cdlTaskDesc').value||'').trim();
+      if(!assigned_to || !task_type || !deadline){ alert('Please select member, task type, and deadline'); return; }
+      try{
+        const res = await fetch(`/emt/api/task/assign/${currentProposalId}/`, { method:'POST', headers:{'Content-Type':'application/json','X-Requested-With':'XMLHttpRequest','X-CSRFToken':getCsrfToken()}, body: JSON.stringify({ assigned_to, task_type, priority, deadline, description }) });
+        const j = await res.json(); if(j.success){ alert('Task assigned'); $('#cdlHeadEventModal').style.display='none'; }
+        else if(j.error){ alert(j.error); }
+      }catch{ alert('Failed to assign task'); }
+    });
+
+    function getCsrfToken(){ const name='csrftoken='; const cookies=document.cookie?document.cookie.split(';'):[]; for(let c of cookies){ c=c.trim(); if(c.startsWith(name)) return decodeURIComponent(c.substring(name.length)); } return ''; }
   
     // Utils
     function cap(s){ return s ? s.charAt(0).toUpperCase()+s.slice(1) : s; }
     function fmt(iso){ const d=new Date(iso); return d.toLocaleString(undefined,{month:'short',day:'2-digit'}); }
+    function esc(s){ return (s??'').toString().replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
   
     document.addEventListener('DOMContentLoaded', ()=>{
+      loadEvents();
       computeKPIs();
-      renderNotifications('all');
       setAMFilter('all');
       renderAssignTable();
       viewWorkload();
-      buildCalendar();
-      openDay(new Date().toISOString().slice(0,10));
+      loadCalendar();
     });
   })();
   

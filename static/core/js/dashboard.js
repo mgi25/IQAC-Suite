@@ -110,7 +110,7 @@
 
   // Calendar
   let calRef = new Date();
-  let currentCategory = 'all';
+  let currentCategory = 'all'; // all|support|private|faculty
   let privateTasksKey = 'ems.privateTasks';
   let eventIndexByDate = new Map();
   const fmt2 = v => String(v).padStart(2,'0');
@@ -153,18 +153,26 @@
     });
   }
 
-  function openDay(day){
+  async function openDay(day){
     const yyyy = day.getFullYear(), mm = String(day.getMonth()+1).padStart(2,'0'), dd = String(day.getDate()).padStart(2,'0');
     const dateStr = `${yyyy}-${mm}-${dd}`;
     const list = $('#upcomingWrap'); if (!list) return;
-    const items = (window.DASHBOARD_EVENTS||[]).filter(e => e.date === dateStr);
-    list.innerHTML = items.length
-      ? items.map(e => {
-          const viewBtn = e.view_url ? `<a class="chip-btn" href="${e.view_url}"><i class="fa-regular fa-eye"></i> View</a>` : '';
-          const addBtn = !e.past && e.gcal_url ? `<a class="chip-btn" target="_blank" rel="noopener" href="${e.gcal_url}"><i class="fa-regular fa-calendar-plus"></i> Add to Google</a>` : '';
-          return `<div class="u-item"><div>${e.title}</div><div style="display:flex;gap:8px;">${viewBtn}${addBtn}</div></div>`;
-        }).join('')
-      : `<div class="empty">No events for ${day.toLocaleDateString()}</div>`;
+    // Fetch live, role-aware events for the day
+    try {
+      const res = await fetch(`/emt/api/events/by-date/?date=${encodeURIComponent(dateStr)}`, { headers:{'X-Requested-With':'XMLHttpRequest'} });
+      const j = await res.json();
+      const items = j.items || [];
+      list.innerHTML = items.length
+        ? items.map(e => {
+            const viewBtn = e.id ? `<a class="chip-btn" href="/emt/proposal-status/${e.id}/"><i class="fa-regular fa-eye"></i> View</a>` : '';
+            return `<div class="u-item"><div>${e.title}</div><div style="display:flex;gap:8px;">${viewBtn}</div></div>`;
+          }).join('')
+        : `<div class="empty">No events for this date</div>`;
+      // Also render in Event Details viewer
+      renderEventDetailsFromApi(day, items);
+    } catch (e) {
+      list.innerHTML = `<div class="empty">No events for this date</div>`;
+    }
   }
 
   function onDayClick(day){
@@ -358,7 +366,7 @@
     
     if (!content) return;
     
-    const events = (window.DASHBOARD_EVENTS||[]).filter(e => e.date === dateStr);
+  const events = (window.DASHBOARD_EVENTS||[]).filter(e => e.date === dateStr);
     
     if (events.length > 0) {
       content.innerHTML = events.map(e => `
@@ -374,6 +382,31 @@
           </div>
         </div>
       `).join('');
+      clearBtn.style.display = 'inline-flex';
+    } else {
+      content.innerHTML = `<div class="empty">No events for ${day.toLocaleDateString()}</div>`;
+      clearBtn.style.display = 'none';
+    }
+  }
+
+  function renderEventDetailsFromApi(day, items){
+    const content = $('#eventDetailsContent');
+    const clearBtn = $('#clearEventDetails');
+    if (!content) return;
+    if ((items||[]).length > 0){
+      content.innerHTML = items.map(e=>`
+        <div class="event-detail-item">
+          <div class="event-detail-title">${e.title}</div>
+          <div class="event-detail-meta">
+            <i class="fa-regular fa-clock"></i> ${e.datetime ? new Date(e.datetime).toLocaleString() : 'All day'}
+            ${e.venue ? `<br><i class=\"fa-solid fa-location-dot\"></i> ${e.venue}` : ''}
+          </div>
+          <div class="event-detail-actions">
+            ${e.id ? `<button class="chip-btn" data-open-event="${e.id}"><i class="fa-regular fa-eye"></i> View Details</button>` : ''}
+          </div>
+        </div>`).join('');
+      content.querySelectorAll('[data-open-event]')
+        .forEach(btn=> btn.addEventListener('click', ()=> openEventModal(btn.getAttribute('data-open-event'))));
       clearBtn.style.display = 'inline-flex';
     } else {
       content.innerHTML = `<div class="empty">No events for ${day.toLocaleDateString()}</div>`;
@@ -494,6 +527,23 @@
     setTimeout(() => document.body.removeChild(temp), 3000);
   }
 
+  // Load Member tasks (Inbox) if section exists
+  async function loadMemberTasks(){
+    const list = $('#memberTasksList');
+    if (!list) return;
+    try{
+      const res = await fetch('/emt/api/task/member/', { headers:{'X-Requested-With':'XMLHttpRequest'} });
+      const j = await res.json();
+      const items = j.items||[];
+      list.innerHTML = items.length? items.map(t=>`
+        <article class="list-item">
+          <div class="bullet ${t.status}"><i class="fa-regular fa-clipboard"></i></div>
+          <div class="list-body"><h4>${t.event_title} — ${t.task_type}</h4><p>Priority: ${t.priority}${t.deadline? ' · Due '+ new Date(t.deadline).toLocaleString():''}</p></div>
+          <span class="chip-btn">${t.progress||0}%</span>
+        </article>`).join('') : '<div class="empty">No tasks assigned</div>';
+    }catch{ list.innerHTML = '<div class="empty">No tasks assigned</div>'; }
+  }
+
   // Dropdown filtering
   $('#visibilitySelect')?.addEventListener('change', (e)=>{
     currentCategory = e.target.value || 'all';
@@ -502,7 +552,9 @@
 
   async function loadCalendarData(){
     try{
-      const res = await fetch(`/api/calendar/?category=${encodeURIComponent(currentCategory)}`, { headers:{'X-Requested-With':'XMLHttpRequest'} });
+      // Use role-aware endpoint; map Support to filter=support
+      const filter = currentCategory === 'support' ? 'support' : 'all';
+      const res = await fetch(`/emt/api/calendar/role/?filter=${encodeURIComponent(filter)}`, { headers:{'X-Requested-With':'XMLHttpRequest'} });
       const j = await res.json();
       window.DASHBOARD_EVENTS = j.items || [];
       // index by date for quick highlight
@@ -516,6 +568,66 @@
     }catch{ window.DASHBOARD_EVENTS = []; eventIndexByDate = new Map(); }
     buildCalendar(); openDay(new Date());
   }
+
+  // Event modal: chat + head assignment
+  let currentProposalId = null;
+  function openEventModal(proposalId){
+    currentProposalId = proposalId;
+    const modal = $('#eventDetailsModal');
+    const meta = $('#edmMeta');
+    const chat = $('#edmChat');
+    modal.style.display = 'flex';
+    // Load minimal meta from current events list
+    const e = (window.DASHBOARD_EVENTS||[]).find(x=>String(x.id)===String(proposalId));
+    meta.textContent = e ? `${e.title} ${e.datetime? '· '+ new Date(e.datetime).toLocaleString():''} ${e.venue? '· '+e.venue:''}` : '';
+    loadChat();
+  }
+  $('#closeEdm')?.addEventListener('click', ()=>{ $('#eventDetailsModal').style.display='none'; });
+  async function loadChat(){
+    if (!currentProposalId) return;
+    const chat = $('#edmChat');
+    try{
+      const res = await fetch(`/emt/api/chat/${currentProposalId}/`, { headers:{'X-Requested-With':'XMLHttpRequest'} });
+      const j = await res.json();
+      chat.innerHTML = (j.items||[]).map(m=>
+        `<div class="msg"><div class="who">${m.sender_role||''}</div><div class="text">${m.message}</div></div>`
+      ).join('') || '<div class="empty">No messages</div>';
+      chat.scrollTop = chat.scrollHeight;
+    }catch{
+      chat.innerHTML = '<div class="empty">Cannot load chat</div>';
+    }
+  }
+  $('#edmSend')?.addEventListener('click', async (e)=>{
+    e.preventDefault();
+    const inp = $('#edmInput');
+    const msg = (inp.value||'').trim();
+    if (!msg || !currentProposalId) return;
+    try{
+      const res = await fetch(`/emt/api/chat/${currentProposalId}/send/`, {
+        method:'POST', headers:{'Content-Type':'application/json','X-Requested-With':'XMLHttpRequest','X-CSRFToken':getCsrfToken()},
+        body: JSON.stringify({ message: msg })
+      });
+      const j = await res.json(); if (j.success){ inp.value=''; loadChat(); }
+    }catch{}
+  });
+  $('#btnAssignTask')?.addEventListener('click', async (e)=>{
+    e.preventDefault(); if (!currentProposalId) return;
+    const assigned_to = Number($('#assignTo').value||'');
+    const task_type = ($('#taskType').value||'').trim();
+    const priority = $('#taskPriority').value||'normal';
+    const deadline = $('#taskDeadline').value||'';
+    const description = ($('#taskDesc').value||'').trim();
+    if (!assigned_to || !task_type || !deadline){
+      alert('Please select member, task type, and deadline');
+      return;
+    }
+    try{
+      const res = await fetch(`/emt/api/task/assign/${currentProposalId}/`, { method:'POST', headers:{'Content-Type':'application/json','X-Requested-With':'XMLHttpRequest','X-CSRFToken':getCsrfToken()}, body: JSON.stringify({ assigned_to, task_type, priority, deadline, description }) });
+      const j = await res.json();
+      if (j.success){ showSuccessMessage('Task assigned'); $('#eventDetailsModal').style.display='none'; }
+      else if (j.error){ alert(j.error); }
+    }catch(ex){ alert('Failed to assign task'); }
+  });
 
   // Heatmap
   async function renderHeatmap(){
@@ -611,6 +723,7 @@ function fitHeatmap(){
   document.addEventListener('DOMContentLoaded', () => {
     loadPerformance();
     loadAndShowProposals();
+  loadMemberTasks();
     // Removed recent events feed to keep only user's proposals in Actions & Proposals
     // loadRecentEvents();
     loadCalendarData();
