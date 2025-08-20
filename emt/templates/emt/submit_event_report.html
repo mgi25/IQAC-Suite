@@ -224,10 +224,16 @@
                                 <label for="attendance-modern">Attendance *</label>
                                 <input type="text" id="attendance-modern" readonly placeholder="Select participants">
                                 <input type="hidden" id="num-participants-modern" name="num_participants" value="{{ form.num_participants.value|default:'' }}">
-                                <input type="hidden" id="num-volunteers-modern" name="num_student_volunteers" value="{{ form.num_student_volunteers.value|default:'' }}">
                                 <div class="help-text">Select attendees; counts update automatically</div>
                                 {% if form.num_participants.errors %}
                                     <div class="field-error">{{ form.num_participants.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="input-group">
+                                <label for="num-volunteers-modern">Number of student volunteers</label>
+                                <input type="number" id="num-volunteers-modern" name="num_student_volunteers" value="{{ form.num_student_volunteers.value|default:'' }}" min="0" placeholder="Enter number of volunteers">
+                                {% if form.num_student_volunteers.errors %}
+                                    <div class="field-error">{{ form.num_student_volunteers.errors.0 }}</div>
                                 {% endif %}
                             </div>
                         </div>

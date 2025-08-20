@@ -1871,7 +1871,8 @@ function setupAttendanceModal() {
             notesField.val(JSON.stringify(data)).trigger('change').trigger('input');
             attendanceField.val(data.map(d => d.name).join(', ')).trigger('change').trigger('input');
             participantInput.val(data.length).trigger('change').trigger('input');
-            volunteerInput.val(0).trigger('change').trigger('input');
+            const volunteers = parseInt(volunteerInput.val(), 10) || 0;
+            volunteerInput.val(volunteers).trigger('change').trigger('input');
             modal.removeClass('show');
         });
     }
