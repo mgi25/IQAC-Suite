@@ -1553,9 +1553,58 @@ function setupDynamicActivities() {
     render();
 }
 
+function setupAttendanceModal() {
+    const participantInput = document.getElementById('num-participants-modern');
+    const volunteerInput = document.getElementById('num-volunteers-modern');
+    const modal = document.getElementById('attendanceModal');
+    const listContainer = document.getElementById('participantsList');
+    const saveBtn = document.getElementById('attendanceSave');
+    const cancelBtn = document.getElementById('attendanceCancel');
+    const notesField = document.getElementById('attendance-data');
+
+    if (!participantInput || !volunteerInput || !modal || !listContainer) return;
+
+    function openModal() {
+        const count = parseInt(participantInput.value, 10) || 0;
+        listContainer.innerHTML = '';
+        for (let i = 0; i < count; i++) {
+            const row = document.createElement('div');
+            row.className = 'attendance-row';
+            row.innerHTML = `
+                <input type="text" class="attendee-name" placeholder="Participant ${i + 1}">
+                <label><input type="checkbox" class="attendee-present" checked> Present</label>
+                <label><input type="checkbox" class="attendee-volunteer"> Volunteer</label>
+            `;
+            listContainer.appendChild(row);
+        }
+        modal.classList.add('show');
+    }
+
+    participantInput.addEventListener('change', openModal);
+    volunteerInput.addEventListener('change', openModal);
+
+    cancelBtn.addEventListener('click', () => modal.classList.remove('show'));
+
+    saveBtn.addEventListener('click', () => {
+        const data = [];
+        let volunteerCount = 0;
+        listContainer.querySelectorAll('.attendance-row').forEach(row => {
+            const name = row.querySelector('.attendee-name').value.trim();
+            const present = row.querySelector('.attendee-present').checked;
+            const volunteer = row.querySelector('.attendee-volunteer').checked;
+            if (volunteer) volunteerCount++;
+            data.push({ name, present, volunteer });
+        });
+        notesField.value = JSON.stringify(data);
+        volunteerInput.value = volunteerCount;
+        modal.classList.remove('show');
+    });
+}
+
 // Initialize section-specific handlers when document is ready
 $(document).ready(function() {
     initializeSectionSpecificHandlers();
     setupDynamicActivities();
+    setupAttendanceModal();
 });
 
