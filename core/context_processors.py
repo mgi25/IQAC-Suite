@@ -67,7 +67,9 @@ def sidebar_permissions(request):
     if perm:
         items = perm.items
     elif session_role:
-        perm = SidebarPermission.objects.filter(role__iexact=session_role).first()
+        perm = SidebarPermission.objects.filter(
+            user__isnull=True, role__iexact=session_role
+        ).first()
         if perm:
             items = perm.items
     return {"allowed_nav_items": items}
