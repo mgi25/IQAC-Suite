@@ -58,17 +58,17 @@
     <div class="profile-kpi card">
       <div class="pkp-avatar">
         {% if request.user.profile and request.user.profile.photo %}
-          <img src="{{ request.user.profile.photo.url }}"
-               alt="{{ request.user.get_full_name|default:request.user.username }}">
+        <img src="{{ request.user.profile.photo.url }}"
+          alt="{{ request.user.get_full_name|default:request.user.username }}">
         {% else %}
-          <span class="pkp-initials">
-            {% if request.user.first_name %}
-              {{ request.user.first_name.0|upper }}
-              {% if request.user.last_name %}{{ request.user.last_name.0|upper }}{% endif %}
-            {% else %}
-              {{ request.user.username.0|upper }}
-            {% endif %}
-          </span>
+        <span class="pkp-initials">
+          {% if request.user.first_name %}
+          {{ request.user.first_name.0|upper }}
+          {% if request.user.last_name %}{{ request.user.last_name.0|upper }}{% endif %}
+          {% else %}
+          {{ request.user.username.0|upper }}
+          {% endif %}
+        </span>
         {% endif %}
       </div>
 
@@ -114,8 +114,10 @@
       <div class="stats-rows">
         <div class="sr"><span>Total Reports</span><strong>{{ stats.total_event_reports|default:0 }}</strong></div>
         <div class="sr"><span>Pending</span><strong>{{ stats.pending_event_reports|default:0 }}</strong></div>
-        <div class="sr"><span>Reviewed</span><strong class="ok">{{ stats.reviewed_event_reports|default:0 }}</strong></div>
-        <div class="sr"><span>Rejected</span><strong class="bad">{{ stats.rejected_event_reports|default:0 }}</strong></div>
+        <div class="sr"><span>Reviewed</span><strong class="ok">{{ stats.reviewed_event_reports|default:0 }}</strong>
+        </div>
+        <div class="sr"><span>Rejected</span><strong class="bad">{{ stats.rejected_event_reports|default:0 }}</strong>
+        </div>
         <a class="chip-btn" href="/core-admin/event-reports/">View Reports</a>
       </div>
     </section>
@@ -143,34 +145,45 @@
         <div class="sr"><span>Departments</span><strong>{{ stats.departments|default:0 }}</strong></div>
         <div class="sr"><span>Clubs</span><strong>{{ stats.clubs|default:0 }}</strong></div>
         <div class="sr"><span>Total Organizations</span><strong>{{ stats.centers|default:0 }}</strong></div>
-        <a class="chip-btn" href="/core-admin/users/">View Organizations</a>
+        <a class="chip-btn" href="/core-admin/master-data/">View Organizations</a>
       </div>
     </section>
 
-    <!-- Notifications -->
-    <section class="card wide" id="cardNotifications">
-      <div class="card-header">
-        <h3><i class="fa-regular fa-bell"></i> Notifications</h3>
-      </div>
-      <div class="list list-scroll">
-        {% if recent_activities %}
+    <!-- Notifications & Calendar side by side -->
+    <div class="grid-2">
+      <!-- Notifications -->
+      <section class="card" id="cardNotifications">
+        <div class="card-header">
+          <h3><i class="fa-regular fa-bell"></i> Notifications</h3>
+        </div>
+        <div class="list list-scroll">
+          {% if recent_activities %}
           {% for a in recent_activities %}
-            <article class="list-item">
-              <div class="bullet"><i class="fa-solid fa-circle-info"></i></div>
-              <div class="list-body">
-                <h4>{{ a.title }}</h4>
-                <p class="muted">{{ a.description }}</p>
-              </div>
-              {% if a.status %}
-                <span class="pill status-{{ a.status|lower }}">{{ a.status }}</span>
-              {% endif %}
-            </article>
+          <article class="list-item">
+            <div class="bullet"><i class="fa-solid fa-circle-info"></i></div>
+            <div class="list-body">
+              <h4>{{ a.title }}</h4>
+              <p class="muted">{{ a.description }}</p>
+            </div>
+            {% if a.status %}
+            <span class="pill status-{{ a.status|lower }}">{{ a.status }}</span>
+            {% endif %}
+          </article>
           {% endfor %}
-        {% else %}
+          {% else %}
           <div class="empty">No notifications.</div>
-        {% endif %}
-      </div>
-    </section>
+          {% endif %}
+        </div>
+      </section>
+
+      <!-- Calendar -->
+      <section class="card" id="cardCalendar">
+        <div class="card-header">
+          <h3><i class="fa-regular fa-calendar-days"></i> Calendar</h3>
+        </div>
+        <div id="calendar"></div>
+      </section>
+    </div>
   </main>
 
   <!-- System Status Bar -->
@@ -208,15 +221,56 @@
 {% endblock %}
 
 {% block scripts_extra %}
+<!-- Example: using FullCalendar (you can swap to other libs if needed) -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+
 <script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const select = document.getElementById('roleSwitch');
-    if (select) {
-      select.addEventListener('change', function () {
-        const target = this.value.trim();
-        if (target) window.location.href = target;
-      });
-    }
-  });
+    document.addEventListener('DOMContentLoaded', function () {
+      const select = document.getElementById('roleSwitch');
+      if (select) {
+        select.addEventListener('change', function () {
+          const target = this.value.trim();
+          if (target) window.location.href = target;
+        });
+      }
+
+      // Initialize Calendar with proper configuration
+      const calendarEl = document.getElementById('calendar');
+      if (calendarEl) {
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+          initialView: 'dayGridMonth',
+          height: 400,
+          headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: ''
+          },
+          dayMaxEvents: false,
+          showNonCurrentDates: true,
+          fixedWeekCount: false,
+          // Ensure proper day name formatting
+          dayHeaderFormat: { weekday: 'short' },
+          // Force proper locale (this should fix day names)
+          locale: 'en',
+          // Ensure table layout is not broken
+          aspectRatio: 1.2,
+          events: [], // you can populate events dynamically here
+
+          // Additional options to ensure proper rendering
+          displayEventTime: false,
+          eventDisplay: 'block',
+          dayHeaderClassNames: 'custom-day-header'
+        });
+
+        // Render the calendar
+        calendar.render();
+
+        // Force a re-render after a short delay to fix any layout issues
+        setTimeout(() => {
+          calendar.updateSize();
+        }, 100);
+      }
+    });
 </script>
 {% endblock %}
