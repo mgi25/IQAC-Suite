@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Dashboard – Event Management Suite{% endblock %}
+{% block title %}Dashboard — Event Management Suite{% endblock %}
 
 {% block head_extra %}
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -21,37 +21,37 @@
 
   <!-- TOP ROW -->
   <section class="kpi-row">
-    <button class="kpi-card" id="kpiStudents">
-      <div class="kpi-icon bg-indigo"><i class="fa-solid fa-user-graduate"></i></div>
+    <button class="kpi-card" id="kpiStudents" type="button" aria-label="Students KPI">
+      <div class="kpi-icon bg-indigo" aria-hidden="true"><i class="fa-solid fa-user-graduate" aria-hidden="true"></i></div>
       <div class="kpi-content">
-        <span class="kpi-title">No. of Students</span>
+        <span class="kpi-title">Students</span>
         <span class="kpi-value">{{ mentee_count|default:0 }}</span>
         <span class="kpi-bar" style="--pct:60%"></span>
       </div>
     </button>
 
-    <button class="kpi-card" id="kpiClasses">
-      <div class="kpi-icon bg-sky"><i class="fa-solid fa-chalkboard-user"></i></div>
+    <button class="kpi-card" id="kpiClasses" type="button" aria-label="Classes KPI">
+      <div class="kpi-icon bg-sky" aria-hidden="true"><i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i></div>
       <div class="kpi-content">
-        <span class="kpi-title">No. of Classes</span>
+        <span class="kpi-title">Classes</span>
         <span class="kpi-value">{{ classes_count|default:0 }}</span>
         <span class="kpi-bar" style="--pct:55%"></span>
       </div>
     </button>
 
-    <button class="kpi-card" id="kpiOrgEvents">
-      <div class="kpi-icon bg-orange"><i class="fa-solid fa-calendar-check"></i></div>
+    <button class="kpi-card" id="kpiOrgEvents" type="button" aria-label="Organized events KPI">
+      <div class="kpi-icon bg-orange" aria-hidden="true"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i></div>
       <div class="kpi-content">
-        <span class="kpi-title">Events Organized</span>
+        <span class="kpi-title">Organized Events</span>
         <span class="kpi-value">{{ organized_events_count|default:0 }}</span>
         <span class="kpi-bar" style="--pct:45%"></span>
       </div>
     </button>
 
-    <button class="kpi-card" id="kpiPartEvents">
-      <div class="kpi-icon bg-emerald"><i class="fa-solid fa-people-group"></i></div>
+    <button class="kpi-card" id="kpiPartEvents" type="button" aria-label="Participated events KPI">
+      <div class="kpi-icon bg-emerald" aria-hidden="true"><i class="fa-solid fa-people-group" aria-hidden="true"></i></div>
       <div class="kpi-content">
-        <span class="kpi-title">Events Participated</span>
+        <span class="kpi-title">Participated Events</span>
         <span class="kpi-value">{{ participated_events_count|default:0 }}</span>
         <span class="kpi-bar" style="--pct:65%"></span>
       </div>
@@ -59,35 +59,34 @@
 
     <!-- Profile -->
     <div class="profile-kpi card">
-        <div class="pkp-avatar">
-          {% if user.profile and user.profile.photo %}
-            <img src="{{ user.profile.photo.url }}" alt="{{ user.get_full_name|default:user.username }}">
-          {% else %}
-            <span class="pkp-initials">
-              {% if user.first_name %}{{ user.first_name.0|upper }}{% if user.last_name %}{{ user.last_name.0|upper }}{% endif %}{% else %}{{ user.username.0|upper }}{% endif %}
-            </span>
-          {% endif %}
-        </div>
-        <div class="pkp-body">
-          <h1 class="pkp-name">{{ user.get_full_name|default:user.username }}</h1>
-          <h2 class="pkp-sub">{{ user.email }}</h2>
-          <h3 class="pkp-meta">
-            <span>Rank: <strong>{{ user.rank|default:"—" }}</strong></span>
-            <span>Classes: <strong>{{ classes_count|default:0 }}</strong></span>
-          </h3>
-          <div class="pkp-actions">
-            <a href="{% url 'my_profile' %}?from_dashboard=true" class="btn btn-profile-primary">
-              <i class="fas fa-user-cog"></i>
-              <span>View Profile</span>
-            </a>
-            <a href="{% url 'my_profile' %}?from_dashboard=true&tab=edit" class="btn btn-profile-secondary">
-              <i class="fas fa-edit"></i>
-              <span>Edit Profile</span>
-            </a>
-          </div>
+      <div class="pkp-avatar">
+        {% if user.profile and user.profile.photo %}
+          <img src="{{ user.profile.photo.url }}" alt="{{ user.get_full_name|default:user.username }}">
+        {% else %}
+          <span class="pkp-initials" aria-hidden="true">
+            {% if user.first_name %}{{ user.first_name.0|upper }}{% if user.last_name %}{{ user.last_name.0|upper }}{% endif %}{% else %}{{ user.username.0|upper }}{% endif %}
+          </span>
+        {% endif %}
+      </div>
+      <div class="pkp-body">
+        <h1 class="pkp-name">{{ user.get_full_name|default:user.username }}</h1>
+        <h2 class="pkp-sub">{{ user.email }}</h2>
+        <h3 class="pkp-meta">
+          <span>Rank: <strong>{{ user.rank|default:"—" }}</strong></span>
+          <span>Classes: <strong>{{ classes_count|default:0 }}</strong></span>
+        </h3>
+        <div class="pkp-actions">
+          <a href="{% url 'my_profile' %}?from_dashboard=true" class="btn btn-profile-primary" aria-label="View profile">
+            <i class="fas fa-user-cog" aria-hidden="true"></i>
+            <span>View Profile</span>
+          </a>
+          <a href="{% url 'my_profile' %}?from_dashboard=true&tab=edit" class="btn btn-profile-secondary" aria-label="Edit profile">
+            <i class="fas fa-edit" aria-hidden="true"></i>
+            <span>Edit Profile</span>
+          </a>
         </div>
       </div>
-      
+    </div>
   </section>
 
   <!-- MAIN GRID -->
@@ -95,13 +94,13 @@
     <!-- Actions (col 1) -->
     <section class="card eq" id="cardActions">
       <div class="card-header">
-        <h3><i class="fa-solid fa-inbox"></i> Actions & Proposals</h3>
-        <a class="link-muted" href="#" data-go-tab="events">View all</a>
+        <h3><i class="fa-solid fa-inbox" aria-hidden="true"></i> Actions &amp; Proposals</h3>
+        <a class="link-muted" href="#" data-go-tab="events" aria-label="View all proposals">View all</a>
       </div>
       <div class="list" id="actionsList">
         <!-- Dynamic: populated by /api/user/proposals -->
         <div class="proposal-tracker-section" id="proposalTracker">
-          <h4><i class="fa-solid fa-file-lines"></i> My Proposals</h4>
+          <h4><i class="fa-solid fa-file-lines" aria-hidden="true"></i> My Proposals</h4>
           <div id="proposalsList"><div class="empty">Loading…</div></div>
         </div>
       </div>
@@ -110,19 +109,19 @@
     <!-- Performance (col 2) -->
     <section class="card eq" id="cardPerformance">
       <div class="card-header">
-        <h3><i class="fa-solid fa-chart-pie"></i> <span id="perfTitle">Student Performance</span></h3>
+        <h3><i class="fa-solid fa-chart-pie" aria-hidden="true"></i> <span id="perfTitle">Student Performance</span></h3>
         <div class="header-actions">
-          <div class="seg">
-            <button class="seg-btn active" data-view="performance">Performance</button>
-            <button class="seg-btn" data-view="contribution">Contribution</button>
+          <div class="seg" role="tablist" aria-label="Performance views">
+            <button class="seg-btn active" data-view="performance" type="button" role="tab" aria-selected="true">Performance</button>
+            <button class="seg-btn" data-view="contribution" type="button" role="tab" aria-selected="false">Contribution</button>
           </div>
         </div>
       </div>
       <div class="chart-wrap donut" id="chartContainer" style="cursor: pointer;">
-        <canvas id="donutChart"></canvas>
-        <div class="chart-legend" id="donutLegend"></div>
-        <div class="chart-click-hint" style="text-align: center; font-size: 12px; color: #666; margin-top: 10px;">
-          <i class="fa-solid fa-hand-pointer"></i> Click to view proposal tracking
+        <canvas id="donutChart" aria-label="Performance donut chart" role="img"></canvas>
+        <div class="chart-legend" id="donutLegend" aria-live="polite"></div>
+        <div class="chart-click-hint" style="text-align:center;font-size:12px;color:#666;margin-top:10px;">
+          <i class="fa-solid fa-hand-pointer" aria-hidden="true"></i> Click to view proposal tracking
         </div>
       </div>
     </section>
@@ -130,115 +129,121 @@
     <!-- Calendar (col 3, row 1) -->
     <section class="card eq" id="cardCalendar">
       <div class="card-header">
-        <h3><i class="fa-regular fa-calendar"></i> Calendar</h3>
+        <h3><i class="fa-regular fa-calendar" aria-hidden="true"></i> Calendar</h3>
         <div class="header-actions">
-          <select id="visibilitySelect" class="select">
+          <label for="visibilitySelect" class="visually-hidden">Visibility</label>
+          <select id="visibilitySelect" class="select" aria-label="Calendar visibility">
             <option value="all">All</option>
             <option value="private">Private</option>
             <option value="faculty">Faculty</option>
           </select>
-          <a href="/suite/submit/?via=dashboard" class="chip-btn" id="addEventBtn"><i class="fa-solid fa-plus"></i>  New Event</a>
+          <a href="/suite/submit/?via=dashboard" class="chip-btn" id="addEventBtn" aria-label="Create a new event"><i class="fa-solid fa-plus" aria-hidden="true"></i> New Event</a>
         </div>
       </div>
-      <div class="mini-cal" id="miniCalendar">
+      <div class="mini-cal" id="miniCalendar" aria-live="polite">
         <div class="cal-head">
-          <button class="cal-nav" id="calPrev" aria-label="Previous month"><i class="fa-solid fa-chevron-left"></i></button>
-          <div id="calTitle">Month YYYY</div>
-          <button class="cal-nav" id="calNext" aria-label="Next month"><i class="fa-solid fa-chevron-right"></i></button>
+          <button class="cal-nav" id="calPrev" aria-label="Previous month"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+          <div id="calTitle" aria-live="polite">Month YYYY</div>
+          <button class="cal-nav" id="calNext" aria-label="Next month"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
         </div>
-        <div class="cal-weekdays">
+        <div class="cal-weekdays" aria-hidden="true">
           <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
         </div>
-        <div class="cal-grid" id="calGrid"></div>
+        <div class="cal-grid" id="calGrid" role="grid" aria-label="Monthly calendar"></div>
       </div>
-      <div id="upcomingWrap" class="upcoming"></div>
+      <div id="upcomingWrap" class="upcoming" aria-live="polite"></div>
     </section>
 
-    <!-- Contribution (col 1–2, row 2) -->
     <!-- Contribution (span same width as Actions + Performance) -->
     <section class="card" id="cardContribution">
-        <div class="card-header"><h3><i class="fa-solid fa-fire"></i> Yearly Contribution</h3></div>
-        <div id="heatmapContainer" class="heatmap"></div>
-      </section>      
+      <div class="card-header"><h3><i class="fa-solid fa-fire" aria-hidden="true"></i> Yearly Contribution</h3></div>
+      <div id="heatmapContainer" class="heatmap" role="img" aria-label="Contribution heatmap"></div>
+    </section>
 
-    <!-- Event Details Viewer (col 3, row 2) - replaces To-do -->
+    <!-- Event Details Viewer (col 3, row 2) -->
     <section class="card eq" id="cardEventDetails">
       <div class="card-header">
-        <h3><i class="fa-regular fa-calendar-days"></i> Event Details</h3>
-        <button class="chip-btn" id="clearEventDetails" style="display: none;"><i class="fa-solid fa-times"></i> Clear</button>
+        <h3><i class="fa-regular fa-calendar-days" aria-hidden="true"></i> Event Details</h3>
+        <button class="chip-btn" id="clearEventDetails" type="button" style="display: none;">
+          <i class="fa-solid fa-times" aria-hidden="true"></i> Clear
+        </button>
       </div>
       <div id="eventDetailsContent" class="event-details-content">
-        <div class="empty">Click on an event in the calendar to view details</div>
+        <div class="empty">Click an event in the calendar to view details</div>
       </div>
     </section>
   </main>
 
   {{ calendar_events|json_script:"calendarEventsJson" }}
   <script>
-    try{window.DASHBOARD_EVENTS=JSON.parse(document.getElementById('calendarEventsJson').textContent);}catch{window.DASHBOARD_EVENTS=[];}
+    try {
+      window.DASHBOARD_EVENTS = JSON.parse(document.getElementById('calendarEventsJson').textContent);
+    } catch {
+      window.DASHBOARD_EVENTS = [];
+    }
   </script>
 
   <!-- Confirmation Modal -->
-  <div id="confirmationModal" class="modal-overlay" style="display: none;">
+  <div id="confirmationModal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
     <div class="modal-content">
-      <h3><i class="fa-solid fa-question-circle"></i> Open in Google Calendar?</h3>
+      <h3 id="confirmTitle"><i class="fa-solid fa-question-circle" aria-hidden="true"></i> Open in Google Calendar?</h3>
       <p>Do you want to open this event in Google Calendar?</p>
       <div class="modal-actions">
-        <button class="btn-secondary" id="cancelConfirm">No, Stay Here</button>
-        <button class="btn-primary" id="confirmOpen">Yes, Open Google Calendar</button>
+        <button class="btn-secondary" id="cancelConfirm" type="button">No, stay here</button>
+        <button class="btn-primary" id="confirmOpen" type="button">Yes, open Google Calendar</button>
       </div>
     </div>
   </div>
 
   <!-- Faculty Meeting Form Modal -->
-  <div id="facultyMeetingModal" class="modal-overlay" style="display: none;">
+  <div id="facultyMeetingModal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="facultyModalTitle">
     <div class="modal-content modal-large">
       <div class="modal-header">
-        <h3><i class="fa-solid fa-calendar-plus"></i> Schedule Faculty Meeting</h3>
-        <button class="modal-close" id="closeFacultyModal">&times;</button>
+        <h3 id="facultyModalTitle"><i class="fa-solid fa-calendar-plus" aria-hidden="true"></i> Schedule Faculty Meeting</h3>
+        <button class="modal-close" id="closeFacultyModal" type="button" aria-label="Close">&times;</button>
       </div>
-      <form id="facultyMeetingForm" method="post">
+      <form id="facultyMeetingForm" method="post" novalidate>
         {% csrf_token %}
         <div class="form-group">
-          <label for="meetingTitle">Meeting Title *</label>
-          <input type="text" id="meetingTitle" required placeholder="Enter meeting title">
+          <label for="meetingTitle">Meeting title *</label>
+          <input type="text" id="meetingTitle" required aria-required="true" placeholder="Enter meeting title">
         </div>
-        
+
         <div class="form-row">
           <div class="form-group">
             <label for="meetingDate">Date *</label>
-            <input type="date" id="meetingDate" required>
+            <input type="date" id="meetingDate" required aria-required="true">
           </div>
           <div class="form-group">
             <label for="meetingTime">Time *</label>
-            <input type="time" id="meetingTime" required value="09:00">
+            <input type="time" id="meetingTime" required aria-required="true" value="09:00">
           </div>
         </div>
-        
+
         <div class="form-group">
           <label for="meetingPlace">Place/Venue</label>
           <select id="meetingPlace">
-            <option value="">Select venue...</option>
+            <option value="">Select venue…</option>
           </select>
         </div>
-        
+
         <div class="form-group">
           <label for="meetingParticipants">Participants</label>
-          <select id="meetingParticipants" multiple>
-            <option value="">Loading participants...</option>
+          <select id="meetingParticipants" multiple aria-describedby="participantsHelp">
+            <option value="">Loading participants…</option>
           </select>
-          <small>Hold Ctrl/Cmd to select multiple participants</small>
+          <small id="participantsHelp">Hold Ctrl (Windows) or Cmd (macOS) to select multiple participants.</small>
         </div>
-        
+
         <div class="form-group">
-          <label for="meetingNotes">Additional Notes</label>
-          <textarea id="meetingNotes" rows="3" placeholder="Meeting agenda, notes, etc."></textarea>
+          <label for="meetingNotes">Additional notes</label>
+          <textarea id="meetingNotes" rows="3" placeholder="Add agenda or notes…"></textarea>
         </div>
-        
+
         <div class="modal-actions">
           <button type="button" class="btn-secondary" id="cancelMeeting">Cancel</button>
           <button type="submit" class="btn-primary">
-            <i class="fa-solid fa-calendar-plus"></i> Schedule Meeting
+            <i class="fa-solid fa-calendar-plus" aria-hidden="true"></i> Schedule meeting
           </button>
         </div>
       </form>
@@ -246,45 +251,45 @@
   </div>
 
   <!-- Event Creation Modal -->
-  <div id="eventCreationModal" class="modal-overlay" style="display: none;">
+  <div id="eventCreationModal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="eventModalTitle">
     <div class="modal-content modal-large">
       <div class="modal-header">
-        <h3><i class="fa-solid fa-calendar-plus"></i> Create New Event</h3>
-        <button class="modal-close" id="closeEventModal">&times;</button>
+        <h3 id="eventModalTitle"><i class="fa-solid fa-calendar-plus" aria-hidden="true"></i> Create New Event</h3>
+        <button class="modal-close" id="closeEventModal" type="button" aria-label="Close">&times;</button>
       </div>
-      <form id="eventCreationForm">
+      <form id="eventCreationForm" novalidate>
         <div class="form-group">
-          <label for="eventTitle">Event Title *</label>
-          <input type="text" id="eventTitle" required placeholder="Enter event title">
+          <label for="eventTitle">Event title *</label>
+          <input type="text" id="eventTitle" required aria-required="true" placeholder="Enter event title">
         </div>
-        
+
         <div class="form-group">
           <label for="eventDescription">Description</label>
-          <textarea id="eventDescription" rows="3" placeholder="Event description..."></textarea>
+          <textarea id="eventDescription" rows="3" placeholder="Add a short description…"></textarea>
         </div>
-        
+
         <div class="form-row">
           <div class="form-group">
             <label for="eventDate">Date *</label>
-            <input type="date" id="eventDate" required>
+            <input type="date" id="eventDate" required aria-required="true">
           </div>
           <div class="form-group">
             <label for="eventTime">Time *</label>
-            <input type="time" id="eventTime" required>
+            <input type="time" id="eventTime" required aria-required="true">
           </div>
         </div>
-        
+
         <div class="form-group">
           <label for="eventVenue">Venue</label>
           <select id="eventVenue">
-            <option value="">Select venue...</option>
+            <option value="">Select venue…</option>
           </select>
         </div>
-        
+
         <div class="modal-actions">
           <button type="button" class="btn-secondary" id="cancelEvent">Cancel</button>
           <button type="submit" class="btn-primary">
-            <i class="fa-solid fa-calendar-plus"></i> Create Event
+            <i class="fa-solid fa-calendar-plus" aria-hidden="true"></i> Create event
           </button>
         </div>
       </form>
