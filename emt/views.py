@@ -3,6 +3,7 @@ from django.http import JsonResponse, HttpResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_POST
 from django.conf import settings
+from django import forms
 import json
 import re
 from urllib.parse import urlparse
@@ -11,6 +12,7 @@ import csv
 from suite.ai_client import chat, AIError
 import time
 from bs4 import BeautifulSoup
+from datetime import datetime
 from django.db.models import Q
 from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
@@ -135,7 +137,32 @@ def generate_report_pdf(request):
         response["Content-Disposition"] = 'attachment; filename="Event_Report.pdf"'
         return response
 
-# Helper to persist text-based sections for proposals
+# Helper to validate and persist text-based sections for proposals
+def _clean_flow_content(content):
+    lines = [line.strip() for line in (content or '').splitlines() if line.strip()]
+    if not lines:
+        raise forms.ValidationError('Schedule is required.')
+
+    cleaned_lines = []
+    for idx, line in enumerate(lines, start=1):
+        try:
+            time_str, activity = line.split('||', 1)
+        except ValueError:
+            raise forms.ValidationError(f'Line {idx}: invalid format.')
+        time_str = time_str.strip()
+        activity = activity.strip()
+        if not time_str:
+            raise forms.ValidationError(f'Line {idx}: date & time is required.')
+        if not activity:
+            raise forms.ValidationError(f'Line {idx}: activity is required.')
+        try:
+            datetime.fromisoformat(time_str)
+        except ValueError:
+            raise forms.ValidationError(f'Line {idx}: invalid date & time.')
+        cleaned_lines.append(f'{time_str}||{activity}')
+    return '\n'.join(cleaned_lines)
+
+
 def _save_text_sections(proposal, data):
     section_map = {
         "need_analysis": EventNeedAnalysis,
@@ -143,11 +170,20 @@ def _save_text_sections(proposal, data):
         "outcomes": EventExpectedOutcomes,
         "flow": TentativeFlow,
     }
+    errors = {}
     for field, model in section_map.items():
         if field in data:
+            content = data.get(field) or ""
+            if field == "flow":
+                try:
+                    content = _clean_flow_content(content)
+                except forms.ValidationError as e:
+                    errors[field] = e.messages
+                    continue
             obj, _ = model.objects.get_or_create(proposal=proposal)
-            obj.content = data.get(field) or ""
+            obj.content = content
             obj.save()
+    return errors
 
 
 def _save_activities(proposal, data, form=None):
@@ -417,9 +453,11 @@ def autosave_proposal(request):
     proposal.status = "draft"
     proposal.save()
     form.save_m2m()               # Keep many-to-many fields in sync.
-    _save_text_sections(proposal, data)
+    text_errors = _save_text_sections(proposal, data)
 
     errors = {}
+    if text_errors:
+        errors.update(text_errors)
 
     # Validate activities
     act_errors = {}

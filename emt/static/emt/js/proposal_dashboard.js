@@ -1540,7 +1540,7 @@ function getWhyThisEventForm() {
                         <table id="flow-table" class="schedule-table">
                             <thead>
                                 <tr>
-                                    <th>Time</th>
+                                    <th>Date & Time</th>
                                     <th>Activity</th>
                                     <th></th>
                                 </tr>
@@ -1566,13 +1566,17 @@ function getWhyThisEventForm() {
         if (!scheduleTableBody) return;
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td><input type="text" class="time-input" value="${time}"></td>
+            <td><input type="datetime-local" class="time-input" value="${time}"></td>
             <td><input type="text" class="activity-input" value="${activity}"></td>
             <td><button type="button" class="btn-remove-row">Remove</button></td>
         `;
         row.querySelector('.btn-remove-row').addEventListener('click', () => removeRow(row));
         row.querySelectorAll('input').forEach(input => {
-            input.addEventListener('input', serializeSchedule);
+            input.addEventListener('input', () => {
+                serializeSchedule();
+                $(input).removeClass('has-error');
+                $(input).siblings('.error-message').remove();
+            });
         });
         scheduleTableBody.appendChild(row);
     }
@@ -1588,9 +1592,9 @@ function getWhyThisEventForm() {
         const initial = (scheduleHiddenField.value || '').trim();
         if (initial) {
             initial.split('\n').forEach(line => {
-                const parts = line.split(/[-–]\s*/);
-                const time = parts.shift()?.trim() || '';
-                const activity = parts.join(' - ').trim();
+                const parts = line.split('||');
+                const time = (parts[0] || '').trim();
+                const activity = (parts[1] || '').trim();
                 addRow(time, activity);
             });
         } else {
@@ -1606,7 +1610,7 @@ function getWhyThisEventForm() {
             const time = tr.querySelector('.time-input').value.trim();
             const activity = tr.querySelector('.activity-input').value.trim();
             if (time || activity) {
-                lines.push(`${time} – ${activity}`);
+                lines.push(`${time}||${activity}`);
             }
         });
         scheduleHiddenField.value = lines.join('\n');
@@ -2530,14 +2534,36 @@ function getWhyThisEventForm() {
     }
     
     function validateSchedule() {
-        const scheduleField = $('#schedule-modern');
-        if (!scheduleField.val() || scheduleField.val().trim() === '') {
-            showFieldError(scheduleField, 'Schedule is required');
+        let isValid = true;
+        if (!scheduleTableBody) return false;
+
+        scheduleTableBody.querySelectorAll('tr').forEach(tr => {
+            const timeInput = $(tr).find('.time-input');
+            const activityInput = $(tr).find('.activity-input');
+            const time = timeInput.val().trim();
+            const activity = activityInput.val().trim();
+
+            if (!time) {
+                showScheduleError(timeInput, 'Date & time required');
+                isValid = false;
+            } else if (isNaN(Date.parse(time))) {
+                showScheduleError(timeInput, 'Invalid date & time');
+                isValid = false;
+            }
+
+            if (!activity) {
+                showScheduleError(activityInput, 'Activity required');
+                isValid = false;
+            }
+        });
+
+        if (!isValid) {
+            const scheduleField = $('#schedule-modern');
             scheduleField.addClass('animate-shake');
             setTimeout(() => scheduleField.removeClass('animate-shake'), 600);
-            return false;
         }
-        return true;
+
+        return isValid;
     }
     
     function validateSpeakers() {
@@ -2795,6 +2821,7 @@ function getWhyThisEventForm() {
     function clearValidationErrors() {
         $('.has-error').removeClass('has-error');
         $('.animate-shake').removeClass('animate-shake');
+        $('.error-message').remove();
     }
 
     function showFieldError(field, message) {
@@ -2807,6 +2834,22 @@ function getWhyThisEventForm() {
             if (!firstErrorField) {
                 firstErrorField = field;
             }
+        }
+    }
+
+    function showScheduleError(field, message) {
+        if (!field || !field.length) return;
+        field.addClass('has-error');
+        const td = field.closest('td');
+        if (!td.length) return;
+        let err = td.find('.error-message');
+        if (!err.length) {
+            err = $('<div class="error-message"></div>');
+            td.append(err);
+        }
+        err.text(message);
+        if (!firstErrorField) {
+            firstErrorField = field;
         }
     }
 

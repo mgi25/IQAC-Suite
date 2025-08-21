@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
 from django.urls import reverse_lazy
+from datetime import datetime
 from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
     EventExpectedOutcomes, TentativeFlow, SpeakerProfile,
@@ -212,6 +213,31 @@ class TentativeFlowForm(forms.ModelForm):
                 attrs={'rows': 8, 'placeholder': '10:00 AM – Welcome\n10:15 AM – Guest Talk…'}
             )
         }
+
+    def clean_content(self):
+        data = self.cleaned_data.get('content', '') or ''
+        lines = [line.strip() for line in data.splitlines() if line.strip()]
+        if not lines:
+            raise forms.ValidationError('Schedule is required.')
+
+        cleaned_lines = []
+        for idx, line in enumerate(lines, start=1):
+            try:
+                time_str, activity = line.split('||', 1)
+            except ValueError:
+                raise forms.ValidationError(f'Line {idx}: invalid format.')
+            time_str = time_str.strip()
+            activity = activity.strip()
+            if not time_str:
+                raise forms.ValidationError(f'Line {idx}: date & time is required.')
+            if not activity:
+                raise forms.ValidationError(f'Line {idx}: activity is required.')
+            try:
+                datetime.fromisoformat(time_str)
+            except ValueError:
+                raise forms.ValidationError(f'Line {idx}: invalid date & time.')
+            cleaned_lines.append(f'{time_str}||{activity}')
+        return '\n'.join(cleaned_lines)
 
 class SpeakerProfileForm(forms.ModelForm):
     full_name = forms.CharField(
