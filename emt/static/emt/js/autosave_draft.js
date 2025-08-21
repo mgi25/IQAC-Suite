@@ -46,9 +46,6 @@ window.AutosaveManager = (function() {
                     || inputs.find(i => i.value.trim() !== '')
                     || field;
                 let value = preferred.value;
-                if (name === 'flow' && value === '[]') {
-                    value = '';
-                }
                 data[name] = value;
             }
         });
@@ -57,6 +54,9 @@ window.AutosaveManager = (function() {
 
     function saveLocal() {
         const data = collectFieldData();
+        if (data.hasOwnProperty('flow') && data.flow === '[]') {
+            data.flow = '';
+        }
         if (proposalId) {
             data._proposal_id = proposalId;
         }
@@ -140,7 +140,7 @@ window.AutosaveManager = (function() {
         fields.forEach(f => {
             if (saved.hasOwnProperty(f.name)) {
                 const val = saved[f.name];
-                if (f.name === 'flow' && val === '[]') {
+                if (f.name === 'flow' && (val === '' || val === '[]')) {
                     f.value = '';
                 } else if (f.type === 'checkbox') {
                     if (Array.isArray(val)) {
