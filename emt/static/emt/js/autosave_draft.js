@@ -39,7 +39,13 @@ window.AutosaveManager = (function() {
             } else if (field.multiple) {
                 data[name] = Array.from(field.selectedOptions).map(o => o.value);
             } else {
-                data[name] = field.value;
+                // When multiple inputs share the same name (e.g. hidden Django field
+                // and visible modern field), prefer a visible, non-empty value.
+                const preferred = inputs.find(i => i.type !== 'hidden' && i.value.trim() !== '')
+                    || inputs.find(i => i.type !== 'hidden')
+                    || inputs.find(i => i.value.trim() !== '')
+                    || field;
+                data[name] = preferred.value;
             }
         });
         return data;
