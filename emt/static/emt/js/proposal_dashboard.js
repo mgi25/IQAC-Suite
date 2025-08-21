@@ -1,3 +1,17 @@
+function showLoadingOverlay() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+        overlay.classList.add('show');
+    }
+}
+
+function hideLoadingOverlay() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+        overlay.classList.remove('show');
+    }
+}
+
 $(document).ready(function() {
     console.log('Initializing dashboard...');
     addAnimationStyles();
@@ -2076,9 +2090,11 @@ function getWhyThisEventForm() {
         if (!currentExpandedCard) return;
 
         if (validateCurrentSection()) {
+            showLoadingOverlay();
             if (window.AutosaveManager && window.AutosaveManager.manualSave) {
                 window.AutosaveManager.manualSave()
                     .then(() => {
+                        hideLoadingOverlay();
                         markSectionComplete(currentExpandedCard);
                         showNotification('Section saved successfully!', 'success');
 
@@ -2097,6 +2113,7 @@ function getWhyThisEventForm() {
                         }
                     })
                     .catch(err => {
+                        hideLoadingOverlay();
                         console.error('Autosave failed:', err);
                         if (err && err.errors) {
                             handleAutosaveErrors(err);
@@ -2104,6 +2121,7 @@ function getWhyThisEventForm() {
                         showNotification('Autosave failed. Please check for missing fields.', 'error');
                     });
             } else {
+                hideLoadingOverlay();
                 markSectionComplete(currentExpandedCard);
             }
         } else {
@@ -3064,14 +3082,18 @@ function removeSubmitSection() {
 
 // Function to manually save draft
 function saveDraft() {
+  showLoadingOverlay();
   if (window.autosaveDraft) {
     window.autosaveDraft().then(() => {
+      hideLoadingOverlay();
       alert('Draft saved successfully!');
     }).catch((error) => {
+      hideLoadingOverlay();
       console.error('Failed to save draft:', error);
       alert('Failed to save draft. Please try again.');
     });
   } else {
+    hideLoadingOverlay();
     console.error('Autosave function not available');
     alert('Save function not available. Please try submitting the form.');
   }
