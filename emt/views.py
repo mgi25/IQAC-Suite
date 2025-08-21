@@ -368,6 +368,7 @@ def submit_proposal(request, pk=None):
         proposal = form.save(commit=False)
         proposal.submitted_by = request.user
         is_final = "final_submit" in request.POST
+        is_review = "review_submit" in request.POST
         if is_final:
             proposal.status = "submitted"
             proposal.submitted_at = timezone.now()
@@ -395,9 +396,50 @@ def submit_proposal(request, pk=None):
                 f"Proposal '{proposal.event_title}' submitted.",
             )
             return redirect("emt:proposal_status_detail", proposal_id=proposal.id)
+        if is_review:
+            return redirect("emt:review_proposal", proposal_id=proposal.id)
         return redirect("emt:submit_need_analysis", proposal_id=proposal.id)
 
     return render(request, "emt/submit_proposal.html", ctx)
+
+
+# ──────────────────────────────────────────────────────────────
+#  Review proposal before final submit
+# ──────────────────────────────────────────────────────────────
+@login_required
+def review_proposal(request, proposal_id):
+    proposal = get_object_or_404(EventProposal, pk=proposal_id, submitted_by=request.user)
+
+    need_analysis = EventNeedAnalysis.objects.filter(proposal=proposal).first()
+    objectives = EventObjectives.objects.filter(proposal=proposal).first()
+    outcomes = EventExpectedOutcomes.objects.filter(proposal=proposal).first()
+    flow = TentativeFlow.objects.filter(proposal=proposal).first()
+    speakers = list(proposal.speakers.all())
+    expenses = list(proposal.expense_details.all())
+    income = list(proposal.income_details.all())
+
+    if request.method == "POST" and "final_submit" in request.POST:
+        proposal.status = "submitted"
+        proposal.submitted_at = timezone.now()
+        proposal.save()
+        build_approval_chain(proposal)
+        messages.success(
+            request,
+            f"Proposal '{proposal.event_title}' submitted.",
+        )
+        return redirect("emt:proposal_status_detail", proposal_id=proposal.id)
+
+    ctx = {
+        "proposal": proposal,
+        "need_analysis": need_analysis,
+        "objectives": objectives,
+        "outcomes": outcomes,
+        "flow": flow,
+        "speakers": speakers,
+        "expenses": expenses,
+        "income": income,
+    }
+    return render(request, "emt/review_proposal.html", ctx)
 
 
 # ──────────────────────────────────────────────────────────────

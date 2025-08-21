@@ -3274,7 +3274,7 @@ function addSubmitSection() {
       <h5 class="mb-3" style="color: var(--primary-blue); font-weight: 600;">Submit Proposal</h5>
       <div class="d-flex gap-3 justify-content-center">
         <button type="button" class="btn-save-section" onclick="saveDraft()">Save as Draft</button>
-        <button type="submit" class="btn-submit">Submit Proposal</button>
+        <button type="submit" class="btn-submit" name="review_submit">Submit Proposal</button>
       </div>
       <p class="submit-help-text">Review all sections before final submission</p>
     </div>
