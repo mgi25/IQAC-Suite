@@ -22,8 +22,8 @@ from .models import (
 from .forms import (
     EventProposalForm, NeedAnalysisForm, ExpectedOutcomesForm,
     ObjectivesForm, TentativeFlowForm, SpeakerProfileForm,
-    ExpenseDetailForm,EventReportForm, EventReportAttachmentForm, CDLSupportForm,
-    CertificateRecipientForm, CDLMessageForm
+    ExpenseDetailForm, EventReportForm, EventReportAttachmentForm, CDLSupportForm,
+    CertificateRecipientForm, CDLMessageForm, NAME_PATTERN,
 )
 from django.forms import modelformset_factory
 from core.models import (
@@ -81,6 +81,7 @@ import logging
 
 # Get an instance of the logger for the 'emt' app
 logger = logging.getLogger(__name__) # __name__ will resolve to 'emt.views'
+NAME_RE = re.compile(NAME_PATTERN)
 # Configure Gemini API key from environment variable(s)
 # Prefer `GEMINI_API_KEY`; fall back to `GOOGLE_API_KEY`
 api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
@@ -458,6 +459,8 @@ def autosave_proposal(request):
             value = data.get(f"speaker_{field}_{sp_idx}")
             if value:
                 has_any = True
+                if field == "full_name" and not NAME_RE.fullmatch(value):
+                    missing[field] = "Enter a valid name (letters, spaces, .'- only)."
             else:
                 missing[field] = "This field is required."
         if has_any and missing:
