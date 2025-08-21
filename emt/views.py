@@ -1563,6 +1563,11 @@ def submit_event_report(request, proposal_id):
     except:
         analysis = None
 
+    attendance_qs = report.attendance_rows.all()
+    attendance_present = attendance_qs.filter(absent=False).count()
+    attendance_absent = attendance_qs.filter(absent=True).count()
+    attendance_volunteers = attendance_qs.filter(volunteer=True).count()
+
     # Pre-fill context with proposal info for readonly/preview display
     context = {
         "proposal": proposal,
@@ -1576,6 +1581,9 @@ def submit_event_report(request, proposal_id):
         "event_outcomes": event_outcomes,
         "analysis": analysis,
         "report": report,
+        "attendance_present": attendance_present,
+        "attendance_absent": attendance_absent,
+        "attendance_volunteers": attendance_volunteers,
     }
     return render(request, "emt/submit_event_report.html", context)
 

@@ -204,11 +204,9 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="attendance-modern">Attendance *</label>
-                                {% with total=report.attendance_rows.count present=report.attendance_rows.filter(absent=False).count absent=report.attendance_rows.filter(absent=True).count volunteers=report.attendance_rows.filter(volunteer=True).count %}
-                                <input type="text" id="attendance-modern" readonly value="Present: {{ present }}, Absent: {{ absent }}, Volunteers: {{ volunteers }}">
-                                <input type="hidden" id="num-participants-modern" name="num_participants" value="{{ present }}">
+                                <input type="text" id="attendance-modern" readonly value="Present: {{ attendance_present }}, Absent: {{ attendance_absent }}, Volunteers: {{ attendance_volunteers }}">
+                                <input type="hidden" id="num-participants-modern" name="num_participants" value="{{ attendance_present }}">
                                 <div class="help-text"><a href="{% url 'emt:attendance_upload' report.id %}">Manage via CSV</a></div>
-                                {% endwith %}
                                 {% if form.num_participants.errors %}
                                     <div class="field-error">{{ form.num_participants.errors.0 }}</div>
                                 {% endif %}
