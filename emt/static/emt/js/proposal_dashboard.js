@@ -1613,7 +1613,7 @@ function getWhyThisEventForm() {
                 lines.push(`${time}||${activity}`);
             }
         });
-        scheduleHiddenField.value = lines.join('\n');
+        scheduleHiddenField.value = lines.length ? lines.join('\n') : '';
         scheduleHiddenField.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
@@ -2294,7 +2294,8 @@ function getWhyThisEventForm() {
             '#need-analysis-modern': 'section_need_analysis',
             '#objectives-modern': 'section_objectives',
             '#outcomes-modern': 'section_outcomes',
-            '#schedule-modern': 'section_flow'
+            '#schedule-modern': 'section_flow',
+            'textarea[name="flow"]': 'section_flow'
         };
 
         Object.entries(editorMap).forEach(([selector, key]) => {
@@ -2303,11 +2304,16 @@ function getWhyThisEventForm() {
 
             const saved = localStorage.getItem(key);
             if (saved && !el.value) {
-                el.value = saved;
+                const normalized = saved === '[]' ? '' : saved;
+                el.value = normalized;
+                if (saved === '[]') {
+                    localStorage.setItem(key, '');
+                }
             }
 
             el.addEventListener('input', () => {
-                localStorage.setItem(key, el.value);
+                const val = el.value === '[]' ? '' : el.value;
+                localStorage.setItem(key, val);
             });
         });
     }
@@ -2945,6 +2951,11 @@ function getWhyThisEventForm() {
     if (window.autosaveDraft) {
         // Trigger autosave on form changes
         $('#form-panel-content').on('input change', 'input, textarea, select', debounce(function() {
+            const flowField = document.getElementById('schedule-modern') || document.querySelector('textarea[name="flow"]');
+            if (flowField && flowField.value.trim() === '[]') {
+                flowField.value = '';
+                localStorage.setItem('section_flow', '');
+            }
             window.autosaveDraft().catch(() => {});
         }, 1000));
     }
@@ -2958,7 +2969,11 @@ function getWhyThisEventForm() {
         const needAnalysisContent = localStorage.getItem('section_need_analysis') || $('#need-analysis-modern').val() || '';
         const objectivesContent = localStorage.getItem('section_objectives') || $('#objectives-modern').val() || '';
         const outcomesContent = localStorage.getItem('section_outcomes') || $('#outcomes-modern').val() || '';
-        const flowContent = localStorage.getItem('section_flow') || $('#schedule-modern').val() || '';
+        let flowContent = localStorage.getItem('section_flow') || $('#schedule-modern').val() || '';
+        if (flowContent.trim() === '[]') {
+            flowContent = '';
+            localStorage.setItem('section_flow', '');
+        }
 
         $('textarea[name="need_analysis"]').val(needAnalysisContent);
         $('textarea[name="objectives"]').val(objectivesContent);

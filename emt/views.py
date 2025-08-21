@@ -176,6 +176,8 @@ def _save_text_sections(proposal, data):
             content = data.get(field) or ""
             if field == "flow":
                 content = content.strip()
+                if content == "[]":
+                    content = ""
                 if not content:
                     continue
                 try:
