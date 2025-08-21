@@ -1488,11 +1488,11 @@ function setupDynamicActivities() {
             row.className = 'activity-row';
             row.innerHTML = `
                 <div class="input-group">
-                    <label for="activity_name_${idx + 1}" class="activity-label">Activity ${idx + 1} Name</label>
+                    <label for="activity_name_${idx + 1}" class="activity-label">${idx + 1}. Activity Name</label>
                     <input type="text" id="activity_name_${idx + 1}" name="activity_name_${idx + 1}" value="${act.activity_name || ''}">
                 </div>
                 <div class="input-group">
-                    <label for="activity_date_${idx + 1}" class="date-label">Activity ${idx + 1} Date</label>
+                    <label for="activity_date_${idx + 1}" class="date-label">${idx + 1}. Activity Date</label>
                     <input type="date" id="activity_date_${idx + 1}" name="activity_date_${idx + 1}" value="${act.activity_date || ''}">
                 </div>
                 <button type="button" class="remove-activity" data-index="${idx}">Remove</button>

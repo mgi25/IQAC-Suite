@@ -414,11 +414,11 @@ $(document).ready(function() {
                     html += `
                         <div class="dynamic-activity-group">
                             <div class="input-group">
-                                <label for="activity_name_${i}">Activity ${i} Name</label>
+                                <label for="activity_name_${i}">${i}. Activity Name</label>
                                 <input type="text" id="activity_name_${i}" name="activity_name_${i}" required>
                             </div>
                             <div class="input-group">
-                                <label for="activity_date_${i}">Activity ${i} Date</label>
+                                <label for="activity_date_${i}">${i}. Activity Date</label>
                                 <input type="date" id="activity_date_${i}" name="activity_date_${i}" required>
                             </div>
                         </div>`;
