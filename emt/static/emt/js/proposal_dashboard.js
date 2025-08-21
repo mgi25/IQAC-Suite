@@ -415,13 +415,13 @@ $(document).ready(function() {
         const container = document.getElementById('dynamic-activities-section');
 
         function reindexActivityRows() {
-            const groups = container.querySelectorAll('.dynamic-activity-group');
-            groups.forEach((group, idx) => {
+            const rows = container.querySelectorAll('.activity-row');
+            rows.forEach((row, idx) => {
                 const num = idx + 1;
-                const nameInput = group.querySelector('input[id^="activity_name"]');
-                const dateInput = group.querySelector('input[id^="activity_date"]');
-                const nameLabel = group.querySelector('label[for^="activity_name"]');
-                const dateLabel = group.querySelector('label[for^="activity_date"]');
+                const nameInput = row.querySelector('input[id^="activity_name"]');
+                const dateInput = row.querySelector('input[id^="activity_date"]');
+                const nameLabel = row.querySelector('label[for^="activity_name"]');
+                const dateLabel = row.querySelector('label[for^="activity_date"]');
                 if (nameInput && nameLabel) {
                     nameInput.id = nameInput.name = `activity_name_${num}`;
                     nameLabel.setAttribute('for', `activity_name_${num}`);
@@ -433,7 +433,7 @@ $(document).ready(function() {
                     dateLabel.textContent = `${num}. Activity Date`;
                 }
             });
-            numActivitiesInput.value = groups.length;
+            numActivitiesInput.value = rows.length;
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
             }
@@ -446,7 +446,7 @@ $(document).ready(function() {
                 let html = '';
                 for (let i = 1; i <= Math.min(count, 50); i++) {
                     html += `
-                        <div class="dynamic-activity-group">
+                        <div class="activity-row">
                             <div class="input-group">
                                 <label for="activity_name_${i}">${i}. Activity Name</label>
                                 <input type="text" id="activity_name_${i}" name="activity_name_${i}" required>
@@ -455,7 +455,7 @@ $(document).ready(function() {
                                 <label for="activity_date_${i}">${i}. Activity Date</label>
                                 <input type="date" id="activity_date_${i}" name="activity_date_${i}" required>
                             </div>
-                            <button type="button" class="remove-activity">×</button>
+                            <button type="button" class="remove-activity btn btn-sm btn-outline-danger">×</button>
                         </div>`;
                 }
                 container.innerHTML = html;
@@ -472,9 +472,9 @@ $(document).ready(function() {
 
         container.addEventListener('click', (e) => {
             if (e.target.classList.contains('remove-activity')) {
-                const group = e.target.closest('.dynamic-activity-group');
-                if (group) {
-                    group.remove();
+                const row = e.target.closest('.activity-row');
+                if (row) {
+                    row.remove();
                     reindexActivityRows();
                 }
             }

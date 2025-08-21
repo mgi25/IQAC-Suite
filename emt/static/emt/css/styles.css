@@ -1048,13 +1048,14 @@
 /* Dynamic Activities Styling */
 .dynamic-activity-group {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr auto;
     gap: 1rem;
     padding: 1rem;
     background: #f9fafb;
     border: 1px solid #e5e7eb;
     border-radius: 8px;
     margin-bottom: 1rem;
+    align-items: center;
 }
 
 .dynamic-activity-group:last-child {
@@ -1066,13 +1067,18 @@
     display: grid;
     grid-template-columns: 1fr 1fr auto;
     gap: 1rem;
-    align-items: flex-end;
+    align-items: center;
     margin-bottom: 0.5rem;
 }
 
-.activity-row .remove-activity {
+.activity-row .remove-activity,
+.dynamic-activity-group .remove-activity {
     align-self: center;
-    padding: 0.25rem 0.5rem;
+    padding: 0.25rem;
+    border: none;
+    background: transparent;
+    color: #dc3545;
+    cursor: pointer;
 }
 
 /* Save Section Styling */
