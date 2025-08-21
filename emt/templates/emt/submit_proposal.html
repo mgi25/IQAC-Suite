@@ -86,10 +86,10 @@
         <div class="content-header">
             <h1 class="content-title" id="main-title">Basic Information</h1>
             <p class="content-subtitle" id="main-subtitle">Organization details and event basics</p>
-            <button type="button" id="autofill-btn" class="btn-draft" style="margin-top:0.5rem;">Auto-Fill Test Data</button>
-            {% if proposal %}
-            <button type="button" id="reset-draft-btn" class="btn-draft" style="margin-top:0.5rem; margin-left:0.5rem;">Reset Draft</button>
-            {% endif %}
+            <div class="content-actions">
+                <button type="button" id="autofill-btn" class="btn-draft">Auto-Fill Test Data</button>
+                <button type="button" id="reset-draft-btn" class="btn-draft">Reset Draft</button>
+            </div>
         </div>
 
         {% if form.errors %}
