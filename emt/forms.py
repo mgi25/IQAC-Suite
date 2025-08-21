@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth.models import User
+from django.core.validators import RegexValidator
 from django.urls import reverse_lazy
 from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
@@ -13,6 +14,13 @@ from core.models import (
     SDGGoal,
     SDG_GOALS,
     OrganizationMembership,
+)
+
+# Reusable validator to ensure names contain only letters and basic punctuation
+NAME_PATTERN = r"^[A-Za-z .'-]+$"
+name_validator = RegexValidator(
+    NAME_PATTERN,
+    "Only letters and standard punctuation (.'- and spaces) are allowed.",
 )
 
 class EventProposalForm(forms.ModelForm):
@@ -206,6 +214,11 @@ class TentativeFlowForm(forms.ModelForm):
         }
 
 class SpeakerProfileForm(forms.ModelForm):
+    full_name = forms.CharField(
+        validators=[name_validator],
+        widget=forms.TextInput(attrs={'pattern': NAME_PATTERN}),
+    )
+
     class Meta:
         model   = SpeakerProfile
         fields  = [
@@ -312,6 +325,12 @@ class CDLSupportForm(forms.ModelForm):
         required=False, label="Do you need CDL help with event certificates?"
     )
 
+    resource_person_name = forms.CharField(
+        required=False,
+        validators=[name_validator],
+        widget=forms.TextInput(attrs={'pattern': NAME_PATTERN}),
+    )
+
     class Meta:
         model = CDLSupport
         fields = [
@@ -352,6 +371,11 @@ class CDLSupportForm(forms.ModelForm):
 
 
 class CertificateRecipientForm(forms.ModelForm):
+    name = forms.CharField(
+        validators=[name_validator],
+        widget=forms.TextInput(attrs={'pattern': NAME_PATTERN}),
+    )
+
     class Meta:
         model = CDLCertificateRecipient
         fields = ["name", "role", "certificate_type"]
