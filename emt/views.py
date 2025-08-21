@@ -175,6 +175,9 @@ def _save_text_sections(proposal, data):
         if field in data:
             content = data.get(field) or ""
             if field == "flow":
+                content = content.strip()
+                if not content:
+                    continue
                 try:
                     content = _clean_flow_content(content)
                 except forms.ValidationError as e:
