@@ -1032,7 +1032,7 @@ $(document).ready(function() {
         }
 
         $('#audienceSave').off('click').on('click', () => {
-            const names = selected.map(it => it.name).concat(userSelected.map(u => u.name));
+            const names = selected.map(it => it.name);
             audienceField.val(names.join(', ')).trigger('change').trigger('input');
             if (currentType === 'students') {
                 classIdsField
