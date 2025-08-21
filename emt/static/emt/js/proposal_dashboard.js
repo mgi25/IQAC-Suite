@@ -2242,6 +2242,12 @@ function getWhyThisEventForm() {
                         console.error('Autosave failed:', err);
                         if (err && err.errors) {
                             handleAutosaveErrors(err);
+                            if (firstErrorField && firstErrorField.length) {
+                                $('html, body').animate({
+                                    scrollTop: firstErrorField.offset().top - 100
+                                }, 500);
+                                firstErrorField.focus();
+                            }
                         }
                         showNotification('Autosave failed. Please check for missing fields.', 'error');
                     });
