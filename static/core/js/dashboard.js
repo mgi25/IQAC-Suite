@@ -38,7 +38,10 @@
     const legend = $('#donutLegend');
     if (legend) legend.innerHTML = labels.map((l,i)=>{
       const raw = data[i];
-      const val = typeof raw === 'number' ? (Math.round(raw*10)/10).toFixed(1) : raw;
+      const n = typeof raw === 'number' ? Math.round(raw*10)/10 : raw;
+      const val = (typeof n === 'number' && Number.isFinite(n))
+        ? (n % 1 === 0 ? n.toFixed(0) : n.toFixed(1))
+        : n;
       return `<div class="legend-row"><span class="legend-dot" style="background:${COLORS[i]}"></span><span>${l}</span><strong style="margin-left:auto">${val}%</strong></div>`;
     }).join('');
   }
@@ -71,10 +74,7 @@
       // Update the static actions list with dynamic data if needed
       const actionsList = $('#actionsList');
       if (actionsList && j.events) {
-        // Find the proposal tracker section and keep it
         const proposalTracker = actionsList.querySelector('#proposalTracker');
-        
-        // Add recent events to the top of the actions list
         const recentEventsHtml = j.events.slice(0, 3).map(event => `
           <article class="list-item">
             <div class="bullet ${event.status.toLowerCase()}">
@@ -87,8 +87,6 @@
             <span class="chip-btn">${event.status}</span>
           </article>
         `).join('');
-        
-        // Insert recent events before existing content
         if (recentEventsHtml) {
           const existingContent = actionsList.innerHTML;
           actionsList.innerHTML = recentEventsHtml + existingContent;
@@ -161,7 +159,7 @@
     list.innerHTML = items.length
       ? items.map(e => {
           const viewBtn = e.view_url ? `<a class="chip-btn" href="${e.view_url}"><i class="fa-regular fa-eye"></i> View</a>` : '';
-          const addBtn = !e.past && e.gcal_url ? `<a class="chip-btn" target="_blank" rel="noopener" href="${e.gcal_url}"><i class="fa-regular fa-calendar-plus"></i> Add to Google</a>` : '';
+          const addBtn = !e.past && e.gcal_url ? `<a class="chip-btn" target="_blank" rel="noopener" href="${e.gcal_url}"><i class="fa-regular fa-calendar-plus"></i> Add to Google Calendar</a>` : '';
           return `<div class="u-item"><div>${e.title}</div><div style="display:flex;gap:8px;">${viewBtn}${addBtn}</div></div>`;
         }).join('')
       : `<div class="empty">No events for ${day.toLocaleDateString()}</div>`;
@@ -254,8 +252,8 @@
     const place = $('#meetingPlace').value;
     const notes = $('#meetingNotes').value;
     
-  // Collect selected participant display names (keep as array)
-  const participants = Array.from($('#meetingParticipants').selectedOptions).map(opt => opt.text);
+    // Collect selected participant display names (keep as array)
+    const participants = Array.from($('#meetingParticipants').selectedOptions).map(opt => opt.text);
     
     try {
       // Get user's organizations
@@ -370,7 +368,7 @@
           </div>
           <div class="event-detail-actions">
             ${e.view_url ? `<a class="chip-btn" href="${e.view_url}"><i class="fa-regular fa-eye"></i> View</a>` : ''}
-            ${!e.past && e.gcal_url ? `<a class="chip-btn" target="_blank" href="${e.gcal_url}"><i class="fa-regular fa-calendar-plus"></i> Add to Google</a>` : ''}
+            ${!e.past && e.gcal_url ? `<a class="chip-btn" target="_blank" href="${e.gcal_url}"><i class="fa-regular fa-calendar-plus"></i> Add to Google Calendar</a>` : ''}
           </div>
         </div>
       `).join('');
@@ -397,7 +395,7 @@
 
   // Clear event details
   $('#clearEventDetails')?.addEventListener('click', () => {
-    $('#eventDetailsContent').innerHTML = '<div class="empty">Click on an event in the calendar to view details</div>';
+    $('#eventDetailsContent').innerHTML = '<div class="empty">Click an event in the calendar to view details.</div>';
     $('#clearEventDetails').style.display = 'none';
   });
 
@@ -411,7 +409,6 @@
     // Handle form submission
     $('#eventCreationForm').onsubmit = async (e) => {
       e.preventDefault();
-      // This would redirect to the actual event creation page
       const scope = $('#visibilitySelect')?.value || 'all';
       window.location.href = `/suite/submit/?via=dashboard&scope=${encodeURIComponent(scope)}`;
     };
@@ -427,7 +424,8 @@
       const data = await response.json();
       const select = $(selector);
       if (select) {
-        select.innerHTML = '<option value="">Select venue...</option>' + 
+        // microcopy: typographic ellipsis and consistent phrasing
+        select.innerHTML = '<option value="">Select a venue…</option>' + 
           data.places.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
       }
     } catch (ex) {
@@ -477,7 +475,7 @@
         `).join('');
         tracker.style.display = 'block';
       } else {
-        list.innerHTML = '<div class="empty">No proposals found</div>';
+        list.innerHTML = '<div class="empty">No proposals found.</div>';
         tracker.style.display = 'block';
       }
     } catch (ex) {
@@ -555,20 +553,19 @@
     }
   }
 
-function fitHeatmap(){
-  const wrap = $('#heatmapContainer'); if(!wrap) return;
-  const cols = 53, rows = 7, gap = 3;
-  const cs = getComputedStyle(wrap);
-  const availW = wrap.clientWidth  - (parseFloat(cs.paddingLeft)||0) - (parseFloat(cs.paddingRight)||0);
-  const availH = wrap.clientHeight - (parseFloat(cs.paddingTop)||0)  - (parseFloat(cs.paddingBottom)||0);
-  const size = Math.max(4, Math.floor(Math.min(
-    (availW - (cols - 1) * gap) / cols,
-    (availH - (rows - 1) * gap) / rows
-  )));
-  wrap.style.setProperty('--hm-size', size + 'px');
-  wrap.style.setProperty('--hm-gap',  gap  + 'px');
-}
-
+  function fitHeatmap(){
+    const wrap = $('#heatmapContainer'); if(!wrap) return;
+    const cols = 53, rows = 7, gap = 3;
+    const cs = getComputedStyle(wrap);
+    const availW = wrap.clientWidth  - (parseFloat(cs.paddingLeft)||0) - (parseFloat(cs.paddingRight)||0);
+    const availH = wrap.clientHeight - (parseFloat(cs.paddingTop)||0)  - (parseFloat(cs.paddingBottom)||0);
+    const size = Math.max(4, Math.floor(Math.min(
+      (availW - (cols - 1) * gap) / cols,
+      (availH - (rows - 1) * gap) / rows
+    )));
+    wrap.style.setProperty('--hm-size', size + 'px');
+    wrap.style.setProperty('--hm-gap',  gap  + 'px');
+  }
 
   // To-do functionality removed - replaced with event details viewer
 
@@ -611,8 +608,7 @@ function fitHeatmap(){
   document.addEventListener('DOMContentLoaded', () => {
     loadPerformance();
     loadAndShowProposals();
-    // Removed recent events feed to keep only user's proposals in Actions & Proposals
-    // loadRecentEvents();
+    // loadRecentEvents(); // intentionally not auto-prepending to keep the section focused
     loadCalendarData();
     renderHeatmap();
     requestAnimationFrame(()=>{ syncHeights(); });

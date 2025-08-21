@@ -5,76 +5,109 @@
 {% block title %}Master Data Management{% endblock %}
 
 {% block head_extra %}
-  <link rel="stylesheet" href="{% static 'core/css/admin_master_data.css' %}?v=1.5">
+  <link rel="stylesheet" href="{% static 'core/css/admin_master_data.css' %}?v=3.0">
 {% endblock %}
 
 {% block content %}
-<div class="main-container">
+<div class="ems-dashboard mdm-page">
 
-    <div class="page-header">
-      <h1>Organization Management</h1>
+
+  <!-- Heading (Dashboard style: black, compact) -->
+  <header class="topbar">
+    <div>
+      <h1>Master Data Management</h1>
+    </div>
+  </header>
+
+  <!-- Controls: Category → Status → Search → Add Entry → Add Category -->
+  <div class="controls-container" id="controlsBar">
+    <div class="filters-left">
+      <label class="filter">
+        <span>Category</span>
+        <select id="categoryFilter" aria-label="Select category">
+          {% for org_type in org_types %}
+            {% with key=org_type.name|lower %}
+            <option
+              value="{{ key }}"
+              data-can-have-parent="{% if org_type.can_have_parent %}true{% else %}false{% endif %}"
+              data-parent-type="{% if org_type.parent_type %}{{ org_type.parent_type.name|lower }}{% endif %}">
+              {{ org_type.name }}{% if not key == 'cell' %}s{% endif %}
+            </option>
+            {% endwith %}
+          {% endfor %}
+        </select>
+      </label>
+
+      <label class="filter">
+        <span>Status</span>
+        <select id="statusFilter" aria-label="Filter by status">
+          <option value="all">All</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </label>
+
+      <div class="search-bar">
+        <i class="fas fa-search"></i>
+        <input type="text" id="universalSearch" placeholder="Search in selected category…" aria-label="Search">
+        <button class="search-clear" id="searchClearBtn" title="Clear search" aria-label="Clear search">×</button>
+      </div>
     </div>
 
-  <div class="controls-container">
-    <div class="search-bar">
-      <i class="fas fa-search"></i>
-      <input type="text" id="universalSearch" placeholder="Search for any entry...">
-    </div>
     <div class="main-actions">
-      <button class="btn btn-primary" id="addNewEntryBtn">
-        <i class="fas fa-plus"></i> Add New Entry
+      <button class="btn btn-primary" id="addNewEntryBtn" title="Add new entry">
+        <i class="fas fa-plus"></i><span class="btn-label">Add New Entry</span>
       </button>
-      <button class="btn btn-secondary" id="addNewCategoryBtn" style="margin-left: 10px;">
-        <i class="fas fa-layer-group"></i> Add New Category
+      <button class="btn btn-secondary" id="addNewCategoryBtn" title="Add new category">
+        <i class="fas fa-layer-group"></i><span class="btn-label">Add New Category</span>
       </button>
     </div>
   </div>
 
-  <!-- Inline Add Entry Form Container -->
-  <div id="add-form-container" class="add-form-container" style="display: none;">
+  <!-- Add Entry Panel -->
+  <div id="add-form-container" class="add-form-container" style="display:none;">
     <div class="form-group">
       <label for="categorySelect">Category</label>
       <select id="categorySelect">
-  {% for org_type in org_types %}
-    <option 
-      value="{{ org_type.name|lower }}"
-      data-can-have-parent="{% if org_type.can_have_parent %}true{% else %}false{% endif %}"
-      data-parent-type="{% if org_type.parent_type %}{{ org_type.parent_type.name|lower }}{% endif %}">
-      {{ org_type.name }}
-    </option>
-  {% endfor %}
-</select>
-
+        {% for org_type in org_types %}
+          {% with key=org_type.name|lower %}
+          <option
+            value="{{ key }}"
+            data-can-have-parent="{% if org_type.can_have_parent %}true{% else %}false{% endif %}"
+            data-parent-type="{% if org_type.parent_type %}{{ org_type.parent_type.name|lower }}{% endif %}">
+            {{ org_type.name }}
+          </option>
+          {% endwith %}
+        {% endfor %}
+      </select>
     </div>
     <div class="form-group">
       <label for="newEntryName">Name</label>
       <input type="text" id="newEntryName" placeholder="Enter the name">
     </div>
-    <div id="parent-organization-group" class="form-group" style="display: none;">
+    <div id="parent-organization-group" class="form-group" style="display:none;">
       <label for="parentOrganizationSelect">Parent Organization</label>
       <select id="parentOrganizationSelect">
         <option value="" disabled selected>Select Parent</option>
-        <!-- Dynamically filled by JS -->
       </select>
+      <div class="hint" id="parentHint" aria-live="polite"></div>
     </div>
     <div class="form-actions">
-      <button class="btn btn-primary" id="addEntryConfirmBtn">
-        <i class="fas fa-check"></i> Add
-      </button>
+      <button class="btn btn-primary" id="addEntryConfirmBtn"><i class="fas fa-check"></i> Add</button>
       <button class="btn btn-secondary" id="addEntryCancelBtn">Cancel</button>
     </div>
   </div>
 
-  <!-- Add New Category Form -->
-  <div id="add-category-container" class="add-form-container" style="display: none; margin-top: 12px;">
+  <!-- Add Category Panel -->
+  <div id="add-category-container" class="add-form-container" style="display:none;">
     <div class="form-group">
       <label for="newCategoryName">Category Name</label>
       <input type="text" id="newCategoryName" placeholder="Enter new category (e.g., Committee)">
     </div>
-    <div class="form-group">
-      <label><input type="checkbox" id="hasParentCategory"> Has a parent category?</label>
+    <div class="form-group checkbox-row">
+      <label><input type="checkbox" id="hasParentCategory"> Has A Parent Category?</label>
     </div>
-    <div class="form-group" id="parentCategoryGroup" style="display: none;">
+    <div class="form-group" id="parentCategoryGroup" style="display:none;">
       <label for="parentCategorySelect">Parent Category</label>
       <select id="parentCategorySelect">
         <option value="">-- Select Parent Category --</option>
@@ -82,47 +115,47 @@
           <option value="{{ org_type.id }}">{{ org_type.name }}</option>
         {% endfor %}
       </select>
+      <div class="hint">This controls available parent options when adding entries.</div>
     </div>
     <div class="form-actions">
-      <button class="btn btn-primary" id="addCategoryConfirmBtn">
-        <i class="fas fa-check"></i> Add Category
-      </button>
+      <button class="btn btn-primary" id="addCategoryConfirmBtn"><i class="fas fa-check"></i> Add Category</button>
       <button class="btn btn-secondary" id="addCategoryCancelBtn">Cancel</button>
     </div>
   </div>
 
-  <div class="widget-grid">
+  <!-- Tables: server renders one panel per category; JS shows the selected one -->
+  <div class="tab-panels">
     {% for org_type in org_types %}
-      <div class="data-widget" data-widget-name="{{ org_type.name|lower }}">
-        <div class="widget-header">
-          <div class="widget-title">
-            {{ org_type.name }}{% if not org_type.name|lower == 'cell' %}s{% endif %}
-          </div>
-        </div>
-        <div class="widget-content">
+      {% with key=org_type.name|lower %}
+      <section
+        id="panel-{{ key }}"
+        class="tab-panel{% if forloop.first %} is-active{% endif %}"
+        role="region"
+        aria-label="{{ org_type.name }}"
+        data-type="{{ key }}"
+      >
+        <div class="table-wrap">
           <table class="data-table">
             <thead>
               <tr>
-                <th>Name</th>
+                <th class="th-name">Name</th>
                 {% if org_type.can_have_parent %}
-                  <th>Parent</th>
+                  <th class="th-parent">Parent</th>
                 {% endif %}
-                <th>Status</th>
-                <th>Actions</th>
+                <th class="th-status">Status</th>
+                <th class="th-actions">Actions</th>
               </tr>
             </thead>
             <tbody>
               {% for entry in orgs_by_type|get_item:org_type.name %}
-                <tr data-id="{{ entry.id }}" class="{% if not entry.is_active %}inactive-row-display{% endif %}">
+                <tr data-id="{{ entry.id }}"
+                    data-type="{{ key }}"
+                    class="{% if not entry.is_active %}inactive-row-display{% endif %}">
                   <td data-label="Name">{{ entry.name }}</td>
                   {% if org_type.can_have_parent %}
-                    <td data-label="Parent">
-                      {% if entry.parent %}
-                        {{ entry.parent.name }}
-                      {% else %}
-                        -
-                      {% endif %}
-                    </td>
+                  <td data-label="Parent">
+                    {% if entry.parent %}{{ entry.parent.name }}{% else %}-{% endif %}
+                  </td>
                   {% endif %}
                   <td data-label="Status">
                     <span class="status-badge status-{% if entry.is_active %}active{% else %}inactive{% endif %}">
@@ -130,44 +163,42 @@
                     </span>
                   </td>
                   <td data-label="Actions" class="actions">
-                    <button class="btn btn-edit"><i class="fas fa-pen"></i></button>
+                    <!-- Icon-only, compact, tooltips -->
+                    <button class="icon-btn btn-edit" title="Edit Entry" aria-label="Edit Entry">
+                      <i class="fas fa-pen"></i>
+                    </button>
                     {% if request.user.is_superuser %}
-                    <a class="btn btn-primary btn-sm" title="Add Users" href="{% url 'admin_org_users_select_role' entry.id %}">
+                    <a class="icon-btn" title="Add Users" aria-label="Add Users"
+                       href="{% url 'admin_org_users_select_role' entry.id %}">
                       <i class="fas fa-user-plus"></i>
                     </a>
                     {% endif %}
                   </td>
                 </tr>
               {% empty %}
-                <tr>
-                  <td colspan="{% if org_type.can_have_parent %}4{% else %}3{% endif %}" class="text-center">
-                    No {{ org_type.name|lower }}s found.
-                  </td>
-                </tr>
+                <tr><td colspan="{% if org_type.can_have_parent %}4{% else %}3{% endif %}" class="text-center">No {{ key }}s found.</td></tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
+      {% endwith %}
     {% endfor %}
   </div>
 
-  <div id="search-not-found" class="search-not-found" style="display: none;">
+  <!-- Universal search (selected category scope): no-results -->
+  <div id="search-not-found" class="search-not-found" style="display:none;">
     <p>No results found for "<strong></strong>".</p>
-    <button class="btn btn-primary" id="addFromSearchBtn">
-      <i class="fas fa-plus"></i> Add as New Entry
-    </button>
+    <button class="btn btn-primary" id="addFromSearchBtn"><i class="fas fa-plus"></i> Add As New Entry</button>
   </div>
 </div>
 
-<div id="toast-notification" class="toast"></div>
+<div id="toast-notification" class="toast" aria-live="polite"></div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-  // Make sure your Django view passes this!
   window.orgsByType = JSON.parse('{{ orgs_by_type_json|safe }}');
-  console.log('orgsByType loaded:', window.orgsByType);
 </script>
-<script src="{% static 'core/js/admin_master_data.js' %}"></script>
+<script src="{% static 'core/js/admin_master_data.js' %}?v=3.0"></script>
 {% endblock %}
