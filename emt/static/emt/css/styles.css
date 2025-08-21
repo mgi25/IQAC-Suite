@@ -1875,6 +1875,45 @@
     }
 }
 
+/* Tentative flow schedule table */
+.schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+}
+
+.schedule-table th,
+.schedule-table td {
+    border: 1px solid var(--border-color, #e5e7eb);
+    padding: 0.5rem;
+}
+
+.schedule-table th {
+    background: var(--background, #f9fafb);
+    text-align: left;
+}
+
+#add-row-btn {
+    background: var(--primary-blue, #2563eb);
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 1rem;
+}
+
+#add-row-btn:hover {
+    background: var(--primary-blue-dark, #1e40af);
+}
+
+.btn-remove-row {
+    background: var(--border-color, #e5e7eb);
+    border: none;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+}
+
 /* Override default form grid for expenses section */
 .expenses-section .form-grid,
 .expenses-section .form-row {
