@@ -124,6 +124,7 @@ $(document).ready(function() {
         enablePreviouslyVisitedSections();
         if (window.PROPOSAL_ID) {
             updateCdlNavLink(window.PROPOSAL_ID);
+            $('#reset-draft-btn').prop('disabled', false).removeAttr('disabled');
         }
         $('#autofill-btn').on('click', () => autofillTestData(currentExpandedCard));
         $('#reset-draft-btn').on('click', resetProposalDraft);
@@ -3043,7 +3044,7 @@ function getWhyThisEventForm() {
             if (detail && detail.proposalId) {
                 window.PROPOSAL_ID = detail.proposalId;
                 updateCdlNavLink(detail.proposalId);
-                $('#reset-draft-btn').prop('disabled', false);
+                $('#reset-draft-btn').prop('disabled', false).removeAttr('disabled');
             }
             const indicator = $('#autosave-indicator');
             indicator.removeClass('saving error').addClass('saved');
