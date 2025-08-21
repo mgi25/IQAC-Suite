@@ -129,16 +129,22 @@ $(document).ready(function() {
 
         if (!confirm('Are you sure you want to reset this draft?')) return;
 
-        formFields.each(function() {
-            if (this.type === 'checkbox' || this.type === 'radio') {
-                this.checked = false;
-            } else {
-                $(this).val('');
-            }
-        }).trigger('change');
+        const form = document.getElementById('proposal-form');
+        if (form) {
+            form.reset();
+            Array.from(form.elements).forEach(el => {
+                el.classList.remove('is-invalid', 'is-valid', 'has-error');
+                $(el).siblings('.error-message').remove();
+            });
+            $(form).find('input, textarea, select').trigger('change');
+        }
 
         ['section_need_analysis', 'section_objectives', 'section_outcomes', 'section_flow']
             .forEach(key => localStorage.removeItem(key));
+
+        if (window.AutosaveManager && window.AutosaveManager.clearLocal) {
+            window.AutosaveManager.clearLocal();
+        }
 
         clearValidationErrors();
         updateResetButtonState();
