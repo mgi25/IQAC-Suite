@@ -373,7 +373,7 @@ $(document).ready(function() {
                 setupScheduleSection();
             }
             if (section === 'why-this-event') {
-                // setupWhyThisEventAI(); // AI suggestions disabled
+                setupWhyThisEventAI();
             }
             setupFormFieldSync();
             setupTextSectionStorage();
@@ -1527,28 +1527,28 @@ function getWhyThisEventForm() {
                 <!-- <div id="ai-suggestion-status" class="ai-loading">Generating AI suggestions...</div> -->
             </div>
             <div class="form-row full-width">
-                <div class="input-group">
+                <div class="input-group ai-input">
                     <label for="need-analysis-modern">Need Analysis - Why is this event necessary? *</label>
                     <textarea id="need-analysis-modern" rows="4" required placeholder="Explain why this event is necessary, what gap it fills, and its relevance to the target audience..."></textarea>
-                    <!-- <div class="ai-suggestion-card" id="ai-need-analysis"></div> -->
+                    <button type="button" class="ai-fill-btn" data-target="need-analysis-modern" title="Fill with AI">AI</button>
                     <div class="help-text">Provide a detailed explanation of why this event is important.</div>
                 </div>
             </div>
 
             <div class="form-row full-width">
-                <div class="input-group">
+                <div class="input-group ai-input">
                     <label for="objectives-modern">Objectives - What do you aim to achieve? *</label>
                     <textarea id="objectives-modern" rows="4" required placeholder="• Objective 1: ...&#10;• Objective 2: ...&#10;• Objective 3: ..."></textarea>
-                    <!-- <div class="ai-suggestion-card" id="ai-objectives"></div> -->
+                    <button type="button" class="ai-fill-btn" data-target="objectives-modern" title="Fill with AI">AI</button>
                     <div class="help-text">List 3-5 clear, measurable objectives.</div>
                 </div>
             </div>
 
             <div class="form-row full-width">
-                <div class="input-group">
+                <div class="input-group ai-input">
                     <label for="outcomes-modern">Expected Learning Outcomes - What results do you expect? *</label>
                     <textarea id="outcomes-modern" rows="4" required placeholder="What specific results, skills, or benefits will participants gain?"></textarea>
-                    <!-- <div class="ai-suggestion-card" id="ai-learning-outcomes"></div> -->
+                    <button type="button" class="ai-fill-btn" data-target="outcomes-modern" title="Fill with AI">AI</button>
                     <div class="help-text">Describe the tangible benefits for participants.</div>
                 </div>
             </div>
@@ -2423,8 +2423,39 @@ function getWhyThisEventForm() {
     }
 
     function setupWhyThisEventAI() {
-        // AI suggestions are temporarily disabled
-        // generateWhyEvent();
+        const randomNeed = [
+            'This event addresses current challenges and encourages collaborative problem-solving.',
+            'The program fills a gap in our curriculum by offering practical, hands-on experience.',
+            'Hosting this session promotes interdisciplinary learning and community engagement.'
+        ];
+        const randomObjectives = [
+            '• Objective 1: Enhance participant skills\n• Objective 2: Foster teamwork\n• Objective 3: Share best practices',
+            '• Objective 1: Increase awareness of emerging trends\n• Objective 2: Encourage innovation\n• Objective 3: Build professional networks',
+            '• Objective 1: Provide experiential learning\n• Objective 2: Promote research thinking\n• Objective 3: Strengthen leadership qualities'
+        ];
+        const randomOutcomes = [
+            '• Outcome 1: Participants gain practical knowledge\n• Outcome 2: Improved problem-solving abilities\n• Outcome 3: Clear action plans',
+            '• Outcome 1: Enhanced collaboration skills\n• Outcome 2: Broader professional connections\n• Outcome 3: Increased motivation for projects',
+            '• Outcome 1: Greater confidence in the subject\n• Outcome 2: Awareness of best practices\n• Outcome 3: Defined next steps'
+        ];
+        $('#form-panel-content')
+            .off('click', '.ai-fill-btn')
+            .on('click', '.ai-fill-btn', function () {
+                const target = $(this).data('target');
+                let text = '';
+                if (target === 'need-analysis-modern') {
+                    text = randomNeed[Math.floor(Math.random() * randomNeed.length)];
+                } else if (target === 'objectives-modern') {
+                    text = randomObjectives[Math.floor(Math.random() * randomObjectives.length)];
+                } else if (target === 'outcomes-modern') {
+                    text = randomOutcomes[Math.floor(Math.random() * randomOutcomes.length)];
+                }
+                const el = document.getElementById(target);
+                if (el) {
+                    el.value = text;
+                    el.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            });
     }
 
     // ===== STATUS & PROGRESS FUNCTIONS - PRESERVED =====

@@ -1887,6 +1887,26 @@
     }
 }
 
+/* AI fill button styling for textareas */
+.ai-input {
+    position: relative;
+}
+.ai-fill-btn {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: var(--primary-blue);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+.ai-fill-btn:hover {
+    background: var(--primary-blue-dark);
+}
+
 /* Tentative flow schedule table */
 .schedule-table {
     width: 100%;
