@@ -37,9 +37,9 @@ class Command(BaseCommand):
                                 defaults={'weight': weight}
                             )
 
-                self.stdout.write(self.style.SUCCESS("✅ Mapping data imported successfully!"))
+                self.stdout.write(self.style.SUCCESS("Mapping data imported successfully."))
 
         except FileNotFoundError:
-            self.stderr.write(self.style.ERROR(f"❌ File not found: {path}"))
+            self.stderr.write(self.style.ERROR(f"File not found: {path}"))
         except Exception as e:
-            self.stderr.write(self.style.ERROR(f"⚠️ Error occurred: {str(e)}"))
+            self.stderr.write(self.style.ERROR(f"Error occurred: {str(e)}"))

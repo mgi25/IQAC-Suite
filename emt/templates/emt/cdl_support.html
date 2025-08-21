@@ -24,7 +24,7 @@
       
       <!-- Empty State (Hidden when CDL support is enabled) -->
       <div class="cdl-empty-state" id="cdl-empty-state">
-        <div class="empty-state-icon">📋</div>
+        <div class="empty-state-icon"><i class="fa-solid fa-clipboard"></i></div>
         <h4>No CDL support requested yet</h4>
         <p>Enable CDL support to access poster, certificate, and content services</p>
       </div>
@@ -46,7 +46,7 @@
         <!-- Poster Support Card -->
         <div class="cdl-service-card" id="poster-service-card">
           <div class="cdl-service-header">
-            <h3 class="cdl-service-title">🎨 Poster Support</h3>
+            <h3 class="cdl-service-title"><i class="fa-solid fa-paintbrush"></i> Poster Support</h3>
             <div class="cdl-service-toggle">
               <label>
                 <input type="checkbox" id="{{ form.poster_required.id_for_label }}" name="{{ form.poster_required.name }}" {% if form.poster_required.value %}checked{% endif %}>
@@ -118,7 +118,7 @@
         <!-- Certificate Support Card -->
         <div class="cdl-service-card" id="certificate-service-card">
           <div class="cdl-service-header">
-            <h3 class="cdl-service-title">🏆 Certificate Support</h3>
+            <h3 class="cdl-service-title"><i class="fa-solid fa-trophy"></i> Certificate Support</h3>
             <div class="cdl-service-toggle">
               <label>
                 <input type="checkbox" id="{{ form.certificates_required.id_for_label }}" name="{{ form.certificates_required.name }}" {% if form.certificates_required.value %}checked{% endif %}>
@@ -160,7 +160,7 @@
         <!-- Other Services Card -->
         <div class="cdl-service-card" id="other-services-card">
           <div class="cdl-service-header">
-            <h3 class="cdl-service-title">🔧 Other CDL Services</h3>
+            <h3 class="cdl-service-title"><i class="fa-solid fa-wrench"></i> Other CDL Services</h3>
           </div>
           
           <div class="cdl-service-content">
@@ -177,7 +177,7 @@
         <!-- Blog Content Card -->
         <div class="cdl-service-card" id="blog-content-card">
           <div class="cdl-service-header">
-            <h3 class="cdl-service-title">📝 Blog Content</h3>
+            <h3 class="cdl-service-title"><i class="fa-solid fa-pen"></i> Blog Content</h3>
           </div>
           
           <div class="cdl-service-content">

@@ -22,7 +22,7 @@
       <tr>
         <td>{{ e.name }}</td>
         <td>{{ e.get_role_display }}</td>
-        <td>{% if e.ai_valid %}✅{% else %}❌{% endif %}</td>
+        <td>{% if e.ai_valid %}Yes{% else %}No{% endif %}</td>
         <td>{{ e.ai_errors }}</td>
       </tr>
     {% empty %}

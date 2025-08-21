@@ -412,7 +412,7 @@ def autosave_proposal(request):
     proposal.submitted_by = request.user
     proposal.status = "draft"
     proposal.save()
-    form.save_m2m()               # 🆕 keep M2M in sync
+    form.save_m2m()               # Keep many-to-many fields in sync.
     _save_text_sections(proposal, data)
 
     errors = {}
@@ -816,7 +816,7 @@ def proposal_status_detail(request, proposal_id):
         proposal=proposal
     ).aggregate(total=Sum('amount'))['total'] or 0
 
-    # ✅ Dynamically assign statuses
+    # Dynamically assign statuses.
     db_status = (proposal.status or '').strip().lower()
 
     if db_status == 'rejected':
