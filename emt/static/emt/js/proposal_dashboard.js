@@ -1257,16 +1257,36 @@ $(document).ready(function() {
             });
         }
 
-        input.prop('readonly', true).css('cursor', 'pointer');
+        // Allow manual entry in case the modal fails to open or users type values directly.
+        // The typed values are matched against the known SDG goal names and the hidden
+        // checkboxes (which are part of the actual Django form) are updated accordingly.
+        input.prop('readonly', false).css('cursor', 'text');
         input.off('click').on('click', () => modal.addClass('show'));
-        $('#sdgCancel').off('click').on('click', () => modal.removeClass('show'));
-        $('#sdgSave').off('click').on('click', () => {
-            const selected = container.find('input[type=checkbox]:checked').map((_, cb) => cb.value).get();
+
+        // Sync typed SDG names with the hidden checkbox inputs
+        input.on('input', () => {
+            const typed = input.val().split(/[,;]+/)
+                .map(s => s.trim()).filter(Boolean);
+            const selected = window.SDG_GOALS
+                .filter(g => typed.some(t => t.toLowerCase() === g.name.toLowerCase()))
+                .map(g => String(g.id));
             Object.entries(hiddenMap).forEach(([id, el]) => {
                 el.prop('checked', selected.includes(id));
             });
             hidden.first().trigger('change');
-            const names = window.SDG_GOALS.filter(g => selected.includes(String(g.id))).map(g => g.name);
+        });
+
+        $('#sdgCancel').off('click').on('click', () => modal.removeClass('show'));
+        $('#sdgSave').off('click').on('click', () => {
+            const selected = container.find('input[type=checkbox]:checked')
+                .map((_, cb) => cb.value).get();
+            Object.entries(hiddenMap).forEach(([id, el]) => {
+                el.prop('checked', selected.includes(id));
+            });
+            hidden.first().trigger('change');
+            const names = window.SDG_GOALS
+                .filter(g => selected.includes(String(g.id)))
+                .map(g => g.name);
             input.val(names.join(', '));
             modal.removeClass('show');
         });
