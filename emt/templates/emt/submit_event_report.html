@@ -168,30 +168,12 @@
                                 <div class="help-text">Academic year from proposal (editable)</div>
                             </div>
                             <div class="input-group">
-                                <label for="event-type-modern">Actual Event Type *</label>
-                                {% with selected_event_type=form.actual_event_type.value|default:proposal.event_focus_type %}
-                                <select id="event-type-modern" name="actual_event_type" required>
-                                    <option value="">Select the type of event that was conducted</option>
-                                    <option value="Training Program" {% if selected_event_type == "Training Program" %}selected{% endif %}>Training Program</option>
-                                    <option value="Workshop" {% if selected_event_type == "Workshop" %}selected{% endif %}>Workshop</option>
-                                    <option value="Seminar" {% if selected_event_type == "Seminar" %}selected{% endif %}>Seminar</option>
-                                    <option value="Conference" {% if selected_event_type == "Conference" %}selected{% endif %}>Conference</option>
-                                    <option value="Guest Lecture" {% if selected_event_type == "Guest Lecture" %}selected{% endif %}>Guest Lecture</option>
-                                    <option value="Webinar" {% if selected_event_type == "Webinar" %}selected{% endif %}>Webinar</option>
-                                    <option value="Competition" {% if selected_event_type == "Competition" %}selected{% endif %}>Competition</option>
-                                    <option value="Cultural Event" {% if selected_event_type == "Cultural Event" %}selected{% endif %}>Cultural Event</option>
-                                    <option value="Sports Event" {% if selected_event_type == "Sports Event" %}selected{% endif %}>Sports Event</option>
-                                    <option value="Exhibition" {% if selected_event_type == "Exhibition" %}selected{% endif %}>Exhibition</option>
-                                    <option value="Panel Discussion" {% if selected_event_type == "Panel Discussion" %}selected{% endif %}>Panel Discussion</option>
-                                    <option value="Hackathon" {% if selected_event_type == "Hackathon" %}selected{% endif %}>Hackathon</option>
-                                    <option value="Field Trip" {% if selected_event_type == "Field Trip" %}selected{% endif %}>Field Trip</option>
-                                    <option value="Other" {% if selected_event_type == "Other" %}selected{% endif %}>Other</option>
-                                </select>
+                                <label for="event-type-modern">Event Type *</label>
+                                <input type="text" id="event-type-modern" name="actual_event_type" value="{{ form.actual_event_type.value|default:proposal.event_focus_type }}" readonly>
                                 {% if form.actual_event_type.errors %}
                                     <div class="field-error">{{ form.actual_event_type.errors.0 }}</div>
                                 {% endif %}
-                                {% endwith %}
-                                <div class="help-text">Select the actual type of event that was conducted</div>
+                                <div class="help-text">Event type from proposal (not editable)</div>
                             </div>
                         </div>
 
