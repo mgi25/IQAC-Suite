@@ -1092,7 +1092,11 @@ $(document).ready(function() {
             modernField.val(djangoField.val());
             modernField.on('input change', function() {
                 const value = $(this).val();
-                djangoField.val(value).trigger('change');
+                djangoField.val(value);
+                if (djangoField[0]) {
+                    djangoField[0].dispatchEvent(new Event('input', { bubbles: true }));
+                    djangoField[0].dispatchEvent(new Event('change', { bubbles: true }));
+                }
                 clearFieldError($(this));
             });
         }
