@@ -16,7 +16,8 @@ from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
     EventExpectedOutcomes, TentativeFlow, EventActivity,
     ExpenseDetail, IncomeDetail, SpeakerProfile, EventReport,
-    EventReportAttachment, CDLSupport, CDLCertificateRecipient, CDLMessage, Student
+    EventReportAttachment, CDLSupport, CDLCertificateRecipient, CDLMessage, Student,
+    AttendanceRow,
 )
 from .forms import (
     EventProposalForm, NeedAnalysisForm, ExpectedOutcomesForm,
@@ -43,6 +44,8 @@ from emt.utils import (
     unlock_optionals_after,
     skip_all_downstream_optionals,
     get_downstream_optional_candidates,
+    parse_attendance_csv,
+    ATTENDANCE_HEADERS,
 )
 from emt.models import ApprovalStep
 
@@ -1572,6 +1575,7 @@ def submit_event_report(request, proposal_id):
         "event_summary": event_summary,
         "event_outcomes": event_outcomes,
         "analysis": analysis,
+        "report": report,
     }
     return render(request, "emt/submit_event_report.html", context)
 
@@ -1637,6 +1641,147 @@ def download_audience_csv(request, proposal_id):
     logger.info(
         "Generated %s audience CSV for proposal %s", audience_type, proposal_id
     )
+    return response
+
+
+@login_required
+def upload_attendance_csv(request, report_id):
+    """Upload and preview attendance CSV for an event report."""
+    report = get_object_or_404(
+        EventReport, id=report_id, proposal__submitted_by=request.user
+    )
+
+    rows = []
+    error = None
+    if request.method == "POST" and "csv_file" in request.FILES:
+        try:
+            rows = parse_attendance_csv(request.FILES["csv_file"])
+        except ValueError as exc:
+            error = str(exc)
+    else:
+        rows = [
+            {
+                "registration_no": r.registration_no,
+                "full_name": r.full_name,
+                "student_class": r.student_class,
+                "absent": r.absent,
+                "volunteer": r.volunteer,
+            }
+            for r in report.attendance_rows.all()
+        ]
+
+    page = int(request.GET.get("page", 1))
+    per_page = 100
+    start = (page - 1) * per_page
+    rows_page = rows[start : start + per_page]
+
+    counts = {
+        "total": len(rows),
+        "present": len([r for r in rows if not r.get("absent")]),
+        "absent": len([r for r in rows if r.get("absent")]),
+        "volunteers": len([r for r in rows if r.get("volunteer")]),
+    }
+
+    context = {
+        "report": report,
+        "rows_json": json.dumps(rows_page),
+        "error": error,
+        "page": page,
+        "has_prev": page > 1,
+        "has_next": start + per_page < len(rows),
+        "counts": counts,
+    }
+    return render(request, "emt/attendance_upload.html", context)
+
+
+@login_required
+@require_POST
+def save_attendance_rows(request, report_id):
+    """Persist attendance rows to database and update report counts."""
+    report = get_object_or_404(
+        EventReport, id=report_id, proposal__submitted_by=request.user
+    )
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    rows = payload.get("rows", [])
+    AttendanceRow.objects.filter(event_report=report).delete()
+    objs = [
+        AttendanceRow(
+            event_report=report,
+            registration_no=r.get("registration_no", ""),
+            full_name=r.get("full_name", ""),
+            student_class=r.get("student_class", ""),
+            absent=bool(r.get("absent")),
+            volunteer=bool(r.get("volunteer")),
+        )
+        for r in rows
+    ]
+    AttendanceRow.objects.bulk_create(objs)
+
+    total = len(rows)
+    absent = len([r for r in rows if r.get("absent")])
+    volunteers = len([r for r in rows if r.get("volunteer")])
+    present = total - absent
+
+    report.num_participants = present
+    report.num_student_volunteers = volunteers
+    report.save(update_fields=["num_participants", "num_student_volunteers"])
+
+    return JsonResponse(
+        {
+            "total": total,
+            "present": present,
+            "absent": absent,
+            "volunteers": volunteers,
+        }
+    )
+
+
+@login_required
+@require_POST
+def download_attendance_csv(request, report_id):
+    """Download current attendance rows as CSV."""
+    report = get_object_or_404(
+        EventReport, id=report_id, proposal__submitted_by=request.user
+    )
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+        rows = payload.get("rows")
+    except json.JSONDecodeError:
+        rows = None
+
+    if rows is None:
+        rows = [
+            {
+                "registration_no": r.registration_no,
+                "full_name": r.full_name,
+                "student_class": r.student_class,
+                "absent": r.absent,
+                "volunteer": r.volunteer,
+            }
+            for r in report.attendance_rows.all()
+        ]
+
+    response = HttpResponse(content_type="text/csv")
+    filename = f"student_audience_{report_id}.csv"
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    writer = csv.writer(response, quoting=csv.QUOTE_MINIMAL)
+    writer.writerow(ATTENDANCE_HEADERS)
+    for r in rows:
+        writer.writerow(
+            [
+                r.get("registration_no", ""),
+                r.get("full_name", ""),
+                r.get("student_class", ""),
+                "TRUE" if r.get("absent") else "FALSE",
+                "TRUE" if r.get("volunteer") else "FALSE",
+            ]
+        )
+
     return response
 
 @login_required

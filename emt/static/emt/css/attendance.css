@@ -1,0 +1,6 @@
+.summary span { margin-right: 1rem; }
+#attendance-table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+#attendance-table th, #attendance-table td { border: 1px solid #ccc; padding: 4px; text-align: left; }
+.actions { margin-top: 1rem; }
+.pagination { margin-top: 1rem; }
+.error { color: red; }
