@@ -13,7 +13,7 @@ from .models import (
     AcademicYear
 )
 
-# ✅ Custom admin for Student to display photo
+# Custom admin for Student to display photo.
 @admin.register(Student)
 class StudentAdmin(admin.ModelAdmin):
     list_display = ('roll_no', 'name', 'course', 'academic_year', 'school', 'photo_tag')
@@ -26,7 +26,7 @@ class StudentAdmin(admin.ModelAdmin):
         return "No photo"
     photo_tag.short_description = 'Photo'
 
-# ✅ Register other models normally
+# Register other models normally.
 admin.site.register(Event)
 admin.site.register(Participation)
 admin.site.register(GraduateAttribute)

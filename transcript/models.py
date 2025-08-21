@@ -96,9 +96,9 @@ class Event(models.Model):
 class Student(models.Model):
     roll_no = models.CharField(max_length=10, unique=True)
     name = models.CharField(max_length=100)
-    photo = models.ImageField(upload_to='student_pics/', null=True, blank=True)  # 👈 Add this line
+    photo = models.ImageField(upload_to='student_pics/', null=True, blank=True)
 
-    # ✅ These are now nullable so you don’t get migration prompts:
+    # These fields are now nullable to avoid migration prompts.
     school = models.ForeignKey(School, on_delete=models.CASCADE, null=True, blank=True)
     course = models.ForeignKey(Course, on_delete=models.CASCADE, null=True, blank=True)
     academic_year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE, null=True, blank=True)

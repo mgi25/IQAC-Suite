@@ -1092,7 +1092,11 @@ $(document).ready(function() {
             modernField.val(djangoField.val());
             modernField.on('input change', function() {
                 const value = $(this).val();
-                djangoField.val(value).trigger('change');
+                djangoField.val(value);
+                if (djangoField[0]) {
+                    djangoField[0].dispatchEvent(new Event('input', { bubbles: true }));
+                    djangoField[0].dispatchEvent(new Event('change', { bubbles: true }));
+                }
                 clearFieldError($(this));
             });
         }
@@ -1620,7 +1624,7 @@ function getWhyThisEventForm() {
             if (container.children('.speaker-form-container').length === 0) {
                 container.html(`
                     <div class="speakers-empty-state">
-                        <div class="empty-state-icon">🎤</div>
+                        <div class="empty-state-icon"><i class="fa-solid fa-microphone"></i></div>
                         <h4>No speakers added yet</h4>
                         <p>Add speakers who will be presenting at your event</p>
                     </div>
@@ -1766,7 +1770,7 @@ function getWhyThisEventForm() {
             if (container.children('.expense-form-container').length === 0) {
                 container.html(`
                     <div class="expenses-empty-state">
-                        <div class="empty-state-icon">🎤</div>
+                        <div class="empty-state-icon"><i class="fa-solid fa-microphone"></i></div>
                         <h4>No expenses added yet</h4>
                         <p>Add all expense items for your event budget</p>
                     </div>
@@ -1914,7 +1918,7 @@ function getWhyThisEventForm() {
             if (container.children('.income-form-container').length === 0) {
                 container.html(`
                     <div class="income-empty-state">
-                        <div class="empty-state-icon">🎤</div>
+                        <div class="empty-state-icon"><i class="fa-solid fa-microphone"></i></div>
                         <h4>No income sources added yet</h4>
                         <p>Add income items for your event budget</p>
                     </div>
@@ -2831,7 +2835,7 @@ function getWhyThisEventForm() {
     // Initialize autosave indicators
     initializeAutosaveIndicators();
 
-    console.log('Dashboard initialized successfully! 🚀');
+    console.log('Dashboard initialized successfully.');
     console.log('All original functionality preserved with new UI');
 });
 

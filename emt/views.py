@@ -412,7 +412,7 @@ def autosave_proposal(request):
     proposal.submitted_by = request.user
     proposal.status = "draft"
     proposal.save()
-    form.save_m2m()               # 🆕 keep M2M in sync
+    form.save_m2m()               # Keep many-to-many fields in sync.
     _save_text_sections(proposal, data)
 
     errors = {}
@@ -816,7 +816,7 @@ def proposal_status_detail(request, proposal_id):
         proposal=proposal
     ).aggregate(total=Sum('amount'))['total'] or 0
 
-    # ✅ Dynamically assign statuses
+    # Dynamically assign statuses.
     db_status = (proposal.status or '').strip().lower()
 
     if db_status == 'rejected':
@@ -1609,8 +1609,30 @@ def download_audience_csv(request, proposal_id):
 
     writer = csv.writer(response, quoting=csv.QUOTE_MINIMAL)
     writer.writerow(headers)
-    for name in names:
-        writer.writerow(["", name, "", "", ""])
+
+    if audience_type == "faculty":
+        # Faculty template remains a simple blank form
+        for name in names:
+            writer.writerow(["", name, "", "", ""])
+    else:
+        # Pre-fill student registration numbers and classes when available
+        students = {
+            (s.user.get_full_name() or s.user.username).strip().lower(): s
+            for s in Student.objects.select_related("user")
+        }
+        for name in names:
+            reg_no = ""
+            class_name = ""
+            student = students.get(name.lower())
+            if student:
+                reg_no = (
+                    student.registration_number
+                    or getattr(getattr(student.user, "profile", None), "register_no", "")
+                )
+                cls = student.classes.filter(is_active=True).first()
+                if cls:
+                    class_name = cls.code or cls.name
+            writer.writerow([reg_no, name, class_name, "", ""])
 
     logger.info(
         "Generated %s audience CSV for proposal %s", audience_type, proposal_id

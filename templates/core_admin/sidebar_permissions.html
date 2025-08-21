@@ -51,9 +51,8 @@
   @media (max-width: 900px) { .permissions-grid { grid-template-columns: 1fr; } .controls-panel { flex-direction:row; flex-wrap:wrap; justify-content:center; } }
 </style>
 {% endblock %}
- 
 
- 
+
 {% block content %}
 <div class="permissions-container">
   <div class="permissions-header">
@@ -135,7 +134,7 @@
 
     <div class="save-section">
       <div class="change-indicator" id="changeIndicator">No changes made</div>
-  <button type="submit" id="saveBtn" class="save-btn"><i class="fas fa-save"></i><span id="saveText">Save Changes</span><i id="saveSpinner" class="fas fa-spinner fa-spin" style="display:none"></i></button>
+      <button type="submit" id="saveBtn" class="save-btn"><i class="fas fa-save"></i><span id="saveText">Save Changes</span><i id="saveSpinner" class="fas fa-spinner fa-spin" style="display:none"></i></button>
     </div>
   </form>
 </div>
@@ -144,14 +143,14 @@
       // Helper functions
       const $ = (sel) => document.querySelector(sel);
       const $$ = (sel) => Array.from(document.querySelectorAll(sel));
-      
+
       // Toast notification
       function showToast(message, type = 'success') {
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
         toast.textContent = message;
         document.body.appendChild(toast);
-        
+
         setTimeout(() => toast.classList.add('show'), 100);
         setTimeout(() => {
           toast.classList.remove('show');
@@ -173,14 +172,14 @@
       const assignedList = $('#assignedList');
       const availableCount = $('#availableCount');
       const assignedCount = $('#assignedCount');
-  const selectedCount = $('#selectedCount');
+      const selectedCount = $('#selectedCount');
       const availableEmpty = $('#availableEmpty');
       const assignedEmpty = $('#assignedEmpty');
       const globalSearch = $('#globalSearch');
-  const userSelect = $('#userSelect');
+      const userSelect = $('#userSelect');
       const roleSelect = $('#roleSelect');
-  const orgTypeSelect = $('#orgTypeSelect');
-  const orgRoleSelect = $('#orgRoleSelect');
+      const orgTypeSelect = $('#orgTypeSelect');
+      const orgRoleSelect = $('#orgRoleSelect');
       const saveBtn = $('#saveBtn');
       const changeIndicator = $('#changeIndicator');
 
@@ -191,6 +190,7 @@
       const moveDownBtn = $('#moveDownBtn');
       const selectAllBtn = $('#selectAllBtn');
       const clearBtn = $('#clearBtn');
+      
       // Helper to build and navigate with filters
       function reloadWithFilters(extraParams={}){
         const params = new URLSearchParams(window.location.search);
@@ -217,12 +217,12 @@
           'po': 'fas fa-graduation-cap',
           'transcript': 'fas fa-file-alt'
         };
-        
+
         const key = Object.keys(iconMap).find(k => 
           permission.label.toLowerCase().includes(k) || 
           permission.id.toLowerCase().includes(k)
         );
-        
+
         return iconMap[key] || 'fas fa-cube';
       }
 
@@ -230,11 +230,11 @@
         const div = document.createElement('div');
         div.className = 'permission-item';
         div.dataset.id = permission.id;
-        
+
         const isSelected = isAssigned ? 
           selectedAssigned.has(permission.id) : 
           selectedAvailable.has(permission.id);
-        
+
         if (isSelected) {
           div.classList.add('selected');
         }
@@ -299,7 +299,7 @@
 
       function render() {
         const filteredAvailable = applyFilters(available);
-  const filteredAssigned = assigned; // keep assigned visible and ordered
+        const filteredAssigned = assigned; // keep assigned visible and ordered
 
         // Clear lists
         availableList.innerHTML = '';
@@ -330,25 +330,25 @@
         // Update counts
         availableCount.textContent = available.length;
         assignedCount.textContent = assigned.length;
-  selectedCount.textContent = selectedAvailable.size + selectedAssigned.size;
+        selectedCount.textContent = selectedAvailable.size + selectedAssigned.size;
 
-  // Update button states
+        // Update button states
         addBtn.disabled = selectedAvailable.size === 0;
         removeBtn.disabled = selectedAssigned.size === 0;
         moveUpBtn.disabled = selectedAssigned.size === 0;
         moveDownBtn.disabled = selectedAssigned.size === 0;
 
         // Update save button and change indicator
-  const originalAssigned = assignedData.map(p => p.id).join(',');
-  const currentAssigned = assigned.map(p => p.id).join(',');
-  const hasChanges = originalAssigned !== currentAssigned;
-  // Keep Save button enabled in UI; we validate on submit
-  // Update badges
-  const availableBadge = document.getElementById('availableBadge');
-  const assignedBadge = document.getElementById('assignedBadge');
-  if (availableBadge) availableBadge.textContent = available.length;
-  if (assignedBadge) assignedBadge.textContent = assigned.length;
-        
+        const originalAssigned = assignedData.map(p => p.id).join(',');
+        const currentAssigned = assigned.map(p => p.id).join(',');
+        const hasChanges = originalAssigned !== currentAssigned;
+        // Keep Save button enabled in UI; we validate on submit
+        // Update badges
+        const availableBadge = document.getElementById('availableBadge');
+        const assignedBadge = document.getElementById('assignedBadge');
+        if (availableBadge) availableBadge.textContent = available.length;
+        if (assignedBadge) assignedBadge.textContent = assigned.length;
+
         if (hasChanges) {
           changeIndicator.textContent = 'Changes pending...';
           changeIndicator.style.color = 'var(--warning)';
@@ -397,8 +397,8 @@
 
       // Filter event listeners
       globalSearch.addEventListener('input', () => setTimeout(render, 150));
-  userSelect.addEventListener('change', () => { roleSelect.value=''; reloadWithFilters(); });
-  roleSelect.addEventListener('change', () => { userSelect.value=''; reloadWithFilters(); });
+      userSelect.addEventListener('change', () => { roleSelect.value=''; reloadWithFilters(); });
+      roleSelect.addEventListener('change', () => { userSelect.value=''; reloadWithFilters(); });
       if (orgTypeSelect) orgTypeSelect.addEventListener('change', () => { if(!orgTypeSelect.value){ orgRoleSelect && (orgRoleSelect.value=''); } reloadWithFilters(); });
       if (orgRoleSelect) orgRoleSelect.addEventListener('change', () => reloadWithFilters());
 
@@ -426,7 +426,7 @@
         }
         const assignedOrder = assigned.map(p => p.id);
         $('#assigned_order').value = JSON.stringify(assignedOrder);
-        
+
         $('#saveText').textContent = 'Saving...';
         const sp = document.getElementById('saveSpinner');
         if (sp) sp.style.display = 'inline-block';
@@ -435,5 +435,5 @@
       // Initial render
       render();
     });
-  </script>
+</script>
 {% endblock %}

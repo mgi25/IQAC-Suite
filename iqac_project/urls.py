@@ -13,7 +13,7 @@ urlpatterns = [
     path('emt/', include('emt.urls')),
 ]
 
-# ✅ This line enables media file serving (for student photos) in development:
+# This line enables media file serving (for student photos) in development.
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
