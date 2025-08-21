@@ -1,3 +1,17 @@
+function showLoadingOverlay() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+        overlay.classList.add('show');
+    }
+}
+
+function hideLoadingOverlay() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+        overlay.classList.remove('show');
+    }
+}
+
 $(document).ready(function() {
     console.log('Initializing dashboard...');
     addAnimationStyles();
@@ -14,6 +28,8 @@ $(document).ready(function() {
     };
     const optionalSections = ['speakers', 'expenses', 'income', 'cdl-support'];
     let firstErrorField = null;
+    let scheduleTableBody = null;
+    let scheduleHiddenField = null;
     const autoFillEnabled = new URLSearchParams(window.location.search).has('autofill');
     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
     const originalFormAction = $('#proposal-form').attr('action') || '';
@@ -72,6 +88,68 @@ $(document).ready(function() {
         link.attr('data-url', url);
     }
 
+    let resetBtn, formFields;
+
+    function updateResetButtonState() {
+        if (!resetBtn || !formFields) return;
+        const hasValue = formFields.toArray().some(el => {
+            const $el = $(el);
+            if (el.type === 'hidden') return false;
+            if (el.type === 'checkbox' || el.type === 'radio') {
+                return $el.is(':checked');
+            }
+            return Boolean($el.val());
+        });
+        resetBtn.prop('disabled', !(hasValue || window.PROPOSAL_ID));
+    }
+
+    function resetProposalDraft() {
+        if (window.PROPOSAL_ID) {
+            if (!confirm('Are you sure you want to reset this draft?')) return;
+            const pid = window.PROPOSAL_ID;
+            fetch(window.RESET_DRAFT_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': window.AUTOSAVE_CSRF || ''
+                },
+                body: JSON.stringify({ proposal_id: pid })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = window.RESET_DRAFT_REDIRECT_URL;
+                } else {
+                    alert('Failed to reset draft');
+                }
+            })
+            .catch(() => alert('Failed to reset draft'));
+            return;
+        }
+
+        if (!confirm('Are you sure you want to reset this draft?')) return;
+
+        const form = document.getElementById('proposal-form');
+        if (form) {
+            form.reset();
+            Array.from(form.elements).forEach(el => {
+                el.classList.remove('is-invalid', 'is-valid', 'has-error');
+                $(el).siblings('.error-message').remove();
+            });
+            $(form).find('input, textarea, select').trigger('change');
+        }
+
+        ['section_need_analysis', 'section_objectives', 'section_outcomes', 'section_flow']
+            .forEach(key => localStorage.removeItem(key));
+
+        if (window.AutosaveManager && window.AutosaveManager.clearLocal) {
+            window.AutosaveManager.clearLocal();
+        }
+
+        clearValidationErrors();
+        updateResetButtonState();
+    }
+
     initializeDashboard();
 
     function initializeDashboard() {
@@ -80,10 +158,18 @@ $(document).ready(function() {
         loadExistingData();
         checkForExistingErrors();
         enablePreviouslyVisitedSections();
+
+        resetBtn = $('#reset-draft-btn');
+        formFields = $('#proposal-form').find('input, textarea, select');
+        formFields.on('change keyup', updateResetButtonState);
+        updateResetButtonState();
+
         if (window.PROPOSAL_ID) {
             updateCdlNavLink(window.PROPOSAL_ID);
         }
+
         $('#autofill-btn').on('click', () => autofillTestData(currentExpandedCard));
+        resetBtn.on('click', resetProposalDraft);
         if (!$('.form-errors-banner').length) {
             setTimeout(() => {
                 activateSection('basic-info');
@@ -283,8 +369,11 @@ $(document).ready(function() {
             if (section === 'income') {
                 setupIncomeSection();
             }
+            if (section === 'schedule') {
+                setupScheduleSection();
+            }
             if (section === 'why-this-event') {
-                // setupWhyThisEventAI(); // AI suggestions disabled
+                setupWhyThisEventAI();
             }
             setupFormFieldSync();
             setupTextSectionStorage();
@@ -298,6 +387,9 @@ $(document).ready(function() {
             }
             if (autoFillEnabled) {
                 autofillTestData(section);
+            }
+            if (section === 'schedule') {
+                populateTable();
             }
         }, 100);
     }
@@ -391,6 +483,32 @@ $(document).ready(function() {
         const numActivitiesInput = document.getElementById('num-activities-modern');
         if (!numActivitiesInput || numActivitiesInput.dataset.listenerAttached) return;
         const container = document.getElementById('dynamic-activities-section');
+
+        function reindexActivityRows() {
+            const rows = container.querySelectorAll('.activity-row');
+            rows.forEach((row, idx) => {
+                const num = idx + 1;
+                const nameInput = row.querySelector('input[id^="activity_name"]');
+                const dateInput = row.querySelector('input[id^="activity_date"]');
+                const nameLabel = row.querySelector('label[for^="activity_name"]');
+                const dateLabel = row.querySelector('label[for^="activity_date"]');
+                if (nameInput && nameLabel) {
+                    nameInput.id = nameInput.name = `activity_name_${num}`;
+                    nameLabel.setAttribute('for', `activity_name_${num}`);
+                    nameLabel.textContent = `${num}. Activity Name`;
+                }
+                if (dateInput && dateLabel) {
+                    dateInput.id = dateInput.name = `activity_date_${num}`;
+                    dateLabel.setAttribute('for', `activity_date_${num}`);
+                    dateLabel.textContent = `${num}. Activity Date`;
+                }
+            });
+            numActivitiesInput.value = rows.length;
+            if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                window.AutosaveManager.reinitialize();
+            }
+        }
+
         function render(count) {
             if (!container) return;
             container.innerHTML = '';
@@ -398,15 +516,16 @@ $(document).ready(function() {
                 let html = '';
                 for (let i = 1; i <= Math.min(count, 50); i++) {
                     html += `
-                        <div class="dynamic-activity-group">
+                        <div class="activity-row">
                             <div class="input-group">
-                                <label for="activity_name_${i}">Activity ${i} Name</label>
+                                <label for="activity_name_${i}">${i}. Activity Name</label>
                                 <input type="text" id="activity_name_${i}" name="activity_name_${i}" required>
                             </div>
                             <div class="input-group">
-                                <label for="activity_date_${i}">Activity ${i} Date</label>
+                                <label for="activity_date_${i}">${i}. Activity Date</label>
                                 <input type="date" id="activity_date_${i}" name="activity_date_${i}" required>
                             </div>
+                            <button type="button" class="remove-activity btn btn-sm btn-outline-danger">×</button>
                         </div>`;
                 }
                 container.innerHTML = html;
@@ -417,11 +536,20 @@ $(document).ready(function() {
                         $(`#activity_date_${index}`).val(act.date);
                     });
                 }
-                if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
-                    window.AutosaveManager.reinitialize();
-                }
+                reindexActivityRows();
             }
         }
+
+        container.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-activity')) {
+                const row = e.target.closest('.activity-row');
+                if (row) {
+                    row.remove();
+                    reindexActivityRows();
+                }
+            }
+        });
+
         numActivitiesInput.addEventListener('input', () => {
             const count = parseInt(numActivitiesInput.value, 10);
             render(count);
@@ -1032,7 +1160,7 @@ $(document).ready(function() {
         }
 
         $('#audienceSave').off('click').on('click', () => {
-            const names = selected.map(it => it.name).concat(userSelected.map(u => u.name));
+            const names = selected.map(it => it.name);
             audienceField.val(names.join(', ')).trigger('change').trigger('input');
             if (currentType === 'students') {
                 classIdsField
@@ -1129,16 +1257,36 @@ $(document).ready(function() {
             });
         }
 
-        input.prop('readonly', true).css('cursor', 'pointer');
+        // Allow manual entry in case the modal fails to open or users type values directly.
+        // The typed values are matched against the known SDG goal names and the hidden
+        // checkboxes (which are part of the actual Django form) are updated accordingly.
+        input.prop('readonly', false).css('cursor', 'text');
         input.off('click').on('click', () => modal.addClass('show'));
-        $('#sdgCancel').off('click').on('click', () => modal.removeClass('show'));
-        $('#sdgSave').off('click').on('click', () => {
-            const selected = container.find('input[type=checkbox]:checked').map((_, cb) => cb.value).get();
+
+        // Sync typed SDG names with the hidden checkbox inputs
+        input.on('input', () => {
+            const typed = input.val().split(/[,;]+/)
+                .map(s => s.trim()).filter(Boolean);
+            const selected = window.SDG_GOALS
+                .filter(g => typed.some(t => t.toLowerCase() === g.name.toLowerCase()))
+                .map(g => String(g.id));
             Object.entries(hiddenMap).forEach(([id, el]) => {
                 el.prop('checked', selected.includes(id));
             });
             hidden.first().trigger('change');
-            const names = window.SDG_GOALS.filter(g => selected.includes(String(g.id))).map(g => g.name);
+        });
+
+        $('#sdgCancel').off('click').on('click', () => modal.removeClass('show'));
+        $('#sdgSave').off('click').on('click', () => {
+            const selected = container.find('input[type=checkbox]:checked')
+                .map((_, cb) => cb.value).get();
+            Object.entries(hiddenMap).forEach(([id, el]) => {
+                el.prop('checked', selected.includes(id));
+            });
+            hidden.first().trigger('change');
+            const names = window.SDG_GOALS
+                .filter(g => selected.includes(String(g.id)))
+                .map(g => g.name);
             input.val(names.join(', '));
             modal.removeClass('show');
         });
@@ -1379,28 +1527,28 @@ function getWhyThisEventForm() {
                 <!-- <div id="ai-suggestion-status" class="ai-loading">Generating AI suggestions...</div> -->
             </div>
             <div class="form-row full-width">
-                <div class="input-group">
+                <div class="input-group ai-input">
                     <label for="need-analysis-modern">Need Analysis - Why is this event necessary? *</label>
                     <textarea id="need-analysis-modern" rows="4" required placeholder="Explain why this event is necessary, what gap it fills, and its relevance to the target audience..."></textarea>
-                    <!-- <div class="ai-suggestion-card" id="ai-need-analysis"></div> -->
+                    <button type="button" class="ai-fill-btn" data-target="need-analysis-modern" title="Fill with AI">AI</button>
                     <div class="help-text">Provide a detailed explanation of why this event is important.</div>
                 </div>
             </div>
 
             <div class="form-row full-width">
-                <div class="input-group">
+                <div class="input-group ai-input">
                     <label for="objectives-modern">Objectives - What do you aim to achieve? *</label>
                     <textarea id="objectives-modern" rows="4" required placeholder="• Objective 1: ...&#10;• Objective 2: ...&#10;• Objective 3: ..."></textarea>
-                    <!-- <div class="ai-suggestion-card" id="ai-objectives"></div> -->
+                    <button type="button" class="ai-fill-btn" data-target="objectives-modern" title="Fill with AI">AI</button>
                     <div class="help-text">List 3-5 clear, measurable objectives.</div>
                 </div>
             </div>
 
             <div class="form-row full-width">
-                <div class="input-group">
+                <div class="input-group ai-input">
                     <label for="outcomes-modern">Expected Learning Outcomes - What results do you expect? *</label>
                     <textarea id="outcomes-modern" rows="4" required placeholder="What specific results, skills, or benefits will participants gain?"></textarea>
-                    <!-- <div class="ai-suggestion-card" id="ai-learning-outcomes"></div> -->
+                    <button type="button" class="ai-fill-btn" data-target="outcomes-modern" title="Fill with AI">AI</button>
                     <div class="help-text">Describe the tangible benefits for participants.</div>
                 </div>
             </div>
@@ -1478,11 +1626,22 @@ function getWhyThisEventForm() {
                 <div class="form-row full-width">
                     <div class="input-group">
                         <label for="schedule-modern">Event timeline and schedule *</label>
-                        <textarea id="schedule-modern" name="flow" rows="8" required placeholder="9:00 AM - Registration&#10;9:30 AM - Opening Ceremony..."></textarea>
+                        <textarea id="schedule-modern" name="flow" hidden></textarea>
+                        <table id="flow-table" class="schedule-table">
+                            <thead>
+                                <tr>
+                                    <th>Date & Time</th>
+                                    <th>Activity</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                        <button type="button" id="add-row-btn">Add Row</button>
                         <div class="help-text">Provide a detailed timeline for each activity.</div>
                     </div>
                 </div>
-                
+
                 <div class="form-row full-width">
                     <div class="save-section-container">
                         <button type="button" class="btn-save-section">Save & Continue</button>
@@ -1491,6 +1650,72 @@ function getWhyThisEventForm() {
                 </div>
             </div>
         `;
+    }
+
+    function addRow(time = '', activity = '') {
+        if (!scheduleTableBody) return;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><input type="datetime-local" class="time-input" value="${time}"></td>
+            <td><input type="text" class="activity-input" value="${activity}"></td>
+            <td><button type="button" class="btn-remove-row">Remove</button></td>
+        `;
+        row.querySelector('.btn-remove-row').addEventListener('click', () => removeRow(row));
+        row.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', () => {
+                serializeSchedule();
+                $(input).removeClass('has-error');
+                $(input).siblings('.error-message').remove();
+            });
+        });
+        scheduleTableBody.appendChild(row);
+    }
+
+    function removeRow(row) {
+        row.remove();
+        serializeSchedule();
+    }
+
+    function populateTable() {
+        if (!scheduleTableBody || !scheduleHiddenField) return;
+        scheduleTableBody.innerHTML = '';
+        const initial = (scheduleHiddenField.value || '').trim();
+        if (initial) {
+            initial.split('\n').forEach(line => {
+                const parts = line.split('||');
+                const time = (parts[0] || '').trim();
+                const activity = (parts[1] || '').trim();
+                addRow(time, activity);
+            });
+        } else {
+            addRow();
+        }
+        serializeSchedule();
+    }
+
+    function serializeSchedule() {
+        if (!scheduleTableBody || !scheduleHiddenField) return;
+        const lines = [];
+        scheduleTableBody.querySelectorAll('tr').forEach(tr => {
+            const time = tr.querySelector('.time-input').value.trim();
+            const activity = tr.querySelector('.activity-input').value.trim();
+            if (time || activity) {
+                lines.push(`${time}||${activity}`);
+            }
+        });
+        scheduleHiddenField.value = lines.length ? lines.join('\n') : '';
+        scheduleHiddenField.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    function setupScheduleSection() {
+        scheduleTableBody = document.querySelector('#flow-table tbody');
+        scheduleHiddenField = document.getElementById('schedule-modern');
+        const addRowBtn = document.getElementById('add-row-btn');
+        if (!scheduleTableBody || !scheduleHiddenField || !addRowBtn) return;
+        addRowBtn.addEventListener('click', () => {
+            addRow();
+            serializeSchedule();
+        });
     }
 
     function getSpeakersForm() {
@@ -2075,10 +2300,16 @@ function getWhyThisEventForm() {
     function saveCurrentSection() {
         if (!currentExpandedCard) return;
 
+        if (currentExpandedCard === 'schedule') {
+            serializeSchedule();
+        }
+
         if (validateCurrentSection()) {
+            showLoadingOverlay();
             if (window.AutosaveManager && window.AutosaveManager.manualSave) {
                 window.AutosaveManager.manualSave()
                     .then(() => {
+                        hideLoadingOverlay();
                         markSectionComplete(currentExpandedCard);
                         showNotification('Section saved successfully!', 'success');
 
@@ -2097,13 +2328,21 @@ function getWhyThisEventForm() {
                         }
                     })
                     .catch(err => {
+                        hideLoadingOverlay();
                         console.error('Autosave failed:', err);
                         if (err && err.errors) {
                             handleAutosaveErrors(err);
+                            if (firstErrorField && firstErrorField.length) {
+                                $('html, body').animate({
+                                    scrollTop: firstErrorField.offset().top - 100
+                                }, 500);
+                                firstErrorField.focus();
+                            }
                         }
                         showNotification('Autosave failed. Please check for missing fields.', 'error');
                     });
             } else {
+                hideLoadingOverlay();
                 markSectionComplete(currentExpandedCard);
             }
         } else {
@@ -2145,7 +2384,8 @@ function getWhyThisEventForm() {
             '#need-analysis-modern': 'section_need_analysis',
             '#objectives-modern': 'section_objectives',
             '#outcomes-modern': 'section_outcomes',
-            '#schedule-modern': 'section_flow'
+            '#schedule-modern': 'section_flow',
+            'textarea[name="flow"]': 'section_flow'
         };
 
         Object.entries(editorMap).forEach(([selector, key]) => {
@@ -2154,11 +2394,16 @@ function getWhyThisEventForm() {
 
             const saved = localStorage.getItem(key);
             if (saved && !el.value) {
-                el.value = saved;
+                const normalized = saved === '[]' ? '' : saved;
+                el.value = normalized;
+                if (saved === '[]') {
+                    localStorage.setItem(key, '');
+                }
             }
 
             el.addEventListener('input', () => {
-                localStorage.setItem(key, el.value);
+                const val = el.value === '[]' ? '' : el.value;
+                localStorage.setItem(key, val);
             });
         });
     }
@@ -2178,8 +2423,39 @@ function getWhyThisEventForm() {
     }
 
     function setupWhyThisEventAI() {
-        // AI suggestions are temporarily disabled
-        // generateWhyEvent();
+        const randomNeed = [
+            'This event addresses current challenges and encourages collaborative problem-solving.',
+            'The program fills a gap in our curriculum by offering practical, hands-on experience.',
+            'Hosting this session promotes interdisciplinary learning and community engagement.'
+        ];
+        const randomObjectives = [
+            '• Objective 1: Enhance participant skills\n• Objective 2: Foster teamwork\n• Objective 3: Share best practices',
+            '• Objective 1: Increase awareness of emerging trends\n• Objective 2: Encourage innovation\n• Objective 3: Build professional networks',
+            '• Objective 1: Provide experiential learning\n• Objective 2: Promote research thinking\n• Objective 3: Strengthen leadership qualities'
+        ];
+        const randomOutcomes = [
+            '• Outcome 1: Participants gain practical knowledge\n• Outcome 2: Improved problem-solving abilities\n• Outcome 3: Clear action plans',
+            '• Outcome 1: Enhanced collaboration skills\n• Outcome 2: Broader professional connections\n• Outcome 3: Increased motivation for projects',
+            '• Outcome 1: Greater confidence in the subject\n• Outcome 2: Awareness of best practices\n• Outcome 3: Defined next steps'
+        ];
+        $('#form-panel-content')
+            .off('click', '.ai-fill-btn')
+            .on('click', '.ai-fill-btn', function () {
+                const target = $(this).data('target');
+                let text = '';
+                if (target === 'need-analysis-modern') {
+                    text = randomNeed[Math.floor(Math.random() * randomNeed.length)];
+                } else if (target === 'objectives-modern') {
+                    text = randomObjectives[Math.floor(Math.random() * randomObjectives.length)];
+                } else if (target === 'outcomes-modern') {
+                    text = randomOutcomes[Math.floor(Math.random() * randomOutcomes.length)];
+                }
+                const el = document.getElementById(target);
+                if (el) {
+                    el.value = text;
+                    el.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            });
     }
 
     // ===== STATUS & PROGRESS FUNCTIONS - PRESERVED =====
@@ -2391,14 +2667,36 @@ function getWhyThisEventForm() {
     }
     
     function validateSchedule() {
-        const scheduleField = $('#schedule-modern');
-        if (!scheduleField.val() || scheduleField.val().trim() === '') {
-            showFieldError(scheduleField, 'Schedule is required');
+        let isValid = true;
+        if (!scheduleTableBody) return false;
+
+        scheduleTableBody.querySelectorAll('tr').forEach(tr => {
+            const timeInput = $(tr).find('.time-input');
+            const activityInput = $(tr).find('.activity-input');
+            const time = timeInput.val().trim();
+            const activity = activityInput.val().trim();
+
+            if (!time) {
+                showScheduleError(timeInput, 'Date & time required');
+                isValid = false;
+            } else if (isNaN(Date.parse(time))) {
+                showScheduleError(timeInput, 'Invalid date & time');
+                isValid = false;
+            }
+
+            if (!activity) {
+                showScheduleError(activityInput, 'Activity required');
+                isValid = false;
+            }
+        });
+
+        if (!isValid) {
+            const scheduleField = $('#schedule-modern');
             scheduleField.addClass('animate-shake');
             setTimeout(() => scheduleField.removeClass('animate-shake'), 600);
-            return false;
         }
-        return true;
+
+        return isValid;
     }
     
     function validateSpeakers() {
@@ -2656,6 +2954,7 @@ function getWhyThisEventForm() {
     function clearValidationErrors() {
         $('.has-error').removeClass('has-error');
         $('.animate-shake').removeClass('animate-shake');
+        $('.error-message').remove();
     }
 
     function showFieldError(field, message) {
@@ -2668,6 +2967,22 @@ function getWhyThisEventForm() {
             if (!firstErrorField) {
                 firstErrorField = field;
             }
+        }
+    }
+
+    function showScheduleError(field, message) {
+        if (!field || !field.length) return;
+        field.addClass('has-error');
+        const td = field.closest('td');
+        if (!td.length) return;
+        let err = td.find('.error-message');
+        if (!err.length) {
+            err = $('<div class="error-message"></div>');
+            td.append(err);
+        }
+        err.text(message);
+        if (!firstErrorField) {
+            firstErrorField = field;
         }
     }
 
@@ -2757,17 +3072,29 @@ function getWhyThisEventForm() {
     if (window.autosaveDraft) {
         // Trigger autosave on form changes
         $('#form-panel-content').on('input change', 'input, textarea, select', debounce(function() {
+            const flowField = document.getElementById('schedule-modern') || document.querySelector('textarea[name="flow"]');
+            if (flowField && flowField.value.trim() === '[]') {
+                flowField.value = '';
+                localStorage.setItem('section_flow', '');
+            }
             window.autosaveDraft().catch(() => {});
         }, 1000));
     }
 
     // ===== FORM SUBMISSION HANDLING - PRESERVED =====
     $('#proposal-form').on('submit', function(e) {
+        if (document.getElementById('schedule-modern')) {
+            serializeSchedule();
+        }
         // Before submit, copy any rich text content into hidden fields
         const needAnalysisContent = localStorage.getItem('section_need_analysis') || $('#need-analysis-modern').val() || '';
         const objectivesContent = localStorage.getItem('section_objectives') || $('#objectives-modern').val() || '';
         const outcomesContent = localStorage.getItem('section_outcomes') || $('#outcomes-modern').val() || '';
-        const flowContent = localStorage.getItem('section_flow') || $('#schedule-modern').val() || '';
+        let flowContent = localStorage.getItem('section_flow') || $('#schedule-modern').val() || '';
+        if (flowContent.trim() === '[]') {
+            flowContent = '';
+            localStorage.setItem('section_flow', '');
+        }
 
         $('textarea[name="need_analysis"]').val(needAnalysisContent);
         $('textarea[name="objectives"]').val(objectivesContent);
@@ -2810,6 +3137,7 @@ function getWhyThisEventForm() {
             if (detail && detail.proposalId) {
                 window.PROPOSAL_ID = detail.proposalId;
                 updateCdlNavLink(detail.proposalId);
+                $('#reset-draft-btn').prop('disabled', false).removeAttr('disabled');
             }
             const indicator = $('#autosave-indicator');
             indicator.removeClass('saving error').addClass('saved');
@@ -3039,13 +3367,12 @@ function addSubmitSection() {
     return;
   }
 
-  // Create the submit section HTML with proper application styling
+  // Create the submit section HTML with only the final submit action
   const submitSectionHTML = `
     <div class="submit-section">
       <h5 class="mb-3" style="color: var(--primary-blue); font-weight: 600;">Submit Proposal</h5>
       <div class="d-flex gap-3 justify-content-center">
-        <button type="button" class="btn-save-section" onclick="saveDraft()">Save as Draft</button>
-        <button type="submit" class="btn-submit">Submit Proposal</button>
+        <button type="submit" class="btn-submit" name="review_submit" id="submit-proposal-btn" disabled>Submit Proposal</button>
       </div>
       <p class="submit-help-text">Review all sections before final submission</p>
     </div>
@@ -3062,17 +3389,3 @@ function removeSubmitSection() {
   }
 }
 
-// Function to manually save draft
-function saveDraft() {
-  if (window.autosaveDraft) {
-    window.autosaveDraft().then(() => {
-      alert('Draft saved successfully!');
-    }).catch((error) => {
-      console.error('Failed to save draft:', error);
-      alert('Failed to save draft. Please try again.');
-    });
-  } else {
-    console.error('Autosave function not available');
-    alert('Save function not available. Please try submitting the form.');
-  }
-}

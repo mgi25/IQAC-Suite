@@ -39,7 +39,14 @@ window.AutosaveManager = (function() {
             } else if (field.multiple) {
                 data[name] = Array.from(field.selectedOptions).map(o => o.value);
             } else {
-                data[name] = field.value;
+                // When multiple inputs share the same name (e.g. hidden Django field
+                // and visible modern field), prefer a visible, non-empty value.
+                const preferred = inputs.find(i => i.type !== 'hidden' && i.value.trim() !== '')
+                    || inputs.find(i => i.type !== 'hidden')
+                    || inputs.find(i => i.value.trim() !== '')
+                    || field;
+                let value = preferred.value;
+                data[name] = value;
             }
         });
         return data;
@@ -47,6 +54,9 @@ window.AutosaveManager = (function() {
 
     function saveLocal() {
         const data = collectFieldData();
+        if (data.hasOwnProperty('flow') && data.flow === '[]') {
+            data.flow = '';
+        }
         if (proposalId) {
             data._proposal_id = proposalId;
         }
@@ -130,7 +140,9 @@ window.AutosaveManager = (function() {
         fields.forEach(f => {
             if (saved.hasOwnProperty(f.name)) {
                 const val = saved[f.name];
-                if (f.type === 'checkbox') {
+                if (f.name === 'flow' && (val === '' || val === '[]')) {
+                    f.value = '';
+                } else if (f.type === 'checkbox') {
                     if (Array.isArray(val)) {
                         f.checked = val.includes(f.value);
                     } else {

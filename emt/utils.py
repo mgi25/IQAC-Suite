@@ -10,6 +10,42 @@ from core.models import (
     ApprovalFlowConfig,
 )
 
+import csv
+from io import TextIOWrapper, TextIOBase
+
+ATTENDANCE_HEADERS = [
+    "Registratio",
+    "Full Name",
+    "Class",
+    "Absent",
+    "Student Volunteer",
+]
+
+
+def parse_attendance_csv(file_obj):
+    """Parse uploaded attendance CSV and return list of row dicts."""
+    if isinstance(file_obj, TextIOBase):
+        reader = csv.DictReader(file_obj)
+    else:
+        wrapper = TextIOWrapper(file_obj, encoding="utf-8")
+        reader = csv.DictReader(wrapper)
+    if reader.fieldnames != ATTENDANCE_HEADERS:
+        raise ValueError("CSV headers do not match required format")
+
+    rows = []
+    for raw in reader:
+        rows.append(
+            {
+                "registration_no": raw["Registratio"].strip(),
+                "full_name": raw["Full Name"].strip(),
+                "student_class": raw["Class"].strip(),
+                "absent": raw.get("Absent", "").strip().upper() == "TRUE",
+                "volunteer": raw.get("Student Volunteer", "").strip().upper()
+                == "TRUE",
+            }
+        )
+    return rows
+
 def build_approval_chain(proposal):
     """Create approval steps for a proposal based on org config and templates."""
     config = ApprovalFlowConfig.objects.filter(

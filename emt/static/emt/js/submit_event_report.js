@@ -1168,6 +1168,12 @@ function openOutcomeModal(){
     alert('No organization set for this proposal.');
     return;
   }
+  const field = document.getElementById('id_pos_pso_mapping');
+  const selectedSet = new Set(
+    (field ? field.value.split('\n') : [])
+      .map(s => s.trim())
+      .filter(Boolean)
+  );
   modal.classList.add('show');
   container.textContent = 'Loading...';
   fetch(url)
@@ -1175,8 +1181,8 @@ function openOutcomeModal(){
     .then(data => {
       if(data.success){
         container.innerHTML = '';
-        data.pos.forEach(po => { addOption(container,'PO: ' + po.description); });
-        data.psos.forEach(pso => { addOption(container,'PSO: ' + pso.description); });
+        data.pos.forEach(po => { addOption(container,'PO: ' + po.description, selectedSet); });
+        data.psos.forEach(pso => { addOption(container,'PSO: ' + pso.description, selectedSet); });
       } else {
         container.textContent = 'No data';
       }
@@ -1184,11 +1190,14 @@ function openOutcomeModal(){
     .catch(() => { container.textContent = 'Error loading'; });
 }
 
-function addOption(container, labelText){
+function addOption(container, labelText, checkedSet){
   const lbl = document.createElement('label');
   const cb = document.createElement('input');
   cb.type = 'checkbox';
   cb.value = labelText;
+  if(checkedSet && checkedSet.has(labelText)){
+    cb.checked = true;
+  }
   lbl.appendChild(cb);
   lbl.appendChild(document.createTextNode(' ' + labelText));
   container.appendChild(lbl);
@@ -1211,9 +1220,7 @@ if(_outcomeSaveBtn && document.getElementById('outcomeModal')){
         const selected = Array.from(modal.querySelectorAll('input[type=checkbox]:checked')).map(c => c.value);
         const field = document.getElementById('id_pos_pso_mapping');
         if(!field) return;
-        let existing = field.value.trim();
-        if(existing){ existing += '\n'; }
-        field.value = existing + selected.join('\n');
+        field.value = selected.join('\n');
         modal.classList.remove('show');
     };
 }
@@ -1481,14 +1488,14 @@ function setupDynamicActivities() {
             row.className = 'activity-row';
             row.innerHTML = `
                 <div class="input-group">
-                    <label for="activity_name_${idx + 1}" class="activity-label">Activity ${idx + 1} Name</label>
+                    <label for="activity_name_${idx + 1}" class="activity-label">${idx + 1}. Activity Name</label>
                     <input type="text" id="activity_name_${idx + 1}" name="activity_name_${idx + 1}" value="${act.activity_name || ''}">
                 </div>
                 <div class="input-group">
-                    <label for="activity_date_${idx + 1}" class="date-label">Activity ${idx + 1} Date</label>
+                    <label for="activity_date_${idx + 1}" class="date-label">${idx + 1}. Activity Date</label>
                     <input type="date" id="activity_date_${idx + 1}" name="activity_date_${idx + 1}" value="${act.activity_date || ''}">
                 </div>
-                <button type="button" class="remove-activity" data-index="${idx}">Remove</button>
+                <button type="button" class="remove-activity btn btn-sm btn-outline-danger">×</button>
             `;
             container.appendChild(row);
         });
@@ -1498,9 +1505,12 @@ function setupDynamicActivities() {
 
     container.addEventListener('click', (e) => {
         if (e.target.classList.contains('remove-activity')) {
-            const index = parseInt(e.target.dataset.index, 10);
-            activities.splice(index, 1);
-            render();
+            const row = e.target.closest('.activity-row');
+            const index = Array.from(container.children).indexOf(row);
+            if (index > -1) {
+                activities.splice(index, 1);
+                render();
+            }
         }
     });
 

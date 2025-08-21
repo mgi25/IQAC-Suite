@@ -3,6 +3,7 @@ from django.http import JsonResponse, HttpResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_POST
 from django.conf import settings
+from django import forms
 import json
 import re
 from urllib.parse import urlparse
@@ -11,18 +12,20 @@ import csv
 from suite.ai_client import chat, AIError
 import time
 from bs4 import BeautifulSoup
+from datetime import datetime
 from django.db.models import Q
 from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
     EventExpectedOutcomes, TentativeFlow, EventActivity,
     ExpenseDetail, IncomeDetail, SpeakerProfile, EventReport,
-    EventReportAttachment, CDLSupport, CDLCertificateRecipient, CDLMessage, Student
+    EventReportAttachment, CDLSupport, CDLCertificateRecipient, CDLMessage, Student,
+    AttendanceRow,
 )
 from .forms import (
     EventProposalForm, NeedAnalysisForm, ExpectedOutcomesForm,
     ObjectivesForm, TentativeFlowForm, SpeakerProfileForm,
-    ExpenseDetailForm,EventReportForm, EventReportAttachmentForm, CDLSupportForm,
-    CertificateRecipientForm, CDLMessageForm
+    ExpenseDetailForm, EventReportForm, EventReportAttachmentForm, CDLSupportForm,
+    CertificateRecipientForm, CDLMessageForm, NAME_PATTERN,
 )
 from django.forms import modelformset_factory
 from core.models import (
@@ -43,6 +46,8 @@ from emt.utils import (
     unlock_optionals_after,
     skip_all_downstream_optionals,
     get_downstream_optional_candidates,
+    parse_attendance_csv,
+    ATTENDANCE_HEADERS,
 )
 from emt.models import ApprovalStep
 
@@ -78,6 +83,7 @@ import logging
 
 # Get an instance of the logger for the 'emt' app
 logger = logging.getLogger(__name__) # __name__ will resolve to 'emt.views'
+NAME_RE = re.compile(NAME_PATTERN)
 # Configure Gemini API key from environment variable(s)
 # Prefer `GEMINI_API_KEY`; fall back to `GOOGLE_API_KEY`
 api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
@@ -131,7 +137,32 @@ def generate_report_pdf(request):
         response["Content-Disposition"] = 'attachment; filename="Event_Report.pdf"'
         return response
 
-# Helper to persist text-based sections for proposals
+# Helper to validate and persist text-based sections for proposals
+def _clean_flow_content(content):
+    lines = [line.strip() for line in (content or '').splitlines() if line.strip()]
+    if not lines:
+        raise forms.ValidationError('Schedule is required.')
+
+    cleaned_lines = []
+    for idx, line in enumerate(lines, start=1):
+        try:
+            time_str, activity = line.split('||', 1)
+        except ValueError:
+            raise forms.ValidationError(f'Line {idx}: invalid format.')
+        time_str = time_str.strip()
+        activity = activity.strip()
+        if not time_str:
+            raise forms.ValidationError(f'Line {idx}: date & time is required.')
+        if not activity:
+            raise forms.ValidationError(f'Line {idx}: activity is required.')
+        try:
+            datetime.fromisoformat(time_str)
+        except ValueError:
+            raise forms.ValidationError(f'Line {idx}: invalid date & time.')
+        cleaned_lines.append(f'{time_str}||{activity}')
+    return '\n'.join(cleaned_lines)
+
+
 def _save_text_sections(proposal, data):
     section_map = {
         "need_analysis": EventNeedAnalysis,
@@ -139,11 +170,25 @@ def _save_text_sections(proposal, data):
         "outcomes": EventExpectedOutcomes,
         "flow": TentativeFlow,
     }
+    errors = {}
     for field, model in section_map.items():
         if field in data:
+            content = data.get(field) or ""
+            if field == "flow":
+                content = content.strip()
+                if content == "[]":
+                    content = ""
+                if not content:
+                    continue
+                try:
+                    content = _clean_flow_content(content)
+                except forms.ValidationError as e:
+                    errors[field] = e.messages
+                    continue
             obj, _ = model.objects.get_or_create(proposal=proposal)
-            obj.content = data.get(field) or ""
+            obj.content = content
             obj.save()
+    return errors
 
 
 def _save_activities(proposal, data, form=None):
@@ -323,6 +368,7 @@ def submit_proposal(request, pk=None):
         proposal = form.save(commit=False)
         proposal.submitted_by = request.user
         is_final = "final_submit" in request.POST
+        is_review = "review_submit" in request.POST
         if is_final:
             proposal.status = "submitted"
             proposal.submitted_at = timezone.now()
@@ -350,9 +396,50 @@ def submit_proposal(request, pk=None):
                 f"Proposal '{proposal.event_title}' submitted.",
             )
             return redirect("emt:proposal_status_detail", proposal_id=proposal.id)
+        if is_review:
+            return redirect("emt:review_proposal", proposal_id=proposal.id)
         return redirect("emt:submit_need_analysis", proposal_id=proposal.id)
 
     return render(request, "emt/submit_proposal.html", ctx)
+
+
+# ──────────────────────────────────────────────────────────────
+#  Review proposal before final submit
+# ──────────────────────────────────────────────────────────────
+@login_required
+def review_proposal(request, proposal_id):
+    proposal = get_object_or_404(EventProposal, pk=proposal_id, submitted_by=request.user)
+
+    need_analysis = EventNeedAnalysis.objects.filter(proposal=proposal).first()
+    objectives = EventObjectives.objects.filter(proposal=proposal).first()
+    outcomes = EventExpectedOutcomes.objects.filter(proposal=proposal).first()
+    flow = TentativeFlow.objects.filter(proposal=proposal).first()
+    speakers = list(proposal.speakers.all())
+    expenses = list(proposal.expense_details.all())
+    income = list(proposal.income_details.all())
+
+    if request.method == "POST" and "final_submit" in request.POST:
+        proposal.status = "submitted"
+        proposal.submitted_at = timezone.now()
+        proposal.save()
+        build_approval_chain(proposal)
+        messages.success(
+            request,
+            f"Proposal '{proposal.event_title}' submitted.",
+        )
+        return redirect("emt:proposal_status_detail", proposal_id=proposal.id)
+
+    ctx = {
+        "proposal": proposal,
+        "need_analysis": need_analysis,
+        "objectives": objectives,
+        "outcomes": outcomes,
+        "flow": flow,
+        "speakers": speakers,
+        "expenses": expenses,
+        "income": income,
+    }
+    return render(request, "emt/review_proposal.html", ctx)
 
 
 # ──────────────────────────────────────────────────────────────
@@ -413,9 +500,11 @@ def autosave_proposal(request):
     proposal.status = "draft"
     proposal.save()
     form.save_m2m()               # Keep many-to-many fields in sync.
-    _save_text_sections(proposal, data)
+    text_errors = _save_text_sections(proposal, data)
 
     errors = {}
+    if text_errors:
+        errors.update(text_errors)
 
     # Validate activities
     act_errors = {}
@@ -455,6 +544,8 @@ def autosave_proposal(request):
             value = data.get(f"speaker_{field}_{sp_idx}")
             if value:
                 has_any = True
+                if field == "full_name" and not NAME_RE.fullmatch(value):
+                    missing[field] = "Enter a valid name (letters, spaces, .'- only)."
             else:
                 missing[field] = "This field is required."
         if has_any and missing:
@@ -524,6 +615,29 @@ def autosave_proposal(request):
     )
 
     return JsonResponse({"success": True, "proposal_id": proposal.id})
+
+
+@login_required
+@require_POST
+def reset_proposal_draft(request):
+    """Delete the current draft proposal and its related data."""
+    try:
+        data = json.loads(request.body.decode("utf-8")) if request.body else {}
+    except json.JSONDecodeError:
+        return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
+
+    pid = data.get("proposal_id")
+    if not pid:
+        return JsonResponse({"success": False, "error": "proposal_id required"}, status=400)
+
+    proposal = EventProposal.objects.filter(
+        id=pid, submitted_by=request.user, status="draft"
+    ).first()
+    if not proposal:
+        return JsonResponse({"success": False, "error": "Draft not found"}, status=404)
+
+    proposal.delete()
+    return JsonResponse({"success": True})
 
 
 # ──────────────────────────────────────────────────────────────
@@ -1560,6 +1674,11 @@ def submit_event_report(request, proposal_id):
     except:
         analysis = None
 
+    attendance_qs = report.attendance_rows.all()
+    attendance_present = attendance_qs.filter(absent=False).count()
+    attendance_absent = attendance_qs.filter(absent=True).count()
+    attendance_volunteers = attendance_qs.filter(volunteer=True).count()
+
     # Pre-fill context with proposal info for readonly/preview display
     context = {
         "proposal": proposal,
@@ -1572,6 +1691,10 @@ def submit_event_report(request, proposal_id):
         "event_summary": event_summary,
         "event_outcomes": event_outcomes,
         "analysis": analysis,
+        "report": report,
+        "attendance_present": attendance_present,
+        "attendance_absent": attendance_absent,
+        "attendance_volunteers": attendance_volunteers,
     }
     return render(request, "emt/submit_event_report.html", context)
 
@@ -1637,6 +1760,171 @@ def download_audience_csv(request, proposal_id):
     logger.info(
         "Generated %s audience CSV for proposal %s", audience_type, proposal_id
     )
+    return response
+
+
+@login_required
+def upload_attendance_csv(request, report_id):
+    """Upload and preview attendance CSV for an event report."""
+    report = get_object_or_404(
+        EventReport, id=report_id, proposal__submitted_by=request.user
+    )
+
+    rows = []
+    error = None
+    if request.method == "POST" and "csv_file" in request.FILES:
+        try:
+            rows = parse_attendance_csv(request.FILES["csv_file"])
+        except ValueError as exc:
+            error = str(exc)
+
+    page = int(request.GET.get("page", 1))
+    per_page = 100
+    start = (page - 1) * per_page
+    rows_page = rows[start : start + per_page]
+
+    if rows:
+        counts = {
+            "total": len(rows),
+            "present": len([r for r in rows if not r.get("absent")]),
+            "absent": len([r for r in rows if r.get("absent")]),
+            "volunteers": len([r for r in rows if r.get("volunteer")]),
+        }
+    else:
+        counts = {
+            "total": report.attendance_rows.count(),
+            "present": report.attendance_rows.filter(absent=False).count(),
+            "absent": report.attendance_rows.filter(absent=True).count(),
+            "volunteers": report.attendance_rows.filter(volunteer=True).count(),
+        }
+
+    context = {
+        "report": report,
+        "rows_json": json.dumps(rows_page),
+        "error": error,
+        "page": page,
+        "has_prev": page > 1,
+        "has_next": start + per_page < len(rows),
+        "counts": counts,
+    }
+    return render(request, "emt/attendance_upload.html", context)
+
+
+@login_required
+@require_http_methods(["GET"])
+def attendance_data(request, report_id):
+    """Return attendance rows and counts for a report."""
+    report = get_object_or_404(
+        EventReport, id=report_id, proposal__submitted_by=request.user
+    )
+    rows = [
+        {
+            "registration_no": r.registration_no,
+            "full_name": r.full_name,
+            "student_class": r.student_class,
+            "absent": r.absent,
+            "volunteer": r.volunteer,
+        }
+        for r in report.attendance_rows.all()
+    ]
+    counts = {
+        "total": len(rows),
+        "present": len([r for r in rows if not r.get("absent")]),
+        "absent": len([r for r in rows if r.get("absent")]),
+        "volunteers": len([r for r in rows if r.get("volunteer")]),
+    }
+    logger.info("Fetched attendance data for report %s", report_id)
+    return JsonResponse({"rows": rows, "counts": counts})
+
+
+@login_required
+@require_POST
+def save_attendance_rows(request, report_id):
+    """Persist attendance rows to database and update report counts."""
+    report = get_object_or_404(
+        EventReport, id=report_id, proposal__submitted_by=request.user
+    )
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    rows = payload.get("rows", [])
+    AttendanceRow.objects.filter(event_report=report).delete()
+    objs = [
+        AttendanceRow(
+            event_report=report,
+            registration_no=r.get("registration_no", ""),
+            full_name=r.get("full_name", ""),
+            student_class=r.get("student_class", ""),
+            absent=bool(r.get("absent")),
+            volunteer=bool(r.get("volunteer")),
+        )
+        for r in rows
+    ]
+    AttendanceRow.objects.bulk_create(objs)
+
+    total = len(rows)
+    absent = len([r for r in rows if r.get("absent")])
+    volunteers = len([r for r in rows if r.get("volunteer")])
+    present = total - absent
+
+    report.num_participants = present
+    report.num_student_volunteers = volunteers
+    report.save(update_fields=["num_participants", "num_student_volunteers"])
+
+    return JsonResponse(
+        {
+            "total": total,
+            "present": present,
+            "absent": absent,
+            "volunteers": volunteers,
+        }
+    )
+
+
+@login_required
+@require_POST
+def download_attendance_csv(request, report_id):
+    """Download current attendance rows as CSV."""
+    report = get_object_or_404(
+        EventReport, id=report_id, proposal__submitted_by=request.user
+    )
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+        rows = payload.get("rows")
+    except json.JSONDecodeError:
+        rows = None
+
+    if rows is None:
+        rows = [
+            {
+                "registration_no": r.registration_no,
+                "full_name": r.full_name,
+                "student_class": r.student_class,
+                "absent": r.absent,
+                "volunteer": r.volunteer,
+            }
+            for r in report.attendance_rows.all()
+        ]
+
+    response = HttpResponse(content_type="text/csv")
+    filename = f"student_audience_{report_id}.csv"
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    writer = csv.writer(response, quoting=csv.QUOTE_MINIMAL)
+    writer.writerow(ATTENDANCE_HEADERS)
+    for r in rows:
+        writer.writerow(
+            [
+                r.get("registration_no", ""),
+                r.get("full_name", ""),
+                r.get("student_class", ""),
+                "TRUE" if r.get("absent") else "FALSE",
+                "TRUE" if r.get("volunteer") else "FALSE",
+            ]
+        )
+
     return response
 
 @login_required

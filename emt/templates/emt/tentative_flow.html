@@ -20,10 +20,21 @@
       <div class="section">
         <h3>Flow Plan</h3>
         <p>Enter a timeline/sequence of the event.</p>
-        <div class="input-group">
-          {{ form.content.label_tag }}
-          {{ form.content }}
-        </div>
+        {% if form.content.errors %}
+          <div class="errorlist">{{ form.content.errors }}</div>
+        {% endif %}
+        <textarea id="id_content" name="content" hidden>{{ form.content.value|default_if_none:'' }}</textarea>
+        <table id="flow-table" class="schedule-table">
+          <thead>
+            <tr>
+              <th>Date & Time</th>
+              <th>Activity</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <button type="button" id="add-row-btn">Add Row</button>
       </div>
       <div class="input-group">
         <button type="submit" class="btn">Save & Continue</button>
@@ -39,5 +50,6 @@
     window.AUTOSAVE_URL = "{% url 'emt:autosave_proposal' %}";
     window.AUTOSAVE_CSRF = "{{ csrf_token }}";
   </script>
+  <script src="{% static 'emt/js/tentative_flow.js' %}"></script>
   <script src="{% static 'emt/js/autosave_draft.js' %}"></script>
 {% endblock %}

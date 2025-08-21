@@ -362,6 +362,44 @@ class AutosaveProposalTests(TestCase):
         self.assertIn("speakers", data.get("errors", {}))
         self.assertIn("designation", data["errors"]["speakers"]["0"])
 
+    def test_autosave_speaker_invalid_name(self):
+        payload = self._payload()
+        payload.update({
+            "speaker_full_name_0": "1234",
+            "speaker_designation_0": "Prof",
+            "speaker_affiliation_0": "Uni",
+            "speaker_contact_email_0": "a@b.com",
+            "speaker_detailed_profile_0": "Profile",
+        })
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertFalse(data.get("success"))
+        self.assertIn("speakers", data.get("errors", {}))
+        self.assertIn("full_name", data["errors"]["speakers"]["0"])
+
+    def test_reset_proposal_draft_deletes_draft(self):
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(self._payload()),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        pid = resp.json()["proposal_id"]
+        self.assertTrue(EventProposal.objects.filter(id=pid).exists())
+
+        resp2 = self.client.post(
+            reverse("emt:reset_proposal_draft"),
+            data=json.dumps({"proposal_id": pid}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp2.status_code, 200)
+        self.assertFalse(EventProposal.objects.filter(id=pid).exists())
+
 
 class EventProposalOrganizationPrefillTests(TestCase):
     def setUp(self):

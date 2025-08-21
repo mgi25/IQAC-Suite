@@ -20,7 +20,9 @@ urlpatterns = [
     path('cdl-support/<int:proposal_id>/', views.submit_cdl_support, name='submit_cdl_support'),
     path('cdl/post-event/<int:proposal_id>/', views.cdl_post_event, name='cdl_post_event'),
     path('proposal-status/<int:proposal_id>/', views.proposal_status_detail, name='proposal_status_detail'),
+    path('review/<int:proposal_id>/', views.review_proposal, name='review_proposal'),
     path('autosave-proposal/', views.autosave_proposal, name='autosave_proposal'),
+    path('reset-proposal-draft/', views.reset_proposal_draft, name='reset_proposal_draft'),
     path('autosave-need-analysis/', views.autosave_need_analysis, name='autosave_need_analysis'),
     path('pending-reports/', views.pending_reports, name='pending_reports'),
     path('generate-report/<int:proposal_id>/', views.generate_report, name='generate_report'),
@@ -30,6 +32,11 @@ urlpatterns = [
     path('download/audience-csv/<int:proposal_id>/', views.download_audience_csv, name='download_audience_csv'),
     path('generated-reports/', views.generated_reports, name='generated_reports'),
     path('view-report/<int:report_id>/', views.view_report, name='view_report'),
+
+    path('reports/<int:report_id>/attendance/upload/', views.upload_attendance_csv, name='attendance_upload'),
+    path('reports/<int:report_id>/attendance/save/', views.save_attendance_rows, name='attendance_save'),
+    path('reports/<int:report_id>/attendance/download/', views.download_attendance_csv, name='attendance_download'),
+    path('reports/<int:report_id>/attendance/data/', views.attendance_data, name='attendance_data'),
 
     # THE NEW, GENERIC ORG API ENDPOINT:
     path('api/organizations/', views.api_organizations, name='api_organizations'),

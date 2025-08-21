@@ -1,6 +1,8 @@
 from django import forms
 from django.contrib.auth.models import User
+from django.core.validators import RegexValidator
 from django.urls import reverse_lazy
+from datetime import datetime
 from .models import (
     EventProposal, EventNeedAnalysis, EventObjectives,
     EventExpectedOutcomes, TentativeFlow, SpeakerProfile,
@@ -13,6 +15,13 @@ from core.models import (
     SDGGoal,
     SDG_GOALS,
     OrganizationMembership,
+)
+
+# Reusable validator to ensure names contain only letters and basic punctuation
+NAME_PATTERN = r"^[A-Za-z .'-]+$"
+name_validator = RegexValidator(
+    NAME_PATTERN,
+    "Only letters and standard punctuation (.'- and spaces) are allowed.",
 )
 
 class EventProposalForm(forms.ModelForm):
@@ -205,7 +214,37 @@ class TentativeFlowForm(forms.ModelForm):
             )
         }
 
+    def clean_content(self):
+        data = self.cleaned_data.get('content', '') or ''
+        lines = [line.strip() for line in data.splitlines() if line.strip()]
+        if not lines:
+            raise forms.ValidationError('Schedule is required.')
+
+        cleaned_lines = []
+        for idx, line in enumerate(lines, start=1):
+            try:
+                time_str, activity = line.split('||', 1)
+            except ValueError:
+                raise forms.ValidationError(f'Line {idx}: invalid format.')
+            time_str = time_str.strip()
+            activity = activity.strip()
+            if not time_str:
+                raise forms.ValidationError(f'Line {idx}: date & time is required.')
+            if not activity:
+                raise forms.ValidationError(f'Line {idx}: activity is required.')
+            try:
+                datetime.fromisoformat(time_str)
+            except ValueError:
+                raise forms.ValidationError(f'Line {idx}: invalid date & time.')
+            cleaned_lines.append(f'{time_str}||{activity}')
+        return '\n'.join(cleaned_lines)
+
 class SpeakerProfileForm(forms.ModelForm):
+    full_name = forms.CharField(
+        validators=[name_validator],
+        widget=forms.TextInput(attrs={'pattern': NAME_PATTERN}),
+    )
+
     class Meta:
         model   = SpeakerProfile
         fields  = [
@@ -312,6 +351,12 @@ class CDLSupportForm(forms.ModelForm):
         required=False, label="Do you need CDL help with event certificates?"
     )
 
+    resource_person_name = forms.CharField(
+        required=False,
+        validators=[name_validator],
+        widget=forms.TextInput(attrs={'pattern': NAME_PATTERN}),
+    )
+
     class Meta:
         model = CDLSupport
         fields = [
@@ -352,6 +397,11 @@ class CDLSupportForm(forms.ModelForm):
 
 
 class CertificateRecipientForm(forms.ModelForm):
+    name = forms.CharField(
+        validators=[name_validator],
+        widget=forms.TextInput(attrs={'pattern': NAME_PATTERN}),
+    )
+
     class Meta:
         model = CDLCertificateRecipient
         fields = ["name", "role", "certificate_type"]

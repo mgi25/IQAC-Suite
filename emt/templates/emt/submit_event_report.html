@@ -204,16 +204,17 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="attendance-modern">Attendance *</label>
-                                <input type="text" id="attendance-modern" readonly placeholder="Select participants">
-                                <input type="hidden" id="num-participants-modern" name="num_participants" value="{{ form.num_participants.value|default:'' }}">
-                                <div class="help-text">Select attendees; counts update automatically. <a href="{% url 'emt:download_audience_csv' proposal.id %}?type=students">Student CSV</a> | <a href="{% url 'emt:download_audience_csv' proposal.id %}?type=faculty">Faculty CSV</a></div>
+                                <input type="text" id="attendance-modern" readonly value="Present: {{ attendance_present }}, Absent: {{ attendance_absent }}, Volunteers: {{ attendance_volunteers }}">
+                                <input type="hidden" id="num-participants-modern" name="num_participants" value="{{ attendance_present }}">
+                                <div class="help-text"><a href="{% url 'emt:attendance_upload' report.id %}">Manage via CSV</a></div>
                                 {% if form.num_participants.errors %}
                                     <div class="field-error">{{ form.num_participants.errors.0 }}</div>
                                 {% endif %}
                             </div>
                             <div class="input-group">
                                 <label for="num-volunteers-modern">Number of student volunteers</label>
-                                <input type="number" id="num-volunteers-modern" name="num_student_volunteers" value="{{ form.num_student_volunteers.value|default:'' }}" min="0" placeholder="Enter number of volunteers">
+                                <input type="number" id="num-volunteers-modern" value="{{ form.num_student_volunteers.value|default:'' }}" disabled>
+                                <input type="hidden" id="num-volunteers-hidden" name="num_student_volunteers" value="{{ form.num_student_volunteers.value|default:'' }}">
                                 <div class="help-text">Automatically calculated from attendance CSV</div>
                                 {% if form.num_student_volunteers.errors %}
                                     <div class="field-error">{{ form.num_student_volunteers.errors.0 }}</div>

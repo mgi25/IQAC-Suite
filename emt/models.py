@@ -434,6 +434,23 @@ class EventReportAttachment(models.Model):
     def __str__(self):
         return f"Attachment for {self.report.proposal.event_title}"
 
+
+class AttendanceRow(models.Model):
+    """Single attendance record linked to an event report."""
+    event_report = models.ForeignKey(
+        'emt.EventReport',
+        on_delete=models.CASCADE,
+        related_name='attendance_rows',
+    )
+    registration_no = models.CharField(max_length=32)
+    full_name = models.CharField(max_length=128)
+    student_class = models.CharField(max_length=128)
+    absent = models.BooleanField(default=False)
+    volunteer = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.full_name} ({self.registration_no})"
+
 # ────────────────────────────────────────────────────────────────
 #  STUDENT PROFILE
 # ────────────────────────────────────────────────────────────────

@@ -52,7 +52,7 @@
       <div class="utility-center" style="flex: 1; display: flex; justify-content: center;">
         <div class="universal-search" style="max-width: 500px; width: 100%;">
           <i class="fas fa-search search-icon"></i>
-          <input type="text" id="globalSearch" placeholder="Search students, reports, proposals..." class="search-input" autocomplete="off">
+          <input type="text" id="globalSearch" placeholder="Search students, reports, proposals, organizations..." class="search-input" autocomplete="off">
           <div class="search-shortcut">Ctrl+K</div>
           <div class="search-results" id="searchResults"></div>
         </div>
@@ -397,7 +397,7 @@
           // Clear previous timeout
           clearTimeout(searchTimeout);
           
-          if (query.length < 2) {
+          if (query.length < 1) {
             searchResults.classList.remove('show');
             return;
           }
@@ -446,10 +446,11 @@
           .then(data => {
             if (data.success) {
               displaySearchResults(
-                data.results.students || [], 
-                data.results.proposals || [], 
+                data.results.students || [],
+                data.results.proposals || [],
                 data.results.reports || [],
                 data.results.users || [],
+                data.results.organizations || [],
                 query
               );
             } else {
@@ -480,10 +481,10 @@
         return cookieValue;
       }
 
-      function displaySearchResults(students, proposals, reports, users, query) {
+      function displaySearchResults(students, proposals, reports, users, organizations, query) {
         let html = '';
 
-        if (students.length === 0 && proposals.length === 0 && reports.length === 0 && users.length === 0) {
+        if (students.length === 0 && proposals.length === 0 && reports.length === 0 && users.length === 0 && organizations.length === 0) {
           html = `<div class="search-no-results">No results found for "${query}"</div>`;
         } else {
           // Students section
@@ -534,6 +535,24 @@
                   <div class="search-item-content">
                     <div class="search-item-title">${report.title}</div>
                     <div class="search-item-subtitle">${report.date} • ${report.type}</div>
+                  </div>
+                </a>
+              `;
+            });
+          }
+
+          // Organizations section
+          if (organizations.length > 0) {
+            html += '<div class="search-category">Organizations</div>';
+            organizations.forEach(org => {
+              html += `
+                <a href="${org.url}" class="search-item">
+                  <div class="search-item-icon">
+                    <i class="fas fa-building"></i>
+                  </div>
+                  <div class="search-item-content">
+                    <div class="search-item-title">${org.name}</div>
+                    <div class="search-item-subtitle">${org.org_type}</div>
                   </div>
                 </a>
               `;

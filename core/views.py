@@ -3700,24 +3700,25 @@ def api_create_faculty_meeting(request):
 def api_global_search(request):
     """
     Global search API endpoint for the Central Command Center.
-    Searches across Students, Event Proposals, Reports, and Users.
+    Searches across Students, Event Proposals, Reports, Organizations, and Users.
     """
     from django.db.models import Q
     from django.contrib.auth.models import User
     import json
     query = request.GET.get('q', '').strip()
-    if len(query) < 2:
+    if len(query) < 1:
         return JsonResponse({
             'success': True,
             'results': {
                 'students': [],
                 'proposals': [],
                 'reports': [],
+                'organizations': [],
                 'users': []
             }
         })
     try:
-        results = {'students': [], 'proposals': [], 'reports': [], 'users': []}
+        results = {'students': [], 'proposals': [], 'reports': [], 'organizations': [], 'users': []}
         try:
             from transcript.models import Student
             students = Student.objects.filter(
@@ -3796,6 +3797,20 @@ def api_global_search(request):
             } for report in reports]
         except (ImportError, AttributeError):
             results['reports'] = []
+
+        # Organizations
+        organizations = Organization.objects.filter(
+            Q(name__icontains=query) | Q(org_type__name__icontains=query)
+        ).select_related('org_type')[:5]
+        results['organizations'] = [
+            {
+                'id': org.id,
+                'name': org.name,
+                'org_type': org.org_type.name if org.org_type else 'N/A',
+                'url': f'/core-admin/user-roles/{org.id}/'
+            }
+            for org in organizations
+        ]
         if request.user.is_superuser or hasattr(request.user, 'profile'):
             users = User.objects.filter(
                 Q(first_name__icontains=query) |
@@ -3820,6 +3835,7 @@ def api_global_search(request):
                 'students': [],
                 'proposals': [],
                 'reports': [],
+                'organizations': [],
                 'users': []
             }
         }, status=500)
