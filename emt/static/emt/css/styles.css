@@ -1893,6 +1893,12 @@
     text-align: left;
 }
 
+.schedule-table .error-message {
+    color: #ef4444;
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+}
+
 #add-row-btn {
     background: var(--primary-blue, #2563eb);
     color: #fff;
