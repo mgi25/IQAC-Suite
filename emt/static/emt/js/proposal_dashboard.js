@@ -89,6 +89,10 @@ $(document).ready(function() {
     }
 
     function resetProposalDraft() {
+        if (!window.PROPOSAL_ID) {
+            alert('No saved draft to reset yet.');
+            return;
+        }
         if (!confirm('Are you sure you want to reset this draft?')) return;
         const pid = window.PROPOSAL_ID;
         fetch(window.RESET_DRAFT_URL, {
@@ -3039,6 +3043,7 @@ function getWhyThisEventForm() {
             if (detail && detail.proposalId) {
                 window.PROPOSAL_ID = detail.proposalId;
                 updateCdlNavLink(detail.proposalId);
+                $('#reset-draft-btn').prop('disabled', false);
             }
             const indicator = $('#autosave-indicator');
             indicator.removeClass('saving error').addClass('saved');
