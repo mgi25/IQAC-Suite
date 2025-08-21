@@ -160,8 +160,8 @@ def transcript_view(request, roll_no):
 
     return render(request, 'transcript_app/transcript.html', {
         'student': student,
-        'strength_data': strength_data,  # 👈 untouched
-        'top_5_strengths': top_5_strengths,  # 👈 added
+        'strength_data': strength_data,  # Unmodified
+        'top_5_strengths': top_5_strengths,  # Added
         'today': date.today(),
         'top_events': top_events,
         'qr_code': qr_b64,
@@ -210,7 +210,7 @@ def all_events_view(request, roll_no):
     student = get_object_or_404(Student, roll_no=roll_no)
     participations = Participation.objects.filter(student=student)
 
-    # 🆕 Create a clean list of events with role and date
+    # Create a clean list of events with role and date.
     all_event_data = []
     for p in participations:
         all_event_data.append({
@@ -219,10 +219,10 @@ def all_events_view(request, roll_no):
             'role': p.role.name if p.role else 'Participant'
         })
 
-    # 🔁 Strength calculations (same as transcript)
+    # Strength calculations (same as transcript).
     strength_data, _ = calculate_strength_data(student)
 
-    # 🔝 Top 5 strengths for sidebar
+    # Top five strengths for sidebar.
     top_5_strengths = [
         {'name': s['name'], 'score': s['average']}
         for s in strength_data if s['average'] > 0
@@ -235,7 +235,7 @@ def all_events_view(request, roll_no):
 
     return render(request, 'transcript_app/student_events.html', {
         'student': student,
-        'all_events': all_event_data,  # 🔁 updated
+        'all_events': all_event_data,  # Updated
         'strength_data': strength_data,
         'top_5_strengths': top_5_strengths
     })

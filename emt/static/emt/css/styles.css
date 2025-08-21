@@ -1695,7 +1695,9 @@
 }
 
 .expense-title::before {
-    content: '💰';
+    content: "\f51e";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
     margin-right: 0.75rem;
     font-size: 1.1rem;
 }

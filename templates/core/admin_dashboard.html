@@ -52,7 +52,7 @@
         <h1 class="pkp-name">{{ request.user.get_full_name|default:request.user.username }}</h1>
         <h2 class="pkp-sub">{{ request.user.email }}</h2>
     
-        <!-- 🔽 Added Switch User Dropdown -->
+        <!-- Added Switch User Dropdown -->
         <div class="pkp-actions">
           <label class="switch-label" for="roleSwitch">Switch to:</label>
           <select id="roleSwitch" class="switch-select">
@@ -61,7 +61,7 @@
             <option value="{% url 'cdl_work_dashboard' %}">CDL Team Dashboard</option>
           </select>
         </div>                      
-        <!-- 🔼 End Switch User -->
+        <!-- End Switch User -->
       </div>
     </div>
     
