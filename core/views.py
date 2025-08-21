@@ -343,17 +343,9 @@ def api_roles(request):
 def dashboard(request):
     user = request.user
 
-    # Check for multiple dashboard assignments
+    # Check dashboard assignments; redirect directly if one, otherwise fall back by role
     from .models import DashboardAssignment
     available_dashboards = DashboardAssignment.get_user_dashboards(user)
-    
-    # If multiple dashboards are available, show selection screen
-    if len(available_dashboards) > 1:
-        return render(request, 'core/dashboard_selection.html', {
-            'available_dashboards': available_dashboards
-        })
-    
-    # If only one dashboard or no specific assignment, use existing logic
     if len(available_dashboards) == 1:
         dashboard_key = available_dashboards[0][0]
         return redirect('select_dashboard', dashboard_key=dashboard_key)
