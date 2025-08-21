@@ -209,7 +209,8 @@
 .outcomes-column .column-card { background:#fff; border-radius: 12px; box-shadow: 0 6px 16px rgba(0,0,0,0.06); overflow:hidden; display:flex; flex-direction:column; min-height: 420px; }
 .column-header { background:#1e60b1; color:#fff; padding: 12px 16px; }
 .column-header h3 { margin:0; font-size: 1rem; font-weight: 600; }
-.column-body { padding: 14px; display:flex; flex-direction:column; gap: 12px; }
+.column-body { padding: 14px; display:flex; flex-direction:column; gap: 12px; flex: 1 1 auto; min-height: 0; }
+.outcomes-list { flex: 1 1 auto; min-height: 0; max-height: 60vh; overflow-y: auto; padding-right: 4px; }
 .add-outcome-inline { display:flex; flex-direction: column; gap: 8px; }
 .outcome-input.large { min-height: 72px; resize: vertical; }
 .outcomes-list .outcome-item { background:#f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; display:flex; gap: 10px; align-items:flex-start; justify-content:space-between; }

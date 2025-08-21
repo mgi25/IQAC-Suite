@@ -37,7 +37,6 @@
           <th>Status</th>
           <th>Parent</th>
           <th>POs & PSOs</th>
-          <th>Assign To</th>
         </tr>
       </thead>
       <tbody id="organizations-list">
@@ -74,17 +73,7 @@
                   </a>
                 </div>
               </td>
-              <td>
-                <div class="assign-cell">
-                  <div class="assigned-user" data-org-id="{{ org.id }}">
-                    <i class="fas fa-user-circle"></i>
-                    <span class="assigned-name">Unassigned</span>
-                  </div>
-                  <button class="assign-user-btn" data-org-id="{{ org.id }}" data-org-name="{{ org.name }}" data-org-type="{{ org_type.name|lower }}">
-                    <i class="fas fa-user-plus"></i> Assign
-                  </button>
-                </div>
-              </td>
+              
             </tr>
           {% endfor %}
         {% endfor %}
@@ -97,46 +86,7 @@
 
 <!-- Removed outcome modals; using full-page inline panel -->
 
-<!-- User Assignment Modal -->
-<div id="assignUserModal" class="modal">
-  <div class="modal-content medium">
-    <div class="modal-header">
-      <h3>Assign User to <span id="assign-org-name"></span></h3>
-      <button class="close">&times;</button>
-    </div>
-    <div class="modal-body">
-      <form id="assignUserForm">
-    <!-- Removed Filter by Role dropdown -->
-        <div class="form-group">
-          <label for="userSelect">Select Faculty User</label>
-          <div class="org-context">
-            <small class="text-muted">
-              <i class="fas fa-info-circle"></i>
-              Showing faculty assigned to <strong><span id="assign-org-name-context"></span></strong> and its parent organizations.
-              Department faculty are shown first.
-            </small>
-          </div>
-          <div class="user-search-container">
-            <input type="text" id="userSearch" placeholder="Search faculty users (real-time)..." autocomplete="off">
-            <div id="userDropdown" class="user-dropdown" style="display:none;"></div>
-          </div>
-          <input type="hidden" id="selectedUserId" required>
-        </div>
-        <div class="current-assignment" id="currentAssignment" style="display: none;">
-          <h4>Current Assignment</h4>
-          <div class="assignment-info">
-            <span id="currentAssignedUser"></span>
-            <button type="button" id="removeAssignmentBtn" class="btn-remove">Remove Assignment</button>
-          </div>
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn-cancel">Cancel</button>
-          <button type="submit" class="btn-save">Assign User</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
+<!-- Assignment UI removed -->
 
 <script src="{% static 'core/js/admin_pso_po_management.js' %}"></script>
 

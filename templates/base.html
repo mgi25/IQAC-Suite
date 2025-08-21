@@ -121,9 +121,7 @@
             <a href="{% url 'my_profile' %}" class="dropdown-item">
               <i class="fas fa-user"></i> My Profile
             </a>
-            <a href="{% url 'settings_pso_po_management' %}" class="dropdown-item" id="popso-settings-link" style="display: none;">
-              <i class="fas fa-cogs"></i> PO/PSO Management
-            </a>
+            
             <a href="{% url 'logout' %}" class="dropdown-item">
               <i class="fas fa-sign-out-alt"></i> Logout
             </a>
@@ -210,15 +208,7 @@
       </div>
       {% endif %}
 
-      <!-- POs & PSOs Management (Admin-controlled) -->
-      {% if user.is_superuser or request.session.role == 'admin' or not allowed_nav_items or 'pso_psos' in allowed_nav_items %}
-      <div class="nav-item" id="popso-manager-nav">
-        <a href="{% url 'settings_pso_po_management' %}" class="nav-link {% if request.resolver_match.url_name == 'settings_pso_po_management' %}active{% endif %}">
-          <i class="fas fa-clipboard-list nav-icon"></i>
-          <span class="nav-text">POs & PSOs Management</span>
-        </a>
-      </div>
-      {% endif %}
+      
 
       <!-- User Management - Expandable (Admin Only) -->
       {% if user.is_superuser or request.session.role == 'admin' %}
@@ -608,31 +598,7 @@
         }
     });
 
-    // Check if user is a PO/PSO manager and show Settings link
-  const isAuthenticated = (document.querySelector('meta[name="authenticated"]')?.content === 'true');
-    if (isAuthenticated) {
-      checkPOPSOManagerStatus();
-    }
-
-    function checkPOPSOManagerStatus() {
-      fetch('/core/api/popso-manager-status/')
-        .then(response => response.json())
-        .then(data => {
-          if (data.is_manager) {
-            const settingsLink = document.getElementById('popso-settings-link');
-            if (settingsLink) {
-              settingsLink.style.display = 'block';
-            }
-            const managerNav = document.getElementById('popso-manager-nav');
-            if (managerNav) {
-              managerNav.style.display = 'block';
-            }
-          }
-        })
-        .catch(error => {
-          console.error('Error checking manager status:', error);
-        });
-    }
+    
   });
   </script>
   {% block scripts %}{% endblock %}

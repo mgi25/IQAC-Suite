@@ -2265,11 +2265,11 @@ def admin_outcomes_for_org(request, org_id: int):
     org = get_object_or_404(Organization, id=org_id)
     return render(request, "core/admin_outcomes_for_org.html", {"organization": org})
 
-@popso_program_access_required
+@user_passes_test(lambda u: u.is_superuser)
 @require_http_methods(["GET", "POST", "PUT", "DELETE", "PATCH"])
 def manage_program_outcomes(request, program_id=None):
-    """API endpoint for managing Program Outcomes (POs and PSOs) - Enhanced for assigned users"""
-    from .models import Program, ProgramOutcome, ProgramSpecificOutcome, POPSOAssignment
+    """API endpoint for managing Program Outcomes (POs and PSOs)"""
+    from .models import Program, ProgramOutcome, ProgramSpecificOutcome
     import json
     
     if request.method == "POST":
@@ -2278,19 +2278,7 @@ def manage_program_outcomes(request, program_id=None):
             program = Program.objects.get(id=data['program_id'])
             outcome_type = data.get('type', '').upper()
             
-            # Additional authorization check for non-superusers
-            if not request.user.is_superuser:
-                if not program.organization:
-                    return JsonResponse({'success': False, 'error': 'Program has no organization'}, status=403)
-                
-                has_assignment = POPSOAssignment.objects.filter(
-                    assigned_user=request.user,
-                    organization=program.organization,
-                    is_active=True
-                ).exists()
-                
-                if not has_assignment:
-                    return JsonResponse({'success': False, 'error': 'Not authorized for this program'}, status=403)
+            # Superuser-only for now; non-admin flows removed
             
             if outcome_type == 'PO':
                 outcome = ProgramOutcome.objects.create(
@@ -2326,19 +2314,7 @@ def manage_program_outcomes(request, program_id=None):
             else:
                 return JsonResponse({'success': False, 'error': 'Invalid outcome type'})
             
-            # Additional authorization check for non-superusers
-            if not request.user.is_superuser:
-                if not program.organization:
-                    return JsonResponse({'success': False, 'error': 'Program has no organization'}, status=403)
-                
-                has_assignment = POPSOAssignment.objects.filter(
-                    assigned_user=request.user,
-                    organization=program.organization,
-                    is_active=True
-                ).exists()
-                
-                if not has_assignment:
-                    return JsonResponse({'success': False, 'error': 'Not authorized for this program'}, status=403)
+            # Superuser-only for now; non-admin flows removed
                 
             outcome.description = data['description']
             outcome.save()
@@ -2363,19 +2339,7 @@ def manage_program_outcomes(request, program_id=None):
             else:
                 return JsonResponse({'success': False, 'error': 'Invalid outcome type'})
             
-            # Additional authorization check for non-superusers
-            if not request.user.is_superuser:
-                if not program.organization:
-                    return JsonResponse({'success': False, 'error': 'Program has no organization'}, status=403)
-                
-                has_assignment = POPSOAssignment.objects.filter(
-                    assigned_user=request.user,
-                    organization=program.organization,
-                    is_active=True
-                ).exists()
-                
-                if not has_assignment:
-                    return JsonResponse({'success': False, 'error': 'Not authorized for this program'}, status=403)
+            # Superuser-only for now; non-admin flows removed
                 
             # Archive instead of permanent delete
             outcome.archive(by=request.user)
@@ -2394,18 +2358,7 @@ def manage_program_outcomes(request, program_id=None):
             else:
                 return JsonResponse({'success': False, 'error': 'Invalid outcome type'})
 
-            # Authorization: same as update
-            program = outcome.program
-            if not request.user.is_superuser:
-                if not program.organization:
-                    return JsonResponse({'success': False, 'error': 'Program has no organization'}, status=403)
-                has_assignment = POPSOAssignment.objects.filter(
-                    assigned_user=request.user,
-                    organization=program.organization,
-                    is_active=True
-                ).exists()
-                if not has_assignment:
-                    return JsonResponse({'success': False, 'error': 'Not authorized for this program'}, status=403)
+            # Superuser-only for now; non-admin flows removed
 
             outcome.restore()
             return JsonResponse({'success': True, 'restored': True})
@@ -4876,27 +4829,12 @@ def api_organization_programs(request, org_id):
         logger.error(f"Error fetching programs for organization {org_id}: {str(e)}")
         return JsonResponse({'error': 'Failed to fetch programs'}, status=500)
 
-@popso_manager_required
+@user_passes_test(lambda u: u.is_superuser)
 @require_http_methods(["GET"])
 def api_program_outcomes(request, program_id):
     """API endpoint to get outcomes for a program - Enhanced for assigned users"""
-    from .models import POPSOAssignment, Program, ProgramOutcome, ProgramSpecificOutcome
+    from .models import Program, ProgramOutcome, ProgramSpecificOutcome
     try:
-        # Check authorization for non-superusers
-        if not request.user.is_superuser:
-            try:
-                program = Program.objects.get(id=program_id)
-                if program.organization:
-                    has_assignment = POPSOAssignment.objects.filter(
-                        assigned_user=request.user,
-                        organization=program.organization,
-                        is_active=True
-                    ).exists()
-                    if not has_assignment:
-                        return JsonResponse({'error': 'Not authorized for this program'}, status=403)
-            except Program.DoesNotExist:
-                return JsonResponse({'error': 'Program not found'}, status=404)
-
         outcome_type = request.GET.get('type', '').upper()
         show_archived = request.GET.get('archived') in ("1", "true", "True")
 
@@ -5327,95 +5265,33 @@ def api_log_popso_change(request):
         logger.error(f"Error logging PO/PSO change: {str(e)}")
         return JsonResponse({'success': False, 'error': 'Failed to log change'}, status=500)
 
-@login_required
-@require_http_methods(["GET"])
-def api_popso_manager_status(request):
-    """Check if the current user is assigned as a PO/PSO manager"""
-    from .models import POPSOAssignment
-    
-    try:
-        # Check if user is assigned to any organization for PO/PSO management
-        is_manager = POPSOAssignment.objects.filter(
-            assigned_user=request.user,
-            is_active=True
-        ).exists()
-        
-        # If user is a manager, get their assigned organizations
-        assignments = []
-        if is_manager:
-            assignments = POPSOAssignment.objects.filter(
-                assigned_user=request.user,
-                is_active=True
-            ).select_related('organization').values(
-                'organization__id',
-                'organization__name',
-                'organization__org_type__name'
-            )
-        
-        return JsonResponse({
-            'is_manager': is_manager,
-            'assignments': list(assignments)
-        })
-        
-    except Exception as e:
-        logger.error(f"Error checking manager status for user {request.user.id}: {str(e)}")
-        return JsonResponse({'error': 'Failed to check manager status'}, status=500)
+## Deprecated with removal of settings PSO/PO page
+# @login_required
+# @require_http_methods(["GET"])
+# def api_popso_manager_status(request):
+#     """Check if the current user is assigned as a PO/PSO manager"""
+#     from .models import POPSOAssignment
+#     try:
+#         is_manager = POPSOAssignment.objects.filter(
+#             assigned_user=request.user,
+#             is_active=True
+#         ).exists()
+#         assignments = []
+#         if is_manager:
+#             assignments = POPSOAssignment.objects.filter(
+#                 assigned_user=request.user,
+#                 is_active=True
+#             ).select_related('organization').values(
+#                 'organization__id',
+#                 'organization__name',
+#                 'organization__org_type__name'
+#             )
+#         return JsonResponse({'is_manager': is_manager,'assignments': list(assignments)})
+#     except Exception as e:
+#         logger.error(f"Error checking manager status for user {request.user.id}: {str(e)}")
+#         return JsonResponse({'error': 'Failed to check manager status'}, status=500)
 
-@login_required
-def settings_pso_po_management(request):
-    """Settings page for assigned PO/PSO managers with role-based access control"""
-    from .models import POPSOAssignment, Program, ProgramOutcome, ProgramSpecificOutcome
-    from django.contrib import messages
-    
-    # Check if user is assigned as manager
-    assignments = POPSOAssignment.objects.filter(
-        assigned_user=request.user,
-        is_active=True
-    ).select_related('organization', 'organization__org_type')
-    
-    if not assignments.exists():
-        messages.error(request, "You are not assigned to manage any PO/PSO outcomes.")
-        return redirect('dashboard')
-    
-    # Get assigned organizations and their programs with role-based restrictions
-    assigned_orgs = []
-    for assignment in assignments:
-        org = assignment.organization
-        
-        # Role-based access: Only show programs for organizations where user has assignment
-        programs = Program.objects.filter(organization=org).prefetch_related('pos', 'psos')
-        
-        # Additional department-based information (no longer blocks access if assigned)
-        if org.org_type.name.lower() in ['department', 'dept']:
-            # If not department faculty, we still allow because user has explicit POPSO assignment
-            user_dept_assignments = request.user.role_assignments.filter(
-                organization=org,
-                role__name__iexact='Faculty'
-            )
-            if not user_dept_assignments.exists():
-                messages.info(request, f"Note: You're assigned to manage {org.name} but not marked Faculty in this department.")
-        
-        org_data = {
-            'organization': org,
-            'programs': programs,
-            'assignment': assignment,
-            'has_department_access': org.org_type.name.lower() in ['department', 'dept'],
-            'can_edit': True  # User has explicit PSO/POS assignment, so they can edit
-        }
-        assigned_orgs.append(org_data)
-    
-    # Check if user has any valid assignments after filtering
-    if not assigned_orgs:
-        messages.error(request, "You don't have valid assignments to manage PO/PSO outcomes.")
-        return redirect('dashboard')
-    
-    context = {
-        'assigned_organizations': assigned_orgs,
-        'user': request.user,
-        'has_assignments': True
-    }
-    
-    return render(request, 'core/settings_pso_po_management.html', context)
+## Removed: settings_pso_po_management page has been deleted.
 
 @login_required
 def cdl_head_dashboard(request):
