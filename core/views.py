@@ -5398,3 +5398,4 @@ def api_update_faculty_professional(request):
             'success': False,
             'message': str(e)
         }, status=400)
+#test
