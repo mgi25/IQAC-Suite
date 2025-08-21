@@ -88,30 +88,60 @@ $(document).ready(function() {
         link.attr('data-url', url);
     }
 
+    let resetBtn, formFields;
+
+    function updateResetButtonState() {
+        if (!resetBtn || !formFields) return;
+        const hasValue = formFields.toArray().some(el => {
+            const $el = $(el);
+            if (el.type === 'hidden') return false;
+            if (el.type === 'checkbox' || el.type === 'radio') {
+                return $el.is(':checked');
+            }
+            return Boolean($el.val());
+        });
+        resetBtn.prop('disabled', !(hasValue || window.PROPOSAL_ID));
+    }
+
     function resetProposalDraft() {
-        if (!window.PROPOSAL_ID) {
-            alert('No saved draft to reset yet.');
+        if (window.PROPOSAL_ID) {
+            if (!confirm('Are you sure you want to reset this draft?')) return;
+            const pid = window.PROPOSAL_ID;
+            fetch(window.RESET_DRAFT_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': window.AUTOSAVE_CSRF || ''
+                },
+                body: JSON.stringify({ proposal_id: pid })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = window.RESET_DRAFT_REDIRECT_URL;
+                } else {
+                    alert('Failed to reset draft');
+                }
+            })
+            .catch(() => alert('Failed to reset draft'));
             return;
         }
+
         if (!confirm('Are you sure you want to reset this draft?')) return;
-        const pid = window.PROPOSAL_ID;
-        fetch(window.RESET_DRAFT_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': window.AUTOSAVE_CSRF || ''
-            },
-            body: JSON.stringify({ proposal_id: pid })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                window.location.href = window.RESET_DRAFT_REDIRECT_URL;
+
+        formFields.each(function() {
+            if (this.type === 'checkbox' || this.type === 'radio') {
+                this.checked = false;
             } else {
-                alert('Failed to reset draft');
+                $(this).val('');
             }
-        })
-        .catch(() => alert('Failed to reset draft'));
+        }).trigger('change');
+
+        ['section_need_analysis', 'section_objectives', 'section_outcomes', 'section_flow']
+            .forEach(key => localStorage.removeItem(key));
+
+        clearValidationErrors();
+        updateResetButtonState();
     }
 
     initializeDashboard();
@@ -122,12 +152,18 @@ $(document).ready(function() {
         loadExistingData();
         checkForExistingErrors();
         enablePreviouslyVisitedSections();
+
+        resetBtn = $('#reset-draft-btn');
+        formFields = $('#proposal-form').find('input, textarea, select');
+        formFields.on('change keyup', updateResetButtonState);
+        updateResetButtonState();
+
         if (window.PROPOSAL_ID) {
             updateCdlNavLink(window.PROPOSAL_ID);
-            $('#reset-draft-btn').prop('disabled', false).removeAttr('disabled');
         }
+
         $('#autofill-btn').on('click', () => autofillTestData(currentExpandedCard));
-        $('#reset-draft-btn').on('click', resetProposalDraft);
+        resetBtn.on('click', resetProposalDraft);
         if (!$('.form-errors-banner').length) {
             setTimeout(() => {
                 activateSection('basic-info');
