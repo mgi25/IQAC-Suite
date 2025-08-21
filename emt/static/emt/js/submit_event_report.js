@@ -1495,7 +1495,7 @@ function setupDynamicActivities() {
                     <label for="activity_date_${idx + 1}" class="date-label">${idx + 1}. Activity Date</label>
                     <input type="date" id="activity_date_${idx + 1}" name="activity_date_${idx + 1}" value="${act.activity_date || ''}">
                 </div>
-                <button type="button" class="remove-activity" data-index="${idx}">Remove</button>
+                <button type="button" class="remove-activity">×</button>
             `;
             container.appendChild(row);
         });
@@ -1505,9 +1505,12 @@ function setupDynamicActivities() {
 
     container.addEventListener('click', (e) => {
         if (e.target.classList.contains('remove-activity')) {
-            const index = parseInt(e.target.dataset.index, 10);
-            activities.splice(index, 1);
-            render();
+            const row = e.target.closest('.activity-row');
+            const index = Array.from(container.children).indexOf(row);
+            if (index > -1) {
+                activities.splice(index, 1);
+                render();
+            }
         }
     });
 

@@ -413,6 +413,32 @@ $(document).ready(function() {
         const numActivitiesInput = document.getElementById('num-activities-modern');
         if (!numActivitiesInput || numActivitiesInput.dataset.listenerAttached) return;
         const container = document.getElementById('dynamic-activities-section');
+
+        function reindexActivityRows() {
+            const groups = container.querySelectorAll('.dynamic-activity-group');
+            groups.forEach((group, idx) => {
+                const num = idx + 1;
+                const nameInput = group.querySelector('input[id^="activity_name"]');
+                const dateInput = group.querySelector('input[id^="activity_date"]');
+                const nameLabel = group.querySelector('label[for^="activity_name"]');
+                const dateLabel = group.querySelector('label[for^="activity_date"]');
+                if (nameInput && nameLabel) {
+                    nameInput.id = nameInput.name = `activity_name_${num}`;
+                    nameLabel.setAttribute('for', `activity_name_${num}`);
+                    nameLabel.textContent = `${num}. Activity Name`;
+                }
+                if (dateInput && dateLabel) {
+                    dateInput.id = dateInput.name = `activity_date_${num}`;
+                    dateLabel.setAttribute('for', `activity_date_${num}`);
+                    dateLabel.textContent = `${num}. Activity Date`;
+                }
+            });
+            numActivitiesInput.value = groups.length;
+            if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                window.AutosaveManager.reinitialize();
+            }
+        }
+
         function render(count) {
             if (!container) return;
             container.innerHTML = '';
@@ -429,6 +455,7 @@ $(document).ready(function() {
                                 <label for="activity_date_${i}">${i}. Activity Date</label>
                                 <input type="date" id="activity_date_${i}" name="activity_date_${i}" required>
                             </div>
+                            <button type="button" class="remove-activity">×</button>
                         </div>`;
                 }
                 container.innerHTML = html;
@@ -439,11 +466,20 @@ $(document).ready(function() {
                         $(`#activity_date_${index}`).val(act.date);
                     });
                 }
-                if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
-                    window.AutosaveManager.reinitialize();
-                }
+                reindexActivityRows();
             }
         }
+
+        container.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-activity')) {
+                const group = e.target.closest('.dynamic-activity-group');
+                if (group) {
+                    group.remove();
+                    reindexActivityRows();
+                }
+            }
+        });
+
         numActivitiesInput.addEventListener('input', () => {
             const count = parseInt(numActivitiesInput.value, 10);
             render(count);
