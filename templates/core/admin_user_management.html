@@ -85,7 +85,7 @@
 }
 
 .filter-tag {
-    background: #007bff;
+    background: var(--christ-blue);
     color: white;
     padding: 4px 8px;
     border-radius: 12px;
@@ -129,8 +129,8 @@
 }
 
 .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice {
-    background-color: #007bff;
-    border-color: #007bff;
+    background-color: var(--christ-blue);
+    border-color: var(--christ-blue);
     color: #fff;
     padding: 2px 8px;
     margin: 2px;
@@ -181,8 +181,26 @@
 }
 
 .select2-container--bootstrap-5 .select2-results__option--highlighted[aria-selected] {
-    background-color: #007bff;
+    background-color: var(--christ-blue);
     color: #fff;
+}
+
+/* Use CHRIST blue for primary buttons on this page */
+.btn-primary,
+.dt-buttons .btn.btn-primary {
+    background-color: var(--christ-blue) !important;
+    border-color: var(--christ-blue) !important;
+}
+.btn-primary:hover,
+.dt-buttons .btn.btn-primary:hover {
+    background-color: var(--christ-blue-dark) !important;
+    border-color: var(--christ-blue-dark) !important;
+}
+
+/* DataTables header styling */
+.admin-users-table thead th {
+    background: var(--christ-blue);
+    color: var(--white);
 }
 </style>
 {% endblock %}
@@ -257,9 +275,14 @@
                 </div>
                 
                 <div class="filter-group">
-                    <button type="button" class="btn btn-outline-secondary w-100" onclick="clearFilters()" style="margin-top: 32px;">
-                        <i class="fas fa-times"></i> Clear All Filters
-                    </button>
+                    <div class="d-flex gap-2" style="margin-top: 32px;">
+                        <button type="button" class="btn btn-primary w-100" id="applyFiltersBtn">
+                            <i class="fas fa-search"></i> Search / Apply Filters
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary w-100" id="clearFiltersBtn">
+                            <i class="fas fa-times"></i> Clear All
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -409,11 +432,7 @@
                         {% endif %}
                     </td>
                 </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="8" style="text-align:center;">No users found matching the current filters.</td>
-                </tr>
-                {% endfor %}
+                {% empty %}{% endfor %}
             </tbody>
         </table>
     </div>
@@ -449,6 +468,10 @@
 
 <script>
 $(document).ready(function () {
+    // Suppress DataTables alert popups
+    if ($.fn.dataTable && $.fn.dataTable.ext) {
+        $.fn.dataTable.ext.errMode = 'none';
+    }
     // Global variables for debouncing
     let filterTimeout;
     
@@ -514,6 +537,7 @@ $(document).ready(function () {
             search: "Search in table:",
             lengthMenu: "Show _MENU_ entries",
             info: "Showing _START_ to _END_ of _TOTAL_ users",
+            emptyTable: "No users found matching the current filters.",
             paginate: {
                 first: "First",
                 last: "Last",
@@ -533,6 +557,10 @@ $(document).ready(function () {
     window.filterManager = new FilterManager();
     window.filterManager.initializeFilters();
     window.filterManager.setupEventListeners();
+    
+    // Manual Apply / Clear
+    $('#applyFiltersBtn').on('click', () => window.filterManager.applyFilters());
+    $('#clearFiltersBtn').on('click', () => window.filterManager.clearAllFilters());
     
     // Load saved filters on page load
     window.filterManager.loadSavedFilters();
@@ -637,29 +665,12 @@ class FilterManager {
      * Setup event listeners for filter changes
      */
     setupEventListeners() {
-        // Dynamic filtering - apply filters on change
-        $('#status').on('change', () => {
-            this.debounceFilter('status');
-        });
-        
-        $('#org_type').on('change', () => {
-            this.refreshDependentDropdowns();
-            this.debounceFilter('org_type');
-        });
-        
-        $('#organization').on('change', () => {
-            this.refreshRolesDropdown();
-            this.debounceFilter('organization');
-        });
-        
-        $('#role').on('change', () => {
-            this.debounceFilter('role');
-        });
-        
-        // Debounced search for text input
-        $('#q').on('input keyup', () => {
-            this.debounceFilter('q', 800); // Longer delay for text input
-        });
+    // Manual apply mode: no auto-fetch; only manage dependent dropdowns and persist local state
+    $('#status').on('change', () => { this.saveFiltersPartial(); });
+    $('#org_type').on('change', () => { this.refreshDependentDropdowns(); this.saveFiltersPartial(); });
+    $('#organization').on('change', () => { this.refreshRolesDropdown(); this.saveFiltersPartial(); });
+    $('#role').on('change', () => { this.saveFiltersPartial(); });
+    $('#q').on('input keyup', () => { this.saveFiltersPartialDebounced(); });
     }
 
     /**
@@ -682,41 +693,38 @@ class FilterManager {
     /**
      * Debounce filter application to avoid too many requests
      */
-    debounceFilter(filterType, delay = 300) {
-        clearTimeout(this.filterTimeouts[filterType]);
-        this.filterTimeouts[filterType] = setTimeout(() => {
-            this.applyFilters();
-        }, delay);
+    debounceFilter() {}
+
+    saveFiltersPartial() {
+        const filters = this.collectFilters();
+        this.saveFilters(filters, {partial: true});
+    }
+    saveFiltersPartialDebounced() {
+        clearTimeout(this.filterTimeouts['partial']);
+        this.filterTimeouts['partial'] = setTimeout(() => this.saveFiltersPartial(), 400);
     }
 
     /**
      * Apply all current filters
      */
-    applyFilters() {
-        const params = new URLSearchParams();
-        
-        // Get all filter values
+    collectFilters() {
         const q = $('#q').val().trim();
         const status = $('#status').val();
         const orgTypes = $('#org_type').val() || [];
         const organizations = $('#organization').val() || [];
         const roles = $('#role').val() || [];
-        
-        // Add non-empty parameters
+        return { q, status, orgTypes, organizations, roles };
+    }
+
+    applyFilters() {
+        const params = new URLSearchParams();
+        const { q, status, orgTypes, organizations, roles } = this.collectFilters();
         if (q) params.append('q', q);
         if (status) params.append('status', status);
-        
-        // Add multi-select parameters
         orgTypes.forEach(id => params.append('org_type[]', id));
         organizations.forEach(id => params.append('organization[]', id));
         roles.forEach(id => params.append('role[]', id));
-        
-        // Save filters to localStorage for persistence
-        this.saveFilters({
-            q, status, orgTypes, organizations, roles
-        });
-        
-        // Update URL and reload page with new filters
+        this.saveFilters({ q, status, orgTypes, organizations, roles });
         const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
         window.location.href = newUrl;
     }
@@ -780,16 +788,17 @@ class FilterManager {
         $('#org_type').val(null).trigger('change');
         $('#organization').val(null).trigger('change');
         $('#role').val(null).trigger('change');
-        
-        // Clear saved filters
+
+        // Clear saved filters completely and prevent re-apply
         try {
             localStorage.removeItem(this.STORAGE_KEY);
         } catch (e) {
             console.warn('Failed to clear saved filters:', e);
         }
-        
-        // Redirect to clear URL parameters
-        window.location.href = window.location.pathname;
+
+        // Replace URL with no params without reloading via cached state
+        const cleanUrl = window.location.pathname;
+        window.location.replace(cleanUrl);
     }
 }
 
