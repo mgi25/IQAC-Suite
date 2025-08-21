@@ -238,7 +238,7 @@ urlpatterns = [
     path('api/event-contribution-data', views.event_contribution_data, name='event_contribution_data'),
     
     # Multi-select filter APIs
-    #path('core-admin/api/filter/organizations/', views.api_filter_organizations, name='api_filter_organizations'),
+    path('core-admin/api/filter/organizations/', views.api_filter_organizations, name='api_filter_organizations'),
     path('core-admin/api/filter/roles/', views.api_filter_roles, name='api_filter_roles'),
     path('core-admin/api/search/org-types/', views.api_search_org_types, name='api_search_org_types'),
 

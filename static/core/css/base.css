@@ -68,6 +68,38 @@ body.command-center-layout {
   z-index: 100;
 }
 
+/* =============================================================================
+   THEME BUTTONS (Gradient using CHRIST blue palette)
+   ============================================================================= */
+/* Primary button gradient (Bootstrap + utilities) */
+.btn-primary,
+.btn.btn-primary {
+  background-image: linear-gradient(135deg, var(--christ-blue) 0%, var(--christ-blue-dark) 100%) !important;
+  background-color: var(--christ-blue) !important; /* fallback */
+  border-color: var(--christ-blue-dark) !important;
+  color: var(--white) !important;
+}
+.btn-primary:hover,
+.btn.btn-primary:hover,
+.btn-primary:focus,
+.btn.btn-primary:focus {
+  filter: brightness(0.98);
+  box-shadow: 0 0 0 0.2rem rgba(44, 90, 160, 0.25);
+}
+
+/* Custom page buttons adopting gradient */
+.save-btn,
+.control-btn.primary {
+  background-image: linear-gradient(135deg, var(--christ-blue) 0%, var(--christ-blue-dark) 100%);
+  background-color: var(--christ-blue); /* fallback */
+  color: var(--white);
+  border: none;
+}
+.save-btn:hover,
+.control-btn.primary:hover {
+  filter: brightness(0.98);
+}
+
 .utility-left {
   display: flex;
   align-items: center;
