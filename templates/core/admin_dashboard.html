@@ -22,36 +22,42 @@
   <section class="kpi-row">
     <div class="kpi-card">
       <div class="kpi-icon bg-indigo"><i class="fa-solid fa-user-graduate"></i></div>
-      <div class="kpi-content"><span class="kpi-title">Students</span><span class="kpi-value">{{ stats.students|default:0 }}</span></div>
+      <div class="kpi-content"><span class="kpi-title">Students</span><span class="kpi-value">{{
+          stats.students|default:0 }}</span></div>
     </div>
     <div class="kpi-card">
       <div class="kpi-icon bg-sky"><i class="fa-solid fa-chalkboard-user"></i></div>
-      <div class="kpi-content"><span class="kpi-title">Faculties</span><span class="kpi-value">{{ stats.faculties|default:0 }}</span></div>
+      <div class="kpi-content"><span class="kpi-title">Faculties</span><span class="kpi-value">{{
+          stats.faculties|default:0 }}</span></div>
     </div>
     <div class="kpi-card">
       <div class="kpi-icon bg-orange"><i class="fa-solid fa-user-tie"></i></div>
-      <div class="kpi-content"><span class="kpi-title">HODs</span><span class="kpi-value">{{ stats.hods|default:0 }}</span></div>
+      <div class="kpi-content"><span class="kpi-title">HODs</span><span class="kpi-value">{{ stats.hods|default:0
+          }}</span></div>
     </div>
     <div class="kpi-card">
       <div class="kpi-icon bg-emerald"><i class="fa-solid fa-building-columns"></i></div>
-      <div class="kpi-content"><span class="kpi-title">Centers / Organizations</span><span class="kpi-value">{{ stats.centers|default:0 }}</span></div>
+      <div class="kpi-content"><span class="kpi-title">Centers / Organizations</span><span class="kpi-value">{{
+          stats.centers|default:0 }}</span></div>
     </div>
 
     <div class="profile-kpi card">
       <div class="pkp-avatar">
         {% if request.user.profile and request.user.profile.photo %}
-          <img src="{{ request.user.profile.photo.url }}" alt="{{ request.user.get_full_name|default:request.user.username }}">
+        <img src="{{ request.user.profile.photo.url }}"
+          alt="{{ request.user.get_full_name|default:request.user.username }}">
         {% else %}
-          <span class="pkp-initials">
-            {% if request.user.first_name %}{{ request.user.first_name.0|upper }}{% if request.user.last_name %}{{ request.user.last_name.0|upper }}{% endif %}{% else %}{{ request.user.username.0|upper }}{% endif %}
-          </span>
+        <span class="pkp-initials">
+          {% if request.user.first_name %}{{ request.user.first_name.0|upper }}{% if request.user.last_name %}{{
+          request.user.last_name.0|upper }}{% endif %}{% else %}{{ request.user.username.0|upper }}{% endif %}
+        </span>
         {% endif %}
       </div>
-    
+
       <div class="pkp-body">
         <h1 class="pkp-name">{{ request.user.get_full_name|default:request.user.username }}</h1>
         <h2 class="pkp-sub">{{ request.user.email }}</h2>
-    
+
         <!-- Added Switch User Dropdown -->
         <div class="pkp-actions">
           <label class="switch-label" for="roleSwitch">Switch to:</label>
@@ -60,17 +66,19 @@
             <option value="{% url 'cdl_head_dashboard' %}">CDL Head Dashboard</option>
             <option value="{% url 'cdl_work_dashboard' %}">CDL Team Dashboard</option>
           </select>
-        </div>                      
+        </div>
         <!-- End Switch User -->
       </div>
     </div>
-    
+
   </section>
 
   <main class="grid-3">
     <!-- Event Proposals -->
     <section class="card eq" data-card="proposals">
-      <div class="card-header"><h3><i class="fa-solid fa-file-signature"></i> Event Proposals</h3></div>
+      <div class="card-header">
+        <h3><i class="fa-solid fa-file-signature"></i> Event Proposals</h3>
+      </div>
       <div class="stats-rows">
         <div class="sr"><span>Total</span><strong>{{ stats.total_proposals|default:0 }}</strong></div>
         <div class="sr"><span>Pending</span><strong>{{ stats.pending_proposals|default:0 }}</strong></div>
@@ -82,7 +90,9 @@
 
     <!-- System Overview -->
     <section class="card eq">
-      <div class="card-header"><h3><i class="fa-solid fa-gauge-high"></i> System Overview</h3></div>
+      <div class="card-header">
+        <h3><i class="fa-solid fa-gauge-high"></i> System Overview</h3>
+      </div>
       <div class="stats-rows">
         <div class="sr"><span>Total Users</span><strong>{{ stats.total_users|default:0 }}</strong></div>
         <div class="sr"><span>Active Users</span><strong>{{ stats.active_users|default:0 }}</strong></div>
@@ -94,7 +104,9 @@
 
     <!-- Organizations -->
     <section class="card eq">
-      <div class="card-header"><h3><i class="fa-solid fa-sitemap"></i> Organizations</h3></div>
+      <div class="card-header">
+        <h3><i class="fa-solid fa-sitemap"></i> Organizations</h3>
+      </div>
       <div class="stats-rows">
         <div class="sr"><span>Departments</span><strong>{{ stats.departments|default:0 }}</strong></div>
         <div class="sr"><span>Clubs</span><strong>{{ stats.clubs|default:0 }}</strong></div>
@@ -105,35 +117,37 @@
 
     <!-- Notifications (scrollable) -->
     <section class="card wide" id="cardNotifications">
-      <div class="card-header"><h3><i class="fa-regular fa-bell"></i> Notifications</h3></div>
+      <div class="card-header">
+        <h3><i class="fa-regular fa-bell"></i> Notifications</h3>
+      </div>
       <div class="list list-scroll">
         {% if recent_activities %}
-          {% for a in recent_activities %}
-            <article class="list-item">
-              <div class="bullet"><i class="fa-solid fa-circle-info"></i></div>
-              <div class="list-body">
-                <h4>{{ a.title }}</h4>
-                <p class="muted">{{ a.description }}</p>
-              </div>
-              {% if a.status %}<span class="pill status-{{ a.status|lower }}">{{ a.status }}</span>{% endif %}
-            </article>
-          {% endfor %}
+        {% for a in recent_activities %}
+        <article class="list-item">
+          <div class="bullet"><i class="fa-solid fa-circle-info"></i></div>
+          <div class="list-body">
+            <h4>{{ a.title }}</h4>
+            <p class="muted">{{ a.description }}</p>
+          </div>
+          {% if a.status %}
+          <span class="pill status-{{ a.status|lower }}">{{ a.status }}</span>
+          {% endif %}
+        </article>
+        {% endfor %}
         {% else %}
-          <div class="empty">No notifications.</div>
+        <div class="empty">No notifications.</div>
         {% endif %}
-      </div>
-      <div class="list">
-        <a class="chip-btn" href="/core-admin/event-proposals/">
-          <i class="fa-regular fa-eye"></i> View all proposals
-        </a>
       </div>
     </section>
   </main>
-
+  
   <section class="sysbar">
-    <div class="chip">DB: <strong class="{% if stats.database_status == 'OK' %}ok{% else %}bad{% endif %}">{{ stats.database_status|default:"—" }}</strong></div>
-    <div class="chip">Email: <strong class="{% if stats.email_status == 'OK' %}ok{% else %}bad{% endif %}">{{ stats.email_status|default:"—" }}</strong></div>
-    <div class="chip">Storage: <strong class="{% if stats.storage_status == 'OK' %}ok{% else %}bad{% endif %}">{{ stats.storage_status|default:"—" }}</strong></div>
+    <div class="chip">DB: <strong class="{% if stats.database_status == 'OK' %}ok{% else %}bad{% endif %}">{{
+        stats.database_status|default:"—" }}</strong></div>
+    <div class="chip">Email: <strong class="{% if stats.email_status == 'OK' %}ok{% else %}bad{% endif %}">{{
+        stats.email_status|default:"—" }}</strong></div>
+    <div class="chip">Storage: <strong class="{% if stats.storage_status == 'OK' %}ok{% else %}bad{% endif %}">{{
+        stats.storage_status|default:"—" }}</strong></div>
     <div class="chip">Last Backup: <strong>{{ stats.last_backup|default:"—" }}</strong></div>
 
     <!-- Export button → open data_export_filter.html -->
