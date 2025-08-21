@@ -640,7 +640,7 @@
     showStudentsBtn.innerHTML = '<span class="skeleton" style="width:80px;height:20px;"></span>';
     showStudentsBtn.disabled = true;
 
-    // ✅ Sort students by roll_no
+    // Sort students by roll number.
     const students = studentData[year][school][course].slice().sort((a, b) =>
       a.roll_no.localeCompare(b.roll_no, undefined, { numeric: true, sensitivity: 'base' })
     );

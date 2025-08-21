@@ -331,6 +331,37 @@ class AutosaveProposalTests(TestCase):
         saved_ids = set(proposal.sdg_goals.values_list("id", flat=True))
         self.assertEqual(saved_ids, {g1.id, g2.id})
 
+    def test_autosave_activity_missing_fields(self):
+        payload = self._payload()
+        payload.update({
+            "num_activities": "1",
+            "activity_name_1": "Orientation"
+        })
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertFalse(data.get("success"))
+        self.assertIn("activities", data.get("errors", {}))
+        self.assertIn("date", data["errors"]["activities"]["1"])
+
+    def test_autosave_speaker_missing_fields(self):
+        payload = self._payload()
+        payload.update({"speaker_full_name_0": "Dr. Jane"})
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertFalse(data.get("success"))
+        self.assertIn("speakers", data.get("errors", {}))
+        self.assertIn("designation", data["errors"]["speakers"]["0"])
+
 
 class EventProposalOrganizationPrefillTests(TestCase):
     def setUp(self):

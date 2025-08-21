@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-trap 'echo "❌ Migration failed"; exit 1' ERR
+trap 'echo "Migration failed"; exit 1' ERR
 
 if [ ! -f .env ]; then
   echo ".env file not found"
@@ -19,4 +19,4 @@ pg_dump "$SOURCE_DATABASE_URL" -Fc --no-owner --no-acl --if-exists -f backup.dum
 echo "Restoring into target database..."
 pg_restore -d "$TARGET_DATABASE_URL" --clean --if-exists --no-owner --no-acl backup.dump
 
-echo "✅ Migration successful"
+echo "Migration successful"

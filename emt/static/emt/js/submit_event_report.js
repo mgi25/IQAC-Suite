@@ -469,7 +469,7 @@ document.addEventListener('DOMContentLoaded', function(){
   });
   
   function getEventInformationContent() {
-      const selectedEventType = window.REPORT_ACTUAL_EVENT_TYPE || (window.PROPOSAL_DATA ? window.PROPOSAL_DATA.event_focus_type || '' : '');
+      const eventTypeValue = window.REPORT_ACTUAL_EVENT_TYPE || (window.PROPOSAL_DATA ? window.PROPOSAL_DATA.event_focus_type || '' : '');
       return `
           <!-- Organization Information Section -->
           <div class="form-section-header">
@@ -540,25 +540,9 @@ document.addEventListener('DOMContentLoaded', function(){
                   <div class="help-text">Academic year from proposal (editable)</div>
               </div>
               <div class="input-group">
-                  <label for="event-type-modern">Actual Event Type *</label>
-                  <select id="event-type-modern" name="actual_event_type" required>
-                      <option value="">Select the type of event that was conducted</option>
-                      <option value="Training Program" ${selectedEventType === 'Training Program' ? 'selected' : ''}>Training Program</option>
-                      <option value="Workshop" ${selectedEventType === 'Workshop' ? 'selected' : ''}>Workshop</option>
-                      <option value="Seminar" ${selectedEventType === 'Seminar' ? 'selected' : ''}>Seminar</option>
-                      <option value="Conference" ${selectedEventType === 'Conference' ? 'selected' : ''}>Conference</option>
-                      <option value="Guest Lecture" ${selectedEventType === 'Guest Lecture' ? 'selected' : ''}>Guest Lecture</option>
-                      <option value="Webinar" ${selectedEventType === 'Webinar' ? 'selected' : ''}>Webinar</option>
-                      <option value="Competition" ${selectedEventType === 'Competition' ? 'selected' : ''}>Competition</option>
-                      <option value="Cultural Event" ${selectedEventType === 'Cultural Event' ? 'selected' : ''}>Cultural Event</option>
-                      <option value="Sports Event" ${selectedEventType === 'Sports Event' ? 'selected' : ''}>Sports Event</option>
-                      <option value="Exhibition" ${selectedEventType === 'Exhibition' ? 'selected' : ''}>Exhibition</option>
-                      <option value="Panel Discussion" ${selectedEventType === 'Panel Discussion' ? 'selected' : ''}>Panel Discussion</option>
-                      <option value="Hackathon" ${selectedEventType === 'Hackathon' ? 'selected' : ''}>Hackathon</option>
-                      <option value="Field Trip" ${selectedEventType === 'Field Trip' ? 'selected' : ''}>Field Trip</option>
-                      <option value="Other" ${selectedEventType === 'Other' ? 'selected' : ''}>Other</option>
-                  </select>
-                  <div class="help-text">Select the actual type of event that was conducted</div>
+                  <label for="event-type-modern">Event Type *</label>
+                  <input type="text" id="event-type-modern" name="actual_event_type" value="${eventTypeValue}" readonly>
+                  <div class="help-text">Event type from proposal (not editable)</div>
               </div>
           </div>
 
