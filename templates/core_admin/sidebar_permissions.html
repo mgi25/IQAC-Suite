@@ -1,315 +1,439 @@
+{% extends "base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-100">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sidebar Permissions</title>
-  <!-- Tailwind CSS is assumed to be loaded globally -->
-  <style>
-    .scroll-thin::-webkit-scrollbar { width: 4px; }
-    .scroll-thin::-webkit-scrollbar-track { background: transparent; }
-    .scroll-thin::-webkit-scrollbar-thumb { background-color: rgb(203 213 225); border-radius: 8px; }
-  </style>
-</head>
-<body class="min-h-full">
-  <main class="max-w-6xl mx-auto px-6 py-8" x-data="permissionsPage">
-    <header class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-semibold text-slate-800">Sidebar Permissions</h1>
-      <div class="relative" id="helpTooltip">
-        <button type="button" class="p-2 text-slate-500 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full" aria-describedby="help-content">
-          <span class="sr-only">Help</span>
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 18h.01"></path><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" fill="none"/></svg>
-        </button>
-        <div id="help-content" class="absolute right-0 mt-2 w-64 p-3 rounded-lg bg-white shadow-xl text-sm text-slate-700 hidden" role="tooltip">
-          Use the lists to assign modules. Select items and use the arrows to move them between lists.
-        </div>
+
+{% block title %}Sidebar Permissions Management - CHRIST University{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Use site palette (white + CHRIST blue) */
+  .permissions-container { background: var(--white); border-radius: var(--border-radius-lg); padding: 2rem; box-shadow: var(--shadow-lg); margin: 1.5rem; }
+  .permissions-header { border-bottom: 1px solid var(--gray-200); padding-bottom: 1.25rem; margin-bottom: 1.5rem; }
+  .permissions-title { font-size: 1.5rem; font-weight: 700; color: var(--gray-900); display:flex; align-items:center; gap:.5rem; }
+  .permissions-subtitle { color: var(--gray-600); }
+
+  .controls-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:1rem; margin-bottom:1.25rem; background: var(--gray-50); border:1px solid var(--gray-200); border-radius: var(--border-radius); padding:1rem; }
+  .control-group { display:flex; flex-direction:column; gap:.5rem; }
+  .control-label { font-weight:600; color:var(--gray-700); font-size:.9rem; display:flex; gap:.5rem; align-items:center; }
+  .control-select, .search-input { padding:.7rem .9rem; border:1px solid var(--gray-300); border-radius: var(--border-radius); font-size:.95rem; background:var(--white); }
+  .control-select:focus, .search-input:focus { outline:none; border-color: var(--christ-blue); box-shadow: 0 0 0 3px var(--christ-blue-light); }
+
+  .stats-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:.75rem; margin: 0 0 1rem 0; }
+  .stat-card { background: var(--white); border:1px solid var(--gray-200); border-radius: var(--border-radius); padding:.75rem; text-align:center; }
+  .stat-number { font-size:1.25rem; font-weight:700; color: var(--christ-blue); }
+  .stat-label { font-size:.8rem; color: var(--gray-600); }
+
+  .permissions-grid { display:grid; grid-template-columns: 1fr auto 1fr; gap:1.25rem; min-height: 420px; }
+  .permissions-panel { border:1px solid var(--gray-200); border-radius: var(--border-radius-lg); overflow:hidden; background:var(--white); display:flex; flex-direction:column; }
+  .panel-header { background: var(--christ-blue); color:var(--white); padding:.8rem 1rem; display:flex; justify-content:space-between; align-items:center; font-weight:600; }
+  .panel-title { display:flex; gap:.5rem; align-items:center; }
+  .panel-count { background: rgba(255,255,255,.2); padding:.15rem .6rem; border-radius:999px; font-size:.85rem; }
+  .permissions-list { flex:1; overflow:auto; max-height: 380px; }
+  .permission-item { display:flex; gap:.6rem; align-items:center; padding:.7rem 1rem; border-bottom:1px solid var(--gray-100); cursor:pointer; }
+  .permission-item:hover { background: var(--gray-50); }
+  .permission-item.selected { background: var(--christ-blue-light); border-left: 3px solid var(--christ-blue); }
+  .permission-checkbox { width:1.05rem; height:1.05rem; accent-color: var(--christ-blue); }
+  .permission-name { font-weight:600; color:var(--gray-900); }
+  .permission-desc { font-size:.82rem; color:var(--gray-600); }
+  .permission-icon { color: var(--christ-blue); width:1.2rem; text-align:center; }
+
+  .controls-panel { display:flex; flex-direction:column; gap:.6rem; justify-content:center; padding:.5rem; }
+  .control-btn { padding:.6rem .9rem; border:none; border-radius: var(--border-radius); font-weight:600; cursor:pointer; display:flex; gap:.5rem; align-items:center; justify-content:center; }
+  .control-btn.primary { background: var(--christ-blue); color: var(--white); }
+  .control-btn.primary:hover { background: var(--christ-blue-dark); }
+  .control-btn.secondary { background: var(--gray-200); color: var(--gray-800); }
+  .control-btn.secondary:hover { background: var(--gray-300); }
+
+  .save-section { margin-top:1rem; padding-top:1rem; border-top:1px solid var(--gray-200); display:flex; justify-content:space-between; align-items:center; }
+  .save-btn { padding:.7rem 1.2rem; background: var(--christ-blue); color:var(--white); border:none; border-radius: var(--border-radius); font-weight:700; display:flex; gap:.5rem; align-items:center; }
+  .save-btn:disabled { opacity:.5; cursor:not-allowed; }
+  .change-indicator { color: var(--gray-600); font-style: italic; font-size:.9rem; }
+
+  @media (max-width: 900px) { .permissions-grid { grid-template-columns: 1fr; } .controls-panel { flex-direction:row; flex-wrap:wrap; justify-content:center; } }
+</style>
+{% endblock %}
+ 
+
+ 
+{% block content %}
+<div class="permissions-container">
+  <div class="permissions-header">
+    <h1 class="permissions-title"><i class="fas fa-sliders-h"></i> Sidebar Permissions Management</h1>
+    <p class="permissions-subtitle">Configure which sidebar modules are available to users and roles</p>
+  </div>
+
+  <form id="permissionsForm" method="post" action="{% url 'admin_sidebar_permissions' %}">
+    {% csrf_token %}
+    <input type="hidden" name="assigned_order" id="assigned_order" value="[]">
+
+    <div class="controls-grid">
+      <div class="control-group">
+        <label class="control-label" for="orgTypeSelect"><i class="fas fa-building"></i> Organization Type</label>
+        <select id="orgTypeSelect" class="control-select">
+          <option value="">All Types</option>
+          {% for t in organization_types %}
+          <option value="{{ t.id }}" {% if selected_org_type == t.id|stringformat:'s' %}selected{% endif %}>{{ t.name }}</option>
+          {% endfor %}
+        </select>
       </div>
-    </header>
-
-    <form id="permissionsForm" method="post" action="{% url 'core_admin_sidebar_permissions' %}" class="space-y-6">
-      {% csrf_token %}
-      <input type="hidden" name="assigned_order" id="assigned_order" value="[]">
-
-      <div class="flex flex-col gap-4 md:flex-row md:items-end">
-        <div class="flex-1">
-          <label for="userSelect" class="block text-sm font-medium text-slate-700">User</label>
-          <select id="userSelect" name="user_id" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:ring-blue-500 focus:border-blue-500">
-            <option value="">Select user...</option>
-            {% for u in users %}
-            <option value="{{ u.id }}" {% if selected_user_id == u.id %}selected{% endif %}>{{ u.name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="flex-1">
-          <label for="roleSelect" class="block text-sm font-medium text-slate-700">Role</label>
-          <select id="roleSelect" name="role_id" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:ring-blue-500 focus:border-blue-500">
-            <option value="">Select role...</option>
-            {% for r in roles %}
-            <option value="{{ r.id }}" {% if selected_role_id == r.id %}selected{% endif %}>{{ r.name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="flex-1">
-          <label for="globalSearch" class="block text-sm font-medium text-slate-700">Search modules</label>
-          <input id="globalSearch" type="text" placeholder="Search modules..." class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:ring-blue-500 focus:border-blue-500" autocomplete="off">
-        </div>
-        <div class="flex-shrink-0">
-          <button type="submit" id="saveBtn" class="mt-1 inline-flex items-center px-4 py-2 rounded-md bg-blue-600 text-white font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all" disabled>
-            <span id="saveText">Save</span>
-            <svg id="saveSpinner" class="hidden ml-2 w-4 h-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
-          </button>
-        </div>
+      <div class="control-group">
+        <label class="control-label" for="orgRoleSelect"><i class="fas fa-id-badge"></i> Organization Role</label>
+        <select id="orgRoleSelect" class="control-select" {% if not selected_org_type %}disabled{% endif %}>
+          <option value="">All Roles</option>
+          {% for r in org_roles %}
+          <option value="{{ r.id }}" {% if selected_org_role == r.id|stringformat:'s' %}selected{% endif %}>{{ r.name }}</option>
+          {% endfor %}
+        </select>
       </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Available -->
-        <div class="rounded-2xl bg-white shadow-xl p-5 flex flex-col">
-          <h2 class="text-lg font-medium text-slate-800 mb-2">Available (<span id="availableCount">0</span>)</h2>
-          <ul id="availableList" tabindex="0" class="flex-1 overflow-y-auto scroll-thin rounded-md border border-slate-200 divide-y divide-slate-100" aria-label="Available modules"></ul>
-          <div id="availableEmpty" class="hidden flex-1 items-center justify-center text-slate-500 text-sm">No modules <span class="ml-1" aria-hidden="true">📭</span></div>
-        </div>
-
-        <!-- Controls -->
-        <div class="flex flex-col items-center justify-center gap-3">
-          <button type="button" id="addBtn" class="px-3 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Add selected">
-            Add &rarr;</button>
-          <button type="button" id="removeBtn" class="px-3 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Remove selected">&larr; Remove</button>
-          <button type="button" id="moveUpBtn" class="px-3 py-2 bg-slate-200 text-slate-700 rounded shadow hover:bg-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Move up">&uarr; Move Up</button>
-          <button type="button" id="moveDownBtn" class="px-3 py-2 bg-slate-200 text-slate-700 rounded shadow hover:bg-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Move down">&darr; Move Down</button>
-          <div class="flex gap-2 mt-2">
-            <button type="button" id="selectAllBtn" class="px-2 py-1 text-xs bg-slate-100 rounded hover:bg-slate-200" aria-label="Select all">Select all</button>
-            <button type="button" id="clearBtn" class="px-2 py-1 text-xs bg-slate-100 rounded hover:bg-slate-200" aria-label="Clear selection">Clear</button>
-          </div>
-        </div>
-
-        <!-- Assigned -->
-        <div class="rounded-2xl bg-white shadow-xl p-5 flex flex-col">
-          <h2 class="text-lg font-medium text-slate-800 mb-2">Assigned (<span id="assignedCount">0</span>)</h2>
-          <ul id="assignedList" tabindex="0" class="flex-1 overflow-y-auto scroll-thin rounded-md border border-slate-200 divide-y divide-slate-100" aria-label="Assigned modules"></ul>
-          <div id="assignedEmpty" class="hidden flex-1 items-center justify-center text-slate-500 text-sm">No modules <span class="ml-1" aria-hidden="true">📭</span></div>
-        </div>
+      <div class="control-group">
+        <label class="control-label" for="userSelect"><i class="fas fa-user"></i> Select User</label>
+        <select id="userSelect" name="user" class="control-select">
+          <option value="">-- Select User --</option>
+          {% for u in users %}
+          <option value="{{ u.id }}" {% if selected_user == u.id|stringformat:'s' %}selected{% endif %}>{{ u.name }}</option>
+          {% endfor %}
+        </select>
       </div>
-    </form>
+      <div class="control-group">
+        <label class="control-label" for="roleSelect"><i class="fas fa-user-tag"></i> Select Role</label>
+        <select id="roleSelect" name="role" class="control-select">
+          <option value="">-- Select Role --</option>
+          {% for r in roles %}
+          <option value="{{ r.id }}" {% if selected_role == r.id %}selected{% endif %}>{{ r.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="control-group">
+        <label class="control-label" for="globalSearch"><i class="fas fa-search"></i> Search</label>
+        <input id="globalSearch" type="text" placeholder="Search modules..." class="search-input" autocomplete="off">
+      </div>
+    </div>
 
-    <div id="toastContainer" class="fixed top-4 right-4 space-y-2" aria-live="polite" aria-atomic="true"></div>
-  </main>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-number" id="availableCount">0</div><div class="stat-label">Available</div></div>
+      <div class="stat-card"><div class="stat-number" id="assignedCount">0</div><div class="stat-label">Assigned</div></div>
+      <div class="stat-card"><div class="stat-number" id="selectedCount">0</div><div class="stat-label">Selected</div></div>
+    </div>
 
-  <script>
-    (function(){
-      const $ = (sel, ctx=document) => ctx.querySelector(sel);
-      const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
-      const debounce = (fn, d=150) => { let t; return (...a)=>{clearTimeout(t); t=setTimeout(()=>fn(...a),d);} };
-      const toast = (msg, type='success') => {
-        const container = $('#toastContainer');
-        const el = document.createElement('div');
-        el.className = `px-4 py-2 rounded shadow text-sm text-white bg-${type==='error'?'red':'green'}-600`;
-        el.textContent = msg;
-        container.appendChild(el);
-        setTimeout(()=>{el.classList.add('opacity-0','translate-x-4');},2500);
-        setTimeout(()=>{el.remove();},3000);
-      };
+    <div class="permissions-grid">
+      <div class="permissions-panel">
+        <div class="panel-header"><div class="panel-title"><i class="fas fa-list"></i> Available Permissions</div><span class="panel-count" id="availableBadge">0</span></div>
+        <div class="permissions-list" id="availableList"><div class="empty-state" id="availableEmpty"><i class="fas fa-inbox empty-icon"></i><p>No permissions available</p></div></div>
+      </div>
+      <div class="controls-panel">
+        <button type="button" id="addBtn" class="control-btn primary"><i class="fas fa-arrow-right"></i> Add</button>
+        <button type="button" id="removeBtn" class="control-btn primary"><i class="fas fa-arrow-left"></i> Remove</button>
+        <button type="button" id="moveUpBtn" class="control-btn secondary"><i class="fas fa-arrow-up"></i> Move Up</button>
+        <button type="button" id="moveDownBtn" class="control-btn secondary"><i class="fas fa-arrow-down"></i> Move Down</button>
+        <button type="button" id="selectAllBtn" class="control-btn secondary"><i class="fas fa-check-double"></i> Select All</button>
+        <button type="button" id="clearBtn" class="control-btn secondary"><i class="fas fa-times"></i> Clear</button>
+      </div>
+      <div class="permissions-panel">
+        <div class="panel-header"><div class="panel-title"><i class="fas fa-check-circle"></i> Assigned Permissions</div><span class="panel-count" id="assignedBadge">0</span></div>
+        <div class="permissions-list" id="assignedList"><div class="empty-state" id="assignedEmpty"><i class="fas fa-check-circle empty-icon"></i><p>No permissions assigned</p></div></div>
+      </div>
+    </div>
 
-      const availableData = JSON.parse('{{ available_permissions|safe|escapejs }}'.replace(/&quot;/g,'"'));
-      const assignedData = JSON.parse('{{ assigned_permissions|safe|escapejs }}'.replace(/&quot;/g,'"'));
+    <div class="save-section">
+      <div class="change-indicator" id="changeIndicator">No changes made</div>
+  <button type="submit" id="saveBtn" class="save-btn"><i class="fas fa-save"></i><span id="saveText">Save Changes</span><i id="saveSpinner" class="fas fa-spinner fa-spin" style="display:none"></i></button>
+    </div>
+  </form>
+</div>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+      // Helper functions
+      const $ = (sel) => document.querySelector(sel);
+      const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+      
+      // Toast notification
+      function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => toast.classList.add('show'), 100);
+        setTimeout(() => {
+          toast.classList.remove('show');
+          setTimeout(() => document.body.removeChild(toast), 300);
+        }, 3000);
+      }
+
+      // Data management
+      const availableData = JSON.parse('{{ available_permissions|safe|escapejs }}'.replace(/&quot;/g,'"') || '[]');
+      const assignedData = JSON.parse('{{ assigned_permissions|safe|escapejs }}'.replace(/&quot;/g,'"') || '[]');
 
       let available = [...availableData];
       let assigned = [...assignedData];
-      let lastAvailableIndex = null;
-      let lastAssignedIndex = null;
+      let selectedAvailable = new Set();
+      let selectedAssigned = new Set();
 
+      // UI Elements
       const availableList = $('#availableList');
       const assignedList = $('#assignedList');
-      const availableEmpty = $('#availableEmpty');
-      const assignedEmpty = $('#assignedEmpty');
       const availableCount = $('#availableCount');
       const assignedCount = $('#assignedCount');
-      const searchInput = $('#globalSearch');
+  const selectedCount = $('#selectedCount');
+      const availableEmpty = $('#availableEmpty');
+      const assignedEmpty = $('#assignedEmpty');
+      const globalSearch = $('#globalSearch');
+  const userSelect = $('#userSelect');
+      const roleSelect = $('#roleSelect');
+  const orgTypeSelect = $('#orgTypeSelect');
+  const orgRoleSelect = $('#orgRoleSelect');
       const saveBtn = $('#saveBtn');
-      const saveText = $('#saveText');
-      const saveSpinner = $('#saveSpinner');
-      const form = $('#permissionsForm');
+      const changeIndicator = $('#changeIndicator');
 
-      const render = () => {
-        const search = searchInput.value.trim().toLowerCase();
-        const availFrag = document.createDocumentFragment();
-        const assignedFrag = document.createDocumentFragment();
-        let availVisible = 0, assignedVisible = 0;
+      // Control buttons
+      const addBtn = $('#addBtn');
+      const removeBtn = $('#removeBtn');
+      const moveUpBtn = $('#moveUpBtn');
+      const moveDownBtn = $('#moveDownBtn');
+      const selectAllBtn = $('#selectAllBtn');
+      const clearBtn = $('#clearBtn');
+      // Helper to build and navigate with filters
+      function reloadWithFilters(extraParams={}){
+        const params = new URLSearchParams(window.location.search);
+        const setOrDelete = (k,v)=>{ if(v){ params.set(k,v); } else { params.delete(k); } };
+        setOrDelete('org_type', orgTypeSelect ? orgTypeSelect.value : '');
+        setOrDelete('org_role', orgRoleSelect ? orgRoleSelect.value : '');
+        // Preserve selected user/role in query for convenience
+        setOrDelete('user', userSelect.value);
+        setOrDelete('role', roleSelect.value);
+        for(const [k,v] of Object.entries(extraParams)) setOrDelete(k,v);
+        const qs = params.toString();
+        window.location.search = qs ? '?' + qs : '';
+      }
 
-        available.forEach((p,i)=>{
-          const match = !search || p.label.toLowerCase().includes(search);
-          if(match){
-            availVisible++;
-            const li = document.createElement('li');
-            li.dataset.id = p.id;
-            li.dataset.index = i;
-            li.className = 'flex items-center gap-2 px-3 py-2 hover:bg-slate-50 cursor-pointer';
-            const cb = document.createElement('input');
-            cb.type='checkbox';
-            cb.className='h-4 w-4 text-blue-600 rounded focus:ring-blue-500';
-            cb.tabIndex=-1;
-            const lbl = document.createElement('span');
-            lbl.textContent=p.label;
-            li.append(cb,lbl);
-            availFrag.appendChild(li);
-          }
+      function getPermissionIcon(permission) {
+        const iconMap = {
+          'dashboard': 'fas fa-tachometer-alt',
+          'event': 'fas fa-calendar',
+          'user': 'fas fa-users',
+          'report': 'fas fa-chart-bar',
+          'setting': 'fas fa-cog',
+          'management': 'fas fa-tools',
+          'cdl': 'fas fa-paint-brush',
+          'po': 'fas fa-graduation-cap',
+          'transcript': 'fas fa-file-alt'
+        };
+        
+        const key = Object.keys(iconMap).find(k => 
+          permission.label.toLowerCase().includes(k) || 
+          permission.id.toLowerCase().includes(k)
+        );
+        
+        return iconMap[key] || 'fas fa-cube';
+      }
+
+      function renderPermissionItem(permission, isAssigned = false) {
+        const div = document.createElement('div');
+        div.className = 'permission-item';
+        div.dataset.id = permission.id;
+        
+        const isSelected = isAssigned ? 
+          selectedAssigned.has(permission.id) : 
+          selectedAvailable.has(permission.id);
+        
+        if (isSelected) {
+          div.classList.add('selected');
+        }
+
+        div.innerHTML = `
+          <input type="checkbox" class="permission-checkbox" ${isSelected ? 'checked' : ''}>
+          <i class="${getPermissionIcon(permission)} permission-icon"></i>
+          <div style="flex: 1;">
+            <div class="permission-label">${permission.label}</div>
+            <div class="permission-description">${permission.description || 'No description available'}</div>
+          </div>
+        `;
+
+        // Event listeners
+        div.addEventListener('click', (e) => {
+          if (e.target.type === 'checkbox') return;
+          toggleSelection(permission.id, isAssigned);
         });
-        availableList.innerHTML='';
-        availableList.appendChild(availFrag);
+
+        div.querySelector('.permission-checkbox').addEventListener('change', (e) => {
+          if (e.target.checked) {
+            if (isAssigned) {
+              selectedAssigned.add(permission.id);
+            } else {
+              selectedAvailable.add(permission.id);
+            }
+          } else {
+            if (isAssigned) {
+              selectedAssigned.delete(permission.id);
+            } else {
+              selectedAvailable.delete(permission.id);
+            }
+          }
+          updateUI();
+        });
+
+        return div;
+      }
+
+      function toggleSelection(id, isAssigned) {
+        if (isAssigned) {
+          if (selectedAssigned.has(id)) {
+            selectedAssigned.delete(id);
+          } else {
+            selectedAssigned.add(id);
+          }
+        } else {
+          if (selectedAvailable.has(id)) {
+            selectedAvailable.delete(id);
+          } else {
+            selectedAvailable.add(id);
+          }
+        }
+        render();
+      }
+
+      function applyFilters(permissions) {
+        // Only filter Available list per requirement
+        const search = globalSearch.value.toLowerCase();
+        return permissions.filter(p => !search || p.label.toLowerCase().includes(search));
+      }
+
+      function render() {
+        const filteredAvailable = applyFilters(available);
+  const filteredAssigned = assigned; // keep assigned visible and ordered
+
+        // Clear lists
+        availableList.innerHTML = '';
+        assignedList.innerHTML = '';
+
+        // Render available permissions
+        if (filteredAvailable.length === 0) {
+          availableList.appendChild(availableEmpty.cloneNode(true));
+        } else {
+          filteredAvailable.forEach(permission => {
+            availableList.appendChild(renderPermissionItem(permission, false));
+          });
+        }
+
+        // Render assigned permissions
+        if (filteredAssigned.length === 0) {
+          assignedList.appendChild(assignedEmpty.cloneNode(true));
+        } else {
+          filteredAssigned.forEach(permission => {
+            assignedList.appendChild(renderPermissionItem(permission, true));
+          });
+        }
+
+        updateUI();
+      }
+
+      function updateUI() {
+        // Update counts
         availableCount.textContent = available.length;
-        availableEmpty.classList.toggle('hidden', available.length !== 0);
+        assignedCount.textContent = assigned.length;
+  selectedCount.textContent = selectedAvailable.size + selectedAssigned.size;
 
-        assigned.forEach((p,i)=>{
-          const match = !search || p.label.toLowerCase().includes(search);
-          if(match){
-            assignedVisible++;
-            const li = document.createElement('li');
-            li.dataset.id = p.id;
-            li.dataset.index = i;
-            li.className = 'flex items-center gap-2 px-3 py-2 hover:bg-slate-50 cursor-pointer';
-            const cb = document.createElement('input');
-            cb.type='checkbox';
-            cb.className='h-4 w-4 text-blue-600 rounded focus:ring-blue-500';
-            cb.tabIndex=-1;
-            const lbl = document.createElement('span');
-            lbl.textContent=p.label;
-            li.append(cb,lbl);
-            assignedFrag.appendChild(li);
+  // Update button states
+        addBtn.disabled = selectedAvailable.size === 0;
+        removeBtn.disabled = selectedAssigned.size === 0;
+        moveUpBtn.disabled = selectedAssigned.size === 0;
+        moveDownBtn.disabled = selectedAssigned.size === 0;
+
+        // Update save button and change indicator
+  const originalAssigned = assignedData.map(p => p.id).join(',');
+  const currentAssigned = assigned.map(p => p.id).join(',');
+  const hasChanges = originalAssigned !== currentAssigned;
+  // Keep Save button enabled in UI; we validate on submit
+  // Update badges
+  const availableBadge = document.getElementById('availableBadge');
+  const assignedBadge = document.getElementById('assignedBadge');
+  if (availableBadge) availableBadge.textContent = available.length;
+  if (assignedBadge) assignedBadge.textContent = assigned.length;
+        
+        if (hasChanges) {
+          changeIndicator.textContent = 'Changes pending...';
+          changeIndicator.style.color = 'var(--warning)';
+        } else {
+          changeIndicator.textContent = 'No changes made';
+          changeIndicator.style.color = 'var(--gray-600)';
+        }
+      }
+
+      // Event listeners
+      addBtn.addEventListener('click', () => {
+        selectedAvailable.forEach(id => {
+          const permission = available.find(p => p.id === id);
+          if (permission) {
+            assigned.push(permission);
+            available = available.filter(p => p.id !== id);
           }
         });
-        assignedList.innerHTML='';
-        assignedList.appendChild(assignedFrag);
-        assignedCount.textContent = assigned.length;
-        assignedEmpty.classList.toggle('hidden', assigned.length !== 0);
-
-        saveBtn.disabled = !hasChanges();
-      };
-
-      const hasChanges = () => {
-        const orig = assignedData.map(p=>p.id).join(',');
-        const curr = assigned.map(p=>p.id).join(',');
-        return orig !== curr || selectedUserId() !== '{{selected_user_id|default:""}}' || selectedRoleId() !== '{{selected_role_id|default:""}}';
-      };
-
-      const getSelected = (listEl) => $$('li', listEl).filter(li=>$('input',li).checked);
-      const selectedUserId = () => $('#userSelect').value;
-      const selectedRoleId = () => $('#roleSelect').value;
-
-      const move = (sourceArr, targetArr, selectedEls) => {
-        const ids = selectedEls.map(li=>li.dataset.id);
-        const moved = [];
-        sourceArr = sourceArr.filter(p=>{ if(ids.includes(p.id)){ moved.push(p); return false;} return true; });
-        targetArr.push(...moved);
-        return [sourceArr, targetArr, moved.length];
-      };
-
-      const removeByIds = (arr, ids) => arr.filter(p=>!ids.includes(p.id));
-
-      const shiftSelect = (listEl, li, lastIndexHolder) => {
-        const items = $$('li', listEl);
-        const idx = items.indexOf(li);
-        if(lastIndexHolder.value!==null && event.shiftKey){
-          const [start,end]=[lastIndexHolder.value,idx].sort((a,b)=>a-b);
-          for(let i=start;i<=end;i++){ $('input',items[i]).checked = true; }
-        }else{
-          $('input',li).checked = !$('input',li).checked;
-        }
-        lastIndexHolder.value = idx;
-      };
-
-      availableList.addEventListener('click',e=>{
-        const li = e.target.closest('li');
-        if(!li) return;
-        shiftSelect(availableList,li,{ get value(){return lastAvailableIndex;}, set value(v){lastAvailableIndex=v;} });
-      });
-      assignedList.addEventListener('click',e=>{
-        const li = e.target.closest('li');
-        if(!li) return;
-        shiftSelect(assignedList,li,{ get value(){return lastAssignedIndex;}, set value(v){lastAssignedIndex=v;} });
-      });
-
-      $('#addBtn').addEventListener('click',()=>{
-        const selected = getSelected(availableList);
-        if(!selected.length) return;
-        const ids = selected.map(li=>li.dataset.id);
-        const [src,tgt,count] = move(available,assigned,selected);
-        available=src; assigned=tgt;
-        toast(`${count} items added`);
-        render();
-      });
-      $('#removeBtn').addEventListener('click',()=>{
-        const selected = getSelected(assignedList);
-        if(!selected.length) return;
-        const ids = selected.map(li=>li.dataset.id);
-        const removed = assigned.filter(p=>ids.includes(p.id));
-        assigned = removeByIds(assigned, ids);
-        available.push(...removed);
-        toast(`${removed.length} items removed`);
+        selectedAvailable.clear();
         render();
       });
 
-      $('#moveUpBtn').addEventListener('click',()=>{
-        const sel = getSelected(assignedList).map(li=>parseInt(li.dataset.index));
-        sel.sort((a,b)=>a-b);
-        sel.forEach(i=>{ if(i>0){ [assigned[i-1],assigned[i]]=[assigned[i],assigned[i-1]]; }});
-        render();
-      });
-      $('#moveDownBtn').addEventListener('click',()=>{
-        const sel = getSelected(assignedList).map(li=>parseInt(li.dataset.index));
-        sel.sort((a,b)=>b-a);
-        sel.forEach(i=>{ if(i<assigned.length-1){ [assigned[i+1],assigned[i]]=[assigned[i],assigned[i+1]]; }});
-        render();
-      });
-
-      $('#selectAllBtn').addEventListener('click',()=>{
-        const focused = document.activeElement===assignedList?assignedList:availableList;
-        $$('input',focused).forEach(cb=>cb.checked=true);
-      });
-      $('#clearBtn').addEventListener('click',()=>{
-        $$('input',availableList).forEach(cb=>cb.checked=false);
-        $$('input',assignedList).forEach(cb=>cb.checked=false);
-      });
-
-      searchInput.addEventListener('input',debounce(()=>render()));
-
-      availableList.addEventListener('keydown',e=>{
-        if(e.key==='Enter'){ $('#addBtn').click(); }
-      });
-      assignedList.addEventListener('keydown',e=>{
-        if(e.key==='Delete' || e.key==='Backspace'){ $('#removeBtn').click(); }
-      });
-
-      $('#userSelect').addEventListener('change',e=>{
-        if(e.target.value){ $('#roleSelect').value=''; }
-        render();
-      });
-      $('#roleSelect').addEventListener('change',e=>{
-        if(e.target.value){ $('#userSelect').value=''; }
+      removeBtn.addEventListener('click', () => {
+        selectedAssigned.forEach(id => {
+          const permission = assigned.find(p => p.id === id);
+          if (permission) {
+            available.push(permission);
+            assigned = assigned.filter(p => p.id !== id);
+          }
+        });
+        selectedAssigned.clear();
         render();
       });
 
-      form.addEventListener('submit',e=>{
-        e.preventDefault();
-        if(!selectedUserId() && !selectedRoleId()){
-          toast('Select a user or role','error');
+      selectAllBtn.addEventListener('click', () => {
+        // Per requirement: select all in Available list
+        available.forEach(p => selectedAvailable.add(p.id));
+        render();
+      });
+
+      clearBtn.addEventListener('click', () => {
+        selectedAvailable.clear();
+        selectedAssigned.clear();
+        render();
+      });
+
+      // Filter event listeners
+      globalSearch.addEventListener('input', () => setTimeout(render, 150));
+  userSelect.addEventListener('change', () => { roleSelect.value=''; reloadWithFilters(); });
+  roleSelect.addEventListener('change', () => { userSelect.value=''; reloadWithFilters(); });
+      if (orgTypeSelect) orgTypeSelect.addEventListener('change', () => { if(!orgTypeSelect.value){ orgRoleSelect && (orgRoleSelect.value=''); } reloadWithFilters(); });
+      if (orgRoleSelect) orgRoleSelect.addEventListener('change', () => reloadWithFilters());
+
+      // Move Up / Down within assigned
+      moveUpBtn.addEventListener('click', () => {
+        const ids = Array.from(selectedAssigned);
+        const indices = ids.map(id => assigned.findIndex(p => p.id === id)).sort((a,b)=>a-b);
+        indices.forEach(index => { if(index>0){ [assigned[index-1],assigned[index]] = [assigned[index],assigned[index-1]]; } });
+        render();
+      });
+
+      moveDownBtn.addEventListener('click', () => {
+        const ids = Array.from(selectedAssigned);
+        const indices = ids.map(id => assigned.findIndex(p => p.id === id)).sort((a,b)=>b-a);
+        indices.forEach(index => { if(index<assigned.length-1){ [assigned[index+1],assigned[index]] = [assigned[index],assigned[index+1]]; } });
+        render();
+      });
+
+      // Form submission
+      $('#permissionsForm').addEventListener('submit', (e) => {
+        if (!userSelect.value && !roleSelect.value) {
+          e.preventDefault();
+          showToast('Please select a User or a Role before saving.', 'error');
           return;
         }
-        if(!assigned.length && !confirm('No modules assigned. Continue?')){
-          return;
-        }
-        $('#assigned_order').value = JSON.stringify(assigned.map(p=>p.id));
-        saveBtn.disabled=true;
-        saveText.textContent='Saving...';
-        saveSpinner.classList.remove('hidden');
-        form.submit();
+        const assignedOrder = assigned.map(p => p.id);
+        $('#assigned_order').value = JSON.stringify(assignedOrder);
+        
+        $('#saveText').textContent = 'Saving...';
+        const sp = document.getElementById('saveSpinner');
+        if (sp) sp.style.display = 'inline-block';
       });
 
-      // Help tooltip
-      $('#helpTooltip button').addEventListener('focus',()=>{$('#help-content').classList.remove('hidden');});
-      $('#helpTooltip button').addEventListener('blur',()=>{$('#help-content').classList.add('hidden');});
-
+      // Initial render
       render();
-    })();
+    });
   </script>
-</body>
-</html>
+{% endblock %}

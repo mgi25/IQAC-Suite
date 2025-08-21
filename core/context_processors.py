@@ -56,22 +56,51 @@ def sidebar_permissions(request):
     if not request.user.is_authenticated:
         return {"allowed_nav_items": None}
 
+    # Admins and superusers get full access (empty list means no restrictions)
+    if request.user.is_superuser:
+        return {"allowed_nav_items": []}
+    
+    # Check session role for admin access
     session_role = request.session.get("role")
-    if request.user.is_superuser or (
-        session_role and session_role.lower() == "admin"
-    ):
+    if session_role and session_role.lower() == "admin":
         return {"allowed_nav_items": []}
 
+    # For non-admin users, check assigned permissions
     items = None
-    perm = SidebarPermission.objects.filter(
+    
+    # First check for user-specific permissions
+    user_perm = SidebarPermission.objects.filter(
         user=request.user, role__in=["", None]
     ).first()
-    if perm:
-        items = perm.items
-    elif session_role:
-        perm = SidebarPermission.objects.filter(
-            user__isnull=True, role__iexact=session_role
-        ).first()
-        if perm:
-            items = perm.items
+    
+    if user_perm:
+        items = user_perm.items
+    else:
+        # If no user-specific permissions, check role-based permissions
+        # Determine user's role if not in session
+        if not session_role:
+            from .models import RoleAssignment
+            roles = RoleAssignment.objects.filter(user=request.user).select_related('role')
+            role_names = [ra.role.name.lower() for ra in roles]
+            
+            # Determine if student or faculty based on roles/email
+            email = (request.user.email or "").lower()
+            if 'student' in role_names or email.endswith('@christuniversity.in'):
+                session_role = 'student'
+            elif 'faculty' in role_names:
+                session_role = 'faculty'
+            else:
+                session_role = 'faculty'  # Default to faculty for non-student users
+            
+            # Store in session for future requests
+            request.session["role"] = session_role
+
+        # Check for role-based permissions
+        if session_role:
+            role_perm = SidebarPermission.objects.filter(
+                user__isnull=True, role__iexact=session_role
+            ).first()
+            if role_perm:
+                items = role_perm.items
+
     return {"allowed_nav_items": items}
