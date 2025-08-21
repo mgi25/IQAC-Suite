@@ -1666,29 +1666,26 @@ def upload_attendance_csv(request, report_id):
             rows = parse_attendance_csv(request.FILES["csv_file"])
         except ValueError as exc:
             error = str(exc)
-    else:
-        rows = [
-            {
-                "registration_no": r.registration_no,
-                "full_name": r.full_name,
-                "student_class": r.student_class,
-                "absent": r.absent,
-                "volunteer": r.volunteer,
-            }
-            for r in report.attendance_rows.all()
-        ]
 
     page = int(request.GET.get("page", 1))
     per_page = 100
     start = (page - 1) * per_page
     rows_page = rows[start : start + per_page]
 
-    counts = {
-        "total": len(rows),
-        "present": len([r for r in rows if not r.get("absent")]),
-        "absent": len([r for r in rows if r.get("absent")]),
-        "volunteers": len([r for r in rows if r.get("volunteer")]),
-    }
+    if rows:
+        counts = {
+            "total": len(rows),
+            "present": len([r for r in rows if not r.get("absent")]),
+            "absent": len([r for r in rows if r.get("absent")]),
+            "volunteers": len([r for r in rows if r.get("volunteer")]),
+        }
+    else:
+        counts = {
+            "total": report.attendance_rows.count(),
+            "present": report.attendance_rows.filter(absent=False).count(),
+            "absent": report.attendance_rows.filter(absent=True).count(),
+            "volunteers": report.attendance_rows.filter(volunteer=True).count(),
+        }
 
     context = {
         "report": report,
@@ -1700,6 +1697,33 @@ def upload_attendance_csv(request, report_id):
         "counts": counts,
     }
     return render(request, "emt/attendance_upload.html", context)
+
+
+@login_required
+@require_http_methods(["GET"])
+def attendance_data(request, report_id):
+    """Return attendance rows and counts for a report."""
+    report = get_object_or_404(
+        EventReport, id=report_id, proposal__submitted_by=request.user
+    )
+    rows = [
+        {
+            "registration_no": r.registration_no,
+            "full_name": r.full_name,
+            "student_class": r.student_class,
+            "absent": r.absent,
+            "volunteer": r.volunteer,
+        }
+        for r in report.attendance_rows.all()
+    ]
+    counts = {
+        "total": len(rows),
+        "present": len([r for r in rows if not r.get("absent")]),
+        "absent": len([r for r in rows if r.get("absent")]),
+        "volunteers": len([r for r in rows if r.get("volunteer")]),
+    }
+    logger.info("Fetched attendance data for report %s", report_id)
+    return JsonResponse({"rows": rows, "counts": counts})
 
 
 @login_required

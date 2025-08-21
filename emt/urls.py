@@ -34,6 +34,7 @@ urlpatterns = [
     path('reports/<int:report_id>/attendance/upload/', views.upload_attendance_csv, name='attendance_upload'),
     path('reports/<int:report_id>/attendance/save/', views.save_attendance_rows, name='attendance_save'),
     path('reports/<int:report_id>/attendance/download/', views.download_attendance_csv, name='attendance_download'),
+    path('reports/<int:report_id>/attendance/data/', views.attendance_data, name='attendance_data'),
 
     # THE NEW, GENERIC ORG API ENDPOINT:
     path('api/organizations/', views.api_organizations, name='api_organizations'),

@@ -1,6 +1,30 @@
-.summary span { margin-right: 1rem; }
-#attendance-table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
-#attendance-table th, #attendance-table td { border: 1px solid #ccc; padding: 4px; text-align: left; }
-.actions { margin-top: 1rem; }
+.attendance-container {
+  background: var(--surface-color, #fff);
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.page-title {
+  margin-bottom: 1rem;
+}
+.summary {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+.summary span {
+  font-weight: 600;
+}
+#attendance-table { margin-top: 1rem; }
+.actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 1rem;
+}
 .pagination { margin-top: 1rem; }
 .error { color: red; }
+.loading {
+  margin-top: 1rem;
+  display: none;
+}
