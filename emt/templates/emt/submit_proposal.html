@@ -87,6 +87,9 @@
             <h1 class="content-title" id="main-title">Basic Information</h1>
             <p class="content-subtitle" id="main-subtitle">Organization details and event basics</p>
             <button type="button" id="autofill-btn" class="btn-draft" style="margin-top:0.5rem;">Auto-Fill Test Data</button>
+            {% if proposal %}
+            <button type="button" id="reset-draft-btn" class="btn-draft" style="margin-top:0.5rem; margin-left:0.5rem;">Reset Draft</button>
+            {% endif %}
         </div>
 
         {% if form.errors %}
@@ -372,6 +375,8 @@
         window.PROPOSAL_STATUS = "{{ proposal.status|default:'draft' }}";
         window.AUTOSAVE_URL = "{% url 'emt:autosave_proposal' %}";
         window.AUTOSAVE_CSRF = "{{ csrf_token }}";
+        window.RESET_DRAFT_URL = "{% url 'emt:reset_proposal_draft' %}";
+        window.RESET_DRAFT_REDIRECT_URL = "{% url 'emt:submit_proposal' %}";
         window.API_ORGANIZATIONS = "{% url 'emt:api_organizations' %}";
         window.API_FACULTY = "{% url 'emt:api_faculty' %}";
         window.API_CLASSES_BASE = "{% url 'emt:api_classes' 0 %}".split('0/')[0];

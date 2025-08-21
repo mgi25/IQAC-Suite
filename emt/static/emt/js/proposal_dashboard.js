@@ -88,6 +88,28 @@ $(document).ready(function() {
         link.attr('data-url', url);
     }
 
+    function resetProposalDraft() {
+        if (!confirm('Are you sure you want to reset this draft?')) return;
+        const pid = window.PROPOSAL_ID;
+        fetch(window.RESET_DRAFT_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': window.AUTOSAVE_CSRF || ''
+            },
+            body: JSON.stringify({ proposal_id: pid })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = window.RESET_DRAFT_REDIRECT_URL;
+            } else {
+                alert('Failed to reset draft');
+            }
+        })
+        .catch(() => alert('Failed to reset draft'));
+    }
+
     initializeDashboard();
 
     function initializeDashboard() {
@@ -100,6 +122,7 @@ $(document).ready(function() {
             updateCdlNavLink(window.PROPOSAL_ID);
         }
         $('#autofill-btn').on('click', () => autofillTestData(currentExpandedCard));
+        $('#reset-draft-btn').on('click', resetProposalDraft);
         if (!$('.form-errors-banner').length) {
             setTimeout(() => {
                 activateSection('basic-info');

@@ -382,6 +382,24 @@ class AutosaveProposalTests(TestCase):
         self.assertIn("speakers", data.get("errors", {}))
         self.assertIn("full_name", data["errors"]["speakers"]["0"])
 
+    def test_reset_proposal_draft_deletes_draft(self):
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(self._payload()),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        pid = resp.json()["proposal_id"]
+        self.assertTrue(EventProposal.objects.filter(id=pid).exists())
+
+        resp2 = self.client.post(
+            reverse("emt:reset_proposal_draft"),
+            data=json.dumps({"proposal_id": pid}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp2.status_code, 200)
+        self.assertFalse(EventProposal.objects.filter(id=pid).exists())
+
 
 class EventProposalOrganizationPrefillTests(TestCase):
     def setUp(self):
