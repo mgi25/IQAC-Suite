@@ -7,9 +7,15 @@ import json
 import csv
 
 from core.signals import create_or_update_user_profile, assign_role_on_login
-from core.models import OrganizationType, Organization, OrganizationRole, RoleAssignment
+from core.models import (
+    OrganizationType,
+    Organization,
+    OrganizationRole,
+    RoleAssignment,
+    Class,
+)
 
-from emt.models import EventProposal, EventReport
+from emt.models import EventProposal, EventReport, Student
 
 
 class AudienceCSVViewTests(TestCase):
@@ -35,6 +41,14 @@ class AudienceCSVViewTests(TestCase):
         )
 
     def test_download_student_audience_csv(self):
+        cls = Class.objects.create(name="CSE", code="CSE")
+        bob_user = User.objects.create_user("bobuser", password="pass", first_name="Bob")
+        bob = Student.objects.create(user=bob_user, registration_number="R1")
+        cls.students.add(bob)
+        carol_user = User.objects.create_user("caroluser", password="pass", first_name="Carol")
+        carol = Student.objects.create(user=carol_user, registration_number="R2")
+        cls.students.add(carol)
+
         url = reverse("emt:download_audience_csv", args=[self.proposal.id]) + "?type=students"
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -45,9 +59,8 @@ class AudienceCSVViewTests(TestCase):
             rows[0],
             ["Registration No", "Full Name", "Class", "Absent", "Student Volunteer"],
         )
-        self.assertEqual(rows[1][1], "Bob")
-        self.assertEqual(rows[2][1], "Carol")
-        self.assertEqual(len(rows[1]), 5)
+        self.assertEqual(rows[1], ["R1", "Bob", "CSE", "", ""])
+        self.assertEqual(rows[2], ["R2", "Carol", "CSE", "", ""])
 
     def test_download_faculty_audience_csv(self):
         url = reverse("emt:download_audience_csv", args=[self.proposal.id]) + "?type=faculty"
