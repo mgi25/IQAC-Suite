@@ -758,3 +758,69 @@ class SidebarPermission(models.Model):
     def __str__(self):
         target = self.user.username if self.user else self.role or "(unspecified)"
         return f"Sidebar permissions for {target}"
+
+
+class DashboardAssignment(models.Model):
+    """Stores dashboard assignments for users and roles."""
+    DASHBOARD_CHOICES = [
+        ('admin', 'Admin Dashboard'),
+        ('faculty', 'Faculty Dashboard'),
+        ('student', 'Student Dashboard'),
+        ('cdl_head', 'CDL Head Dashboard'),
+        ('cdl_work', 'CDL Work Dashboard'),
+    ]
+    
+    DASHBOARD_PATHS = {
+        'admin': 'core/admin_dashboard.html',
+        'faculty': 'core/dashboard.html',
+        'student': 'core/student_dashboard.html',
+        'cdl_head': 'core/cdl_head_dashboard.html',
+        'cdl_work': 'core/cdl_work_dashboard.html',
+    }
+    
+    DASHBOARD_URLS = {
+        'admin': 'admin_dashboard',
+        'faculty': 'dashboard',
+        'student': 'dashboard',
+        'cdl_head': 'cdl_head_dashboard',
+        'cdl_work': 'cdl_work_dashboard',
+    }
+    
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE, related_name='dashboard_assignments')
+    role = models.CharField(max_length=50, blank=True)
+    organization_type = models.ForeignKey(OrganizationType, null=True, blank=True, on_delete=models.CASCADE)
+    dashboard = models.CharField(max_length=20, choices=DASHBOARD_CHOICES)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ("user", "role", "dashboard")
+        ordering = ['dashboard']
+    
+    def __str__(self):
+        target = self.user.username if self.user else self.role or "(unspecified)"
+        return f"{target} -> {self.get_dashboard_display()}"
+    
+    @classmethod
+    def get_user_dashboards(cls, user):
+        """Get all assigned dashboards for a user"""
+        # Admin users get all dashboards
+        if user.is_superuser:
+            return cls.DASHBOARD_CHOICES
+        
+        # Get user-specific assignments
+        user_assignments = cls.objects.filter(
+            user=user, 
+            is_active=True
+        ).values_list('dashboard', flat=True)
+        
+        # Get role-based assignments
+        user_roles = RoleAssignment.objects.filter(user=user).values_list('role__name', flat=True)
+        role_assignments = cls.objects.filter(
+            role__in=[role.lower() for role in user_roles],
+            is_active=True
+        ).values_list('dashboard', flat=True)
+        
+        # Combine and get dashboard info
+        all_dashboards = set(user_assignments) | set(role_assignments)
+        return [(dash, dict(cls.DASHBOARD_CHOICES)[dash]) for dash in all_dashboards]

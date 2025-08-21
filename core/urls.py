@@ -30,6 +30,7 @@ urlpatterns = [
     # General Dashboard and Proposal Views
     # ────────────────────────────────────────────────
     path('', views.dashboard, name='dashboard'),
+    path('dashboard/select/<str:dashboard_key>/', views.select_dashboard, name='select_dashboard'),
     path('cdl/', views.cdl_dashboard, name='cdl_dashboard'),
     path('propose-event/', views.propose_event, name='propose_event'),
     path('proposal-status/<int:pk>/', views.proposal_status, name='proposal_status'),
@@ -100,6 +101,13 @@ urlpatterns = [
     path('core-admin/master-data-dashboard/', views.master_data_dashboard, name='master_data_dashboard'),
     path('core-admin/settings/', views.admin_settings_dashboard, name='admin_settings'),
     path('core-admin/sidebar-permissions/', views.admin_sidebar_permissions, name='admin_sidebar_permissions'),
+    path('core-admin/enhanced-permissions/', views.enhanced_permissions_management, name='enhanced_permissions_management'),
+    
+    # API endpoints for enhanced permissions
+    path('core-admin/api/dashboard-assignments/', views.api_get_dashboard_assignments, name='api_get_dashboard_assignments'),
+    path('core-admin/api/sidebar-permissions/', views.api_get_sidebar_permissions, name='api_get_sidebar_permissions'),
+    path('core-admin/api/save-dashboard-assignments/', views.api_save_dashboard_assignments, name='api_save_dashboard_assignments'),
+    path('core-admin/api/save-sidebar-permissions/', views.api_save_sidebar_permissions, name='api_save_sidebar_permissions'),
     path('core-admin/settings/<str:model_name>/add/', views.admin_master_data_add, name='admin_settings_add'),
     path('core-admin/settings/<str:model_name>/<int:pk>/edit/', views.admin_master_data_edit, name='admin_settings_edit'),
     path('core-admin/settings/<str:model_name>/<int:pk>/delete/', views.admin_master_data_delete, name='admin_settings_delete'),

@@ -137,7 +137,7 @@
   <div class="left-control-panel">
     <nav class="control-navigation">
       
-      {% if not allowed_nav_items or 'dashboard' in allowed_nav_items %}
+      {% if user.is_superuser or request.session.role == 'admin' or not allowed_nav_items or 'dashboard' in allowed_nav_items %}
       <!-- Dashboard - Always Visible -->
       <div class="nav-item">
         {% if user.is_superuser or request.session.role == 'admin' %}
@@ -154,7 +154,7 @@
       </div>
       {% endif %}
 
-      {% if not allowed_nav_items or 'events' in allowed_nav_items %}
+      {% if user.is_superuser or request.session.role == 'admin' or not allowed_nav_items or 'events' in allowed_nav_items %}
       <!-- Event Management Suite - Expandable -->
       <div class="nav-section {% if 'suite' in request.resolver_match.url_name or '/suite/' in request.path or request.resolver_match.namespace == 'emt' %}expanded{% endif %}">
         <div class="nav-section-header">
@@ -172,7 +172,7 @@
           <a href="/suite/generated-reports/" class="nav-sublink {% if request.resolver_match.url_name == 'generated_reports' %}active{% endif %}">
             <i class="fas fa-eye"></i> View Reports
           </a>
-          {% if request.session.role != 'student' %}
+          {% if user.is_superuser or request.session.role == 'admin' or request.session.role != 'student' %}
           <a href="{% url 'emt:my_approvals' %}" class="nav-sublink {% if request.resolver_match.url_name == 'my_approvals' %}active{% endif %}">
             <i class="fas fa-check-circle"></i> Event Approvals
           </a>
@@ -181,21 +181,18 @@
       </div>
       {% endif %}
 
-      <!-- Graduate Transcript - Standalone (Superuser only) -->
-      {% if user.is_superuser %}
-        {% if not allowed_nav_items or 'transcript' in allowed_nav_items %}
+      <!-- Graduate Transcript - Standalone (Admin-controlled) -->
+      {% if user.is_superuser or request.session.role == 'admin' or not allowed_nav_items or 'transcript' in allowed_nav_items %}
       <div class="nav-item">
         <a href="/transcript/" class="nav-link {% if request.resolver_match.namespace == 'transcript' or 'transcript' in request.resolver_match.url_name or '/transcript/' in request.path %}active{% endif %}">
           <i class="fas fa-graduation-cap nav-icon"></i>
           <span class="nav-text">Graduate Transcript</span>
         </a>
       </div>
-        {% endif %}
       {% endif %}
 
-      <!-- CDL - Expandable (Faculty and Superuser) -->
-      {% if user.is_superuser or request.session.role == 'faculty' or user|has_group:"Faculty" %}
-        {% if not allowed_nav_items or 'cdl' in allowed_nav_items %}
+      <!-- CDL - Expandable (Admin-controlled) -->
+      {% if user.is_superuser or request.session.role == 'admin' or not allowed_nav_items or 'cdl' in allowed_nav_items %}
       <div class="nav-section {% if 'cdl' in request.resolver_match.url_name or '/cdl/' in request.path %}expanded{% endif %}">
         <div class="nav-section-header">
           <i class="fas fa-photo-video nav-icon"></i>
@@ -211,24 +208,20 @@
           </a>
         </div>
       </div>
-        {% endif %}
       {% endif %}
 
-      <!-- POs & PSOs Management (Visible to assigned managers; non-admin) -->
-      {% if request.user.is_authenticated and not user.is_superuser and request.session.role != 'admin' %}
-        {% if not allowed_nav_items or 'pso_psos' in allowed_nav_items %}
-      <div class="nav-item" id="popso-manager-nav" style="display:none;">
+      <!-- POs & PSOs Management (Admin-controlled) -->
+      {% if user.is_superuser or request.session.role == 'admin' or not allowed_nav_items or 'pso_psos' in allowed_nav_items %}
+      <div class="nav-item" id="popso-manager-nav">
         <a href="{% url 'settings_pso_po_management' %}" class="nav-link {% if request.resolver_match.url_name == 'settings_pso_po_management' %}active{% endif %}">
           <i class="fas fa-clipboard-list nav-icon"></i>
           <span class="nav-text">POs & PSOs Management</span>
         </a>
       </div>
-        {% endif %}
       {% endif %}
 
       <!-- User Management - Expandable (Admin Only) -->
       {% if user.is_superuser or request.session.role == 'admin' %}
-        {% if not allowed_nav_items or 'user_management' in allowed_nav_items %}
       <div class="nav-section {% if 'users' in request.path or 'user-roles' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' %}expanded{% endif %}">
         <div class="nav-section-header">
           <i class="fas fa-users nav-icon"></i>
@@ -244,36 +237,30 @@
           </a>
         </div>
       </div>
-        {% endif %}
       {% endif %}
 
-      {% if user.is_superuser or request.session.role == 'admin' %}
-        {% if not allowed_nav_items or 'event_proposals' in allowed_nav_items %}
       <!-- Event Proposals - Standalone (Admin Only) -->
+      {% if user.is_superuser or request.session.role == 'admin' %}
       <div class="nav-item">
         <a href="/core-admin/event-proposals/" class="nav-link {% if request.resolver_match.url_name == 'admin_event_proposals' %}active{% endif %}">
           <i class="fas fa-list nav-icon"></i>
           <span class="nav-text">Event Proposals</span>
         </a>
       </div>
-        {% endif %}
       {% endif %}
 
       <!-- Reports - Standalone (Admin Only) -->
       {% if user.is_superuser or request.session.role == 'admin' %}
-        {% if not allowed_nav_items or 'reports' in allowed_nav_items %}
       <div class="nav-item">
         <a href="/core-admin/reports/" class="nav-link {% if request.resolver_match.url_name == 'admin_reports' or request.resolver_match.url_name == 'admin_reports_view' %}active{% endif %}">
           <i class="fas fa-file-alt nav-icon"></i>
           <span class="nav-text">Reports</span>
         </a>
       </div>
-        {% endif %}
       {% endif %}
 
       <!-- Settings - Expandable (Admin Only) -->
       {% if user.is_superuser or request.session.role == 'admin' %}
-        {% if not allowed_nav_items or 'settings' in allowed_nav_items %}
       <div class="nav-section {% if 'settings' in request.path or 'approval' in request.path or 'pso-po' in request.path or 'master-data' in request.path or 'outcomes' in request.path or 'sdg-goals' in request.path or 'history' in request.path or request.resolver_match.url_name == 'admin_settings' or request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'admin_pso_po_management' or request.resolver_match.url_name == 'admin_outcome_dashboard' or request.resolver_match.url_name == 'admin_sdg_management' or request.resolver_match.url_name == 'admin_academic_year_settings' or request.resolver_match.url_name == 'admin_history' or request.resolver_match.url_name == 'admin_history_detail' %}expanded{% endif %}">
         <div class="nav-section-header">
           <i class="fas fa-cog nav-icon"></i>
@@ -306,7 +293,6 @@
           </a>
         </div>
       </div>
-        {% endif %}
       {% endif %}
 
     </nav>

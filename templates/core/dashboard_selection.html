@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Dashboard Selection{% endblock %}
+
+{% block head_extra %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+<style>
+.dashboard-selection {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.selection-container {
+    background: white;
+    border-radius: 20px;
+    padding: 3rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    max-width: 800px;
+    width: 100%;
+}
+
+.selection-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.selection-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #1e40af;
+    margin-bottom: 0.5rem;
+}
+
+.selection-header p {
+    color: #6b7280;
+    font-size: 1.1rem;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.dashboard-card {
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 15px;
+    padding: 2rem;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.dashboard-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #1e60b1, #3b82f6);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.dashboard-card:hover {
+    border-color: #1e60b1;
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(30, 96, 177, 0.15);
+}
+
+.dashboard-card:hover::before {
+    transform: scaleX(1);
+}
+
+.dashboard-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #1e60b1, #3b82f6);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    color: white;
+    font-size: 2rem;
+}
+
+.dashboard-content h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+}
+
+.dashboard-content p {
+    color: #6b7280;
+    line-height: 1.5;
+    margin-bottom: 1rem;
+}
+
+.dashboard-features {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.dashboard-features li {
+    color: #374151;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.dashboard-features li::before {
+    content: '✓';
+    color: #10b981;
+    font-weight: bold;
+    margin-right: 0.5rem;
+}
+
+.admin-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: #dc2626;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.user-info {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.user-avatar {
+    width: 60px;
+    height: 60px;
+    background: #1e60b1;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 auto 1rem;
+}
+
+.user-name {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.25rem;
+}
+
+.user-role {
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+    .selection-container {
+        margin: 1rem;
+        padding: 2rem;
+    }
+    
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .selection-header h1 {
+        font-size: 2rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-selection">
+    <div class="selection-container">
+        <div class="selection-header">
+            <h1>Select Dashboard</h1>
+            <p>Choose the dashboard you'd like to access</p>
+        </div>
+        
+        <div class="user-info">
+            <div class="user-avatar">
+                {% if user.first_name %}
+                    {{ user.first_name.0|upper }}{% if user.last_name %}{{ user.last_name.0|upper }}{% endif %}
+                {% else %}
+                    {{ user.username.0|upper }}
+                {% endif %}
+            </div>
+            <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
+            <div class="user-role">{{ user.email }}</div>
+        </div>
+        
+        <div class="dashboard-grid">
+            {% for dashboard_key, dashboard_name in available_dashboards %}
+                <a href="{% url 'select_dashboard' dashboard_key %}" class="dashboard-card">
+                    {% if dashboard_key == 'admin' %}
+                        <div class="admin-badge">Admin</div>
+                    {% endif %}
+                    
+                    <div class="dashboard-icon">
+                        {% if dashboard_key == 'admin' %}
+                            <i class="fas fa-crown"></i>
+                        {% elif dashboard_key == 'faculty' %}
+                            <i class="fas fa-chalkboard-teacher"></i>
+                        {% elif dashboard_key == 'student' %}
+                            <i class="fas fa-graduation-cap"></i>
+                        {% elif dashboard_key == 'cdl_head' %}
+                            <i class="fas fa-palette"></i>
+                        {% elif dashboard_key == 'cdl_work' %}
+                            <i class="fas fa-brush"></i>
+                        {% else %}
+                            <i class="fas fa-tachometer-alt"></i>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="dashboard-content">
+                        <h3>{{ dashboard_name }}</h3>
+                        
+                        {% if dashboard_key == 'admin' %}
+                            <p>Complete system administration and analytics</p>
+                            <ul class="dashboard-features">
+                                <li>User & role management</li>
+                                <li>System analytics</li>
+                                <li>Organization oversight</li>
+                                <li>Global settings</li>
+                            </ul>
+                        {% elif dashboard_key == 'faculty' %}
+                            <p>Faculty-specific tools and student management</p>
+                            <ul class="dashboard-features">
+                                <li>Student mentoring</li>
+                                <li>Class management</li>
+                                <li>Event proposals</li>
+                                <li>Academic oversight</li>
+                            </ul>
+                        {% elif dashboard_key == 'student' %}
+                            <p>Student portal with events and achievements</p>
+                            <ul class="dashboard-features">
+                                <li>Event participation</li>
+                                <li>Achievement tracking</li>
+                                <li>Club activities</li>
+                                <li>Academic progress</li>
+                            </ul>
+                        {% elif dashboard_key == 'cdl_head' %}
+                            <p>Creative & Design Lab management</p>
+                            <ul class="dashboard-features">
+                                <li>Team oversight</li>
+                                <li>Project assignments</li>
+                                <li>Quality control</li>
+                                <li>Resource management</li>
+                            </ul>
+                        {% elif dashboard_key == 'cdl_work' %}
+                            <p>CDL team workspace and task management</p>
+                            <ul class="dashboard-features">
+                                <li>Design tasks</li>
+                                <li>Project collaboration</li>
+                                <li>Asset management</li>
+                                <li>Timeline tracking</li>
+                            </ul>
+                        {% endif %}
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

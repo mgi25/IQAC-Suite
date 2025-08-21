@@ -137,6 +137,12 @@ def my_profile(request):
     email = (user.email or "").lower()
     is_student = ('student' in role_lc) or email.endswith('@christuniversity.in')
     
+    # Set session role for sidebar permissions
+    if is_student:
+        request.session["role"] = "student"
+    else:
+        request.session["role"] = "faculty"
+    
     # Determine if this is accessed from dashboard (check for 'from_dashboard' parameter)
     from_dashboard = request.GET.get('from_dashboard', False)
     
@@ -337,7 +343,22 @@ def api_roles(request):
 def dashboard(request):
     user = request.user
 
-    # ---- role / domain detection ----
+    # Check for multiple dashboard assignments
+    from .models import DashboardAssignment
+    available_dashboards = DashboardAssignment.get_user_dashboards(user)
+    
+    # If multiple dashboards are available, show selection screen
+    if len(available_dashboards) > 1:
+        return render(request, 'core/dashboard_selection.html', {
+            'available_dashboards': available_dashboards
+        })
+    
+    # If only one dashboard or no specific assignment, use existing logic
+    if len(available_dashboards) == 1:
+        dashboard_key = available_dashboards[0][0]
+        return redirect('select_dashboard', dashboard_key=dashboard_key)
+
+    # ---- role / domain detection (fallback for users without assignments) ----
     roles = RoleAssignment.objects.filter(user=user).select_related('role', 'organization')
     role_lc = [ra.role.name.lower() for ra in roles]
 
@@ -346,6 +367,13 @@ def dashboard(request):
 
     email = (user.email or "").lower()
     is_student = ('student' in role_lc) or email.endswith('@christuniversity.in')
+    
+    # Set session role for sidebar permissions
+    if is_student:
+        request.session["role"] = "student"
+    else:
+        request.session["role"] = "faculty"
+    
     dashboard_template = "core/student_dashboard.html" if is_student else "core/dashboard.html"
 
     # ---- defaults (avoid UnboundLocalError) ----
@@ -611,6 +639,238 @@ def proposal_status(request, pk):
 #  Admin Dashboard and User Management
 # ─────────────────────────────────────────────────────────────
 @login_required
+def select_dashboard(request, dashboard_key):
+    """Handle dashboard selection and redirect to appropriate dashboard"""
+    from .models import DashboardAssignment
+    
+    # Verify user has access to this dashboard
+    available_dashboards = dict(DashboardAssignment.get_user_dashboards(request.user))
+    
+    if dashboard_key not in available_dashboards and not request.user.is_superuser:
+        messages.error(request, "You don't have access to that dashboard.")
+        return redirect('dashboard')
+    
+    # Set session data for the selected dashboard
+    request.session['selected_dashboard'] = dashboard_key
+    
+    # Route to appropriate dashboard
+    if dashboard_key == 'admin':
+        return redirect('admin_dashboard')
+    elif dashboard_key == 'faculty':
+        request.session["role"] = "faculty"
+        return _render_faculty_dashboard(request)
+    elif dashboard_key == 'student':
+        request.session["role"] = "student"
+        return _render_student_dashboard(request)
+    elif dashboard_key == 'cdl_head':
+        return redirect('cdl_head_dashboard')
+    elif dashboard_key == 'cdl_work':
+        return redirect('cdl_work_dashboard')
+    else:
+        messages.error(request, "Invalid dashboard selection.")
+        return redirect('dashboard')
+
+
+def _render_faculty_dashboard(request):
+    """Render faculty dashboard with existing logic"""
+    user = request.user
+    roles = RoleAssignment.objects.filter(user=user).select_related('role', 'organization')
+    
+    # ---- defaults (avoid UnboundLocalError) ----
+    my_events = EventProposal.objects.none()
+    other_events = EventProposal.objects.none()
+    upcoming_events_count = 0
+    organized_events_count = 0
+    this_week_events = 0
+    students_participated = 0
+    my_students = Student.objects.none()
+    classes_count = 0
+    recent_activity = []
+    user_proposals = []
+    calendar_events = []
+    org_count = 0
+    mentee_count = 0
+
+    # ---- common: events for calendar ----
+    from datetime import timedelta
+    from emt.models import EventProposal
+    
+    try:
+        my_events = EventProposal.objects.filter(
+            Q(submitted_by=user) | Q(faculty_incharges=user)
+        ).distinct().order_by('-start_date')[:10]
+
+        other_events = EventProposal.objects.exclude(
+            Q(submitted_by=user) | Q(faculty_incharges=user)
+        ).filter(status='approved').order_by('-start_date')[:5]
+
+        calendar_events = list(my_events) + list(other_events)
+        
+        # KPI calculations
+        upcoming_events_count = my_events.filter(
+            start_date__gte=timezone.now().date()
+        ).count()
+        
+        organized_events_count = my_events.count()
+        
+        this_week_events = my_events.filter(
+            start_date__gte=timezone.now().date(),
+            start_date__lte=timezone.now().date() + timedelta(days=7)
+        ).count()
+
+    except Exception as e:
+        print(f"Event loading error: {e}")
+
+    # ---- faculty-specific data ----
+    try:
+        my_students = Student.objects.filter(mentor=user)
+        from core.models import Class
+        my_classes = Class.objects.filter(teacher=user, is_active=True)
+        classes_count = my_classes.count()
+        mentee_count = my_students.count()
+        
+        # Calculate students who participated in events
+        students_participated = my_students.filter(
+            user__in=EventProposal.objects.filter(
+                Q(submitted_by=user) | Q(faculty_incharges=user)
+            ).values_list('participants__user', flat=True)
+        ).distinct().count()
+
+    except Exception as e:
+        print(f"Faculty data loading error: {e}")
+
+    # ---- user organizations ----
+    try:
+        user_organizations = Organization.objects.filter(
+            Q(role_assignments__user=user) | Q(memberships__user=user)
+        ).distinct()
+        org_count = user_organizations.count()
+    except Exception as e:
+        print(f"Organization loading error: {e}")
+        user_organizations = Organization.objects.none()
+
+    # ---- user proposals for API ----
+    try:
+        user_proposals = list(my_events.values(
+            'id', 'title', 'status', 'start_date', 'end_date', 
+            'organization__name', 'description'
+        ))
+        for proposal in user_proposals:
+            if proposal['start_date']:
+                proposal['start_date'] = proposal['start_date'].isoformat()
+            if proposal['end_date']:
+                proposal['end_date'] = proposal['end_date'].isoformat()
+    except Exception as e:
+        print(f"Proposals serialization error: {e}")
+        user_proposals = []
+
+    # ---- final context ----
+    context = {
+        "user": user,
+        "roles": roles,
+        "my_events": my_events,
+        "other_events": other_events,
+        "upcoming_events_count": upcoming_events_count,
+        "organized_events_count": organized_events_count,
+        "this_week_events": this_week_events,
+        "students_participated": students_participated,
+        "classes_count": classes_count,
+        "mentee_count": mentee_count,
+        "org_count": org_count,
+        "calendar_events": calendar_events,
+        "user_proposals": user_proposals,
+        "role_names": [ra.role.name for ra in roles],
+    }
+
+    return render(request, "core/dashboard.html", context)
+
+
+def _render_student_dashboard(request):
+    """Render student dashboard with existing logic"""
+    user = request.user
+    roles = RoleAssignment.objects.filter(user=user).select_related('role', 'organization')
+    
+    # ---- defaults ----
+    participated_events_count = 0
+    achievements_count = 0
+    clubs_count = 0
+    activity_score = 0
+    recent_activity = []
+    user_proposals = []
+    calendar_events = []
+    org_count = 0
+
+    # ---- student-specific data ----
+    try:
+        from emt.models import Student
+        student_profile = Student.objects.filter(user=user).first()
+        
+        if student_profile:
+            # Get events where student participated
+            participated_events = EventProposal.objects.filter(
+                participants=student_profile
+            ).distinct()
+            participated_events_count = participated_events.count()
+            
+            # Mock achievements and activity score
+            achievements_count = participated_events_count // 3
+            activity_score = min(participated_events_count * 10, 100)
+            
+            calendar_events = list(participated_events[:10])
+
+    except Exception as e:
+        print(f"Student data loading error: {e}")
+
+    # ---- user organizations ----
+    try:
+        user_organizations = Organization.objects.filter(
+            Q(role_assignments__user=user) | Q(memberships__user=user)
+        ).distinct()
+        org_count = user_organizations.count()
+        clubs_count = user_organizations.filter(
+            org_type__name__icontains='club'
+        ).count()
+    except Exception as e:
+        print(f"Organization loading error: {e}")
+
+    # ---- user proposals for API ----
+    try:
+        user_events = EventProposal.objects.filter(
+            Q(submitted_by=user) | Q(participants__user=user)
+        ).distinct()[:10]
+        
+        user_proposals = list(user_events.values(
+            'id', 'title', 'status', 'start_date', 'end_date',
+            'organization__name', 'description'
+        ))
+        for proposal in user_proposals:
+            if proposal['start_date']:
+                proposal['start_date'] = proposal['start_date'].isoformat()
+            if proposal['end_date']:
+                proposal['end_date'] = proposal['end_date'].isoformat()
+    except Exception as e:
+        print(f"Student proposals error: {e}")
+        user_proposals = []
+
+    # ---- final context ----
+    context = {
+        "user": user,
+        "roles": roles,
+        "participated_events_count": participated_events_count,
+        "achievements_count": achievements_count,
+        "clubs_count": clubs_count,
+        "activity_score": activity_score,
+        "org_count": org_count,
+        "calendar_events": calendar_events,
+        "user_proposals": user_proposals,
+        "role_names": [ra.role.name for ra in roles],
+        "recent_activity": recent_activity,
+    }
+
+    return render(request, "core/student_dashboard.html", context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
 def admin_dashboard(request):
     """
     Render the admin dashboard with dynamic analytics from the backend.
@@ -634,6 +894,7 @@ def admin_dashboard(request):
             counted_users['student'].add(user_id)
         elif 'hod' in role_name or 'head' in role_name:
             counted_users['hod'].add(user_id)
+    
     stats = {
         'students': len(counted_users['student']),
         'faculties': len(counted_users['faculty']),
@@ -658,6 +919,7 @@ def admin_dashboard(request):
         'storage_status': '45% Used',
         'last_backup': timezone.now().strftime("%b %d, %Y"),
     }
+    
     # Recent activity feed (proposals and reports)
     recent_activities = []
     recent_proposals = EventProposal.objects.select_related('submitted_by').order_by('-created_at')[:5]
@@ -669,6 +931,7 @@ def admin_dashboard(request):
             'timestamp': proposal.created_at,
             'status': proposal.status
         })
+    
     recent_reports = Report.objects.select_related('submitted_by').order_by('-created_at')[:3]
     for report in recent_reports:
         recent_activities.append({
@@ -678,8 +941,10 @@ def admin_dashboard(request):
             'timestamp': report.created_at,
             'status': getattr(report, 'status', '')
         })
+    
     recent_activities.sort(key=lambda x: x['timestamp'], reverse=True)
     recent_activities = recent_activities[:8]
+    
     context = {
         'stats': stats,
         'recent_activities': recent_activities,
@@ -1444,10 +1709,25 @@ def admin_settings_dashboard(request):
 def admin_sidebar_permissions(request):
     """Allow admin to configure sidebar items per user or role."""
     from django.contrib.auth.models import User
+    import json
+    from .models import OrganizationType, OrganizationRole, RoleAssignment
 
     roles = ["admin", "faculty", "student"]
-    users = User.objects.all().order_by("username")
 
+    # Filters from query params
+    org_type_id = (request.GET.get("org_type") or "").strip()
+    org_role_id = (request.GET.get("org_role") or "").strip()
+
+    # Base users queryset, filtered by organization type and role if provided
+    users_qs = User.objects.all().order_by("username")
+    if org_type_id:
+        ra_qs = RoleAssignment.objects.filter(role__organization__org_type_id=org_type_id)
+        if org_role_id:
+            ra_qs = ra_qs.filter(role_id=org_role_id)
+        users_qs = users_qs.filter(id__in=ra_qs.values_list("user_id", flat=True)).distinct()
+    users = users_qs
+
+    # Top-level nav keys used site-wide (kept centralized here)
     nav_items = [
         ("dashboard", "Dashboard"),
         ("events", "Event Management Suite"),
@@ -1458,6 +1738,15 @@ def admin_sidebar_permissions(request):
         ("event_proposals", "Event Proposals"),
         ("reports", "Reports"),
         ("settings", "Settings"),
+    ]
+
+    # Sub-permissions that map to submenu links (aligned with base.html)
+    sub_nav_items = [
+        ("events:submit_proposal", "Event Proposal"),
+        ("events:pending_reports", "Report Generation"),
+        ("events:generated_reports", "View Reports"),
+        ("events:my_approvals", "Event Approvals"),
+        # Extend here if other menus expose sub-items
     ]
 
     selected_user = request.GET.get("user")
@@ -1476,7 +1765,13 @@ def admin_sidebar_permissions(request):
     if request.method == "POST":
         target_user = request.POST.get("user") or None
         target_role = (request.POST.get("role") or "").lower()
-        items = request.POST.getlist("items")
+        # Support modern UI submitting a JSON array "assigned_order" or legacy list "items"
+        assigned_order_raw = request.POST.get("assigned_order")
+        try:
+            assigned_items = json.loads(assigned_order_raw) if assigned_order_raw else None
+        except Exception:
+            assigned_items = None
+        items = assigned_items if assigned_items is not None else request.POST.getlist("items")
 
         if target_user:
             permission, _ = SidebarPermission.objects.get_or_create(
@@ -1495,17 +1790,244 @@ def admin_sidebar_permissions(request):
             redirect_url += f"?user={target_user}"
         elif target_role:
             redirect_url += f"?role={target_role}"
+        # Preserve filters
+        extras = []
+        if org_type_id:
+            extras.append(f"org_type={org_type_id}")
+        if org_role_id:
+            extras.append(f"org_role={org_role_id}")
+        if extras:
+            sep = '&' if ('?' in redirect_url) else '?'
+            redirect_url += sep + '&'.join(extras)
         return redirect(redirect_url)
 
+    # Prepare data for the modern template
+    available_permissions = []
+    assigned_permissions = []
+    
+    # Build available permissions list
+    # Prepare a lookup for labels
+    label_map = {k: v for k, v in nav_items}
+    label_map.update({k: v for k, v in sub_nav_items})
+
+    # Build available permissions list from known nav + sub-nav, excluding assigned
+    assigned_set = set(permission.items) if permission else set()
+    for key, label in nav_items + sub_nav_items:
+        if key not in assigned_set:
+            available_permissions.append({"id": key, "label": label})
+    
+    # Build assigned permissions list
+    if permission:
+        for item in permission.items:
+            # Find label from map; fallback to prettified key
+            label = label_map.get(item)
+            if not label:
+                # For sub-keys like events:submit_proposal -> "Submit Proposal"
+                label = item.split(":")[-1].replace("_", " ").title()
+            assigned_permissions.append({"id": item, "label": label})
+
     context = {
-        "roles": roles,
-        "users": users,
+        "roles": [{"id": r, "name": r.title()} for r in roles],
+        "organization_types": list(OrganizationType.objects.filter(is_active=True).values("id", "name")),
+        "org_roles": list(OrganizationRole.objects.filter(organization__org_type_id=org_type_id).values("id", "name")) if org_type_id else [],
+        "selected_org_type": org_type_id,
+        "selected_org_role": org_role_id,
+        "users": [{"id": u.id, "name": u.get_full_name() or u.username} for u in users],
         "nav_items": nav_items,
         "permission": permission,
         "selected_user": selected_user,
         "selected_role": selected_role,
+        "selected_user_id": selected_user,
+        "selected_role_id": selected_role,
+        "available_permissions": json.dumps(available_permissions),
+        "assigned_permissions": json.dumps(assigned_permissions),
     }
-    return render(request, "core/admin_sidebar_permissions.html", context)
+    return render(request, "core_admin/sidebar_permissions.html", context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def enhanced_permissions_management(request):
+    """Enhanced permissions management interface"""
+    from .models import DashboardAssignment, OrganizationType, OrganizationRole
+    from django.contrib.auth.models import User
+    import json
+    
+    # Get all data for the interface
+    organization_types = OrganizationType.objects.all()
+    roles = OrganizationRole.objects.select_related('organization', 'organization__org_type').all()
+    users = User.objects.filter(is_active=True).select_related()
+    
+    # Add role list to users for filtering
+    for user in users:
+        user_roles = RoleAssignment.objects.filter(user=user).values_list('role__name', flat=True)
+        user.role_list = json.dumps(list(user_roles))
+    
+    # Dashboard choices
+    dashboard_choices = DashboardAssignment.DASHBOARD_CHOICES
+    
+    # Sidebar items
+    sidebar_items = [
+        ('dashboard', 'Dashboard'),
+        ('events', 'Event Management'),
+        ('cdl', 'CDL (Creative & Design Lab)'),
+        ('pso_psos', 'PSO & POs Management'),
+        ('transcript', 'Transcript Management'),
+        ('profile', 'User Profile'),
+        ('admin', 'Admin Functions'),
+    ]
+    
+    context = {
+        'organization_types': organization_types,
+        'roles': roles,
+        'users': users,
+        'dashboard_choices': json.dumps(dashboard_choices),
+        'sidebar_items': json.dumps(sidebar_items),
+        'available_permissions': json.dumps([item[0] for item in sidebar_items]),
+        'assigned_permissions': json.dumps([]),
+    }
+    
+    return render(request, 'core_admin/enhanced_permissions.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+@require_http_methods(["POST"])
+def api_save_dashboard_assignments(request):
+    """API endpoint to save dashboard assignments"""
+    from .models import DashboardAssignment
+    from django.http import JsonResponse
+    from django.views.decorators.http import require_http_methods
+    import json
+    
+    try:
+        data = json.loads(request.body)
+        assignments = data.get('assignments', [])
+        user_id = data.get('user')
+        role = data.get('role')
+        
+        if not user_id and not role:
+            return JsonResponse({'success': False, 'error': 'Must specify either user or role'})
+        
+        # Clear existing assignments
+        if user_id:
+            DashboardAssignment.objects.filter(user_id=user_id, role='').delete()
+        elif role:
+            DashboardAssignment.objects.filter(user__isnull=True, role=role).delete()
+        
+        # Create new assignments
+        for dashboard in assignments:
+            if user_id:
+                DashboardAssignment.objects.create(
+                    user_id=user_id,
+                    role='',
+                    dashboard=dashboard
+                )
+            else:
+                DashboardAssignment.objects.create(
+                    user=None,
+                    role=role,
+                    dashboard=dashboard
+                )
+        
+        return JsonResponse({'success': True})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+@require_http_methods(["POST"])
+def api_save_sidebar_permissions(request):
+    """API endpoint to save sidebar permissions"""
+    from .models import SidebarPermission
+    from django.http import JsonResponse
+    import json
+    
+    try:
+        data = json.loads(request.body)
+        assignments = data.get('assignments', [])
+        user_id = data.get('user')
+        role = data.get('role')
+        
+        if not user_id and not role:
+            return JsonResponse({'success': False, 'error': 'Must specify either user or role'})
+        
+        # Get or create permission record
+        if user_id:
+            permission, created = SidebarPermission.objects.get_or_create(
+                user_id=user_id,
+                role='',
+                defaults={'items': assignments}
+            )
+            if not created:
+                permission.items = assignments
+                permission.save()
+        else:
+            permission, created = SidebarPermission.objects.get_or_create(
+                user=None,
+                role=role,
+                defaults={'items': assignments}
+            )
+            if not created:
+                permission.items = assignments
+                permission.save()
+        
+        return JsonResponse({'success': True})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def api_get_dashboard_assignments(request):
+    """API endpoint to get dashboard assignments for a user or role"""
+    from .models import DashboardAssignment
+    from django.http import JsonResponse
+    
+    user_id = request.GET.get('user')
+    role = request.GET.get('role')
+    
+    assignments = []
+    
+    if user_id:
+        assignments = list(DashboardAssignment.objects.filter(
+            user_id=user_id, is_active=True
+        ).values_list('dashboard', flat=True))
+    elif role:
+        assignments = list(DashboardAssignment.objects.filter(
+            user__isnull=True, role=role, is_active=True
+        ).values_list('dashboard', flat=True))
+    
+    return JsonResponse({'assignments': assignments})
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def api_get_sidebar_permissions(request):
+    """API endpoint to get sidebar permissions for a user or role"""
+    from .models import SidebarPermission
+    from django.http import JsonResponse
+    
+    user_id = request.GET.get('user')
+    role = request.GET.get('role')
+    
+    assignments = []
+    
+    if user_id:
+        permission = SidebarPermission.objects.filter(user_id=user_id).first()
+        if permission:
+            assignments = permission.items
+    elif role:
+        permission = SidebarPermission.objects.filter(
+            user__isnull=True, role=role
+        ).first()
+        if permission:
+            assignments = permission.items
+    
+    return JsonResponse({'assignments': assignments})
 
 
 @login_required
