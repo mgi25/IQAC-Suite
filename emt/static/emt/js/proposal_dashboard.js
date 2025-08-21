@@ -3336,13 +3336,12 @@ function addSubmitSection() {
     return;
   }
 
-  // Create the submit section HTML with proper application styling
+  // Create the submit section HTML with only the final submit action
   const submitSectionHTML = `
     <div class="submit-section">
       <h5 class="mb-3" style="color: var(--primary-blue); font-weight: 600;">Submit Proposal</h5>
       <div class="d-flex gap-3 justify-content-center">
-        <button type="button" class="btn-save-section" onclick="saveDraft()">Save as Draft</button>
-        <button type="submit" class="btn-submit" name="review_submit">Submit Proposal</button>
+        <button type="submit" class="btn-submit" name="review_submit" id="submit-proposal-btn" disabled>Submit Proposal</button>
       </div>
       <p class="submit-help-text">Review all sections before final submission</p>
     </div>
@@ -3359,21 +3358,3 @@ function removeSubmitSection() {
   }
 }
 
-// Function to manually save draft
-function saveDraft() {
-  showLoadingOverlay();
-  if (window.autosaveDraft) {
-    window.autosaveDraft().then(() => {
-      hideLoadingOverlay();
-      alert('Draft saved successfully!');
-    }).catch((error) => {
-      hideLoadingOverlay();
-      console.error('Failed to save draft:', error);
-      alert('Failed to save draft. Please try again.');
-    });
-  } else {
-    hideLoadingOverlay();
-    console.error('Autosave function not available');
-    alert('Save function not available. Please try submitting the form.');
-  }
-}
