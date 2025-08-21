@@ -45,7 +45,11 @@ window.AutosaveManager = (function() {
                     || inputs.find(i => i.type !== 'hidden')
                     || inputs.find(i => i.value.trim() !== '')
                     || field;
-                data[name] = preferred.value;
+                let value = preferred.value;
+                if (name === 'flow' && value === '[]') {
+                    value = '';
+                }
+                data[name] = value;
             }
         });
         return data;
@@ -136,7 +140,9 @@ window.AutosaveManager = (function() {
         fields.forEach(f => {
             if (saved.hasOwnProperty(f.name)) {
                 const val = saved[f.name];
-                if (f.type === 'checkbox') {
+                if (f.name === 'flow' && val === '[]') {
+                    f.value = '';
+                } else if (f.type === 'checkbox') {
                     if (Array.isArray(val)) {
                         f.checked = val.includes(f.value);
                     } else {
