@@ -28,6 +28,8 @@ $(document).ready(function() {
     };
     const optionalSections = ['speakers', 'expenses', 'income', 'cdl-support'];
     let firstErrorField = null;
+    let scheduleTableBody = null;
+    let scheduleHiddenField = null;
     const autoFillEnabled = new URLSearchParams(window.location.search).has('autofill');
     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
     const originalFormAction = $('#proposal-form').attr('action') || '';
@@ -297,6 +299,9 @@ $(document).ready(function() {
             if (section === 'income') {
                 setupIncomeSection();
             }
+            if (section === 'schedule') {
+                setupScheduleSection();
+            }
             if (section === 'why-this-event') {
                 // setupWhyThisEventAI(); // AI suggestions disabled
             }
@@ -312,6 +317,9 @@ $(document).ready(function() {
             }
             if (autoFillEnabled) {
                 autofillTestData(section);
+            }
+            if (section === 'schedule') {
+                populateTable();
             }
         }, 100);
     }
@@ -1492,11 +1500,22 @@ function getWhyThisEventForm() {
                 <div class="form-row full-width">
                     <div class="input-group">
                         <label for="schedule-modern">Event timeline and schedule *</label>
-                        <textarea id="schedule-modern" name="flow" rows="8" required placeholder="9:00 AM - Registration&#10;9:30 AM - Opening Ceremony..."></textarea>
+                        <textarea id="schedule-modern" name="flow" hidden></textarea>
+                        <table id="flow-table" class="schedule-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Activity</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                        <button type="button" id="add-row-btn">Add Row</button>
                         <div class="help-text">Provide a detailed timeline for each activity.</div>
                     </div>
                 </div>
-                
+
                 <div class="form-row full-width">
                     <div class="save-section-container">
                         <button type="button" class="btn-save-section">Save & Continue</button>
@@ -1505,6 +1524,68 @@ function getWhyThisEventForm() {
                 </div>
             </div>
         `;
+    }
+
+    function addRow(time = '', activity = '') {
+        if (!scheduleTableBody) return;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><input type="text" class="time-input" value="${time}"></td>
+            <td><input type="text" class="activity-input" value="${activity}"></td>
+            <td><button type="button" class="btn-remove-row">Remove</button></td>
+        `;
+        row.querySelector('.btn-remove-row').addEventListener('click', () => removeRow(row));
+        row.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', serializeSchedule);
+        });
+        scheduleTableBody.appendChild(row);
+    }
+
+    function removeRow(row) {
+        row.remove();
+        serializeSchedule();
+    }
+
+    function populateTable() {
+        if (!scheduleTableBody || !scheduleHiddenField) return;
+        scheduleTableBody.innerHTML = '';
+        const initial = (scheduleHiddenField.value || '').trim();
+        if (initial) {
+            initial.split('\n').forEach(line => {
+                const parts = line.split(/[-–]\s*/);
+                const time = parts.shift()?.trim() || '';
+                const activity = parts.join(' - ').trim();
+                addRow(time, activity);
+            });
+        } else {
+            addRow();
+        }
+        serializeSchedule();
+    }
+
+    function serializeSchedule() {
+        if (!scheduleTableBody || !scheduleHiddenField) return;
+        const lines = [];
+        scheduleTableBody.querySelectorAll('tr').forEach(tr => {
+            const time = tr.querySelector('.time-input').value.trim();
+            const activity = tr.querySelector('.activity-input').value.trim();
+            if (time || activity) {
+                lines.push(`${time} – ${activity}`);
+            }
+        });
+        scheduleHiddenField.value = lines.join('\n');
+        scheduleHiddenField.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    function setupScheduleSection() {
+        scheduleTableBody = document.querySelector('#flow-table tbody');
+        scheduleHiddenField = document.getElementById('schedule-modern');
+        const addRowBtn = document.getElementById('add-row-btn');
+        if (!scheduleTableBody || !scheduleHiddenField || !addRowBtn) return;
+        addRowBtn.addEventListener('click', () => {
+            addRow();
+            serializeSchedule();
+        });
     }
 
     function getSpeakersForm() {
@@ -2088,6 +2169,10 @@ function getWhyThisEventForm() {
     // ===== SAVE SECTION FUNCTIONALITY - FULLY PRESERVED =====
     function saveCurrentSection() {
         if (!currentExpandedCard) return;
+
+        if (currentExpandedCard === 'schedule') {
+            serializeSchedule();
+        }
 
         if (validateCurrentSection()) {
             showLoadingOverlay();
@@ -2781,6 +2866,9 @@ function getWhyThisEventForm() {
 
     // ===== FORM SUBMISSION HANDLING - PRESERVED =====
     $('#proposal-form').on('submit', function(e) {
+        if (document.getElementById('schedule-modern')) {
+            serializeSchedule();
+        }
         // Before submit, copy any rich text content into hidden fields
         const needAnalysisContent = localStorage.getItem('section_need_analysis') || $('#need-analysis-modern').val() || '';
         const objectivesContent = localStorage.getItem('section_objectives') || $('#objectives-modern').val() || '';
