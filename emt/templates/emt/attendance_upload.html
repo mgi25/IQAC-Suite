@@ -1,19 +1,24 @@
+{% extends "base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Upload Attendance CSV</title>
-    <link rel="stylesheet" href="{% static 'emt/css/attendance.css' %}">
-</head>
-<body>
-    <h1>Upload Attendance CSV</h1>
+
+{% block title %}Attendance Upload{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'emt/css/attendance.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="attendance-container">
+    <h1 class="page-title">Attendance CSV Upload</h1>
+
     {% if error %}
-    <div class="error">{{ error }}</div>
+    <div class="alert alert-danger">{{ error }}</div>
     {% endif %}
-    <form method="post" enctype="multipart/form-data">
+
+    <form method="post" enctype="multipart/form-data" class="mb-4">
         {% csrf_token %}
-        <input type="file" name="csv_file" accept=".csv">
-        <button type="submit">Upload</button>
+        <input type="file" name="csv_file" accept=".csv" class="form-control-file mb-2">
+        <button type="submit" class="btn btn-primary">Upload</button>
     </form>
 
     <div id="summary" class="summary">
@@ -23,7 +28,9 @@
         <span>Volunteers: <span id="volunteer-count">{{ counts.volunteers }}</span></span>
     </div>
 
-    <table id="attendance-table">
+    <div id="loading" class="loading">Loading...</div>
+
+    <table id="attendance-table" class="table table-sm mt-3">
         <thead>
             <tr>
                 <th>Registration No</th>
@@ -37,17 +44,19 @@
     </table>
 
     <div class="actions">
-        <button id="save-event-report">Save to Event Report</button>
-        <button id="download-csv">Download CSV</button>
+        <button id="save-event-report" class="btn btn-primary">Save to Event Report</button>
+        <button id="download-csv" class="btn btn-secondary">Download CSV</button>
     </div>
+</div>
 
-    <script>
-        const initialRows = {{ rows_json|default:'[]'|safe }};
-        const saveUrl = "{% url 'emt:attendance_save' report.id %}";
-        const downloadUrl = "{% url 'emt:attendance_download' report.id %}";
-        const downloadFilename = "student_audience_{{ report.id }}.csv";
-        const csrftoken = '{{ csrf_token }}';
-    </script>
-    <script src="{% static 'emt/js/attendance.js' %}"></script>
-</body>
-</html>
+<script>
+    const initialRows = {{ rows_json|default:'[]'|safe }};
+    const saveUrl = "{% url 'emt:attendance_save' report.id %}";
+    const downloadUrl = "{% url 'emt:attendance_download' report.id %}";
+    const dataUrl = "{% url 'emt:attendance_data' report.id %}";
+    const downloadFilename = "student_audience_{{ report.id }}.csv";
+    const csrftoken = '{{ csrf_token }}';
+</script>
+<script src="{% static 'emt/js/attendance.js' %}"></script>
+{% endblock %}
+

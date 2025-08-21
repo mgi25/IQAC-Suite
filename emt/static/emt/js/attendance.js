@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const presentEl = document.getElementById('present-count');
     const absentEl = document.getElementById('absent-count');
     const volunteerEl = document.getElementById('volunteer-count');
+    const loadingEl = document.getElementById('loading');
 
     function renderTable() {
         tableBody.innerHTML = '';
@@ -102,6 +103,27 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function fetchRows() {
+        if (!dataUrl) {
+            renderTable();
+            return;
+        }
+        loadingEl.style.display = 'block';
+        fetch(dataUrl)
+            .then(r => r.json())
+            .then(data => {
+                rows = data.rows || [];
+                renderTable();
+            })
+            .finally(() => {
+                loadingEl.style.display = 'none';
+            });
+    }
+
     setupPagination();
-    renderTable();
+    if (rows.length === 0) {
+        fetchRows();
+    } else {
+        renderTable();
+    }
 });
