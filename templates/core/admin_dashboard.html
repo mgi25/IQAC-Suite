@@ -95,7 +95,7 @@
     <!-- Event Proposals -->
     <section class="card eq" data-card="proposals">
       <div class="card-header">
-        <h3><i class="fa-solid fa-file-signature"></i> Event Proposals</h3>
+        <h3><i class="fa-solid fa-file-signature"></i> Event Proposals Overview</h3>
       </div>
       <div class="stats-rows">
         <div class="sr"><span>Total</span><strong>{{ stats.total_proposals|default:0 }}</strong></div>
@@ -103,6 +103,20 @@
         <div class="sr"><span>Approved</span><strong class="ok">{{ stats.approved_proposals|default:0 }}</strong></div>
         <div class="sr"><span>Rejected</span><strong class="bad">{{ stats.rejected_proposals|default:0 }}</strong></div>
         <a id="viewAllProposals" class="chip-btn" href="/core-admin/event-proposals/">View All</a>
+      </div>
+    </section>
+
+    <!-- Event Reports Overview -->
+    <section class="card eq">
+      <div class="card-header">
+        <h3><i class="fa-solid fa-clipboard-list"></i> Event Reports Overview</h3>
+      </div>
+      <div class="stats-rows">
+        <div class="sr"><span>Total Reports</span><strong>{{ stats.total_event_reports|default:0 }}</strong></div>
+        <div class="sr"><span>Pending</span><strong>{{ stats.pending_event_reports|default:0 }}</strong></div>
+        <div class="sr"><span>Reviewed</span><strong class="ok">{{ stats.reviewed_event_reports|default:0 }}</strong></div>
+        <div class="sr"><span>Rejected</span><strong class="bad">{{ stats.rejected_event_reports|default:0 }}</strong></div>
+        <a class="chip-btn" href="/core-admin/event-reports/">View Reports</a>
       </div>
     </section>
 
