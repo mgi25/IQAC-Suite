@@ -575,6 +575,29 @@ def autosave_proposal(request):
     return JsonResponse({"success": True, "proposal_id": proposal.id})
 
 
+@login_required
+@require_POST
+def reset_proposal_draft(request):
+    """Delete the current draft proposal and its related data."""
+    try:
+        data = json.loads(request.body.decode("utf-8")) if request.body else {}
+    except json.JSONDecodeError:
+        return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
+
+    pid = data.get("proposal_id")
+    if not pid:
+        return JsonResponse({"success": False, "error": "proposal_id required"}, status=400)
+
+    proposal = EventProposal.objects.filter(
+        id=pid, submitted_by=request.user, status="draft"
+    ).first()
+    if not proposal:
+        return JsonResponse({"success": False, "error": "Draft not found"}, status=404)
+
+    proposal.delete()
+    return JsonResponse({"success": True})
+
+
 # ──────────────────────────────────────────────────────────────
 #  Remaining steps (unchanged)
 # ──────────────────────────────────────────────────────────────
