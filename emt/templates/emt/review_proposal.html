@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Review Proposal{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'emt/css/proposal_status_detail.css' %}">
+<link rel="stylesheet" href="{% static 'emt/css/review_proposal.css' %}">
+
+<div class="detail-container review-grid">
+  <!-- LEFT COLUMN: Event Info Card -->
+  <aside class="timeline-column review-side">
+    <div class="info-card event-details-card">
+      <h2>Event Information</h2>
+      <table>
+        <tr><th>Organization</th><td>{{ proposal.organization.name|default:"—" }}</td></tr>
+        <tr>
+          <th>Committees &amp; Collaborations</th>
+          <td>
+            {% if proposal.committees_collaborations %}
+              {{ proposal.committees_collaborations }}
+            {% elif proposal.committees %}
+              {{ proposal.committees }}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+        </tr>
+        <tr><th>Event Title</th><td>{{ proposal.event_title }}</td></tr>
+        <tr><th>No. of Activities</th><td>{{ proposal.num_activities|default:"—" }}</td></tr>
+        <tr>
+          <th>Start Date</th>
+          <td>
+            {% if proposal.event_start_date %}
+              {{ proposal.event_start_date|date:"d M Y" }}
+            {% elif proposal.event_datetime %}
+              {{ proposal.event_datetime|date:"d M Y" }}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+        </tr>
+        <tr>
+          <th>End Date</th>
+          <td>
+            {% if proposal.event_end_date %}
+              {{ proposal.event_end_date|date:"d M Y" }}
+            {% elif proposal.event_datetime %}
+              {{ proposal.event_datetime|date:"d M Y" }}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+        </tr>
+        <tr><th>Venue</th><td>{{ proposal.venue|default:"—" }}</td></tr>
+        <tr><th>Academic Year</th><td>{{ proposal.academic_year|default:"—" }}</td></tr>
+        <tr><th>Target Audience</th><td>{{ proposal.target_audience|default:"—" }}</td></tr>
+        <tr><th>POS &amp; PSO</th><td>{{ proposal.pos_pso|default:"—" }}</td></tr>
+        <tr>
+          <th>SDG Goals</th>
+          <td>
+            {% with goals=proposal.sdg_goals.all %}
+              {% if goals %}
+                {% for goal in goals %}
+                  {{ goal.name }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+              {% else %}
+                —
+              {% endif %}
+            {% endwith %}
+          </td>
+        </tr>
+        <tr>
+          <th>Faculty Incharges</th>
+          <td>
+            {% with facs=proposal.faculty_incharges.all %}
+              {% if facs %}
+                {% for fac in facs %}
+                  {{ fac.get_full_name|default:fac.username }} ({{ fac.email }}){% if not forloop.last %}, {% endif %}
+                {% endfor %}
+              {% else %}
+                —
+              {% endif %}
+            {% endwith %}
+          </td>
+        </tr>
+        <tr><th>Student Coordinators</th><td>{{ proposal.student_coordinators|default:"—" }}</td></tr>
+        <tr><th>Type (Focus)</th><td>{{ proposal.event_focus_type|default:"—" }}</td></tr>
+      </table>
+    </div>
+  </aside>
+
+  <!-- RIGHT COLUMN: Proposal Details -->
+  <main class="details-column review-main">
+    <header class="review-header overview-card">
+      <div class="review-heading">
+        <h1 class="review-title">Review Proposal</h1>
+        <span class="meta">{{ proposal.event_title }}</span>
+      </div>
+      <div class="review-actions">
+        <a href="{% url 'emt:submit_proposal_with_pk' proposal.id %}" class="btn-save-section">Edit</a>
+        <form method="post" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit" name="final_submit" class="btn-submit">Confirm Submit</button>
+        </form>
+      </div>
+    </header>
+
+    {% include "emt/partials/review_section.html" with title="Need Analysis" body=need_analysis.content %}
+    {% include "emt/partials/review_section.html" with title="Objectives" body=objectives.content %}
+    {% include "emt/partials/review_section.html" with title="Expected Outcomes" body=outcomes.content %}
+    {% include "emt/partials/review_section.html" with title="Tentative Flow" body=flow.content %}
+
+    <div class="event-details-card">
+      <h3>Speaker Profile</h3>
+      {% if speakers %}
+        {% for sp in speakers %}
+          <div class="speaker-profile-block">
+            <div><strong>{{ sp.full_name }}</strong> - {{ sp.designation }}{% if sp.affiliation %} ({{ sp.affiliation }}){% endif %}</div>
+            {% if sp.detailed_profile %}<div>{{ sp.detailed_profile|linebreaksbr }}</div>{% endif %}
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="detail-block">—</div>
+      {% endif %}
+    </div>
+
+    <div class="event-details-card">
+      <h3>Expense Details</h3>
+      {% if expenses %}
+        <table class="review-table">
+          <tr><th>Sl. No.</th><th>Particulars</th><th>Amount</th></tr>
+          {% for e in expenses %}
+            <tr><td>{{ e.sl_no }}</td><td>{{ e.particulars }}</td><td>{{ e.amount }}</td></tr>
+          {% endfor %}
+        </table>
+      {% else %}
+        <div class="detail-block">—</div>
+      {% endif %}
+    </div>
+
+    <div class="event-details-card">
+      <h3>Income Details</h3>
+      {% if income %}
+        <table class="review-table">
+          <tr><th>Sl. No.</th><th>Particulars</th><th>Participants</th><th>Rate</th><th>Amount</th></tr>
+          {% for i in income %}
+            <tr><td>{{ i.sl_no }}</td><td>{{ i.particulars }}</td><td>{{ i.participants }}</td><td>{{ i.rate }}</td><td>{{ i.amount }}</td></tr>
+          {% endfor %}
+        </table>
+      {% else %}
+        <div class="detail-block">—</div>
+      {% endif %}
+    </div>
+  </main>
+</div>
+{% endblock %}
