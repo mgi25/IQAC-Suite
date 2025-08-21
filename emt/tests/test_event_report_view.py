@@ -7,7 +7,7 @@ from django.contrib.auth.signals import user_logged_in
 
 from core.signals import create_or_update_user_profile, assign_role_on_login
 
-from emt.models import EventProposal, EventActivity
+from emt.models import EventProposal, EventActivity, EventReport, AttendanceRow
 
 
 class SubmitEventReportViewTests(TestCase):
@@ -83,4 +83,32 @@ class SubmitEventReportViewTests(TestCase):
         self.assertEqual(len(activities), 2)
         self.assertEqual(activities[0].name, "Session 1")
         self.assertEqual(activities[1].name, "Session 2")
+
+    def test_attendance_counts_displayed(self):
+        report = EventReport.objects.create(proposal=self.proposal)
+        AttendanceRow.objects.create(
+            event_report=report,
+            registration_no="R1",
+            full_name="Bob",
+            student_class="CSE",
+            absent=False,
+            volunteer=True,
+        )
+        AttendanceRow.objects.create(
+            event_report=report,
+            registration_no="R2",
+            full_name="Carol",
+            student_class="CSE",
+            absent=True,
+            volunteer=False,
+        )
+        response = self.client.get(
+            reverse("emt:submit_event_report", args=[self.proposal.id])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            'Present: 1, Absent: 1, Volunteers: 1',
+            html=False,
+        )
 
