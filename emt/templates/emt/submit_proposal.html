@@ -88,7 +88,8 @@
             <p class="content-subtitle" id="main-subtitle">Organization details and event basics</p>
             <div class="content-actions">
                 <button type="button" id="autofill-btn" class="btn-draft">Auto-Fill Test Data</button>
-                <button type="button" id="reset-draft-btn" class="btn-draft">Reset Draft</button>
+                <button type="button" id="reset-draft-btn" class="btn-draft"
+                        {% if not proposal.id %}disabled{% endif %}>Reset Draft</button>
             </div>
         </div>
 
