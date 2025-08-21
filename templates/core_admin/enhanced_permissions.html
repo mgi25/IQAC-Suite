@@ -1,0 +1,1130 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Dashboard & Permission Management{% endblock %}
+
+{% block head_extra %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+<style>
+.permissions-container {
+    padding: 2rem;
+    background: #f8fafc;
+    min-height: 100vh;
+}
+
+.page-header {
+    background: white;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    margin-bottom: 2rem;
+}
+
+.page-header h1 {
+    color: #1e40af;
+    font-size: 2.25rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.page-header p {
+    color: #6b7280;
+    font-size: 1.1rem;
+}
+
+.management-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.management-section {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.section-header {
+    background: linear-gradient(135deg, #1e60b1, #3b82f6);
+    color: white;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.section-header h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.section-header p {
+    opacity: 0.9;
+    font-size: 0.95rem;
+}
+
+.section-content {
+    padding: 2rem;
+}
+
+.filter-section {
+    background: #f8fafc;
+    padding: 1.5rem;
+    border-radius: 10px;
+    margin-bottom: 2rem;
+    border: 2px solid #e5e7eb;
+}
+
+.filter-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.filter-group label {
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.filter-select {
+    padding: 0.75rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    background: white;
+    font-size: 0.95rem;
+    transition: border-color 0.2s;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: #1e60b1;
+    box-shadow: 0 0 0 3px rgba(30, 96, 177, 0.1);
+}
+
+.selection-boxes {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 1rem;
+    align-items: center;
+}
+
+.selection-box {
+    background: #f8fafc;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    min-height: 400px;
+    overflow: hidden;
+}
+
+.selection-box.available {
+    background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+    border-color: #0ea5e9;
+}
+
+.selection-box.assigned {
+    background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+    border-color: #22c55e;
+}
+
+.box-header {
+    padding: 1rem 1.5rem;
+    background: white;
+    border-bottom: 2px solid #e5e7eb;
+    font-weight: 600;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.box-header .count {
+    background: #1e60b1;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+}
+
+.box-content {
+    padding: 0;
+    max-height: 350px;
+    overflow-y: auto;
+}
+
+.filter-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: none;
+    border-bottom: 2px solid #e5e7eb;
+    background: #f8fafc;
+    font-size: 0.9rem;
+}
+
+.filter-input:focus {
+    outline: none;
+    border-bottom-color: #1e60b1;
+    background: white;
+}
+
+.item-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.item-list li {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.item-list li:hover {
+    background: rgba(30, 96, 177, 0.05);
+}
+
+.item-list li.selected {
+    background: rgba(30, 96, 177, 0.1);
+    border-left: 4px solid #1e60b1;
+}
+
+.item-checkbox {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #d1d5db;
+    border-radius: 4px;
+    position: relative;
+    cursor: pointer;
+}
+
+.item-checkbox.checked {
+    background: #1e60b1;
+    border-color: #1e60b1;
+}
+
+.item-checkbox.checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.item-details {
+    flex: 1;
+}
+
+.item-name {
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.25rem;
+}
+
+.item-description {
+    font-size: 0.85rem;
+    color: #6b7280;
+    line-height: 1.4;
+}
+
+.transfer-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.transfer-btn {
+    width: 50px;
+    height: 50px;
+    border: 2px solid #e5e7eb;
+    background: white;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #6b7280;
+    font-size: 1.2rem;
+}
+
+.transfer-btn:hover {
+    border-color: #1e60b1;
+    background: #1e60b1;
+    color: white;
+    transform: scale(1.1);
+}
+
+.transfer-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 2px solid #f1f5f9;
+}
+
+.btn {
+    padding: 0.75rem 2rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-primary {
+    background: #1e60b1;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #1e40af;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(30, 96, 177, 0.3);
+}
+
+.btn-secondary {
+    background: #6b7280;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #4b5563;
+}
+
+.access-preview {
+    background: #f8fafc;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.access-preview h3 {
+    color: #1f2937;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.access-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.access-item {
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 4px solid #22c55e;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.access-item h4 {
+    color: #1f2937;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.access-subitems {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.access-subitems li {
+    color: #6b7280;
+    font-size: 0.85rem;
+    padding: 0.25rem 0;
+    padding-left: 1rem;
+    position: relative;
+}
+
+.access-subitems li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: #22c55e;
+}
+
+@media (max-width: 1200px) {
+    .management-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .filter-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .selection-boxes {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+    
+    .transfer-controls {
+        order: 2;
+        flex-direction: row;
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="permissions-container">
+    <div class="page-header">
+        <h1><i class="fas fa-shield-alt"></i> Dashboard & Permission Management</h1>
+        <p>Assign dashboards and configure sidebar permissions for users and roles</p>
+    </div>
+    
+    <div class="management-grid">
+        <!-- Dashboard Assignment Section -->
+        <div class="management-section">
+            <div class="section-header">
+                <h2><i class="fas fa-tachometer-alt"></i> Dashboard Assignment</h2>
+                <p>Assign multiple dashboards to users and roles</p>
+            </div>
+            <div class="section-content">
+                <div class="filter-section">
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label for="dashboardOrgType">Organization Type</label>
+                            <select id="dashboardOrgType" class="filter-select">
+                                <option value="">-- All Organization Types --</option>
+                                {% for org_type in organization_types %}
+                                    <option value="{{ org_type.id }}">{{ org_type.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="dashboardRole">Role</label>
+                            <select id="dashboardRole" class="filter-select">
+                                <option value="">-- Select Role --</option>
+                                {% for role in roles %}
+                                    <option value="{{ role.id }}" data-org-type="{{ role.organization.org_type.id }}">{{ role.name }} ({{ role.organization.name }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="dashboardUser">User</label>
+                            <select id="dashboardUser" class="filter-select">
+                                <option value="">-- Select User --</option>
+                                {% for user in users %}
+                                    <option value="{{ user.id }}" data-roles="{{ user.role_list }}">{{ user.get_full_name|default:user.username }} ({{ user.email }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="selection-boxes">
+                    <div class="selection-box available">
+                        <div class="box-header">
+                            Available Dashboards
+                            <span class="count" id="availableDashboardCount">0</span>
+                        </div>
+                        <div class="box-content">
+                            <input type="text" class="filter-input" id="dashboardAvailableFilter" placeholder="Filter available dashboards...">
+                            <ul class="item-list" id="availableDashboards">
+                                {% for dashboard_key, dashboard_name in dashboard_choices %}
+                                    <li data-dashboard="{{ dashboard_key }}">
+                                        <div class="item-checkbox"></div>
+                                        <div class="item-details">
+                                            <div class="item-name">{{ dashboard_name }}</div>
+                                            <div class="item-description">
+                                                {% if dashboard_key == 'admin' %}
+                                                    Complete system administration and analytics
+                                                {% elif dashboard_key == 'faculty' %}
+                                                    Faculty-specific tools and student management
+                                                {% elif dashboard_key == 'student' %}
+                                                    Student portal with events and achievements
+                                                {% elif dashboard_key == 'cdl_head' %}
+                                                    Creative & Design Lab management
+                                                {% elif dashboard_key == 'cdl_work' %}
+                                                    CDL team workspace and task management
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="transfer-controls">
+                        <button class="transfer-btn" id="addDashboard" title="Add selected dashboards">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                        <button class="transfer-btn" id="removeDashboard" title="Remove selected dashboards">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="selection-box assigned">
+                        <div class="box-header">
+                            Assigned Dashboards
+                            <span class="count" id="assignedDashboardCount">0</span>
+                        </div>
+                        <div class="box-content">
+                            <input type="text" class="filter-input" id="dashboardAssignedFilter" placeholder="Filter assigned dashboards...">
+                            <ul class="item-list" id="assignedDashboards">
+                                <!-- Dynamically populated -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="btn btn-primary" id="saveDashboardAssignments">
+                        <i class="fas fa-save"></i> Save Dashboard Assignments
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar Permissions Section -->
+        <div class="management-section">
+            <div class="section-header">
+                <h2><i class="fas fa-bars"></i> Sidebar Permissions</h2>
+                <p>Configure sidebar navigation access</p>
+            </div>
+            <div class="section-content">
+                <div class="filter-section">
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label for="sidebarOrgType">Organization Type</label>
+                            <select id="sidebarOrgType" class="filter-select">
+                                <option value="">-- All Organization Types --</option>
+                                {% for org_type in organization_types %}
+                                    <option value="{{ org_type.id }}">{{ org_type.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="sidebarRole">Role</label>
+                            <select id="sidebarRole" class="filter-select">
+                                <option value="">-- Select Role --</option>
+                                {% for role in roles %}
+                                    <option value="{{ role.name.lower }}" data-org-type="{{ role.organization.org_type.id }}">{{ role.name }} ({{ role.organization.name }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="sidebarUser">User</label>
+                            <select id="sidebarUser" class="filter-select">
+                                <option value="">-- Select User --</option>
+                                {% for user in users %}
+                                    <option value="{{ user.id }}" data-roles="{{ user.role_list }}">{{ user.get_full_name|default:user.username }} ({{ user.email }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="selection-boxes">
+                    <div class="selection-box available">
+                        <div class="box-header">
+                            Available Navigation
+                            <span class="count" id="availableNavCount">0</span>
+                        </div>
+                        <div class="box-content">
+                            <input type="text" class="filter-input" id="navAvailableFilter" placeholder="Filter available items...">
+                            <ul class="item-list" id="availableNavItems">
+                                {% for nav_key, nav_name in sidebar_items %}
+                                    <li data-nav="{{ nav_key }}">
+                                        <div class="item-checkbox"></div>
+                                        <div class="item-details">
+                                            <div class="item-name">{{ nav_name }}</div>
+                                            <div class="item-description">
+                                                {% if nav_key == 'dashboard' %}
+                                                    Main dashboard and overview
+                                                {% elif nav_key == 'events' %}
+                                                    Event management and proposals
+                                                {% elif nav_key == 'cdl' %}
+                                                    Creative & Design Lab features
+                                                {% elif nav_key == 'pso_psos' %}
+                                                    PSO/PO management
+                                                {% elif nav_key == 'transcript' %}
+                                                    Transcript management
+                                                {% elif nav_key == 'profile' %}
+                                                    User profile management
+                                                {% elif nav_key == 'admin' %}
+                                                    Administrative functions
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="transfer-controls">
+                        <button class="transfer-btn" id="addNavItem" title="Add selected navigation items">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                        <button class="transfer-btn" id="removeNavItem" title="Remove selected navigation items">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="selection-box assigned">
+                        <div class="box-header">
+                            Assigned Navigation
+                            <span class="count" id="assignedNavCount">0</span>
+                        </div>
+                        <div class="box-content">
+                            <input type="text" class="filter-input" id="navAssignedFilter" placeholder="Filter assigned items...">
+                            <ul class="item-list" id="assignedNavItems">
+                                <!-- Dynamically populated -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="access-preview">
+                    <h3><i class="fas fa-eye"></i> Access Preview</h3>
+                    <div id="accessPreviewContent">
+                        <p style="color: #6b7280; text-align: center; padding: 2rem;">
+                            Select a user or role to preview their access permissions
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="btn btn-primary" id="saveSidebarPermissions">
+                        <i class="fas fa-save"></i> Save Sidebar Permissions
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global state
+let selectedDashboards = new Set();
+let selectedNavItems = new Set();
+let currentDashboardAssignments = new Set();
+let currentNavAssignments = new Set();
+
+// Dashboard data from backend
+const dashboardChoices = {{ dashboard_choices|safe }};
+const sidebarItems = {{ sidebar_items|safe }};
+const availablePermissions = {{ available_permissions|safe }};
+const assignedPermissions = {{ assigned_permissions|safe }};
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    initializeFilters();
+    initializeTransferControls();
+    loadInitialData();
+    updateCounts();
+});
+
+function initializeFilters() {
+    // Organization type filter for dashboards
+    document.getElementById('dashboardOrgType').addEventListener('change', function() {
+        filterRolesByOrgType('dashboardRole', this.value);
+        filterUsersByOrgType('dashboardUser', this.value);
+    });
+    
+    // Organization type filter for sidebar
+    document.getElementById('sidebarOrgType').addEventListener('change', function() {
+        filterRolesByOrgType('sidebarRole', this.value);
+        filterUsersByOrgType('sidebarUser', this.value);
+    });
+    
+    // Role selection for dashboards
+    document.getElementById('dashboardRole').addEventListener('change', function() {
+        if (this.value) {
+            document.getElementById('dashboardUser').value = '';
+            loadDashboardAssignments('role', this.value);
+        }
+    });
+    
+    // User selection for dashboards
+    document.getElementById('dashboardUser').addEventListener('change', function() {
+        if (this.value) {
+            document.getElementById('dashboardRole').value = '';
+            loadDashboardAssignments('user', this.value);
+        }
+    });
+    
+    // Role selection for sidebar
+    document.getElementById('sidebarRole').addEventListener('change', function() {
+        if (this.value) {
+            document.getElementById('sidebarUser').value = '';
+            loadSidebarAssignments('role', this.value);
+        }
+    });
+    
+    // User selection for sidebar
+    document.getElementById('sidebarUser').addEventListener('change', function() {
+        if (this.value) {
+            document.getElementById('sidebarRole').value = '';
+            loadSidebarAssignments('user', this.value);
+        }
+    });
+    
+    // Search filters
+    document.getElementById('dashboardAvailableFilter').addEventListener('input', function() {
+        filterItems('availableDashboards', this.value);
+    });
+    
+    document.getElementById('dashboardAssignedFilter').addEventListener('input', function() {
+        filterItems('assignedDashboards', this.value);
+    });
+    
+    document.getElementById('navAvailableFilter').addEventListener('input', function() {
+        filterItems('availableNavItems', this.value);
+    });
+    
+    document.getElementById('navAssignedFilter').addEventListener('input', function() {
+        filterItems('assignedNavItems', this.value);
+    });
+}
+
+function initializeTransferControls() {
+    // Dashboard transfer controls
+    document.getElementById('addDashboard').addEventListener('click', function() {
+        transferItems('availableDashboards', 'assignedDashboards', selectedDashboards);
+        updateCounts();
+    });
+    
+    document.getElementById('removeDashboard').addEventListener('click', function() {
+        transferItems('assignedDashboards', 'availableDashboards', selectedDashboards);
+        updateCounts();
+    });
+    
+    // Navigation transfer controls
+    document.getElementById('addNavItem').addEventListener('click', function() {
+        transferItems('availableNavItems', 'assignedNavItems', selectedNavItems);
+        updateCounts();
+        updateAccessPreview();
+    });
+    
+    document.getElementById('removeNavItem').addEventListener('click', function() {
+        transferItems('assignedNavItems', 'availableNavItems', selectedNavItems);
+        updateCounts();
+        updateAccessPreview();
+    });
+    
+    // Save buttons
+    document.getElementById('saveDashboardAssignments').addEventListener('click', saveDashboardAssignments);
+    document.getElementById('saveSidebarPermissions').addEventListener('click', saveSidebarPermissions);
+}
+
+function filterRolesByOrgType(selectId, orgTypeId) {
+    const select = document.getElementById(selectId);
+    const options = select.querySelectorAll('option');
+    
+    options.forEach(option => {
+        if (option.value === '') return; // Keep the default option
+        
+        if (!orgTypeId || option.dataset.orgType === orgTypeId) {
+            option.style.display = '';
+        } else {
+            option.style.display = 'none';
+        }
+    });
+    
+    // Reset selection if current selection is now hidden
+    if (select.value && select.querySelector(`option[value="${select.value}"]`).style.display === 'none') {
+        select.value = '';
+    }
+}
+
+function filterUsersByOrgType(selectId, orgTypeId) {
+    const select = document.getElementById(selectId);
+    const options = select.querySelectorAll('option');
+    
+    options.forEach(option => {
+        if (option.value === '') return; // Keep the default option
+        
+        if (!orgTypeId) {
+            option.style.display = '';
+        } else {
+            // Filter users by their roles' organization types
+            const userRoles = JSON.parse(option.dataset.roles || '[]');
+            const hasMatchingRole = userRoles.some(role => 
+                document.querySelector(`#${selectId.replace('User', 'Role')} option[value="${role}"]`)?.dataset.orgType === orgTypeId
+            );
+            
+            option.style.display = hasMatchingRole ? '' : 'none';
+        }
+    });
+    
+    // Reset selection if current selection is now hidden
+    if (select.value && select.querySelector(`option[value="${select.value}"]`).style.display === 'none') {
+        select.value = '';
+    }
+}
+
+function loadInitialData() {
+    // Load available dashboards
+    populateAvailableItems('availableDashboards', dashboardChoices, 'dashboard');
+    
+    // Load available navigation items
+    populateAvailableItems('availableNavItems', sidebarItems, 'nav');
+}
+
+function populateAvailableItems(containerId, items, type) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    
+    items.forEach(([key, name]) => {
+        const li = createItemElement(key, name, type);
+        container.appendChild(li);
+    });
+}
+
+function createItemElement(key, name, type) {
+    const li = document.createElement('li');
+    li.dataset[type] = key;
+    
+    li.innerHTML = `
+        <div class="item-checkbox"></div>
+        <div class="item-details">
+            <div class="item-name">${name}</div>
+            <div class="item-description">${getItemDescription(key, type)}</div>
+        </div>
+    `;
+    
+    // Add click handlers
+    li.addEventListener('click', function() {
+        toggleItemSelection(li, type);
+    });
+    
+    return li;
+}
+
+function getItemDescription(key, type) {
+    const descriptions = {
+        dashboard: {
+            admin: 'Complete system administration and analytics',
+            faculty: 'Faculty-specific tools and student management',
+            student: 'Student portal with events and achievements',
+            cdl_head: 'Creative & Design Lab management',
+            cdl_work: 'CDL team workspace and task management'
+        },
+        nav: {
+            dashboard: 'Main dashboard and overview',
+            events: 'Event management and proposals',
+            cdl: 'Creative & Design Lab features',
+            pso_psos: 'PSO/PO management',
+            transcript: 'Transcript management',
+            profile: 'User profile management',
+            admin: 'Administrative functions'
+        }
+    };
+    
+    return descriptions[type][key] || 'Standard system feature';
+}
+
+function toggleItemSelection(li, type) {
+    const checkbox = li.querySelector('.item-checkbox');
+    const isSelected = checkbox.classList.contains('checked');
+    const key = li.dataset[type];
+    
+    if (isSelected) {
+        checkbox.classList.remove('checked');
+        li.classList.remove('selected');
+        if (type === 'dashboard') {
+            selectedDashboards.delete(key);
+        } else {
+            selectedNavItems.delete(key);
+        }
+    } else {
+        checkbox.classList.add('checked');
+        li.classList.add('selected');
+        if (type === 'dashboard') {
+            selectedDashboards.add(key);
+        } else {
+            selectedNavItems.add(key);
+        }
+    }
+}
+
+function transferItems(fromId, toId, selectedSet) {
+    const fromContainer = document.getElementById(fromId);
+    const toContainer = document.getElementById(toId);
+    
+    selectedSet.forEach(key => {
+        const item = fromContainer.querySelector(`[data-dashboard="${key}"], [data-nav="${key}"]`);
+        if (item) {
+            // Reset selection state
+            const checkbox = item.querySelector('.item-checkbox');
+            checkbox.classList.remove('checked');
+            item.classList.remove('selected');
+            
+            // Move to target container
+            toContainer.appendChild(item);
+        }
+    });
+    
+    selectedSet.clear();
+}
+
+function filterItems(containerId, searchTerm) {
+    const container = document.getElementById(containerId);
+    const items = container.querySelectorAll('li');
+    
+    items.forEach(item => {
+        const name = item.querySelector('.item-name').textContent.toLowerCase();
+        const description = item.querySelector('.item-description').textContent.toLowerCase();
+        
+        if (name.includes(searchTerm.toLowerCase()) || description.includes(searchTerm.toLowerCase())) {
+            item.style.display = '';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+
+function updateCounts() {
+    document.getElementById('availableDashboardCount').textContent = 
+        document.getElementById('availableDashboards').children.length;
+    document.getElementById('assignedDashboardCount').textContent = 
+        document.getElementById('assignedDashboards').children.length;
+    document.getElementById('availableNavCount').textContent = 
+        document.getElementById('availableNavItems').children.length;
+    document.getElementById('assignedNavCount').textContent = 
+        document.getElementById('assignedNavItems').children.length;
+}
+
+function updateAccessPreview() {
+    const assignedItems = document.getElementById('assignedNavItems').children;
+    const previewContent = document.getElementById('accessPreviewContent');
+    
+    if (assignedItems.length === 0) {
+        previewContent.innerHTML = `
+            <p style="color: #6b7280; text-align: center; padding: 2rem;">
+                No navigation items assigned
+            </p>
+        `;
+        return;
+    }
+    
+    const accessList = document.createElement('div');
+    accessList.className = 'access-list';
+    
+    Array.from(assignedItems).forEach(item => {
+        const key = item.dataset.nav;
+        const name = item.querySelector('.item-name').textContent;
+        const subItems = getNavSubItems(key);
+        
+        const accessItem = document.createElement('div');
+        accessItem.className = 'access-item';
+        accessItem.innerHTML = `
+            <h4>${name}</h4>
+            <ul class="access-subitems">
+                ${subItems.map(sub => `<li>${sub}</li>`).join('')}
+            </ul>
+        `;
+        
+        accessList.appendChild(accessItem);
+    });
+    
+    previewContent.innerHTML = '';
+    previewContent.appendChild(accessList);
+}
+
+function getNavSubItems(key) {
+    const subItems = {
+        dashboard: ['Overview', 'Quick Stats', 'Recent Activity'],
+        events: ['Create Event', 'View Events', 'Event Proposals', 'Event Calendar'],
+        cdl: ['Design Requests', 'CDL Dashboard', 'Project Management'],
+        pso_psos: ['Program Outcomes', 'Program Specific Outcomes', 'Outcome Management'],
+        transcript: ['View Transcripts', 'Generate Reports', 'Academic Records'],
+        profile: ['View Profile', 'Edit Profile', 'Account Settings'],
+        admin: ['User Management', 'System Settings', 'Admin Tools']
+    };
+    
+    return subItems[key] || ['Standard Features'];
+}
+
+function loadDashboardAssignments(type, value) {
+    // Load existing assignments for the selected user/role
+    fetch(`/core-admin/api/dashboard-assignments/?${type}=${value}`)
+        .then(response => response.json())
+        .then(data => {
+            currentDashboardAssignments = new Set(data.assignments);
+            populateAssignedItems('assignedDashboards', data.assignments, 'dashboard');
+            updateCounts();
+        })
+        .catch(error => console.error('Error loading dashboard assignments:', error));
+}
+
+function loadSidebarAssignments(type, value) {
+    // Load existing assignments for the selected user/role
+    fetch(`/core-admin/api/sidebar-permissions/?${type}=${value}`)
+        .then(response => response.json())
+        .then(data => {
+            currentNavAssignments = new Set(data.assignments);
+            populateAssignedItems('assignedNavItems', data.assignments, 'nav');
+            updateCounts();
+            updateAccessPreview();
+        })
+        .catch(error => console.error('Error loading sidebar assignments:', error));
+}
+
+function populateAssignedItems(containerId, assignments, type) {
+    const container = document.getElementById(containerId);
+    const availableContainer = document.getElementById(
+        type === 'dashboard' ? 'availableDashboards' : 'availableNavItems'
+    );
+    
+    assignments.forEach(key => {
+        const item = availableContainer.querySelector(`[data-${type}="${key}"]`);
+        if (item) {
+            container.appendChild(item.cloneNode(true));
+            item.remove();
+        }
+    });
+}
+
+function saveDashboardAssignments() {
+    const userSelect = document.getElementById('dashboardUser');
+    const roleSelect = document.getElementById('dashboardRole');
+    const assigned = Array.from(document.getElementById('assignedDashboards').children)
+        .map(item => item.dataset.dashboard);
+    
+    const data = {
+        assignments: assigned,
+        user: userSelect.value || null,
+        role: roleSelect.value || null
+    };
+    
+    fetch('/core-admin/api/save-dashboard-assignments/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Dashboard assignments saved successfully!', 'success');
+        } else {
+            showNotification('Error saving dashboard assignments: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error saving dashboard assignments', 'error');
+    });
+}
+
+function saveSidebarPermissions() {
+    const userSelect = document.getElementById('sidebarUser');
+    const roleSelect = document.getElementById('sidebarRole');
+    const assigned = Array.from(document.getElementById('assignedNavItems').children)
+        .map(item => item.dataset.nav);
+    
+    const data = {
+        assignments: assigned,
+        user: userSelect.value || null,
+        role: roleSelect.value || null
+    };
+    
+    fetch('/core-admin/api/save-sidebar-permissions/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Sidebar permissions saved successfully!', 'success');
+        } else {
+            showNotification('Error saving sidebar permissions: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error saving sidebar permissions', 'error');
+    });
+}
+
+function showNotification(message, type) {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <div class="notification-content">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    // Add notification styles
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'success' ? '#10b981' : '#ef4444'};
+        color: white;
+        padding: 1rem 2rem;
+        border-radius: 8px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        z-index: 1000;
+        opacity: 0;
+        transform: translateX(100%);
+        transition: all 0.3s ease;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Animate in
+    setTimeout(() => {
+        notification.style.opacity = '1';
+        notification.style.transform = 'translateX(0)';
+    }, 100);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 300);
+    }, 3000);
+}
+</script>
+{% endblock %}
