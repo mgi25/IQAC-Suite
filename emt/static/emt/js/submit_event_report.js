@@ -1168,6 +1168,12 @@ function openOutcomeModal(){
     alert('No organization set for this proposal.');
     return;
   }
+  const field = document.getElementById('id_pos_pso_mapping');
+  const selectedSet = new Set(
+    (field ? field.value.split('\n') : [])
+      .map(s => s.trim())
+      .filter(Boolean)
+  );
   modal.classList.add('show');
   container.textContent = 'Loading...';
   fetch(url)
@@ -1175,8 +1181,8 @@ function openOutcomeModal(){
     .then(data => {
       if(data.success){
         container.innerHTML = '';
-        data.pos.forEach(po => { addOption(container,'PO: ' + po.description); });
-        data.psos.forEach(pso => { addOption(container,'PSO: ' + pso.description); });
+        data.pos.forEach(po => { addOption(container,'PO: ' + po.description, selectedSet); });
+        data.psos.forEach(pso => { addOption(container,'PSO: ' + pso.description, selectedSet); });
       } else {
         container.textContent = 'No data';
       }
@@ -1184,11 +1190,14 @@ function openOutcomeModal(){
     .catch(() => { container.textContent = 'Error loading'; });
 }
 
-function addOption(container, labelText){
+function addOption(container, labelText, checkedSet){
   const lbl = document.createElement('label');
   const cb = document.createElement('input');
   cb.type = 'checkbox';
   cb.value = labelText;
+  if(checkedSet && checkedSet.has(labelText)){
+    cb.checked = true;
+  }
   lbl.appendChild(cb);
   lbl.appendChild(document.createTextNode(' ' + labelText));
   container.appendChild(lbl);
@@ -1211,9 +1220,7 @@ if(_outcomeSaveBtn && document.getElementById('outcomeModal')){
         const selected = Array.from(modal.querySelectorAll('input[type=checkbox]:checked')).map(c => c.value);
         const field = document.getElementById('id_pos_pso_mapping');
         if(!field) return;
-        let existing = field.value.trim();
-        if(existing){ existing += '\n'; }
-        field.value = existing + selected.join('\n');
+        field.value = selected.join('\n');
         modal.classList.remove('show');
     };
 }
