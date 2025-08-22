@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from suite import views as suite_views
+from ai import enhance_summary as ai_views
 
 app_name = 'emt'
 
@@ -70,6 +71,7 @@ urlpatterns = [
     path('generate-need-analysis/', suite_views.generate_need_analysis, name='generate_need_analysis'),
     path('generate-objectives/', suite_views.generate_objectives, name='generate_objectives'),
     path('generate-expected-outcomes/', suite_views.generate_learning_outcomes, name='generate_expected_outcomes'),
+    path('ai/enhance-summary/', ai_views.enhance_summary, name='enhance_summary'),
     path('api/organization-types/', views.api_organization_types, name='api_organization_types'),
     path('api/outcomes/<int:org_id>/', views.api_outcomes, name='api_outcomes'),
 

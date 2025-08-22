@@ -62,11 +62,13 @@ document.addEventListener('DOMContentLoaded', function(){
       });
       
       // Word counter for event summary
+      const hiddenSummaryField = $('textarea[name="event_summary"][hidden]');
       $(document).on('input', '#event-summary-modern', function() {
           const text = $(this).val().trim();
           const wordCount = text ? text.split(/\s+/).filter(word => word.length > 0).length : 0;
           $('#summary-word-count').text(wordCount);
-          
+          hiddenSummaryField.val($(this).val());
+
           // Update styling based on word count
           if (wordCount >= 500) {
               $('#summary-word-count').parent().removeClass('text-danger').addClass('text-success');
@@ -102,6 +104,40 @@ document.addEventListener('DOMContentLoaded', function(){
   
   // Populate fields with proposal data
   populateProposalData();
+
+  // AI enhance summary button
+  $(document).on('click', '#ai-enhance-summary', async function() {
+      const btn = $(this);
+      const original = btn.text();
+      const textarea = $('#event-summary-modern');
+      const payload = new URLSearchParams({
+          text: textarea.val(),
+          title: $('#event-title-modern').val() || '',
+          department: $('#department-modern').val() || '',
+          start_date: $('#start-date-modern').val() || '',
+          end_date: $('#end-date-modern').val() || ''
+      });
+      btn.prop('disabled', true).text('...');
+      try {
+          const res = await fetch('/suite/ai/enhance-summary/', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/x-www-form-urlencoded',
+                  'X-CSRFToken': getCookie('csrftoken')
+              },
+              body: payload
+          });
+          const data = await res.json();
+          if (!res.ok || !data.ok) throw new Error(data.error || 'Enhancement failed');
+          textarea.val(data.summary);
+          textarea.trigger('input');
+      } catch (err) {
+          console.error(err);
+          alert(err.message || 'Enhancement failed');
+      } finally {
+          btn.prop('disabled', false).text(original);
+      }
+  });
   
   // Add validation styling to form fields with errors
   $('.field-error').each(function() {
@@ -697,10 +733,11 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
           
           <div class="form-row full-width">
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="event-summary-modern">Summary of Overall Event *</label>
-                  <textarea id="event-summary-modern" name="event_summary" rows="15" required 
+                  <textarea id="event-summary-modern" name="event_summary" rows="15" required
                       placeholder="Provide a comprehensive summary of the event (minimum 500 words):&#10;&#10;• Event overview and objectives&#10;• Key activities and sessions conducted&#10;• Timeline and schedule of events&#10;• Participant engagement and interaction&#10;• Key highlights and memorable moments&#10;• Overall atmosphere and reception&#10;• Achievement of planned objectives&#10;• Any unexpected outcomes or learnings&#10;&#10;This should be a detailed narrative that captures the essence of the entire event."></textarea>
+                  <button type="button" id="ai-enhance-summary" class="ai-fill-btn" title="Enhance with AI">AI</button>
                   <div class="help-text">
                       Comprehensive overview of the event - minimum 500 words required
                       <span class="word-counter text-danger">
