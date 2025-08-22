@@ -310,11 +310,16 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
                           }));
                       });
                   } else {
+                      const field = form.find(`[name="${name}"]`).first();
+                      let finalValue = value;
+                      if(field.length && (field.attr('type') === 'checkbox' || field.attr('type') === 'radio')){
+                          finalValue = field.prop('checked') ? field.val() : '';
+                      }
                       form.append($('<input>', {
                           type: 'hidden',
                           class: 'section-state-hidden',
                           name: name,
-                          value: value
+                          value: finalValue
                       }));
                   }
               });
@@ -623,6 +628,8 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
       const el = this;
       if(el.tagName === 'SELECT' && el.multiple){
           sectionState[el.name] = Array.from(el.selectedOptions).map(o => o.value);
+      } else if(el.type === 'checkbox' || el.type === 'radio') {
+          sectionState[el.name] = el.checked ? el.value : '';
       } else {
           sectionState[el.name] = el.value;
       }
@@ -632,6 +639,8 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
   document.querySelectorAll('form#report-form input[name], form#report-form textarea[name], form#report-form select[name]').forEach(el => {
       if(el.tagName === 'SELECT' && el.multiple){
           sectionState[el.name] = Array.from(el.selectedOptions).map(o => o.value);
+      } else if(el.type === 'checkbox' || el.type === 'radio') {
+          sectionState[el.name] = el.checked ? el.value : '';
       } else {
           sectionState[el.name] = el.value;
       }

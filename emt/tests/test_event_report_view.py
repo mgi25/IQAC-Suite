@@ -150,3 +150,22 @@ class SubmitEventReportViewTests(TestCase):
             ["engineering_knowledge", "problem_analysis"],
         )
 
+    def test_preview_preserves_checked_and_unchecked_fields(self):
+        url = reverse("emt:preview_event_report", args=[self.proposal.id])
+        data = {
+            "actual_event_type": "Seminar",
+            "report_signed_date": "2024-01-10",
+            "needs_projector": "yes",  # Simulate checked checkbox
+            "needs_permission": "",    # Simulate unchecked checkbox
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["post_data"]["needs_projector"], "yes")
+        self.assertEqual(response.context["post_data"]["needs_permission"], "")
+        self.assertContains(response, "<strong>Needs_projector:</strong> yes", html=False)
+        self.assertContains(response, "<strong>Needs_permission:</strong>", html=False)
+
