@@ -430,6 +430,11 @@ function displayOutcomes(outcomes, type) {
             label.textContent = `PO${idx+1}: `;
             text.appendChild(label);
             text.appendChild(document.createTextNode(outcome.description || ''));
+        } else if (type === 'psos') {
+            const label = document.createElement('strong');
+            label.textContent = `PSO${idx+1}: `;
+            text.appendChild(label);
+            text.appendChild(document.createTextNode(outcome.description || ''));
         } else {
             text.textContent = outcome.description || '';
         }
