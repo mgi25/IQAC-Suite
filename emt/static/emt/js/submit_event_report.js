@@ -294,6 +294,31 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
           } else {
               showNotification('All sections completed! Review your report.', 'success');
               const form = $('#report-form');
+
+              // Remove any previously appended hidden inputs
+              form.find('input.section-state-hidden').remove();
+
+              // Append hidden inputs for all fields tracked in sectionState
+              Object.entries(sectionState).forEach(([name, value]) => {
+                  if (Array.isArray(value)) {
+                      value.forEach(v => {
+                          form.append($('<input>', {
+                              type: 'hidden',
+                              class: 'section-state-hidden',
+                              name: name,
+                              value: v
+                          }));
+                      });
+                  } else {
+                      form.append($('<input>', {
+                          type: 'hidden',
+                          class: 'section-state-hidden',
+                          name: name,
+                          value: value
+                      }));
+                  }
+              });
+
               form.attr('action', previewUrl);
               form[0].submit();
           }

@@ -126,3 +126,27 @@ class SubmitEventReportViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Seminar")
 
+    def test_preview_renders_multiple_sections_data(self):
+        url = reverse("emt:preview_event_report", args=[self.proposal.id])
+        data = {
+            "actual_event_type": "Workshop",
+            "summary": "Section summary text",
+            "outcomes": "Outcome details",
+            "graduate_attributes": ["engineering_knowledge", "problem_analysis"],
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        # Verify fields from multiple sections appear in the preview
+        self.assertContains(response, "Workshop")
+        self.assertContains(response, "Section summary text")
+        self.assertContains(response, "Outcome details")
+        # Multi-select values should be preserved in POST data
+        self.assertEqual(
+            response.context["form"].data.getlist("graduate_attributes"),
+            ["engineering_knowledge", "problem_analysis"],
+        )
+
