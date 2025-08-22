@@ -429,6 +429,10 @@ def review_proposal(request, proposal_id):
             f"Proposal '{proposal.event_title}' submitted.",
         )
         return redirect("emt:proposal_status_detail", proposal_id=proposal.id)
+    else:
+        if proposal.status != EventProposal.Status.SUBMITTED:
+            proposal.status = EventProposal.Status.DRAFT
+            proposal.save(update_fields=["status"])
 
     ctx = {
         "proposal": proposal,
