@@ -1,0 +1,13 @@
+{
+  "fields": [
+    "organization_type",
+    "department",
+    "target_audience",
+    "event_focus_type",
+    "sdg_goals",
+    "event_title",
+    "committees_collaborations",
+    "pos_pso_management",
+    "num_activities"
+  ]
+}
