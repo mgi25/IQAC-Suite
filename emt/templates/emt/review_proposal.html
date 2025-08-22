@@ -105,14 +105,24 @@
         </form>
       </div>
     </header>
+    {% url 'emt:submit_need_analysis' proposal.id as need_edit %}
+    {% url 'emt:submit_objectives' proposal.id as obj_edit %}
+    {% url 'emt:submit_expected_outcomes' proposal.id as out_edit %}
+    {% url 'emt:submit_tentative_flow' proposal.id as flow_edit %}
+    {% url 'emt:submit_speaker_profile' proposal.id as speaker_edit %}
+    {% url 'emt:submit_expense_details' proposal.id as expense_edit %}
+    {% url 'emt:submit_cdl_support' proposal.id as cdl_edit %}
 
-    {% include "emt/partials/review_section.html" with title="Need Analysis" body=need_analysis.content %}
-    {% include "emt/partials/review_section.html" with title="Objectives" body=objectives.content %}
-    {% include "emt/partials/review_section.html" with title="Expected Outcomes" body=outcomes.content %}
-    {% include "emt/partials/review_section.html" with title="Tentative Flow" body=flow.content %}
+    {% include "emt/partials/review_section.html" with title="Need Analysis" body=need_analysis.content edit_url=need_edit %}
+    {% include "emt/partials/review_section.html" with title="Objectives" body=objectives.content edit_url=obj_edit %}
+    {% include "emt/partials/review_section.html" with title="Expected Outcomes" body=outcomes.content edit_url=out_edit %}
+    {% include "emt/partials/review_section.html" with title="Tentative Flow" body=flow.content edit_url=flow_edit %}
 
     <div class="event-details-card">
-      <h3>Speaker Profile</h3>
+      <div class="review-section-header">
+        <h3>Speaker Profile</h3>
+        <a href="{{ speaker_edit }}" class="section-edit-link">Edit</a>
+      </div>
       {% if speakers %}
         {% for sp in speakers %}
           <div class="speaker-profile-block">
@@ -126,7 +136,10 @@
     </div>
 
     <div class="event-details-card">
-      <h3>Expense Details</h3>
+      <div class="review-section-header">
+        <h3>Expense Details</h3>
+        <a href="{{ expense_edit }}" class="section-edit-link">Edit</a>
+      </div>
       {% if expenses %}
         <table class="review-table">
           <tr><th>Sl. No.</th><th>Particulars</th><th>Amount</th></tr>
@@ -140,7 +153,10 @@
     </div>
 
     <div class="event-details-card">
-      <h3>Income Details</h3>
+      <div class="review-section-header">
+        <h3>Income Details</h3>
+        <a href="{{ expense_edit }}" class="section-edit-link">Edit</a>
+      </div>
       {% if income %}
         <table class="review-table">
           <tr><th>Sl. No.</th><th>Particulars</th><th>Participants</th><th>Rate</th><th>Amount</th></tr>
@@ -155,7 +171,10 @@
 
     {% if cdl_support %}
     <div class="event-details-card">
-      <h3>CDL Support</h3>
+      <div class="review-section-header">
+        <h3>CDL Support</h3>
+        <a href="{{ cdl_edit }}" class="section-edit-link">Edit</a>
+      </div>
       <table class="review-table">
         <tr><th>Needs Support</th><td>{{ cdl_support.needs_support|yesno:"Yes,No" }}</td></tr>
         {% if cdl_support.poster_required %}

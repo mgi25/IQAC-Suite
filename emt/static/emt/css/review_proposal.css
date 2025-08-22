@@ -198,6 +198,23 @@ body {
   gap: 14px;
   box-shadow: 0 1px 7px rgba(36,70,120,0.06);
 }
+
+.review-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-sm);
+}
+
+.section-edit-link {
+  font-size: 0.9rem;
+  color: var(--christ-blue-primary);
+}
+
+.section-edit-link:hover,
+.section-edit-link:focus {
+  text-decoration: underline;
+}
 .speaker-profile-block .profile-aff {
   color: var(--christ-blue-primary); font-weight: 600; margin-left: 8px;
 }
