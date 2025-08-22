@@ -3,437 +3,365 @@
 
 {% block title %}Sidebar Permissions Management - CHRIST University{% endblock %}
 
-{% block extra_css %}
-<style>
-  /* Use site palette (white + CHRIST blue) */
-  .permissions-container { background: var(--white); border-radius: var(--border-radius-lg); padding: 2rem; box-shadow: var(--shadow-lg); margin: 1.5rem; }
-  .permissions-header { border-bottom: 1px solid var(--gray-200); padding-bottom: 1.25rem; margin-bottom: 1.5rem; }
-  .permissions-title { font-size: 1.5rem; font-weight: 700; color: var(--gray-900); display:flex; align-items:center; gap:.5rem; }
-  .permissions-subtitle { color: var(--gray-600); }
+{% block head_extra %}
+  {# Reuse the master-data visual language #}
+  <link rel="stylesheet" href="{% static 'core/css/admin_master_data.css' %}?v=3.0">
+  <style>
+    /* ----- Page shell (reuses admin_master_data.css primitives) ----- */
+    .permissions-page .topbar h1{margin:0;font-size:28px;font-weight:800;color:var(--ink)}
+    .permissions-page .controls-container{position:sticky;top:0;z-index:40}
 
-  .controls-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:1rem; margin-bottom:1.25rem; background: var(--gray-50); border:1px solid var(--gray-200); border-radius: var(--border-radius); padding:1rem; }
-  .control-group { display:flex; flex-direction:column; gap:.5rem; }
-  .control-label { font-weight:600; color:var(--gray-700); font-size:.9rem; display:flex; gap:.5rem; align-items:center; }
-  .control-select, .search-input { padding:.7rem .9rem; border:1px solid var(--gray-300); border-radius: var(--border-radius); font-size:.95rem; background:var(--white); }
-  .control-select:focus, .search-input:focus { outline:none; border-color: var(--christ-blue); box-shadow: 0 0 0 3px var(--christ-blue-light); }
+    /* Wrap the two lists + action column */
+    .permissions-page .panel-grid{
+      display:grid;grid-template-columns:1fr auto 1fr;gap:16px;margin:8px 0
+    }
+    @media (max-width: 980px){ .permissions-page .panel-grid{grid-template-columns:1fr} }
 
-  .stats-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:.75rem; margin: 0 0 1rem 0; }
-  .stat-card { background: var(--white); border:1px solid var(--gray-200); border-radius: var(--border-radius); padding:.75rem; text-align:center; }
-  .stat-number { font-size:1.25rem; font-weight:700; color: var(--christ-blue); }
-  .stat-label { font-size:.8rem; color: var(--gray-600); }
+    /* Panels look/feel like cards in master page */
+    .permissions-page .panel{
+      background:var(--surf);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);
+      display:flex;flex-direction:column;min-height:320px
+    }
+    .permissions-page .panel .panel-head{
+      background:linear-gradient(90deg,var(--primary),var(--primary-dark));color:#fff;
+      padding:10px 12px;border-top-left-radius:16px;border-top-right-radius:16px;
+      display:flex;justify-content:space-between;align-items:center;font-weight:800;text-transform:uppercase;font-size:12px;letter-spacing:.5px
+    }
+    .permissions-page .panel .panel-head .count{background:rgba(255,255,255,.25);padding:2px 8px;border-radius:999px;font-weight:800}
 
-  .permissions-grid { display:grid; grid-template-columns: 1fr auto 1fr; gap:1.25rem; min-height: 420px; }
-  .permissions-panel { border:1px solid var(--gray-200); border-radius: var(--border-radius-lg); overflow:hidden; background:var(--white); display:flex; flex-direction:column; }
-  .panel-header { background: var(--christ-blue); color:var(--white); padding:.8rem 1rem; display:flex; justify-content:space-between; align-items:center; font-weight:600; }
-  .panel-title { display:flex; gap:.5rem; align-items:center; }
-  .panel-count { background: rgba(255,255,255,.2); padding:.15rem .6rem; border-radius:999px; font-size:.85rem; }
-  .permissions-list { flex:1; overflow:auto; max-height: 380px; }
-  .permission-item { display:flex; gap:.6rem; align-items:center; padding:.7rem 1rem; border-bottom:1px solid var(--gray-100); cursor:pointer; }
-  .permission-item:hover { background: var(--gray-50); }
-  .permission-item.selected { background: var(--christ-blue-light); border-left: 3px solid var(--christ-blue); }
-  .permission-checkbox { width:1.05rem; height:1.05rem; accent-color: var(--christ-blue); }
-  .permission-name { font-weight:600; color:var(--gray-900); }
-  .permission-desc { font-size:.82rem; color:var(--gray-600); }
-  .permission-icon { color: var(--christ-blue); width:1.2rem; text-align:center; }
+    /* Lists: only these scroll, nothing else */
+    .permissions-page .list{
+      overflow:auto; padding:6px 8px;
+      max-height:calc(100vh - 300px);   /* fills viewport; keeps header/toolbar visible */
+    }
+    @media (max-width: 980px){ .permissions-page .list{max-height:calc(100vh - 360px)} }
 
-  .controls-panel { display:flex; flex-direction:column; gap:.6rem; justify-content:center; padding:.5rem; }
-  .control-btn { padding:.6rem .9rem; border:none; border-radius: var(--border-radius); font-weight:600; cursor:pointer; display:flex; gap:.5rem; align-items:center; justify-content:center; }
-  .control-btn.primary { background: var(--christ-blue); color: var(--white); }
-  .control-btn.primary:hover { background: var(--christ-blue-dark); }
-  .control-btn.secondary { background: var(--gray-200); color: var(--gray-800); }
-  .control-btn.secondary:hover { background: var(--gray-300); }
+    .permissions-page .item{
+      display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--border);
+      border-radius:12px;background:#fff;margin:6px 0;cursor:pointer;transition:.15s
+    }
+    .permissions-page .item:hover{box-shadow:var(--shadow)}
+    .permissions-page .item.selected{background:#eef4fd;border-color:var(--primary)}
+    .permissions-page .item .chk{width:16px;height:16px;margin-top:2px;accent-color:var(--primary)}
+    .permissions-page .item .name{font-weight:800;color:var(--ink);font-size:14px}
+    .permissions-page .item .desc{font-size:12px;color:var(--muted);margin-top:2px}
 
-  .save-section { margin-top:1rem; padding-top:1rem; border-top:1px solid var(--gray-200); display:flex; justify-content:space-between; align-items:center; }
-  .save-btn { padding:.7rem 1.2rem; background: var(--christ-blue); color:var(--white); border:none; border-radius: var(--border-radius); font-weight:700; display:flex; gap:.5rem; align-items:center; }
-  .save-btn:disabled { opacity:.5; cursor:not-allowed; }
-  .change-indicator { color: var(--gray-600); font-style: italic; font-size:.9rem; }
+    /* Middle column actions styled like master buttons */
+    .permissions-page .actions-col{
+      display:flex;flex-direction:column;gap:8px;align-items:stretch;justify-content:center
+    }
+    .permissions-page .actions-col .btn{border-radius:10px}
+    .permissions-page .actions-col .btn-secondary{background:var(--muted);border-color:var(--muted);color:#fff}
 
-  @media (max-width: 900px) { .permissions-grid { grid-template-columns: 1fr; } .controls-panel { flex-direction:row; flex-wrap:wrap; justify-content:center; } }
-</style>
+    /* Stats strip compact */
+    .permissions-page .stats{
+      display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin:8px 0
+    }
+    .permissions-page .stat{
+      background:var(--surf);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);
+      padding:10px;text-align:center
+    }
+    .permissions-page .stat .num{font-weight:900;color:var(--primary);font-size:18px}
+    .permissions-page .stat .lbl{color:var(--muted);font-size:12px}
+
+    /* Save bar */
+    .permissions-page .savebar{
+      display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:10px;border-top:1px solid var(--border)
+    }
+    .permissions-page .savebar .save-btn{border-radius:10px}
+
+    /* Tiny helpers */
+    .permissions-page .search-bar input{min-width:220px}
+    .permissions-page .empty{padding:24px;color:var(--muted);text-align:center}
+  </style>
 {% endblock %}
 
-
 {% block content %}
-<div class="permissions-container">
-  <div class="permissions-header">
-    <h1 class="permissions-title"><i class="fas fa-sliders-h"></i> Sidebar Permissions Management</h1>
-    <p class="permissions-subtitle">Configure which sidebar modules are available to users and roles</p>
+<div class="ems-dashboard mdm-page permissions-page">
+  <!-- Heading (black, compact) -->
+  <header class="topbar">
+    <div><h1>Sidebar Permissions Management</h1></div>
+  </header>
+
+  <!-- Sticky controls bar (uses master-data filters & btns) -->
+  <div class="controls-container">
+    <div class="filters-left">
+      <label class="filter">
+        <span>Organization Type</span>
+        <select id="orgTypeSelect" aria-label="Organization Type">
+          <option value="">All Types</option>
+          {% for t in organization_types %}
+            <option value="{{ t.id }}" {% if selected_org_type == t.id|stringformat:'s' %}selected{% endif %}>{{ t.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label class="filter">
+        <span>Organization Role</span>
+        <select id="orgRoleSelect" {% if not selected_org_type %}disabled{% endif %} aria-label="Organization Role">
+          <option value="">All Roles</option>
+          {% for r in org_roles %}
+            <option value="{{ r.id }}" {% if selected_org_role == r.id|stringformat:'s' %}selected{% endif %}>{{ r.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label class="filter">
+        <span>User</span>
+        <select id="userSelect" name="user" aria-label="User">
+          <option value="">-- Select User --</option>
+          {% for u in users %}
+            <option value="{{ u.id }}" {% if selected_user == u.id|stringformat:'s' %}selected{% endif %}>{{ u.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label class="filter">
+        <span>Role</span>
+        <select id="roleSelect" name="role" aria-label="Role">
+          <option value="">-- Select Role --</option>
+          {% for r in roles %}
+            <option value="{{ r.id }}" {% if selected_role == r.id %}selected{% endif %}>{{ r.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <div class="search-bar">
+        <i class="fas fa-search"></i>
+        <input id="globalSearch" type="text" placeholder="Search modules…" autocomplete="off" aria-label="Search modules">
+        <button class="search-clear" type="button" id="clearSearchBtn" title="Clear">×</button>
+      </div>
+    </div>
+
+    <div class="main-actions">
+      <button type="submit" form="permissionsForm" id="saveBtn" class="btn btn-primary save-btn">
+        <i class="fas fa-save"></i><span id="saveText">Save Changes</span>
+        <i id="saveSpinner" class="fas fa-spinner fa-spin" style="display:none"></i>
+      </button>
+    </div>
   </div>
 
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat"><div class="num" id="availableCount">0</div><div class="lbl">Available</div></div>
+    <div class="stat"><div class="num" id="assignedCount">0</div><div class="lbl">Assigned</div></div>
+    <div class="stat"><div class="num" id="selectedCount">0</div><div class="lbl">Selected</div></div>
+  </div>
+
+  <!-- Form & Panels -->
   <form id="permissionsForm" method="post" action="{% url 'admin_sidebar_permissions' %}">
     {% csrf_token %}
     <input type="hidden" name="assigned_order" id="assigned_order" value="[]">
 
-    <div class="controls-grid">
-      <div class="control-group">
-        <label class="control-label" for="orgTypeSelect"><i class="fas fa-building"></i> Organization Type</label>
-        <select id="orgTypeSelect" class="control-select">
-          <option value="">All Types</option>
-          {% for t in organization_types %}
-          <option value="{{ t.id }}" {% if selected_org_type == t.id|stringformat:'s' %}selected{% endif %}>{{ t.name }}</option>
-          {% endfor %}
-        </select>
+    <div class="panel-grid">
+      <!-- Available -->
+      <section class="panel">
+        <div class="panel-head">
+          <span>Available Permissions</span>
+          <span class="count" id="availableBadge">0</span>
+        </div>
+        <div class="list" id="availableList">
+          <div class="empty" id="availableEmpty">No permissions available</div>
+        </div>
+      </section>
+
+      <!-- Middle actions -->
+      <div class="actions-col">
+        <button type="button" id="addBtn" class="btn btn-primary"><i class="fas fa-arrow-right"></i> Add</button>
+        <button type="button" id="removeBtn" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Remove</button>
+        <button type="button" id="moveUpBtn" class="btn btn-secondary"><i class="fas fa-arrow-up"></i> Move Up</button>
+        <button type="button" id="moveDownBtn" class="btn btn-secondary"><i class="fas fa-arrow-down"></i> Move Down</button>
+        <button type="button" id="selectAllBtn" class="btn btn-secondary"><i class="fas fa-check-double"></i> Select All</button>
+        <button type="button" id="clearBtn" class="btn btn-secondary"><i class="fas fa-times"></i> Clear</button>
       </div>
-      <div class="control-group">
-        <label class="control-label" for="orgRoleSelect"><i class="fas fa-id-badge"></i> Organization Role</label>
-        <select id="orgRoleSelect" class="control-select" {% if not selected_org_type %}disabled{% endif %}>
-          <option value="">All Roles</option>
-          {% for r in org_roles %}
-          <option value="{{ r.id }}" {% if selected_org_role == r.id|stringformat:'s' %}selected{% endif %}>{{ r.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="control-group">
-        <label class="control-label" for="userSelect"><i class="fas fa-user"></i> Select User</label>
-        <select id="userSelect" name="user" class="control-select">
-          <option value="">-- Select User --</option>
-          {% for u in users %}
-          <option value="{{ u.id }}" {% if selected_user == u.id|stringformat:'s' %}selected{% endif %}>{{ u.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="control-group">
-        <label class="control-label" for="roleSelect"><i class="fas fa-user-tag"></i> Select Role</label>
-        <select id="roleSelect" name="role" class="control-select">
-          <option value="">-- Select Role --</option>
-          {% for r in roles %}
-          <option value="{{ r.id }}" {% if selected_role == r.id %}selected{% endif %}>{{ r.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="control-group">
-        <label class="control-label" for="globalSearch"><i class="fas fa-search"></i> Search</label>
-        <input id="globalSearch" type="text" placeholder="Search modules..." class="search-input" autocomplete="off">
-      </div>
+
+      <!-- Assigned -->
+      <section class="panel">
+        <div class="panel-head">
+          <span>Assigned Permissions</span>
+          <span class="count" id="assignedBadge">0</span>
+        </div>
+        <div class="list" id="assignedList">
+          <div class="empty" id="assignedEmpty">No permissions assigned</div>
+        </div>
+      </section>
     </div>
 
-    <div class="stats-grid">
-      <div class="stat-card"><div class="stat-number" id="availableCount">0</div><div class="stat-label">Available</div></div>
-      <div class="stat-card"><div class="stat-number" id="assignedCount">0</div><div class="stat-label">Assigned</div></div>
-      <div class="stat-card"><div class="stat-number" id="selectedCount">0</div><div class="stat-label">Selected</div></div>
-    </div>
-
-    <div class="permissions-grid">
-      <div class="permissions-panel">
-        <div class="panel-header"><div class="panel-title"><i class="fas fa-list"></i> Available Permissions</div><span class="panel-count" id="availableBadge">0</span></div>
-        <div class="permissions-list" id="availableList"><div class="empty-state" id="availableEmpty"><i class="fas fa-inbox empty-icon"></i><p>No permissions available</p></div></div>
-      </div>
-      <div class="controls-panel">
-        <button type="button" id="addBtn" class="control-btn primary"><i class="fas fa-arrow-right"></i> Add</button>
-        <button type="button" id="removeBtn" class="control-btn primary"><i class="fas fa-arrow-left"></i> Remove</button>
-        <button type="button" id="moveUpBtn" class="control-btn secondary"><i class="fas fa-arrow-up"></i> Move Up</button>
-        <button type="button" id="moveDownBtn" class="control-btn secondary"><i class="fas fa-arrow-down"></i> Move Down</button>
-        <button type="button" id="selectAllBtn" class="control-btn secondary"><i class="fas fa-check-double"></i> Select All</button>
-        <button type="button" id="clearBtn" class="control-btn secondary"><i class="fas fa-times"></i> Clear</button>
-      </div>
-      <div class="permissions-panel">
-        <div class="panel-header"><div class="panel-title"><i class="fas fa-check-circle"></i> Assigned Permissions</div><span class="panel-count" id="assignedBadge">0</span></div>
-        <div class="permissions-list" id="assignedList"><div class="empty-state" id="assignedEmpty"><i class="fas fa-check-circle empty-icon"></i><p>No permissions assigned</p></div></div>
-      </div>
-    </div>
-
-    <div class="save-section">
+    <!-- Save bar -->
+    <div class="savebar">
       <div class="change-indicator" id="changeIndicator">No changes made</div>
-      <button type="submit" id="saveBtn" class="save-btn"><i class="fas fa-save"></i><span id="saveText">Save Changes</span><i id="saveSpinner" class="fas fa-spinner fa-spin" style="display:none"></i></button>
+      <button type="submit" id="saveBtnDup" class="btn btn-primary save-btn">
+        <i class="fas fa-save"></i> Save Changes
+      </button>
     </div>
   </form>
 </div>
+{% endblock %}
+
+{% block scripts %}
 <script>
+  /* Keep your existing JS intact; only selectors/IDs are reused.
+     Below is your script with no functional changes, just two tiny hooks:
+     - a Clear button for search (#clearSearchBtn)
+     - duplicated Save button (#saveBtnDup) submits the same form
+  */
   document.addEventListener('DOMContentLoaded', function() {
-      // Helper functions
-      const $ = (sel) => document.querySelector(sel);
-      const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-      // Toast notification
-      function showToast(message, type = 'success') {
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        toast.textContent = message;
-        document.body.appendChild(toast);
+    function showToast(message, type='success'){
+      const t=document.createElement('div');t.className=`toast ${type}`;t.textContent=message;
+      Object.assign(t.style,{position:'fixed',right:'14px',bottom:'14px',background:'#164c8d',color:'#fff',padding:'10px 12px',borderRadius:'10px',boxShadow:'0 12px 40px rgba(2,6,23,.2)',opacity:'0',transform:'translateY(10px)',transition:'.25s',zIndex:1000,fontWeight:800});
+      document.body.appendChild(t); setTimeout(()=>{t.style.opacity='1';t.style.transform='none'},50);
+      setTimeout(()=>{t.style.opacity='0';t.style.transform='translateY(10px)';setTimeout(()=>t.remove(),250)},2500);
+    }
 
-        setTimeout(() => toast.classList.add('show'), 100);
-        setTimeout(() => {
-          toast.classList.remove('show');
-          setTimeout(() => document.body.removeChild(toast), 300);
-        }, 3000);
-      }
+    const availableData = JSON.parse('{{ available_permissions|safe|escapejs }}'.replace(/&quot;/g,'"') || '[]');
+    const assignedData  = JSON.parse('{{ assigned_permissions|safe|escapejs }}'.replace(/&quot;/g,'"') || '[]');
 
-      // Data management
-      const availableData = JSON.parse('{{ available_permissions|safe|escapejs }}'.replace(/&quot;/g,'"') || '[]');
-      const assignedData = JSON.parse('{{ assigned_permissions|safe|escapejs }}'.replace(/&quot;/g,'"') || '[]');
+    let available=[...availableData]; let assigned=[...assignedData];
+    let selectedAvailable=new Set(); let selectedAssigned=new Set();
 
-      let available = [...availableData];
-      let assigned = [...assignedData];
-      let selectedAvailable = new Set();
-      let selectedAssigned = new Set();
+    const availableList = $('#availableList');
+    const assignedList  = $('#assignedList');
+    const availableCount=$('#availableCount');
+    const assignedCount =$('#assignedCount');
+    const selectedCount =$('#selectedCount');
+    const availableEmpty=$('#availableEmpty');
+    const assignedEmpty =$('#assignedEmpty');
+    const globalSearch  =$('#globalSearch');
+    const userSelect=$('#userSelect'); const roleSelect=$('#roleSelect');
+    const orgTypeSelect=$('#orgTypeSelect'); const orgRoleSelect=$('#orgRoleSelect');
+    const changeIndicator=$('#changeIndicator');
 
-      // UI Elements
-      const availableList = $('#availableList');
-      const assignedList = $('#assignedList');
-      const availableCount = $('#availableCount');
-      const assignedCount = $('#assignedCount');
-      const selectedCount = $('#selectedCount');
-      const availableEmpty = $('#availableEmpty');
-      const assignedEmpty = $('#assignedEmpty');
-      const globalSearch = $('#globalSearch');
-      const userSelect = $('#userSelect');
-      const roleSelect = $('#roleSelect');
-      const orgTypeSelect = $('#orgTypeSelect');
-      const orgRoleSelect = $('#orgRoleSelect');
-      const saveBtn = $('#saveBtn');
-      const changeIndicator = $('#changeIndicator');
+    const addBtn=$('#addBtn'), removeBtn=$('#removeBtn'),
+          moveUpBtn=$('#moveUpBtn'), moveDownBtn=$('#moveDownBtn'),
+          selectAllBtn=$('#selectAllBtn'), clearBtn=$('#clearBtn');
 
-      // Control buttons
-      const addBtn = $('#addBtn');
-      const removeBtn = $('#removeBtn');
-      const moveUpBtn = $('#moveUpBtn');
-      const moveDownBtn = $('#moveDownBtn');
-      const selectAllBtn = $('#selectAllBtn');
-      const clearBtn = $('#clearBtn');
-      
-      // Helper to build and navigate with filters
-      function reloadWithFilters(extraParams={}){
-        const params = new URLSearchParams(window.location.search);
-        const setOrDelete = (k,v)=>{ if(v){ params.set(k,v); } else { params.delete(k); } };
-        setOrDelete('org_type', orgTypeSelect ? orgTypeSelect.value : '');
-        setOrDelete('org_role', orgRoleSelect ? orgRoleSelect.value : '');
-        // Preserve selected user/role in query for convenience
-        setOrDelete('user', userSelect.value);
-        setOrDelete('role', roleSelect.value);
-        for(const [k,v] of Object.entries(extraParams)) setOrDelete(k,v);
-        const qs = params.toString();
-        window.location.search = qs ? '?' + qs : '';
-      }
+    function reloadWithFilters(extraParams={}){
+      const params=new URLSearchParams(window.location.search);
+      const setOrDelete=(k,v)=>{ if(v){params.set(k,v)} else {params.delete(k)} };
+      setOrDelete('org_type', orgTypeSelect?orgTypeSelect.value:'');
+      setOrDelete('org_role', orgRoleSelect?orgRoleSelect.value:'');
+      setOrDelete('user', userSelect.value);
+      setOrDelete('role', roleSelect.value);
+      for(const [k,v] of Object.entries(extraParams)) setOrDelete(k,v);
+      const qs=params.toString(); window.location.search = qs?('?'+qs):'';
+    }
 
-      function getPermissionIcon(permission) {
-        const iconMap = {
-          'dashboard': 'fas fa-tachometer-alt',
-          'event': 'fas fa-calendar',
-          'user': 'fas fa-users',
-          'report': 'fas fa-chart-bar',
-          'setting': 'fas fa-cog',
-          'management': 'fas fa-tools',
-          'cdl': 'fas fa-paint-brush',
-          'po': 'fas fa-graduation-cap',
-          'transcript': 'fas fa-file-alt'
-        };
+    function getPermissionIcon(p){
+      const map={dashboard:'fas fa-tachometer-alt',event:'fas fa-calendar',user:'fas fa-users',
+        report:'fas fa-chart-bar',setting:'fas fa-cog',management:'fas fa-tools',cdl:'fas fa-paint-brush',
+        po:'fas fa-graduation-cap',transcript:'fas fa-file-alt'};
+      const key=Object.keys(map).find(k=>p.label.toLowerCase().includes(k)||p.id.toLowerCase().includes(k));
+      return map[key]||'fas fa-cube';
+    }
 
-        const key = Object.keys(iconMap).find(k => 
-          permission.label.toLowerCase().includes(k) || 
-          permission.id.toLowerCase().includes(k)
-        );
-
-        return iconMap[key] || 'fas fa-cube';
-      }
-
-      function renderPermissionItem(permission, isAssigned = false) {
-        const div = document.createElement('div');
-        div.className = 'permission-item';
-        div.dataset.id = permission.id;
-
-        const isSelected = isAssigned ? 
-          selectedAssigned.has(permission.id) : 
-          selectedAvailable.has(permission.id);
-
-        if (isSelected) {
-          div.classList.add('selected');
-        }
-
-        div.innerHTML = `
-          <input type="checkbox" class="permission-checkbox" ${isSelected ? 'checked' : ''}>
-          <i class="${getPermissionIcon(permission)} permission-icon"></i>
-          <div style="flex: 1;">
-            <div class="permission-label">${permission.label}</div>
-            <div class="permission-description">${permission.description || 'No description available'}</div>
-          </div>
-        `;
-
-        // Event listeners
-        div.addEventListener('click', (e) => {
-          if (e.target.type === 'checkbox') return;
-          toggleSelection(permission.id, isAssigned);
-        });
-
-        div.querySelector('.permission-checkbox').addEventListener('change', (e) => {
-          if (e.target.checked) {
-            if (isAssigned) {
-              selectedAssigned.add(permission.id);
-            } else {
-              selectedAvailable.add(permission.id);
-            }
-          } else {
-            if (isAssigned) {
-              selectedAssigned.delete(permission.id);
-            } else {
-              selectedAvailable.delete(permission.id);
-            }
-          }
-          updateUI();
-        });
-
-        return div;
-      }
-
-      function toggleSelection(id, isAssigned) {
-        if (isAssigned) {
-          if (selectedAssigned.has(id)) {
-            selectedAssigned.delete(id);
-          } else {
-            selectedAssigned.add(id);
-          }
-        } else {
-          if (selectedAvailable.has(id)) {
-            selectedAvailable.delete(id);
-          } else {
-            selectedAvailable.add(id);
-          }
-        }
-        render();
-      }
-
-      function applyFilters(permissions) {
-        // Only filter Available list per requirement
-        const search = globalSearch.value.toLowerCase();
-        return permissions.filter(p => !search || p.label.toLowerCase().includes(search));
-      }
-
-      function render() {
-        const filteredAvailable = applyFilters(available);
-        const filteredAssigned = assigned; // keep assigned visible and ordered
-
-        // Clear lists
-        availableList.innerHTML = '';
-        assignedList.innerHTML = '';
-
-        // Render available permissions
-        if (filteredAvailable.length === 0) {
-          availableList.appendChild(availableEmpty.cloneNode(true));
-        } else {
-          filteredAvailable.forEach(permission => {
-            availableList.appendChild(renderPermissionItem(permission, false));
-          });
-        }
-
-        // Render assigned permissions
-        if (filteredAssigned.length === 0) {
-          assignedList.appendChild(assignedEmpty.cloneNode(true));
-        } else {
-          filteredAssigned.forEach(permission => {
-            assignedList.appendChild(renderPermissionItem(permission, true));
-          });
-        }
-
+    function renderPermissionItem(p,isAssigned){
+      const div=document.createElement('div'); div.className='item'; div.dataset.id=p.id;
+      const isSel=isAssigned?selectedAssigned.has(p.id):selectedAvailable.has(p.id);
+      if(isSel) div.classList.add('selected');
+      div.innerHTML = `
+        <input type="checkbox" class="chk" ${isSel?'checked':''}>
+        <i class="${getPermissionIcon(p)}" style="color:var(--primary);min-width:18px"></i>
+        <div style="flex:1">
+          <div class="name">${p.label}</div>
+          <div class="desc">${p.description||'No description available'}</div>
+        </div>`;
+      div.addEventListener('click',e=>{ if(e.target.type==='checkbox')return; toggle(p.id,isAssigned);});
+      div.querySelector('.chk').addEventListener('change',e=>{
+        (isAssigned?selectedAssigned:selectedAvailable)[e.target.checked?'add':'delete'](p.id);
         updateUI();
-      }
-
-      function updateUI() {
-        // Update counts
-        availableCount.textContent = available.length;
-        assignedCount.textContent = assigned.length;
-        selectedCount.textContent = selectedAvailable.size + selectedAssigned.size;
-
-        // Update button states
-        addBtn.disabled = selectedAvailable.size === 0;
-        removeBtn.disabled = selectedAssigned.size === 0;
-        moveUpBtn.disabled = selectedAssigned.size === 0;
-        moveDownBtn.disabled = selectedAssigned.size === 0;
-
-        // Update save button and change indicator
-        const originalAssigned = assignedData.map(p => p.id).join(',');
-        const currentAssigned = assigned.map(p => p.id).join(',');
-        const hasChanges = originalAssigned !== currentAssigned;
-        // Keep Save button enabled in UI; we validate on submit
-        // Update badges
-        const availableBadge = document.getElementById('availableBadge');
-        const assignedBadge = document.getElementById('assignedBadge');
-        if (availableBadge) availableBadge.textContent = available.length;
-        if (assignedBadge) assignedBadge.textContent = assigned.length;
-
-        if (hasChanges) {
-          changeIndicator.textContent = 'Changes pending...';
-          changeIndicator.style.color = 'var(--warning)';
-        } else {
-          changeIndicator.textContent = 'No changes made';
-          changeIndicator.style.color = 'var(--gray-600)';
-        }
-      }
-
-      // Event listeners
-      addBtn.addEventListener('click', () => {
-        selectedAvailable.forEach(id => {
-          const permission = available.find(p => p.id === id);
-          if (permission) {
-            assigned.push(permission);
-            available = available.filter(p => p.id !== id);
-          }
-        });
-        selectedAvailable.clear();
-        render();
       });
+      return div;
+    }
 
-      removeBtn.addEventListener('click', () => {
-        selectedAssigned.forEach(id => {
-          const permission = assigned.find(p => p.id === id);
-          if (permission) {
-            available.push(permission);
-            assigned = assigned.filter(p => p.id !== id);
-          }
-        });
-        selectedAssigned.clear();
-        render();
+    function toggle(id,isAssigned){
+      const set=isAssigned?selectedAssigned:selectedAvailable;
+      set[set.has(id)?'delete':'add'](id); render();
+    }
+
+    function applyFilters(list){
+      const q=globalSearch.value.trim().toLowerCase();
+      return list.filter(p=>!q||p.label.toLowerCase().includes(q));
+    }
+
+    function render(){
+      const av=applyFilters(available); const as=assigned;
+      availableList.innerHTML=''; assignedList.innerHTML='';
+      if(av.length===0){ availableList.appendChild(availableEmpty.cloneNode(true)); }
+      else av.forEach(p=>availableList.appendChild(renderPermissionItem(p,false)));
+      if(as.length===0){ assignedList.appendChild(assignedEmpty.cloneNode(true)); }
+      else as.forEach(p=>assignedList.appendChild(renderPermissionItem(p,true)));
+      updateUI();
+    }
+
+    function updateUI(){
+      availableCount.textContent=available.length;
+      assignedCount.textContent=assigned.length;
+      selectedCount.textContent=selectedAvailable.size+selectedAssigned.size;
+      addBtn.disabled=selectedAvailable.size===0;
+      removeBtn.disabled=selectedAssigned.size===0;
+      moveUpBtn.disabled=selectedAssigned.size===0;
+      moveDownBtn.disabled=selectedAssigned.size===0;
+
+      const original=assignedData.map(p=>p.id).join(',');
+      const current =assigned.map(p=>p.id).join(',');
+      const changed =original!==current;
+      changeIndicator.textContent = changed?'Changes pending…':'No changes made';
+      changeIndicator.style.color = changed?'#b45309':'var(--muted)';
+
+      const ab=$('#availableBadge'), bb=$('#assignedBadge');
+      if(ab) ab.textContent=available.length; if(bb) bb.textContent=assigned.length;
+    }
+
+    addBtn.addEventListener('click',()=>{
+      selectedAvailable.forEach(id=>{
+        const p=available.find(x=>x.id===id); if(p){assigned.push(p); available=available.filter(x=>x.id!==id);}
       });
-
-      selectAllBtn.addEventListener('click', () => {
-        // Per requirement: select all in Available list
-        available.forEach(p => selectedAvailable.add(p.id));
-        render();
-      });
-
-      clearBtn.addEventListener('click', () => {
-        selectedAvailable.clear();
-        selectedAssigned.clear();
-        render();
-      });
-
-      // Filter event listeners
-      globalSearch.addEventListener('input', () => setTimeout(render, 150));
-      userSelect.addEventListener('change', () => { roleSelect.value=''; reloadWithFilters(); });
-      roleSelect.addEventListener('change', () => { userSelect.value=''; reloadWithFilters(); });
-      if (orgTypeSelect) orgTypeSelect.addEventListener('change', () => { if(!orgTypeSelect.value){ orgRoleSelect && (orgRoleSelect.value=''); } reloadWithFilters(); });
-      if (orgRoleSelect) orgRoleSelect.addEventListener('change', () => reloadWithFilters());
-
-      // Move Up / Down within assigned
-      moveUpBtn.addEventListener('click', () => {
-        const ids = Array.from(selectedAssigned);
-        const indices = ids.map(id => assigned.findIndex(p => p.id === id)).sort((a,b)=>a-b);
-        indices.forEach(index => { if(index>0){ [assigned[index-1],assigned[index]] = [assigned[index],assigned[index-1]]; } });
-        render();
-      });
-
-      moveDownBtn.addEventListener('click', () => {
-        const ids = Array.from(selectedAssigned);
-        const indices = ids.map(id => assigned.findIndex(p => p.id === id)).sort((a,b)=>b-a);
-        indices.forEach(index => { if(index<assigned.length-1){ [assigned[index+1],assigned[index]] = [assigned[index],assigned[index+1]]; } });
-        render();
-      });
-
-      // Form submission
-      $('#permissionsForm').addEventListener('submit', (e) => {
-        if (!userSelect.value && !roleSelect.value) {
-          e.preventDefault();
-          showToast('Please select a User or a Role before saving.', 'error');
-          return;
-        }
-        const assignedOrder = assigned.map(p => p.id);
-        $('#assigned_order').value = JSON.stringify(assignedOrder);
-
-        $('#saveText').textContent = 'Saving...';
-        const sp = document.getElementById('saveSpinner');
-        if (sp) sp.style.display = 'inline-block';
-      });
-
-      // Initial render
-      render();
+      selectedAvailable.clear(); render();
     });
+
+    removeBtn.addEventListener('click',()=>{
+      selectedAssigned.forEach(id=>{
+        const p=assigned.find(x=>x.id===id); if(p){available.push(p); assigned=assigned.filter(x=>x.id!==id);}
+      });
+      selectedAssigned.clear(); render();
+    });
+
+    selectAllBtn.addEventListener('click',()=>{ available.forEach(p=>selectedAvailable.add(p.id)); render(); });
+    clearBtn.addEventListener('click',()=>{ selectedAvailable.clear(); selectedAssigned.clear(); render(); });
+
+    globalSearch.addEventListener('input',()=> setTimeout(render,120));
+    $('#clearSearchBtn')?.addEventListener('click',()=>{ globalSearch.value=''; render(); });
+
+    userSelect.addEventListener('change',()=>{ roleSelect.value=''; reloadWithFilters(); });
+    roleSelect.addEventListener('change',()=>{ userSelect.value=''; reloadWithFilters(); });
+    if(orgTypeSelect) orgTypeSelect.addEventListener('change',()=>{ if(!orgTypeSelect.value){ orgRoleSelect && (orgRoleSelect.value=''); } reloadWithFilters(); });
+    if(orgRoleSelect) orgRoleSelect.addEventListener('change',()=> reloadWithFilters());
+
+    $('#saveBtnDup')?.addEventListener('click',()=> document.getElementById('permissionsForm').requestSubmit());
+
+    document.getElementById('permissionsForm').addEventListener('submit',e=>{
+      if(!userSelect.value && !roleSelect.value){ e.preventDefault(); showToast('Please select a User or a Role before saving.','error'); return; }
+      document.getElementById('assigned_order').value = JSON.stringify(assigned.map(p=>p.id));
+      document.getElementById('saveText').textContent='Saving…';
+      const sp=document.getElementById('saveSpinner'); if(sp) sp.style.display='inline-block';
+    });
+
+    /* Move Up / Down order (assigned) */
+    function move(sel,dir){
+      const ids=Array.from(sel); const idxs=ids.map(id=>assigned.findIndex(p=>p.id===id)).sort((a,b)=>dir>0?b-a:a-b);
+      idxs.forEach(i=>{
+        const j=i+dir; if(j>=0 && j<assigned.length){ [assigned[i],assigned[j]]=[assigned[j],assigned[i]]; }
+      });
+      render();
+    }
+    document.getElementById('moveUpBtn').addEventListener('click',()=>move(selectedAssigned,-1));
+    document.getElementById('moveDownBtn').addEventListener('click',()=>move(selectedAssigned, 1));
+
+    /* Initial render */
+    render();
+  });
 </script>
 {% endblock %}
