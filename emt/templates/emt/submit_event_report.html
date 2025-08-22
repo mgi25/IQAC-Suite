@@ -133,8 +133,6 @@
                             </div>
                         </div>
 
-                        <!-- Hidden field to track number of activities -->
-                        <input type="hidden" id="num-activities-modern" name="num_activities" value="{{ proposal_activities|length }}">
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="venue-modern">Venue *</label>
@@ -236,7 +234,21 @@
                         </div>
 
                         <!-- Dynamic activities section -->
-                        <div id="dynamic-activities-section" class="full-width"></div>
+                        <div id="dynamic-activities-section" class="full-width">
+                            {% for act in proposal_activities %}
+                            <div class="activity-row">
+                                <div class="input-group">
+                                    <label for="activity_name_{{ forloop.counter }}" class="activity-label">{{ forloop.counter }}. Activity Name</label>
+                                    <input type="text" id="activity_name_{{ forloop.counter }}" name="activity_name_{{ forloop.counter }}" value="{{ act.activity_name }}">
+                                </div>
+                                <div class="input-group">
+                                    <label for="activity_date_{{ forloop.counter }}" class="date-label">{{ forloop.counter }}. Activity Date</label>
+                                    <input type="date" id="activity_date_{{ forloop.counter }}" name="activity_date_{{ forloop.counter }}" value="{{ act.activity_date }}">
+                                </div>
+                                <button type="button" class="remove-activity btn btn-sm btn-outline-danger">×</button>
+                            </div>
+                            {% endfor %}
+                        </div>
 
                         <!-- Save Section -->
                         <div class="form-row full-width">
