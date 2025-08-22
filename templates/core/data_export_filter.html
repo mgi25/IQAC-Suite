@@ -188,6 +188,35 @@
 .offcanvas-backdrop.show { opacity:0.35; }
 .offcanvas-body .form-group { margin-bottom:12px; }
 
+/* New style for the red Clear button */
+.tab-btn-red {
+  border-radius: 8px;
+  padding: 0.75rem 1.25rem;
+  background: #dc3545; /* Red background */
+  border: 1px solid #dc3545; /* Red border */
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: #ffffff; /* White text */
+  transition: all 0.2s ease;
+}
+
+.tab-btn-red:hover {
+  background: #c82333; /* Darker red on hover */
+  border-color: #bd2130;
+  transform: translateY(-1px);
+}
+
+/* small responsive */
+@media (max-width:900px) {
+  .controls { flex-direction:column; align-items:stretch; }
+  .search-row { width:100%; }
+}
+
+/* offcanvas (filter drawer) tweaks */
+.offcanvas-backdrop.show { opacity:0.35; }
+.offcanvas-body .form-group { margin-bottom:12px; }
+
 /* small responsive */
 @media (max-width:900px) {
   .controls { flex-direction:column; align-items:stretch; }
@@ -202,9 +231,6 @@
     <div class="header-left">
       <h1><i class="bx bx-filter" style="color:#667eea; margin-right:8px;"></i> Advanced Data Export & Filter</h1>
       <p>Search across Events, Users, Reports and Organizations. Open the filters drawer to refine results.</p>
-    </div>
-    <div>
-      <img src="{% static 'core/img/logo-small.png' %}" alt="logo" style="height:42px; opacity:0.95;">
     </div>
   </div>
 
@@ -256,11 +282,10 @@
         <!-- dynamic fields inserted here -->
       </div>
 
-      <div style="display:flex; gap:8px; margin-top:12px;">
-        <button type="button" id="applyFilters" class="tab-btn">Apply</button>
-        <button type="button" id="clearFilters" class="tab-btn">Clear</button>
-        <div style="margin-left:auto; color:#6b7280; align-self:center;"><small>Filters are server-side</small></div>
-      </div>
+     <div style="display:flex; gap:8px; margin-top:12px;">
+    <button type="button" id="applyFilters" class="tab-btn">Apply</button>
+    <button type="button" id="clearFilters" class="tab-btn-red">Clear</button>
+</div>
     </form>
   </div>
 </div>
@@ -445,8 +470,10 @@
     clearFiltersBtn.addEventListener('click', () => {
       // clear form inputs
       filterFieldsContainer.innerHTML = '';
-      appliedFilters = appliedFilters.filter(f => f.type === 'search'); // keep search only
+      appliedFilters = []; // clear all filters
       renderActiveFilters();
+      doSearch(); // immediately trigger a search to show all records
+      filterDrawer.hide(); // Hide the drawer after clearing
     });
   }
 
