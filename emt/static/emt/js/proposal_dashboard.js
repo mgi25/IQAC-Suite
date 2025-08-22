@@ -1191,8 +1191,8 @@ $(document).ready(function() {
                 if (data.success) {
                     container.empty();
                     const existing = posField.val().split('\n').map(s => s.trim());
-                    data.pos.forEach(po => { addOption(container, 'PO: ' + po.description, existing); });
-                    data.psos.forEach(pso => { addOption(container, 'PSO: ' + pso.description, existing); });
+                    data.pos.forEach((po, idx) => { addOption(container, `PO${idx+1}: ` + po.description, existing); });
+                    data.psos.forEach((pso, idx) => { addOption(container, `PSO${idx+1}: ` + pso.description, existing); });
                 } else {
                     container.text('No data');
                 }
