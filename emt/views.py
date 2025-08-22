@@ -1684,6 +1684,12 @@ def submit_event_report(request, proposal_id):
     attendance_present = attendance_qs.filter(absent=False).count()
     attendance_absent = attendance_qs.filter(absent=True).count()
     attendance_volunteers = attendance_qs.filter(volunteer=True).count()
+    volunteer_names = list(
+        attendance_qs.filter(volunteer=True).values_list('full_name', flat=True)
+    )
+    faculty_names = [
+        f.get_full_name() or f.username for f in proposal.faculty_incharges.all()
+    ]
 
     # Pre-fill context with proposal info for readonly/preview display
     context = {
@@ -1701,6 +1707,8 @@ def submit_event_report(request, proposal_id):
         "attendance_present": attendance_present,
         "attendance_absent": attendance_absent,
         "attendance_volunteers": attendance_volunteers,
+        "faculty_names_json": json.dumps(faculty_names),
+        "volunteer_names_json": json.dumps(volunteer_names),
     }
     return render(request, "emt/submit_event_report.html", context)
 

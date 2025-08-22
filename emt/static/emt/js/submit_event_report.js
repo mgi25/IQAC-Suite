@@ -1023,6 +1023,29 @@ function populateProposalData() {
             }
         }, 100);
     });
+
+    // Populate organizing committee details when section becomes active
+    $(document).on('click', '[data-section="participants-information"]', function() {
+        setTimeout(function() {
+            const field = $('#organizing-committee-modern');
+            if (field.length && field.val().trim() === '' && window.PROPOSAL_DATA) {
+                const parts = [];
+                if (window.PROPOSAL_DATA.proposer) {
+                    parts.push(`Proposer: ${window.PROPOSAL_DATA.proposer}`);
+                }
+                if (window.PROPOSAL_DATA.faculty_incharges && window.PROPOSAL_DATA.faculty_incharges.length) {
+                    parts.push(`Faculty In-Charge: ${window.PROPOSAL_DATA.faculty_incharges.join(', ')}`);
+                }
+                if (window.PROPOSAL_DATA.student_coordinators) {
+                    parts.push(`Student Coordinators: ${window.PROPOSAL_DATA.student_coordinators}`);
+                }
+                if (window.PROPOSAL_DATA.volunteers && window.PROPOSAL_DATA.volunteers.length) {
+                    parts.push(`Volunteers: ${window.PROPOSAL_DATA.volunteers.join(', ')}`);
+                }
+                field.val(parts.join('\n'));
+            }
+        }, 100);
+    });
 }
 
 // Populate speaker reference card with speakers from the original proposal
