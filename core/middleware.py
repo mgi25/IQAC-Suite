@@ -123,20 +123,25 @@ class ActivityLogMiddleware:
                 params = {
                     k: v for k, v in params.items() if k.lower() != "csrfmiddlewaretoken"
                 }
-                params_str = ", ".join(f"{k}={v}" for k, v in params.items()) or "none"
+                params_str = ", ".join(f"{k}={v}" for k, v in params.items())
                 ip = request.META.get("REMOTE_ADDR", "unknown")
-                ua = request.META.get("HTTP_USER_AGENT", "unknown")
-                status = getattr(response, "status_code", "unknown")
-                referrer = request.META.get("HTTP_REFERER", "unknown")
                 view_name = (
                     getattr(getattr(request, "resolver_match", None), "view_name", None)
                     or request.path
                 )
-                description = (
-                    f"User {request.user.username} performed {request.method} {request.path}. "
-                    f"View: {view_name}. Params: {params_str}. IP: {ip}. "
-                    f"User-Agent: {ua}. Status: {status}. Referrer: {referrer}"
-                )
+                user_display = request.user.get_full_name() or request.user.username
+                verb_map = {
+                    "GET": "viewed",
+                    "POST": "submitted data to",
+                    "PUT": "updated",
+                    "PATCH": "updated",
+                    "DELETE": "deleted",
+                }
+                verb = verb_map.get(request.method, request.method.lower())
+                description = f"{user_display} {verb} {view_name}"
+                if params_str:
+                    description += f" with {params_str}"
+                description += f" from IP {ip}."
                 ActivityLog.objects.create(
                     user=request.user,
                     action=f"{request.method} {request.path}",

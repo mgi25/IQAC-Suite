@@ -526,20 +526,26 @@ class ActivityLog(models.Model):
         return f"{self.timestamp} - {self.user} - {self.action}"
 
     def generate_description(self):
-        """Build a detailed description if none is provided."""
+        """Build a friendly human readable description if none is provided."""
         params = {}
-        ua = None
         if isinstance(self.metadata, dict):
-            ua = self.metadata.get("user_agent")
             params = {k: v for k, v in self.metadata.items() if k != "user_agent"}
-        params_str = ", ".join(f"{k}={v}" for k, v in params.items()) or "none"
-        ip = self.ip_address or "unknown"
-        username = self.user.username if self.user else "anonymous"
-        ua_str = f" User-Agent: {ua}." if ua else ""
-        return (
-            f"User {username} performed {self.action}. "
-            f"Params: {params_str}. IP: {ip}.{ua_str}"
-        )
+
+        username = "someone"
+        if self.user:
+            username = self.user.get_full_name() or self.user.username
+
+        action = self.action.replace("_", " ")
+        parts = [f"{username} {action}"]
+
+        if params:
+            params_str = ", ".join(f"{k}={v}" for k, v in params.items())
+            parts.append(f"with {params_str}")
+
+        if self.ip_address:
+            parts.append(f"from IP {self.ip_address}")
+
+        return " ".join(parts) + "."
 
     def save(self, *args, **kwargs):
         if not self.description:
