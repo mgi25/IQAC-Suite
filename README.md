@@ -14,6 +14,7 @@
 - [Key Features](#key-features)
 - [System Overview](#system-overview)
 - [Technology Stack](#technology-stack)
+- [AI Integration](#ai-integration)
 - [Installation Guide](#installation-guide)
 - [Modules](#modules)
 - [Usage Flow](#usage-flow)
@@ -77,6 +78,36 @@ Database (SQLite / PostgreSQL)
 ![WeasyPrint](https://img.shields.io/badge/WeasyPrint-F23030?logo=python&logoColor=white)
 ![Crispy Forms](https://img.shields.io/badge/Django--Crispy--Forms-FF9900?logo=django&logoColor=white)
 ![Dotenv](https://img.shields.io/badge/Python--Dotenv-FFD43B?logo=python&logoColor=black)
+
+---
+
+## AI Integration
+
+IQAC-Suite relies on **local AI models** served through [Ollama](https://github.com/ollama/ollama) to assist with tasks like report drafting and critique. All AI interactions are routed through helpers in the `ai/` directory.
+
+### Environment Variables
+
+Configure the following in your `.env` file:
+
+```bash
+AI_BACKEND=OLLAMA
+OLLAMA_BASE=http://127.0.0.1:11434
+OLLAMA_GEN_MODEL=llama3.1
+OLLAMA_CRITIC_MODEL=llama3.1
+```
+
+### Task Routing
+
+- `need-analysis`, `report-outline`, `report-section` → writer model
+- `critique` → critic model
+- Add new tasks in `ai/router.py`; **never** hardcode cloud model names.
+
+### Long Report Pipeline
+
+1. Generate outline.
+2. `parse_outline_to_titles`.
+3. For each title: generate section → critique → save to `EventReport.summary`.
+4. Stream progress through `ai_report_progress`, `ai_report_partial`, and `generate_ai_report_stream` views.
 
 ---
 

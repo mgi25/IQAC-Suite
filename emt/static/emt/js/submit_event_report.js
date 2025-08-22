@@ -35,6 +35,8 @@ document.addEventListener('DOMContentLoaded', function(){
       'event-relevance': false
   };
 
+  const previewUrl = $('#report-form').data('preview-url');
+
   // Rehydrate progress from server-rendered classes (if editing existing draft)
   document.querySelectorAll('.nav-link').forEach(link => {
       if(link.classList.contains('completed')){
@@ -62,11 +64,13 @@ document.addEventListener('DOMContentLoaded', function(){
       });
       
       // Word counter for event summary
+      const hiddenSummaryField = $('textarea[name="event_summary"][hidden]');
       $(document).on('input', '#event-summary-modern', function() {
           const text = $(this).val().trim();
           const wordCount = text ? text.split(/\s+/).filter(word => word.length > 0).length : 0;
           $('#summary-word-count').text(wordCount);
-          
+          hiddenSummaryField.val($(this).val());
+
           // Update styling based on word count
           if (wordCount >= 500) {
               $('#summary-word-count').parent().removeClass('text-danger').addClass('text-success');
@@ -102,6 +106,143 @@ document.addEventListener('DOMContentLoaded', function(){
   
   // Populate fields with proposal data
   populateProposalData();
+
+  // Helper to generate placeholder summary text
+  function generatePlaceholder(words = 500) {
+      const corpus = [
+          'lorem', 'ipsum', 'dolor', 'sit', 'amet', 'consectetur', 'adipiscing', 'elit',
+          'sed', 'do', 'eiusmod', 'tempor', 'incididunt', 'ut', 'labore', 'et', 'dolore',
+          'magna', 'aliqua', 'enim', 'ad', 'minim', 'veniam', 'quis', 'nostrud',
+          'exercitation', 'ullamco', 'laboris', 'nisi', 'ut', 'aliquip', 'ex', 'ea',
+          'commodo', 'consequat'
+      ];
+      const out = [];
+  while (out.length < words) out.push(corpus[Math.floor(Math.random() * corpus.length)]);
+  return out.join(' ');
+}
+
+// AI enhance summary button
+$(document).on('click', '#ai-enhance-summary', function() {
+      const btn = $(this);
+      const original = btn.text();
+      const textarea = $('#event-summary-modern');
+      btn.prop('disabled', true).text('...');
+      try {
+          const summary = generatePlaceholder();
+          textarea.val(summary);
+          textarea.trigger('input');
+      } catch (err) {
+          console.error(err);
+      } finally {
+      btn.prop('disabled', false).text(original);
+  }
+});
+
+function aiFill(target, words=320){
+    const textarea = $(target);
+    const text = generatePlaceholder(words);
+    textarea.val(text);
+    textarea.trigger('input');
+}
+
+$(document).on('click', '#ai-learning-outcomes', function(){
+    const btn = $(this);
+    const original = btn.text();
+    btn.prop('disabled', true).text('...');
+    try { aiFill('#learning-outcomes-modern', 80); }
+    catch (err) { console.error(err); }
+    finally { btn.prop('disabled', false).text(original); }
+});
+
+$(document).on('click', '#ai-participant-feedback', function(){
+    const btn = $(this);
+    const original = btn.text();
+    btn.prop('disabled', true).text('...');
+    try { aiFill('#participant-feedback-modern', 80); }
+    catch (err) { console.error(err); }
+    finally { btn.prop('disabled', false).text(original); }
+});
+
+$(document).on('click', '#ai-measurable-outcomes', function(){
+    const btn = $(this);
+    const original = btn.text();
+    btn.prop('disabled', true).text('...');
+    try { aiFill('#measurable-outcomes-modern', 60); }
+    catch (err) { console.error(err); }
+    finally { btn.prop('disabled', false).text(original); }
+});
+
+$(document).on('click', '#ai-impact-assessment', function(){
+    const btn = $(this);
+    const original = btn.text();
+    btn.prop('disabled', true).text('...');
+    try { aiFill('#impact-assessment-modern', 120); }
+    catch (err) { console.error(err); }
+    finally { btn.prop('disabled', false).text(original); }
+});
+
+$(document).on('click', '#ai-objective-achievement', function(){
+    const btn = $(this);
+    const original = btn.text();
+    btn.prop('disabled', true).text('...');
+    try { aiFill('#objective-achievement-modern', 320); }
+    catch (err) { console.error(err); }
+    finally { btn.prop('disabled', false).text(original); }
+});
+
+$(document).on('click', '#ai-strengths-analysis', function(){
+    const btn = $(this);
+    const original = btn.text();
+    btn.prop('disabled', true).text('...');
+    try { aiFill('#strengths-analysis-modern', 320); }
+    catch (err) { console.error(err); }
+    finally { btn.prop('disabled', false).text(original); }
+});
+
+$(document).on('click', '#ai-challenges-analysis', function(){
+    const btn = $(this);
+    const original = btn.text();
+    btn.prop('disabled', true).text('...');
+    try { aiFill('#challenges-analysis-modern', 320); }
+    catch (err) { console.error(err); }
+    finally { btn.prop('disabled', false).text(original); }
+});
+
+$(document).on('click', '#ai-effectiveness-analysis', function(){
+    const btn = $(this);
+    const original = btn.text();
+    btn.prop('disabled', true).text('...');
+    try { aiFill('#effectiveness-analysis-modern', 320); }
+    catch (err) { console.error(err); }
+    finally { btn.prop('disabled', false).text(original); }
+});
+
+$(document).on('click', '#ai-lessons-learned', function(){
+    const btn = $(this);
+    const original = btn.text();
+    btn.prop('disabled', true).text('...');
+    try { aiFill('#lessons-learned-modern', 320); }
+    catch (err) { console.error(err); }
+    finally { btn.prop('disabled', false).text(original); }
+});
+
+$(document).on('click', '#ai-pos-pso', function(){
+    const btn = $(this);
+    const original = btn.text();
+    btn.prop('disabled', true).text('...');
+    try { aiFill('#pos-pso-modern', 120); }
+    catch (err) { console.error(err); }
+    finally { btn.prop('disabled', false).text(original); }
+});
+
+$(document).on('click', '#ai-contemporary-requirements', function(){
+    const btn = $(this);
+    const original = btn.text();
+    btn.prop('disabled', true).text('...');
+    try { aiFill('#contemporary-requirements-modern', 120); }
+    catch (err) { console.error(err); }
+    finally { btn.prop('disabled', false).text(original); }
+});
   
   // Add validation styling to form fields with errors
   $('.field-error').each(function() {
@@ -151,7 +292,62 @@ document.addEventListener('DOMContentLoaded', function(){
               activateSection(nextSection);
               showNotification('Section saved! Moving to next section', 'success');
           } else {
-              showNotification('All sections completed!', 'success');
+              showNotification('All sections completed! Review your report.', 'success');
+              const form = $('#report-form');
+
+              // Remove any previously appended hidden inputs
+              form.find('input.section-state-hidden').remove();
+
+              // Serialize every form control, including empty or unchecked ones
+              const fieldsByName = {};
+              form.find('input[name], select[name], textarea[name]').each(function(){
+                  const name = this.name;
+                  if(!fieldsByName[name]){
+                      fieldsByName[name] = [];
+                  }
+                  fieldsByName[name].push(this);
+              });
+
+              const appendHidden = (frm, name, value) => {
+                  frm.append($('<input>', {
+                      type: 'hidden',
+                      class: 'section-state-hidden',
+                      name: name,
+                      value: value
+                  }));
+              };
+
+              Object.entries(fieldsByName).forEach(([name, elements]) => {
+                  const el = elements[0];
+                  if(el.tagName === 'SELECT'){
+                      const $el = $(el);
+                      const vals = $el.val();
+                      if(Array.isArray(vals)){
+                          if(vals.length){
+                              vals.forEach(v => appendHidden(form, name, v));
+                          } else {
+                              appendHidden(form, name, '');
+                          }
+                      } else {
+                          appendHidden(form, name, vals || '');
+                      }
+                  } else if(el.type === 'checkbox'){
+                      const checkedVals = elements.filter(e => e.checked).map(e => e.value);
+                      if(checkedVals.length){
+                          checkedVals.forEach(v => appendHidden(form, name, v));
+                      } else {
+                          appendHidden(form, name, '');
+                      }
+                  } else if(el.type === 'radio'){
+                      const checked = elements.find(e => e.checked);
+                      appendHidden(form, name, checked ? checked.value : '');
+                  } else {
+                      appendHidden(form, name, $(el).val() || '');
+                  }
+              });
+
+              form.attr('action', previewUrl);
+              form[0].submit();
           }
       } else {
           showNotification('Please fill in all required fields', 'error');
@@ -454,6 +650,8 @@ document.addEventListener('DOMContentLoaded', function(){
       const el = this;
       if(el.tagName === 'SELECT' && el.multiple){
           sectionState[el.name] = Array.from(el.selectedOptions).map(o => o.value);
+      } else if(el.type === 'checkbox' || el.type === 'radio') {
+          sectionState[el.name] = el.checked ? el.value : '';
       } else {
           sectionState[el.name] = el.value;
       }
@@ -463,6 +661,8 @@ document.addEventListener('DOMContentLoaded', function(){
   document.querySelectorAll('form#report-form input[name], form#report-form textarea[name], form#report-form select[name]').forEach(el => {
       if(el.tagName === 'SELECT' && el.multiple){
           sectionState[el.name] = Array.from(el.selectedOptions).map(o => o.value);
+      } else if(el.type === 'checkbox' || el.type === 'radio') {
+          sectionState[el.name] = el.checked ? el.value : '';
       } else {
           sectionState[el.name] = el.value;
       }
@@ -697,10 +897,11 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
           
           <div class="form-row full-width">
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="event-summary-modern">Summary of Overall Event *</label>
-                  <textarea id="event-summary-modern" name="event_summary" rows="15" required 
+                  <textarea id="event-summary-modern" name="event_summary" rows="15" required
                       placeholder="Provide a comprehensive summary of the event (minimum 500 words):&#10;&#10;• Event overview and objectives&#10;• Key activities and sessions conducted&#10;• Timeline and schedule of events&#10;• Participant engagement and interaction&#10;• Key highlights and memorable moments&#10;• Overall atmosphere and reception&#10;• Achievement of planned objectives&#10;• Any unexpected outcomes or learnings&#10;&#10;This should be a detailed narrative that captures the essence of the entire event."></textarea>
+                  <button type="button" id="ai-enhance-summary" class="ai-fill-btn" title="Enhance with AI">AI</button>
                   <div class="help-text">
                       Comprehensive overview of the event - minimum 500 words required
                       <span class="word-counter text-danger">
@@ -747,12 +948,13 @@ document.addEventListener('DOMContentLoaded', function(){
           <div class="form-section-header">
               <h3>Learning Outcomes</h3>
           </div>
-          
+
           <div class="form-row full-width">
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="learning-outcomes-modern">Learning Outcomes Achieved *</label>
-                  <textarea id="learning-outcomes-modern" name="learning_outcomes" rows="8" required 
+                  <textarea id="learning-outcomes-modern" name="learning_outcomes" rows="8" required
                       placeholder="Describe the learning outcomes achieved by participants:&#10;&#10;• Knowledge gained: [Specific knowledge areas]&#10;• Skills developed: [Technical and soft skills]&#10;• Competencies enhanced: [Professional competencies]&#10;• Understanding improved: [Subject areas or concepts]&#10;&#10;Be specific about what participants learned and how it benefits them."></textarea>
+                  <button type="button" id="ai-learning-outcomes" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <div class="help-text">Detail the specific learning outcomes achieved by participants</div>
               </div>
           </div>
@@ -763,16 +965,18 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
 
           <div class="form-row">
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="participant-feedback-modern">Participant Feedback *</label>
-                  <textarea id="participant-feedback-modern" name="participant_feedback" rows="8" required 
+                  <textarea id="participant-feedback-modern" name="participant_feedback" rows="8" required
                       placeholder="Summarize participant feedback:&#10;&#10;• Overall satisfaction rating: [X/10 or percentage]&#10;• Content quality feedback: [Summary]&#10;• Organization feedback: [Summary]&#10;• Suggestions received: [Key suggestions]&#10;• Testimonials: [Notable quotes]&#10;&#10;Include both quantitative and qualitative feedback."></textarea>
+                  <button type="button" id="ai-participant-feedback" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <div class="help-text">Summary of participant feedback and satisfaction</div>
               </div>
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="measurable-outcomes-modern">Measurable Outcomes *</label>
-                  <textarea id="measurable-outcomes-modern" name="measurable_outcomes" rows="8" required 
+                  <textarea id="measurable-outcomes-modern" name="measurable_outcomes" rows="8" required
                       placeholder="List quantifiable outcomes:&#10;&#10;• Attendance rate: [X% of expected participants]&#10;• Completion rate: [X% completed full program]&#10;• Assessment scores: [If applicable]&#10;• Certification issued: [Number of certificates]&#10;• Follow-up actions: [Concrete next steps]&#10;&#10;Focus on measurable and quantifiable results."></textarea>
+                  <button type="button" id="ai-measurable-outcomes" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <div class="help-text">Quantifiable and measurable outcomes from the event</div>
               </div>
           </div>
@@ -783,10 +987,11 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
 
           <div class="form-row full-width">
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="impact-assessment-modern">Short-term and Long-term Impact *</label>
-                  <textarea id="impact-assessment-modern" name="impact_assessment" rows="10" required 
+                  <textarea id="impact-assessment-modern" name="impact_assessment" rows="10" required
                       placeholder="Assess the impact of the event:&#10;&#10;Short-term Impact:&#10;• Immediate learning and awareness gains&#10;• Networking connections established&#10;• Skills immediately applicable&#10;&#10;Long-term Impact:&#10;• Career development opportunities&#10;• Research collaborations initiated&#10;• Behavioral changes expected&#10;• Contribution to academic/professional growth&#10;&#10;Provide evidence-based assessment where possible."></textarea>
+                  <button type="button" id="ai-impact-assessment" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <div class="help-text">Assess both immediate and long-term impact on participants and institution</div>
               </div>
           </div>
@@ -810,10 +1015,11 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
           
           <div class="form-row full-width">
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="objective-achievement-modern">Achievement of Planned Objectives *</label>
-                  <textarea id="objective-achievement-modern" name="objective_achievement" rows="10" required 
+                  <textarea id="objective-achievement-modern" name="objective_achievement" rows="10" required
                       placeholder="Analyze how well the event achieved its planned objectives:&#10;&#10;Original Objectives:&#10;• Objective 1: [Status - Fully/Partially/Not Achieved]&#10;  Analysis: [Detailed explanation]&#10;&#10;• Objective 2: [Status - Fully/Partially/Not Achieved]&#10;  Analysis: [Detailed explanation]&#10;&#10;Overall Achievement Rate: [X%]&#10;Factors contributing to success/challenges: [Analysis]"></textarea>
+                  <button type="button" id="ai-objective-achievement" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <div class="help-text">Detailed analysis of how well planned objectives were achieved</div>
               </div>
           </div>
@@ -824,16 +1030,18 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
 
           <div class="form-row">
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="strengths-analysis-modern">Strengths and Successes *</label>
-                  <textarea id="strengths-analysis-modern" name="strengths_analysis" rows="8" required 
+                  <textarea id="strengths-analysis-modern" name="strengths_analysis" rows="8" required
                       placeholder="Identify and analyze the key strengths:&#10;&#10;• Organizational strengths: [What worked well in planning/execution]&#10;• Content strengths: [Quality of sessions, speakers, materials]&#10;• Participant engagement: [What kept participants engaged]&#10;• Infrastructure/logistics: [What supported the event well]&#10;• Team collaboration: [How the team worked effectively]&#10;&#10;Provide specific examples and evidence."></textarea>
+                  <button type="button" id="ai-strengths-analysis" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <div class="help-text">Analyze what worked well and contributed to success</div>
               </div>
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="challenges-analysis-modern">Challenges and Areas for Improvement *</label>
-                  <textarea id="challenges-analysis-modern" name="challenges_analysis" rows="8" required 
+                  <textarea id="challenges-analysis-modern" name="challenges_analysis" rows="8" required
                       placeholder="Identify challenges faced and areas for improvement:&#10;&#10;• Organizational challenges: [Planning, coordination issues]&#10;• Technical challenges: [Equipment, platform, connectivity]&#10;• Participant-related challenges: [Attendance, engagement]&#10;• Content/delivery challenges: [Session quality, timing]&#10;• Resource constraints: [Budget, time, personnel]&#10;&#10;For each challenge, suggest specific improvements."></textarea>
+                  <button type="button" id="ai-challenges-analysis" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <div class="help-text">Honest assessment of challenges and improvement opportunities</div>
               </div>
           </div>
@@ -844,10 +1052,11 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
 
           <div class="form-row full-width">
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="effectiveness-analysis-modern">Overall Effectiveness Analysis *</label>
-                  <textarea id="effectiveness-analysis-modern" name="effectiveness_analysis" rows="10" required 
+                  <textarea id="effectiveness-analysis-modern" name="effectiveness_analysis" rows="10" required
                       placeholder="Provide a comprehensive effectiveness analysis:&#10;&#10;Methodology Used:&#10;• Data collection methods: [Surveys, interviews, observations]&#10;• Metrics evaluated: [Attendance, satisfaction, learning gains]&#10;&#10;Effectiveness Rating: [X/10 or percentage]&#10;&#10;Key Findings:&#10;• Most effective aspects: [What worked exceptionally well]&#10;• Least effective aspects: [What needs significant improvement]&#10;• Unexpected findings: [Surprising results or outcomes]&#10;&#10;Evidence-based analysis with specific data points where available."></textarea>
+                  <button type="button" id="ai-effectiveness-analysis" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <div class="help-text">Comprehensive analysis of event effectiveness with supporting evidence</div>
               </div>
           </div>
@@ -858,10 +1067,11 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
 
           <div class="form-row full-width">
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="lessons-learned-modern">Lessons Learned and Future Insights *</label>
-                  <textarea id="lessons-learned-modern" name="lessons_learned" rows="10" required 
+                  <textarea id="lessons-learned-modern" name="lessons_learned" rows="10" required
                       placeholder="Document key lessons learned and insights for future events:&#10;&#10;Key Lessons Learned:&#10;• Planning phase: [What to do differently in planning]&#10;• Execution phase: [What to improve in delivery]&#10;• Participant management: [Better engagement strategies]&#10;• Resource management: [More efficient resource utilization]&#10;&#10;Actionable Insights:&#10;• Best practices to replicate: [Successful strategies to repeat]&#10;• Practices to avoid: [What didn't work and should be avoided]&#10;• Innovation opportunities: [New approaches to try]&#10;&#10;Recommendations for future similar events."></textarea>
+                  <button type="button" id="ai-lessons-learned" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <div class="help-text">
                       Key lessons and insights for future improvement - minimum 300 words recommended
                       <span class="word-counter text-danger">
@@ -890,10 +1100,11 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
           
           <div class="form-row full-width">
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="pos-pso-modern">PO's and PSO's Management *</label>
-                  <textarea id="pos-pso-modern" name="pos_pso" rows="15" required 
+                  <textarea id="pos-pso-modern" name="pos_pso" rows="15" required
                       placeholder="Describe how the event addresses Program Outcomes (POs) and Program Specific Outcomes (PSOs):&#10;&#10;Program Outcomes:&#10;• PO1: Engineering Knowledge&#10;• PO2: Problem Analysis&#10;• PO3: Design/Development of Solutions&#10;&#10;Program Specific Outcomes:&#10;• PSO1: [Specific to your program]&#10;• PSO2: [Specific to your program]&#10;&#10;Provide detailed explanation of how each relevant outcome was addressed through this event."></textarea>
+                  <button type="button" id="ai-pos-pso" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <div class="help-text">Detail how the event contributes to achieving specific program outcomes</div>
               </div>
           </div>
@@ -925,13 +1136,14 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
           
           <div class="form-row">
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="contemporary-requirements-modern">Contemporary Requirements *</label>
-                  <textarea id="contemporary-requirements-modern" name="contemporary_requirements" rows="12" required 
+                  <textarea id="contemporary-requirements-modern" name="contemporary_requirements" rows="12" required
                       placeholder="Describe how the event addresses contemporary requirements:&#10;&#10;• Employability enhancement&#10;• Entrepreneurship development&#10;• Skill development initiatives&#10;• Industry 4.0 readiness&#10;• Digital transformation skills&#10;• Innovation and creativity&#10;• Leadership and soft skills&#10;• Global competency development&#10;&#10;Provide specific examples of how these requirements were addressed."></textarea>
+                  <button type="button" id="ai-contemporary-requirements" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <div class="help-text">Explain how the event addresses employability, entrepreneurship, skill development, etc.</div>
               </div>
-              
+
               <div class="input-group">
                   <label for="sdg-implementation-modern">SDG Implementation *</label>
                   <textarea id="sdg-implementation-modern" name="sdg_goals" rows="10" required 
@@ -1020,6 +1232,29 @@ function populateProposalData() {
             }
             if ($('#sdg-implementation-modern').length && window.PROPOSAL_DATA && window.PROPOSAL_DATA.sdg_goals) {
                 $('#sdg-implementation-modern').val(window.PROPOSAL_DATA.sdg_goals);
+            }
+        }, 100);
+    });
+
+    // Populate organizing committee details when section becomes active
+    $(document).on('click', '[data-section="participants-information"]', function() {
+        setTimeout(function() {
+            const field = $('#organizing-committee-modern');
+            if (field.length && field.val().trim() === '' && window.PROPOSAL_DATA) {
+                const parts = [];
+                if (window.PROPOSAL_DATA.proposer) {
+                    parts.push(`Proposer: ${window.PROPOSAL_DATA.proposer}`);
+                }
+                if (window.PROPOSAL_DATA.faculty_incharges && window.PROPOSAL_DATA.faculty_incharges.length) {
+                    parts.push(`Faculty In-Charge: ${window.PROPOSAL_DATA.faculty_incharges.join(', ')}`);
+                }
+                if (window.PROPOSAL_DATA.student_coordinators) {
+                    parts.push(`Student Coordinators: ${window.PROPOSAL_DATA.student_coordinators}`);
+                }
+                if (window.PROPOSAL_DATA.volunteers && window.PROPOSAL_DATA.volunteers.length) {
+                    parts.push(`Volunteers: ${window.PROPOSAL_DATA.volunteers.join(', ')}`);
+                }
+                field.val(parts.join('\n'));
             }
         }, 100);
     });

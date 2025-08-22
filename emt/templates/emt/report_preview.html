@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Review Event Report{% endblock %}
+
+{% block content %}
+<div class="proposal-layout">
+    <nav class="proposal-nav">
+        <div class="nav-header">
+            <h2 class="nav-title">Review Event Report</h2>
+            <p class="nav-subtitle">Confirm details before submission</p>
+        </div>
+    </nav>
+    <main class="proposal-content">
+        <div class="content-header">
+            <h1 class="content-title">{{ proposal.event_title|default:"Event Report" }}</h1>
+            <p class="content-subtitle">Please verify the information below.</p>
+        </div>
+        <form method="post" action="{% url 'emt:submit_event_report' proposal.id %}">
+            {% csrf_token %}
+            {% for key, value in post_data.items %}
+                <input type="hidden" name="{{ key }}" value="{{ value|escape }}">
+            {% endfor %}
+            <ol class="report-preview-list">
+                {% for field in form.visible_fields %}
+                    <li><strong>{{ field.label }}:</strong> {{ field.value|default:"—" }}</li>
+                {% endfor %}
+            </ol>
+            <button type="submit" name="final_submit" class="btn-submit">Submit Report</button>
+        </form>
+    </main>
+</div>
+{% endblock %}

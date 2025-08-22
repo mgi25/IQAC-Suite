@@ -45,6 +45,7 @@ emt.txt
 !package-lock.json
 # Include AI field configuration
 !suite/field_config/*.json
+!docs/*.json
 
 media/
 

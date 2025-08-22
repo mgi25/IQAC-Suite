@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from suite import views as suite_views
+from ai import enhance_summary as ai_views
 
 app_name = 'emt'
 
@@ -56,6 +57,7 @@ urlpatterns = [
     path("suite/my-approvals/", views.my_approvals, name="my_approvals"),
     path("suite/review-approval/<int:step_id>/", views.review_approval_step, name="review_approval_step"),
     path('cdl/my-requests/', views.my_requests_view, name='cdl_my_requests'),
+    path('report/preview/<int:proposal_id>/', views.preview_event_report, name='preview_event_report'),
     path('report/submit/<int:proposal_id>/', views.submit_event_report, name='submit_event_report'),
 
     # AI Report Generation
@@ -70,6 +72,7 @@ urlpatterns = [
     path('generate-need-analysis/', suite_views.generate_need_analysis, name='generate_need_analysis'),
     path('generate-objectives/', suite_views.generate_objectives, name='generate_objectives'),
     path('generate-expected-outcomes/', suite_views.generate_learning_outcomes, name='generate_expected_outcomes'),
+    path('ai/enhance-summary/', ai_views.enhance_summary, name='enhance_summary'),
     path('api/organization-types/', views.api_organization_types, name='api_organization_types'),
     path('api/outcomes/<int:org_id>/', views.api_outcomes, name='api_outcomes'),
 
