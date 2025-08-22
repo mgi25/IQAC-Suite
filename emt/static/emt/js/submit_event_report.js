@@ -115,12 +115,12 @@ document.addEventListener('DOMContentLoaded', function(){
           'commodo', 'consequat'
       ];
       const out = [];
-      while (out.length < words) out.push(corpus[Math.floor(Math.random() * corpus.length)]);
-      return out.join(' ');
-  }
+  while (out.length < words) out.push(corpus[Math.floor(Math.random() * corpus.length)]);
+  return out.join(' ');
+}
 
-  // AI enhance summary button
-  $(document).on('click', '#ai-enhance-summary', function() {
+// AI enhance summary button
+$(document).on('click', '#ai-enhance-summary', function() {
       const btn = $(this);
       const original = btn.text();
       const textarea = $('#event-summary-modern');
@@ -132,9 +132,52 @@ document.addEventListener('DOMContentLoaded', function(){
       } catch (err) {
           console.error(err);
       } finally {
-          btn.prop('disabled', false).text(original);
-      }
-  });
+      btn.prop('disabled', false).text(original);
+  }
+});
+
+function aiFill(target, words=80){
+    const textarea = $(target);
+    const text = generatePlaceholder(words);
+    textarea.val(text);
+    textarea.trigger('input');
+}
+
+$(document).on('click', '#ai-learning-outcomes', function(){
+    const btn = $(this);
+    const original = btn.text();
+    btn.prop('disabled', true).text('...');
+    try { aiFill('#learning-outcomes-modern', 80); }
+    catch (err) { console.error(err); }
+    finally { btn.prop('disabled', false).text(original); }
+});
+
+$(document).on('click', '#ai-participant-feedback', function(){
+    const btn = $(this);
+    const original = btn.text();
+    btn.prop('disabled', true).text('...');
+    try { aiFill('#participant-feedback-modern', 80); }
+    catch (err) { console.error(err); }
+    finally { btn.prop('disabled', false).text(original); }
+});
+
+$(document).on('click', '#ai-measurable-outcomes', function(){
+    const btn = $(this);
+    const original = btn.text();
+    btn.prop('disabled', true).text('...');
+    try { aiFill('#measurable-outcomes-modern', 60); }
+    catch (err) { console.error(err); }
+    finally { btn.prop('disabled', false).text(original); }
+});
+
+$(document).on('click', '#ai-impact-assessment', function(){
+    const btn = $(this);
+    const original = btn.text();
+    btn.prop('disabled', true).text('...');
+    try { aiFill('#impact-assessment-modern', 120); }
+    catch (err) { console.error(err); }
+    finally { btn.prop('disabled', false).text(original); }
+});
   
   // Add validation styling to form fields with errors
   $('.field-error').each(function() {
@@ -781,12 +824,13 @@ document.addEventListener('DOMContentLoaded', function(){
           <div class="form-section-header">
               <h3>Learning Outcomes</h3>
           </div>
-          
+
           <div class="form-row full-width">
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="learning-outcomes-modern">Learning Outcomes Achieved *</label>
-                  <textarea id="learning-outcomes-modern" name="learning_outcomes" rows="8" required 
+                  <textarea id="learning-outcomes-modern" name="learning_outcomes" rows="8" required
                       placeholder="Describe the learning outcomes achieved by participants:&#10;&#10;• Knowledge gained: [Specific knowledge areas]&#10;• Skills developed: [Technical and soft skills]&#10;• Competencies enhanced: [Professional competencies]&#10;• Understanding improved: [Subject areas or concepts]&#10;&#10;Be specific about what participants learned and how it benefits them."></textarea>
+                  <button type="button" id="ai-learning-outcomes" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <div class="help-text">Detail the specific learning outcomes achieved by participants</div>
               </div>
           </div>
@@ -797,16 +841,18 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
 
           <div class="form-row">
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="participant-feedback-modern">Participant Feedback *</label>
-                  <textarea id="participant-feedback-modern" name="participant_feedback" rows="8" required 
+                  <textarea id="participant-feedback-modern" name="participant_feedback" rows="8" required
                       placeholder="Summarize participant feedback:&#10;&#10;• Overall satisfaction rating: [X/10 or percentage]&#10;• Content quality feedback: [Summary]&#10;• Organization feedback: [Summary]&#10;• Suggestions received: [Key suggestions]&#10;• Testimonials: [Notable quotes]&#10;&#10;Include both quantitative and qualitative feedback."></textarea>
+                  <button type="button" id="ai-participant-feedback" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <div class="help-text">Summary of participant feedback and satisfaction</div>
               </div>
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="measurable-outcomes-modern">Measurable Outcomes *</label>
-                  <textarea id="measurable-outcomes-modern" name="measurable_outcomes" rows="8" required 
+                  <textarea id="measurable-outcomes-modern" name="measurable_outcomes" rows="8" required
                       placeholder="List quantifiable outcomes:&#10;&#10;• Attendance rate: [X% of expected participants]&#10;• Completion rate: [X% completed full program]&#10;• Assessment scores: [If applicable]&#10;• Certification issued: [Number of certificates]&#10;• Follow-up actions: [Concrete next steps]&#10;&#10;Focus on measurable and quantifiable results."></textarea>
+                  <button type="button" id="ai-measurable-outcomes" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <div class="help-text">Quantifiable and measurable outcomes from the event</div>
               </div>
           </div>
@@ -817,10 +863,11 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
 
           <div class="form-row full-width">
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="impact-assessment-modern">Short-term and Long-term Impact *</label>
-                  <textarea id="impact-assessment-modern" name="impact_assessment" rows="10" required 
+                  <textarea id="impact-assessment-modern" name="impact_assessment" rows="10" required
                       placeholder="Assess the impact of the event:&#10;&#10;Short-term Impact:&#10;• Immediate learning and awareness gains&#10;• Networking connections established&#10;• Skills immediately applicable&#10;&#10;Long-term Impact:&#10;• Career development opportunities&#10;• Research collaborations initiated&#10;• Behavioral changes expected&#10;• Contribution to academic/professional growth&#10;&#10;Provide evidence-based assessment where possible."></textarea>
+                  <button type="button" id="ai-impact-assessment" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <div class="help-text">Assess both immediate and long-term impact on participants and institution</div>
               </div>
           </div>
