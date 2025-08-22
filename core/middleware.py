@@ -123,31 +123,49 @@ class ActivityLogMiddleware:
                 params = {
                     k: v for k, v in params.items() if k.lower() != "csrfmiddlewaretoken"
                 }
-                params_str = ", ".join(f"{k}={v}" for k, v in params.items())
                 ip = request.META.get("REMOTE_ADDR", "unknown")
-                view_name = (
-                    getattr(getattr(request, "resolver_match", None), "view_name", None)
-                    or request.path
-                )
+
+                resolver_match = getattr(request, "resolver_match", None)
+                view_name = getattr(resolver_match, "view_name", "")
+                if view_name:
+                    view_desc = view_name.split(":")[-1].replace("_", " ")
+                else:
+                    # Fall back to a humanised path segment
+                    path_seg = request.path.strip("/").split("/")[-1]
+                    view_desc = path_seg.replace("-", " ") or "page"
+
+                # Attempt to include an object's title if the view exposed it
+                obj_title = None
+                obj = getattr(request, "object", None)
+                if not obj and hasattr(response, "context_data"):
+                    obj = response.context_data.get("object")
+                if obj:
+                    obj_title = getattr(obj, "title", getattr(obj, "name", None))
+
                 user_display = request.user.get_full_name() or request.user.username
                 verb_map = {
                     "GET": "viewed",
-                    "POST": "submitted data to",
+                    "POST": "submitted",
                     "PUT": "updated",
                     "PATCH": "updated",
                     "DELETE": "deleted",
                 }
                 verb = verb_map.get(request.method, request.method.lower())
-                description = f"{user_display} {verb} {view_name}"
-                if params_str:
-                    description += f" with {params_str}"
-                description += f" from IP {ip}."
+                description = f"{user_display} {verb} {view_desc}".strip()
+                if obj_title:
+                    description += f' "{obj_title}"'
+
+                metadata = params or None
+                if obj_title:
+                    metadata = metadata or {}
+                    metadata["object_title"] = obj_title
+
                 ActivityLog.objects.create(
                     user=request.user,
                     action=f"{request.method} {request.path}",
                     description=description,
                     ip_address=ip,
-                    metadata=params or None,
+                    metadata=metadata,
                 )
         except Exception:  # pragma: no cover - logging should never break the request
             logger.exception(

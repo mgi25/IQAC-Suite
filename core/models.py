@@ -526,7 +526,7 @@ class ActivityLog(models.Model):
         return f"{self.timestamp} - {self.user} - {self.action}"
 
     def generate_description(self):
-        """Build a friendly human readable description if none is provided."""
+        """Build a concise plain-language description when none is provided."""
         params = {}
         if isinstance(self.metadata, dict):
             params = {k: v for k, v in self.metadata.items() if k != "user_agent"}
@@ -535,17 +535,26 @@ class ActivityLog(models.Model):
         if self.user:
             username = self.user.get_full_name() or self.user.username
 
-        action = self.action.replace("_", " ")
-        parts = [f"{username} {action}"]
+        method, _, path = (self.action or "").partition(" ")
+        verb_map = {
+            "GET": "viewed",
+            "POST": "submitted",
+            "PUT": "updated",
+            "PATCH": "updated",
+            "DELETE": "deleted",
+        }
+        verb = verb_map.get(method.upper(), method.lower())
 
-        if params:
-            params_str = ", ".join(f"{k}={v}" for k, v in params.items())
-            parts.append(f"with {params_str}")
+        path = path.split("?")[0]
+        segments = [seg for seg in path.strip("/").split("/") if not seg.isdigit()]
+        resource = " ".join(segments).replace("-", " ").strip() or "resource"
 
-        if self.ip_address:
-            parts.append(f"from IP {self.ip_address}")
+        obj_title = params.get("object_title") or params.get("title")
+        description = f"{username} {verb} {resource}".strip()
+        if obj_title:
+            description += f' "{obj_title}"'
 
-        return " ".join(parts) + "."
+        return description
 
     def save(self, *args, **kwargs):
         if not self.description:

@@ -7,6 +7,7 @@ from django.utils import timezone
 from datetime import timedelta
 from core.models import ActivityLog
 from core import signals
+from bs4 import BeautifulSoup
 
 class AdminHistoryFilterTests(TestCase):
     def setUp(self):
@@ -56,3 +57,29 @@ class AdminHistoryFilterTests(TestCase):
         self.assertContains(resp, 'login')
         self.assertContains(resp, 'bob')
         self.assertContains(resp, 'logout')
+
+
+class AdminHistoryDescriptionTests(TestCase):
+    def setUp(self):
+        post_save.disconnect(signals.create_or_update_user_profile, sender=User)
+        self.admin = User.objects.create_superuser('admin', 'admin@example.com', 'pass')
+        self.client.login(username='admin', password='pass')
+        ActivityLog.objects.create(
+            user=self.admin,
+            action='GET /secret/123/?q=1',
+            ip_address='9.9.9.9',
+            metadata={'q': '1'}
+        )
+
+    def tearDown(self):
+        post_save.connect(signals.create_or_update_user_profile, sender=User)
+
+    def test_sanitized_description_rendered(self):
+        url = reverse('admin_history')
+        resp = self.client.get(url)
+        soup = BeautifulSoup(resp.content, 'html.parser')
+        desc_cell = soup.find('td', string=lambda s: s and 'admin viewed secret' in s)
+        self.assertIsNotNone(desc_cell)
+        self.assertNotIn('/secret', desc_cell.text)
+        self.assertNotIn('123', desc_cell.text)
+        self.assertNotIn('9.9.9.9', desc_cell.text)
