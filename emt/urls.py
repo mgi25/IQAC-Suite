@@ -57,6 +57,7 @@ urlpatterns = [
     path("suite/my-approvals/", views.my_approvals, name="my_approvals"),
     path("suite/review-approval/<int:step_id>/", views.review_approval_step, name="review_approval_step"),
     path('cdl/my-requests/', views.my_requests_view, name='cdl_my_requests'),
+    path('report/preview/<int:proposal_id>/', views.preview_event_report, name='preview_event_report'),
     path('report/submit/<int:proposal_id>/', views.submit_event_report, name='submit_event_report'),
 
     # AI Report Generation

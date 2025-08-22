@@ -35,6 +35,8 @@ document.addEventListener('DOMContentLoaded', function(){
       'event-relevance': false
   };
 
+  const previewUrl = $('#report-form').data('preview-url');
+
   // Rehydrate progress from server-rendered classes (if editing existing draft)
   document.querySelectorAll('.nav-link').forEach(link => {
       if(link.classList.contains('completed')){
@@ -290,7 +292,10 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
               activateSection(nextSection);
               showNotification('Section saved! Moving to next section', 'success');
           } else {
-              showNotification('All sections completed!', 'success');
+              showNotification('All sections completed! Review your report.', 'success');
+              const form = $('#report-form');
+              form.attr('action', previewUrl);
+              form[0].submit();
           }
       } else {
           showNotification('Please fill in all required fields', 'error');
