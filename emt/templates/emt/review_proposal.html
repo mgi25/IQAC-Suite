@@ -152,6 +152,27 @@
         <div class="detail-block">—</div>
       {% endif %}
     </div>
+
+    {% if cdl_support %}
+    <div class="event-details-card">
+      <h3>CDL Support</h3>
+      <table class="review-table">
+        <tr><th>Needs Support</th><td>{{ cdl_support.needs_support|yesno:"Yes,No" }}</td></tr>
+        {% if cdl_support.poster_required %}
+        <tr><th>Poster</th><td>{{ cdl_support.get_poster_choice_display }}</td></tr>
+        {% endif %}
+        {% if cdl_support.certificates_required %}
+        <tr><th>Certificates</th><td>{{ cdl_support.get_certificate_choice_display }}</td></tr>
+        {% endif %}
+        {% if cdl_support.other_services %}
+        <tr><th>Other Services</th><td>{{ cdl_support.other_services|join:", " }}</td></tr>
+        {% endif %}
+        {% if cdl_support.blog_content %}
+        <tr><th>Blog Content</th><td>{{ cdl_support.blog_content|linebreaksbr }}</td></tr>
+        {% endif %}
+      </table>
+    </div>
+    {% endif %}
   </main>
 </div>
 {% endblock %}

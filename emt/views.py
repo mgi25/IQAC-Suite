@@ -417,6 +417,7 @@ def review_proposal(request, proposal_id):
     speakers = list(proposal.speakers.all())
     expenses = list(proposal.expense_details.all())
     income = list(proposal.income_details.all())
+    support = getattr(proposal, "cdl_support", None)
 
     if request.method == "POST" and "final_submit" in request.POST:
         proposal.status = "submitted"
@@ -438,6 +439,7 @@ def review_proposal(request, proposal_id):
         "speakers": speakers,
         "expenses": expenses,
         "income": income,
+        "cdl_support": support,
     }
     return render(request, "emt/review_proposal.html", ctx)
 

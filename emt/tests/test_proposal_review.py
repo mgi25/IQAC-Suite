@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 import json
 
-from emt.models import EventProposal
+from emt.models import EventProposal, CDLSupport
 from core.models import (
     OrganizationType,
     Organization,
@@ -49,3 +49,24 @@ class ProposalReviewFlowTests(TestCase):
         self.assertEqual(resp3.status_code, 302)
         proposal = EventProposal.objects.get(id=pid)
         self.assertEqual(proposal.status, EventProposal.Status.SUBMITTED)
+
+    def test_review_displays_cdl_support(self):
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(self._payload()),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        pid = resp.json()["proposal_id"]
+        proposal = EventProposal.objects.get(id=pid)
+
+        CDLSupport.objects.create(
+            proposal=proposal,
+            needs_support=True,
+            poster_required=True,
+            poster_choice=CDLSupport.PosterChoice.CDL_CREATE,
+        )
+
+        resp = self.client.get(reverse("emt:review_proposal", args=[pid]))
+        self.assertContains(resp, "CDL Support")
+        self.assertContains(resp, "Ask CDL to make the poster")
