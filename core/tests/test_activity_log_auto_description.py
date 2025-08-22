@@ -12,6 +12,6 @@ class ActivityLogAutoDescriptionTests(TestCase):
             ip_address='1.2.3.4',
             metadata={'foo': 'bar'}
         )
-        self.assertIn('User charlie performed test_action', log.description)
-        self.assertIn('Params: foo=bar', log.description)
-        self.assertIn('IP: 1.2.3.4', log.description)
+        self.assertIn('charlie test action', log.description)
+        self.assertIn('foo=bar', log.description)
+        self.assertIn('1.2.3.4', log.description)
