@@ -1,0 +1,10 @@
+{
+  "fields": [
+    "event_title",
+    "target_audience",
+    "event_focus_type",
+    "pos_pso_management",
+    "sdg_goals",
+    "num_activities"
+  ]
+}

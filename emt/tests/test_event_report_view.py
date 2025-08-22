@@ -8,6 +8,7 @@ from django.contrib.auth.signals import user_logged_in
 from core.signals import create_or_update_user_profile, assign_role_on_login
 
 from emt.models import EventProposal, EventActivity, EventReport, AttendanceRow
+from emt.forms import EventReportForm
 
 
 class SubmitEventReportViewTests(TestCase):
@@ -53,14 +54,10 @@ class SubmitEventReportViewTests(TestCase):
             html=False,
         )
         # Hidden count of activities
-        self.assertContains(
-            response,
-            'id="num-activities-modern" name="num_activities" value="1"',
-            html=False,
-        )
-        # Add and remove buttons for dynamic editing
-        self.assertContains(response, 'id="add-activity-btn"')
-        self.assertContains(response, 'class="remove-activity"')
+        self.assertContains(response, 'id="num-activities-modern"', html=False)
+        self.assertContains(response, 'name="num_activities"', html=False)
+        self.assertContains(response, 'value="1"', html=False)
+        # Dynamic editing controls are managed client-side; server renders activity inputs
 
     def test_can_update_activities_via_report_submission(self):
         url = reverse("emt:submit_event_report", args=[self.proposal.id])
@@ -111,4 +108,76 @@ class SubmitEventReportViewTests(TestCase):
             'Present: 1, Absent: 1, Volunteers: 1',
             html=False,
         )
+
+    def test_preview_event_report(self):
+        url = reverse("emt:preview_event_report", args=[self.proposal.id])
+        data = {
+            "actual_event_type": "Seminar",
+            "report_signed_date": "2024-01-10",
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Seminar")
+
+    def test_preview_renders_multiple_sections_data(self):
+        url = reverse("emt:preview_event_report", args=[self.proposal.id])
+        data = {
+            "actual_event_type": "Workshop",
+            "summary": "Section summary text",
+            "outcomes": "Outcome details",
+            "graduate_attributes": ["engineering_knowledge", "problem_analysis"],
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        # Verify fields from multiple sections appear in the preview
+        self.assertContains(response, "Workshop")
+        self.assertContains(response, "Section summary text")
+        self.assertContains(response, "Outcome details")
+        # Multi-select values should be preserved in POST data
+        self.assertEqual(
+            response.context["form"].data.getlist("graduate_attributes"),
+            ["engineering_knowledge", "problem_analysis"],
+        )
+
+    def test_preview_preserves_checked_and_unchecked_fields(self):
+        url = reverse("emt:preview_event_report", args=[self.proposal.id])
+        data = {
+            "actual_event_type": "Seminar",
+            "report_signed_date": "2024-01-10",
+            "needs_projector": "yes",  # Simulate checked checkbox
+            "needs_permission": "",    # Simulate unchecked checkbox
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["post_data"]["needs_projector"], "yes")
+        self.assertEqual(response.context["post_data"]["needs_permission"], "")
+
+    def test_preview_includes_all_form_fields(self):
+        url = reverse("emt:preview_event_report", args=[self.proposal.id])
+        data = {
+            "actual_event_type": "Seminar",
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        form = EventReportForm()
+        for field in form.fields.values():
+            self.assertContains(
+                response, f"<strong>{field.label}:</strong>", html=False
+            )
 

@@ -526,20 +526,35 @@ class ActivityLog(models.Model):
         return f"{self.timestamp} - {self.user} - {self.action}"
 
     def generate_description(self):
-        """Build a detailed description if none is provided."""
+        """Build a concise plain-language description when none is provided."""
         params = {}
-        ua = None
         if isinstance(self.metadata, dict):
-            ua = self.metadata.get("user_agent")
             params = {k: v for k, v in self.metadata.items() if k != "user_agent"}
-        params_str = ", ".join(f"{k}={v}" for k, v in params.items()) or "none"
-        ip = self.ip_address or "unknown"
-        username = self.user.username if self.user else "anonymous"
-        ua_str = f" User-Agent: {ua}." if ua else ""
-        return (
-            f"User {username} performed {self.action}. "
-            f"Params: {params_str}. IP: {ip}.{ua_str}"
-        )
+
+        username = "someone"
+        if self.user:
+            username = self.user.get_full_name() or self.user.username
+
+        method, _, path = (self.action or "").partition(" ")
+        verb_map = {
+            "GET": "viewed",
+            "POST": "submitted",
+            "PUT": "updated",
+            "PATCH": "updated",
+            "DELETE": "deleted",
+        }
+        verb = verb_map.get(method.upper(), method.lower())
+
+        path = path.split("?")[0]
+        segments = [seg for seg in path.strip("/").split("/") if not seg.isdigit()]
+        resource = " ".join(segments).replace("-", " ").strip() or "resource"
+
+        obj_title = params.get("object_title") or params.get("title")
+        description = f"{username} {verb} {resource}".strip()
+        if obj_title:
+            description += f' "{obj_title}"'
+
+        return description
 
     def save(self, *args, **kwargs):
         if not self.description:

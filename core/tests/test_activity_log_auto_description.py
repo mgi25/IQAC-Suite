@@ -8,10 +8,12 @@ class ActivityLogAutoDescriptionTests(TestCase):
         user = User.objects.create_user('charlie')
         log = ActivityLog.objects.create(
             user=user,
-            action='test_action',
+            action='GET /events/123/?next=/foo',
             ip_address='1.2.3.4',
             metadata={'foo': 'bar'}
         )
-        self.assertIn('User charlie performed test_action', log.description)
-        self.assertIn('Params: foo=bar', log.description)
-        self.assertIn('IP: 1.2.3.4', log.description)
+        # Description should be friendly and omit technical details
+        self.assertEqual(log.description, 'charlie viewed events')
+        self.assertNotIn('foo=bar', log.description)
+        self.assertNotIn('1.2.3.4', log.description)
+        self.assertNotIn('123', log.description)

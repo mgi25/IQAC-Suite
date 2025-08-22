@@ -1,12 +1,16 @@
-from django.test import TestCase
+from django.test import TestCase, RequestFactory
 from django.urls import reverse
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.contrib.auth.signals import user_logged_in
 from django.utils import timezone
 from datetime import timedelta
+from types import SimpleNamespace
+from django.http import HttpResponse
 from core.models import ActivityLog
 from core import signals
+from core.middleware import ActivityLogMiddleware
+from bs4 import BeautifulSoup
 
 class AdminHistoryFilterTests(TestCase):
     def setUp(self):
@@ -56,3 +60,30 @@ class AdminHistoryFilterTests(TestCase):
         self.assertContains(resp, 'login')
         self.assertContains(resp, 'bob')
         self.assertContains(resp, 'logout')
+
+
+class AdminHistoryDescriptionTests(TestCase):
+    def setUp(self):
+        post_save.disconnect(signals.create_or_update_user_profile, sender=User)
+        self.factory = RequestFactory()
+        self.middleware = ActivityLogMiddleware(lambda request: HttpResponse("ok"))
+        self.admin = User.objects.create_superuser('admin', 'admin@example.com', 'pass')
+        self.client.login(username='admin', password='pass')
+
+        request = self.factory.get('/admin/sites/site/?q=1')
+        request.user = self.admin
+        request.META['REMOTE_ADDR'] = '9.9.9.9'
+        request.resolver_match = SimpleNamespace(view_name='admin:sites_site_changelist')
+        self.middleware(request)
+
+    def tearDown(self):
+        post_save.connect(signals.create_or_update_user_profile, sender=User)
+
+    def test_sanitized_description_rendered(self):
+        url = reverse('admin_history')
+        resp = self.client.get(url)
+        soup = BeautifulSoup(resp.content, 'html.parser')
+        desc_cell = soup.find('td', string=lambda s: s and 'admin viewed site list' in s)
+        self.assertIsNotNone(desc_cell)
+        self.assertNotIn('/admin/sites/site', desc_cell.text)
+        self.assertNotIn('9.9.9.9', desc_cell.text)

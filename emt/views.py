@@ -1684,6 +1684,21 @@ def submit_event_report(request, proposal_id):
     attendance_present = attendance_qs.filter(absent=False).count()
     attendance_absent = attendance_qs.filter(absent=True).count()
     attendance_volunteers = attendance_qs.filter(volunteer=True).count()
+    volunteer_names = list(
+        attendance_qs.filter(volunteer=True).values_list('full_name', flat=True)
+    )
+    faculty_names = [
+        f.get_full_name() or f.username for f in proposal.faculty_incharges.all()
+    ]
+
+    # Prepare SDG goal data for modal and proposal prefill
+    sdg_goals_list = [
+        {"id": goal.id, "title": goal.name}
+        for goal in SDGGoal.objects.all()
+    ]
+    proposal_sdg_goals = ", ".join(
+        f"SDG{goal.id}: {goal.name}" for goal in proposal.sdg_goals.all()
+    )
 
     # Pre-fill context with proposal info for readonly/preview display
     context = {
@@ -1693,7 +1708,8 @@ def submit_event_report(request, proposal_id):
         "proposal_activities": proposal_activities,
         "proposal_activities_json": json.dumps(proposal_activities),
         "speakers_json": json.dumps(speakers_json),
-        "sdg_goals_list": [],  # Add SDG goals if needed
+        "sdg_goals_list": sdg_goals_list,
+        "proposal_sdg_goals": proposal_sdg_goals,
         "event_summary": event_summary,
         "event_outcomes": event_outcomes,
         "analysis": analysis,
@@ -1701,8 +1717,34 @@ def submit_event_report(request, proposal_id):
         "attendance_present": attendance_present,
         "attendance_absent": attendance_absent,
         "attendance_volunteers": attendance_volunteers,
+        "faculty_names_json": json.dumps(faculty_names),
+        "volunteer_names_json": json.dumps(volunteer_names),
     }
     return render(request, "emt/submit_event_report.html", context)
+
+
+@login_required
+def preview_event_report(request, proposal_id):
+    """Display a summary of the event report before final submission."""
+    proposal = get_object_or_404(
+        EventProposal,
+        id=proposal_id,
+        submitted_by=request.user,
+    )
+
+    if request.method != "POST":
+        return redirect("emt:submit_event_report", proposal_id=proposal.id)
+
+    form = EventReportForm(request.POST)
+    if not form.is_valid():
+        logger.debug("Preview form invalid for proposal %s: %s", proposal.id, form.errors)
+
+    context = {
+        "proposal": proposal,
+        "form": form,
+        "post_data": request.POST,
+    }
+    return render(request, "emt/report_preview.html", context)
 
 
 @login_required

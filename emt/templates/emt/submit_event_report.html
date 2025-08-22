@@ -92,7 +92,7 @@
             </div>
         {% endif %}
 
-        <form method="post" enctype="multipart/form-data" id="report-form" autocomplete="off">
+        <form method="post" enctype="multipart/form-data" id="report-form" autocomplete="off" action="{% url 'emt:submit_event_report' proposal.id %}" data-preview-url="{% url 'emt:preview_event_report' proposal.id %}">
             {% csrf_token %}
             <textarea name="event_summary" hidden>{{ event_summary.content|default_if_none:'' }}</textarea>
             <textarea name="event_outcomes" hidden>{{ event_outcomes.content|default_if_none:'' }}</textarea>
@@ -133,8 +133,6 @@
                             </div>
                         </div>
 
-                        <!-- Hidden field to track number of activities -->
-                        <input type="hidden" id="num-activities-modern" name="num_activities" value="{{ proposal_activities|length }}">
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="venue-modern">Venue *</label>
@@ -185,7 +183,7 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="actual-location-modern">Actual Event Location</label>
-                                <input type="text" id="actual-location-modern" name="location" value="{{ form.location.value|default:'' }}" placeholder="Enter the actual venue where event was held">
+                                <input type="text" id="actual-location-modern" name="location" value="{{ form.location.value|default:proposal.venue|default:'' }}" placeholder="Enter the actual venue where event was held">
                                 <div class="help-text">Specify the actual venue (if different from proposed venue)</div>
                                 {% if form.location.errors %}
                                     <div class="field-error">{{ form.location.errors.0 }}</div>
@@ -236,7 +234,21 @@
                         </div>
 
                         <!-- Dynamic activities section -->
-                        <div id="dynamic-activities-section" class="full-width"></div>
+                        <div id="dynamic-activities-section" class="full-width">
+                            {% for act in proposal_activities %}
+                            <div class="activity-row">
+                                <div class="input-group">
+                                    <label for="activity_name_{{ forloop.counter }}" class="activity-label">{{ forloop.counter }}. Activity Name</label>
+                                    <input type="text" id="activity_name_{{ forloop.counter }}" name="activity_name_{{ forloop.counter }}" value="{{ act.activity_name }}">
+                                </div>
+                                <div class="input-group">
+                                    <label for="activity_date_{{ forloop.counter }}" class="date-label">{{ forloop.counter }}. Activity Date</label>
+                                    <input type="date" id="activity_date_{{ forloop.counter }}" name="activity_date_{{ forloop.counter }}" value="{{ act.activity_date }}">
+                                </div>
+                                <button type="button" class="remove-activity btn btn-sm btn-outline-danger">×</button>
+                            </div>
+                            {% endfor %}
+                        </div>
 
                         <!-- Save Section -->
                         <div class="form-row full-width">
@@ -334,6 +346,9 @@
             target_audience: "{{ proposal.target_audience|default:'' }}",
             event_focus_type: "{{ proposal.event_focus_type|default:'' }}",
             student_coordinators: "{{ proposal.student_coordinators|default:'' }}",
+            proposer: "{{ proposal.submitted_by.get_full_name|default:'' }}",
+            faculty_incharges: {{ faculty_names_json|default:'[]'|safe }},
+            volunteers: {{ volunteer_names_json|default:'[]'|safe }},
             academic_year: "{{ proposal.academic_year|default:'2024-2025' }}",
             num_activities: "{{ proposal_activities|length }}",
             event_start_date: "{% if proposal.event_start_date %}{{ proposal.event_start_date|date:'Y-m-d' }}{% elif proposal.event_datetime %}{{ proposal.event_datetime|date:'Y-m-d' }}{% endif %}",
@@ -341,7 +356,7 @@
             activities: {{ proposal_activities_json|default:'[]'|safe }},
             speakers: {{ speakers_json|default:'[]'|safe }},
             pos_pso: "{{ proposal.pos_pso|default:'' }}",
-            sdg_goals: "{{ proposal.sdg_goals|default:'' }}"
+            sdg_goals: "{{ proposal_sdg_goals|default:'' }}"
         };
     </script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
