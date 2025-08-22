@@ -105,35 +105,32 @@ document.addEventListener('DOMContentLoaded', function(){
   // Populate fields with proposal data
   populateProposalData();
 
+  // Helper to generate placeholder summary text
+  function generatePlaceholder(words = 500) {
+      const corpus = [
+          'lorem', 'ipsum', 'dolor', 'sit', 'amet', 'consectetur', 'adipiscing', 'elit',
+          'sed', 'do', 'eiusmod', 'tempor', 'incididunt', 'ut', 'labore', 'et', 'dolore',
+          'magna', 'aliqua', 'enim', 'ad', 'minim', 'veniam', 'quis', 'nostrud',
+          'exercitation', 'ullamco', 'laboris', 'nisi', 'ut', 'aliquip', 'ex', 'ea',
+          'commodo', 'consequat'
+      ];
+      const out = [];
+      while (out.length < words) out.push(corpus[Math.floor(Math.random() * corpus.length)]);
+      return out.join(' ');
+  }
+
   // AI enhance summary button
-  $(document).on('click', '#ai-enhance-summary', async function() {
+  $(document).on('click', '#ai-enhance-summary', function() {
       const btn = $(this);
       const original = btn.text();
       const textarea = $('#event-summary-modern');
-      const payload = new URLSearchParams({
-          text: textarea.val(),
-          title: $('#event-title-modern').val() || '',
-          department: $('#department-modern').val() || '',
-          start_date: $('#start-date-modern').val() || '',
-          end_date: $('#end-date-modern').val() || ''
-      });
       btn.prop('disabled', true).text('...');
       try {
-          const res = await fetch('/suite/ai/enhance-summary/', {
-              method: 'POST',
-              headers: {
-                  'Content-Type': 'application/x-www-form-urlencoded',
-                  'X-CSRFToken': getCookie('csrftoken')
-              },
-              body: payload
-          });
-          const data = await res.json();
-          if (!res.ok || !data.ok) throw new Error(data.error || 'Enhancement failed');
-          textarea.val(data.summary);
+          const summary = generatePlaceholder();
+          textarea.val(summary);
           textarea.trigger('input');
       } catch (err) {
           console.error(err);
-          alert(err.message || 'Enhancement failed');
       } finally {
           btn.prop('disabled', false).text(original);
       }
