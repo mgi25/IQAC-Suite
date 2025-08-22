@@ -59,3 +59,40 @@ class ActivityLogMiddlewareTests(TestCase):
         self.assertEqual(log.ip_address, '127.0.0.1')
         self.assertEqual(log.metadata, {'q': 'test'})
         self.assertEqual(log.description, 'alice viewed profile')
+
+
+class AdminActivityLogMiddlewareTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        post_save.disconnect(signals.create_or_update_user_profile, sender=User)
+        self.admin = User.objects.create_superuser('admin', 'admin@example.com', 'pass')
+        self.middleware = ActivityLogMiddleware(lambda request: HttpResponse("ok"))
+
+    def tearDown(self):
+        post_save.connect(signals.create_or_update_user_profile, sender=User)
+
+    def test_admin_get_request_has_friendly_description(self):
+        request = self.factory.get('/admin/sites/site/')
+        request.user = self.admin
+        request.resolver_match = SimpleNamespace(view_name='admin:sites_site_changelist')
+
+        self.middleware(request)
+        log = ActivityLog.objects.get()
+        self.assertEqual(log.description, 'admin viewed site list')
+
+    def test_admin_post_request_has_friendly_description(self):
+        request = self.factory.post('/admin/sites/site/add/', {})
+        request.user = self.admin
+        request.resolver_match = SimpleNamespace(view_name='admin:sites_site_add')
+
+        self.middleware(request)
+        log = ActivityLog.objects.get()
+        self.assertEqual(log.description, 'admin added site')
+
+    def test_noise_admin_endpoints_skipped(self):
+        request = self.factory.get('/admin/jsi18n/')
+        request.user = self.admin
+        request.resolver_match = SimpleNamespace(view_name='admin:jsi18n')
+
+        self.middleware(request)
+        self.assertFalse(ActivityLog.objects.exists())
