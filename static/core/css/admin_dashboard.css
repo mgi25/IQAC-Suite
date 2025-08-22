@@ -361,3 +361,8 @@
   .cal-grid .day { min-height:28px; font-size:12px }
   .cal-weekdays { font-size:11px }
 }
+
+.kpi-link {
+  text-decoration: none;
+  color: inherit;
+}

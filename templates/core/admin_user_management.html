@@ -2,282 +2,144 @@
 {% load static %}
 
 {% block head_extra %}
-<!-- jQuery -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-
-<!-- Bootstrap CSS -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-<!-- Select2 CSS -->
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
-
-<!-- DataTables CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css"
+    rel="stylesheet" />
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
 
-<!-- Custom CSS -->
 <link rel="stylesheet" href="{% static 'core/css/admin_user_management.css' %}">
 
 <style>
-.filters-section {
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-}
-
-.filters-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-}
-
-.filters-header h5 {
-    margin: 0;
-    color: #495057;
-    font-weight: 600;
-}
-
-.filter-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-    margin-bottom: 15px;
-}
-
-.filter-group {
-    display: flex;
-    flex-direction: column;
-}
-
-.filter-group label {
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: #6c757d;
-    margin-bottom: 5px;
-}
-
-.filter-actions {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-    margin-top: 15px;
-}
-
-.results-summary {
-    background: #e9ecef;
-    padding: 12px 16px;
-    border-radius: 6px;
-    margin-bottom: 15px;
-    font-size: 0.95rem;
-    color: #495057;
-}
-
-.active-filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 10px;
-}
-
-.filter-tag {
-    background: var(--christ-blue);
-    color: white;
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.filter-tag .remove-filter {
-    background: none;
-    border: none;
-    color: white;
-    cursor: pointer;
-    padding: 0;
-    font-size: 0.9rem;
-}
-
-.toggle-filters {
-    background: none;
-    border: none;
-    color: #007bff;
-    font-size: 0.9rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.filters-collapsed .filter-content {
-    display: none;
-}
-
-/* Select2 Bootstrap 5 theme customizations */
-.select2-container--bootstrap-5 .select2-selection {
-    min-height: 38px;
-}
-
-.select2-container--bootstrap-5 .select2-selection--multiple {
-    min-height: 38px;
-}
-
-.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice {
-    background-color: var(--christ-blue);
-    border-color: var(--christ-blue);
-    color: #fff;
-    padding: 2px 8px;
-    margin: 2px;
-    border-radius: 12px;
-}
-
-.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice__remove {
-    color: #fff;
-    margin-right: 5px;
-}
-
-.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice__remove:hover {
-    color: #fff;
-    background-color: rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
-}
-
-/* Loading spinner for Select2 */
-.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__rendered .select2-search--inline .select2-search__field:focus {
-    outline: none;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .filter-row {
-        grid-template-columns: 1fr;
-        gap: 10px;
+    .filters-section {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
     }
-    
-    .active-filters {
-        margin-top: 15px;
-    }
-    
+
     .filters-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
     }
-}
 
-/* Custom Select2 dropdown styling */
-.select2-container--bootstrap-5 .select2-dropdown {
-    border-color: #ced4da;
-}
+    .filters-header h5 {
+        margin: 0;
+        color: #495057;
+        font-weight: 600;
+    }
 
-.select2-container--bootstrap-5 .select2-search--dropdown .select2-search__field {
-    border-color: #ced4da;
-}
+    .filter-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 15px;
+    }
 
-.select2-container--bootstrap-5 .select2-results__option--highlighted[aria-selected] {
-    background-color: var(--christ-blue);
-    color: #fff;
-}
+    .filter-group label {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #6c757d;
+        margin-bottom: 5px;
+    }
 
-/* Use CHRIST blue for primary buttons on this page */
-.btn-primary,
-.dt-buttons .btn.btn-primary {
-    background-color: var(--christ-blue) !important;
-    border-color: var(--christ-blue) !important;
-}
-.btn-primary:hover,
-.dt-buttons .btn.btn-primary:hover {
-    background-color: var(--christ-blue-dark) !important;
-    border-color: var(--christ-blue-dark) !important;
-}
+    .toggle-filters {
+        background: none;
+        border: none;
+        color: #007bff;
+        font-size: 0.9rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
 
-/* DataTables header styling */
-.admin-users-table thead th {
-    background: var(--christ-blue);
-    color: var(--white);
-}
+    .filters-collapsed .filter-content {
+        display: none;
+    }
+
+    .btn-primary,
+    .dt-buttons .btn.btn-primary {
+        background-color: var(--christ-blue) !important;
+        border-color: var(--christ-blue) !important;
+    }
+
+    .btn-primary:hover,
+    .dt-buttons .btn.btn-primary:hover {
+        background-color: var(--christ-blue-dark) !important;
+        border-color: var(--christ-blue-dark) !important;
+    }
+
+    .admin-users-table thead th {
+        background: var(--christ-blue);
+        color: var(--white);
+    }
+
+    .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice {
+        background-color: var(--christ-blue);
+        border-color: var(--christ-blue);
+        color: #fff;
+    }
+
+    .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice__remove {
+        color: #fff;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="user-mgmt-container">
     <h1 class="mgmt-title">User Management</h1>
-    
-    <!-- Enhanced Filters Section -->
+
     <div class="filters-section" id="filtersSection">
         <div class="filters-header">
             <h5><i class="fas fa-filter"></i> Advanced Filters</h5>
-            <button type="button" class="toggle-filters" onclick="toggleFilters()">
+            <button type="button" class="toggle-filters" id="toggleFiltersBtn">
                 <span id="filterToggleText">Collapse</span>
                 <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
             </button>
         </div>
-        
+
         <div class="filter-content">
             <div class="filter-row">
                 <div class="filter-group">
                     <label for="q">Search Users</label>
-                    <input type="text" class="form-control" id="q" name="q" value="{{ current_filters.q }}" 
-                           placeholder="Name, email, username...">
+                    <input type="text" class="form-control" id="q" placeholder="Name, email, username...">
                 </div>
-                
                 <div class="filter-group">
                     <label for="status">Account Status</label>
-                    <select class="form-select" id="status" name="status">
-                        <option value="">All Status</option>
-                        <option value="active" {% if current_filters.status == 'active' %}selected{% endif %}>Active</option>
-                        <option value="inactive" {% if current_filters.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                    <select class="form-select" id="status">
+                        <option value="" selected>All Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
                     </select>
                 </div>
-                
                 <div class="filter-group">
                     <label for="org_type">Organization Type</label>
-                    <select class="form-select" id="org_type" name="org_type[]" multiple>
-                        {% for org_type in all_org_types %}
-                            <option value="{{ org_type.id }}" 
-                                {% if org_type.id|stringformat:"s" in current_filters.org_type %}selected{% endif %}>
-                                {{ org_type.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
+                    <select class="form-select" id="org_type" name="org_type[]" multiple></select>
                 </div>
-                
                 <div class="filter-group">
                     <label for="organization">Organization</label>
-                    <select class="form-select" id="organization" name="organization[]" multiple>
-                        {% for org in all_organizations %}
-                            <option value="{{ org.id }}" 
-                                {% if org.id|stringformat:"s" in current_filters.organization %}selected{% endif %}>
-                                {{ org.name }} ({{ org.org_type.name }})
-                            </option>
-                        {% endfor %}
-                    </select>
+                    <select class="form-select" id="organization" name="organization[]" multiple></select>
                 </div>
             </div>
-            
+
             <div class="filter-row">
                 <div class="filter-group">
                     <label for="role">Organization Role</label>
-                    <select class="form-select" id="role" name="role[]" multiple>
-                        {% for role in all_roles %}
-                            <option value="{{ role.id }}" 
-                                {% if role.id|stringformat:"s" in current_filters.role %}selected{% endif %}>
-                                {{ role.name }} ({{ role.organization.name }})
-                            </option>
-                        {% endfor %}
-                    </select>
+                    <select class="form-select" id="role" name="role[]" multiple
+                        data-initial-roles='{{ initial_roles_json|safe }}'></select>
                 </div>
-                
                 <div class="filter-group">
                     <div class="d-flex gap-2" style="margin-top: 32px;">
                         <button type="button" class="btn btn-primary w-100" id="applyFiltersBtn">
-                            <i class="fas fa-search"></i> Search / Apply Filters
+                            <i class="fas fa-search"></i> Apply Filters
                         </button>
                         <button type="button" class="btn btn-outline-secondary w-100" id="clearFiltersBtn">
                             <i class="fas fa-times"></i> Clear All
@@ -286,76 +148,11 @@
                 </div>
             </div>
         </div>
-        
-        <!-- Active Filters Display -->
-        {% if current_filters.q or current_filters.role or current_filters.organization or current_filters.org_type or current_filters.status %}
-        <div class="active-filters">
-            <strong>Active Filters:</strong>
-            {% if current_filters.q %}
-                <span class="filter-tag">
-                    Search: "{{ current_filters.q }}"
-                    <button type="button" class="remove-filter" onclick="removeFilter('q')">&times;</button>
-                </span>
-            {% endif %}
-            {% if current_filters.status %}
-                <span class="filter-tag">
-                    Status: {{ current_filters.status|title }}
-                    <button type="button" class="remove-filter" onclick="removeFilter('status')">&times;</button>
-                </span>
-            {% endif %}
-            {% if current_filters.org_type %}
-                {% for ot_id in current_filters.org_type %}
-                    {% for ot in all_org_types %}
-                        {% if ot.id|stringformat:"s" == ot_id %}
-                            <span class="filter-tag">
-                                Org Type: {{ ot.name }}
-                                <button type="button" class="remove-filter" onclick="removeFilterValue('org_type', '{{ ot.id }}')">&times;</button>
-                            </span>
-                        {% endif %}
-                    {% endfor %}
-                {% endfor %}
-            {% endif %}
-            {% if current_filters.organization %}
-                {% for org_id in current_filters.organization %}
-                    {% for org in all_organizations %}
-                        {% if org.id|stringformat:"s" == org_id %}
-                            <span class="filter-tag">
-                                Organization: {{ org.name }}
-                                <button type="button" class="remove-filter" onclick="removeFilterValue('organization', '{{ org.id }}')">&times;</button>
-                            </span>
-                        {% endif %}
-                    {% endfor %}
-                {% endfor %}
-            {% endif %}
-            {% if current_filters.role %}
-                {% for role_id in current_filters.role %}
-                    {% for role in all_roles %}
-                        {% if role.id|stringformat:"s" == role_id %}
-                            <span class="filter-tag">
-                                Role: {{ role.name }}
-                                <button type="button" class="remove-filter" onclick="removeFilterValue('role', '{{ role.id }}')">&times;</button>
-                            </span>
-                        {% endif %}
-                    {% endfor %}
-                {% endfor %}
-            {% endif %}
-        </div>
-        {% endif %}
     </div>
-    
-    <!-- Results Summary -->
-    {% if total_users is not None %}
-    <div class="results-summary">
-        <i class="fas fa-info-circle"></i>
-        Showing {{ users|length }} of {{ total_users }} users
-        {% if total_users != users|length %}
-            (filtered from {{ total_users }} total)
-        {% endif %}
-    </div>
-    {% endif %}
 
     <div class="table-responsive">
-        <table id="myTable" class="admin-users-table table table-striped table-hover align-middle display nowrap" style="width:100%">
+        <table id="usersTable" class="admin-users-table table table-striped table-hover align-middle display nowrap"
+            style="width:100%" data-api-url="{% url 'api_admin_search_users' %}">
             <thead>
                 <tr>
                     <th>S.NO</th>
@@ -369,515 +166,270 @@
                 </tr>
             </thead>
             <tbody>
-                {% for user in users %}
-                <tr>
-                    <td>{{ forloop.counter }}</td>
-                    <td>
-                        <div class="user-info">
-                            <strong>{{ user.get_full_name|default:user.username }}</strong>
-                            <small class="text-muted d-block">@{{ user.username }}</small>
-                        </div>
-                    </td>
-                    <td>
-                        {% if user.email %}
-                            <a href="mailto:{{ user.email }}">{{ user.email }}</a>
-                        {% else %}
-                            <span class="text-muted">No email</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if user.role_assignments.all %}
-                            {% for ra in user.role_assignments.all %}
-                                <div class="{% if not forloop.first %}mt-1{% endif %}">
-                                    <span class="badge {% if forloop.first %}bg-primary{% else %}bg-secondary{% endif %}">{{ ra.role.name }}</span>
-                                </div>
-                            {% endfor %}
-                        {% elif user.profile %}
-                            <span class="badge bg-primary">{{ user.profile.get_role_display }}</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% for ra in user.role_assignments.all %}
-                            <div>
-                                {% if ra.organization %}
-                                    {{ ra.organization.name }}
-                                    <small class="text-muted">({{ ra.organization.org_type.name }})</small>
-                                {% else %}
-                                    <span class="text-muted">No organization</span>
-                                {% endif %}
-                            </div>
-                        {% empty %}
-                            <span class="text-muted">No assignments</span>
-                        {% endfor %}
-                    </td>
-                    <td>{{ user.date_joined|date:"M d, Y H:i" }}</td>
-                    <td>
-                        {% if user.is_active and user.last_login %}
-                            <span class="badge bg-success">Active</span>
-                        {% else %}
-                            <span class="badge bg-danger">Inactive</span>
-                        {% endif %}
-                        {% if user.is_superuser %}
-                            <span class="badge bg-warning">Admin</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <a href="{% url 'admin_user_edit' user.id %}" class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-edit"></i> Edit
-                        </a>
-                        {% if user != request.user %}
-                        <a href="{% url 'admin_impersonate_user' user.id %}?next={% url 'dashboard' %}" class="btn btn-sm btn-outline-secondary ms-1">
-                            <i class="fas fa-user-secret"></i> Login as
-                        </a>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% empty %}{% endfor %}
             </tbody>
         </table>
     </div>
 </div>
 {% endblock %}
 
-{% block scripts %}
-<!-- Bootstrap JS -->
+{% block scripts_extra %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-<!-- Select2 JS -->
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
-<!-- DataTables JS -->
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
-
-<!-- DataTables Buttons -->
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.colVis.min.js"></script>
 
-<!-- JSZip for Excel export -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-
-<!-- pdfmake for PDF export -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
-
 <script>
-$(document).ready(function () {
-    // Suppress DataTables alert popups
-    if ($.fn.dataTable && $.fn.dataTable.ext) {
-        $.fn.dataTable.ext.errMode = 'none';
-    }
-    // Global variables for debouncing
-    let filterTimeout;
-    
-    // Initialize DataTable
-    const table = $('#myTable').DataTable({
-        dom: '<"dt-toolbar d-flex justify-content-between align-items-center flex-wrap mb-3"lBf>rtip',
-        responsive: true,
-        pagingType: 'simple_numbers',
-        lengthMenu: [
-            [10, 25, 50, 100, -1],
-            [10, 25, 50, 100, "All"]
-        ],
-        pageLength: 25,
-        columnDefs: [
-            { targets: [3, 4, 7], orderable: false }, // Roles, Organization, Action columns
-        ],
-        buttons: [
-            {
-                extend: 'colvis',
-                text: '<i class="fa fa-eye"></i> Columns',
-                className: 'btn btn-secondary btn-sm'
-            },
-            {
-                extend: 'copyHtml5',
-                text: '<i class="fa fa-copy"></i> Copy',
-                className: 'btn btn-info btn-sm',
-                exportOptions: { 
-                    columns: ':visible:not(:last-child)' // Exclude action column
-                }
-            },
-            {
-                extend: 'excelHtml5',
-                text: '<i class="fa fa-file-excel"></i> Excel',
-                className: 'btn btn-success btn-sm',
-                exportOptions: { 
-                    columns: ':visible:not(:last-child)' // Exclude action column
-                },
-                title: 'User Management Report'
-            },
-            {
-                extend: 'pdfHtml5',
-                text: '<i class="fa fa-file-pdf"></i> PDF',
-                className: 'btn btn-danger btn-sm',
-                exportOptions: { 
-                    columns: ':visible:not(:last-child)' // Exclude action column
-                },
-                title: 'User Management Report',
-                orientation: 'landscape',
-                pageSize: 'A4'
-            },
-            {
-                extend: 'print',
-                text: '<i class="fa fa-print"></i> Print',
-                className: 'btn btn-primary btn-sm',
-                exportOptions: { 
-                    columns: ':visible:not(:last-child)' // Exclude action column
-                },
-                title: 'User Management Report'
+    $(document).ready(function () {
+        class UserFilterManager {
+            constructor() {
+                this.table = null;
+                this.apiUrl = $('#usersTable').data('api-url');
             }
-        ],
-        order: [[5, 'desc']], // Order by Date Joined descending
-        language: {
-            search: "Search in table:",
-            lengthMenu: "Show _MENU_ entries",
-            info: "Showing _START_ to _END_ of _TOTAL_ users",
-            emptyTable: "No users found matching the current filters.",
-            paginate: {
-                first: "First",
-                last: "Last",
-                next: "Next",
-                previous: "Previous"
+
+            init() {
+                this.initSelect2();
+                this.initDataTable();
+                this.initEventListeners();
+            }
+
+            initSelect2() {
+                const commonOptions = {
+                    theme: 'bootstrap-5',
+                    allowClear: true,
+                    width: '100%',
+                };
+
+                $('#org_type').select2({
+                    ...commonOptions,
+                    placeholder: 'All Types',
+                    ajax: {
+                        url: '/core-admin/api/search/org-types/',
+                        dataType: 'json',
+                        delay: 250,
+                        data: params => ({ search: params.term }),
+                        processResults: data => ({
+                            results: data.org_types.map(item => ({ id: item.id, text: item.name }))
+                        }),
+                        cache: true
+                    }
+                });
+
+                $('#organization').select2({
+                    ...commonOptions,
+                    placeholder: 'All Organizations',
+                    ajax: {
+                        url: '/core-admin/api/filter/organizations/',
+                        dataType: 'json',
+                        delay: 250,
+                        data: params => ({
+                            'org_type_ids[]': $('#org_type').val(),
+                            search: params.term
+                        }),
+                        processResults: data => ({
+                            results: data.organizations.map(item => ({ id: item.id, text: `${item.name} (${item.org_type})` }))
+                        }),
+                    }
+                });
+
+                $('#role').select2({
+                    ...commonOptions,
+                    placeholder: 'All Roles',
+                    ajax: {
+                        url: '/core-admin/api/filter/roles/',
+                        dataType: 'json',
+                        delay: 250,
+                        data: params => ({
+                            'organization_ids[]': $('#organization').val(),
+                            search: params.term
+                        }),
+                        processResults: data => ({
+                            results: data.roles.map(item => ({ id: item.id, text: `${item.name} (${item.organization})` }))
+                        }),
+                    }
+                });
+            }
+
+            initDataTable() {
+                this.table = $('#usersTable').DataTable({
+                    processing: true,
+                    serverSide: true,
+                    ajax: {
+                        url: this.apiUrl,
+                        data: (d) => {
+                            const filters = this.collectFilters();
+                            d.q = filters.q;
+                            d.status = filters.status;
+                            d['org_type[]'] = filters.orgTypes;
+                            d['organization[]'] = filters.organizations;
+                            d['role[]'] = filters.roles;
+                            d['role_name'] = filters.roleName; // For dashboard links
+                        }
+                    },
+                    columns: [
+                        { data: 's_no', name: 's_no', orderable: false, searchable: false },
+                        { data: 'name', name: 'name' },
+                        { data: 'email', name: 'email' },
+                        { data: 'roles', name: 'roles', orderable: false, searchable: false },
+                        { data: 'organization', name: 'organization', orderable: false, searchable: false },
+                        { data: 'date_joined', name: 'date_joined' },
+                        { data: 'status', name: 'status', orderable: false, searchable: false },
+                        { data: 'action', name: 'action', orderable: false, searchable: false }
+                    ],
+                    dom: '<"dt-toolbar d-flex justify-content-between align-items-center flex-wrap mb-3"lBf>rtip',
+                    responsive: true,
+                    pagingType: 'simple_numbers',
+                    lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                    pageLength: 25,
+                    order: [[5, 'desc']],
+                    buttons: ['copy', 'excel', 'pdf', 'print', 'colvis'],
+                    language: { search: "_INPUT_", searchPlaceholder: "Search table..." },
+                    initComplete: () => {
+                        // Apply filters from URL after the table is fully initialized
+                        this.applyFiltersFromURL();
+                    }
+                });
+
+                $.fn.dataTable.ext.errMode = 'none';
+                $('#usersTable').on('error.dt', (e, settings, techNote, message) => {
+                    console.error('DataTables error:', message);
+                });
+            }
+
+            initEventListeners() {
+                $('#applyFiltersBtn').on('click', () => this.applyFilters(true));
+                $('#clearFiltersBtn').on('click', () => this.clearFilters());
+                $('#toggleFiltersBtn').on('click', () => this.toggleFilterVisibility());
+
+                $('#org_type').on('change', () => {
+                    $('#organization').val(null).trigger('change');
+                });
+                $('#organization').on('change', () => {
+                    $('#role').val(null).trigger('change');
+                });
+            }
+
+            collectFilters() {
+                const params = new URLSearchParams(window.location.search);
+                return {
+                    q: $('#q').val(),
+                    status: $('#status').val(),
+                    orgTypes: $('#org_type').val() || [],
+                    organizations: $('#organization').val() || [],
+                    roles: $('#role').val() || [],
+                    roleName: params.get('role')
+                };
+            }
+
+            applyFilters(updateUrl = false) {
+                this.table.ajax.reload();
+                if (updateUrl) {
+                    this.updateURL();
+                }
+            }
+
+            clearFilters() {
+                const currentUrl = new URL(window.location);
+                currentUrl.search = ''; // Clear all query parameters
+                history.pushState(null, '', currentUrl.toString());
+
+                $('#q, #status').val('');
+                $('#org_type, #organization, #role').val(null).trigger('change');
+                this.table.ajax.reload();
+            }
+
+            updateURL() {
+                const filters = this.collectFilters();
+                const params = new URLSearchParams();
+
+                if (filters.q) params.set('q', filters.q);
+                if (filters.status) params.set('status', filters.status);
+
+                // Do not persist the 'role' name param once a specific ID is chosen
+                if (filters.roleName && (!filters.roles || filters.roles.length === 0)) {
+                    params.set('role', filters.roleName);
+                }
+
+                filters.orgTypes.forEach(id => params.append('org_type[]', id));
+                filters.organizations.forEach(id => params.append('organization[]', id));
+                filters.roles.forEach(id => params.append('role[]', id));
+
+                const newUrl = `${window.location.pathname}?${params.toString()}`;
+                history.pushState(null, '', newUrl);
+            }
+
+            applyFiltersFromURL() {
+                const params = new URLSearchParams(window.location.search);
+                $('#q').val(params.get('q') || '');
+                $('#status').val(params.get('status') || '');
+
+                // Handle initial role from dashboard redirect
+                const initialRolesData = $('#role').data('initial-roles');
+                if (initialRolesData && initialRolesData.length > 0) {
+                    const selectRole = $('#role');
+                    selectRole.empty(); // Clear existing options
+                    initialRolesData.forEach(role => {
+                        // Create a new option and select it
+                        const option = new Option(role.text, role.id, true, true);
+                        selectRole.append(option);
+                    });
+                    selectRole.trigger('change'); // Notify Select2
+                } else {
+                    // Handle manual filters if no initial role
+                    this.prepopulateSelect2FromURL('role', params.getAll('role[]'), '/core-admin/api/filter/roles/', 'roles');
+                }
+
+                // Pre-populate other filters
+                this.prepopulateSelect2FromURL('org_type', params.getAll('org_type[]'), '/core-admin/api/search/org-types/', 'org_types');
+                this.prepopulateSelect2FromURL('organization', params.getAll('organization[]'), '/core-admin/api/filter/organizations/', 'organizations');
+            }
+
+            prepopulateSelect2FromURL(elementId, values, ajaxUrl, dataKey) {
+                if (!values || values.length === 0) return;
+
+                const select = $(`#${elementId}`);
+                if (select.val() && select.val().length > 0) return;
+
+                const fetchPromises = values.map(id => $.ajax({
+                    url: ajaxUrl,
+                    data: { 'id': id } // Assuming API can fetch by a single ID
+                }));
+
+                Promise.all(fetchPromises).then(responses => {
+                    responses.forEach((response, index) => {
+                        const items = response[dataKey] || [];
+                        const item = items.find(d => d.id == values[index]);
+                        if (item) {
+                            const text = item.org_type ? `${item.name} (${item.org_type})` :
+                                item.organization ? `${item.name} (${item.organization})` :
+                                    item.name;
+                            const option = new Option(text, item.id, true, true);
+                            select.append(option);
+                        }
+                    });
+                    select.trigger('change');
+                });
+            }
+
+            toggleFilterVisibility() {
+                $('#filtersSection').toggleClass('filters-collapsed');
+                const isCollapsed = $('#filtersSection').hasClass('filters-collapsed');
+                $('#filterToggleIcon').toggleClass('fa-chevron-up fa-chevron-down');
+                $('#filterToggleText').text(isCollapsed ? 'Expand' : 'Collapse');
             }
         }
+
+        const manager = new UserFilterManager();
+        manager.init();
     });
-
-    // Add some custom styling for buttons
-    $('.dt-buttons .btn').css({
-        'margin-right': '5px',
-        'margin-bottom': '5px'
-    });
-
-    // Initialize filter persistence and UI
-    window.filterManager = new FilterManager();
-    window.filterManager.initializeFilters();
-    window.filterManager.setupEventListeners();
-    
-    // Manual Apply / Clear
-    $('#applyFiltersBtn').on('click', () => window.filterManager.applyFilters());
-    $('#clearFiltersBtn').on('click', () => window.filterManager.clearAllFilters());
-    
-    // Load saved filters on page load
-    window.filterManager.loadSavedFilters();
-});
-
-/**
- * FilterManager class to handle all filter-related functionality
- */
-class FilterManager {
-    constructor() {
-        this.filterTimeouts = {};
-        this.filterCache = new Map();
-        this.STORAGE_KEY = 'userMgmt_filters';
-    }
-
-    /**
-     * Initialize all filter dropdowns with Select2
-     */
-    initializeFilters() {
-        // Initialize multi-select dropdowns with Select2
-        $('#org_type').select2({
-            theme: 'bootstrap-5',
-            placeholder: 'All Organization Types',
-            allowClear: true,
-            ajax: {
-                url: '/core-admin/api/search/org-types/',
-                dataType: 'json',
-                delay: 300,
-                data: function (params) {
-                    return {
-                        search: params.term || ''
-                    };
-                },
-                processResults: function (data) {
-                    return {
-                        results: data.org_types.map(item => ({
-                            id: item.id,
-                            text: item.name
-                        }))
-                    };
-                },
-                cache: true
-            }
-        });
-
-        $('#organization').select2({
-            theme: 'bootstrap-5',
-            placeholder: 'All Organizations',
-            allowClear: true,
-            ajax: {
-                url: '/core-admin/api/filter/organizations/',
-                dataType: 'json',
-                delay: 300,
-                data: function (params) {
-                    const orgTypeIds = $('#org_type').val() || [];
-                    return {
-                        'org_type_ids[]': orgTypeIds,
-                        search: params.term || ''
-                    };
-                },
-                processResults: function (data) {
-                    return {
-                        results: data.organizations.map(item => ({
-                            id: item.id,
-                            text: `${item.name} (${item.org_type})`
-                        }))
-                    };
-                },
-                cache: false // Don't cache as it depends on org_type selection
-            }
-        });
-
-        $('#role').select2({
-            theme: 'bootstrap-5',
-            placeholder: 'All Organization Roles',
-            allowClear: true,
-            ajax: {
-                url: '/core-admin/api/filter/roles/',
-                dataType: 'json',
-                delay: 300,
-                data: function (params) {
-                    const organizationIds = $('#organization').val() || [];
-                    return {
-                        'organization_ids[]': organizationIds,
-                        search: params.term || ''
-                    };
-                },
-                processResults: function (data) {
-                    return {
-                        results: data.roles.map(item => ({
-                            id: item.id,
-                            text: `${item.name} (${item.organization})`
-                        }))
-                    };
-                },
-                cache: false // Don't cache as it depends on organization selection
-            }
-        });
-    }
-
-    /**
-     * Setup event listeners for filter changes
-     */
-    setupEventListeners() {
-    // Manual apply mode: no auto-fetch; only manage dependent dropdowns and persist local state
-    $('#status').on('change', () => { this.saveFiltersPartial(); });
-    $('#org_type').on('change', () => { this.refreshDependentDropdowns(); this.saveFiltersPartial(); });
-    $('#organization').on('change', () => { this.refreshRolesDropdown(); this.saveFiltersPartial(); });
-    $('#role').on('change', () => { this.saveFiltersPartial(); });
-    $('#q').on('input keyup', () => { this.saveFiltersPartialDebounced(); });
-    }
-
-    /**
-     * Refresh dependent dropdowns when parent filters change
-     */
-    refreshDependentDropdowns() {
-        // Clear and refresh organization dropdown when org_type changes
-        $('#organization').val(null).trigger('change');
-        $('#role').val(null).trigger('change');
-    }
-
-    /**
-     * Refresh roles dropdown when organization changes
-     */
-    refreshRolesDropdown() {
-        // Clear and refresh role dropdown when organization changes
-        $('#role').val(null).trigger('change');
-    }
-
-    /**
-     * Debounce filter application to avoid too many requests
-     */
-    debounceFilter() {}
-
-    saveFiltersPartial() {
-        const filters = this.collectFilters();
-        this.saveFilters(filters, {partial: true});
-    }
-    saveFiltersPartialDebounced() {
-        clearTimeout(this.filterTimeouts['partial']);
-        this.filterTimeouts['partial'] = setTimeout(() => this.saveFiltersPartial(), 400);
-    }
-
-    /**
-     * Apply all current filters
-     */
-    collectFilters() {
-        const q = $('#q').val().trim();
-        const status = $('#status').val();
-        const orgTypes = $('#org_type').val() || [];
-        const organizations = $('#organization').val() || [];
-        const roles = $('#role').val() || [];
-        return { q, status, orgTypes, organizations, roles };
-    }
-
-    applyFilters() {
-        const params = new URLSearchParams();
-        const { q, status, orgTypes, organizations, roles } = this.collectFilters();
-        if (q) params.append('q', q);
-        if (status) params.append('status', status);
-        orgTypes.forEach(id => params.append('org_type[]', id));
-        organizations.forEach(id => params.append('organization[]', id));
-        roles.forEach(id => params.append('role[]', id));
-        this.saveFilters({ q, status, orgTypes, organizations, roles });
-        const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
-        window.location.href = newUrl;
-    }
-
-    /**
-     * Save current filter state to localStorage
-     */
-    saveFilters(filters) {
-        try {
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(filters));
-        } catch (e) {
-            console.warn('Failed to save filters to localStorage:', e);
-        }
-    }
-
-    /**
-     * Load saved filters from localStorage
-     */
-    loadSavedFilters() {
-        // Only load saved filters if there are no URL parameters
-        if (window.location.search) {
-            return; // URL parameters take precedence
-        }
-
-        try {
-            const saved = localStorage.getItem(this.STORAGE_KEY);
-            if (saved) {
-                const filters = JSON.parse(saved);
-                
-                // Apply saved filters to form elements
-                if (filters.q) $('#q').val(filters.q);
-                if (filters.status) $('#status').val(filters.status);
-                
-                // For Select2 dropdowns, we need to create options and trigger change
-                if (filters.orgTypes && filters.orgTypes.length) {
-                    // Add options for org types and set values
-                    // Note: This assumes the options are already in the DOM or will be loaded by Select2
-                    $('#org_type').val(filters.orgTypes).trigger('change');
-                }
-                
-                if (filters.organizations && filters.organizations.length) {
-                    $('#organization').val(filters.organizations).trigger('change');
-                }
-                
-                if (filters.roles && filters.roles.length) {
-                    $('#role').val(filters.roles).trigger('change');
-                }
-            }
-        } catch (e) {
-            console.warn('Failed to load saved filters:', e);
-        }
-    }
-
-    /**
-     * Clear all filters
-     */
-    clearAllFilters() {
-        // Clear all filter inputs
-        $('#q').val('');
-        $('#status').val('');
-        $('#org_type').val(null).trigger('change');
-        $('#organization').val(null).trigger('change');
-        $('#role').val(null).trigger('change');
-
-        // Clear saved filters completely and prevent re-apply
-        try {
-            localStorage.removeItem(this.STORAGE_KEY);
-        } catch (e) {
-            console.warn('Failed to clear saved filters:', e);
-        }
-
-        // Replace URL with no params without reloading via cached state
-        const cleanUrl = window.location.pathname;
-        window.location.replace(cleanUrl);
-    }
-}
-
-// Filter management functions (global for onclick handlers)
-function toggleFilters() {
-    const section = document.getElementById('filtersSection');
-    const icon = document.getElementById('filterToggleIcon');
-    const text = document.getElementById('filterToggleText');
-    
-    section.classList.toggle('filters-collapsed');
-    
-    if (section.classList.contains('filters-collapsed')) {
-        icon.className = 'fas fa-chevron-down';
-        text.textContent = 'Expand';
-    } else {
-        icon.className = 'fas fa-chevron-up';
-        text.textContent = 'Collapse';
-    }
-}
-
-function clearFilters() {
-    if (window.filterManager) {
-        window.filterManager.clearAllFilters();
-    } else {
-        // Fallback if filterManager is not available
-        window.location.href = window.location.pathname;
-    }
-}
-
-function removeFilter(filterName) {
-    const url = new URL(window.location);
-    url.searchParams.delete(filterName);
-    
-    // Also clear from localStorage
-    try {
-        const saved = localStorage.getItem('userMgmt_filters');
-        if (saved) {
-            const filters = JSON.parse(saved);
-            delete filters[filterName];
-            localStorage.setItem('userMgmt_filters', JSON.stringify(filters));
-        }
-    } catch (e) {
-        console.warn('Failed to update saved filters:', e);
-    }
-    
-    window.location.href = url.toString();
-}
-
-function removeFilterValue(filterName, value) {
-    const url = new URL(window.location);
-    const params = url.searchParams;
-    
-    // Get all values for this filter
-    const currentValues = params.getAll(filterName + '[]');
-    
-    // Remove the specific value
-    params.delete(filterName + '[]');
-    currentValues.forEach(val => {
-        if (val !== value) {
-            params.append(filterName + '[]', val);
-        }
-    });
-    
-    // Also update localStorage
-    try {
-        const saved = localStorage.getItem('userMgmt_filters');
-        if (saved) {
-            const filters = JSON.parse(saved);
-            const filterKey = filterName + 's'; // Convert to plural for consistency
-            if (filters[filterKey] && Array.isArray(filters[filterKey])) {
-                filters[filterKey] = filters[filterKey].filter(v => v !== value);
-                localStorage.setItem('userMgmt_filters', JSON.stringify(filters));
-            }
-        }
-    } catch (e) {
-        console.warn('Failed to update saved filters:', e);
-    }
-    
-    window.location.href = url.toString();
-}
 </script>
 {% endblock %}
