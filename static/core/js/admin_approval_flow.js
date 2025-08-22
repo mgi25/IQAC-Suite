@@ -1,404 +1,190 @@
-// core/static/core/js/admin_approval_flow.js
-(function() {
-  // ———————————————————————————————————————————————
-  // Configuration
-  // ———————————————————————————————————————————————
-  const CSRF_TOKEN = window.CSRF_TOKEN || '';
-  let REQUIRE_FACULTY_FIRST = window.REQUIRE_FACULTY_FIRST || false;
+// ======= Globals =======
+let approvalSteps = [];
+let draggedUser = null;
+let draggedIdx = null;
+let roleSuggestions = [];
+let searchDebounceTimer = null;
 
-  // ———————————————————————————————————————————————
-  // Utility: fetch wrapper with CSRF
-  // ———————————————————————————————————————————————
-  async function fetchJson(url, opts = {}) {
-    const headers = {
-      'X-CSRFToken': CSRF_TOKEN,
-      'Content-Type': 'application/json',
-      ...(opts.headers || {})
-    };
-    const res = await fetch(url, {
-      credentials: 'same-origin',
-      ...opts,
-      headers
+// ======= Boot =======
+document.addEventListener('DOMContentLoaded', () => {
+  initializeApprovalFlow();
+  wireShortcuts();
+  showSuccessToastIfNeeded();
+});
+
+// ======= Initialization =======
+function initializeApprovalFlow() {
+  if (window.SELECTED_ORG_ID) {
+    loadCurrentFlow();
+    loadRoles();
+    
+    const facultyToggle = document.getElementById('facultyFirstToggle');
+    if (facultyToggle) facultyToggle.checked = window.REQUIRE_FACULTY_FIRST;
+  }
+  initModalHandlers();
+}
+
+function initModalHandlers() {
+  // Close when clicking overlay
+  document.querySelectorAll('.modal-overlay').forEach(el => {
+    el.addEventListener('click', e => {
+      if (e.target === el) closeModal(el.id);
     });
-    return res.json();
-  }
+  });
+  
+  // ESC to close
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeAllModals();
+  });
+}
 
-  // ———————————————————————————————————————————————
-  // Debounce helper
-  // ———————————————————————————————————————————————
-  function debounce(fn, delay) {
-    let timeout;
-    return function(...args) {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => fn.apply(this, args), delay);
-    };
-  }
-
-  // ———————————————————————————————————————————————
-  // Modal controls
-  // ———————————————————————————————————————————————
-  function openModal(id) {
-    document.getElementById(id).classList.add('show');
+// ======= Modal controls =======
+function openModal(id) {
+  const modal = document.getElementById(id);
+  if (modal) {
+    modal.classList.add('show');
     document.body.style.overflow = 'hidden';
   }
-  function closeModal(id) {
-    document.getElementById(id).classList.remove('show');
-    document.body.style.overflow = '';
-  }
-  function closeAllModals() {
-    document.querySelectorAll('.modal-overlay.show')
-      .forEach(el => el.classList.remove('show'));
-    document.body.style.overflow = '';
-  }
+}
 
-  // ———————————————————————————————————————————————
-  // Toast notification
-  // ———————————————————————————————————————————————
-  let toastTimeout;
-  function showToast(message, type = 'success') {
-    const toast = document.getElementById('toast');
-    const msgEl = toast.querySelector('#toastMessage');
-    toast.className = `toast show ${type}`;
+function closeModal(id) {
+  const modal = document.getElementById(id);
+  if (modal) {
+    modal.classList.remove('show');
+    document.body.style.overflow = '';
+  }
+}
+
+function closeAllModals() {
+  document.querySelectorAll('.modal-overlay.show')
+    .forEach(el => el.classList.remove('show'));
+  document.body.style.overflow = '';
+}
+
+// ======= Toast notifications =======
+let toastTimeout;
+function showToast(message, type = 'success') {
+  // Try both toast IDs for compatibility
+  const toast = document.getElementById('toast') || document.getElementById('toast-notification');
+  if (!toast) {
+    console.log('Toast:', message); // Fallback to console
+    return;
+  }
+  
+  const msgEl = toast.querySelector('#toastMessage') || toast.querySelector('span');
+  if (msgEl) {
     msgEl.textContent = message;
-    clearTimeout(toastTimeout);
-    toastTimeout = setTimeout(() => toast.classList.remove('show'), 3000);
-    }
-
-// ADD THIS:
-window.showToast = showToast;
-
-
-  // ———————————————————————————————————————————————
-  // Loading placeholder
-  // ———————————————————————————————————————————————
-  function showLoading() {
-    const list = document.getElementById('eventList');
-    list.innerHTML = `<div class="loading">
-      <div class="spinner"></div>Loading events...
-    </div>`;
   }
-  function hideLoading() {
-    // New content will replace
-  }
+  
+  toast.className = `toast show toast-${type}`;
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => toast.classList.remove('show'), 3000);
+}
 
-  // ———————————————————————————————————————————————
-  // Filters
-  // ———————————————————————————————————————————————
-  function applyFilters() {
-    const term = document.getElementById('searchInput').value.toLowerCase();
-    const orgType = document.getElementById('orgTypeFilter').value;
-    const status = document.getElementById('statusFilter').value;
+// ======= Utility functions =======
+function getCsrfToken() {
+  return window.CSRF_TOKEN || '';
+}
 
-    document.querySelectorAll('.event-card').forEach(card => {
-      const title = card.querySelector('.event-title').textContent.toLowerCase();
-      const meta = card.querySelector('.event-meta').textContent.toLowerCase();
-      const cardStatus = card.querySelector('.event-status').className;
-      const cardType = card.dataset.orgType || '';
+function debounce(fn, delay) {
+  let timeout;
+  return function(...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
 
-      let visible = true;
-      if (term && !title.includes(term) && !meta.includes(term)) visible = false;
-      if (status && !cardStatus.includes(`status-${status}`)) visible = false;
-      if (orgType && cardType !== orgType) visible = false;
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, m => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  }[m]));
+}
 
-      card.style.display = visible ? '' : 'none';
-    });
-  }
-
-  // ———————————————————————————————————————————————
-  // Fetch & display events, details & actions
-  // ———————————————————————————————————————————————
-  async function refreshEvents() {
-    showLoading();
-    try {
-      const data = await fetchJson('/api/events/refresh/', { method: 'GET' });
-      if (data.success) window.location.reload();
-      else showToast('Failed to refresh events', 'error');
-    } catch {
-      showToast('Error refreshing events', 'error');
-    }
-  }
-
-  async function openEventDetails(id) {
-    try {
-      const data = await fetchJson(`/api/events/${id}/details/`, { method: 'GET' });
-      if (data.success) {
-        document.getElementById('eventDetailsContent').innerHTML = data.html;
-        openModal('eventDetailsModal');
-      } else {
-        showToast('Could not load details', 'error');
-      }
-    } catch {
-      showToast('Error loading details', 'error');
-    }
-  }
-
-  let currentEventId = null;
-  async function redirectApprovalFlow(id) {
-    currentEventId = id;
-    try {
-      const data = await fetchJson(`/api/events/${id}/current-approver/`, { method: 'GET' });
-      if (data.success) {
-        document.getElementById('currentApprover').value = data.current_approver;
-        openModal('redirectFlowModal');
-      } else {
-        showToast('Could not load approver', 'error');
-      }
-    } catch {
-      showToast('Error loading approver', 'error');
-    }
-  }
-
-  async function submitRedirectFlow() {
-    const newApprover = document.getElementById('newApprover').value;
-    const reason = document.getElementById('redirectReason').value;
-    const notify = document.getElementById('notifyUsers').checked;
-
-    if (!newApprover || !reason) {
-      showToast('Fill all fields', 'error');
-      return;
-    }
-    try {
-      const data = await fetchJson(`/api/events/${currentEventId}/redirect-flow/`, {
-        method: 'POST',
-        body: JSON.stringify({ new_approver: newApprover, reason, notify_users: notify })
-      });
-      if (data.success) {
-        showToast('Flow redirected');
-        closeModal('redirectFlowModal');
-        refreshEvents();
-      } else {
-        showToast(data.message || 'Failed to redirect', 'error');
-      }
-    } catch {
-      showToast('Error redirecting', 'error');
-    }
-  }
-
-  function modifyApprovalStages() {
-    showToast('Feature coming soon', 'warning');
-  }
-
-  async function escalateEvent(id) {
-    if (!confirm('Escalate this event?')) return;
-    try {
-      const data = await fetchJson(`/api/events/${id}/escalate/`, { method: 'POST' });
-      if (data.success) {
-        showToast('Event escalated');
-        refreshEvents();
-      } else {
-        showToast(data.message || 'Failed to escalate', 'error');
-      }
-    } catch {
-      showToast('Error escalating', 'error');
-    }
-  }
-
-  // ———————————————————————————————————————————————
-  // Bulk actions
-  // ———————————————————————————————————————————————
-  async function openBulkActionsModal() {
-    try {
-      const data = await fetchJson('/api/events/bulk-list/', { method: 'GET' });
-      if (data.success) {
-        const list = document.getElementById('bulkEventsList');
-        list.innerHTML = data.events.map(ev => `
-          <label>
-            <input type="checkbox" name="bulkEvents" value="${ev.id}">
-            ${ev.title} — ${ev.organization} (${ev.status})
-          </label>
-        `).join('');
-        openModal('bulkActionsModal');
-      } else {
-        showToast('Could not load bulk list', 'error');
-      }
-    } catch {
-      showToast('Error loading bulk list', 'error');
-    }
-  }
-
-  async function submitBulkActions() {
-    const selected = Array.from(document.querySelectorAll('input[name="bulkEvents"]:checked'))
-      .map(cb => cb.value);
-    const action = document.getElementById('bulkAction').value;
-    const comments = document.getElementById('bulkComments').value;
-
-    if (!selected.length || !action) {
-      showToast('Select events & action', 'error');
-      return;
-    }
-    try {
-      const data = await fetchJson('/api/events/bulk-actions/', {
-        method: 'POST',
-        body: JSON.stringify({ events: selected, action, comments })
-      });
-      if (data.success) {
-        showToast(`Applied to ${selected.length} events`);
-        closeModal('bulkActionsModal');
-        refreshEvents();
-      } else {
-        showToast(data.message || 'Bulk action failed', 'error');
-      }
-    } catch {
-      showToast('Error applying bulk action', 'error');
-    }
-  }
-
-  // ———————————————————————————————————————————————
-  // User management & stubs
-  // ———————————————————————————————————————————————
-  function openUserManagementModal() {
-    openModal('userManagementModal');
-  }
-  function openAddUserModal() {
-    document.getElementById('userManagementForm').reset();
-    openModal('userManagementModal');
-  }
-  async function submitUserManagement() {
-    const form = document.getElementById('userManagementForm');
-    const dataObj = Object.fromEntries(new FormData(form).entries());
-    dataObj.permissions = Array.from(form.permissions)
-      .filter(ch => ch.checked).map(ch => ch.value);
-
-    try {
-      const data = await fetchJson('/api/users/manage/', {
-        method: 'POST',
-        body: JSON.stringify(dataObj)
-      });
-      if (data.success) {
-        showToast('User saved');
-        closeModal('userManagementModal');
-        window.location.reload();
-      } else {
-        showToast(data.message || 'Failed to save user', 'error');
-      }
-    } catch {
-      showToast('Error saving user', 'error');
-    }
-  }
-  async function editUser(id) {
-    try {
-      const data = await fetchJson(`/api/users/${id}/details/`, { method: 'GET' });
-      if (data.success) {
-        const u = data.user;
-        document.getElementById('userName').value = u.name;
-        document.getElementById('userEmail').value = u.email;
-        document.getElementById('userRole').value = u.role;
-        document.getElementById('userOrganization').value = u.organization;
-        u.permissions.forEach(pid => {
-          const cb = document.querySelector(`input[name="permissions"][value="${pid}"]`);
-          if (cb) cb.checked = true;
-        });
-        openModal('userManagementModal');
-      } else {
-        showToast('Could not load user', 'error');
-      }
-    } catch {
-      showToast('Error loading user', 'error');
-    }
-  }
-  function managePermissions() {
-    showToast('Feature coming soon', 'warning');
-  }
-  function openBulkApprovalModal() {
-    showToast('Feature coming soon', 'warning');
-  }
-  function openSystemSettingsModal() {
-    showToast('Feature coming soon', 'warning');
-  }
-  function generateReport() {
-    showToast('Feature coming soon', 'warning');
-  }
-
-  // ———————————————————————————————————————————————
-  // Recent activity stub
-  // ———————————————————————————————————————————————
-  function loadRecentActivity() {
-    // populated server-side
-  }
-
-  // ———————————————————————————————————————————————
-  // Global event listeners
-  // ———————————————————————————————————————————————
-  function setupGlobalListeners() {
-    // Close when clicking overlay
-    document.querySelectorAll('.modal-overlay').forEach(el => {
-      el.addEventListener('click', e => {
-        if (e.target === el) closeModal(el.id);
-      });
-    });
-    // ESC to close
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') closeAllModals();
-    });
-  }
-
-  // ———————————————————————————————————————————————
-  // Initialization
-  // ———————————————————————————————————————————————
-  document.addEventListener('DOMContentLoaded', () => {
-    console.log("DOM ready, script loaded");
-    // Filters
-    const searchInputEl = document.getElementById('searchInput');
-    if (searchInputEl) {
-      searchInputEl.addEventListener('input', debounce(applyFilters, 300));
-    }
-    const orgTypeFilterEl = document.getElementById('orgTypeFilter');
-    if (orgTypeFilterEl) {
-      orgTypeFilterEl.addEventListener('change', applyFilters);
-    }
-    const statusFilterEl = document.getElementById('statusFilter');
-    if (statusFilterEl) {
-      statusFilterEl.addEventListener('change', applyFilters);
-    }
-
-    setupGlobalListeners();
-    loadRecentActivity();
+// ======= API helpers =======
+async function fetchJson(url, opts = {}) {
+  const headers = {
+    'X-CSRFToken': getCsrfToken(),
+    'Content-Type': 'application/json',
+    ...(opts.headers || {})
+  };
+  
+  const res = await fetch(url, {
+    credentials: 'same-origin',
+    ...opts,
+    headers
   });
+  
+  return res.json();
+}
 
-  // ———————————————————————————————————————————————
-  // Expose core functions to inline onclicks
-  // ———————————————————————————————————————————————
-  window.applyFilters = applyFilters;
-  window.refreshEvents = refreshEvents;
-  window.openEventDetails = openEventDetails;
-  window.redirectApprovalFlow = redirectApprovalFlow;
-  window.submitRedirectFlow = submitRedirectFlow;
-  window.modifyApprovalStages = modifyApprovalStages;
-  window.escalateEvent = escalateEvent;
-  window.openBulkActionsModal = openBulkActionsModal;
-  window.submitBulkActions = submitBulkActions;
-  window.openUserManagementModal = openUserManagementModal;
-  window.openAddUserModal = openAddUserModal;
-  window.submitUserManagement = submitUserManagement;
-  window.editUser = editUser;
-  window.managePermissions = managePermissions;
-  window.openBulkApprovalModal = openBulkApprovalModal;
-  window.openSystemSettingsModal = openSystemSettingsModal;
-  window.generateReport = generateReport;
+// ======= Approval Flow Editor =======
+function openApprovalFlowEditor() {
+  openModal('approvalFlowEditorModal');
+  loadApprovalFlow();
+  loadOrgUsers();
+  loadRoles();
+}
 
-  // ———————————————————————————————————————————————
-  // Approval flow editor
-  // ———————————————————————————————————————————————
-  let draggedUser = null;
-
-  function openApprovalFlowEditor() {
-    openModal('approvalFlowEditorModal');
-    loadApprovalFlow();
-    loadOrgUsers();
-    loadRoles();
+async function loadCurrentFlow() {
+  const tableBody = document.getElementById('currentFlowTableBody');
+  if (!tableBody || !window.SELECTED_ORG_ID) return;
+  
+  try {
+    const resp = await fetch(`/core-admin/approval-flow/${window.SELECTED_ORG_ID}/get/`);
+    const data = await resp.json();
+    
+    if (data.success) {
+      if (data.steps.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="4" class="text-center">No approval flow defined. Click "Edit Flow" to create one.</td></tr>';
+      } else {
+        tableBody.innerHTML = data.steps.map(step => `
+          <tr>
+            <td><span class="step-number">${step.step_order}</span></td>
+            <td><span class="role-display">${step.role_display || step.role_required}</span></td>
+            <td>${step.user_name ? `
+              <div class="user-info">
+                <strong>${step.user_name}</strong>
+                <span class="user-email">${step.user_email || ''}</span>
+              </div>
+            ` : '<span class="text-muted"><i class="fas fa-user-slash"></i> Unassigned</span>'}</td>
+            <td>
+              <span class="status-badge ${step.optional ? 'status-inactive' : 'status-active'}">
+                ${step.optional ? 'Optional' : 'Required'}
+              </span>
+            </td>
+          </tr>
+        `).join('');
+      }
+      
+      // Update faculty toggle if provided
+      if (typeof data.require_faculty_incharge_first !== 'undefined') {
+        const toggle = document.getElementById('facultyFirstToggle');
+        if (toggle) toggle.checked = data.require_faculty_incharge_first;
+        window.REQUIRE_FACULTY_FIRST = data.require_faculty_incharge_first;
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load current flow:', e);
   }
-window.loadApprovalFlow = async function() {
+}
+
+async function loadApprovalFlow() {
   const orgId = window.SELECTED_ORG_ID;
   approvalSteps = [];
   const stepsDiv = document.getElementById('approvalFlowSteps');
-  if (!orgId) {
-    stepsDiv.innerHTML = '';
-    return;
-  }
-  stepsDiv.innerHTML = '<div style="padding:1rem 0;">Loading flow…</div>';
+  
+  if (!orgId || !stepsDiv) return;
+  
+  stepsDiv.innerHTML = '<div class="empty-msg">Loading flow…</div>';
+  
   try {
     const resp = await fetch(`/core-admin/approval-flow/${orgId}/get/`);
     const data = await resp.json();
+    
     if (data.success && data.steps.length > 0) {
       approvalSteps = data.steps.map(s => ({
         role: s.role_required,
@@ -410,6 +196,7 @@ window.loadApprovalFlow = async function() {
       approvalSteps = [];
       renderApprovalSteps();
     }
+    
     if (typeof data.require_faculty_incharge_first !== 'undefined') {
       window.REQUIRE_FACULTY_FIRST = data.require_faculty_incharge_first;
       const toggle = document.getElementById('facultyFirstToggle');
@@ -420,17 +207,185 @@ window.loadApprovalFlow = async function() {
   }
 }
 
-let approvalSteps = [];
-let draggedIdx = null;
-let roleSuggestions = [];
+function addApprovalStep() {
+  approvalSteps.push({ role: '', user: null, optional: false });
+  renderApprovalSteps();
+}
 
+// ======= Simplified Step Rendering (No TomSelect) =======
+function renderApprovalSteps() {
+  const stepsDiv = document.getElementById('approvalFlowSteps');
+  if (!stepsDiv) return;
+  
+  if (approvalSteps.length === 0) {
+    stepsDiv.innerHTML = '<div class="empty-msg"><i class="fas fa-plus-circle"></i> No steps added. Click "+ Add Step" to begin.</div>';
+    return;
+  }
+  
+  stepsDiv.innerHTML = approvalSteps.map((step, i) => `
+    <div class="step-block" draggable="true" data-idx="${i}" 
+         ondragstart="startDrag(event, ${i})" 
+         ondragover="allowDrop(event)" 
+         ondrop="dropStep(event, ${i})">
+      <span class="drag-handle" title="Drag to reorder">
+        <i class="fas fa-grip-vertical"></i>
+      </span>
+      <span class="step-number">${i + 1}</span>
+      <input class="role-input" list="roleSuggestions" type="text" 
+             placeholder="Role (e.g. faculty)" 
+             value="${escapeHtml(step.role || '')}"
+             oninput="updateStepRole(${i}, this.value);">
+      <div class="user-display-wrapper">
+        <div class="user-display" onclick="clearUser(${i})" title="Click to clear user">
+          ${step.user ? escapeHtml(step.user.name) : 'Click to assign user'}
+        </div>
+      </div>
+      <label class="optional-toggle">
+        <input type="checkbox" ${step.optional ? 'checked' : ''} 
+               onchange="toggleOptional(${i}, this.checked)"> 
+        Optional
+      </label>
+      <button onclick="removeStep(${i})" class="btn btn-danger btn-sm" title="Remove step">
+        <i class="fas fa-trash"></i>
+      </button>
+    </div>
+  `).join('');
+}
+
+function updateStepRole(idx, value) {
+  if (approvalSteps[idx]) {
+    approvalSteps[idx].role = value;
+  }
+}
+
+function toggleOptional(idx, val) {
+  if (approvalSteps[idx]) {
+    approvalSteps[idx].optional = val;
+  }
+}
+
+function clearUser(idx) {
+  if (approvalSteps[idx]) {
+    approvalSteps[idx].user = null;
+    renderApprovalSteps();
+  }
+}
+
+function selectUserForStep(idx, userId, userName) {
+  if (approvalSteps[idx]) {
+    approvalSteps[idx].user = { id: userId, name: userName };
+    renderApprovalSteps();
+  }
+}
+
+function removeStep(idx) {
+  approvalSteps.splice(idx, 1);
+  renderApprovalSteps();
+}
+
+// ======= Drag and drop for steps =======
+function startDrag(e, idx) {
+  draggedIdx = idx;
+  e.dataTransfer.effectAllowed = 'move';
+  e.target.classList.add('dragging');
+}
+
+function allowDrop(e) {
+  e.preventDefault();
+}
+
+function dropStep(e, idx) {
+  e.preventDefault();
+  if (draggedIdx === null || draggedIdx === idx) return;
+  
+  const step = approvalSteps.splice(draggedIdx, 1)[0];
+  approvalSteps.splice(idx, 0, step);
+  draggedIdx = null;
+  
+  document.querySelectorAll('.step-block').forEach(block => {
+    block.classList.remove('dragging');
+  });
+  
+  renderApprovalSteps();
+}
+
+// ======= User management =======
+const debouncedLoadUsers = debounce(loadOrgUsers, 300);
+
+async function loadOrgUsers(q = '') {
+  const list = document.getElementById('orgUserList');
+  if (!list) return;
+  
+  list.innerHTML = '<div class="empty-msg">Loading...</div>';
+  
+  const params = new URLSearchParams({ 
+    q, 
+    org_type_id: window.SELECTED_ORG_TYPE_ID 
+  });
+  
+  try {
+    const resp = await fetch(`/core-admin/api/org-users/${window.SELECTED_ORG_ID}/?${params}`);
+    const data = await resp.json();
+    
+    if (data.success) {
+      if (data.users && data.users.length > 0) {
+        list.innerHTML = data.users.map(u => `
+          <div class="user-item" 
+               draggable="true" 
+               ondragstart="startUserDrag(${u.id}, '${escapeHtml(u.name)}', '${escapeHtml(u.role)}')"
+               onclick="selectUserForStep(getCurrentStepIndex(), ${u.id}, '${escapeHtml(u.name)}')"
+               title="Drag to step or click to assign">
+            <strong>${escapeHtml(u.name)}</strong>
+            <span class="role">${escapeHtml(u.role)}</span>
+          </div>
+        `).join('');
+      } else {
+        list.innerHTML = '<div class="empty-msg">No users found</div>';
+      }
+    } else {
+      list.innerHTML = '<div class="error-msg">Failed to load users</div>';
+    }
+  } catch (e) {
+    list.innerHTML = '<div class="error-msg">Error loading users</div>';
+  }
+}
+
+function getCurrentStepIndex() {
+  // Simple helper to get the last step index for click assignment
+  return Math.max(0, approvalSteps.length - 1);
+}
+
+function startUserDrag(id, name, role) {
+  draggedUser = { id, name, role };
+}
+
+function dropOnSteps(e) {
+  e.preventDefault();
+  if (!draggedUser) return;
+  
+  // Add dragged user as new step
+  approvalSteps.push({ 
+    role: draggedUser.role.toLowerCase(), 
+    user: { id: draggedUser.id, name: draggedUser.name },
+    optional: false
+  });
+  
+  renderApprovalSteps();
+  draggedUser = null;
+  
+  // Visual feedback
+  const stepsContainer = document.getElementById('approvalFlowSteps');
+  if (stepsContainer) {
+    stepsContainer.classList.remove('drag-over');
+  }
+}
+
+// ======= Role suggestions =======
 async function loadRoles() {
-  const typeSel = document.getElementById('approvalCategorySelect');
-  const orgSel = document.getElementById('approvalFlowOrgSelect');
-  const typeId = typeSel ? typeSel.value : null;
-  const orgId = orgSel ? orgSel.value : window.SELECTED_ORG_ID;
-
-  if (!typeId && !orgId) {
+  const orgId = window.SELECTED_ORG_ID;
+  const typeId = window.SELECTED_ORG_TYPE_ID;
+  
+  if (!orgId && !typeId) {
     document.getElementById('roleSuggestions').innerHTML = '';
     return;
   }
@@ -445,12 +400,13 @@ async function loadRoles() {
   try {
     const resp = await fetch(url);
     const data = await resp.json();
+    
     if (data.success) {
       roleSuggestions = data.roles || [];
       const list = document.getElementById('roleSuggestions');
       if (list) {
         list.innerHTML = roleSuggestions
-          .map(r => `<option value="${r.name}"></option>`)
+          .map(r => `<option value="${escapeHtml(r.name)}"></option>`)
           .join('');
       }
     }
@@ -459,265 +415,275 @@ async function loadRoles() {
   }
 }
 
-window.addApprovalStep = function() {
-  const stepsDiv = document.getElementById('approvalFlowSteps');
-  const idx = approvalSteps.length + 1;
-  approvalSteps.push({ role: '', user: null, optional: false });
-  renderApprovalSteps();
-};
-
-function renderApprovalSteps() {
-  const stepsDiv = document.getElementById('approvalFlowSteps');
-  if (approvalSteps.length === 0) {
-    stepsDiv.innerHTML = '<div class="empty-msg">No steps added. Click "+ Add Step".</div>';
-    return;
-  }
-  stepsDiv.innerHTML = approvalSteps.map((step, i) => `
-    <div class="step-block" draggable="true" data-idx="${i}" ondragstart="startDrag(event, ${i})" ondragover="allowDrop(event)" ondrop="dropStep(event, ${i})">
-      <span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span>
-      <span class="step-number">${i + 1}</span>
-      <input class="role-input" list="roleSuggestions" type="text" placeholder="Role (e.g. faculty)" value="${step.role || ''}"
-             oninput="updateStepRole(${i}, this.value); loadRoles();">
-      <div class="user-select-wrapper">
-        <input class="user-search-input" type="text" placeholder="Search user..."
-               value="${step.user ? step.user.name : ''}" data-idx="${i}">
+// ======= Real-time visualization updates =======
+function updateFlowVisualization(steps, facultyFirst = false) {
+  const flowDiagram = document.getElementById('flowVisualization');
+  if (!flowDiagram) return;
+  
+  let html = '';
+  
+  // Faculty first step
+  if (facultyFirst) {
+    html += `
+      <div class="flow-step flow-step-faculty">
+        <i class="fas fa-user-tie"></i>
+        <div class="step-content">
+          <strong>Faculty</strong>
+          <small>In-Charge</small>
+        </div>
       </div>
-      <label class="optional-toggle"><input type="checkbox" ${step.optional ? 'checked' : ''} onchange="toggleOptional(${i}, this.checked)"> Optional</label>
-      <button onclick="removeStep(${i})" class="btn btn-danger btn-sm">Delete</button>
-    </div>
-  `).join('');
-  initUserSearchInputs();
-}
-
-function initUserSearchInputs() {
-  document.querySelectorAll('.user-search-input').forEach(el => {
-    if (el.dataset.tsInit) return;
-    el.dataset.tsInit = '1';
-    const idx = el.getAttribute('data-idx');
-    new TomSelect(el, {
-      valueField: 'id',
-      labelField: 'text',
-      searchField: 'text',
-      create: false,
-      load: function(query, callback) {
-        const roleInput = document.querySelector(`.step-block[data-idx="${idx}"] .role-input`);
-        const role = roleInput ? roleInput.value : '';
-        const params = new URLSearchParams({
-          q: query,
-          role: role,
-          org_id: window.SELECTED_ORG_ID,
-          org_type_id: window.SELECTED_ORG_TYPE_ID
-        });
-        fetch(`/core-admin/api/search-users/?${params}`)
-          .then(r => r.json())
-          .then(data => {
-            callback(
-              (data.users || []).map(u => ({ id: u.id, text: `${u.name} (${u.email})` }))
-            );
-          })
-          .catch(() => callback());
-      },
-      onChange: function(value) {
-        const option = this.options[value];
-        if (option) {
-          selectUserForStep(parseInt(idx), value, option.text);
-        }
-      }
-    });
+    `;
+  }
+  
+  // Regular steps
+  steps.forEach((step, index) => {
+    const stepType = step.optional ? 'flow-step-optional' : 'flow-step-required';
+    const stepRole = step.role || 'User';
+    const stepUser = step.user ? step.user.name : 'Unassigned';
+    
+    // Choose appropriate icon based on role
+    let icon = 'fas fa-user';
+    const roleLower = stepRole.toLowerCase();
+    if (roleLower.includes('student')) icon = 'fas fa-user-graduate';
+    else if (roleLower.includes('faculty')) icon = 'fas fa-chalkboard-teacher';
+    else if (roleLower.includes('hod')) icon = 'fas fa-user-tie';
+    else if (roleLower.includes('principal')) icon = 'fas fa-crown';
+    
+    html += `
+      <div class="flow-step ${stepType}">
+        <span class="step-badge">${index + 1}</span>
+        <i class="${icon}"></i>
+        <div class="step-content">
+          <strong>${stepRole.length > 8 ? stepRole.substring(0,8) : stepRole}</strong>
+          <small>${stepUser.length > 10 ? stepUser.substring(0,10) : stepUser}</small>
+        </div>
+        ${step.optional ? '<i class="fas fa-question-circle optional-icon" title="Optional Step"></i>' : ''}
+      </div>
+    `;
   });
+  
+  // End step
+  if (steps.length > 0) {
+    html += `
+      <div class="flow-step flow-step-end">
+        <i class="fas fa-check-circle"></i>
+        <div class="step-content">
+          <strong>Approved</strong>
+          <small>Final</small>
+        </div>
+      </div>
+    `;
+  }
+  
+  flowDiagram.innerHTML = html;
 }
 
-
-window.updateStepRole = function(idx, value) {
-  approvalSteps[idx].role = value;
-};
-
-window.toggleOptional = function(idx, val) {
-  approvalSteps[idx].optional = val;
-};
-
-function searchUserForStep(idx, q) {
-  if (!q) {
-    document.getElementById(`user-search-results-${idx}`).innerHTML = '';
+function updateCurrentFlowTable(steps) {
+  const tableBody = document.querySelector('.data-table tbody');
+  if (!tableBody) return;
+  
+  if (steps.length === 0) {
+    tableBody.innerHTML = '<tr><td colspan="4" class="text-center">No approval flow configured</td></tr>';
     return;
   }
-  const role = document.querySelector(`.step-block[data-idx="${idx}"] .role-input`).value;
-  const orgId = window.SELECTED_ORG_ID;
-  const typeId = window.SELECTED_ORG_TYPE_ID;
-  const params = new URLSearchParams({ q, role, org_id: orgId, org_type_id: typeId });
-  fetch(`/core-admin/api/search-users/?${params}`)
-    .then(r => r.json())
-    .then(data => {
-      const results = (data.users || []).map(u =>
-        `<div class="user-search-option" onclick="selectUserForStep(${idx}, ${u.id}, '${u.name.replace("'", "\\'")}')">${u.name} (${u.email})</div>`
-      ).join('');
-      document.getElementById(`user-search-results-${idx}`).innerHTML = results || '<div class="user-search-option disabled">No users found</div>';
-    });
+  
+  const html = steps.map((step, index) => `
+    <tr>
+      <td>
+        <span class="step-number">${index + 1}</span>
+      </td>
+      <td>
+        <span class="role-display">${step.role ? step.role.charAt(0).toUpperCase() + step.role.slice(1) : 'Unassigned'}</span>
+      </td>
+      <td>
+        ${step.user ? `
+          <div class="user-info">
+            <strong>${step.user.name}</strong>
+            <span class="user-email">${step.user.email || ''}</span>
+          </div>
+        ` : '<span class="text-muted"><i class="fas fa-user-slash"></i> Unassigned</span>'}
+      </td>
+      <td>
+        <span class="status-badge ${step.optional ? 'status-inactive' : 'status-active'}">
+          ${step.optional ? 'Optional' : 'Required'}
+        </span>
+      </td>
+    </tr>
+  `).join('');
+  
+  tableBody.innerHTML = html;
 }
 
-const debouncedSearchUser = debounce(searchUserForStep, 300);
+function updateFlowSummary(steps) {
+  const summary = document.querySelector('.flow-summary');
+  if (summary) {
+    summary.textContent = `${steps.length} step${steps.length !== 1 ? 's' : ''} configured`;
+  }
+}
 
-window.startDrag = function(e, idx) {
-  draggedIdx = idx;
-  e.dataTransfer.effectAllowed = 'move';
-};
+function updateFacultyFirstBadge(enabled) {
+  const badge = document.querySelector('.filters-left .status-badge');
+  if (badge) {
+    badge.className = `status-badge ${enabled ? 'status-active' : 'status-inactive'}`;
+    badge.textContent = enabled ? 'Enabled' : 'Disabled';
+  }
+}
 
-window.allowDrop = function(e) {
-  e.preventDefault();
-};
-
-window.dropStep = function(e, idx) {
-  e.preventDefault();
-  if (draggedIdx === null || draggedIdx === idx) return;
-  const step = approvalSteps.splice(draggedIdx, 1)[0];
-  approvalSteps.splice(idx, 0, step);
-  draggedIdx = null;
-  renderApprovalSteps();
-};
-
-
-
-window.selectUserForStep = function(idx, userId, userName) {
-  approvalSteps[idx].user = { id: userId, name: userName };
-  renderApprovalSteps();
-};
-
-window.removeStep = function(idx) {
-  approvalSteps.splice(idx, 1);
-  renderApprovalSteps();
-};
-  window.saveApprovalFlow = function() {
-    console.log("Save clicked");
+// ======= Save and delete operations =======
+async function saveApprovalFlow() {
   const orgId = window.SELECTED_ORG_ID;
+  if (!orgId) {
+    showToast('No organization selected', 'error');
+    return;
+  }
 
-  // Map your frontend data to the backend format!
+  // Validate steps
+  for (let i = 0; i < approvalSteps.length; i++) {
+    const step = approvalSteps[i];
+    if (!step.role.trim()) {
+      showToast(`Step ${i + 1} is missing a role`, 'error');
+      return;
+    }
+  }
+
+  // Map frontend data to backend format
   const payloadSteps = approvalSteps.map(s => ({
     role_required: s.role,
     user_id: s.user ? s.user.id : null,
     optional: s.optional
   }));
+  
   const requireFic = document.getElementById('facultyFirstToggle');
   const requireFlag = requireFic ? requireFic.checked : false;
 
-  fetch(`/core-admin/approval-flow/${orgId}/save/`, {
-    method: "POST",
-    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
-    credentials: 'same-origin',
-    body: JSON.stringify({ steps: payloadSteps, require_faculty_incharge_first: requireFlag })
-  })
-  .then(r => r.json())
-  .then(data => {
-    if (data.success) {
-      showToast('Approval flow saved!', 'success');
-      closeModal('approvalFlowEditorModal');
-      loadCurrentFlow();
-    } else {
-      alert("Failed to save flow");
-    }
-  }).catch(e => {
-    alert("Error: " + e);
-  });
-};
+  try {
+    const data = await fetchJson(`/core-admin/approval-flow/${orgId}/save/`, {
+      method: 'POST',
+      body: JSON.stringify({ 
+        steps: payloadSteps, 
+        require_faculty_incharge_first: requireFlag 
+      })
+    });
 
-window.deleteApprovalFlow = function() {
-  console.log("Delete clicked");
+    if (data.success) {
+      showToast('Approval flow saved successfully!', 'success');
+      closeModal('approvalFlowEditorModal');
+      
+      // Real-time updates without page refresh
+      updateFlowVisualization(approvalSteps, requireFlag);
+      updateCurrentFlowTable(approvalSteps);
+      updateFlowSummary(approvalSteps);
+      updateFacultyFirstBadge(requireFlag);
+      
+      // Update page elements
+      const emptyState = document.querySelector('.empty-state');
+      const flowContent = document.querySelector('.flow-status-header');
+      
+      if (approvalSteps.length > 0 && emptyState) {
+        emptyState.style.display = 'none';
+        if (flowContent) flowContent.style.display = 'flex';
+      }
+      
+    } else {
+      showToast(data.error || 'Failed to save flow', 'error');
+    }
+  } catch (e) {
+    console.error('Save error:', e);
+    showToast('Error saving flow', 'error');
+  }
+}
+
+async function deleteApprovalFlow() {
   const orgId = window.SELECTED_ORG_ID;
   if (!orgId) return;
-  if (!confirm('Delete entire approval flow for this organization?')) return;
-  fetch(`/core-admin/approval-flow/${orgId}/delete/`, {
-    method: 'POST',
-    headers: { 'X-CSRFToken': CSRF_TOKEN },
-    credentials: 'same-origin'
-  })
-  .then(r => r.json())
-  .then(data => {
+  
+  if (!confirm('Delete the entire approval flow for this organization? This action cannot be undone.')) {
+    return;
+  }
+
+  try {
+    const data = await fetchJson(`/core-admin/approval-flow/${orgId}/delete/`, {
+      method: 'POST'
+    });
+
     if (data.success) {
       approvalSteps = [];
       renderApprovalSteps();
-      showToast('Approval flow deleted', 'success');
+      showToast('Approval flow deleted successfully', 'success');
+      closeModal('approvalFlowEditorModal');
       loadCurrentFlow();
     } else {
-      showToast('Failed to delete flow', 'error');
+      showToast(data.error || 'Failed to delete flow', 'error');
     }
-  })
-  .catch(() => showToast('Error deleting flow', 'error'));
-};
-
-window.loadOrgUsers = async function(q = '') {
-  const list = document.getElementById('orgUserList');
-  if (!list) return;
-  list.innerHTML = '<div style="padding:0.5rem">Loading...</div>';
-  const params = new URLSearchParams({ q, org_type_id: window.SELECTED_ORG_TYPE_ID });
-  const resp = await fetch(`/core-admin/api/org-users/${window.SELECTED_ORG_ID}/?${params}`);
-  const data = await resp.json();
-  if (data.success) {
-    list.innerHTML = (data.users || []).map(u =>
-      `<div class="user-item" draggable="true" ondragstart="startUserDrag(${u.id}, '${u.name.replace("'", "\'")}', '${u.role.replace("'", "\'")}')">${u.name} <span class="role">(${u.role})</span></div>`
-    ).join('') || '<div class="empty-msg">No users found</div>';
-  } else {
-    list.innerHTML = '<div class="error-msg">Failed to load users</div>';
+  } catch (e) {
+    console.error('Delete error:', e);
+    showToast('Error deleting flow', 'error');
   }
-};
+}
 
-window.startUserDrag = function(id, name, role) {
-  draggedUser = { id, name, role };
-};
-
-window.dropOnSteps = function(e) {
-  e.preventDefault();
-  if (!draggedUser) return;
-  approvalSteps.push({ role: draggedUser.role.toLowerCase(), user: { id: draggedUser.id, name: draggedUser.name } });
-  renderApprovalSteps();
-  draggedUser = null;
-};
-
-window.loadCurrentFlow = async function() {
-  const container = document.getElementById('currentFlowList');
-  if (!container) return;
-  container.innerHTML = '';
-  const resp = await fetch(`/core-admin/approval-flow/${window.SELECTED_ORG_ID}/get/`);
-  const data = await resp.json();
-  if (data.success) {
-    if (data.steps.length === 0) {
-      container.innerHTML = '<li>No approval flow defined.</li>';
-    } else {
-      container.innerHTML = data.steps.map(s => `<li>${s.step_order}. ${s.role_display || s.role_required}${s.optional ? ' (Optional)' : ''} – ${s.user_name || 'Unassigned'}</li>`).join('');
-      if (typeof data.require_faculty_incharge_first !== 'undefined') {
-        const toggle = document.getElementById('facultyFirstToggle');
-        if (toggle) toggle.checked = data.require_faculty_incharge_first;
-        window.REQUIRE_FACULTY_FIRST = data.require_faculty_incharge_first;
-      }
+// ======= Utility functions =======
+function wireShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    const isMac = navigator.platform.toUpperCase().includes('MAC');
+    if ((isMac && e.metaKey && e.key.toLowerCase() === 'k') || 
+        (!isMac && e.ctrlKey && e.key.toLowerCase() === 'k')) {
+      e.preventDefault();
+      const searchInput = document.getElementById('userSearchInput');
+      if (searchInput) searchInput.focus();
     }
+  });
+}
+
+function showSuccessToastIfNeeded() {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('success')) {
+    showToast('Operation completed successfully!', 'success');
   }
-};
+}
 
-document.addEventListener('DOMContentLoaded', () => {
-  if (window.SELECTED_ORG_ID) {
-    loadCurrentFlow();
-    loadRoles();
-    // Optionally also load the editable flow if needed:
-    // loadApprovalFlow();
-    // Or open the editor if you want to auto-open:
-    // openApprovalFlowEditor();
-    const select = document.getElementById('approvalFlowOrgSelect');
-    if (select) {
-      select.value = String(window.SELECTED_ORG_ID);
-      select.addEventListener('change', () => {
-        window.SELECTED_ORG_ID = select.value;
-        loadRoles();
-      });
-    }
-    const typeSelect = document.getElementById('approvalCategorySelect');
-    if (typeSelect) {
-      typeSelect.addEventListener('change', loadRoles);
-    }
-    const ficToggle = document.getElementById('facultyFirstToggle');
-    if (ficToggle) ficToggle.checked = REQUIRE_FACULTY_FIRST;
+// ======= Drag over effects =======
+document.addEventListener('dragover', (e) => {
+  const stepsContainer = document.getElementById('approvalFlowSteps');
+  if (stepsContainer && stepsContainer.contains(e.target)) {
+    e.preventDefault();
+    stepsContainer.classList.add('drag-over');
   }
 });
 
-  // Expose approval flow helpers
-  window.openApprovalFlowEditor = openApprovalFlowEditor;
-  window.closeModal = closeModal;
-  window.loadRoles = loadRoles;
-})();
+document.addEventListener('dragleave', (e) => {
+  const stepsContainer = document.getElementById('approvalFlowSteps');
+  if (stepsContainer && !stepsContainer.contains(e.relatedTarget)) {
+    stepsContainer.classList.remove('drag-over');
+  }
+});
+
+document.addEventListener('drop', (e) => {
+  const stepsContainer = document.getElementById('approvalFlowSteps');
+  if (stepsContainer) {
+    stepsContainer.classList.remove('drag-over');
+  }
+});
+
+// ======= Global exports =======
+window.openApprovalFlowEditor = openApprovalFlowEditor;
+window.closeModal = closeModal;
+window.loadRoles = loadRoles;
+window.addApprovalStep = addApprovalStep;
+window.updateStepRole = updateStepRole;
+window.toggleOptional = toggleOptional;
+window.removeStep = removeStep;
+window.clearUser = clearUser;
+window.startDrag = startDrag;
+window.allowDrop = allowDrop;
+window.dropStep = dropStep;
+window.startUserDrag = startUserDrag;
+window.dropOnSteps = dropOnSteps;
+window.saveApprovalFlow = saveApprovalFlow;
+window.deleteApprovalFlow = deleteApprovalFlow;
+window.loadOrgUsers = loadOrgUsers;
+window.selectUserForStep = selectUserForStep;
+window.showToast = showToast;
+window.updateFlowVisualization = updateFlowVisualization;
+window.updateCurrentFlowTable = updateCurrentFlowTable;
+window.updateFlowSummary = updateFlowSummary;
+window.updateFacultyFirstBadge = updateFacultyFirstBadge;

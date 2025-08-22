@@ -2,76 +2,286 @@
 {% load static %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'core/css/admin_master_data.css' %}">
-<link rel="stylesheet" href="{% static 'core/css/admin_pso_po_management.css' %}">
-
-<div class="main-container">
-  <div class="page-header">
-    <h1 class="page-title">Manage Outcomes for {{ organization.name }}</h1>
+<div class="ems-dashboard mdm-page">
+  <!-- Header -->
+  <div class="topbar">
+    <div>
+      <h1>Outcomes Management</h1>
+      <span class="org-label">Organization: <strong>{{ organization.name }}</strong></span>
+    </div>
+    <label class="archive-toggle">
+      <input type="checkbox" id="archivedToggle"> Archived
+    </label>
   </div>
+  <form style="display:none">{% csrf_token %}</form>
 
-  <section id="outcomesPanel" class="outcomes-fullpage">
-    <div class="outcomes-fullpage-header">
-      <div class="header-left">
-        <h2>Manage Outcomes for <span id="modal-org-name">{{ organization.name }}</span></h2>
-        <p class="subtext">Inline editing with instant save. Use the add boxes to create new outcomes.</p>
-      </div>
-      <div class="header-actions">
-        <a class="btn-outline" href="{% url 'admin_pso_po_management' %}">Back to list</a>
-        <label style="margin-left:12px; display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
-          <input type="checkbox" id="showArchivedToggle"> View Archived
-        </label>
-      </div>
-    </div>
-    <div class="outcomes-fullpage-grid">
-      <div class="outcomes-column">
-        <div class="column-card">
-          <div class="column-header"><h3>PROGRAMME OUTCOMES (POs)</h3></div>
-          <div class="column-body">
-            <div class="outcomes-list" id="posList"></div>
-            <div class="add-outcome-inline">
-              <textarea id="newPOInput" rows="3" placeholder="Add new Programme Outcome..." class="outcome-input large"></textarea>
-              <button class="add-outcome-btn" id="addPOBtn"><i class="fas fa-plus"></i> Add PO</button>
-            </div>
+  <!-- Two equal columns -->
+  <div class="outcomes-grid" id="outcomesPanel"
+       data-org-id="{{ organization.id }}"
+       data-org-name="{{ organization.name|escapejs }}">
+
+    <!-- POs -->
+    <section class="md-card">
+      <header class="md-card-head">PROGRAMME OUTCOMES (POs)</header>
+      <div class="md-card-body">
+        <!-- Scrollable list area -->
+        <div id="posList" class="list">
+          <div class="list__empty">Loading…</div>
+        </div>
+
+        <!-- Fixed add area (stays aligned with PSO side) -->
+        <div class="adder">
+          <label class="adder__hint">Write the full description. “PO number” labels are auto‑handled.</label>
+          <textarea id="newPO" class="outcome-input large" rows="4"
+                    placeholder="Enter Programme Outcome description…"></textarea>
+
+          <div class="btn-row">
+            <button id="btnAddPO" class="btn btn--primary">
+              <i class="fas fa-plus"></i> Add PO
+            </button>
           </div>
         </div>
       </div>
-      <div class="outcomes-column">
-        <div class="column-card">
-          <div class="column-header"><h3>PROGRAMME SPECIFIC OUTCOMES (PSOs)</h3></div>
-          <div class="column-body">
-            <div class="outcomes-list" id="psosList"></div>
-            <div class="add-outcome-inline">
-              <textarea id="newPSOInput" rows="3" placeholder="Add new Programme Specific Outcome..." class="outcome-input large"></textarea>
-              <button class="add-outcome-btn" id="addPSOBtn"><i class="fas fa-plus"></i> Add PSO</button>
-            </div>
+    </section>
+
+    <!-- PSOs -->
+    <section class="md-card">
+      <header class="md-card-head">PROGRAMME SPECIFIC OUTCOMES (PSOs)</header>
+      <div class="md-card-body">
+        <!-- Scrollable list area -->
+        <div id="psoList" class="list">
+          <div class="list__empty">Loading…</div>
+        </div>
+
+        <!-- Fixed add area -->
+        <div class="adder">
+          <label class="adder__hint">Write the full description for the new PSO.</label>
+          <textarea id="newPSO" class="outcome-input large" rows="4"
+                    placeholder="Enter Programme Specific Outcome description…"></textarea>
+
+          <div class="btn-row">
+            <button id="btnAddPSO" class="btn btn--primary">
+              <i class="fas fa-plus"></i> Add PSO
+            </button>
           </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
+
+  </div>
 </div>
 
-<script src="{% static 'core/js/admin_pso_po_management.js' %}"></script>
+<style>
+/* ===== Layout aligned like Master Data (flush left, no excess whitespace) ===== */
+.ems-dashboard.mdm-page{max-width:none;width:100%;margin:0;padding:0}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin:0 0 12px;border-bottom:1px solid var(--border);padding:0 0 10px}
+.topbar h1{margin:0;font-size:1.8rem;font-weight:800;color:var(--ink)}
+.org-label{color:var(--muted);margin-left:12px}
+.archive-toggle{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:.95rem}
+
+/* Two same-width columns */
+.outcomes-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:18px;
+  margin:0;
+}
+
+/* Card shell */
+.md-card{
+  background:#fff;border:1px solid var(--border);border-radius:14px;
+  box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;
+}
+
+/* Make both cards equal height.
+   The body gets a viewport-based height so lists scroll but buttons stay aligned. */
+.md-card-body{
+  display:flex;flex-direction:column;gap:12px;
+  /* Adjust this calc if you want more/less vertical room. Keeps both sides equal. */
+  height:calc(100vh - 280px);
+  padding:14px;
+  background:#fff;
+}
+.md-card-head{background:#1e60b1;color:#fff;padding:12px 14px;font-weight:800;letter-spacing:.02em}
+
+/* Scrollable list occupies remaining space above the adder */
+.list{
+  flex:1 1 auto;min-height:0; /* required for flexbox overflow */
+  overflow:auto;padding-right:6px;display:flex;flex-direction:column;gap:8px;
+  background:#fff;
+}
+.list__empty{color:var(--muted);padding:12px;text-align:center;font-style:italic}
+.item{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:10px}
+.item__txt{color:#0f172a;line-height:1.45}
+.item__txt strong{color:#1e3a8a}
+.item__act{display:flex;gap:8px;flex-shrink:0}
+.icon{border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:6px;cursor:pointer}
+.icon:hover{box-shadow:0 4px 12px rgba(2,6,23,.08);transform:translateY(-1px)}
+
+/* Add area: fixed at bottom of card body so buttons line up across columns */
+.adder{border-top:1px dashed #cbd5e1;padding-top:10px;display:flex;flex-direction:column;gap:8px}
+.adder__hint{font-size:.9rem;color:#475569}
+
+/* Inputs & buttons */
+.outcome-input{
+  width:100%;border:1px solid var(--border);border-radius:8px;padding:10px;background:#fff;resize:vertical;
+}
+.outcome-input:focus{border-color:#1e60b1;box-shadow:0 0 0 3px rgba(30,96,177,.12);outline:none}
+.btn-row{display:flex;gap:10px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:8px;padding:8px 14px;border:1px solid transparent;cursor:pointer;font-weight:700}
+.btn--primary{background:#1e60b1;color:#fff;border-color:#1e60b1}
+.btn--primary:hover{background:#184c8c;border-color:#184c8c}
+/* IMPORTANT: do NOT make buttons full-width */
+.btn, .btn-row .btn{width:auto}
+
+/* Responsive: stack columns on small screens but keep same logic */
+@media (max-width: 900px){
+  .outcomes-grid{grid-template-columns:1fr}
+  .md-card-body{height:auto}
+  .list{max-height:40vh}
+}
+</style>
+
 <script>
-  // Seed the panel with the selected org and load
-  document.addEventListener('DOMContentLoaded', function(){
-    const panel = document.getElementById('outcomesPanel');
-    if (panel) {
-      panel.dataset.orgId = '{{ organization.id }}';
-      panel.dataset.orgName = '{{ organization.name|escapejs }}';
+/* ===== JS: unchanged backend endpoints, now with aligned/scrolling UI ===== */
+(function(){
+  const panel=document.getElementById('outcomesPanel');
+  const orgId=Number(panel?.dataset?.orgId);
+  let currentProgramId=null;
+
+  const els={
+    arch:document.getElementById('archivedToggle'),
+    posList:document.getElementById('posList'),
+    psoList:document.getElementById('psoList'),
+    newPO:document.getElementById('newPO'),
+    newPSO:document.getElementById('newPSO'),
+    btnAddPO:document.getElementById('btnAddPO'),
+    btnAddPSO:document.getElementById('btnAddPSO'),
+  };
+
+  function getCsrf(){
+    const el=document.querySelector('[name=csrfmiddlewaretoken]');
+    if(el) return el.value;
+    const m=document.cookie.match(/(?:^|;)\s*csrftoken=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+
+  async function loadAll(){
+    if(!orgId) return;
+    els.posList.innerHTML='<div class="list__empty">Loading…</div>';
+    els.psoList.innerHTML='<div class="list__empty">Loading…</div>';
+
+    try{
+      const progRes=await fetch(`/core/api/programs/${orgId}/`);
+      if(!progRes.ok) throw new Error('Programs load failed');
+      const programs=await progRes.json();
+      if(!programs?.length){
+        els.posList.innerHTML='<div class="list__empty">No programmes found.</div>';
+        els.psoList.innerHTML='<div class="list__empty">No programmes found.</div>';
+        return;
+      }
+      currentProgramId=programs[0].id;
+      await Promise.all([loadOutcomes('PO'), loadOutcomes('PSO')]);
+    }catch{
+      els.posList.innerHTML='<div class="list__empty">Error loading.</div>';
+      els.psoList.innerHTML='<div class="list__empty">Error loading.</div>';
     }
-    if (typeof loadOutcomesForOrganization === 'function' && panel && panel.dataset.orgId) {
-      const id = Number(panel.dataset.orgId);
-      if (id) loadOutcomesForOrganization(id);
+  }
+
+  async function loadOutcomes(kind){
+    if(!currentProgramId) return;
+    const archived=els.arch?.checked ? '&archived=1' : '';
+    const res=await fetch(`/core/api/program-outcomes/${currentProgramId}/?type=${kind}${archived}`);
+    if(!res.ok) return;
+    const data=await res.json();
+    render(kind, Array.isArray(data)?data:[]);
+  }
+
+  function render(kind, items){
+    const wrap = kind==='PO' ? els.posList : els.psoList;
+    wrap.innerHTML='';
+    if(!items.length){
+      wrap.innerHTML='<div class="list__empty">No outcomes added yet.</div>';
+      return;
     }
-    const toggle = document.getElementById('showArchivedToggle');
-    if (toggle) {
-      toggle.addEventListener('change', function(){
-        const id = Number(panel?.dataset?.orgId);
-        if (id) loadOutcomesForOrganization(id);
+    items.forEach((o, idx)=>{
+      const div=document.createElement('div');
+      div.className='item';
+      const label = (kind==='PO'?'PO':'PSO')+(idx+1);
+
+      const txt=document.createElement('div');
+      txt.className='item__txt';
+      txt.innerHTML = `<strong>${label}:</strong> ${escapeHtml(o.description||'')}`;
+
+      const act=document.createElement('div'); act.className='item__act';
+      const edit=document.createElement('button'); edit.className='icon'; edit.title='Edit';
+      edit.innerHTML='<i class="fas fa-edit"></i>';
+      edit.onclick=()=>inlineEdit(div, txt, o.id, kind);
+
+      const del=document.createElement('button'); del.className='icon'; del.title='Archive';
+      del.innerHTML='<i class="fas fa-trash"></i>';
+      del.onclick=()=>archiveOutcome(o.id, kind);
+
+      act.append(edit, del);
+      div.append(txt, act);
+      wrap.append(div);
+    });
+  }
+
+  function inlineEdit(container, txtEl, outcomeId, kind){
+    const clean=txtEl.textContent.replace(/^PO\d+:\s*|^PSO\d+:\s*/,'').trim();
+    const ta=document.createElement('textarea'); ta.className='outcome-input'; ta.value=clean;
+    container.replaceChild(ta, txtEl);
+
+    const bar=document.createElement('div'); bar.className='btn-row'; bar.style.marginTop='8px';
+    const save=document.createElement('button'); save.className='btn btn--primary'; save.textContent='Save';
+    const cancel=document.createElement('button'); cancel.className='btn'; cancel.textContent='Cancel';
+    bar.append(save,cancel); container.append(bar);
+
+    cancel.onclick = ()=>loadOutcomes(kind);
+    save.onclick = async ()=>{
+      const v=(ta.value||'').trim(); if(!v) return;
+      const r=await fetch('/core/api/manage-program-outcomes/',{
+        method:'PUT', headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+        body: JSON.stringify({ outcome_id: outcomeId, type: kind, description: v })
       });
-    }
-  });
+      const j=await r.json(); if(j?.success) loadOutcomes(kind);
+    };
+  }
+
+  async function archiveOutcome(outcomeId, kind){
+    const r=await fetch('/core/api/manage-program-outcomes/',{
+      method:'DELETE', headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+      body: JSON.stringify({ outcome_id: outcomeId, type: kind })
+    });
+    const j=await r.json(); if(j?.success) loadOutcomes(kind);
+  }
+
+  async function addOutcome(kind){
+    if(!currentProgramId) return;
+    const ta = kind==='PO' ? els.newPO : els.newPSO;
+    const v = (ta.value||'').trim(); if(!v) { ta.focus(); return; }
+
+    const url = (kind==='PO')
+      ? `/api/programs/${currentProgramId}/pos/`
+      : `/api/programs/${currentProgramId}/psos/`;
+
+    const r=await fetch(url,{
+      method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+      body: JSON.stringify({ description: v })
+    });
+    const j=await r.json();
+    if(j?.success){ ta.value=''; loadOutcomes(kind); }
+  }
+
+  // events
+  els.arch?.addEventListener('change', loadAll);
+  els.btnAddPO?.addEventListener('click', ()=>addOutcome('PO'));
+  els.btnAddPSO?.addEventListener('click', ()=>addOutcome('PSO'));
+
+  document.addEventListener('DOMContentLoaded', loadAll);
+  if(document.readyState!=='loading') loadAll();
+})();
 </script>
 {% endblock %}

@@ -1,201 +1,189 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Academic Year Settings – Event Management Suite{% endblock %}
+{% block title %}Academic Year Settings{% endblock %}
 
 {% block head_extra %}
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
-<link rel="stylesheet" href="{% static 'core/css/admin_academic_year.css' %}">
+  <link rel="stylesheet" href="{% static 'core/css/admin_academic_year.css' %}?v=4.0">
+  <!-- FontAwesome already in base; include if not -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
-<div class="main-container">
-  
-  <!-- Page Header -->
-  <div class="page-header">
-    <div class="page-header-content">
-      <div class="breadcrumb">
-        <a href="{% url 'admin_dashboard' %}"><i class="fas fa-home"></i> Admin Dashboard</a>
-        <span class="breadcrumb-separator">></span>
-        <span>Academic Year Settings</span>
+<div class="ems-dashboard mdm-page ays-page"><!-- same container model as Master Data -->
+
+  <!-- Heading (plain, left, compact) -->
+  <header class="topbar">
+    <div><h1>Academic Year Settings</h1></div>
+  </header>
+
+  <!-- Toolbar (tabs on left, Add on right — identical layout to Master Data controls) -->
+  <div class="controls-container ays-toolbar">
+    <div class="filters-left">
+      <div class="tabs-in-toolbar" role="tablist" aria-label="Academic Years">
+        <button class="tab-btn is-active" role="tab" aria-selected="true"
+                aria-controls="panel-active" id="tab-active">
+          Active <span class="count-chip">{{ active_years|length }}</span>
+        </button>
+        <button class="tab-btn" role="tab" aria-selected="false"
+                aria-controls="panel-archived" id="tab-archived">
+          Archived <span class="count-chip">{{ archived_years|length }}</span>
+        </button>
       </div>
-      <h1><i class="fas fa-calendar-alt"></i> Academic Year Settings</h1>
-      <p class="page-description">Manage academic year configurations for the system</p>
+    </div>
+
+    <div class="main-actions">
+      <button class="btn btn-primary" id="btnOpenAdd">
+        <i class="fas fa-plus"></i><span class="btn-label">Add New Entry</span>
+      </button>
     </div>
   </div>
 
-  <div class="content-grid">
-    
-    <!-- Add/Edit Academic Year Form -->
-    <div class="card form-card">
-      <div class="card-header">
-        <h3><i class="fas fa-plus-circle"></i> {% if edit_year %}Edit Academic Year{% else %}Add New Academic Year{% endif %}</h3>
-      </div>
-      <div class="card-body">
-        <form method="post" class="academic-year-form">
-          {% csrf_token %}
-          {% if edit_year %}
-          <input type="hidden" name="id" value="{{ edit_year.id }}">
-          {% endif %}
-          
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="startDate" class="form-label">
-                <i class="fas fa-calendar-day"></i> Start Date
-              </label>
-              <input type="date" 
-                     id="startDate" 
-                     name="start_date" 
-                     class="form-control" 
-                     value="{{ edit_year.start_date|date:'Y-m-d' }}"
-                     required>
-            </div>
-            
-            <div class="form-group">
-              <label for="endDate" class="form-label">
-                <i class="fas fa-calendar-day"></i> End Date
-              </label>
-              <input type="date" 
-                     id="endDate" 
-                     name="end_date" 
-                     class="form-control" 
-                     value="{{ edit_year.end_date|date:'Y-m-d' }}"
-                     required>
-            </div>
-          </div>
-          
-          <div class="form-actions">
-            <button type="submit" class="btn btn-primary">
-              <i class="fas fa-save"></i>
-              {% if edit_year %}Update Academic Year{% else %}Add Academic Year{% endif %}
-            </button>
-            {% if edit_year %}
-            <a href="{% url 'admin_academic_year_settings' %}" class="btn btn-secondary">
-              <i class="fas fa-times"></i> Cancel
-            </a>
-            {% endif %}
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Active Academic Years -->
-    <div class="card years-card">
-      <div class="card-header">
-        <h3><i class="fas fa-calendar-check"></i> Active Academic Years</h3>
-        <div class="card-header-actions">
-          <span class="badge badge-info">{{ active_years|length }} Active</span>
-        </div>
-      </div>
-      <div class="card-body">
-        {% if active_years %}
-        <div class="years-list">
+  <!-- ACTIVE TABLE -->
+  <section id="panel-active" class="tab-panel is-active" role="region" aria-label="Active">
+    {% if active_years %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="th-name">Name</th>
+            <th>Dates</th>
+            <th class="th-status">Status</th>
+            <th class="th-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
           {% for year in active_years %}
-          <div class="year-item active">
-            <div class="year-info">
-              <div class="year-title">{{ year.year }}</div>
-              <div class="year-dates">
-                <span class="date-range">
-                  <i class="fas fa-calendar"></i>
-                  {{ year.start_date|date:"M d, Y" }} - {{ year.end_date|date:"M d, Y" }}
-                </span>
-              </div>
-            </div>
-            <div class="year-actions">
-              <a href="?edit={{ year.id }}" class="btn btn-sm btn-outline-primary" title="Edit">
-                <i class="fas fa-edit"></i> Edit
+          <tr>
+            <td data-label="Name" class="mono">{{ year.year }}</td>
+            <td data-label="Dates">
+              <i class="fas fa-calendar"></i>
+              {{ year.start_date|date:"M d, Y" }} – {{ year.end_date|date:"M d, Y" }}
+            </td>
+            <td data-label="Status">
+              <span class="status-badge status-active">Active</span>
+            </td>
+            <td data-label="Actions" class="actions">
+              <a href="?edit={{ year.id }}"
+                 class="icon-text js-edit"
+                 data-id="{{ year.id }}"
+                 data-start="{{ year.start_date|date:'Y-m-d' }}"
+                 data-end="{{ year.end_date|date:'Y-m-d' }}">
+                <i class="fas fa-pen"></i> Edit
               </a>
-              <form method="post" action="{% url 'academic_year_archive' year.id %}" style="display:inline;" 
+              <form method="post" action="{% url 'academic_year_archive' year.id %}" class="inline"
                     onsubmit="return confirm('Are you sure you want to archive this academic year?')">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-outline-warning" title="Archive">
-                  <i class="fas fa-archive"></i> Archive
-                </button>
+                <button type="submit" class="icon-text warn"><i class="fas fa-box-archive"></i> Archive</button>
               </form>
-            </div>
-          </div>
+            </td>
+          </tr>
           {% endfor %}
-        </div>
-        {% else %}
-        <div class="empty-state">
-          <div class="empty-icon"><i class="fas fa-calendar-times"></i></div>
-          <h4>No Active Academic Years</h4>
-          <p>Add your first academic year to get started.</p>
-        </div>
-        {% endif %}
-      </div>
+        </tbody>
+      </table>
     </div>
+    {% else %}
+      <div class="search-not-found"><p>No active academic years.</p></div>
+    {% endif %}
+  </section>
 
-    <!-- Archived Academic Years -->
-    <div class="card archived-card">
-      <div class="card-header collapsible" data-toggle="collapse" data-target="#archivedYears">
-        <h3><i class="fas fa-archive"></i> Archived Academic Years</h3>
-        <div class="card-header-actions">
-          <span class="badge badge-secondary">{{ archived_years|length }} Archived</span>
-          <i class="fas fa-chevron-down collapse-icon"></i>
-        </div>
-      </div>
-      <div class="card-body collapse" id="archivedYears">
-        {% if archived_years %}
-        <div class="years-list">
+  <!-- ARCHIVED TABLE -->
+  <section id="panel-archived" class="tab-panel" role="region" aria-label="Archived">
+    {% if archived_years %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="th-name">Name</th>
+            <th>Dates</th>
+            <th class="th-status">Status</th>
+            <th class="th-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
           {% for year in archived_years %}
-          <div class="year-item archived">
-            <div class="year-info">
-              <div class="year-title">{{ year.year }}</div>
-              <div class="year-dates">
-                <span class="date-range">
-                  <i class="fas fa-calendar"></i>
-                  {{ year.start_date|date:"M d, Y" }} - {{ year.end_date|date:"M d, Y" }}
-                </span>
-                <span class="archived-badge">
-                  <i class="fas fa-archive"></i> Archived
-                </span>
-              </div>
-            </div>
-            <div class="year-actions">
-              <form method="post" action="{% url 'academic_year_restore' year.id %}" style="display:inline;"
+          <tr class="is-archived">
+            <td data-label="Name" class="mono">{{ year.year }}</td>
+            <td data-label="Dates">
+              <i class="fas fa-calendar"></i>
+              {{ year.start_date|date:"M d, Y" }} – {{ year.end_date|date:"M d, Y" }}
+            </td>
+            <td data-label="Status">
+              <span class="status-badge status-inactive">Archived</span>
+            </td>
+            <td data-label="Actions" class="actions">
+              <form method="post" action="{% url 'academic_year_restore' year.id %}" class="inline"
                     onsubmit="return confirm('Are you sure you want to restore this academic year?')">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-outline-success" title="Restore">
-                  <i class="fas fa-undo"></i> Restore
-                </button>
+                <button type="submit" class="icon-text ok"><i class="fas fa-rotate-left"></i> Restore</button>
               </form>
-            </div>
-          </div>
+            </td>
+          </tr>
           {% endfor %}
-        </div>
-        {% else %}
-        <div class="empty-state small">
-          <div class="empty-icon"><i class="fas fa-archive"></i></div>
-          <p>No archived academic years.</p>
-        </div>
-        {% endif %}
-      </div>
+        </tbody>
+      </table>
     </div>
-    
+    {% else %}
+      <div class="search-not-found"><p>No archived academic years.</p></div>
+    {% endif %}
+  </section>
+
+  <!-- Hide any global welcome/hero below content -->
+  <div class="iqac-welcome" style="display:none"></div>
+</div>
+
+<!-- Data for client-side checks + optional edit prefill -->
+<script id="activeYearsData" type="application/json">
+[
+  {% for y in active_years %}
+    {"start":"{{ y.start_date|date:'Y-m-d' }}","end":"{{ y.end_date|date:'Y-m-d' }}"}{% if not forloop.last %},{% endif %}
+  {% endfor %}
+]
+</script>
+{% if edit_year %}
+<script id="editYearData" type="application/json">
+{"id":"{{ edit_year.id }}","start":"{{ edit_year.start_date|date:'Y-m-d' }}","end":"{{ edit_year.end_date|date:'Y-m-d' }}"}
+</script>
+{% endif %}
+
+<!-- Add/Edit Modal (reuse the one you already have); include the same JS -->
+<div class="modal" id="yearModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal__backdrop" data-close></div>
+  <div class="modal__dialog">
+    <header class="modal__header">
+      <h2 id="modalTitle" class="modal__title"><i class="fas fa-plus-circle"></i> Add Academic Year</h2>
+      <button class="icon-btn" type="button" title="Close" data-close aria-label="Close"><i class="fas fa-times"></i></button>
+    </header>
+    <div class="modal__body">
+      <form method="post" id="academicYearForm" class="form" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="id" id="yearId">
+        <div class="form-row">
+          <div class="field">
+            <label for="startDate" class="label"><i class="fas fa-calendar-day"></i> Start Date</label>
+            <input type="date" id="startDate" name="start_date" class="input" required>
+          </div>
+          <div class="field">
+            <label for="endDate" class="label"><i class="fas fa-calendar-day"></i> End Date</label>
+            <input type="date" id="endDate" name="end_date" class="input" required>
+          </div>
+        </div>
+        <div class="year-preview">
+          <span class="preview-key">Year Label:</span>
+          <span class="preview-val" id="yearLabel">—</span>
+        </div>
+        <div class="notices" id="formNotices" aria-live="polite"></div>
+        <div class="modal__actions">
+          <button type="submit" class="btn btn-primary" id="btnSubmit"><i class="fas fa-save"></i> Save</button>
+          <button type="button" class="btn btn-secondary" data-close>Cancel</button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 
-<script>
-// Collapsible functionality
-document.addEventListener('DOMContentLoaded', function() {
-  const collapsibleHeaders = document.querySelectorAll('.collapsible');
-  
-  collapsibleHeaders.forEach(header => {
-    header.addEventListener('click', function() {
-      const target = document.querySelector(this.dataset.target);
-      const icon = this.querySelector('.collapse-icon');
-      
-      if (target.classList.contains('show')) {
-        target.classList.remove('show');
-        icon.style.transform = 'rotate(0deg)';
-      } else {
-        target.classList.add('show');
-        icon.style.transform = 'rotate(180deg)';
-      }
-    });
-  });
-});
-</script>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{% static 'core/js/admin_academic_year.js' %}?v=4.0"></script>
 {% endblock %}

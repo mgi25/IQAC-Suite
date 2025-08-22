@@ -1,170 +1,103 @@
-body {
-    background: #e8f3fc;
-}
-
-.admin-history-container,
-.history-detail-container {
-    background: #fff;
-    border-radius: 24px;
-    width: calc(100% - 40px);
-    margin: 40px auto;
-    padding: 40px;
-    box-shadow: 0 8px 40px rgba(34,116,203,0.10);
-}
-
-.history-title {
-    font-size: 2.1rem;
-    font-weight: 800;
-    color: #20508c;
-    margin-bottom: 22px;
-    letter-spacing: -1px;
-}
-
-/* DataTable styling */
-.history-table.dataTable {
-    width: 100% !important;
-    border-collapse: collapse;
-    border: 1px solid #dbeaff;
-    font-size: 0.95rem;
-    background: #fff;
-}
-
-.history-table thead th {
-    background: linear-gradient(to right, #2274cb, #185db4);
-    color: white;
-    padding: 12px 14px;
-    text-transform: uppercase;
-    font-weight: 600;
-    font-size: 0.9rem;
-}
-
-.history-table thead th.sorting_disabled {
-    cursor: default !important;
-}
-
-.history-table tbody tr:hover {
-    background: #f3f9ff;
-}
-
-.history-table td {
-    padding: 12px 14px;
-    vertical-align: middle;
-    color: #183a56;
-}
-
-.history-table tbody tr:nth-child(even) {
-    background: #f7fbff;
-}
-
-/* DataTables toolbar */
-.dataTables_wrapper .dt-toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin: 1rem 0;
-    padding: 10px 0;
-}
-
-.dt-toolbar {
-    display: flex !important;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-bottom: 20px;
-}
-
-.dt-toolbar .dataTables_length {
-    order: 1;
-}
-
-.dt-toolbar .dt-buttons {
-    order: 2;
-    flex: 1;
-    justify-content: center;
-}
-
-.dt-toolbar .dataTables_filter {
-    order: 3;
-    margin-left: auto;
-}
-
-.dt-toolbar .dataTables_filter input[type="search"] {
-    max-width: 220px;
-}
-
-.dataTables_info {
-    color: #154d8b;
-    font-weight: 500;
-    margin-top: 15px;
-}
-
-.dataTables_paginate {
-    margin-top: 15px;
-}
-
-/* Entries dropdown */
-.dataTables_length label {
-    font-weight: 500;
-    color: #154d8b;
-}
-
-.dataTables_length select {
-    padding: 6px 10px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    background: #ffffff;
-    font-size: 0.9rem;
-    color: #154d8b;
-}
-
-/* Buttons */
-.dt-buttons {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.dt-button {
-    background: #2274cb;
-    color: white !important;
-    border: none;
-    padding: 8px 14px;
-    border-radius: 8px;
-    font-weight: 500;
-    font-size: 0.9rem;
-}
-
-.dt-button:hover {
-    background: #154d8b !important;
-}
-
-/* Search bar */
-.dataTables_filter label {
-    font-weight: 500;
-    color: #154d8b;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.dataTables_filter input {
-    padding: 8px 14px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    height: 40px;
-    width: 220px;
-    box-sizing: border-box;
-}
-
-/* Filter form */
-.history-filter-form {
-    margin-bottom: 0;
-}
-
-.history-filter-form .btn-reset {
-    color: #20508c;
-    text-decoration: underline;
-}
+:root{
+    --primary:#1e60b1; --primary-dark:#164c8d;
+    --ink:#0f172a; --muted:#64748b; --border:#e5e7eb;
+    --surf:#ffffff; --subtle:#f8fafc; --shadow:0 8px 24px rgba(2,6,23,.06);
+  }
+  
+  .ems-dashboard{width:100%;padding:0;max-width:none;margin:0}
+  
+  /* Heading */
+  .topbar{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+  .topbar h1{margin:0;font-size:28px;font-weight:800;color:var(--ink)}
+  
+  /* Toolbar (fixed above scroller) */
+  .controls-container{
+    position:sticky;top:0;z-index:40;background:var(--surf);
+    border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);
+    padding:8px 10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+  }
+  .filters-left{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .filters-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0}
+  
+  /* Search */
+  .search-bar{display:flex;align-items:center;gap:8px;background:#eef2f7;border:1px solid var(--border);border-radius:999px;padding:6px 10px}
+  .search-bar i{color:var(--muted)}
+  .search-bar input{border:none;background:transparent;outline:none;font-size:14px;min-width:240px}
+  .search-clear{border:none;background:transparent;font-size:18px;line-height:16px;cursor:pointer;color:var(--muted);padding:0 6px;border-radius:6px}
+  .search-clear:hover{background:#e3e8ef}
+  
+  /* Filter chips */
+  .filter{display:flex;align-items:center;gap:6px;background:var(--surf);border:1px solid var(--border);padding:6px 8px;border-radius:10px}
+  .filter>span{font-size:13px;color:var(--muted)}
+  .filter input{border:none;outline:none;font-size:13px;background:transparent}
+  
+  /* Buttons */
+  .main-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:8px;border:1px solid transparent;border-radius:10px;padding:8px 12px;font-weight:700;font-size:13px;cursor:pointer;transition:.2s}
+  .btn:hover{filter:brightness(.97)}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:#fff}
+  .btn-secondary{background:#64748b;border-color:#64748b;color:#fff}
+  .btn .btn-label{display:inline}
+  @media (max-width:900px){ .btn .btn-label{display:none} }
+  
+  /* Card wrapping the DataTable (DT adds its own scroll containers) */
+  .table-wrap{
+    background:var(--surf);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);overflow:hidden
+  }
+  .data-table{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed}
+  
+  /* Header (original & cloned header) */
+  .data-table thead th,
+  .dataTables_scrollHead thead th{
+    background:linear-gradient(90deg,var(--primary),var(--primary-dark));color:#fff;
+    text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.5px;padding:10px 18px 10px 8px;border-bottom:0
+  }
+  .dataTables_scrollHead{border-top-left-radius:16px;border-top-right-radius:16px;overflow:hidden}
+  .dataTables_scrollBody{
+    overflow-y:auto !important;overflow-x:hidden !important;
+    -webkit-overflow-scrolling:touch;scroll-behavior:smooth; /* smooth vertical scroll */
+  }
+  
+  /* Column widths — apply to TH and TD to keep header/body in sync */
+  .data-table th:nth-child(1), .data-table td:nth-child(1){width:64px;text-align:center}
+  .data-table th:nth-child(2), .data-table td:nth-child(2){width:100px}
+  .data-table th:nth-child(3), .data-table td:nth-child(3){width:72px}
+  .data-table th:nth-child(5), .data-table td:nth-child(5){width:170px}
+  .data-table th:nth-child(7), .data-table td:nth-child(7){width:120px}
+  
+  /* Sort chevrons right; hidden for SL No */
+  table.dataTable thead>tr>th.sorting,
+  table.dataTable thead>tr>th.sorting_asc,
+  table.dataTable thead>tr>th.sorting_desc{padding-right:22px}
+  table.dataTable thead .sorting:before,
+  table.dataTable thead .sorting_asc:before,
+  table.dataTable thead .sorting_desc:before,
+  table.dataTable thead .sorting:after,
+  table.dataTable thead .sorting_asc:after,
+  table.dataTable thead .sorting_desc:after{right:6px;left:auto;opacity:.65}
+  .dataTable thead th.no-sort::before,
+  .dataTable thead th.no-sort::after{display:none !important}
+  
+  /* Body */
+  .data-table tbody td{padding:10px 8px;border-bottom:1px solid var(--border);font-size:14px;vertical-align:top;overflow:hidden;text-overflow:ellipsis;white-space:normal;word-break:break-word;color:#183a56}
+  .nowrap{white-space:nowrap !important}
+  .col-desc{white-space:normal !important; word-break:break-word}
+  .data-table tbody tr:nth-child(odd){background:#fafbfc}
+  .text-center{text-align:center;color:#154d8b;padding:14px 8px}
+  
+  /* New footer INSIDE the card */
+  .table-footer{
+    display:flex;justify-content:space-between;align-items:center;gap:12px;
+    padding:10px 12px;border-top:1px solid var(--border);
+    background:var(--subtle);
+  }
+  .table-footer .dataTables_info{color:#154d8b;font-weight:600;margin:0}
+  .table-footer .dataTables_paginate{margin:0}
+  .table-footer .paginate_button{padding:4px 8px;border-radius:8px;cursor:pointer;margin:0 2px;user-select:none}
+  .table-footer .paginate_button.current{background:var(--primary);color:#fff}
+  .table-footer .paginate_button.disabled{opacity:.4;pointer-events:none}
+  .table-footer .ellipsis{padding:0 6px;color:#64748b}
+  
+  /* Buttons in toolbar */
+  .dt-buttons .btn{border-radius:10px}
+  

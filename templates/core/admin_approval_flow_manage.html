@@ -1,92 +1,236 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Approval Flow Management – CHRIST University{% endblock %}
+{% block title %}Approval Flow Management{% endblock %}
 
 {% block head_extra %}
-  <link rel="stylesheet" href="{% static 'core/css/admin_approval_flow.css' %}">
+  <link rel="stylesheet" href="{% static 'core/css/admin_approval_flow.css' %}?v=3.0">
   <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet"/>
 {% endblock %}
 
-{% block page_title %}Admin Approval Flow{% endblock %}
-{% block current_page %}Approval Flow Management{% endblock %}
-
-{% block breadcrumb %}
-  <a href="{% url 'dashboard' %}">Home</a>
-  <i class="fa-solid fa-chevron-right"></i>
-  <a href="{% url 'core_admin_dashboard' %}">Admin Dashboard</a>
-  <i class="fa-solid fa-chevron-right"></i>
-  <span>Approval Flow Management</span>
-{% endblock %}
-
 {% block content %}
-<div class="admin-approval-container">
+<div class="ems-dashboard approval-flow-page">
 
-  <!-- Page Header -->
-  <div class="page-header">
-    <h1>
-      <i class="fa-solid fa-route"></i> Approval Flow – {{ selected_org.name }}
-    </h1>
-    <p>View or edit the proposal approval hierarchy. Drag to reorder the steps or assign users.</p>
-    <p><a class="btn btn-secondary btn-sm" href="{% url 'admin_approval_flow' %}">Back to list</a></p>
+  <!-- Heading (Dashboard style: black, compact) -->
+  <header class="topbar">
+    <div>
+      <h1>Approval Flow Configuration</h1>
+      <p>Configure proposal approval hierarchy for <strong>{{ selected_org.name }}</strong></p>
+    </div>
+  </header>
+
+  <!-- Controls: Simplified without back button and organization info -->
+  <div class="controls-container" id="controlsBar">
+    <div class="filters-left">
+      <!-- Remove all the filter elements since they're redundant -->
+    </div>
+
+    <div class="main-actions">
+      <!-- Move edit button to visualization section -->
+    </div>
   </div>
 
-  <div id="currentFlow" class="current-flow">
+  <!-- Current Flow Display -->
+  <div class="current-flow-container">
     {% if existing_steps %}
+      <div class="flow-status-header">
+        <h3><i class="fas fa-route"></i> Current Approval Flow</h3>
+        <span class="flow-summary">{{ existing_steps|length }} step{{ existing_steps|length|pluralize }} configured</span>
+      </div>
+      
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Step</th>
+              <th>Role Required</th>
+              <th>Assigned User</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for step in existing_steps %}
+              <tr>
+                <td>
+                  <span class="step-number">{{ step.step_order }}</span>
+                </td>
+                <td>
+                  <span class="role-display">{{ step.get_role_required_display }}</span>
+                </td>
+                <td>
+                  {% if step.user %}
+                    <div class="user-info">
+                      <strong>{{ step.user.get_full_name }}</strong>
+                      <span class="user-email">{{ step.user.email }}</span>
+                    </div>
+                  {% else %}
+                    <span class="text-muted"><i class="fas fa-user-slash"></i> Unassigned</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="status-badge {% if step.optional %}status-inactive{% else %}status-active{% endif %}">
+                    {% if step.optional %}Optional{% else %}Required{% endif %}
+                  </span>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Flow Visualization with edit button -->
+      <div class="flow-preview">
+        <div class="flow-header">
+          <h4><i class="fas fa-sitemap"></i> Flow Visualization</h4>
+          <div class="flow-actions">
+            {% if existing_steps %}
+              <button class="btn btn-primary" onclick="openApprovalFlowEditor()">
+                <i class="fas fa-edit"></i><span class="btn-label">Edit Flow</span>
+              </button>
+            {% else %}
+              <button class="btn btn-primary" onclick="openApprovalFlowEditor()">
+                <i class="fas fa-plus"></i><span class="btn-label">Create Flow</span>
+              </button>
+            {% endif %}
+          </div>
+        </div>
+        <div class="flow-diagram" id="flowVisualization">
+          {% if require_faculty_incharge_first %}
+            <div class="flow-step flow-step-faculty">
+              <i class="fas fa-user-tie"></i>
+              <div class="step-content">
+                <strong>Faculty</strong>
+                <small>In-Charge</small>
+              </div>
+            </div>
+          {% endif %}
+          
+          {% for step in existing_steps %}
+            <div class="flow-step {% if step.optional %}flow-step-optional{% else %}flow-step-required{% endif %}">
+              <span class="step-badge">{{ step.step_order }}</span>
+              {% if step.get_role_required_display == 'Student' %}
+                <i class="fas fa-user-graduate"></i>
+              {% elif step.get_role_required_display == 'Faculty' %}
+                <i class="fas fa-chalkboard-teacher"></i>
+              {% elif step.get_role_required_display == 'HOD' %}
+                <i class="fas fa-user-tie"></i>
+              {% elif step.get_role_required_display == 'Principal' %}
+                <i class="fas fa-crown"></i>
+              {% else %}
+                <i class="fas fa-user"></i>
+              {% endif %}
+              <div class="step-content">
+                <strong>{{ step.get_role_required_display|truncatechars:8 }}</strong>
+                <small>{{ step.user.get_full_name|default:"Unassigned"|truncatechars:10 }}</small>
+              </div>
+              {% if step.optional %}<i class="fas fa-question-circle optional-icon" title="Optional Step"></i>{% endif %}
+            </div>
+          {% endfor %}
+          
+          {% if existing_steps %}
+            <div class="flow-step flow-step-end">
+              <i class="fas fa-check-circle"></i>
+              <div class="step-content">
+                <strong>Approved</strong>
+                <small>Final</small>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+      
+    {% else %}
+      <!-- Empty State -->
+      <div class="empty-state">
+        <div class="empty-icon">
+          <i class="fas fa-route"></i>
+        </div>
+        <h3>No Approval Flow Configured</h3>
+        <p>This organization doesn't have an approval flow set up yet. Create one to enable proposal approvals.</p>
+        <button class="btn btn-primary btn-lg" onclick="openApprovalFlowEditor()">
+          <i class="fas fa-plus"></i> Create Approval Flow
+        </button>
+      </div>
+    {% endif %}
+
+    <!-- Original flow list for JS compatibility -->
+    <div id="currentFlow" style="display:none;">
       <ol id="currentFlowList" class="flow-list">
         {% for step in existing_steps %}
           <li>{{ step.step_order }}. {{ step.get_role_required_display }}{% if step.optional %} (Optional){% endif %} – {{ step.user.get_full_name|default:'Unassigned' }}</li>
         {% endfor %}
       </ol>
-      <button class="btn btn-primary" type="button" onclick="openApprovalFlowEditor()">Edit Flow</button>
-    {% else %}
-      <p>No approval flow defined.</p>
-      <button class="btn btn-primary" type="button" onclick="openApprovalFlowEditor()">Create Flow</button>
-    {% endif %}
+    </div>
   </div>
 </div>
 
-<!-- Approval Flow Editor Modal -->
+<!-- Approval Flow Editor Modal (Keep original structure) -->
 <div id="approvalFlowEditorModal" class="modal-overlay">
   <div class="modal approval-flow-modal">
     <div class="modal-header">
-      <h3>Edit Approval Flow</h3>
+      <h3><i class="fas fa-route"></i> Edit Approval Flow</h3>
       <button class="modal-close" onclick="closeModal('approvalFlowEditorModal')">&times;</button>
     </div>
     <div class="modal-body">
-      <div class="form-check mb-3">
-        <label class="form-check-label">
-          <input type="checkbox" class="form-check-input" id="facultyFirstToggle" {% if require_faculty_incharge_first %}checked{% endif %}>
+      <!-- Faculty First Toggle -->
+      <div class="form-group">
+        <label class="checkbox-row">
+          <input type="checkbox" id="facultyFirstToggle" {% if require_faculty_incharge_first %}checked{% endif %}>
           Enable Faculty In-Charge First Approval
         </label>
+        <div class="hint">When enabled, Faculty In-Charge must approve before the flow begins</div>
       </div>
 
       <div class="edit-layout">
-        <!-- Step Edit Pane -->
+        <!-- User Search/List Pane - NOW ON LEFT (BIGGER) -->
+        <div class="user-pane">
+          <div class="section-header">
+            <h4>Available Users</h4>
+          </div>
+          <input type="text" id="userSearchInput" class="form-control" placeholder="Search users..." oninput="loadOrgUsers(this.value)">
+          <div id="orgUserList" class="user-list">
+            <!-- Users will load here (JS) -->
+          </div>
+        </div>
+
+        <!-- Step Edit Pane - NOW ON RIGHT (SMALLER) -->
         <div class="steps-pane">
+          <div class="section-header">
+            <h4>Approval Steps</h4>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="addApprovalStep()">
+              <i class="fas fa-plus"></i> Add Step
+            </button>
+          </div>
+          
           <div id="approvalFlowSteps" class="steps-container" ondragover="allowDrop(event)" ondrop="dropOnSteps(event)">
             <!-- Steps will render here (JS) -->
           </div>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="addApprovalStep()">+ Add Step</button>
-          <p class="form-tip">Drag users from the right to build the flow. Roles can be adjusted per step.</p>
-        </div>
-        <!-- User Search/List Pane -->
-        <div class="user-pane">
-          <input type="text" id="userSearchInput" class="form-control" placeholder="Search users" oninput="loadOrgUsers(this.value)">
-          <div id="orgUserList" class="user-list"></div>
+          
+          <div class="form-tip">
+            <i class="fas fa-info-circle"></i>
+            Drag users from the left panel to build the flow. Use drag handles to reorder steps.
+          </div>
         </div>
       </div>
+      
       <datalist id="roleSuggestions"></datalist>
     </div>
+    
     <div class="modal-footer">
-      <button type="button" class="btn btn-danger" onclick="deleteApprovalFlow()">Delete Flow</button>
-      <button type="button" class="btn btn-secondary" onclick="closeModal('approvalFlowEditorModal')">Cancel</button>
-      <button type="button" class="btn btn-primary" onclick="saveApprovalFlow()">Save</button>
+      <button type="button" class="btn btn-danger" onclick="deleteApprovalFlow()">
+        <i class="fas fa-trash"></i> Delete Flow
+      </button>
+      <button type="button" class="btn btn-secondary" onclick="closeModal('approvalFlowEditorModal')">
+        Cancel
+      </button>
+      <button type="button" class="btn btn-primary" onclick="saveApprovalFlow()">
+        <i class="fas fa-save"></i> Save Flow
+      </button>
     </div>
   </div>
 </div>
 
-<!-- Toast for notifications -->
+<!-- Toast for notifications (IMPORTANT: Keep the original ID) -->
 <div class="toast" id="toast">
   <span id="toastMessage"></span>
 </div>
@@ -99,8 +243,176 @@
     window.SELECTED_ORG_TYPE_ID = {{ selected_org.org_type_id|default:'null' }};
     window.SELECTED_ORG_NAME = "{{ selected_org.name|escapejs }}";
     window.REQUIRE_FACULTY_FIRST = {{ require_faculty_incharge_first|yesno:'true,false' }};
+    
+    // Real-time flow update functions
+    function updateFlowVisualization(steps, facultyFirst = false) {
+      const flowDiagram = document.getElementById('flowVisualization');
+      if (!flowDiagram) return;
+      
+      let html = '';
+      
+      // Faculty first step
+      if (facultyFirst) {
+        html += `
+          <div class="flow-step flow-step-faculty">
+            <i class="fas fa-user-tie"></i>
+            <div class="step-content">
+              <strong>Faculty</strong>
+              <small>In-Charge</small>
+            </div>
+          </div>
+        `;
+      }
+      
+      // Regular steps
+      steps.forEach((step, index) => {
+        const stepType = step.optional ? 'flow-step-optional' : 'flow-step-required';
+        const stepRole = step.role || 'User';
+        const stepUser = step.user ? step.user.name : 'Unassigned';
+        
+        // Choose appropriate icon based on role
+        let icon = 'fas fa-user';
+        const roleLower = stepRole.toLowerCase();
+        if (roleLower.includes('student')) icon = 'fas fa-user-graduate';
+        else if (roleLower.includes('faculty')) icon = 'fas fa-chalkboard-teacher';
+        else if (roleLower.includes('hod')) icon = 'fas fa-user-tie';
+        else if (roleLower.includes('principal')) icon = 'fas fa-crown';
+        
+        html += `
+          <div class="flow-step ${stepType}">
+            <span class="step-badge">${index + 1}</span>
+            <i class="${icon}"></i>
+            <div class="step-content">
+              <strong>${stepRole.length > 8 ? stepRole.substring(0,8) : stepRole}</strong>
+              <small>${stepUser.length > 10 ? stepUser.substring(0,10) : stepUser}</small>
+            </div>
+            ${step.optional ? '<i class="fas fa-question-circle optional-icon" title="Optional Step"></i>' : ''}
+          </div>
+        `;
+      });
+      
+      // End step
+      if (steps.length > 0) {
+        html += `
+          <div class="flow-step flow-step-end">
+            <i class="fas fa-check-circle"></i>
+            <div class="step-content">
+              <strong>Approved</strong>
+              <small>Final</small>
+            </div>
+          </div>
+        `;
+      }
+      
+      flowDiagram.innerHTML = html;
+    }
+    
+    function updateCurrentFlowTable(steps) {
+      const tableBody = document.querySelector('.data-table tbody');
+      if (!tableBody) return;
+      
+      if (steps.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="4" class="text-center">No approval flow configured</td></tr>';
+        return;
+      }
+      
+      const html = steps.map((step, index) => `
+        <tr>
+          <td>
+            <span class="step-number">${index + 1}</span>
+          </td>
+          <td>
+            <span class="role-display">${step.role ? step.role.charAt(0).toUpperCase() + step.role.slice(1) : 'Unassigned'}</span>
+          </td>
+          <td>
+            ${step.user ? `
+              <div class="user-info">
+                <strong>${step.user.name}</strong>
+                <span class="user-email">${step.user.email || ''}</span>
+              </div>
+            ` : '<span class="text-muted"><i class="fas fa-user-slash"></i> Unassigned</span>'}
+          </td>
+          <td>
+            <span class="status-badge ${step.optional ? 'status-inactive' : 'status-active'}">
+              ${step.optional ? 'Optional' : 'Required'}
+            </span>
+          </td>
+        </tr>
+      `).join('');
+      
+      tableBody.innerHTML = html;
+    }
+    
+    function updateFlowSummary(steps) {
+      const summary = document.querySelector('.flow-summary');
+      if (summary) {
+        summary.textContent = `${steps.length} step${steps.length !== 1 ? 's' : ''} configured`;
+      }
+    }
+    
+    function updateFacultyFirstBadge(enabled) {
+      const badge = document.querySelector('.filters-left .status-badge');
+      if (badge) {
+        badge.className = `status-badge ${enabled ? 'status-active' : 'status-inactive'}`;
+        badge.textContent = enabled ? 'Enabled' : 'Disabled';
+      }
+    }
+    
+    // Override the original save function to add real-time updates
+    const originalSaveApprovalFlow = window.saveApprovalFlow;
+    window.saveApprovalFlow = function() {
+      const orgId = window.SELECTED_ORG_ID;
+      const payloadSteps = approvalSteps.map(s => ({
+        role_required: s.role,
+        user_id: s.user ? s.user.id : null,
+        optional: s.optional
+      }));
+      const requireFic = document.getElementById('facultyFirstToggle');
+      const requireFlag = requireFic ? requireFic.checked : false;
+
+      fetch(`/core-admin/approval-flow/${orgId}/save/`, {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': window.CSRF_TOKEN },
+        credentials: 'same-origin',
+        body: JSON.stringify({ steps: payloadSteps, require_faculty_incharge_first: requireFlag })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          showToast('Approval flow saved successfully!', 'success');
+          closeModal('approvalFlowEditorModal');
+          
+          // Real-time updates without page refresh
+          updateFlowVisualization(approvalSteps, requireFlag);
+          updateCurrentFlowTable(approvalSteps);
+          updateFlowSummary(approvalSteps);
+          updateFacultyFirstBadge(requireFlag);
+          
+          // Update page elements
+          const emptyState = document.querySelector('.empty-state');
+          const flowContent = document.querySelector('.flow-status-header');
+          
+          if (approvalSteps.length > 0 && emptyState) {
+            emptyState.style.display = 'none';
+            if (flowContent) flowContent.style.display = 'flex';
+          }
+          
+        } else {
+          showToast(data.error || 'Failed to save flow', 'error');
+        }
+      })
+      .catch(e => {
+        console.error('Save error:', e);
+        showToast('Error saving flow', 'error');
+      });
+    };
+    
+    // Make functions globally available
+    window.updateFlowVisualization = updateFlowVisualization;
+    window.updateCurrentFlowTable = updateCurrentFlowTable;
+    window.updateFlowSummary = updateFlowSummary;
+    window.updateFacultyFirstBadge = updateFacultyFirstBadge;
   </script>
   <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
   <script src="{% static 'core/js/admin_approval_flow.js' %}"></script>
 {% endblock %}
-

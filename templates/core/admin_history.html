@@ -1,73 +1,81 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block title %}Activity History{% endblock %}
+
 {% block head_extra %}
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
-<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
-<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
-<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
-<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
-<script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.colVis.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
-<link rel="stylesheet" href="{% static 'core/css/admin_history.css' %}">
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
+
+  <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.colVis.min.js"></script>
+
+  <link rel="stylesheet" href="{% static 'core/css/admin_history.css' %}?v=5.1">
 {% endblock %}
 
 {% block content %}
-<div class="admin-history-container">
-  <h1 class="history-title">Activity History</h1>
-  <form method="get" class="history-filter-form d-flex flex-wrap align-items-end gap-2 mb-3">
-    <div class="form-group">
-      <label for="history-search-input" class="form-label">Search</label>
-      <input type="text" id="history-search-input" name="q" class="form-control form-control-sm" placeholder="Search..." value="{{ q }}" list="history-suggestions">
-      <datalist id="history-suggestions">
-        {% for item in suggestions %}
-          <option value="{{ item }}">
-        {% endfor %}
-      </datalist>
+<div class="ems-dashboard mdm-page history-page">
+
+  <!-- Heading -->
+  <header class="topbar">
+    <div><h1>Activity History</h1></div>
+  </header>
+
+  <!-- Toolbar (fixed; NOT in the scroller) -->
+  <div class="controls-container" id="historyControls">
+    <div class="filters-left">
+      <form method="get" id="historyFilterForm" class="filters-row" role="search">
+        <div class="search-bar">
+          <i class="fas fa-search"></i>
+          <input type="text" id="history-search-input" name="q" placeholder="Search…" value="{{ q }}" list="history-suggestions" aria-label="Search history">
+          <button class="search-clear" type="button" id="clearSearchBtn" title="Clear">×</button>
+          <datalist id="history-suggestions">
+            {% for item in suggestions %}<option value="{{ item }}">{% endfor %}
+          </datalist>
+        </div>
+
+        <label class="filter"><span>Start</span><input type="date" id="start" name="start" value="{{ start }}"></label>
+        <label class="filter"><span>End</span><input type="date" id="end" name="end" value="{{ end }}"></label>
+
+        <button type="submit" class="btn btn-primary btn-sm-only" title="Apply Filters">
+          <i class="fas fa-filter"></i><span class="btn-label">Filter</span>
+        </button>
+        {% if q or start or end %}
+          <a href="{% url 'admin_history' %}" class="btn btn-secondary btn-sm-only" title="Reset Filters">Reset</a>
+        {% endif %}
+      </form>
     </div>
-    <div class="form-group">
-      <label for="start" class="form-label">Start date</label>
-      <input type="date" id="start" name="start" class="form-control form-control-sm" value="{{ start }}">
-    </div>
-    <div class="form-group">
-      <label for="end" class="form-label">End date</label>
-      <input type="date" id="end" name="end" class="form-control form-control-sm" value="{{ end }}">
-    </div>
-    <div class="form-group">
-      <button type="submit" class="btn btn-sm btn-primary">Filter</button>
-    </div>
-    {% if q or start or end %}
-    <div class="form-group">
-      <a href="{% url 'admin_history' %}" class="btn btn-sm btn-outline-secondary btn-reset">Reset</a>
-    </div>
-    {% endif %}
-  </form>
+
+    <div class="main-actions" id="dtButtonsHost"></div>
+  </div>
+
   {% if q or start or end %}
-  <div class="alert alert-info py-2 small">
-    {% if q %}Search: <strong>{{ q }}</strong>{% endif %}
-    {% if start or end %}
-      {% if q %}<span class="mx-1">|</span>{% endif %}
-      Date:
-      {% if start %}from {{ start }}{% endif %}
-      {% if start and end %} to {% endif %}
-      {% if end %}{{ end }}{% endif %}
-    {% endif %}
+  <div class="search-not-found" id="appliedFilters">
+    <p class="m-0">
+      {% if q %}Search: <strong>{{ q }}</strong>{% endif %}
+      {% if start or end %}
+        {% if q %}<span class="mx-1">|</span>{% endif %}
+        Date: {% if start %}from {{ start }}{% endif %}{% if start and end %} to {% endif %}{% if end %}{{ end }}{% endif %}
+      {% endif %}
+    </p>
   </div>
   {% endif %}
-  <div class="table-responsive">
-    <table class="history-table table table-striped table-bordered" id="historyTable">
+
+  <!-- Card: header fixed, body scrolls, footer (info + pager) INSIDE this card -->
+  <div class="table-wrap" id="historyTableWrap">
+    <table id="historyTable" class="data-table">
       <thead>
         <tr>
-          <th>Timestamp</th>
+          <th class="no-sort slno">SL No</th>
+          <th>Date</th>
+          <th>Time</th>
           <th>User</th>
           <th>Action</th>
           <th>Description</th>
@@ -77,37 +85,106 @@
       <tbody>
         {% for log in logs %}
         <tr>
-          <td>{{ log.timestamp|date:"Y-m-d H:i" }}</td>
+          <td></td>
+          <td class="nowrap">{{ log.timestamp|date:"Y-m-d" }}</td>
+          <td class="nowrap">{{ log.timestamp|date:"H:i" }}</td>
           <td>{{ log.user.get_full_name|default:log.user.username|default:"System" }}</td>
           <td><a href="{% url 'admin_history_detail' log.pk %}">{{ log.action }}</a></td>
-          <td>{{ log.description|default:"-" }}</td>
-          <td>{{ log.ip_address|default:"-" }}</td>
+          <td class="col-desc">{{ log.description|default:"-" }}</td>
+          <td class="nowrap">{{ log.ip_address|default:"-" }}</td>
         </tr>
         {% empty %}
-        <tr>
-          <td colspan="5">No activity found.</td>
-        </tr>
+        <tr><td colspan="7" class="text-center">No activity found.</td></tr>
         {% endfor %}
       </tbody>
     </table>
+
+    <!-- New footer lives INSIDE the card -->
+    <div class="table-footer">
+      <div class="footer-info"></div>
+      <div class="footer-pager"></div>
+    </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
 <script>
-$(document).ready(function() {
-  $('#historyTable').DataTable({
-    responsive: true,
-    dom: '<"dt-toolbar d-flex justify-content-between align-items-center flex-wrap mb-3"lB>rtip',
-    buttons: [
-      { extend: 'copy', className: 'btn btn-secondary' },
-      { extend: 'excel', className: 'btn btn-success' },
-      { extend: 'csv', className: 'btn btn-info' },
-      { extend: 'print', className: 'btn btn-primary' },
-      { extend: 'colvis', className: 'btn btn-secondary' }
-    ],
-    initComplete: function() {
-      $(".history-filter-form").appendTo('.dt-toolbar').removeClass('mb-3').addClass('mb-0');
+  $(function () {
+    // Compute scrollable body height, reserving space for our in-card footer.
+    function computeScrollY() {
+      const wrap = document.getElementById('historyTableWrap');
+      const rect = wrap.getBoundingClientRect();
+      const viewportH = window.innerHeight;
+      const footer = wrap.querySelector('.table-footer');
+      const footerH = footer ? footer.offsetHeight : 56;
+      // Leave a little breathing room.
+      return Math.max(240, viewportH - rect.top - footerH - 16);
     }
+
+    const dt = $('#historyTable').DataTable({
+      responsive: false,
+      autoWidth: false,
+      // Buttons + table + (we will MOVE the default info/pager into our footer)
+      dom: 'Brtip',
+      pageLength: 20,
+      order: [[1, 'desc'], [2, 'desc']],
+      language: {
+        info: "_START_–_END_ of _TOTAL_",
+        infoEmpty: "0 results",
+        paginate: { previous: "Prev", next: "Next" }
+      },
+      columnDefs: [
+        { targets: 0, searchable: false, orderable: false, className: 'text-center' },
+        { targets: 1, className: 'nowrap' },
+        { targets: 2, className: 'nowrap' },
+        { targets: 5, className: 'wrap' },
+        { targets: 6, className: 'nowrap' }
+      ],
+      // Split head/body; only body scrolls
+      scrollY: computeScrollY() + 'px',
+      scrollCollapse: true,
+      scrollX: false,
+      deferRender: true
+    });
+
+    // Buttons → toolbar
+    $('#dtButtonsHost').empty().append($(dt.buttons().container()));
+
+    // Move DataTables' info and pager inside the card footer.
+    const $wrapper = $(dt.table().container());
+    const $info = $wrapper.find('.dataTables_info').detach();
+    const $pager = $wrapper.find('.dataTables_paginate').detach();
+    $('.table-footer .footer-info').append($info);
+    $('.table-footer .footer-pager').append($pager);
+
+    // Auto-number SL No per page
+    function renumber() {
+      const info = dt.page.info();
+      dt.column(0, { search:'applied', order:'applied', page:'current' })
+        .nodes().each(function (cell, i) { cell.innerHTML = info.start + i + 1; });
+    }
+    dt.on('order.dt search.dt draw.dt', renumber);
+    renumber();
+
+    // Keep header/body widths aligned and body height correct.
+    function resizeScrollBody() {
+      const h = computeScrollY();
+      const api = dt.settings()[0];
+      api.oScroll.sY = h + 'px';
+      dt.columns.adjust().draw(false);
+
+      const $body = $(dt.table().container()).find('div.dataTables_scrollBody');
+      $body.css({ height: h + 'px', maxHeight: h + 'px', overflowX: 'hidden' });
+    }
+    setTimeout(resizeScrollBody, 0);
+    $(window).on('resize', function(){ setTimeout(resizeScrollBody, 0); });
+
+    // Clear search
+    $('#clearSearchBtn').on('click', function () {
+      $('#history-search-input').val('');
+      $('#historyFilterForm')[0].submit();
+    });
   });
-});
 </script>
 {% endblock %}
