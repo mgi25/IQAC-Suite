@@ -136,7 +136,7 @@ $(document).on('click', '#ai-enhance-summary', function() {
   }
 });
 
-function aiFill(target, words=80){
+function aiFill(target, words=320){
     const textarea = $(target);
     const text = generatePlaceholder(words);
     textarea.val(text);
@@ -183,7 +183,7 @@ $(document).on('click', '#ai-objective-achievement', function(){
     const btn = $(this);
     const original = btn.text();
     btn.prop('disabled', true).text('...');
-    try { aiFill('#objective-achievement-modern', 120); }
+    try { aiFill('#objective-achievement-modern', 320); }
     catch (err) { console.error(err); }
     finally { btn.prop('disabled', false).text(original); }
 });
@@ -192,7 +192,7 @@ $(document).on('click', '#ai-strengths-analysis', function(){
     const btn = $(this);
     const original = btn.text();
     btn.prop('disabled', true).text('...');
-    try { aiFill('#strengths-analysis-modern', 80); }
+    try { aiFill('#strengths-analysis-modern', 320); }
     catch (err) { console.error(err); }
     finally { btn.prop('disabled', false).text(original); }
 });
@@ -201,7 +201,7 @@ $(document).on('click', '#ai-challenges-analysis', function(){
     const btn = $(this);
     const original = btn.text();
     btn.prop('disabled', true).text('...');
-    try { aiFill('#challenges-analysis-modern', 80); }
+    try { aiFill('#challenges-analysis-modern', 320); }
     catch (err) { console.error(err); }
     finally { btn.prop('disabled', false).text(original); }
 });
@@ -210,7 +210,7 @@ $(document).on('click', '#ai-effectiveness-analysis', function(){
     const btn = $(this);
     const original = btn.text();
     btn.prop('disabled', true).text('...');
-    try { aiFill('#effectiveness-analysis-modern', 120); }
+    try { aiFill('#effectiveness-analysis-modern', 320); }
     catch (err) { console.error(err); }
     finally { btn.prop('disabled', false).text(original); }
 });
@@ -219,7 +219,7 @@ $(document).on('click', '#ai-lessons-learned', function(){
     const btn = $(this);
     const original = btn.text();
     btn.prop('disabled', true).text('...');
-    try { aiFill('#lessons-learned-modern', 150); }
+    try { aiFill('#lessons-learned-modern', 320); }
     catch (err) { console.error(err); }
     finally { btn.prop('disabled', false).text(original); }
 });
