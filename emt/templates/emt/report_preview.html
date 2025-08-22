@@ -21,13 +21,11 @@
             {% for key, value in post_data.items %}
                 <input type="hidden" name="{{ key }}" value="{{ value|escape }}">
             {% endfor %}
-            <div class="report-preview-list">
-                {% for key, value in post_data.items %}
-                    {% if key != 'csrfmiddlewaretoken' %}
-                        <p><strong>{{ key|capfirst }}:</strong> {{ value }}</p>
-                    {% endif %}
+            <ol class="report-preview-list">
+                {% for field in form.visible_fields %}
+                    <li><strong>{{ field.label }}:</strong> {{ field.value|default:"—" }}</li>
                 {% endfor %}
-            </div>
+            </ol>
             <button type="submit" name="final_submit" class="btn-submit">Submit Report</button>
         </form>
     </main>
