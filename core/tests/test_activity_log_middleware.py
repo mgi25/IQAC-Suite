@@ -2,6 +2,7 @@ from django.test import TestCase, RequestFactory
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.http import HttpResponse
+from types import SimpleNamespace
 
 from core.middleware import ActivityLogMiddleware
 from core.models import ActivityLog
@@ -18,40 +19,43 @@ class ActivityLogMiddlewareTests(TestCase):
     def tearDown(self):
         post_save.connect(signals.create_or_update_user_profile, sender=User)
 
-    def test_creates_log_for_post_request(self):
-        request = self.factory.post('/some/path', {'foo': 'bar', 'csrfmiddlewaretoken': 'token'})
+    def test_creates_friendly_log_for_post_request(self):
+        request = self.factory.post(
+            '/contact/',
+            {'foo': 'bar', 'csrfmiddlewaretoken': 'token'}
+        )
         request.user = self.user
         request.META['REMOTE_ADDR'] = '127.0.0.1'
         request.META['HTTP_USER_AGENT'] = 'TestAgent/1.0'
+        request.resolver_match = SimpleNamespace(view_name='contact_form')
+        request.object = SimpleNamespace(title='Feedback')
 
         response = self.middleware(request)
 
         self.assertEqual(response.status_code, 200)
         log = ActivityLog.objects.get()
         self.assertEqual(log.user, self.user)
-        self.assertEqual(log.action, 'POST /some/path')
+        self.assertEqual(log.action, 'POST /contact/')
         self.assertEqual(log.ip_address, '127.0.0.1')
-        self.assertEqual(log.metadata, {'foo': 'bar'})
+        self.assertEqual(log.metadata, {'foo': 'bar', 'object_title': 'Feedback'})
         self.assertEqual(
             log.description,
-            'alice submitted data to /some/path with foo=bar from IP 127.0.0.1.'
+            'alice submitted contact form "Feedback"'
         )
 
-    def test_creates_log_for_get_request(self):
-        request = self.factory.get('/some/path', {'q': 'test'})
+    def test_creates_friendly_log_for_get_request(self):
+        request = self.factory.get('/profile/', {'q': 'test'})
         request.user = self.user
         request.META['REMOTE_ADDR'] = '127.0.0.1'
         request.META['HTTP_USER_AGENT'] = 'TestAgent/1.0'
+        request.resolver_match = SimpleNamespace(view_name='profile')
 
         response = self.middleware(request)
 
         self.assertEqual(response.status_code, 200)
         log = ActivityLog.objects.get()
         self.assertEqual(log.user, self.user)
-        self.assertEqual(log.action, 'GET /some/path')
+        self.assertEqual(log.action, 'GET /profile/')
         self.assertEqual(log.ip_address, '127.0.0.1')
         self.assertEqual(log.metadata, {'q': 'test'})
-        self.assertEqual(
-            log.description,
-            'alice viewed /some/path with q=test from IP 127.0.0.1.'
-        )
+        self.assertEqual(log.description, 'alice viewed profile')
