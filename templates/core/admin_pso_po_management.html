@@ -2,113 +2,164 @@
 {% load static %}
 {% load dict_filters %}
 
+{% block title %}POs & PSOs Management{% endblock %}
+
+{% block head_extra %}
+  <!-- Master Data base styles FIRST -->
+  <link rel="stylesheet" href="{% static 'core/css/admin_master_data.css' %}?v=3.0">
+  <!-- Minimal page-specific overrides (chips only, no backgrounds) -->
+  <link rel="stylesheet" href="{% static 'core/css/admin_pso_po_management.css' %}?v=1.0">
+{% endblock %}
+
 {% block content %}
-<link rel="stylesheet" href="{% static 'core/css/admin_master_data.css' %}">
-<link rel="stylesheet" href="{% static 'core/css/admin_pso_po_management.css' %}">
-
-<div class="main-container">
-  <!-- Page Header -->
-  <div class="page-header">
-    <h1 class="page-title">POs & PSOs Management</h1>
-  </div>
-
-  <!-- Controls Section -->
-  <div class="controls-section">
-    <div class="filter-tabs">
-      <button class="filter-btn active" data-type="all">All</button>
-      {% for org_type in org_types %}
-        <button class="filter-btn" data-type="{{ org_type.name|lower }}">{{ org_type.name }}s</button>
-      {% endfor %}
+<div class="ems-dashboard mdm-page">
+  <!-- Heading (identical style to Master Data) -->
+  <header class="topbar">
+    <div>
+      <h1>POs &amp; PSOs Management</h1>
     </div>
-    
-    <div class="search-container">
-      <input type="text" id="org-search" placeholder="Search organizations...">
-    </div>
-  </div>
+  </header>
 
-  <!-- Organizations Table -->
-  <div class="table-container">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>S.on</th>
-          <th>Organization</th>
-          <th>Type</th>
-          <th>Status</th>
-          <th>Parent</th>
-          <th>POs & PSOs</th>
-        </tr>
-      </thead>
-      <tbody id="organizations-list">
-        {% for org_type in org_types %}
-          {% for org in orgs_by_type|get_item:org_type.name %}
-            <tr class="org-row" 
-                data-id="{{ org.id }}" 
-                data-name="{{ org.name }}" 
-                data-type="{{ org_type.name|lower }}"
-                data-parent="{{ org.parent.name|default:'' }}">
-              <td>{{ org.id }}</td>
-              <td class="org-name">{{ org.name }}</td>
-              <td>{{ org_type.name }}</td>
-              <td>
-                <span class="status-badge {% if org.is_active %}active{% else %}inactive{% endif %}">
-                  {% if org.is_active %}Active{% else %}Inactive{% endif %}
-                </span>
-              </td>
-              <td class="parent-name">
-                {% if org.parent %}{{ org.parent.name }}{% else %}-{% endif %}
-              </td>
-              <td>
-                <div class="outcomes-cell">
-                  <div class="outcome-counts">
-                    <a class="po-count" href="{% url 'admin_outcomes_for_org' org.id %}" data-org-id="{{ org.id }}">
-                      <span class="count">0</span> POs
-                    </a>
-                    <a class="pso-count" href="{% url 'admin_outcomes_for_org' org.id %}" data-org-id="{{ org.id }}">
-                      <span class="count">0</span> PSOs
-                    </a>
-                  </div>
-                  <a class="edit-outcomes-btn" href="{% url 'admin_outcomes_for_org' org.id %}">
-                    <i class="fas fa-edit"></i> Edit
-                  </a>
-                </div>
-              </td>
-              
-            </tr>
+  <!-- Controls bar (identical component: Category → Status → Search) -->
+  <div class="controls-container" id="controlsBar">
+    <div class="filters-left">
+      <label class="filter">
+        <span>Category</span>
+        <select id="categoryFilter" aria-label="Select category">
+          {% for org_type in org_types %}
+            {% with key=org_type.name|lower %}
+            <option
+              value="{{ key }}"
+              data-can-have-parent="{% if org_type.can_have_parent %}true{% else %}false{% endif %}"
+              data-parent-type="{% if org_type.parent_type %}{{ org_type.parent_type.name|lower }}{% endif %}">
+              {{ org_type.name }}{% if not key == 'cell' %}s{% endif %}
+            </option>
+            {% endwith %}
           {% endfor %}
-        {% endfor %}
-      </tbody>
-    </table>
+        </select>
+      </label>
+
+      <label class="filter">
+        <span>Status</span>
+        <select id="statusFilter" aria-label="Filter by status">
+          <option value="all">All</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </label>
+
+      <div class="search-bar">
+        <i class="fas fa-search"></i>
+        <input type="text" id="universalSearch" placeholder="Search in selected category…" aria-label="Search">
+        <button class="search-clear" id="searchClearBtn" title="Clear search" aria-label="Clear search">×</button>
+      </div>
+    </div>
+
+    <!-- Actions (none needed for this page; keeping space for consistency) -->
+    <div class="main-actions"></div>
   </div>
 
-  <!-- Dedicated outcomes page is used; embedded panel removed. -->
+  <!-- Panels: one per category (exactly like Master Data) -->
+  <div class="tab-panels">
+    {% for org_type in org_types %}
+      {% with key=org_type.name|lower %}
+      <section
+        id="panel-{{ key }}"
+        class="tab-panel{% if forloop.first %} is-active{% endif %}"
+        role="region"
+        aria-label="{{ org_type.name }}"
+        data-type="{{ key }}"
+      >
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:90px;">S. No.</th>
+                <th class="th-name">Organization</th>
+                {% if org_type.can_have_parent %}
+                  <th class="th-parent">Parent</th>
+                {% endif %}
+                <th class="th-status" style="width:140px;">Status</th>
+                <th style="width:220px;">POs</th>
+                <th style="width:220px;">PSOs</th>
+                <th class="th-actions" style="width:110px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for org in orgs_by_type|get_item:org_type.name %}
+                <tr data-id="{{ org.id }}"
+                    data-type="{{ key }}"
+                    class="{% if not org.is_active %}inactive-row-display{% endif %}">
+                  <td data-label="S. No.">{{ forloop.counter }}</td>
+                  <td data-label="Organization" class="org-name">{{ org.name }}</td>
+
+                  {% if org_type.can_have_parent %}
+                  <td data-label="Parent" class="parent-name">
+                    {% if org.parent %}{{ org.parent.name }}{% else %}-{% endif %}
+                  </td>
+                  {% endif %}
+
+                  <td data-label="Status">
+                    <span class="status-badge status-{% if org.is_active %}active{% else %}inactive{% endif %}">
+                      {% if org.is_active %}Active{% else %}Inactive{% endif %}
+                    </span>
+                  </td>
+
+                  <!-- Outcome chips (inherit link/hover from Master Data look) -->
+                  <td data-label="POs">
+                    <a class="chip chip-link chip-count" href="{% url 'admin_outcomes_for_org' org.id %}" data-org-id="{{ org.id }}" data-kind="po">
+                      <span class="chip-dot"></span>
+                      <strong class="count">0</strong>
+                      <span class="chip-label">POs</span>
+                    </a>
+                  </td>
+                  <td data-label="PSOs">
+                    <a class="chip chip-link chip-count" href="{% url 'admin_outcomes_for_org' org.id %}" data-org-id="{{ org.id }}" data-kind="pso">
+                      <span class="chip-dot"></span>
+                      <strong class="count">0</strong>
+                      <span class="chip-label">PSOs</span>
+                    </a>
+                  </td>
+
+                  <!-- Icon-only actions, compact (exact Master Data pattern) -->
+                  <td data-label="Actions" class="actions">
+                    <a class="icon-btn" title="Manage Outcomes" aria-label="Manage Outcomes"
+                       href="{% url 'admin_outcomes_for_org' org.id %}">
+                      <i class="fas fa-edit"></i>
+                    </a>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="{% if org_type.can_have_parent %}7{% else %}6{% endif %}" class="text-center">
+                    No {{ key }}s found.
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      {% endwith %}
+    {% endfor %}
+  </div>
+
+  <!-- No-results panel (same component) -->
+  <div id="search-not-found" class="search-not-found" style="display:none;">
+    <p>No results found for "<strong></strong>".</p>
+  </div>
 </div>
 
-<!-- Removed outcome modals; using full-page inline panel -->
-
-<!-- Assignment UI removed -->
-
-<script src="{% static 'core/js/admin_pso_po_management.js' %}"></script>
-
+<!-- Data bridges to JS -->
 <script>
-  // Pass backend data to JavaScript safely
-  try {
-    window.orgOutcomeCounts = JSON.parse('{{ org_outcome_counts|escapejs }}');
-  } catch (e) {
-    console.error('Failed to parse orgOutcomeCounts from template:', e);
-    window.orgOutcomeCounts = {};
-  }
-
-  // Update outcome counts in the table
-  document.addEventListener('DOMContentLoaded', function() {
-    const outcomeCounts = window.orgOutcomeCounts || {};
-    Object.keys(outcomeCounts).forEach(orgId => {
-      const counts = outcomeCounts[orgId] || {};
-      const poCountSpan = document.querySelector(`.po-count[data-org-id="${orgId}"] .count`);
-      if (poCountSpan) poCountSpan.textContent = counts.po_count || 0;
-      const psoCountSpan = document.querySelector(`.pso-count[data-org-id="${orgId}"] .count`);
-      if (psoCountSpan) psoCountSpan.textContent = counts.pso_count || 0;
-    });
-  });
+  window.orgsByType = JSON.parse('{{ orgs_by_type_json|safe }}');
+  try { window.orgOutcomeCounts = JSON.parse('{{ org_outcome_counts|escapejs }}'); }
+  catch (e) { window.orgOutcomeCounts = null; }
 </script>
+
+{% endblock %}
+
+{% block scripts %}
+  <!-- Page JS (namespaced; mirrors MD controls) -->
+  <script src="{% static 'core/js/admin_pso_po_management.js' %}?v=1.0"></script>
 {% endblock %}
