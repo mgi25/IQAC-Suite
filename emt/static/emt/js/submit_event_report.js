@@ -178,6 +178,51 @@ $(document).on('click', '#ai-impact-assessment', function(){
     catch (err) { console.error(err); }
     finally { btn.prop('disabled', false).text(original); }
 });
+
+$(document).on('click', '#ai-objective-achievement', function(){
+    const btn = $(this);
+    const original = btn.text();
+    btn.prop('disabled', true).text('...');
+    try { aiFill('#objective-achievement-modern', 120); }
+    catch (err) { console.error(err); }
+    finally { btn.prop('disabled', false).text(original); }
+});
+
+$(document).on('click', '#ai-strengths-analysis', function(){
+    const btn = $(this);
+    const original = btn.text();
+    btn.prop('disabled', true).text('...');
+    try { aiFill('#strengths-analysis-modern', 80); }
+    catch (err) { console.error(err); }
+    finally { btn.prop('disabled', false).text(original); }
+});
+
+$(document).on('click', '#ai-challenges-analysis', function(){
+    const btn = $(this);
+    const original = btn.text();
+    btn.prop('disabled', true).text('...');
+    try { aiFill('#challenges-analysis-modern', 80); }
+    catch (err) { console.error(err); }
+    finally { btn.prop('disabled', false).text(original); }
+});
+
+$(document).on('click', '#ai-effectiveness-analysis', function(){
+    const btn = $(this);
+    const original = btn.text();
+    btn.prop('disabled', true).text('...');
+    try { aiFill('#effectiveness-analysis-modern', 120); }
+    catch (err) { console.error(err); }
+    finally { btn.prop('disabled', false).text(original); }
+});
+
+$(document).on('click', '#ai-lessons-learned', function(){
+    const btn = $(this);
+    const original = btn.text();
+    btn.prop('disabled', true).text('...');
+    try { aiFill('#lessons-learned-modern', 150); }
+    catch (err) { console.error(err); }
+    finally { btn.prop('disabled', false).text(original); }
+});
   
   // Add validation styling to form fields with errors
   $('.field-error').each(function() {
@@ -891,10 +936,11 @@ $(document).on('click', '#ai-impact-assessment', function(){
           </div>
           
           <div class="form-row full-width">
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="objective-achievement-modern">Achievement of Planned Objectives *</label>
-                  <textarea id="objective-achievement-modern" name="objective_achievement" rows="10" required 
+                  <textarea id="objective-achievement-modern" name="objective_achievement" rows="10" required
                       placeholder="Analyze how well the event achieved its planned objectives:&#10;&#10;Original Objectives:&#10;• Objective 1: [Status - Fully/Partially/Not Achieved]&#10;  Analysis: [Detailed explanation]&#10;&#10;• Objective 2: [Status - Fully/Partially/Not Achieved]&#10;  Analysis: [Detailed explanation]&#10;&#10;Overall Achievement Rate: [X%]&#10;Factors contributing to success/challenges: [Analysis]"></textarea>
+                  <button type="button" id="ai-objective-achievement" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <div class="help-text">Detailed analysis of how well planned objectives were achieved</div>
               </div>
           </div>
@@ -905,16 +951,18 @@ $(document).on('click', '#ai-impact-assessment', function(){
           </div>
 
           <div class="form-row">
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="strengths-analysis-modern">Strengths and Successes *</label>
-                  <textarea id="strengths-analysis-modern" name="strengths_analysis" rows="8" required 
+                  <textarea id="strengths-analysis-modern" name="strengths_analysis" rows="8" required
                       placeholder="Identify and analyze the key strengths:&#10;&#10;• Organizational strengths: [What worked well in planning/execution]&#10;• Content strengths: [Quality of sessions, speakers, materials]&#10;• Participant engagement: [What kept participants engaged]&#10;• Infrastructure/logistics: [What supported the event well]&#10;• Team collaboration: [How the team worked effectively]&#10;&#10;Provide specific examples and evidence."></textarea>
+                  <button type="button" id="ai-strengths-analysis" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <div class="help-text">Analyze what worked well and contributed to success</div>
               </div>
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="challenges-analysis-modern">Challenges and Areas for Improvement *</label>
-                  <textarea id="challenges-analysis-modern" name="challenges_analysis" rows="8" required 
+                  <textarea id="challenges-analysis-modern" name="challenges_analysis" rows="8" required
                       placeholder="Identify challenges faced and areas for improvement:&#10;&#10;• Organizational challenges: [Planning, coordination issues]&#10;• Technical challenges: [Equipment, platform, connectivity]&#10;• Participant-related challenges: [Attendance, engagement]&#10;• Content/delivery challenges: [Session quality, timing]&#10;• Resource constraints: [Budget, time, personnel]&#10;&#10;For each challenge, suggest specific improvements."></textarea>
+                  <button type="button" id="ai-challenges-analysis" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <div class="help-text">Honest assessment of challenges and improvement opportunities</div>
               </div>
           </div>
@@ -925,10 +973,11 @@ $(document).on('click', '#ai-impact-assessment', function(){
           </div>
 
           <div class="form-row full-width">
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="effectiveness-analysis-modern">Overall Effectiveness Analysis *</label>
-                  <textarea id="effectiveness-analysis-modern" name="effectiveness_analysis" rows="10" required 
+                  <textarea id="effectiveness-analysis-modern" name="effectiveness_analysis" rows="10" required
                       placeholder="Provide a comprehensive effectiveness analysis:&#10;&#10;Methodology Used:&#10;• Data collection methods: [Surveys, interviews, observations]&#10;• Metrics evaluated: [Attendance, satisfaction, learning gains]&#10;&#10;Effectiveness Rating: [X/10 or percentage]&#10;&#10;Key Findings:&#10;• Most effective aspects: [What worked exceptionally well]&#10;• Least effective aspects: [What needs significant improvement]&#10;• Unexpected findings: [Surprising results or outcomes]&#10;&#10;Evidence-based analysis with specific data points where available."></textarea>
+                  <button type="button" id="ai-effectiveness-analysis" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <div class="help-text">Comprehensive analysis of event effectiveness with supporting evidence</div>
               </div>
           </div>
@@ -939,10 +988,11 @@ $(document).on('click', '#ai-impact-assessment', function(){
           </div>
 
           <div class="form-row full-width">
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="lessons-learned-modern">Lessons Learned and Future Insights *</label>
-                  <textarea id="lessons-learned-modern" name="lessons_learned" rows="10" required 
+                  <textarea id="lessons-learned-modern" name="lessons_learned" rows="10" required
                       placeholder="Document key lessons learned and insights for future events:&#10;&#10;Key Lessons Learned:&#10;• Planning phase: [What to do differently in planning]&#10;• Execution phase: [What to improve in delivery]&#10;• Participant management: [Better engagement strategies]&#10;• Resource management: [More efficient resource utilization]&#10;&#10;Actionable Insights:&#10;• Best practices to replicate: [Successful strategies to repeat]&#10;• Practices to avoid: [What didn't work and should be avoided]&#10;• Innovation opportunities: [New approaches to try]&#10;&#10;Recommendations for future similar events."></textarea>
+                  <button type="button" id="ai-lessons-learned" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <div class="help-text">
                       Key lessons and insights for future improvement - minimum 300 words recommended
                       <span class="word-counter text-danger">
