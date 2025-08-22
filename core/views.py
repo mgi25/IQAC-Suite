@@ -942,6 +942,16 @@ def admin_dashboard(request):
         'recent_activities': recent_activities,
     }
     return render(request, 'core/admin_dashboard.html', context)
+
+    events = Event.objects.all().values("title", "date")
+    events_list = [
+        {"title": e["title"], "date": format(e["date"], "Y-m-d")}
+        for e in events
+    ]
+    return render(request, "admin_dashboard.html", {
+        "events_json": events_list,
+    })
+
 @user_passes_test(lambda u: u.is_superuser)
 def admin_user_panel(request):
     return render(request, "core/admin_user_panel.html")
