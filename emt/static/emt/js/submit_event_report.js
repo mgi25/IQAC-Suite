@@ -223,6 +223,24 @@ $(document).on('click', '#ai-lessons-learned', function(){
     catch (err) { console.error(err); }
     finally { btn.prop('disabled', false).text(original); }
 });
+
+$(document).on('click', '#ai-pos-pso', function(){
+    const btn = $(this);
+    const original = btn.text();
+    btn.prop('disabled', true).text('...');
+    try { aiFill('#pos-pso-modern', 120); }
+    catch (err) { console.error(err); }
+    finally { btn.prop('disabled', false).text(original); }
+});
+
+$(document).on('click', '#ai-contemporary-requirements', function(){
+    const btn = $(this);
+    const original = btn.text();
+    btn.prop('disabled', true).text('...');
+    try { aiFill('#contemporary-requirements-modern', 120); }
+    catch (err) { console.error(err); }
+    finally { btn.prop('disabled', false).text(original); }
+});
   
   // Add validation styling to form fields with errors
   $('.field-error').each(function() {
@@ -1021,10 +1039,11 @@ $(document).on('click', '#ai-lessons-learned', function(){
           </div>
           
           <div class="form-row full-width">
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="pos-pso-modern">PO's and PSO's Management *</label>
-                  <textarea id="pos-pso-modern" name="pos_pso" rows="15" required 
+                  <textarea id="pos-pso-modern" name="pos_pso" rows="15" required
                       placeholder="Describe how the event addresses Program Outcomes (POs) and Program Specific Outcomes (PSOs):&#10;&#10;Program Outcomes:&#10;• PO1: Engineering Knowledge&#10;• PO2: Problem Analysis&#10;• PO3: Design/Development of Solutions&#10;&#10;Program Specific Outcomes:&#10;• PSO1: [Specific to your program]&#10;• PSO2: [Specific to your program]&#10;&#10;Provide detailed explanation of how each relevant outcome was addressed through this event."></textarea>
+                  <button type="button" id="ai-pos-pso" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <div class="help-text">Detail how the event contributes to achieving specific program outcomes</div>
               </div>
           </div>
@@ -1056,13 +1075,14 @@ $(document).on('click', '#ai-lessons-learned', function(){
           </div>
           
           <div class="form-row">
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="contemporary-requirements-modern">Contemporary Requirements *</label>
-                  <textarea id="contemporary-requirements-modern" name="contemporary_requirements" rows="12" required 
+                  <textarea id="contemporary-requirements-modern" name="contemporary_requirements" rows="12" required
                       placeholder="Describe how the event addresses contemporary requirements:&#10;&#10;• Employability enhancement&#10;• Entrepreneurship development&#10;• Skill development initiatives&#10;• Industry 4.0 readiness&#10;• Digital transformation skills&#10;• Innovation and creativity&#10;• Leadership and soft skills&#10;• Global competency development&#10;&#10;Provide specific examples of how these requirements were addressed."></textarea>
+                  <button type="button" id="ai-contemporary-requirements" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <div class="help-text">Explain how the event addresses employability, entrepreneurship, skill development, etc.</div>
               </div>
-              
+
               <div class="input-group">
                   <label for="sdg-implementation-modern">SDG Implementation *</label>
                   <textarea id="sdg-implementation-modern" name="sdg_goals" rows="10" required 
