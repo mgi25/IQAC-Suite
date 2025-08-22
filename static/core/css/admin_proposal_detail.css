@@ -1,7 +1,7 @@
 /* Enable smooth scrolling and fixed-height layout */
 .review-container {
-  max-height: calc(100vh - 140px);
-  overflow: hidden;
+  max-height: none; /* Remove fixed height constraint */
+  overflow: visible; /* Allow content to scroll naturally */
   display: flex;
   flex-direction: column;
 }
@@ -10,17 +10,19 @@
   display: grid;
   grid-template-columns: 320px 1fr;
   gap: 16px;
-  min-height: 0; /* for nested overflow */
+  height: auto; /* Allow natural height */
 }
 
 .ultra-side-info {
-  overflow: auto;
-  max-height: calc(100vh - 200px);
+  overflow: visible; /* Allow natural scrolling */
+  height: auto;
+  position: sticky;
+  top: 90px;
 }
 
 .ultra-main-content {
-  overflow: auto;
-  max-height: calc(100vh - 200px);
+  overflow: visible; /* Allow natural scrolling */
+  height: auto;
 }
 
 .info-card.glass,
@@ -36,15 +38,21 @@
   word-break: break-word;
 }
 body {
-  background: linear-gradient(110deg, #e8f1fa 70%, #e2e2ef 100%);
+  background: linear-gradient(110deg, #f5f9ff 0%, #e8f1fa 50%, #e2e2ef 100%);
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
 }
 
 /* ------------ Review Page Container and Timeline ------------- */
 .review-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 90px 1rem 2rem 1rem;
+  padding: 90px 1rem 4rem 1rem;
+  display: flex;
+  flex-direction: column;
 }
+
 
 .review-tracker-card {
   background: #fff;
@@ -86,38 +94,44 @@ body {
 .step-dot {
   width: 23px;
   height: 23px;
-  background: #e3eefb;
+  background: #e3eefb; /* Light blue for incomplete */
   border-radius: 50%;
-  border: 4px solid #e3eefb;
+  border: 4px solid #c5deff;
   margin-bottom: 0.3rem;
   position: relative;
   z-index: 1;
-  transition: background 0.25s, border 0.25s;
+  transition: all 0.3s ease;
 }
 
-.timeline-step.active .step-dot,
-.timeline-step.current .step-dot {
-  background: #1064c8;
-  border: 4px solid #3d8dfb;
+.timeline-step.active .step-dot {
+  background: #1064c8; /* Dark blue for completed */
+  border: 4px solid #0a4285;
+  box-shadow: 0 0 0 2px #e3eefb;
 }
 
 .timeline-step.current .step-dot {
+  background: #3384db; /* Medium blue for current */
+  border: 4px solid #1064c8;
   box-shadow: 0 0 0 4px #e7f1ff;
 }
 
 .step-label {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #a0adc1;
+  color: #a0adc1; /* Light color for incomplete */
   margin-top: 0.15rem;
   text-align: center;
   width: 88px;
   line-height: 1.23;
+  transition: color 0.3s ease;
 }
 
-.timeline-step.active .step-label,
+.timeline-step.active .step-label {
+  color: #1064c8; /* Dark blue for completed */
+}
+
 .timeline-step.current .step-label {
-  color: #1463b6;
+  color: #3384db; /* Medium blue for current */
 }
 
 .timeline-step:not(:last-child)::after {
@@ -127,13 +141,18 @@ body {
   left: 100%;
   width: 100%;
   height: 4px;
-  background: #e3eefb;
+  background: #e3eefb; /* Light blue for incomplete steps */
   z-index: 0;
 }
 
-.timeline-step.active:not(:last-child)::after,
+/* Progressive gradient for active steps */
+.timeline-step.active:not(:last-child)::after {
+  background: #1064c8; /* Solid dark blue for completed sections */
+}
+
+/* Current step gradient */
 .timeline-step.current:not(:last-child)::after {
-  background: linear-gradient(90deg, #3d8dfb 50%, #e3eefb 50%);
+  background: linear-gradient(90deg, #1064c8 0%, #e3eefb 100%); /* Gradient from dark to light */
 }
 
 .proposal-meta {
@@ -526,8 +545,21 @@ body {
 }
 
 /* -------- Clean Scrollbar -------- */
-::-webkit-scrollbar { width: 8px; background: #f3f3fb;}
-::-webkit-scrollbar-thumb { background: #dde3f2; border-radius: 8px;}
+::-webkit-scrollbar {
+  width: 12px;
+  background: #f3f6fb;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #c5deff 0%, #1064c8 100%);
+  border-radius: 6px;
+  border: 3px solid #f3f6fb;
+}
+
+::-webkit-scrollbar-track {
+  background: #f3f6fb;
+  border-radius: 6px;
+}
 
 /* -------- View Details Button -------- */
 .header-actions {

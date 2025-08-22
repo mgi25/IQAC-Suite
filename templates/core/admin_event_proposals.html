@@ -17,7 +17,9 @@
         </select>
         <button type="submit" class="btn btn-primary">Filter</button>
     </form>
-    <div class="table-responsive">
+
+    <!-- Scrollable table with sticky headers -->
+    <div class="table-responsive fixed-header-table">
         <table class="proposals-table">
             <thead>
                 <tr>
@@ -26,6 +28,7 @@
                     <th>Submitted By</th>
                     <th>Organization</th>
                     <th>Date</th>
+                    <th>Time</th>
                     <th>Status</th>
                     <th>Action</th>
                 </tr>
@@ -47,7 +50,9 @@
                             —
                         {% endif %}
                     </td>
-                    <td>{{ p.created_at|date:"Y-m-d H:i" }}</td>
+                    <!-- Separated Date and Time -->
+                    <td>{{ p.created_at|date:"d-m-Y" }}</td>
+                    <td>{{ p.created_at|time:"H:i" }}</td>
                     <td>
                         <span class="status-badge status-{{ p.status }}">
                             {{ p.get_status_display }}
@@ -56,11 +61,10 @@
                     <td>
                         <a href="{% url 'admin_proposal_detail' p.id %}" class="btn-action btn-view">View</a>
                     </td>
-
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7" style="text-align:center;">No proposals found.</td>
+                    <td colspan="8" style="text-align:center;">No proposals found.</td>
                 </tr>
                 {% endfor %}
             </tbody>

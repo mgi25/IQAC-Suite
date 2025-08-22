@@ -112,39 +112,58 @@ body {
   border-radius: 12px;
   border: 1px solid var(--border-color);
   margin: 0 32px;
+  /* Add these properties for fixed header */
+  max-height: calc(100vh - 250px); /* Adjust based on your header height */
+  position: relative;
 }
 
 .reports-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate; /* Changed from collapse */
+  border-spacing: 0; /* Added for border-collapse: separate */
   min-width: 900px;
   font-size: 1rem;
   background: var(--bg-container);
   border-radius: 12px;
-  overflow: hidden;
 }
 
+/* Fixed Header Styles */
+.reports-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-table-header);
+}
+
+.reports-table thead th {
+  background: var(--bg-table-header);
+  position: sticky;
+  top: 0;
+  border-bottom: 2px solid var(--border-color);
+  /* Add box-shadow for better visual separation */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.reports-table tbody {
+  position: relative;
+}
+
+/* Adjust cell padding and borders */
 .reports-table th, .reports-table td {
   padding: 18px 16px;
   text-align: left;
   border-bottom: 1px solid var(--border-color);
   vertical-align: middle;
+  background: inherit; /* This ensures background colors work properly */
 }
 
-.reports-table th {
-  background: var(--bg-table-header);
-  color: var(--header-blue);
-  font-weight: 600;
-  font-size: 0.9rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.reports-table tr:last-child td {
+/* Handle last row border */
+.reports-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.reports-table tr:hover td {
+/* Handle hover state */
+.reports-table tbody tr:hover td {
   background-color: #f9fafb;
 }
 
@@ -220,6 +239,7 @@ body {
   }
   .reports-table-wrap {
     margin: 0 4vw;
+    max-height: calc(100vh - 200px); /* Slightly adjusted for mobile */
   }
   .reports-table {
     font-size: 0.95rem;
