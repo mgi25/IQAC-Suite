@@ -285,6 +285,14 @@
       </div>
       {% endif %}
 
+     <button id="download-json-btn">Download JSON</button>
+<input type="file" id="upload-json-input" style="display:none;">
+<button onclick="document.getElementById('upload-json-input').click()">Upload JSON</button>
+
+
+</div>
+
+
     </nav>
   </div>
 
@@ -620,6 +628,7 @@
     
   });
   </script>
+<script src="{% static 'emt/js/json_sync.js' %}"></script>
   {% block scripts %}{% endblock %}
   {% block scripts_extra %}{% endblock %}
   </body>
