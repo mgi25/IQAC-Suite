@@ -87,7 +87,12 @@ function aiRequest() {
     document.getElementById('generate-ai-btn').disabled = false;
     if (res.report_text) {
       document.getElementById('aiPreviewBlock').style.display = 'block';
-      document.getElementById('aiReportEditor').value = res.report_text;
+      const editor = document.getElementById('aiReportEditor');
+      editor.value = res.report_text;
+      editor.dispatchEvent(new Event('input', { bubbles: true }));
+      if (window.AutosaveManager && window.AutosaveManager.manualSave) {
+        try { window.AutosaveManager.manualSave(); } catch (e) {}
+      }
     } else {
       alert(res.error || "AI failed, try again.");
     }

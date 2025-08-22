@@ -1,6 +1,11 @@
 {# Reusable section card for proposal review #}
 <div class="event-details-card">
-  <h3>{{ title }}</h3>
+  <div class="review-section-header">
+    <h3>{{ title }}</h3>
+    {% if edit_url %}
+      <a href="{{ edit_url }}" class="section-edit-link">Edit</a>
+    {% endif %}
+  </div>
   {% if body %}
     <div class="detail-block">{{ body|linebreaksbr }}</div>
   {% else %}

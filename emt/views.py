@@ -417,6 +417,7 @@ def review_proposal(request, proposal_id):
     speakers = list(proposal.speakers.all())
     expenses = list(proposal.expense_details.all())
     income = list(proposal.income_details.all())
+    support = getattr(proposal, "cdl_support", None)
 
     if request.method == "POST" and "final_submit" in request.POST:
         proposal.status = "submitted"
@@ -428,6 +429,10 @@ def review_proposal(request, proposal_id):
             f"Proposal '{proposal.event_title}' submitted.",
         )
         return redirect("emt:proposal_status_detail", proposal_id=proposal.id)
+    else:
+        if proposal.status != EventProposal.Status.SUBMITTED:
+            proposal.status = EventProposal.Status.DRAFT
+            proposal.save(update_fields=["status"])
 
     ctx = {
         "proposal": proposal,
@@ -438,6 +443,7 @@ def review_proposal(request, proposal_id):
         "speakers": speakers,
         "expenses": expenses,
         "income": income,
+        "cdl_support": support,
     }
     return render(request, "emt/review_proposal.html", ctx)
 
@@ -817,14 +823,14 @@ def submit_cdl_support(request, proposal_id):
             support.other_services = form.cleaned_data.get("other_services", [])
             support.save()
 
-            proposal.status = "submitted"
+            proposal.status = "draft"
             proposal.save()
 
-            from emt.utils import build_approval_chain
-            build_approval_chain(proposal)
+            if "review_submit" in request.POST:
+                return redirect("emt:review_proposal", proposal_id=proposal.id)
 
-            messages.success(request, "Your event proposal has been submitted for approval.")
-            return redirect("emt:proposal_status_detail", proposal_id=proposal.id)
+            messages.success(request, "CDL support saved.")
+            return redirect("emt:submit_cdl_support", proposal_id=proposal.id)
     else:
         initial = {}
         if instance:
