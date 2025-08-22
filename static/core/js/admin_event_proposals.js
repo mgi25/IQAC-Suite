@@ -3,18 +3,29 @@ function showProposalModal(id) {
     fetch('/core-admin/event-proposal/' + id + '/json/')
     .then(response => response.json())
     .then(data => {
+        // Try to split datetime string into date + time
+        let dateOnly = data.date_submitted;
+        let timeOnly = "";
+        if (dateOnly && dateOnly.includes(" ")) {
+            let parts = dateOnly.split(" ");
+            dateOnly = parts[0]; // YYYY-MM-DD
+            timeOnly = parts[1].slice(0,5); // HH:MM
+        }
+
         document.getElementById("modal-title").innerText = data.title;
         document.getElementById("modal-details").innerHTML = `
             <b>Description:</b> ${data.description}<br>
             <b>Organization:</b> ${data.organization || "-"}<br>
             <b>User Type:</b> ${data.user_type}<br>
             <b>Status:</b> ${data.status_display}<br>
-            <b>Date Submitted:</b> ${data.date_submitted}<br>
+            <b>Date Submitted:</b> ${dateOnly}<br>
+            <b>Time Submitted:</b> ${timeOnly}<br>
             <b>Submitted By:</b> ${data.submitted_by}
         `;
         document.getElementById("proposalModal").style.display = "flex";
     });
 }
+
 function hideProposalModal() {
     document.getElementById("proposalModal").style.display = "none";
 }
