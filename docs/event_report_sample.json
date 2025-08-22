@@ -1,0 +1,20 @@
+{
+  "event_information": {
+    "title": "Sample Tech Talk",
+    "date": "2024-08-05",
+    "venue": "Auditorium"
+  },
+  "event_outcomes": {
+    "learning_outcomes_achieved": [
+      "Participants explained basic AI concepts",
+      "Students applied machine learning algorithms"
+    ],
+    "student_engagement": "Hands-on labs and peer discussions kept students involved.",
+    "participant_feedback": "",
+    "measurable_outcomes": [
+      "95 attendees completed the feedback survey",
+      "80% of participants scored above 70% in the post-event quiz"
+    ],
+    "impact_assessment": "The event enhanced technical skills and fostered collaboration."
+  }
+}
