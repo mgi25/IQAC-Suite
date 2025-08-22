@@ -12,6 +12,21 @@ from .utils import get_or_create_current_site
 
 logger = logging.getLogger(__name__)
 
+# Admin endpoints that generate a flurry of internal requests (translation
+# catalogues, static assets, etc.) clutter the activity log.  Skip them to keep
+# the audit trail focused on user initiated actions.
+ADMIN_NOISE_VIEWS = {
+    "admin:jsi18n",
+}
+
+# Map a handful of common Django admin view names to human readable phrases so
+# the activity log shows friendly text instead of the raw view identifiers.
+ADMIN_VIEW_ACTIONS = {
+    "admin:sites_site_changelist": "viewed site list",
+    "admin:sites_site_add": "added site",
+    "admin:sites_site_delete": "deleted site",
+}
+
 
 class ImpersonationMiddleware:
     """Swap ``request.user`` when admin impersonates another user.
@@ -127,36 +142,49 @@ class ActivityLogMiddleware:
 
                 resolver_match = getattr(request, "resolver_match", None)
                 view_name = getattr(resolver_match, "view_name", "")
-                if view_name:
-                    view_desc = view_name.split(":")[-1].replace("_", " ")
-                else:
-                    # Fall back to a humanised path segment
-                    path_seg = request.path.strip("/").split("/")[-1]
-                    view_desc = path_seg.replace("-", " ") or "page"
 
-                # Attempt to include an object's title if the view exposed it
-                obj_title = None
-                obj = getattr(request, "object", None)
-                if not obj and hasattr(response, "context_data"):
-                    obj = response.context_data.get("object")
-                if obj:
-                    obj_title = getattr(obj, "title", getattr(obj, "name", None))
+                # Skip noisy internal admin endpoints altogether
+                if view_name in ADMIN_NOISE_VIEWS:
+                    return response
+
+                custom_action = ADMIN_VIEW_ACTIONS.get(view_name)
+
+                if custom_action:
+                    description = custom_action
+                    obj_title = None
+                else:
+                    if view_name:
+                        view_desc = view_name.split(":")[-1].replace("_", " ")
+                    else:
+                        # Fall back to a humanised path segment
+                        path_seg = request.path.strip("/").split("/")[-1]
+                        view_desc = path_seg.replace("-", " ") or "page"
+
+                    # Attempt to include an object's title if the view exposed it
+                    obj_title = None
+                    obj = getattr(request, "object", None)
+                    if not obj and hasattr(response, "context_data"):
+                        obj = response.context_data.get("object")
+                    if obj:
+                        obj_title = getattr(obj, "title", getattr(obj, "name", None))
+
+                    verb_map = {
+                        "GET": "viewed",
+                        "POST": "submitted",
+                        "PUT": "updated",
+                        "PATCH": "updated",
+                        "DELETE": "deleted",
+                    }
+                    verb = verb_map.get(request.method, request.method.lower())
+                    description = f"{verb} {view_desc}".strip()
+                    if obj_title:
+                        description += f' "{obj_title}"'
 
                 user_display = request.user.get_full_name() or request.user.username
-                verb_map = {
-                    "GET": "viewed",
-                    "POST": "submitted",
-                    "PUT": "updated",
-                    "PATCH": "updated",
-                    "DELETE": "deleted",
-                }
-                verb = verb_map.get(request.method, request.method.lower())
-                description = f"{user_display} {verb} {view_desc}".strip()
-                if obj_title:
-                    description += f' "{obj_title}"'
+                description = f"{user_display} {description}".strip()
 
                 metadata = params or None
-                if obj_title:
+                if custom_action is None and obj_title:
                     metadata = metadata or {}
                     metadata["object_title"] = obj_title
 
