@@ -12,9 +12,8 @@ class EventProposal(models.Model):
 
     @property
     def title(self):
-        if self.proposal and self.proposal.event_title:
-            return self.proposal.event_title
-        return "Untitled Event Report"
+        """Convenience property to return the proposal's event title."""
+        return self.event_title or "Untitled Event"
     class Status(models.TextChoices):
         DRAFT = 'draft', 'Draft'
         SUBMITTED = 'submitted', 'Submitted'
@@ -43,7 +42,7 @@ class EventProposal(models.Model):
     committees = models.TextField(blank=True, help_text="List of committees involved.")
     sdg_goals = models.ManyToManyField(SDGGoal, blank=True, related_name="event_proposals")
     committees_collaborations = models.TextField(blank=True, help_text="Committees and collaborations involved.")
-    event_title = models.CharField(max_length=200, blank=True)
+    event_title = models.CharField(max_length=200, blank=False)
     num_activities = models.PositiveIntegerField(null=True, blank=True)
     event_datetime = models.DateTimeField(null=True, blank=True)
     event_start_date = models.DateField(null=True, blank=True)

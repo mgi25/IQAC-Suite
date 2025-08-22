@@ -942,6 +942,16 @@ def admin_dashboard(request):
         'recent_activities': recent_activities,
     }
     return render(request, 'core/admin_dashboard.html', context)
+
+    events = Event.objects.all().values("title", "date")
+    events_list = [
+        {"title": e["title"], "date": format(e["date"], "Y-m-d")}
+        for e in events
+    ]
+    return render(request, "admin_dashboard.html", {
+        "events_json": events_list,
+    })
+
 @user_passes_test(lambda u: u.is_superuser)
 def admin_user_panel(request):
     return render(request, "core/admin_user_panel.html")
@@ -3987,15 +3997,25 @@ def _compute_date_range(range_key):
 # -------------------------
 def _emt_event_to_dict(ev: EMTEventProposal):
     org = getattr(ev, 'organization', None)
+    
+    submitted_by_name = None
+    if getattr(ev, 'submitted_by', None):
+        user = ev.submitted_by
+        # Attempt to get the user's full name. If it's an empty string,
+        # fall back to the username.
+        full_name = user.get_full_name().strip()
+        if full_name:
+            submitted_by_name = full_name
+        else:
+            submitted_by_name = user.username
+            
     return {
         'title': getattr(ev, 'event_title', '') or getattr(ev, 'title', '') or f'Event #{ev.id}',
         'status': getattr(ev, 'status', None) or getattr(ev, 'get_status_display', lambda: '')(),
-        'submitted_by': ev.submitted_by.get_full_name() if getattr(ev, 'submitted_by', None) else None,
+        'submitted_by': submitted_by_name,
         'organization': org.name if org else None,
         'event_start_date': iso(getattr(ev, 'event_start_date', None))
-
     }
-
 
 def _core_event_to_dict(ev):
     """If you have a core EventProposal model (optional), format it similarly."""
@@ -4367,7 +4387,7 @@ def api_search(request):
     page = int(payload.get('page', request.GET.get('page', 1) or 1))
 
     # Allow selecting 100, 250, 500, 1000 from frontend, default to 100
-    page_size = int(payload.get('page_size', request.GET.get('page_size', 100) or 100))
+    page_size = int(payload.get('page_size', request.GET.get('page_size', 1000000) or 1000000))
 
     # If page_size is 0 or less, load *all* records
     if page_size <= 0:

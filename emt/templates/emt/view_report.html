@@ -37,9 +37,9 @@
             <!-- Report Content -->
             <div class="report-content-wrapper">
                 <div class="report-title">
-                    <h2>{{ report.proposal.title|default:"Untitled Event" }}</h2>
+                    <h2>{{ report.proposal.event_title|default:"Untitled Event" }}</h2>
                 </div>
-                
+
                 <div class="report-meta-grid">
                     <div class="meta-row">
                         <span class="meta-label">Organization:</span>
@@ -47,7 +47,18 @@
                     </div>
                     <div class="meta-row">
                         <span class="meta-label">Event Date:</span>
-                        <span class="meta-value">{{ report.proposal.event_datetime|date:"M j, Y" }}</span>
+                        <span class="meta-value">
+                            {% if report.proposal.event_start_date %}
+                                {{ report.proposal.event_start_date|date:"M j, Y" }}
+                                {% if report.proposal.event_end_date and report.proposal.event_end_date != report.proposal.event_start_date %}
+                                    - {{ report.proposal.event_end_date|date:"M j, Y" }}
+                                {% endif %}
+                            {% elif report.proposal.event_datetime %}
+                                {{ report.proposal.event_datetime|date:"M j, Y" }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </span>
                     </div>
                     <div class="meta-row">
                         <span class="meta-label">Report Generated:</span>

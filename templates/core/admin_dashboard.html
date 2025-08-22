@@ -7,12 +7,90 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'core/css/admin_dashboard.css' %}">
+<style>
+/* Sidebar */
+.event-sidebar {
+  position: fixed;
+  top: 0;
+  right: -400px; /* hidden initially */
+  width: 400px;
+  height: 100%;
+  background: var(--surf);
+  box-shadow: -4px 0 12px rgba(0,0,0,0.1);
+  transition: right 0.3s ease;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+}
+
+.event-sidebar.active {
+  right: 0;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.sidebar-header button {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.sidebar-content {
+  padding: 1rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.sidebar-content .event-item {
+  margin-bottom: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.event-item p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 1000;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+  visibility: visible;
+}
+
+.sidebar-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="ems-dashboard admin-dash">
 
-  <!-- Topbar -->
   <header class="topbar">
     <div>
       <h1>Welcome, {{ request.user.first_name|default:request.user.username }}</h1>
@@ -20,7 +98,6 @@
     </div>
   </header>
 
-  <!-- KPI Row -->
   <section class="kpi-row">
     <div class="kpi-card">
       <div class="kpi-icon bg-indigo"><i class="fa-solid fa-user-graduate"></i></div>
@@ -54,12 +131,11 @@
       </div>
     </div>
 
-    <!-- Profile KPI -->
     <div class="profile-kpi card">
       <div class="pkp-avatar">
         {% if request.user.profile and request.user.profile.photo %}
         <img src="{{ request.user.profile.photo.url }}"
-          alt="{{ request.user.get_full_name|default:request.user.username }}">
+             alt="{{ request.user.get_full_name|default:request.user.username }}">
         {% else %}
         <span class="pkp-initials">
           {% if request.user.first_name %}
@@ -76,11 +152,10 @@
         <h1 class="pkp-name">{{ request.user.get_full_name|default:request.user.username }}</h1>
         <h2 class="pkp-sub">{{ request.user.email }}</h2>
 
-        <!-- Switch User Dropdown -->
         <div class="pkp-actions">
           <label class="switch-label" for="roleSwitch">Switch to:</label>
-          <select id="roleSwitch" class="switch-select">
-            <option value="" selected>Choose CDL view…</option>
+          <select id="roleSwitch" class="switch-select" onchange="window.location.href=this.value;">
+            <option value="" selected disabled>Choose CDL view…</option>
             <option value="{% url 'cdl_head_dashboard' %}">CDL Head Dashboard</option>
             <option value="{% url 'cdl_work_dashboard' %}">CDL Team Dashboard</option>
           </select>
@@ -89,10 +164,8 @@
     </div>
   </section>
 
-  <!-- Main Grid -->
   <main class="grid-3">
 
-    <!-- Event Proposals -->
     <section class="card eq" data-card="proposals">
       <div class="card-header">
         <h3><i class="fa-solid fa-file-signature"></i> Event Proposals Overview</h3>
@@ -106,7 +179,6 @@
       </div>
     </section>
 
-    <!-- Event Reports Overview -->
     <section class="card eq">
       <div class="card-header">
         <h3><i class="fa-solid fa-clipboard-list"></i> Event Reports Overview</h3>
@@ -118,11 +190,10 @@
         </div>
         <div class="sr"><span>Rejected</span><strong class="bad">{{ stats.rejected_event_reports|default:0 }}</strong>
         </div>
-        <a class="chip-btn" href="/core-admin/event-reports/">View Reports</a>
+        <a class="chip-btn" href="/core-admin/reports/">View Reports</a>
       </div>
     </section>
 
-    <!-- System Overview -->
     <section class="card eq">
       <div class="card-header">
         <h3><i class="fa-solid fa-gauge-high"></i> System Overview</h3>
@@ -136,7 +207,6 @@
       </div>
     </section>
 
-    <!-- Organizations -->
     <section class="card eq">
       <div class="card-header">
         <h3><i class="fa-solid fa-sitemap"></i> Organizations</h3>
@@ -149,9 +219,7 @@
       </div>
     </section>
 
-    <!-- Notifications & Calendar side by side -->
     <div class="grid-2">
-      <!-- Notifications -->
       <section class="card" id="cardNotifications">
         <div class="card-header">
           <h3><i class="fa-regular fa-bell"></i> Notifications</h3>
@@ -176,17 +244,39 @@
         </div>
       </section>
 
-      <!-- Calendar -->
       <section class="card" id="cardCalendar">
         <div class="card-header">
           <h3><i class="fa-regular fa-calendar-days"></i> Calendar</h3>
+          <div class="header-actions">
+            <select id="visibilitySelect" class="select" aria-label="Calendar visibility">
+              <option value="all">All</option>
+              <option value="private">Private</option>
+              <option value="faculty">Faculty</option>
+            </select>
+          </div>
         </div>
-        <div id="calendar"></div>
+        <div class="mini-cal" aria-live="polite">
+          <div class="cal-head">
+            <button class="cal-nav" id="calPrev" aria-label="Previous month">
+              <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+            </button>
+            <div id="calTitle" aria-live="polite">Month YYYY</div>
+            <button class="cal-nav" id="calNext" aria-label="Next month">
+              <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="cal-weekdays" aria-hidden="true">
+            <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+          </div>
+          <div class="cal-grid" id="calGrid" role="grid" aria-label="Monthly calendar"></div>
+        </div>
+        <div id="upcomingWrap" class="upcoming" aria-live="polite">
+          <div class="empty">No upcoming events.</div>
+        </div>
       </section>
     </div>
   </main>
 
-  <!-- System Status Bar -->
   <section class="sysbar">
     <div class="chip">
       DB:
@@ -211,66 +301,208 @@
       <strong>{{ stats.last_backup|default:"—" }}</strong>
     </div>
 
-    <!-- Export Button -->
     <a id="btnExport" class="btn-solid right" href="{% url 'data_export_filter' %}">
       <i class="fa-solid fa-download"></i> Export
     </a>
   </section>
 
 </div>
+
+<aside id="eventSidebar" class="event-sidebar" aria-hidden="true">
+  <div class="sidebar-header">
+    <h3 id="sidebarDate">Events</h3>
+    <button id="sidebarClose" aria-label="Close sidebar">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  </div>
+  <div id="sidebarContent" class="sidebar-content">
+    <p class="empty">No events for this day.</p>
+  </div>
+</aside>
+<div id="sidebarOverlay" class="sidebar-overlay hidden"></div>
+
+<script id="events-data" type="application/json">
+  {{ events|safe }}
+</script>
 {% endblock %}
 
 {% block scripts_extra %}
-<!-- Example: using FullCalendar (you can swap to other libs if needed) -->
-<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
-
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      const select = document.getElementById('roleSwitch');
-      if (select) {
-        select.addEventListener('change', function () {
-          const target = this.value.trim();
-          if (target) window.location.href = target;
-        });
+document.addEventListener("DOMContentLoaded", () => {
+  // --- Calendar Elements ---
+  const calTitle = document.getElementById("calTitle");
+  const calGrid = document.getElementById("calGrid");
+  const upcomingWrap = document.getElementById("upcomingWrap");
+  const prevMonthBtn = document.getElementById("calPrev");
+  const nextMonthBtn = document.getElementById("calNext");
+
+  // --- Sidebar Elements ---
+  const sidebar = document.getElementById("eventSidebar");
+  const overlay = document.getElementById("sidebarOverlay");
+  const sidebarDate = document.getElementById("sidebarDate");
+  const sidebarContent = document.getElementById("sidebarContent");
+  const sidebarCloseBtn = document.getElementById("sidebarClose");
+
+  // --- State ---
+  let today = new Date();
+  today.setHours(0, 0, 0, 0); // Normalize today's date
+  let currentMonth = today.getMonth();
+  let currentYear = today.getFullYear();
+  let allEvents = [];
+
+  // --- UPDATE: Safely parse event data ---
+  try {
+    const eventsDataEl = document.getElementById("events-data");
+    // Ensure the data exists and is not empty before parsing
+    if (eventsDataEl && eventsDataEl.textContent.trim()) {
+        allEvents = JSON.parse(eventsDataEl.textContent);
+    }
+  } catch (e) {
+    console.error("Error parsing event JSON data:", e);
+    // You could display an error message to the user here
+  }
+
+  /**
+   * Renders the calendar grid and the upcoming events list for a given month and year.
+   */
+  function renderCalendar(month, year) {
+    calGrid.innerHTML = "";
+    upcomingWrap.innerHTML = ""; // Clear upcoming events list
+
+    const firstDayOfMonth = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const monthName = new Date(year, month).toLocaleString("default", { month: "long" });
+
+    calTitle.textContent = `${monthName} ${year}`;
+    calTitle.setAttribute("aria-live", "polite");
+
+    // Add blank cells for days before the 1st of the month
+    for (let i = 0; i < firstDayOfMonth; i++) {
+      const blank = document.createElement("div");
+      blank.classList.add("day", "muted");
+      calGrid.appendChild(blank);
+    }
+
+    // Add day cells for the current month
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(year, month, d);
+      const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      
+      const cell = document.createElement("button"); // Use button for accessibility
+      cell.classList.add("day");
+      cell.textContent = d;
+      cell.setAttribute("aria-label", `Events for ${monthName} ${d}`);
+
+      if (date.getTime() === today.getTime()) {
+        cell.classList.add("today");
+        cell.setAttribute("aria-current", "date");
       }
 
-      // Initialize Calendar with proper configuration
-      const calendarEl = document.getElementById('calendar');
-      if (calendarEl) {
-        const calendar = new FullCalendar.Calendar(calendarEl, {
-          initialView: 'dayGridMonth',
-          height: 400,
-          headerToolbar: {
-            left: 'prev,next today',
-            center: 'title',
-            right: ''
-          },
-          dayMaxEvents: false,
-          showNonCurrentDates: true,
-          fixedWeekCount: false,
-          // Ensure proper day name formatting
-          dayHeaderFormat: { weekday: 'short' },
-          // Force proper locale (this should fix day names)
-          locale: 'en',
-          // Ensure table layout is not broken
-          aspectRatio: 1.2,
-          events: [], // you can populate events dynamically here
-
-          // Additional options to ensure proper rendering
-          displayEventTime: false,
-          eventDisplay: 'block',
-          dayHeaderClassNames: 'custom-day-header'
-        });
-
-        // Render the calendar
-        calendar.render();
-
-        // Force a re-render after a short delay to fix any layout issues
-        setTimeout(() => {
-          calendar.updateSize();
-        }, 100);
+      const dayEvents = allEvents.filter(e => e.date === dateStr);
+      if (dayEvents.length > 0) {
+        cell.classList.add("has-event");
+        cell.addEventListener("click", () => openSidebar(date, dayEvents));
       }
+
+      calGrid.appendChild(cell);
+    }
+
+    // --- UPDATE: Render upcoming events for the current month ---
+    renderUpcomingEvents(month, year);
+  }
+
+  /**
+   * Renders the list of upcoming events for the current month.
+   */
+  function renderUpcomingEvents(month, year) {
+      const monthStr = String(month + 1).padStart(2, '0');
+      const upcomingEvents = allEvents
+        .filter(e => e.date.startsWith(`${year}-${monthStr}`))
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      if (upcomingEvents.length === 0) {
+          upcomingWrap.innerHTML = '<div class="empty">No upcoming events.</div>';
+          return;
+      }
+
+      upcomingEvents.forEach(event => {
+          const item = document.createElement('div');
+          item.className = 'u-item';
+          const eventDate = new Date(event.date + 'T00:00:00'); // Avoid timezone issues
+          const formattedDate = eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          
+          item.innerHTML = `<span>${event.title}</span><small>${formattedDate}</small>`;
+          item.addEventListener("click", () => openSidebar(eventDate, [event]));
+          upcomingWrap.appendChild(item);
+      });
+  }
+
+  /**
+   * Opens the sidebar to show events for a specific day.
+   */
+  function openSidebar(date, dayEvents) {
+    sidebarDate.textContent = date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    sidebarContent.innerHTML = "";
+
+    dayEvents.forEach(ev => {
+      const div = document.createElement("div");
+      div.classList.add("event-item");
+      // Add more event details if they exist in your JSON
+      let eventHTML = `<strong>${ev.title}</strong>`;
+      if (ev.description) {
+        eventHTML += `<p>${ev.description}</p>`;
+      }
+      div.innerHTML = eventHTML;
+      sidebarContent.appendChild(div);
     });
+
+    sidebar.classList.add("active");
+    overlay.classList.remove("hidden");
+    sidebar.setAttribute("aria-hidden", "false");
+    sidebarCloseBtn.focus(); // Focus on the close button for accessibility
+  }
+
+  /**
+   * Closes the event sidebar.
+   */
+  function closeSidebar() {
+    sidebar.classList.remove("active");
+    overlay.classList.add("hidden");
+    sidebar.setAttribute("aria-hidden", "true");
+  }
+
+  // --- Event Listeners ---
+  prevMonthBtn.addEventListener("click", () => {
+    currentMonth--;
+    if (currentMonth < 0) {
+      currentMonth = 11;
+      currentYear--;
+    }
+    renderCalendar(currentMonth, currentYear);
+  });
+
+  nextMonthBtn.addEventListener("click", () => {
+    currentMonth++;
+    if (currentMonth > 11) {
+      currentMonth = 0;
+      currentYear++;
+    }
+    renderCalendar(currentMonth, currentYear);
+  });
+
+  sidebarCloseBtn.addEventListener("click", closeSidebar);
+  overlay.addEventListener("click", closeSidebar);
+  
+  // Close sidebar on "Escape" key press
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && sidebar.classList.contains('active')) {
+      closeSidebar();
+    }
+  });
+
+
+  // --- Initial Render ---
+  renderCalendar(currentMonth, currentYear);
+});
 </script>
 {% endblock %}
