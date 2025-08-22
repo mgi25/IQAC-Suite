@@ -1724,6 +1724,30 @@ def submit_event_report(request, proposal_id):
 
 
 @login_required
+def preview_event_report(request, proposal_id):
+    """Display a summary of the event report before final submission."""
+    proposal = get_object_or_404(
+        EventProposal,
+        id=proposal_id,
+        submitted_by=request.user,
+    )
+
+    if request.method != "POST":
+        return redirect("emt:submit_event_report", proposal_id=proposal.id)
+
+    form = EventReportForm(request.POST)
+    if not form.is_valid():
+        logger.debug("Preview form invalid for proposal %s: %s", proposal.id, form.errors)
+
+    context = {
+        "proposal": proposal,
+        "form": form,
+        "post_data": request.POST,
+    }
+    return render(request, "emt/report_preview.html", context)
+
+
+@login_required
 def download_audience_csv(request, proposal_id):
     """Provide CSV templates for marking attendance separately for students and faculty."""
     proposal = get_object_or_404(
