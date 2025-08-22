@@ -1239,8 +1239,8 @@ $(document).ready(function() {
 
         if (container.children().length === 0 && window.SDG_GOALS) {
             let html = '';
-            window.SDG_GOALS.forEach(goal => {
-                html += `<label><input type="checkbox" value="${goal.id}"> ${goal.name}</label><br>`;
+            window.SDG_GOALS.forEach((goal, idx) => {
+                html += `<label><input type="checkbox" value="${goal.id}"> SDG${idx+1} ${goal.name}</label><br>`;
             });
             container.html(html);
         }
