@@ -1,0 +1,9 @@
+{
+  "fields": [
+    "event_title",
+    "target_audience",
+    "num_activities",
+    "student_coordinators",
+    "faculty_incharges"
+  ]
+}
