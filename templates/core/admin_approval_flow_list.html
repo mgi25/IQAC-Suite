@@ -2,60 +2,322 @@
 {% load static %}
 {% load dict_filters %}
 
-{% block title %}Approval Flow Management – CHRIST University{% endblock %}
+{% block title %}Approval Flow Management{% endblock %}
 
 {% block head_extra %}
-  <link rel="stylesheet" href="{% static 'core/css/admin_master_data.css' %}">
-{% endblock %}
-
-{% block page_title %}Approval Flow Management{% endblock %}
-{% block current_page %}Approval Flow Management{% endblock %}
-
-{% block breadcrumb %}
-  <a href="{% url 'dashboard' %}">Home</a>
-  <i class="fa-solid fa-chevron-right"></i>
-  <a href="{% url 'core_admin_dashboard' %}">Admin Dashboard</a>
-  <i class="fa-solid fa-chevron-right"></i>
-  <span>Approval Flow Management</span>
+  <link rel="stylesheet" href="{% static 'core/css/admin_approval_flow.css' %}?v=3.0">
 {% endblock %}
 
 {% block content %}
-<div class="main-container">
-  <div class="page-header">
-    <h1>Proposal Approval Flows</h1>
-    <p>Select an organization to view or edit its approval hierarchy.</p>
+<div class="ems-dashboard approval-flow-page">
+
+  <!-- Heading (Dashboard style: black, compact) -->
+  <header class="topbar">
+    <div>
+      <h1>Approval Flow Management</h1>
+      <p>Select an organization to view or edit its proposal approval hierarchy</p>
+    </div>
+  </header>
+
+  <!-- Controls: Category filter → Search → Actions (sticky, compact) -->
+  <div class="controls-container" id="controlsBar">
+    <div class="filters-left">
+      <label class="filter">
+        <span>Category</span>
+        <select id="categoryFilter" aria-label="Select category">
+          <option value="all">All Categories</option>
+          {% for org_type in org_types %}
+            {% with key=org_type.name|lower %}
+            <option value="{{ key }}">
+              {{ org_type.name }}{% if not key == 'cell' %}s{% endif %}
+            </option>
+            {% endwith %}
+          {% endfor %}
+        </select>
+      </label>
+
+      <label class="filter">
+        <span>Status</span>
+        <select id="statusFilter" aria-label="Filter by status">
+          <option value="all">All</option>
+          <option value="configured">Configured</option>
+          <option value="not-configured">Not Configured</option>
+        </select>
+      </label>
+
+      <div class="search-bar">
+        <i class="fas fa-search"></i>
+        <input type="text" id="universalSearch" placeholder="Search organizations..." aria-label="Search">
+        <button class="search-clear" id="searchClearBtn" title="Clear search" aria-label="Clear search">×</button>
+      </div>
+    </div>
+
+    <div class="main-actions">
+      <button class="btn btn-secondary" onclick="refreshFlows()">
+        <i class="fas fa-sync-alt"></i><span class="btn-label">Refresh</span>
+      </button>
+    </div>
   </div>
 
-  <div class="widget-grid">
-    {% for org_type in org_types %}
-      <div class="data-widget">
-        <div class="widget-header">
-          <div class="widget-title">{{ org_type.name }}{% if not org_type.name|lower == 'cell' %}s{% endif %}</div>
-        </div>
-        <div class="widget-content">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for org in orgs_by_type|get_item:org_type.name %}
-                <tr>
-                  <td>{{ org.name }}</td>
-                  <td class="actions">
-                    <a class="btn btn-primary btn-sm" href="{% url 'admin_approval_flow_manage' org.id %}">View</a>
-                  </td>
-                </tr>
-              {% empty %}
-                <tr><td colspan="2" class="text-center">No organizations.</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    {% endfor %}
+  <!-- Single unified table for all organizations -->
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th class="th-name">Organization</th>
+          <th class="th-category">Category</th>
+          <th class="th-status">Flow Status</th>
+          <th class="th-steps">Steps</th>
+          <th class="th-actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="organizationsTableBody">
+        {% for org_type in org_types %}
+          {% for org in orgs_by_type|get_item:org_type.name %}
+            <tr data-id="{{ org.id }}"
+                data-type="{{ org_type.name|lower }}"
+                data-category="{{ org_type.name }}"
+                class="org-row">
+              <td data-label="Organization">{{ org.name }}</td>
+              <td data-label="Category">{{ org_type.name }}</td>
+              <td data-label="Flow Status">
+                {% if org.has_approval_flow %}
+                  <span class="status-badge status-active">Configured</span>
+                {% else %}
+                  <span class="status-badge status-inactive">Not Configured</span>
+                {% endif %}
+              </td>
+              <td data-label="Steps">
+                {% if org.approval_step_count %}
+                  <span class="step-count">{{ org.approval_step_count }} step{{ org.approval_step_count|pluralize }}</span>
+                {% else %}
+                  <span class="text-muted">No steps</span>
+                {% endif %}
+              </td>
+              <td data-label="Actions" class="actions">
+                <!-- Icon-only, compact, tooltips -->
+                <a class="icon-btn" title="Manage Flow" aria-label="Manage Approval Flow"
+                   href="{% url 'admin_approval_flow_manage' org.id %}">
+                  <i class="fas fa-route"></i>
+                </a>
+                {% if org.has_approval_flow %}
+                <button class="icon-btn" title="Preview Flow" aria-label="Preview Flow"
+                        onclick="previewFlow({{ org.id }}, '{{ org.name|escapejs }}')">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button class="icon-btn" title="Copy Flow" aria-label="Copy Flow"
+                        onclick="copyFlow({{ org.id }}, '{{ org.name|escapejs }}')">
+                  <i class="fas fa-copy"></i>
+                </button>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        {% empty %}
+          <tr><td colspan="5" class="text-center">No organizations found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Universal search: no-results -->
+  <div id="search-not-found" class="search-not-found" style="display:none;">
+    <p>No organizations found for "<strong></strong>".</p>
   </div>
 </div>
+
+<!-- Preview Flow Modal -->
+<div id="previewFlowModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3><i class="fas fa-eye"></i> Approval Flow Preview</h3>
+      <button class="modal-close" onclick="closeModal('previewFlowModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="previewFlowContent">
+        <!-- Flow preview content will load here -->
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" onclick="closeModal('previewFlowModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Copy Flow Modal -->
+<div id="copyFlowModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3><i class="fas fa-copy"></i> Copy Approval Flow</h3>
+      <button class="modal-close" onclick="closeModal('copyFlowModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Copy flow from <strong id="sourceOrgName"></strong> to:</label>
+        <select id="targetOrgSelect" class="form-control">
+          <option value="">Select target organization...</option>
+          {% for org_type in org_types %}
+            {% for org in orgs_by_type|get_item:org_type.name %}
+              <option value="{{ org.id }}" data-category="{{ org_type.name }}">
+                {{ org.name }} ({{ org_type.name }})
+              </option>
+            {% endfor %}
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="checkbox-row">
+          <input type="checkbox" id="overwriteExisting" checked>
+          Overwrite existing flow if present
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" onclick="closeModal('copyFlowModal')">Cancel</button>
+      <button type="button" class="btn btn-primary" onclick="submitCopyFlow()">
+        <i class="fas fa-copy"></i> Copy Flow
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-notification" class="toast" aria-live="polite">
+  <span id="toastMessage"></span>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  window.CSRF_TOKEN = "{{ csrf_token|escapejs }}";
+  
+  // Apply filters function
+  function applyFilters() {
+    const categoryFilter = document.getElementById('categoryFilter').value;
+    const statusFilter = document.getElementById('statusFilter').value;
+    const searchTerm = document.getElementById('universalSearch').value.toLowerCase().trim();
+    
+    let anyVisible = false;
+    
+    document.querySelectorAll('.org-row').forEach(row => {
+      const orgName = row.querySelector('td[data-label="Organization"]').textContent.toLowerCase();
+      const category = row.dataset.type;
+      const hasFlow = row.querySelector('.status-active') !== null;
+      
+      let visible = true;
+      
+      // Category filter
+      if (categoryFilter !== 'all' && category !== categoryFilter) {
+        visible = false;
+      }
+      
+      // Status filter
+      if (statusFilter === 'configured' && !hasFlow) {
+        visible = false;
+      } else if (statusFilter === 'not-configured' && hasFlow) {
+        visible = false;
+      }
+      
+      // Search filter
+      if (searchTerm && !orgName.includes(searchTerm)) {
+        visible = false;
+      }
+      
+      row.style.display = visible ? '' : 'none';
+      if (visible) anyVisible = true;
+    });
+    
+    // Show/hide no results message
+    const notFound = document.getElementById('search-not-found');
+    const notFoundText = notFound.querySelector('strong');
+    if (searchTerm && !anyVisible) {
+      if (notFoundText) notFoundText.textContent = document.getElementById('universalSearch').value;
+      notFound.style.display = 'block';
+    } else {
+      notFound.style.display = 'none';
+    }
+  }
+  
+  // Initialize filters
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('categoryFilter').addEventListener('change', applyFilters);
+    document.getElementById('statusFilter').addEventListener('change', applyFilters);
+    document.getElementById('universalSearch').addEventListener('input', debounce(applyFilters, 300));
+    document.getElementById('searchClearBtn').addEventListener('click', () => {
+      document.getElementById('universalSearch').value = '';
+      applyFilters();
+    });
+  });
+  
+  // Utility functions
+  function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
+  
+  function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast-notification');
+    const msgEl = document.getElementById('toastMessage');
+    toast.className = `toast show toast-${type}`;
+    msgEl.textContent = message;
+    setTimeout(() => toast.classList.remove('show'), 3000);
+  }
+  
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('show');
+    document.body.style.overflow = '';
+  }
+  
+  function openModal(id) {
+    document.getElementById(id).classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+  
+  // Modal functions
+  function previewFlow(orgId, orgName) {
+    // Implementation for preview flow
+    showToast('Preview feature coming soon', 'info');
+  }
+  
+  let sourceFlowOrgId = null;
+  function copyFlow(orgId, orgName) {
+    sourceFlowOrgId = orgId;
+    document.getElementById('sourceOrgName').textContent = orgName;
+    
+    // Hide source org from target list
+    const targetSelect = document.getElementById('targetOrgSelect');
+    Array.from(targetSelect.options).forEach(option => {
+      option.style.display = option.value == orgId ? 'none' : 'block';
+    });
+    
+    openModal('copyFlowModal');
+  }
+  
+  function submitCopyFlow() {
+    const targetOrgId = document.getElementById('targetOrgSelect').value;
+    const overwrite = document.getElementById('overwriteExisting').checked;
+    
+    if (!targetOrgId) {
+      showToast('Please select a target organization', 'error');
+      return;
+    }
+    
+    // Implementation for copy flow
+    showToast('Copy feature coming soon', 'info');
+    closeModal('copyFlowModal');
+  }
+  
+  function refreshFlows() {
+    showToast('Refreshing flows...', 'info');
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
+  }
+</script>
 {% endblock %}
