@@ -298,29 +298,51 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
               // Remove any previously appended hidden inputs
               form.find('input.section-state-hidden').remove();
 
-              // Append hidden inputs for all fields tracked in sectionState
-              Object.entries(sectionState).forEach(([name, value]) => {
-                  if (Array.isArray(value)) {
-                      value.forEach(v => {
-                          form.append($('<input>', {
-                              type: 'hidden',
-                              class: 'section-state-hidden',
-                              name: name,
-                              value: v
-                          }));
-                      });
-                  } else {
-                      const field = form.find(`[name="${name}"]`).first();
-                      let finalValue = value;
-                      if(field.length && (field.attr('type') === 'checkbox' || field.attr('type') === 'radio')){
-                          finalValue = field.prop('checked') ? field.val() : '';
+              // Serialize every form control, including empty or unchecked ones
+              const fieldsByName = {};
+              form.find('input[name], select[name], textarea[name]').each(function(){
+                  const name = this.name;
+                  if(!fieldsByName[name]){
+                      fieldsByName[name] = [];
+                  }
+                  fieldsByName[name].push(this);
+              });
+
+              const appendHidden = (frm, name, value) => {
+                  frm.append($('<input>', {
+                      type: 'hidden',
+                      class: 'section-state-hidden',
+                      name: name,
+                      value: value
+                  }));
+              };
+
+              Object.entries(fieldsByName).forEach(([name, elements]) => {
+                  const el = elements[0];
+                  if(el.tagName === 'SELECT'){
+                      const $el = $(el);
+                      const vals = $el.val();
+                      if(Array.isArray(vals)){
+                          if(vals.length){
+                              vals.forEach(v => appendHidden(form, name, v));
+                          } else {
+                              appendHidden(form, name, '');
+                          }
+                      } else {
+                          appendHidden(form, name, vals || '');
                       }
-                      form.append($('<input>', {
-                          type: 'hidden',
-                          class: 'section-state-hidden',
-                          name: name,
-                          value: finalValue
-                      }));
+                  } else if(el.type === 'checkbox'){
+                      const checkedVals = elements.filter(e => e.checked).map(e => e.value);
+                      if(checkedVals.length){
+                          checkedVals.forEach(v => appendHidden(form, name, v));
+                      } else {
+                          appendHidden(form, name, '');
+                      }
+                  } else if(el.type === 'radio'){
+                      const checked = elements.find(e => e.checked);
+                      appendHidden(form, name, checked ? checked.value : '');
+                  } else {
+                      appendHidden(form, name, $(el).val() || '');
                   }
               });
 
