@@ -3286,28 +3286,39 @@ function showCard(field, content){
 function applyGeneratedToField(field, text) {
   const id = `id_${field}`;
 
+  function triggerSave() {
+    if (window.AutosaveManager && window.AutosaveManager.manualSave) {
+      try { window.AutosaveManager.manualSave(); } catch (e) {}
+    }
+  }
+
   if (window.CKEDITOR && CKEDITOR.instances[id]) {
     CKEDITOR.instances[id].setData(text);
+    triggerSave();
     return;
   }
   if (window.ClassicEditor && window._editors && window._editors[field]) {
     window._editors[field].setData(text);
+    triggerSave();
     return;
   }
   if (window.tinymce && tinymce.get(id)) {
     tinymce.get(id).setContent(text);
+    triggerSave();
     return;
   }
   if (window.Quill && window._quills && window._quills[field]) {
     const q = window._quills[field];
     q.setText("");
     q.clipboard.dangerouslyPasteHTML(0, text);
+    triggerSave();
     return;
   }
   const el = document.getElementById(id);
   if (el) {
     el.value = text;
     el.dispatchEvent(new Event('input', { bubbles: true }));
+    triggerSave();
   }
 }
 

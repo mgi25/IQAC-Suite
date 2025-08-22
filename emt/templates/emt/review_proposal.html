@@ -160,9 +160,21 @@
         <tr><th>Needs Support</th><td>{{ cdl_support.needs_support|yesno:"Yes,No" }}</td></tr>
         {% if cdl_support.poster_required %}
         <tr><th>Poster</th><td>{{ cdl_support.get_poster_choice_display }}</td></tr>
+        {% if cdl_support.organization_name %}<tr><th>Organization</th><td>{{ cdl_support.organization_name }}</td></tr>{% endif %}
+        {% if cdl_support.poster_event_title %}<tr><th>Poster Title</th><td>{{ cdl_support.poster_event_title }}</td></tr>{% endif %}
+        {% if cdl_support.poster_date %}<tr><th>Poster Date</th><td>{{ cdl_support.poster_date }}</td></tr>{% endif %}
+        {% if cdl_support.poster_time %}<tr><th>Poster Time</th><td>{{ cdl_support.poster_time }}</td></tr>{% endif %}
+        {% if cdl_support.poster_venue %}<tr><th>Poster Venue</th><td>{{ cdl_support.poster_venue }}</td></tr>{% endif %}
+        {% if cdl_support.resource_person_name %}
+        <tr><th>Resource Person</th><td>{{ cdl_support.resource_person_name }}{% if cdl_support.resource_person_designation %} ({{ cdl_support.resource_person_designation }}){% endif %}</td></tr>
+        {% endif %}
+        {% if cdl_support.poster_summary %}<tr><th>Poster Summary</th><td>{{ cdl_support.poster_summary|linebreaksbr }}</td></tr>{% endif %}
+        {% if cdl_support.poster_design_link %}<tr><th>Poster Design Link</th><td><a href="{{ cdl_support.poster_design_link }}">{{ cdl_support.poster_design_link }}</a></td></tr>{% endif %}
         {% endif %}
         {% if cdl_support.certificates_required %}
         <tr><th>Certificates</th><td>{{ cdl_support.get_certificate_choice_display }}</td></tr>
+        {% if cdl_support.certificate_help %}<tr><th>Certificate Help</th><td>Yes</td></tr>{% endif %}
+        {% if cdl_support.certificate_design_link %}<tr><th>Certificate Design Link</th><td><a href="{{ cdl_support.certificate_design_link }}">{{ cdl_support.certificate_design_link }}</a></td></tr>{% endif %}
         {% endif %}
         {% if cdl_support.other_services %}
         <tr><th>Other Services</th><td>{{ cdl_support.other_services|join:", " }}</td></tr>
