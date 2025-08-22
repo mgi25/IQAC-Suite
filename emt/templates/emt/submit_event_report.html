@@ -356,7 +356,7 @@
             activities: {{ proposal_activities_json|default:'[]'|safe }},
             speakers: {{ speakers_json|default:'[]'|safe }},
             pos_pso: "{{ proposal.pos_pso|default:'' }}",
-            sdg_goals: "{{ proposal.sdg_goals|default:'' }}"
+            sdg_goals: "{{ proposal_sdg_goals|default:'' }}"
         };
     </script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>

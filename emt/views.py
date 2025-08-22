@@ -1691,6 +1691,15 @@ def submit_event_report(request, proposal_id):
         f.get_full_name() or f.username for f in proposal.faculty_incharges.all()
     ]
 
+    # Prepare SDG goal data for modal and proposal prefill
+    sdg_goals_list = [
+        {"id": goal.id, "title": goal.name}
+        for goal in SDGGoal.objects.all()
+    ]
+    proposal_sdg_goals = ", ".join(
+        f"SDG{goal.id}: {goal.name}" for goal in proposal.sdg_goals.all()
+    )
+
     # Pre-fill context with proposal info for readonly/preview display
     context = {
         "proposal": proposal,
@@ -1699,7 +1708,8 @@ def submit_event_report(request, proposal_id):
         "proposal_activities": proposal_activities,
         "proposal_activities_json": json.dumps(proposal_activities),
         "speakers_json": json.dumps(speakers_json),
-        "sdg_goals_list": [],  # Add SDG goals if needed
+        "sdg_goals_list": sdg_goals_list,
+        "proposal_sdg_goals": proposal_sdg_goals,
         "event_summary": event_summary,
         "event_outcomes": event_outcomes,
         "analysis": analysis,
