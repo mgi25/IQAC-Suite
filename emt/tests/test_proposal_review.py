@@ -70,3 +70,20 @@ class ProposalReviewFlowTests(TestCase):
         resp = self.client.get(reverse("emt:review_proposal", args=[pid]))
         self.assertContains(resp, "CDL Support")
         self.assertContains(resp, "Ask CDL to make the poster")
+
+    def test_cdl_support_review_flow(self):
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(self._payload()),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        pid = resp.json()["proposal_id"]
+
+        post_data = {"needs_support": "on", "review_submit": "1"}
+        resp2 = self.client.post(reverse("emt:submit_cdl_support", args=[pid]), post_data)
+        self.assertEqual(resp2.status_code, 302)
+        self.assertIn(reverse("emt:review_proposal", args=[pid]), resp2.headers["Location"])
+
+        proposal = EventProposal.objects.get(id=pid)
+        self.assertEqual(proposal.status, EventProposal.Status.DRAFT)
