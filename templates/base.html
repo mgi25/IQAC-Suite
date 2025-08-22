@@ -285,11 +285,16 @@
       </div>
       {% endif %}
 
-     <button id="download-json-btn">Download JSON</button>
-<input type="file" id="upload-json-input" style="display:none;">
-<button onclick="document.getElementById('upload-json-input').click()">Upload JSON</button>
-
-
+      <div class="json-controls" style="position: fixed; bottom: 0; left: 0; width: 280px; padding: 16px; background: #fff; border-top: 1px solid #e5e7eb;">
+  <div style="display: flex; gap: 8px;">
+    <button id="download-json-btn" class="json-btn" style="flex: 1; padding: 8px 12px; border-radius: 6px; border: 1px solid #e5e7eb; background: #f8fafc; color: #374151; font-size: 0.875rem; display: flex; align-items: center; justify-content: center; gap: 6px;">
+      <i class="fas fa-download"></i> Download JSON
+    </button>
+    <label for="upload-json-input" class="json-btn" style="flex: 1; padding: 8px 12px; border-radius: 6px; border: 1px solid #e5e7eb; background: #f8fafc; color: #374151; font-size: 0.875rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+      <i class="fas fa-upload"></i> Upload JSON
+    </label>
+    <input type="file" id="upload-json-input" accept=".json" style="display: none;">
+  </div>
 </div>
 
 
