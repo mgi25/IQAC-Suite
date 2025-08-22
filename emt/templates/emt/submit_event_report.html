@@ -183,7 +183,7 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="actual-location-modern">Actual Event Location</label>
-                                <input type="text" id="actual-location-modern" name="location" value="{{ form.location.value|default:'' }}" placeholder="Enter the actual venue where event was held">
+                                <input type="text" id="actual-location-modern" name="location" value="{{ form.location.value|default:proposal.venue|default:'' }}" placeholder="Enter the actual venue where event was held">
                                 <div class="help-text">Specify the actual venue (if different from proposed venue)</div>
                                 {% if form.location.errors %}
                                     <div class="field-error">{{ form.location.errors.0 }}</div>
@@ -346,6 +346,9 @@
             target_audience: "{{ proposal.target_audience|default:'' }}",
             event_focus_type: "{{ proposal.event_focus_type|default:'' }}",
             student_coordinators: "{{ proposal.student_coordinators|default:'' }}",
+            proposer: "{{ proposal.submitted_by.get_full_name|default:'' }}",
+            faculty_incharges: {{ faculty_names_json|default:'[]'|safe }},
+            volunteers: {{ volunteer_names_json|default:'[]'|safe }},
             academic_year: "{{ proposal.academic_year|default:'2024-2025' }}",
             num_activities: "{{ proposal_activities|length }}",
             event_start_date: "{% if proposal.event_start_date %}{{ proposal.event_start_date|date:'Y-m-d' }}{% elif proposal.event_datetime %}{{ proposal.event_datetime|date:'Y-m-d' }}{% endif %}",
