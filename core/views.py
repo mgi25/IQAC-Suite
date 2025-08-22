@@ -862,23 +862,27 @@ def _render_student_dashboard(request):
     return render(request, "core/student_dashboard.html", context)
 
 
+# core/views.py
+
 @user_passes_test(lambda u: u.is_superuser)
 def admin_dashboard(request):
     """
-    Render the admin dashboard with dynamic analytics from the backend.
+    Render the admin dashboard with dynamic analytics and calendar events.
     """
     from django.contrib.auth.models import User
     from django.db.models import Q
     from datetime import timedelta
+    import json
+    from emt.models import EventReport # Make sure this is imported
 
-    # Calculate role statistics (manual count for accuracy)
+    # --- Role statistics logic (this part is correct) ---
     all_assignments = RoleAssignment.objects.select_related('role', 'user').filter(
         user__is_active=True,
         user__last_login__isnull=False,
     )
     counted_users = {'faculty': set(), 'student': set(), 'hod': set()}
     for assignment in all_assignments:
-        role_name = assignment.role.name.lower()
+        role_name = (getattr(assignment.role, 'name', "") or "").lower()
         user_id = assignment.user.id
         if 'faculty' in role_name:
             counted_users['faculty'].add(user_id)
@@ -887,6 +891,20 @@ def admin_dashboard(request):
         elif 'hod' in role_name or 'head' in role_name:
             counted_users['hod'].add(user_id)
     
+    # === CORRECTED LOGIC FOR EVENT REPORT STATS ===
+    total_event_reports = EventReport.objects.count()
+    
+    # We assume a report is 'pending' if 'iqac_feedback' is empty.
+    pending_event_reports = EventReport.objects.filter(Q(iqac_feedback__isnull=True) | Q(iqac_feedback='')).count()
+    
+    # We assume a report is 'reviewed' if 'iqac_feedback' is NOT empty.
+    reviewed_event_reports = EventReport.objects.filter(iqac_feedback__isnull=False).exclude(iqac_feedback='').count()
+    
+    # NOTE: There is no obvious field for 'rejected'. I've set this to 0.
+    # You will need to adjust this logic if you have a specific way to track rejections.
+    rejected_event_reports = 0 
+    # ===============================================
+
     stats = {
         'students': len(counted_users['student']),
         'faculties': len(counted_users['faculty']),
@@ -896,7 +914,7 @@ def admin_dashboard(request):
         'clubs': Organization.objects.filter(org_type__name__icontains='club', is_active=True).count(),
         'total_proposals': EventProposal.objects.count(),
         'pending_proposals': EventProposal.objects.filter(status__in=['submitted', 'under_review']).count(),
-        'approved_proposals': EventProposal.objects.filter(status='approved').count(),
+        'approved_proposals': EventProposal.objects.filter(status__in=['approved', 'finalized']).count(),
         'rejected_proposals': EventProposal.objects.filter(status='rejected').count(),
         'total_users': User.objects.count(),
         'active_users': User.objects.filter(is_active=True, last_login__isnull=False).count(),
@@ -905,52 +923,63 @@ def admin_dashboard(request):
             last_login__isnull=False,
             date_joined__gte=timezone.now() - timedelta(days=7),
         ).count(),
-        'total_reports': Report.objects.count(),
+        'total_reports': Report.objects.count() + total_event_reports,
+        'total_event_reports': total_event_reports,
+        'pending_event_reports': pending_event_reports,
+        'reviewed_event_reports': reviewed_event_reports,
+        'rejected_event_reports': rejected_event_reports,
         'database_status': 'Operational',
         'email_status': 'Active',
         'storage_status': '45% Used',
         'last_backup': timezone.now().strftime("%b %d, %Y"),
     }
     
-    # Recent activity feed (proposals and reports)
+    # --- Recent activities logic (this part is correct) ---
     recent_activities = []
     recent_proposals = EventProposal.objects.select_related('submitted_by').order_by('-created_at')[:5]
     for proposal in recent_proposals:
         recent_activities.append({
             'type': 'proposal',
+            'title': f"Proposal by {proposal.submitted_by.get_full_name() if proposal.submitted_by else ''}",
             'description': f"New event proposal: {getattr(proposal, 'event_title', getattr(proposal, 'title', 'Untitled Event'))}",
             'user': proposal.submitted_by.get_full_name() if proposal.submitted_by else '',
             'timestamp': proposal.created_at,
-            'status': proposal.status
+            'status': proposal.get_status_display()
         })
-    
     recent_reports = Report.objects.select_related('submitted_by').order_by('-created_at')[:3]
     for report in recent_reports:
         recent_activities.append({
             'type': 'report',
+            'title': f"Report by {report.submitted_by.get_full_name() if report.submitted_by else 'System'}",
             'description': f"Report submitted: {report.title}",
             'user': report.submitted_by.get_full_name() if report.submitted_by else 'System',
             'timestamp': report.created_at,
             'status': getattr(report, 'status', '')
         })
-    
     recent_activities.sort(key=lambda x: x['timestamp'], reverse=True)
     recent_activities = recent_activities[:8]
+    
+    # --- Calendar events logic (this part is correct) ---
+    calendar_event_proposals = EventProposal.objects.filter(
+        status__in=['approved', 'finalized'],
+        event_start_date__isnull=False
+    ).select_related('organization')
+    events_list = []
+    for event in calendar_event_proposals:
+        events_list.append({
+            'title': event.event_title or 'Untitled Event',
+            'date': event.event_start_date.strftime('%Y-%m-%d'),
+            'description': f"Organized by {event.organization.name if event.organization else 'N/A'}"
+        })
+    events_json_string = json.dumps(events_list)
     
     context = {
         'stats': stats,
         'recent_activities': recent_activities,
+        'events': events_json_string,
     }
+    
     return render(request, 'core/admin_dashboard.html', context)
-
-    events = Event.objects.all().values("title", "date")
-    events_list = [
-        {"title": e["title"], "date": format(e["date"], "Y-m-d")}
-        for e in events
-    ]
-    return render(request, "admin_dashboard.html", {
-        "events_json": events_list,
-    })
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_user_panel(request):
@@ -1185,31 +1214,54 @@ def admin_user_management(request):
     Manages and displays a paginated list of users with enhanced filtering capabilities.
     Supports multi-select filtering for organization types, organizations, and roles.
     """
+    # Base queryset
     users_list = User.objects.select_related('profile').prefetch_related(
-        'role_assignments__organization', 
-        'role_assignments__role',
-        'role_assignments__organization__org_type'
+        'role_assignments__organization__org_type', 
+        'role_assignments__role'
     ).order_by('-date_joined')
 
-    # Filter parameters - support both single and multiple values
+    # --- CORRECTED LOGIC FOR HANDLING FILTERS ---
     q = request.GET.get('q', '').strip()
-    role_ids = request.GET.getlist('role[]') or ([request.GET.get('role')] if request.GET.get('role') else [])
-    org_ids = request.GET.getlist('organization[]') or ([request.GET.get('organization')] if request.GET.get('organization') else [])
-    org_type_ids = request.GET.getlist('org_type[]') or ([request.GET.get('org_type')] if request.GET.get('org_type') else [])
+    # Start with IDs from manual filters (e.g., role[]=123)
+    role_ids = request.GET.getlist('role[]') 
+    
+    role_name_from_url = request.GET.get('role', '').strip()
+    initial_roles_json = '[]'
+    
+    # If a role NAME came from the dashboard URL, find its IDs
+    if role_name_from_url:
+        matching_roles = OrganizationRole.objects.filter(
+            name__iexact=role_name_from_url, is_active=True
+        ).select_related('organization')
+        
+        matching_role_ids = list(matching_roles.values_list('id', flat=True))
+        
+        if matching_role_ids:
+            # Add the found IDs to our list for filtering
+            role_ids.extend([str(rid) for rid in matching_role_ids])
+            
+            # Prepare the initial data (ID and Text) for the template's JavaScript
+            initial_roles_data = [
+                {'id': role.id, 'text': f"{role.name} ({role.organization.name})"} 
+                for role in matching_roles
+            ]
+            initial_roles_json = json.dumps(initial_roles_data)
+    
+    org_ids = request.GET.getlist('organization[]')
+    org_type_ids = request.GET.getlist('org_type[]')
     status = request.GET.get('status')
     
-    # Clean empty values
-    role_ids = [r for r in role_ids if r and r.strip()]
-    org_ids = [o for o in org_ids if o and o.strip()]
-    org_type_ids = [ot for ot in org_type_ids if ot and ot.strip()]
+    # Clean empty values and remove duplicates
+    role_ids = list(set([r for r in role_ids if r and r.strip()]))
+    org_ids = list(set([o for o in org_ids if o and o.strip()]))
+    org_type_ids = list(set([ot for ot in org_type_ids if ot and ot.strip()]))
+    # --- END OF CORRECTION ---
     
-    # Apply filters
+    # Apply all filters to the queryset
     if q:
         users_list = users_list.filter(
-            Q(email__icontains=q) |
-            Q(first_name__icontains=q) |
-            Q(last_name__icontains=q) |
-            Q(username__icontains=q)
+            Q(email__icontains=q) | Q(first_name__icontains=q) |
+            Q(last_name__icontains=q) | Q(username__icontains=q)
         )
     
     if role_ids:
@@ -1228,7 +1280,7 @@ def admin_user_management(request):
 
     users_list = users_list.distinct()
 
-    # Pagination
+    # (The rest of the function remains the same)
     paginator = Paginator(users_list, 25)
     page_number = request.GET.get('page')
     try:
@@ -1238,15 +1290,13 @@ def admin_user_management(request):
     except EmptyPage:
         users = paginator.page(paginator.num_pages)
 
-    # Filter options data
     all_roles = OrganizationRole.objects.filter(is_active=True)
     if org_ids:
-        # Restrict roles to those belonging to the selected organizations
         all_roles = all_roles.filter(organization_id__in=org_ids)
     if role_ids:
-        # Ensure currently selected roles remain available in the dropdown
-        all_roles = all_roles | OrganizationRole.objects.filter(id__in=role_ids)
-    all_roles = all_roles.select_related('organization').order_by('name').distinct()
+        all_roles = (all_roles | OrganizationRole.objects.filter(id__in=role_ids)).distinct()
+        
+    all_roles = all_roles.select_related('organization').order_by('name')
     all_organizations = Organization.objects.filter(is_active=True).order_by('name')
     all_org_types = OrganizationType.objects.filter(is_active=True).order_by('name')
 
@@ -1268,9 +1318,111 @@ def admin_user_management(request):
         },
         'query_params': query_params.urlencode(),
         'total_users': users_list.count(),
+        'initial_roles_json': initial_roles_json,
     }
     
     return render(request, "core/admin_user_management.html", context)
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def api_admin_search_users(request):
+    """
+    API endpoint to provide user data for the server-side DataTables.
+    """
+    draw = int(request.GET.get('draw', 1))
+    start = int(request.GET.get('start', 0))
+    length = int(request.GET.get('length', 25))
+    
+    # Get filter parameters from the request
+    q = request.GET.get('q', '').strip()
+    role_name_from_url = request.GET.get('role_name', '').strip() # e.g., "Student"
+    role_ids = request.GET.getlist('role[]')
+    org_ids = request.GET.getlist('organization[]')
+    org_type_ids = request.GET.getlist('org_type[]')
+    status = request.GET.get('status')
+
+    # Base queryset
+    users_qs = User.objects.select_related('profile').prefetch_related(
+        'role_assignments__organization__org_type',
+        'role_assignments__role'
+    ).order_by('-date_joined')
+
+    # Apply filters
+    if q:
+        users_qs = users_qs.filter(
+            Q(email__icontains=q) | Q(first_name__icontains=q) |
+            Q(last_name__icontains=q) | Q(username__icontains=q)
+        )
+    
+    if role_name_from_url and not role_ids:
+        matching_role_ids = list(
+            OrganizationRole.objects.filter(name__iexact=role_name_from_url, is_active=True)
+            .values_list('id', flat=True)
+        )
+        if matching_role_ids:
+            users_qs = users_qs.filter(role_assignments__role_id__in=matching_role_ids)
+
+    if role_ids:
+        users_qs = users_qs.filter(role_assignments__role_id__in=role_ids)
+    if org_ids:
+        users_qs = users_qs.filter(role_assignments__organization_id__in=org_ids)
+    if org_type_ids:
+        users_qs = users_qs.filter(role_assignments__organization__org_type_id__in=org_type_ids)
+
+    if status == 'active':
+        users_qs = users_qs.filter(is_active=True, last_login__isnull=False)
+    elif status == 'inactive':
+        users_qs = users_qs.filter(Q(is_active=False) | Q(last_login__isnull=True))
+
+    users_qs = users_qs.distinct()
+    
+    total_records = users_qs.count()
+    
+    # Paginate the queryset
+    paginated_users = users_qs[start : start + length]
+    
+    # Serialize the data
+    data = []
+    for user in paginated_users:
+        roles = []
+        organizations = []
+        for ra in user.role_assignments.all():
+            if ra.role:
+                roles.append(f'<span class="badge bg-primary">{ra.role.name}</span>')
+            if ra.organization:
+                organizations.append(f'<div>{ra.organization.name} <small class="text-muted">({ra.organization.org_type.name})</small></div>')
+        
+        status_badge = '<span class="badge bg-success">Active</span>' if user.is_active and user.last_login else '<span class="badge bg-danger">Inactive</span>'
+        if user.is_superuser:
+            status_badge += ' <span class="badge bg-warning">Admin</span>'
+
+        action_buttons = f"""
+            <a href="/core-admin/users/{user.id}/edit/" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i> Edit</a>
+        """
+        if user.id != request.user.id:
+            action_buttons += f"""
+                <a href="/core-admin/impersonate/{user.id}/?next=/dashboard/" class="btn btn-sm btn-outline-secondary ms-1">
+                    <i class="fas fa-user-secret"></i> Login as
+                </a>
+            """
+            
+        data.append({
+            's_no': start + len(data) + 1,
+            'name': f'<strong>{user.get_full_name() or user.username}</strong><small class="text-muted d-block">@{user.username}</small>',
+            'email': f'<a href="mailto:{user.email}">{user.email}</a>' if user.email else '<span class="text-muted">No email</span>',
+            'roles': '<br>'.join(roles) or '<span class="text-muted">No roles</span>',
+            'organization': '<br>'.join(organizations) or '<span class="text-muted">No assignments</span>',
+            'date_joined': user.date_joined.strftime("%b %d, %Y %H:%M"),
+            'status': status_badge,
+            'action': action_buttons
+        })
+
+    return JsonResponse({
+        "draw": draw,
+        "recordsTotal": total_records,
+        "recordsFiltered": total_records,
+        "data": data,
+    })
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
