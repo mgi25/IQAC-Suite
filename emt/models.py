@@ -12,9 +12,8 @@ class EventProposal(models.Model):
 
     @property
     def title(self):
-        if self.proposal and self.proposal.event_title:
-            return self.proposal.event_title
-        return "Untitled Event Report"
+        """Convenience property to return the proposal's event title."""
+        return self.event_title or "Untitled Event"
     class Status(models.TextChoices):
         DRAFT = 'draft', 'Draft'
         SUBMITTED = 'submitted', 'Submitted'
