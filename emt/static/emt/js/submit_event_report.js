@@ -1616,8 +1616,11 @@ function updateSpeakerDisplay() {
             </div>
         `;
     });
-    
+
     speakersDisplay.innerHTML = html;
+    if (window.ReportAutosaveManager) {
+        ReportAutosaveManager.reinitialize();
+    }
 }
 
 // Function to handle dynamic content updates when sections are loaded

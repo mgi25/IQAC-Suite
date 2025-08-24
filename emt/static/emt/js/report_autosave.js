@@ -7,11 +7,11 @@ window.ReportAutosaveManager = (function() {
     let timeoutId = null;
     let fields = [];
 
-    let storageKey = `report_draft_${reportId || proposalId || 'new'}`;
+    const pageKey = `report_draft_${window.location.pathname}_new`;
 
     function getSavedData() {
         try {
-            return JSON.parse(localStorage.getItem(storageKey) || '{}');
+            return JSON.parse(localStorage.getItem(pageKey) || '{}');
         } catch (e) {
             console.error('Error parsing saved draft:', e);
             return {};
@@ -54,11 +54,11 @@ window.ReportAutosaveManager = (function() {
         if (reportId) {
             data._report_id = reportId;
         }
-        localStorage.setItem(storageKey, JSON.stringify(data));
+        localStorage.setItem(pageKey, JSON.stringify(data));
     }
 
     function clearLocal() {
-        localStorage.removeItem(storageKey);
+        localStorage.removeItem(pageKey);
     }
 
     function autosaveDraft() {
@@ -99,16 +99,10 @@ window.ReportAutosaveManager = (function() {
         .then(data => {
             if (data && data.success && data.report_id) {
                 if (!reportId || reportId !== data.report_id) {
-                    const old = getSavedData();
-                    clearLocal();
                     reportId = data.report_id;
-                    storageKey = `report_draft_${reportId}`;
-                    old._report_id = reportId;
-                    localStorage.setItem(storageKey, JSON.stringify(old));
                     window.REPORT_ID = reportId;
-                } else {
-                    saveLocal();
                 }
+                saveLocal();
                 document.dispatchEvent(new CustomEvent('autosave:success', {detail: {reportId: data.report_id}}));
                 return data;
             }
@@ -138,7 +132,23 @@ window.ReportAutosaveManager = (function() {
 
     function reinitialize() {
         fields = Array.from(document.querySelectorAll('input[name], textarea[name], select[name]'));
-        const saved = getSavedData();
+        let saved = getSavedData();
+
+        if (!reportId && !saved._report_id) {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('report_draft_')) {
+                    try {
+                        const candidate = JSON.parse(localStorage.getItem(key) || '{}');
+                        if (candidate._report_id) {
+                            saved = candidate;
+                            localStorage.setItem(pageKey, JSON.stringify(candidate));
+                            break;
+                        }
+                    } catch (e) {}
+                }
+            }
+        }
         fields.forEach(f => {
             if (saved.hasOwnProperty(f.name)) {
                 const val = saved[f.name];
@@ -162,7 +172,6 @@ window.ReportAutosaveManager = (function() {
 
         if (saved._report_id && !reportId) {
             reportId = saved._report_id;
-            storageKey = `report_draft_${reportId}`;
             window.REPORT_ID = reportId;
         }
 
