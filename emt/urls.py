@@ -25,6 +25,7 @@ urlpatterns = [
     path('autosave-proposal/', views.autosave_proposal, name='autosave_proposal'),
     path('reset-proposal-draft/', views.reset_proposal_draft, name='reset_proposal_draft'),
     path('autosave-need-analysis/', views.autosave_need_analysis, name='autosave_need_analysis'),
+    path('autosave-event-report/', views.autosave_event_report, name='autosave_event_report'),
     path('pending-reports/', views.pending_reports, name='pending_reports'),
     path('generate-report/<int:proposal_id>/', views.generate_report, name='generate_report'),
     path('report-success/<int:proposal_id>/', views.report_success, name='report_success'),
