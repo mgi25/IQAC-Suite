@@ -355,8 +355,8 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
           }
       };
 
-      const savePromise = (window.AutosaveManager && window.AutosaveManager.manualSave)
-          ? window.AutosaveManager.manualSave()
+      const savePromise = (window.ReportAutosaveManager && window.ReportAutosaveManager.manualSave)
+          ? window.ReportAutosaveManager.manualSave()
           : Promise.resolve();
 
       savePromise.then(proceed).catch(() => {
@@ -1505,8 +1505,8 @@ function initAttachments(){
       removeBtn.style.display = 'none';
       const del = block.querySelector('input[name$="-DELETE"]');
       if(del) del.checked = true;
-      if (window.AutosaveManager) {
-        AutosaveManager.reinitialize();
+      if (window.ReportAutosaveManager) {
+        ReportAutosaveManager.reinitialize();
       }
     });
   }
@@ -1522,8 +1522,8 @@ function initAttachments(){
     list.appendChild(block);
     totalInput.value = idx + 1;
     bind(block);
-    if (window.AutosaveManager) {
-      AutosaveManager.reinitialize();
+    if (window.ReportAutosaveManager) {
+      ReportAutosaveManager.reinitialize();
     }
     block.querySelector('.file-input').click();
   });
@@ -1674,8 +1674,8 @@ function initializeSectionSpecificHandlers() {
         `;
 
         container.append(memberHtml);
-        if (window.AutosaveManager) {
-            AutosaveManager.reinitialize();
+        if (window.ReportAutosaveManager) {
+            ReportAutosaveManager.reinitialize();
         }
     });
 
@@ -1687,8 +1687,8 @@ function initializeSectionSpecificHandlers() {
         $('#committee-members-container .committee-member-group').each(function(index) {
             $(this).find('h6').text(`Committee Member ${index + 1}`);
         });
-        if (window.AutosaveManager) {
-            AutosaveManager.reinitialize();
+        if (window.ReportAutosaveManager) {
+            ReportAutosaveManager.reinitialize();
         }
     });
 }
@@ -1759,8 +1759,8 @@ function setupDynamicActivities() {
         });
         numInput.value = activities.length;
         console.log('Activities rendered successfully, count:', activities.length);
-        if (window.AutosaveManager) {
-            AutosaveManager.reinitialize();
+        if (window.ReportAutosaveManager) {
+            ReportAutosaveManager.reinitialize();
         }
     }
 
@@ -1971,8 +1971,8 @@ $(document).ready(function() {
     initializeSectionSpecificHandlers();
     setupDynamicActivities();
     setupAttendanceModal();
-    if (window.AutosaveManager) {
-        AutosaveManager.reinitialize();
+    if (window.ReportAutosaveManager) {
+        ReportAutosaveManager.reinitialize();
     }
     initializeAutosaveIndicators();
 });
