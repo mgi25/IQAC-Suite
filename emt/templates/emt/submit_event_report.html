@@ -220,6 +220,30 @@
                             </div>
                         </div>
 
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label for="student-participants-modern">Number of student participants</label>
+                                <input type="number" id="student-participants-modern" name="num_student_participants" value="{{ form.num_student_participants.value|default:'' }}">
+                                {% if form.num_student_participants.errors %}
+                                    <div class="field-error">{{ form.num_student_participants.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="input-group">
+                                <label for="faculty-participants-modern">Number of faculty participants</label>
+                                <input type="number" id="faculty-participants-modern" name="num_faculty_participants" value="{{ form.num_faculty_participants.value|default:'' }}">
+                                {% if form.num_faculty_participants.errors %}
+                                    <div class="field-error">{{ form.num_faculty_participants.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="input-group">
+                                <label for="external-participants-modern">Number of external participants</label>
+                                <input type="number" id="external-participants-modern" name="num_external_participants" value="{{ form.num_external_participants.value|default:'' }}">
+                                {% if form.num_external_participants.errors %}
+                                    <div class="field-error">{{ form.num_external_participants.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
                         <!-- Activities Section -->
                         <div class="form-section-header">
                             <h3>Activities Planning</h3>
@@ -280,6 +304,10 @@
     </main>
 </div>
 
+<div class="autosave-indicator" id="autosave-indicator">
+    <span class="indicator-text">Saved</span>
+</div>
+
 <!-- SDG Goals Modal -->
 <div id="sdgModal" class="sdg-modal">
     <div class="sdg-modal-content">
@@ -328,7 +356,7 @@
         window.PROPOSAL_ID = "{{ proposal.id|default:'' }}";
         window.REPORT_STATUS = "{{ report.status|default:'draft' }}";
         window.REPORT_ACTUAL_EVENT_TYPE = "{{ form.actual_event_type.value|default:'' }}";
-        window.AUTOSAVE_URL = "#"; // TODO: Add autosave URL for reports
+        window.AUTOSAVE_URL = "{% url 'emt:autosave_event_report' %}";
         window.AUTOSAVE_CSRF = "{{ csrf_token }}";
         window.API_ORGANIZATIONS = "#"; // TODO: Add API URLs
         window.API_CLASSES_BASE = "{% url 'emt:api_classes' 0 %}".split('0/')[0];
@@ -360,5 +388,6 @@
         };
     </script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="{% static 'emt/js/report_autosave.js' %}"></script>
     <script src="{% static 'emt/js/submit_event_report.js' %}"></script>
 {% endblock %}

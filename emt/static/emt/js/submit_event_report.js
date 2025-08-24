@@ -282,11 +282,15 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
   // Save & Continue button handling
   $(document).on('click', '.btn-save-section', function(e) {
       e.preventDefault();
-      
-      if (validateCurrentSection()) {
+      if (!validateCurrentSection()) {
+          showNotification('Please fill in all required fields', 'error');
+          return;
+      }
+
+      const proceed = () => {
           markSectionComplete(currentSection);
           const nextSection = getNextSection(currentSection);
-          
+
           if (nextSection) {
               enableSection(nextSection);
               activateSection(nextSection);
@@ -349,9 +353,16 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
               form.attr('action', previewUrl);
               form[0].submit();
           }
-      } else {
-          showNotification('Please fill in all required fields', 'error');
-      }
+      };
+
+      const savePromise = (window.ReportAutosaveManager && window.ReportAutosaveManager.manualSave)
+          ? window.ReportAutosaveManager.manualSave()
+          : Promise.resolve();
+
+      savePromise.then(proceed).catch(() => {
+          showNotification('Save failed', 'error');
+          proceed();
+      });
   });
   
   function activateSection(sectionName) {
@@ -1494,6 +1505,9 @@ function initAttachments(){
       removeBtn.style.display = 'none';
       const del = block.querySelector('input[name$="-DELETE"]');
       if(del) del.checked = true;
+      if (window.ReportAutosaveManager) {
+        ReportAutosaveManager.reinitialize();
+      }
     });
   }
 
@@ -1508,6 +1522,9 @@ function initAttachments(){
     list.appendChild(block);
     totalInput.value = idx + 1;
     bind(block);
+    if (window.ReportAutosaveManager) {
+      ReportAutosaveManager.reinitialize();
+    }
     block.querySelector('.file-input').click();
   });
 }
@@ -1599,8 +1616,11 @@ function updateSpeakerDisplay() {
             </div>
         `;
     });
-    
+
     speakersDisplay.innerHTML = html;
+    if (window.ReportAutosaveManager) {
+        ReportAutosaveManager.reinitialize();
+    }
 }
 
 // Function to handle dynamic content updates when sections are loaded
@@ -1655,10 +1675,13 @@ function initializeSectionSpecificHandlers() {
                 </div>
             </div>
         `;
-        
+
         container.append(memberHtml);
+        if (window.ReportAutosaveManager) {
+            ReportAutosaveManager.reinitialize();
+        }
     });
-    
+
     // Handle committee member removal
     $(document).on('click', '.remove-committee-member', function() {
         $(this).closest('.committee-member-group').remove();
@@ -1667,6 +1690,9 @@ function initializeSectionSpecificHandlers() {
         $('#committee-members-container .committee-member-group').each(function(index) {
             $(this).find('h6').text(`Committee Member ${index + 1}`);
         });
+        if (window.ReportAutosaveManager) {
+            ReportAutosaveManager.reinitialize();
+        }
     });
 }
 
@@ -1736,6 +1762,9 @@ function setupDynamicActivities() {
         });
         numInput.value = activities.length;
         console.log('Activities rendered successfully, count:', activities.length);
+        if (window.ReportAutosaveManager) {
+            ReportAutosaveManager.reinitialize();
+        }
     }
 
     container.addEventListener('click', (e) => {
@@ -1913,10 +1942,41 @@ function setupAttendanceModal() {
 }
 
 
+function initializeAutosaveIndicators() {
+    $(document).on('autosave:start', function() {
+        const indicator = $('#autosave-indicator');
+        indicator.removeClass('saved error').addClass('saving show');
+        indicator.find('.indicator-text').text('Saving...');
+    });
+
+    $(document).on('autosave:success', function() {
+        const indicator = $('#autosave-indicator');
+        indicator.removeClass('saving error').addClass('saved');
+        indicator.find('.indicator-text').text('Saved');
+        setTimeout(() => {
+            indicator.removeClass('show');
+        }, 2000);
+    });
+
+    $(document).on('autosave:error', function() {
+        const indicator = $('#autosave-indicator');
+        indicator.removeClass('saving saved').addClass('error show');
+        indicator.find('.indicator-text').text('Save Failed');
+        setTimeout(() => {
+            indicator.removeClass('show');
+        }, 3000);
+    });
+}
+
+
 // Initialize section-specific handlers when document is ready
 $(document).ready(function() {
     initializeSectionSpecificHandlers();
     setupDynamicActivities();
     setupAttendanceModal();
+    if (window.ReportAutosaveManager) {
+        ReportAutosaveManager.reinitialize();
+    }
+    initializeAutosaveIndicators();
 });
 

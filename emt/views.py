@@ -21,6 +21,7 @@ from .models import (
     EventReportAttachment, CDLSupport, CDLCertificateRecipient, CDLMessage, Student,
     AttendanceRow,
 )
+from types import SimpleNamespace
 from .forms import (
     EventProposalForm, NeedAnalysisForm, ExpectedOutcomesForm,
     ObjectivesForm, TentativeFlowForm, SpeakerProfileForm,
@@ -1245,6 +1246,57 @@ def autosave_need_analysis(request):
         return JsonResponse({'success': True})
     return JsonResponse({'success': False}, status=400)
 
+
+@csrf_exempt
+@login_required
+def autosave_event_report(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request"}, status=400)
+
+    try:
+        raw = request.body.decode("utf-8")
+        data = json.loads(raw) if raw else {}
+    except json.JSONDecodeError:
+        logger.debug("autosave_event_report invalid json: %s", raw)
+        return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
+
+    proposal_id = data.get("proposal_id")
+    report_id = data.get("report_id")
+
+    proposal = EventProposal.objects.filter(id=proposal_id, submitted_by=request.user).first()
+    if not proposal:
+        return JsonResponse({"success": False, "error": "Invalid proposal"}, status=400)
+
+    report = None
+    if report_id:
+        report = EventReport.objects.filter(id=report_id, proposal=proposal).first()
+    if not report:
+        report, _ = EventReport.objects.get_or_create(proposal=proposal)
+
+    # Map section fields to model fields
+    summary_content = data.pop("event_summary", None)
+    outcomes_content = data.pop("event_outcomes", None)
+    analysis_content = data.pop("analysis", None)
+
+    form = EventReportForm(data, instance=report)
+    form.fields.get("report_signed_date").required = False
+    if not form.is_valid():
+        logger.debug("autosave_event_report form errors: %s", form.errors)
+        return JsonResponse({"success": False, "errors": form.errors})
+
+    report = form.save(commit=False)
+    if summary_content is not None:
+        report.summary = summary_content
+    if outcomes_content is not None:
+        report.outcomes = outcomes_content
+    if analysis_content is not None and hasattr(report, "analysis"):
+        report.analysis = analysis_content
+    report.save()
+
+    _save_activities(proposal, data)
+
+    return JsonResponse({"success": True, "report_id": report.id})
+
 @login_required
 def api_organizations(request):
     q = request.GET.get("q", "").strip()
@@ -1615,42 +1667,69 @@ def submit_event_report(request, proposal_id):
         submitted_by=request.user,
     )
 
-    # Only allow if no report exists yet
-    report, created = EventReport.objects.get_or_create(proposal=proposal)
-    AttachmentFormSet = modelformset_factory(EventReportAttachment, form=EventReportAttachmentForm, extra=2, can_delete=True)
+    report = EventReport.objects.filter(proposal=proposal).first()
+    AttachmentFormSet = modelformset_factory(
+        EventReportAttachment, form=EventReportAttachmentForm, extra=2, can_delete=True
+    )
+
+    drafts = request.session.setdefault("event_report_draft", {})
+    draft = drafts.get(str(proposal_id), {})
 
     if request.method == "POST":
+        drafts[str(proposal_id)] = {
+            key: request.POST.getlist(key) if len(request.POST.getlist(key)) > 1 else request.POST.get(key)
+            for key in request.POST.keys()
+        }
+        request.session.modified = True
+
         form = EventReportForm(request.POST, instance=report)
-        formset = AttachmentFormSet(request.POST, request.FILES, queryset=report.attachments.all())
+        attachments_qs = report.attachments.all() if report else EventReportAttachment.objects.none()
+        formset = AttachmentFormSet(request.POST, request.FILES, queryset=attachments_qs)
         if form.is_valid() and formset.is_valid() and _save_activities(proposal, request.POST, form):
             report = form.save(commit=False)
             report.proposal = proposal
             report.save()
             form.save_m2m()
 
-            # Save attachments
             instances = formset.save(commit=False)
             for obj in instances:
                 obj.report = report
                 obj.save()
             for obj in formset.deleted_objects:
                 obj.delete()
-            messages.success(request, "Report submitted successfully! Starting AI generation...")
-            # Directly redirect to streaming AI progress page
-            return redirect('emt:ai_report_progress', proposal_id=proposal.id)
-    else:
-        form = EventReportForm(instance=report)
-        formset = AttachmentFormSet(queryset=report.attachments.all())
 
-    # Fetch activities for editing in the report form
+            drafts.pop(str(proposal_id), None)
+            request.session.modified = True
+
+            messages.success(
+                request, "Report submitted successfully! Starting AI generation..."
+            )
+            return redirect("emt:ai_report_progress", proposal_id=proposal.id)
+    else:
+        form = EventReportForm(initial=draft, instance=report)
+        attachments_qs = report.attachments.all() if report else EventReportAttachment.objects.none()
+        formset = AttachmentFormSet(queryset=attachments_qs)
+
     activities_qs = EventActivity.objects.filter(proposal=proposal)
     proposal_activities = [
         {
-            "activity_name": a.name, 
-            "activity_date": a.date.strftime('%Y-%m-%d') if a.date else ''
+            "activity_name": a.name,
+            "activity_date": a.date.strftime("%Y-%m-%d") if a.date else ""
         }
         for a in activities_qs
     ]
+    if draft:
+        num_act = int(draft.get("num_activities", 0) or 0)
+        session_acts = []
+        for i in range(1, num_act + 1):
+            session_acts.append(
+                {
+                    "activity_name": draft.get(f"activity_name_{i}", ""),
+                    "activity_date": draft.get(f"activity_date_{i}", ""),
+                }
+            )
+        if session_acts:
+            proposal_activities = session_acts
 
     # Fetch speakers data for editing
     speakers_qs = SpeakerProfile.objects.filter(proposal=proposal)
@@ -1667,20 +1746,26 @@ def submit_event_report(request, proposal_id):
     # Get or create content sections for the report
     try:
         event_summary = report.event_summary
-    except:
+    except Exception:
         event_summary = None
-        
+    if draft.get("event_summary"):
+        event_summary = SimpleNamespace(content=draft.get("event_summary"))
+
     try:
         event_outcomes = report.event_outcomes
-    except:
+    except Exception:
         event_outcomes = None
-        
+    if draft.get("event_outcomes"):
+        event_outcomes = SimpleNamespace(content=draft.get("event_outcomes"))
+
     try:
         analysis = report.analysis
-    except:
+    except Exception:
         analysis = None
+    if draft.get("analysis"):
+        analysis = SimpleNamespace(content=draft.get("analysis"))
 
-    attendance_qs = report.attendance_rows.all()
+    attendance_qs = report.attendance_rows.all() if report else AttendanceRow.objects.none()
     attendance_present = attendance_qs.filter(absent=False).count()
     attendance_absent = attendance_qs.filter(absent=True).count()
     attendance_volunteers = attendance_qs.filter(volunteer=True).count()
