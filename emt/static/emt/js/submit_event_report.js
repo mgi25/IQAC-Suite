@@ -1494,6 +1494,9 @@ function initAttachments(){
       removeBtn.style.display = 'none';
       const del = block.querySelector('input[name$="-DELETE"]');
       if(del) del.checked = true;
+      if (window.AutosaveManager) {
+        AutosaveManager.reinitialize();
+      }
     });
   }
 
@@ -1508,6 +1511,9 @@ function initAttachments(){
     list.appendChild(block);
     totalInput.value = idx + 1;
     bind(block);
+    if (window.AutosaveManager) {
+      AutosaveManager.reinitialize();
+    }
     block.querySelector('.file-input').click();
   });
 }
@@ -1655,10 +1661,13 @@ function initializeSectionSpecificHandlers() {
                 </div>
             </div>
         `;
-        
+
         container.append(memberHtml);
+        if (window.AutosaveManager) {
+            AutosaveManager.reinitialize();
+        }
     });
-    
+
     // Handle committee member removal
     $(document).on('click', '.remove-committee-member', function() {
         $(this).closest('.committee-member-group').remove();
@@ -1667,6 +1676,9 @@ function initializeSectionSpecificHandlers() {
         $('#committee-members-container .committee-member-group').each(function(index) {
             $(this).find('h6').text(`Committee Member ${index + 1}`);
         });
+        if (window.AutosaveManager) {
+            AutosaveManager.reinitialize();
+        }
     });
 }
 
