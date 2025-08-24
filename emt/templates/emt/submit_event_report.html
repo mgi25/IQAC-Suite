@@ -358,7 +358,6 @@
         window.REPORT_ACTUAL_EVENT_TYPE = "{{ form.actual_event_type.value|default:'' }}";
         window.AUTOSAVE_URL = "{% url 'emt:autosave_event_report' %}";
         window.AUTOSAVE_CSRF = "{{ csrf_token }}";
-        window.PROPOSAL_STATUS = window.REPORT_STATUS;
         window.API_ORGANIZATIONS = "#"; // TODO: Add API URLs
         window.API_CLASSES_BASE = "{% url 'emt:api_classes' 0 %}".split('0/')[0];
         window.API_FACULTY = "{% url 'emt:api_faculty' %}";
@@ -389,6 +388,6 @@
         };
     </script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-    <script src="{% static 'emt/js/autosave_draft.js' %}"></script>
+    <script src="{% static 'emt/js/report_autosave.js' %}"></script>
     <script src="{% static 'emt/js/submit_event_report.js' %}"></script>
 {% endblock %}

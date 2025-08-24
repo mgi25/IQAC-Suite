@@ -45,6 +45,7 @@ class AutosaveEventReportTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertTrue(data.get("success"))
+        self.assertIn("report_id", data)
         report = EventReport.objects.get(proposal=self.proposal)
         self.assertEqual(report.location, "Main Hall")
         self.assertEqual(report.summary, "Summary text")
@@ -67,6 +68,7 @@ class AutosaveEventReportTests(TestCase):
         }
         resp = self.client.post(url, data=json.dumps(payload), content_type="application/json")
         self.assertEqual(resp.status_code, 200)
+        self.assertIn("report_id", resp.json())
         report = EventReport.objects.get(proposal=self.proposal)
         self.assertEqual(report.num_participants, 25)
         self.assertEqual(report.num_student_participants, 15)
@@ -91,8 +93,20 @@ class AutosaveEventReportTests(TestCase):
         }
         resp = self.client.post(url, data=json.dumps(payload), content_type="application/json")
         self.assertEqual(resp.status_code, 200)
+        self.assertIn("report_id", resp.json())
         report = EventReport.objects.get(proposal=self.proposal)
         self.assertEqual(report.analysis, "Detailed analysis text")
+
+    def test_autosave_with_report_id_updates(self):
+        url = reverse("emt:autosave_event_report")
+        payload = {"proposal_id": self.proposal.id, "location": "Room 1"}
+        resp = self.client.post(url, data=json.dumps(payload), content_type="application/json")
+        report_id = resp.json()["report_id"]
+
+        payload2 = {"proposal_id": self.proposal.id, "report_id": report_id, "location": "Room 2"}
+        self.client.post(url, data=json.dumps(payload2), content_type="application/json")
+        report = EventReport.objects.get(id=report_id)
+        self.assertEqual(report.location, "Room 2")
 
     def test_autosave_invalid_json(self):
         url = reverse("emt:autosave_event_report")
