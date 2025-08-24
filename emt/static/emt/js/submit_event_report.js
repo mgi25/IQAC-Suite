@@ -1736,6 +1736,9 @@ function setupDynamicActivities() {
         });
         numInput.value = activities.length;
         console.log('Activities rendered successfully, count:', activities.length);
+        if (window.AutosaveManager) {
+            AutosaveManager.reinitialize();
+        }
     }
 
     container.addEventListener('click', (e) => {
@@ -1918,5 +1921,8 @@ $(document).ready(function() {
     initializeSectionSpecificHandlers();
     setupDynamicActivities();
     setupAttendanceModal();
+    if (window.AutosaveManager) {
+        AutosaveManager.reinitialize();
+    }
 });
 

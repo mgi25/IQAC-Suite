@@ -1245,6 +1245,51 @@ def autosave_need_analysis(request):
         return JsonResponse({'success': True})
     return JsonResponse({'success': False}, status=400)
 
+
+@csrf_exempt
+@login_required
+def autosave_event_report(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request"}, status=400)
+
+    try:
+        raw = request.body.decode("utf-8")
+        data = json.loads(raw) if raw else {}
+    except json.JSONDecodeError:
+        logger.debug("autosave_event_report invalid json: %s", raw)
+        return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
+
+    proposal_id = data.get("proposal_id")
+    proposal = EventProposal.objects.filter(id=proposal_id, submitted_by=request.user).first()
+    if not proposal:
+        return JsonResponse({"success": False, "error": "Invalid proposal"}, status=400)
+
+    report, _ = EventReport.objects.get_or_create(proposal=proposal)
+
+    # Map section fields to model fields
+    summary_content = data.pop("event_summary", None)
+    outcomes_content = data.pop("event_outcomes", None)
+    analysis_content = data.pop("analysis", None)
+
+    form = EventReportForm(data, instance=report)
+    form.fields.get("report_signed_date").required = False
+    if not form.is_valid():
+        logger.debug("autosave_event_report form errors: %s", form.errors)
+        return JsonResponse({"success": False, "errors": form.errors})
+
+    report = form.save(commit=False)
+    if summary_content is not None:
+        report.summary = summary_content
+    if outcomes_content is not None:
+        report.outcomes = outcomes_content
+    if analysis_content is not None and hasattr(report, "analysis"):
+        report.analysis = analysis_content
+    report.save()
+
+    _save_activities(proposal, data)
+
+    return JsonResponse({"success": True, "proposal_id": proposal.id})
+
 @login_required
 def api_organizations(request):
     q = request.GET.get("q", "").strip()
