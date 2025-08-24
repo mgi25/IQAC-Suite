@@ -53,11 +53,14 @@ class AutosaveEventReportTests(TestCase):
         self.assertEqual(len(activities), 1)
         self.assertEqual(activities[0].name, "Intro")
 
-    def test_autosave_saves_participants_and_committee(self):
+    def test_autosave_saves_participant_counts_and_committee(self):
         url = reverse("emt:autosave_event_report")
         payload = {
             "proposal_id": self.proposal.id,
             "num_participants": 25,
+            "num_student_participants": 15,
+            "num_faculty_participants": 5,
+            "num_external_participants": 5,
             "num_student_volunteers": 5,
             "organizing_committee": "Alice, Bob",
             "attendance_notes": json.dumps([{"name": "Alice"}]),
@@ -66,9 +69,19 @@ class AutosaveEventReportTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         report = EventReport.objects.get(proposal=self.proposal)
         self.assertEqual(report.num_participants, 25)
+        self.assertEqual(report.num_student_participants, 15)
+        self.assertEqual(report.num_faculty_participants, 5)
+        self.assertEqual(report.num_external_participants, 5)
         self.assertEqual(report.num_student_volunteers, 5)
         self.assertEqual(report.organizing_committee, "Alice, Bob")
         self.assertEqual(report.attendance_notes, json.dumps([{"name": "Alice"}]))
+
+        # Reload the form and confirm values are pre-filled
+        response = self.client.get(reverse("emt:submit_event_report", args=[self.proposal.id]))
+        self.assertContains(response, 'name="num_participants" value="25"', html=False)
+        self.assertContains(response, 'name="num_student_participants" value="15"', html=False)
+        self.assertContains(response, 'name="num_faculty_participants" value="5"', html=False)
+        self.assertContains(response, 'name="num_external_participants" value="5"', html=False)
 
     def test_autosave_saves_analysis_section(self):
         url = reverse("emt:autosave_event_report")
