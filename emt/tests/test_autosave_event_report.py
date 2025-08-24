@@ -53,6 +53,34 @@ class AutosaveEventReportTests(TestCase):
         self.assertEqual(len(activities), 1)
         self.assertEqual(activities[0].name, "Intro")
 
+    def test_autosave_saves_participants_and_committee(self):
+        url = reverse("emt:autosave_event_report")
+        payload = {
+            "proposal_id": self.proposal.id,
+            "num_participants": 25,
+            "num_student_volunteers": 5,
+            "organizing_committee": "Alice, Bob",
+            "attendance_notes": json.dumps([{"name": "Alice"}]),
+        }
+        resp = self.client.post(url, data=json.dumps(payload), content_type="application/json")
+        self.assertEqual(resp.status_code, 200)
+        report = EventReport.objects.get(proposal=self.proposal)
+        self.assertEqual(report.num_participants, 25)
+        self.assertEqual(report.num_student_volunteers, 5)
+        self.assertEqual(report.organizing_committee, "Alice, Bob")
+        self.assertEqual(report.attendance_notes, json.dumps([{"name": "Alice"}]))
+
+    def test_autosave_saves_analysis_section(self):
+        url = reverse("emt:autosave_event_report")
+        payload = {
+            "proposal_id": self.proposal.id,
+            "analysis": "Detailed analysis text",
+        }
+        resp = self.client.post(url, data=json.dumps(payload), content_type="application/json")
+        self.assertEqual(resp.status_code, 200)
+        report = EventReport.objects.get(proposal=self.proposal)
+        self.assertEqual(report.analysis, "Detailed analysis text")
+
     def test_autosave_invalid_json(self):
         url = reverse("emt:autosave_event_report")
         resp = self.client.post(url, data="not json", content_type="application/json")
