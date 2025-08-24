@@ -109,6 +109,13 @@ class SubmitEventReportViewTests(TestCase):
             html=False,
         )
 
+    def test_autosave_indicator_present(self):
+        response = self.client.get(
+            reverse("emt:submit_event_report", args=[self.proposal.id])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="autosave-indicator"', html=False)
+
     def test_preview_event_report(self):
         url = reverse("emt:preview_event_report", args=[self.proposal.id])
         data = {
