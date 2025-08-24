@@ -83,6 +83,7 @@ window.ReportAutosaveManager = (function() {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': window.AUTOSAVE_CSRF
             },
+            credentials: 'same-origin',
             body: JSON.stringify(formData)
         })
         .then(async res => {
