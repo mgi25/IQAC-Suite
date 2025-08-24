@@ -282,11 +282,15 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
   // Save & Continue button handling
   $(document).on('click', '.btn-save-section', function(e) {
       e.preventDefault();
-      
-      if (validateCurrentSection()) {
+      if (!validateCurrentSection()) {
+          showNotification('Please fill in all required fields', 'error');
+          return;
+      }
+
+      const proceed = () => {
           markSectionComplete(currentSection);
           const nextSection = getNextSection(currentSection);
-          
+
           if (nextSection) {
               enableSection(nextSection);
               activateSection(nextSection);
@@ -349,9 +353,16 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
               form.attr('action', previewUrl);
               form[0].submit();
           }
-      } else {
-          showNotification('Please fill in all required fields', 'error');
-      }
+      };
+
+      const savePromise = (window.AutosaveManager && window.AutosaveManager.manualSave)
+          ? window.AutosaveManager.manualSave()
+          : Promise.resolve();
+
+      savePromise.then(proceed).catch(() => {
+          showNotification('Save failed', 'error');
+          proceed();
+      });
   });
   
   function activateSection(sectionName) {
@@ -1928,6 +1939,33 @@ function setupAttendanceModal() {
 }
 
 
+function initializeAutosaveIndicators() {
+    $(document).on('autosave:start', function() {
+        const indicator = $('#autosave-indicator');
+        indicator.removeClass('saved error').addClass('saving show');
+        indicator.find('.indicator-text').text('Saving...');
+    });
+
+    $(document).on('autosave:success', function() {
+        const indicator = $('#autosave-indicator');
+        indicator.removeClass('saving error').addClass('saved');
+        indicator.find('.indicator-text').text('Saved');
+        setTimeout(() => {
+            indicator.removeClass('show');
+        }, 2000);
+    });
+
+    $(document).on('autosave:error', function() {
+        const indicator = $('#autosave-indicator');
+        indicator.removeClass('saving saved').addClass('error show');
+        indicator.find('.indicator-text').text('Save Failed');
+        setTimeout(() => {
+            indicator.removeClass('show');
+        }, 3000);
+    });
+}
+
+
 // Initialize section-specific handlers when document is ready
 $(document).ready(function() {
     initializeSectionSpecificHandlers();
@@ -1936,5 +1974,6 @@ $(document).ready(function() {
     if (window.AutosaveManager) {
         AutosaveManager.reinitialize();
     }
+    initializeAutosaveIndicators();
 });
 
