@@ -144,6 +144,9 @@ urlpatterns = [
     path('api/export/csv/', views.api_export_csv, name='api_export_csv'),
     path('api/export/excel/', views.api_export_excel, name='api_export_excel'),
     path('api/summary/quick/', views.api_quick_summary, name='api_quick_summary'),
+    path("api/org-types/", views.api_org_types, name="api_org_types"),
+    path("api/orgs/", views.api_orgs_by_type, name="api_orgs_by_type"),
+    path("api/filter-meta/<str:category>/", views.api_filter_meta, name="api_filter_meta"),
 
     # ────────────────────────────────────────────────
     # API Endpoints
