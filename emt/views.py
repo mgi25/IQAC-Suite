@@ -1278,6 +1278,11 @@ def autosave_event_report(request):
     outcomes_content = data.pop("event_outcomes", None)
     analysis_content = data.pop("analysis", None)
 
+    # Flatten any list values (e.g., multi-select fields) into comma-separated strings
+    for key, value in list(data.items()):
+        if isinstance(value, list):
+            data[key] = ", ".join(value)
+
     form = EventReportForm(data, instance=report)
     form.fields.get("report_signed_date").required = False
     if not form.is_valid():

@@ -1113,7 +1113,7 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
           <div class="form-row full-width">
               <div class="input-group ai-input">
                   <label for="pos-pso-modern">PO's and PSO's Management *</label>
-                  <textarea id="pos-pso-modern" name="pos_pso" rows="15" required
+                  <textarea id="pos-pso-modern" name="pos_pso_mapping" rows="15" required
                       placeholder="Describe how the event addresses Program Outcomes (POs) and Program Specific Outcomes (PSOs):&#10;&#10;Program Outcomes:&#10;• PO1: Engineering Knowledge&#10;• PO2: Problem Analysis&#10;• PO3: Design/Development of Solutions&#10;&#10;Program Specific Outcomes:&#10;• PSO1: [Specific to your program]&#10;• PSO2: [Specific to your program]&#10;&#10;Provide detailed explanation of how each relevant outcome was addressed through this event."></textarea>
                   <button type="button" id="ai-pos-pso" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <div class="help-text">Detail how the event contributes to achieving specific program outcomes</div>
@@ -1128,7 +1128,7 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
           <div class="form-row">
               <div class="input-group">
                   <label for="graduate-attributes-modern">Graduate Attributes *</label>
-                  <select id="graduate-attributes-modern" name="graduate_attributes" multiple class="graduate-attributes-select" required>
+                  <select id="graduate-attributes-modern" name="needs_grad_attr_mapping" multiple class="graduate-attributes-select" required>
                       <option value="engineering_knowledge">Engineering Knowledge</option>
                       <option value="problem_analysis">Problem Analysis</option>
                       <option value="design_solutions">Design/Development of Solutions</option>
@@ -1157,7 +1157,7 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
 
               <div class="input-group">
                   <label for="sdg-implementation-modern">SDG Implementation *</label>
-                  <textarea id="sdg-implementation-modern" name="sdg_goals" rows="10" required 
+                  <textarea id="sdg-implementation-modern" name="sdg_value_systems_mapping" rows="10" required
                       placeholder="Click 'Select SDG Goals' to choose from the 17 Sustainable Development Goals&#10;&#10;Selected goals will appear here and can be edited:&#10;&#10;You can modify the SDG selection or add additional context about how your event addresses these goals."></textarea>
                   <button type="button" id="sdg-select-btn" class="btn-select-sdg">Select SDG Goals</button>
                   <div class="help-text">Sustainable Development Goals addressed by this event (editable)</div>
