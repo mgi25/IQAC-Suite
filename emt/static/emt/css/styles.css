@@ -2635,23 +2635,39 @@ textarea {
     color: #ef4444 !important;
 }
 
-/* Graduate Attributes Multi-select Styling */
-.graduate-attributes-select {
-    min-height: 220px;
-    max-height: 220px;
+/* Graduate Attributes Grouped Checkbox Styling */
+.graduate-attributes-groups {
+    max-height: 300px;
     overflow-y: auto;
+    border: 1px solid #ccc;
     padding: 12px;
+    border-radius: 6px;
 }
 
-.graduate-attributes-select option {
-    padding: 8px 12px;
-    margin: 2px 0;
+.ga-category {
+    margin-bottom: 8px;
+}
+
+.ga-toggle {
+    width: 100%;
+    text-align: left;
+    background: #f0f0f0;
+    border: none;
+    padding: 8px;
     border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
 }
 
-.graduate-attributes-select option:checked {
-    background: linear-gradient(135deg, #3498db, #2980b9);
-    color: white;
+.ga-options {
+    display: none;
+    margin-top: 4px;
+    margin-left: 12px;
+}
+
+.ga-options label {
+    display: block;
+    margin: 4px 0;
 }
 
 /* SDG Selection Button */

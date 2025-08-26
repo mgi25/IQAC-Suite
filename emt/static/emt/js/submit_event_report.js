@@ -597,8 +597,8 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
       requiredFields.forEach(function(field) {
           const element = $(field.id);
           if (field.id === '#graduate-attributes-modern') {
-              // Special validation for multi-select
-              if (!element.val() || element.val().length === 0) {
+              const checked = element.find('input[name="needs_grad_attr_mapping"]:checked');
+              if (checked.length === 0) {
                   showFieldError(element, field.name + ' - Please select at least one attribute');
                   isValid = false;
               } else {
@@ -652,6 +652,8 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
           if(sectionState.hasOwnProperty(key)){
               if(el.tagName === 'SELECT' && el.multiple && Array.isArray(sectionState[key])){
                   Array.from(el.options).forEach(o => { o.selected = sectionState[key].includes(o.value); });
+              } else if(el.type === 'checkbox') {
+                  el.checked = Array.isArray(sectionState[key]) ? sectionState[key].includes(el.value) : sectionState[key] === el.value;
               } else {
                   el.value = sectionState[key];
               }
@@ -664,8 +666,11 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
       const el = this;
       if(el.tagName === 'SELECT' && el.multiple){
           sectionState[el.name] = Array.from(el.selectedOptions).map(o => o.value);
-      } else if(el.type === 'checkbox' || el.type === 'radio') {
-          sectionState[el.name] = el.checked ? el.value : '';
+      } else if(el.type === 'checkbox') {
+          const checked = Array.from(document.querySelectorAll(`input[name="${el.name}"]:checked`)).map(cb => cb.value);
+          sectionState[el.name] = checked;
+      } else if(el.type === 'radio') {
+          if(el.checked) sectionState[el.name] = el.value;
       } else {
           sectionState[el.name] = el.value;
       }
@@ -675,13 +680,26 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
   document.querySelectorAll('form#report-form input[name], form#report-form textarea[name], form#report-form select[name]').forEach(el => {
       if(el.tagName === 'SELECT' && el.multiple){
           sectionState[el.name] = Array.from(el.selectedOptions).map(o => o.value);
-      } else if(el.type === 'checkbox' || el.type === 'radio') {
-          sectionState[el.name] = el.checked ? el.value : '';
+      } else if(el.type === 'checkbox') {
+          if(!sectionState[el.name]) sectionState[el.name] = [];
+          if(el.checked) sectionState[el.name].push(el.value);
+      } else if(el.type === 'radio') {
+          if(el.checked) sectionState[el.name] = el.value;
       } else {
           sectionState[el.name] = el.value;
       }
   });
-  
+
+  // Graduate Attributes toggle behavior
+  $(document).on('click', '.ga-toggle', function(){
+      $(this).next('.ga-options').slideToggle();
+  });
+
+  // Clear error when selecting graduate attributes
+  $(document).on('change', 'input[name="needs_grad_attr_mapping"]', function(){
+      clearFieldError($('#graduate-attributes-modern'));
+  });
+
   function getEventInformationContent() {
       const eventTypeValue = window.REPORT_ACTUAL_EVENT_TYPE || (window.PROPOSAL_DATA ? window.PROPOSAL_DATA.event_focus_type || '' : '');
       return `
@@ -1126,20 +1144,91 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
           <div class="form-row">
               <div class="input-group">
                   <label for="graduate-attributes-modern">Graduate Attributes *</label>
-                  <select id="graduate-attributes-modern" name="needs_grad_attr_mapping" multiple class="graduate-attributes-select" required>
-                      <option value="engineering_knowledge">Engineering Knowledge</option>
-                      <option value="problem_analysis">Problem Analysis</option>
-                      <option value="design_solutions">Design/Development of Solutions</option>
-                      <option value="investigation">Conduct Investigations</option>
-                      <option value="modern_tools">Modern Tool Usage</option>
-                      <option value="engineer_society">The Engineer and Society</option>
-                      <option value="environment_sustainability">Environment and Sustainability</option>
-                      <option value="ethics">Ethics</option>
-                      <option value="individual_teamwork">Individual and Team Work</option>
-                      <option value="communication">Communication</option>
-                      <option value="project_management">Project Management and Finance</option>
-                      <option value="lifelong_learning">Life-long Learning</option>
-                  </select>
+                  <div id="graduate-attributes-modern" class="graduate-attributes-groups">
+                      <div class="ga-category">
+                          <button type="button" class="ga-toggle">Academic Excellence</button>
+                          <div class="ga-options">
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="academic_extensive_knowledge"> Academic Excellence: Extensive knowledge in the chosen discipline with ability to apply it effectively </label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="domain_expertise"> Domain Expertise: Comprehensive specialist knowledge of the field of study and defined professional skills ensuring work readiness</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="problem_solving"> Problem solving: Making informed choices in a variety of situations, useful in a scholarly context that enables the students to understand and develop solutions</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="knowledge_application"> Knowledge Application: Ability to use available knowledge to make decisions and perform tasks</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="self_learning_research"> Self-Learning and research Skills: Ability to create new understanding and knowledge through the process of research and inquiry.</label>
+                          </div>
+                      </div>
+                      <div class="ga-category">
+                          <button type="button" class="ga-toggle">Professional Excellence</button>
+                          <div class="ga-options">
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="professional_excellence"> Professional Excellence: Application of knowledge and its derivatives objectively and effectively accomplishing the organizational goals.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="practical_skills"> Practical Skills: Ability to use theoretical knowledge in real-life situations.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="creative_thinking"> Creative Thinking: Ability to look at problems or situations from a fresh or unorthodox perspective.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="employability"> Employability: Denotes the academic and professional expertise along with the soft skills and pleasant demeanors necessary for success at a job.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="entrepreneurship"> Entrepreneurship: Capacity and willingness to develop, organize and manage any value-adding venture along with any risk.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="continuous_learning"> Continuous Learning: Also referred to as life-long learning, is the ongoing, voluntary, and self-motivated pursuit of knowledge for either personal or professional reasons.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="analytical_skills"> Analytical Skills: Ability to firm up on the relevance of information and its interpretation towards planning, problem-solving or decision making.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="critical_solution_thinking"> Critical and Solution-Oriented Thinking: Ability to objectively analyze and evaluate an issue or problem in order to form a judgement or solution</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="global_perspective"> Global Perspective: Recognition and appreciation of other cultures and recognizing the global context of an issue and/or perceptions in decision making</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="innovativeness"> Innovativeness: The skill and imagination to create new things/ideas/ methods to gain an organizational advantage</label>
+                          </div>
+                      </div>
+                      <div class="ga-category">
+                          <button type="button" class="ga-toggle">Personality</button>
+                          <div class="ga-options">
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="personality"> Personality: Personality refers to individual differences in characteristics, patterns of thinking, feeling and behaving</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="self_awareness"> Self-Awareness: Ability to critically introspect on one's attitude, thoughts, feeling and behavior and their impact in life situations</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="emotional_self_regulation"> Emotional Self-Regulation: Ability to manage emotions effectively</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="self_esteem"> Self-Esteem: Confidence in one's own worth and abilities</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="humility"> Humility: Quality of having a modest or low view of one's importance, not influenced by ego</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="accessibility"> Accessibility: Quality of being approachable by others.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="positive_attitude"> Positive Attitude: Mental perception of optimism that focuses on positive results</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="personal_integrity"> Personal Integrity: An innate moral conviction to stand against things that are not virtuous or morally right</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="adaptability"> Adaptability: Quality of being able to adjust to new conditions in any given circumstance</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="tolerance"> Tolerance: Ability or willingness to forbear the existence of opinions/behavior/development that one dislikes or disagrees with</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="peer_recognition"> Peer Recognition: Genuine expression of appreciation for or exchanged between team members/colleagues</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="sense_of_transcendence"> Sense of Transcendence: Ability to go beyond and connect to the Almighty through a sense of purpose, meaning, hope and gratitude</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="compassion"> Compassion: Genuine concern for others and their life situation</label>
+                          </div>
+                      </div>
+                      <div class="ga-category">
+                          <button type="button" class="ga-toggle">Leadership</button>
+                          <div class="ga-options">
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="leadership"> Leadership: Ability to lead the action of a team or a group or an organization towards achieving the goals with voluntary participation by all</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="logical_resolution"> Logical Resolution of Issues: Attitude of logically resolving the issues which may consequently include questioning, observing physical reality, testing, hypothesizing, analyzing and communicating</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="self_confidence"> Self-Confidence: The belief in one's own capability</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="initiative"> Initiative: Self-motivation and willingness to do things or to get things done by one's own voluntary act</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="dynamism"> Dynamism: Quality of being proactive in terms of thoughts, tasks or responsibility</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="empathy"> Empathy: Capacity to understand or feel what another person is experiencing i.e., the capacity to place oneself in another's position</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="inclusiveness"> Inclusiveness: Quality of including different types of people and treating them fairly and equally</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="team_building"> Team Building Skills: Ability to motivate the team members and increase the overall performance of the team</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="facilitation"> Facilitation: Ability to guide the team members to achieve their task with minimum emphasis on criticism</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="consultative_decision_making"> Consultative Decision Making: Considering the views of others in decision making.</label>
+                          </div>
+                      </div>
+                      <div class="ga-category">
+                          <button type="button" class="ga-toggle">Communication</button>
+                          <div class="ga-options">
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="communication"> Communication: Ability to convey intended meaning through the use of mutually understood means or methods</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="verbal_skills"> Verbal skills: Ability to speak, tell or write in simple understandable language set to a pleasant tone to ensure that the listener or reader is motivated to listen, follow or act</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="non_verbal_skills"> Non-Verbal Skills: Ability to convey information informally in an amicable manner without exchange of words</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="mutual_respect"> Mutual Respect: Ability to maintain decorum and mutual respect while communicating by signs and bodily expressions</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="listening"> Listening: Ability to be a good listener to accurately receive and interpret messages in the communication process</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="clarity_comprehensiveness"> Clarity and Comprehensiveness: Ability to communicate clearly and sequentially to ensure its full understanding to the reader with no scope for misunderstanding or confusion</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="assertiveness"> Assertiveness: Ability to stand up for one's own or other's viewpoints in a calm and positive way, without being either aggressive or passive.</label>
+                          </div>
+                      </div>
+                      <div class="ga-category">
+                          <button type="button" class="ga-toggle">Social Sensitivity</button>
+                          <div class="ga-options">
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="social_sensitivity"> Social Sensitivity: Ability and willingness to perceive, understand and respect the feelings and viewpoints of members of the society and to recognize and respond to social issues.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="respecting_diversity"> Respecting Diversity: Awareness of and insight into differences and diversity and treat them respectfully and equitably.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="civic_sense"> Civic Sense: Responsibility of a person to encompass norms of society that help it run smoothly without disturbing others.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="law_abiding"> Law Abiding: Awareness and voluntary compliance of lawful duties as a citizen of the country and not to carry out anything illegal.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="cross_cultural_recognition"> Cross Cultural Recognition: Acknowledgement of and respect for equality, opportunity in recognition and appreciation of all other cultural beliefs.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="knowledge_sharing"> Knowledge Sharing: Attitude to help and develop the underprivileged members of the society by spreading education.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="environmental_sensitivity"> Environmental Sensitivity: Working to conserving natural environment in all areas and prevent its destruction.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="social_awareness_contribution"> Social Awareness and Contribution: Appreciating the role for removal of problems of the less privileged groups of the society and contribute towards their upliftment.</label>
+                          </div>
+                      </div>
+                  </div>
                   <div class="help-text">Select relevant graduate attributes developed through this event</div>
               </div>
           </div>
