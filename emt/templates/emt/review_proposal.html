@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="{% static 'emt/css/proposal_status_detail.css' %}">
 <link rel="stylesheet" href="{% static 'emt/css/review_proposal.css' %}">
 
+<div class="review-proposal-container">
 <div class="review-grid">
   <!-- LEFT COLUMN: Event Info Card -->
   <aside class="timeline-column review-side">
@@ -105,6 +106,16 @@
         </form>
       </div>
     </header>
+
+    <div class="proposal-progress">
+      <div class="progress-step {% if need_analysis.content %}progress-complete{% endif %}">Need Analysis</div>
+      <div class="progress-step {% if objectives.content %}progress-complete{% endif %}">Objectives</div>
+      <div class="progress-step {% if outcomes.content %}progress-complete{% endif %}">Expected Outcomes</div>
+      <div class="progress-step {% if flow.content %}progress-complete{% endif %}">Tentative Flow</div>
+      <div class="progress-step {% if speakers %}progress-complete{% endif %}">Speakers</div>
+      <div class="progress-step {% if expenses %}progress-complete{% endif %}">Finance</div>
+      <div class="progress-step {% if cdl_support %}progress-complete{% endif %}">CDL Support</div>
+    </div>
     {% url 'emt:submit_need_analysis' proposal.id as need_edit %}
     {% url 'emt:submit_objectives' proposal.id as obj_edit %}
     {% url 'emt:submit_expected_outcomes' proposal.id as out_edit %}
@@ -216,5 +227,6 @@
     </div>
     {% endif %}
   </main>
+</div>
 </div>
 {% endblock %}
