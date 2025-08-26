@@ -244,12 +244,14 @@ def _save_activities(proposal, data, form=None):
 
 
 def _save_speakers(proposal, data, files):
-    proposal.speakers.all().delete()
     pattern = re.compile(
         r"^speaker_(?:full_name|designation|affiliation|contact_email|contact_number|linkedin_url|photo|detailed_profile)_(\d+)$"
     )
     all_keys = list(data.keys()) + list(files.keys())
     indices = sorted({int(m.group(1)) for key in all_keys if (m := pattern.match(key))})
+    if not indices:
+        return
+    proposal.speakers.all().delete()
     for index in indices:
         full_name = data.get(f"speaker_full_name_{index}")
         if full_name:
@@ -267,11 +269,13 @@ def _save_speakers(proposal, data, files):
 
 
 def _save_expenses(proposal, data):
-    proposal.expense_details.all().delete()
     pattern = re.compile(r"^expense_(?:sl_no|particulars|amount)_(\d+)$")
     indices = sorted(
         {int(m.group(1)) for key in data.keys() if (m := pattern.match(key))}
     )
+    if not indices:
+        return
+    proposal.expense_details.all().delete()
     for index in indices:
         particulars = data.get(f"expense_particulars_{index}")
         amount = data.get(f"expense_amount_{index}")
@@ -286,13 +290,15 @@ def _save_expenses(proposal, data):
 
 
 def _save_income(proposal, data):
-    proposal.income_details.all().delete()
     pattern = re.compile(
         r"^income_(?:sl_no|particulars|participants|rate|amount)_(\d+)$"
     )
     indices = sorted(
         {int(m.group(1)) for key in data.keys() if (m := pattern.match(key))}
     )
+    if not indices:
+        return
+    proposal.income_details.all().delete()
     for index in indices:
         particulars = data.get(f"income_particulars_{index}")
         participants = data.get(f"income_participants_{index}")
@@ -457,9 +463,12 @@ def submit_proposal(request, pk=None):
             ctx["form"] = form
             ctx["proposal"] = proposal
             return render(request, "emt/submit_proposal.html", ctx)
-        _save_speakers(proposal, request.POST, request.FILES)
-        _save_expenses(proposal, request.POST)
-        _save_income(proposal, request.POST)
+        if any(key.startswith("speaker_") for key in request.POST.keys()):
+            _save_speakers(proposal, request.POST, request.FILES)
+        if any(key.startswith("expense_") for key in request.POST.keys()):
+            _save_expenses(proposal, request.POST)
+        if any(key.startswith("income_") for key in request.POST.keys()):
+            _save_income(proposal, request.POST)
         logger.debug(
             "Proposal %s saved with faculty %s",
             proposal.id,
