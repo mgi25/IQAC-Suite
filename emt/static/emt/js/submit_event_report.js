@@ -809,7 +809,6 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
           <div class="form-row full-width">
               <div class="save-section-container" style="display: flex; flex-direction: column; align-items: center;">
                   <button type="button" class="btn-save-section" style="margin-bottom: 0.5rem;">Save & Continue</button>
-                  <button type="submit" name="save_draft" class="btn-draft-section">Save as Draft</button>
                   <div class="save-help-text" style="margin-top: 0.75rem;">Complete this section to unlock the next one</div>
               </div>
           </div>
@@ -893,7 +892,6 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
           <div class="form-row full-width">
               <div class="save-section-container">
                   <button type="button" class="btn-save-section">Save & Continue</button>
-                  <button type="submit" name="save_draft" class="btn-draft-section">Save as Draft</button>
                   <div class="save-help-text">Complete this section to unlock the next one</div>
               </div>
           </div>
@@ -946,7 +944,6 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
           <div class="form-row full-width">
               <div class="save-section-container">
                   <button type="button" class="btn-save-section">Save & Continue</button>
-                  <button type="submit" name="save_draft" class="btn-draft-section">Save as Draft</button>
                   <div class="save-help-text">Complete this section to unlock the next one</div>
               </div>
           </div>
@@ -1011,7 +1008,6 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
           <div class="form-row full-width">
               <div class="save-section-container">
                   <button type="button" class="btn-save-section">Save & Continue</button>
-                  <button type="submit" name="save_draft" class="btn-draft-section">Save as Draft</button>
                   <div class="save-help-text">Complete this section to unlock the next one</div>
               </div>
           </div>
@@ -1096,7 +1092,6 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
           <div class="form-row full-width">
               <div class="save-section-container">
                   <button type="button" class="btn-save-section">Save & Continue</button>
-                  <button type="submit" name="save_draft" class="btn-draft-section">Save as Draft</button>
                   <div class="save-help-text">Complete this section to unlock the next one</div>
               </div>
           </div>
@@ -1168,7 +1163,6 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
           <div class="form-row full-width">
               <div class="save-section-container">
                   <button type="button" class="btn-save-section">Save & Continue</button>
-                  <button type="submit" name="save_draft" class="btn-draft-section">Save as Draft</button>
                   <div class="save-help-text">Complete this section to unlock the next one</div>
               </div>
           </div>
