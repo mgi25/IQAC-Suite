@@ -3,7 +3,17 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 import json
 
-from emt.models import EventProposal, CDLSupport
+from emt.models import (
+    EventProposal,
+    CDLSupport,
+    EventNeedAnalysis,
+    EventObjectives,
+    EventExpectedOutcomes,
+    TentativeFlow,
+    SpeakerProfile,
+    ExpenseDetail,
+    IncomeDetail,
+)
 from core.models import (
     OrganizationType,
     Organization,
@@ -19,8 +29,12 @@ class ProposalReviewFlowTests(TestCase):
         self.faculty_role = OrganizationRole.objects.create(
             organization=self.org, name="Faculty"
         )
-        self.user = User.objects.create(username="u1", first_name="Test", email="u1@example.com")
-        RoleAssignment.objects.create(user=self.user, role=self.faculty_role, organization=self.org)
+        self.user = User.objects.create(
+            username="u1", first_name="Test", email="u1@example.com"
+        )
+        RoleAssignment.objects.create(
+            user=self.user, role=self.faculty_role, organization=self.org
+        )
         self.client.force_login(self.user)
 
     def _payload(self):
@@ -41,11 +55,17 @@ class ProposalReviewFlowTests(TestCase):
 
         post_data = self._payload()
         post_data["review_submit"] = "1"
-        resp2 = self.client.post(reverse("emt:submit_proposal_with_pk", args=[pid]), post_data)
+        resp2 = self.client.post(
+            reverse("emt:submit_proposal_with_pk", args=[pid]), post_data
+        )
         self.assertEqual(resp2.status_code, 302)
-        self.assertIn(reverse("emt:review_proposal", args=[pid]), resp2.headers["Location"])
+        self.assertIn(
+            reverse("emt:review_proposal", args=[pid]), resp2.headers["Location"]
+        )
 
-        resp3 = self.client.post(reverse("emt:review_proposal", args=[pid]), {"final_submit": "1"})
+        resp3 = self.client.post(
+            reverse("emt:review_proposal", args=[pid]), {"final_submit": "1"}
+        )
         self.assertEqual(resp3.status_code, 302)
         proposal = EventProposal.objects.get(id=pid)
         self.assertEqual(proposal.status, EventProposal.Status.SUBMITTED)
@@ -98,9 +118,13 @@ class ProposalReviewFlowTests(TestCase):
         pid = resp.json()["proposal_id"]
 
         post_data = {"needs_support": "on", "review_submit": "1"}
-        resp2 = self.client.post(reverse("emt:submit_cdl_support", args=[pid]), post_data)
+        resp2 = self.client.post(
+            reverse("emt:submit_cdl_support", args=[pid]), post_data
+        )
         self.assertEqual(resp2.status_code, 302)
-        self.assertIn(reverse("emt:review_proposal", args=[pid]), resp2.headers["Location"])
+        self.assertIn(
+            reverse("emt:review_proposal", args=[pid]), resp2.headers["Location"]
+        )
 
         proposal = EventProposal.objects.get(id=pid)
         self.assertEqual(proposal.status, EventProposal.Status.DRAFT)
@@ -130,3 +154,48 @@ class ProposalReviewFlowTests(TestCase):
         self.assertContains(resp2, "AI need")
         self.assertContains(resp2, "AI objectives")
         self.assertContains(resp2, "AI outcomes")
+
+    def test_review_displays_all_sections(self):
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(self._payload()),
+            content_type="application/json",
+        )
+        pid = resp.json()["proposal_id"]
+        proposal = EventProposal.objects.get(id=pid)
+
+        EventNeedAnalysis.objects.create(proposal=proposal, content="Need content")
+        EventObjectives.objects.create(proposal=proposal, content="Objective content")
+        EventExpectedOutcomes.objects.create(
+            proposal=proposal, content="Outcome content"
+        )
+        TentativeFlow.objects.create(proposal=proposal, content="Flow content")
+        SpeakerProfile.objects.create(
+            proposal=proposal,
+            full_name="Alice",
+            designation="Prof",
+            affiliation="Uni",
+            contact_email="a@example.com",
+            contact_number="123",
+            detailed_profile="Bio",
+        )
+        ExpenseDetail.objects.create(
+            proposal=proposal, sl_no=1, particulars="Venue", amount=100
+        )
+        IncomeDetail.objects.create(
+            proposal=proposal,
+            sl_no=1,
+            particulars="Ticket",
+            participants=10,
+            rate=100,
+            amount=1000,
+        )
+
+        resp2 = self.client.get(reverse("emt:review_proposal", args=[pid]))
+        self.assertContains(resp2, "Need content")
+        self.assertContains(resp2, "Objective content")
+        self.assertContains(resp2, "Outcome content")
+        self.assertContains(resp2, "Flow content")
+        self.assertContains(resp2, "Alice")
+        self.assertContains(resp2, "Venue")
+        self.assertContains(resp2, "Ticket")
