@@ -149,35 +149,52 @@
               </tr>
             </thead>
             <tbody>
-              {% if proposal.fest_fee_participants or proposal.fest_fee_rate or proposal.fest_fee_amount %}
-                <tr>
-                  <td>1</td>
-                  <td>Participation Fee [Fest]</td>
-                  <td>{{ proposal.fest_fee_participants|default:"—" }}</td>
-                  <td>{{ proposal.fest_fee_rate|default:"—" }}</td>
-                  <td>{{ proposal.fest_fee_amount|default:"—" }}</td>
-                </tr>
-                <tr>
-                  <td>2</td>
-                  <td>Sponsorship [Fest]</td>
-                  <td>—</td><td>—</td>
-                  <td>{{ proposal.fest_sponsorship_amount|default:"—" }}</td>
-                </tr>
-              {% endif %}
-              {% if proposal.conf_fee_participants or proposal.conf_fee_rate or proposal.conf_fee_amount %}
-                <tr>
-                  <td>3</td>
-                  <td>Participation Fee [Conference]</td>
-                  <td>{{ proposal.conf_fee_participants|default:"—" }}</td>
-                  <td>{{ proposal.conf_fee_rate|default:"—" }}</td>
-                  <td>{{ proposal.conf_fee_amount|default:"—" }}</td>
-                </tr>
-                <tr>
-                  <td>4</td>
-                  <td>Sponsorship [Conference]</td>
-                  <td>—</td><td>—</td>
-                  <td>{{ proposal.conf_sponsorship_amount|default:"—" }}</td>
-                </tr>
+              {% if income %}
+                {% for inc in income %}
+                  <tr>
+                    <td>{{ inc.sl_no }}</td>
+                    <td>{{ inc.particulars }}</td>
+                    <td>{{ inc.participants|default:"—" }}</td>
+                    <td>{{ inc.rate|default:"—" }}</td>
+                    <td>{{ inc.amount }}</td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                {% if proposal.fest_fee_participants or proposal.fest_fee_rate or proposal.fest_fee_amount %}
+                  <tr>
+                    <td>1</td>
+                    <td>Participation Fee [Fest]</td>
+                    <td>{{ proposal.fest_fee_participants|default:"—" }}</td>
+                    <td>{{ proposal.fest_fee_rate|default:"—" }}</td>
+                    <td>{{ proposal.fest_fee_amount|default:"—" }}</td>
+                  </tr>
+                  <tr>
+                    <td>2</td>
+                    <td>Sponsorship [Fest]</td>
+                    <td>—</td><td>—</td>
+                    <td>{{ proposal.fest_sponsorship_amount|default:"—" }}</td>
+                  </tr>
+                {% endif %}
+                {% if proposal.conf_fee_participants or proposal.conf_fee_rate or proposal.conf_fee_amount %}
+                  <tr>
+                    <td>3</td>
+                    <td>Participation Fee [Conference]</td>
+                    <td>{{ proposal.conf_fee_participants|default:"—" }}</td>
+                    <td>{{ proposal.conf_fee_rate|default:"—" }}</td>
+                    <td>{{ proposal.conf_fee_amount|default:"—" }}</td>
+                  </tr>
+                  <tr>
+                    <td>4</td>
+                    <td>Sponsorship [Conference]</td>
+                    <td>—</td><td>—</td>
+                    <td>{{ proposal.conf_sponsorship_amount|default:"—" }}</td>
+                  </tr>
+                {% endif %}
+                {% if not (proposal.fest_fee_participants or proposal.fest_fee_rate or proposal.fest_fee_amount or proposal.fest_sponsorship_amount or proposal.conf_fee_participants or proposal.conf_fee_rate or proposal.conf_fee_amount or proposal.conf_sponsorship_amount) %}
+                  <tr>
+                    <td colspan="5">—</td>
+                  </tr>
+                {% endif %}
               {% endif %}
             </tbody>
           </table>
