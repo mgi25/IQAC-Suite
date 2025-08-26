@@ -10,7 +10,7 @@
 <div class="detail-container review-grid">
   <!-- LEFT COLUMN: Event Info Card -->
   <aside class="timeline-column review-side">
-    <div class="info-card event-details-card">
+    <div class="info-card event-details-card card-base">
       <h2>Event Information</h2>
       <table>
         <tr><th>Organization</th><td>{{ proposal.organization.name|default:"—" }}</td></tr>
@@ -118,7 +118,7 @@
     {% include "emt/partials/review_section.html" with title="Expected Outcomes" body=outcomes.content edit_url=out_edit %}
     {% include "emt/partials/review_section.html" with title="Tentative Flow" body=flow.content edit_url=flow_edit %}
 
-    <div class="event-details-card">
+    <div class="event-details-card card-base">
       <div class="review-section-header">
         <h3>Speaker Profile</h3>
         <a href="{{ speaker_edit }}" class="section-edit-link">Edit</a>
@@ -126,8 +126,8 @@
       {% if speakers %}
         <ul class="speaker-profile-list">
           {% for sp in speakers %}
-            <li>
-              <strong>{{ sp.full_name }}</strong>{% if sp.designation %} - {{ sp.designation }}{% endif %}
+            <li class="speaker-profile-block">
+              <strong>{{ sp.full_name }}</strong>{% if sp.designation %}<span class="profile-aff">{{ sp.designation }}</span>{% endif %}
             </li>
           {% endfor %}
         </ul>
@@ -136,50 +136,52 @@
       {% endif %}
     </div>
 
-    <div class="event-details-card">
-      <div class="review-section-header">
-        <h3>Expense Details</h3>
-        <a href="{{ expense_edit }}" class="section-edit-link">Edit</a>
+    <div class="fin-row">
+      <div class="fin-half event-details-card card-base">
+        <div class="review-section-header">
+          <h3>Expense Details</h3>
+          <a href="{{ expense_edit }}" class="section-edit-link">Edit</a>
+        </div>
+        {% if expenses %}
+          <table class="review-table">
+            <thead>
+              <tr><th>Sl. No.</th><th>Particulars</th><th>Amount</th></tr>
+            </thead>
+            <tbody>
+            {% for e in expenses %}
+              <tr>
+                <td>{{ e.sl_no }}</td>
+                <td>{{ e.particulars }}</td>
+                <td>{{ e.amount }}</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="detail-block">—</div>
+        {% endif %}
       </div>
-      {% if expenses %}
-        <table class="review-table">
-          <thead>
-            <tr><th>Sl. No.</th><th>Particulars</th><th>Amount</th></tr>
-          </thead>
-          <tbody>
-          {% for e in expenses %}
-            <tr>
-              <td>{{ e.sl_no }}</td>
-              <td>{{ e.particulars }}</td>
-              <td>{{ e.amount }}</td>
-            </tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      {% else %}
-        <div class="detail-block">—</div>
-      {% endif %}
-    </div>
 
-    <div class="event-details-card">
-      <div class="review-section-header">
-        <h3>Income Details</h3>
-        <a href="{{ expense_edit }}" class="section-edit-link">Edit</a>
+      <div class="fin-half event-details-card card-base">
+        <div class="review-section-header">
+          <h3>Income Details</h3>
+          <a href="{{ expense_edit }}" class="section-edit-link">Edit</a>
+        </div>
+        {% if income %}
+          <table class="review-table">
+            <tr><th>Sl. No.</th><th>Particulars</th><th>Participants</th><th>Rate</th><th>Amount</th></tr>
+            {% for i in income %}
+              <tr><td>{{ i.sl_no }}</td><td>{{ i.particulars }}</td><td>{{ i.participants }}</td><td>{{ i.rate }}</td><td>{{ i.amount }}</td></tr>
+            {% endfor %}
+          </table>
+        {% else %}
+          <div class="detail-block">—</div>
+        {% endif %}
       </div>
-      {% if income %}
-        <table class="review-table">
-          <tr><th>Sl. No.</th><th>Particulars</th><th>Participants</th><th>Rate</th><th>Amount</th></tr>
-          {% for i in income %}
-            <tr><td>{{ i.sl_no }}</td><td>{{ i.particulars }}</td><td>{{ i.participants }}</td><td>{{ i.rate }}</td><td>{{ i.amount }}</td></tr>
-          {% endfor %}
-        </table>
-      {% else %}
-        <div class="detail-block">—</div>
-      {% endif %}
     </div>
 
     {% if cdl_support %}
-    <div class="event-details-card">
+    <div class="event-details-card card-base">
       <div class="review-section-header">
         <h3>CDL Support</h3>
         <a href="{{ cdl_edit }}" class="section-edit-link">Edit</a>
