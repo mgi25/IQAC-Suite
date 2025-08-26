@@ -124,12 +124,13 @@
         <a href="{{ speaker_edit }}" class="section-edit-link">Edit</a>
       </div>
       {% if speakers %}
-        {% for sp in speakers %}
-          <div class="speaker-profile-block">
-            <div><strong>{{ sp.full_name }}</strong> - {{ sp.designation }}{% if sp.affiliation %} ({{ sp.affiliation }}){% endif %}</div>
-            {% if sp.detailed_profile %}<div>{{ sp.detailed_profile|linebreaksbr }}</div>{% endif %}
-          </div>
-        {% endfor %}
+        <ul class="speaker-profile-list">
+          {% for sp in speakers %}
+            <li>
+              <strong>{{ sp.full_name }}</strong>{% if sp.designation %} - {{ sp.designation }}{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
       {% else %}
         <div class="detail-block">—</div>
       {% endif %}
@@ -142,10 +143,18 @@
       </div>
       {% if expenses %}
         <table class="review-table">
-          <tr><th>Sl. No.</th><th>Particulars</th><th>Amount</th></tr>
+          <thead>
+            <tr><th>Sl. No.</th><th>Particulars</th><th>Amount</th></tr>
+          </thead>
+          <tbody>
           {% for e in expenses %}
-            <tr><td>{{ e.sl_no }}</td><td>{{ e.particulars }}</td><td>{{ e.amount }}</td></tr>
+            <tr>
+              <td>{{ e.sl_no }}</td>
+              <td>{{ e.particulars }}</td>
+              <td>{{ e.amount }}</td>
+            </tr>
           {% endfor %}
+          </tbody>
         </table>
       {% else %}
         <div class="detail-block">—</div>

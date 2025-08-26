@@ -484,14 +484,20 @@ def submit_proposal(request, pk=None):
 # ──────────────────────────────────────────────────────────────
 @login_required
 def review_proposal(request, proposal_id):
+    proposal_qs = EventProposal.objects.select_related(
+        "need_analysis",
+        "objectives",
+        "expected_outcomes",
+        "tentative_flow",
+        "cdl_support",
+    ).prefetch_related(
+        "speakers",
+        "expense_details",
+        "income_details",
+    )
+    # Prefetch speaker and expense details for efficient rendering
     proposal = get_object_or_404(
-        EventProposal.objects.select_related(
-            "need_analysis",
-            "objectives",
-            "expected_outcomes",
-            "tentative_flow",
-            "cdl_support",
-        ).prefetch_related("speakers", "expense_details", "income_details"),
+        proposal_qs,
         pk=proposal_id,
         submitted_by=request.user,
     )
@@ -847,6 +853,8 @@ def submit_speaker_profile(request, proposal_id):
     proposal = get_object_or_404(
         EventProposal, id=proposal_id, submitted_by=request.user
     )
+    # Track wizard progress for breadcrumbs/UI
+    request.session["proposal_step"] = "speaker_profile"
     SpeakerFS = modelformset_factory(
         SpeakerProfile, form=SpeakerProfileForm, extra=1, can_delete=True
     )
