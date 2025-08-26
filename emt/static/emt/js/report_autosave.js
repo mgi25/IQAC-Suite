@@ -62,7 +62,7 @@ window.ReportAutosaveManager = (function() {
     }
 
     function autosaveDraft() {
-        if (window.REPORT_STATUS && window.REPORT_STATUS !== 'draft') {
+        if (window.CAN_AUTOSAVE === false) {
             clearLocal();
             return Promise.resolve();
         }
@@ -175,7 +175,7 @@ window.ReportAutosaveManager = (function() {
             window.REPORT_ID = reportId;
         }
 
-        if (window.REPORT_STATUS && window.REPORT_STATUS !== 'draft') {
+        if (window.CAN_AUTOSAVE === false) {
             clearLocal();
         }
     }

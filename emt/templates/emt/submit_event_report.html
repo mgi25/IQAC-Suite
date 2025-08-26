@@ -355,6 +355,7 @@
         window.REPORT_ID = "{{ report.id|default:'' }}";
         window.PROPOSAL_ID = "{{ proposal.id|default:'' }}";
         window.REPORT_STATUS = "{{ report.status|default:'draft' }}";
+        window.CAN_AUTOSAVE = {{ can_autosave|yesno:"true,false" }};
         window.REPORT_ACTUAL_EVENT_TYPE = "{{ form.actual_event_type.value|default:'' }}";
         window.AUTOSAVE_URL = "{% url 'emt:autosave_event_report' %}";
         window.AUTOSAVE_CSRF = "{{ csrf_token }}";
