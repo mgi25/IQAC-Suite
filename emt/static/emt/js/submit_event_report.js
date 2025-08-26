@@ -270,7 +270,16 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
     catch (err) { console.error(err); }
     finally { btn.prop('disabled', false).text(original); }
 });
-  
+
+$(document).on('click', '#ai-sdg-implementation', function(){
+    const btn = $(this);
+    const original = btn.text();
+    btn.prop('disabled', true).text('...');
+    try { aiFill('#sdg-implementation-modern', 120); }
+    catch (err) { console.error(err); }
+    finally { btn.prop('disabled', false).text(original); }
+});
+
   // Add validation styling to form fields with errors
   $('.field-error').each(function() {
       $(this).siblings('input, select, textarea').addClass('error');
@@ -1277,10 +1286,11 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
                   <div class="help-text">Explain how the event addresses employability, entrepreneurship, skill development, etc.</div>
               </div>
 
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="sdg-implementation-modern">SDG Implementation *</label>
                   <textarea id="sdg-implementation-modern" name="sdg_value_systems_mapping" rows="10" required
                       placeholder="Click 'Select SDG Goals' to choose from the 17 Sustainable Development Goals&#10;&#10;Selected goals will appear here and can be edited:&#10;&#10;You can modify the SDG selection or add additional context about how your event addresses these goals."></textarea>
+                  <button type="button" id="ai-sdg-implementation" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <button type="button" id="sdg-select-btn" class="btn-select-sdg">Select SDG Goals</button>
                   <div class="help-text">Sustainable Development Goals addressed by this event (editable)</div>
               </div>
@@ -1356,16 +1366,21 @@ function showNotification(message, type = 'info') {
 
 // Populate fields with proposal data
 function populateProposalData() {
-    // Populate PO/PSO field when section becomes active
+    function fillEventRelevance() {
+        if ($('#pos-pso-modern').length && window.PROPOSAL_DATA && window.PROPOSAL_DATA.pos_pso) {
+            $('#pos-pso-modern').val(window.PROPOSAL_DATA.pos_pso);
+        }
+        if ($('#sdg-implementation-modern').length && window.PROPOSAL_DATA && window.PROPOSAL_DATA.sdg_goals) {
+            $('#sdg-implementation-modern').val(window.PROPOSAL_DATA.sdg_goals);
+        }
+    }
+
+    // Populate on load
+    setTimeout(fillEventRelevance, 100);
+
+    // Populate when section becomes active
     $(document).on('click', '[data-section="event-relevance"]', function() {
-        setTimeout(function() {
-            if ($('#pos-pso-modern').length && window.PROPOSAL_DATA && window.PROPOSAL_DATA.pos_pso) {
-                $('#pos-pso-modern').val(window.PROPOSAL_DATA.pos_pso);
-            }
-            if ($('#sdg-implementation-modern').length && window.PROPOSAL_DATA && window.PROPOSAL_DATA.sdg_goals) {
-                $('#sdg-implementation-modern').val(window.PROPOSAL_DATA.sdg_goals);
-            }
-        }, 100);
+        setTimeout(fillEventRelevance, 100);
     });
 
     // Populate organizing committee details when section becomes active
