@@ -33,46 +33,33 @@ body {
 /* -------- Layout -------- */
 .review-grid {
   display: grid;
-  grid-template-columns: 380px 1fr;
-  grid-template-areas:
-    "header header"
-    "side main";
+  grid-template-columns: 1fr;
   gap: 46px;
-  max-width: 1440px;
-  margin: 40px auto 0 auto;
+  width: 100%;
+  margin: 40px 0 0;
+  padding: 0 1rem;
   min-height: 88vh;
 }
 
-.review-header { grid-area: header; text-align: center; }
-
 .review-side {
-  grid-area: side;
-  min-width: 340px;
-  max-width: 410px;
-  position: sticky;
-  top: 90px;
+  position: static;
   align-self: flex-start;
   height: fit-content;
   z-index: 2;
 }
 
 .review-main {
-  grid-area: main;
-  min-width: 420px;
-  max-width: 960px;
+  width: 100%;
 }
 
-@media (max-width: 1050px) {
+@media (min-width: 900px) {
   .review-grid {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "header"
-      "side"
-      "main";
-    gap: 26px;
+    grid-template-columns: minmax(250px, 30%) 1fr;
   }
-  .review-side { position: static; }
-  .review-main { min-width: 0; max-width: 100%; }
+  .review-side {
+    position: sticky;
+    top: 90px;
+  }
 }
 
 /* -------- Info Card -------- */
