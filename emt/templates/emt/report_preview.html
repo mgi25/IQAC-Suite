@@ -23,7 +23,9 @@
             {% endfor %}
             <ol class="report-preview-list">
                 {% for field in form.visible_fields %}
-                    <li><strong>{{ field.label }}:</strong> {{ field.value|default:"—" }}</li>
+                    {% with values=form.data.getlist(field.name) %}
+                        <li><strong>{{ field.label }}:</strong> {{ values|join:", "|default:"—" }}</li>
+                    {% endwith %}
                 {% endfor %}
             </ol>
             <button type="submit" name="final_submit" class="btn-submit">Submit Report</button>
