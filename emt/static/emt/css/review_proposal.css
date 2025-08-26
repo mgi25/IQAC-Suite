@@ -116,12 +116,18 @@ body {
   padding: 0 0 14px 0;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: var(--spacing-md);
   flex-wrap: wrap;
 }
 
-.review-heading { flex: 1; text-align: center; }
+.review-heading { flex: 1; text-align: left; }
+
+.review-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
 
 .review-title {
   font-size: 2.2rem;
@@ -199,6 +205,12 @@ body {
   box-shadow: 0 1px 7px rgba(36,70,120,0.06);
 }
 
+.speaker-profile-list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
 .review-section-header {
   display: flex;
   align-items: center;
@@ -207,13 +219,21 @@ body {
 }
 
 .section-edit-link {
+  display: inline-block;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: 6px;
   font-size: 0.9rem;
-  color: var(--christ-blue-primary);
+  font-weight: 600;
+  color: var(--white);
+  background: var(--christ-blue-primary);
+  transition: background var(--transition-base);
+  text-decoration: none;
 }
 
 .section-edit-link:hover,
 .section-edit-link:focus {
-  text-decoration: underline;
+  background: var(--christ-blue-secondary);
+  outline: none;
 }
 .speaker-profile-block .profile-aff {
   color: var(--christ-blue-primary); font-weight: 600; margin-left: 8px;
