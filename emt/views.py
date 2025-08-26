@@ -1836,10 +1836,27 @@ def preview_event_report(request, proposal_id):
     if not form.is_valid():
         logger.debug("Preview form invalid for proposal %s: %s", proposal.id, form.errors)
 
+    # Prepare proposal fields for display in preview
+    proposal_form = EventProposalForm(instance=proposal)
+    proposal_fields = []
+    for field in proposal_form.visible_fields():
+        raw_value = field.value()
+        field_def = field.field
+        if isinstance(field_def, forms.ModelMultipleChoiceField):
+            objs = field_def.queryset.filter(pk__in=raw_value) if raw_value else []
+            display = ", ".join(str(obj) for obj in objs) or "—"
+        elif isinstance(field_def, forms.ModelChoiceField):
+            obj = field_def.queryset.filter(pk=raw_value).first()
+            display = str(obj) if obj else "—"
+        else:
+            display = raw_value or "—"
+        proposal_fields.append((field.label, display))
+
     context = {
         "proposal": proposal,
         "form": form,
         "post_data": request.POST,
+        "proposal_fields": proposal_fields,
     }
     return render(request, "emt/report_preview.html", context)
 
