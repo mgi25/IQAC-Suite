@@ -1,3 +1,30 @@
+let loadingCount = 0;
+
+function showLoadingOverlay(text = 'Loading...') {
+    const overlay = document.getElementById('loadingOverlay');
+    if (!overlay) return;
+    const textEl = overlay.querySelector('p');
+    if (textEl) textEl.textContent = text;
+    loadingCount++;
+    overlay.classList.add('show');
+}
+
+function hideLoadingOverlay() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (!overlay) return;
+    loadingCount = Math.max(loadingCount - 1, 0);
+    if (loadingCount === 0) {
+        overlay.classList.remove('show');
+    }
+}
+
+function fetchWithOverlay(url, options = {}, text = 'Loading...') {
+    showLoadingOverlay(text);
+    return fetch(url, options).finally(() => {
+        hideLoadingOverlay();
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function(){
     // Central init (consolidated single DOMContentLoaded listener)
     const sectionState = {}; // fieldName -> value snapshot
@@ -287,6 +314,7 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
           return;
       }
 
+      let submitted = false;
       const proceed = () => {
           markSectionComplete(currentSection);
           const nextSection = getNextSection(currentSection);
@@ -351,17 +379,24 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
               });
 
               form.attr('action', previewUrl);
+              showLoadingOverlay('Generating preview...');
               form[0].submit();
+              submitted = true;
           }
       };
 
+      showLoadingOverlay('Saving...');
       const savePromise = (window.ReportAutosaveManager && window.ReportAutosaveManager.manualSave)
           ? window.ReportAutosaveManager.manualSave()
           : Promise.resolve();
 
-      savePromise.then(proceed).catch(() => {
+      savePromise.then(() => {
+          proceed();
+          if (!submitted) hideLoadingOverlay();
+      }).catch(() => {
           showNotification('Save failed', 'error');
           proceed();
+          if (!submitted) hideLoadingOverlay();
       });
   });
   
@@ -1508,7 +1543,7 @@ function openOutcomeModal(){
   );
   modal.classList.add('show');
   container.textContent = 'Loading...';
-  fetch(url)
+  fetchWithOverlay(url, {}, 'Loading outcomes...')
     .then(r => r.json())
     .then(data => {
       if(data.success){
@@ -1951,6 +1986,7 @@ function setupAttendanceModal() {
 
     function handleFile(file, type) {
         if (!file) return;
+        showLoadingOverlay('Processing file...');
         const reader = new FileReader();
         reader.onload = e => {
             const rows = parseCSV(e.target.result);
@@ -1966,7 +2002,7 @@ function setupAttendanceModal() {
                 };
                 participants.push(obj);
                 if (type === 'faculty' && !obj.class_or_dept && obj.number) {
-                    fetch(`${window.API_FACULTY}?org_id=${window.PROPOSAL_ORG_ID}&q=${encodeURIComponent(obj.number)}`, { credentials: 'include' })
+                    fetchWithOverlay(`${window.API_FACULTY}?org_id=${window.PROPOSAL_ORG_ID}&q=${encodeURIComponent(obj.number)}`, { credentials: 'include' }, 'Fetching faculty details...')
                         .then(r => r.json())
                         .then(data => {
                             if (data.length) {
@@ -1978,7 +2014,9 @@ function setupAttendanceModal() {
                 }
             });
             renderList();
+            hideLoadingOverlay();
         };
+        reader.onerror = () => hideLoadingOverlay();
         reader.readAsText(file);
     }
 
@@ -2064,5 +2102,11 @@ $(document).ready(function() {
         ReportAutosaveManager.reinitialize();
     }
     initializeAutosaveIndicators();
+
+    $('#report-form').on('submit', function() {
+        if (loadingCount === 0) {
+            showLoadingOverlay('Submitting...');
+        }
+    });
 });
 
