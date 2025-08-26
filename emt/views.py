@@ -15,18 +15,38 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from django.db.models import Q
 from .models import (
-    EventProposal, EventNeedAnalysis, EventObjectives,
-    EventExpectedOutcomes, TentativeFlow, EventActivity,
-    ExpenseDetail, IncomeDetail, SpeakerProfile, EventReport,
-    EventReportAttachment, CDLSupport, CDLCertificateRecipient, CDLMessage, Student,
+    EventProposal,
+    EventNeedAnalysis,
+    EventObjectives,
+    EventExpectedOutcomes,
+    TentativeFlow,
+    EventActivity,
+    ExpenseDetail,
+    IncomeDetail,
+    SpeakerProfile,
+    EventReport,
+    EventReportAttachment,
+    CDLSupport,
+    CDLCertificateRecipient,
+    CDLMessage,
+    Student,
     AttendanceRow,
 )
 from types import SimpleNamespace
 from .forms import (
-    EventProposalForm, NeedAnalysisForm, ExpectedOutcomesForm,
-    ObjectivesForm, TentativeFlowForm, SpeakerProfileForm,
-    ExpenseDetailForm, EventReportForm, EventReportAttachmentForm, CDLSupportForm,
-    CertificateRecipientForm, CDLMessageForm, NAME_PATTERN,
+    EventProposalForm,
+    NeedAnalysisForm,
+    ExpectedOutcomesForm,
+    ObjectivesForm,
+    TentativeFlowForm,
+    SpeakerProfileForm,
+    ExpenseDetailForm,
+    EventReportForm,
+    EventReportAttachmentForm,
+    CDLSupportForm,
+    CertificateRecipientForm,
+    CDLMessageForm,
+    NAME_PATTERN,
 )
 from django.forms import modelformset_factory
 from core.models import (
@@ -78,12 +98,13 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 # --- Added for the new function ---
 from itertools import chain
 from operator import attrgetter
+
 # ----------------------------------
 
 import logging
 
 # Get an instance of the logger for the 'emt' app
-logger = logging.getLogger(__name__) # __name__ will resolve to 'emt.views'
+logger = logging.getLogger(__name__)  # __name__ will resolve to 'emt.views'
 NAME_RE = re.compile(NAME_PATTERN)
 # Configure Gemini API key from environment variable(s)
 # Prefer `GEMINI_API_KEY`; fall back to `GOOGLE_API_KEY`
@@ -91,14 +112,15 @@ api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 if api_key:
     genai.configure(api_key=api_key)
 
+
 @login_required
 def submit_request_view(request):
-    if request.method == 'POST':
-        media_type = request.POST.get('media_type')
-        title = request.POST.get('title')
-        description = request.POST.get('description')
-        event_date = request.POST.get('event_date')
-        media_file = request.FILES.get('media_file')
+    if request.method == "POST":
+        media_type = request.POST.get("media_type")
+        title = request.POST.get("title")
+        description = request.POST.get("description")
+        event_date = request.POST.get("event_date")
+        media_file = request.FILES.get("media_file")
 
         MediaRequest.objects.create(
             user=request.user,
@@ -106,17 +128,19 @@ def submit_request_view(request):
             title=title,
             description=description,
             event_date=event_date,
-            media_file=media_file
+            media_file=media_file,
         )
-        messages.success(request, 'Your media request has been submitted.')
-        return redirect('cdl_dashboard')
+        messages.success(request, "Your media request has been submitted.")
+        return redirect("cdl_dashboard")
 
-    return render(request, 'emt/cdl_submit_request.html')
+    return render(request, "emt/cdl_submit_request.html")
+
 
 @login_required
 def my_requests_view(request):
-    requests = MediaRequest.objects.filter(user=request.user).order_by('-created_at')
-    return render(request, 'emt/cdl_my_requests.html', {'requests': requests})
+    requests = MediaRequest.objects.filter(user=request.user).order_by("-created_at")
+    return render(request, "emt/cdl_my_requests.html", {"requests": requests})
+
 
 # ──────────────────────────────
 # REPORT GENERATION
@@ -127,41 +151,45 @@ from django.template.loader import render_to_string
 from django.http import HttpResponse
 import pdfkit
 
+
 def report_form(request):
- return render(request, "report_generation.html")
+    return render(request, "report_generation.html")
+
+
 @csrf_exempt
 def generate_report_pdf(request):
-    if request.method == 'POST':
+    if request.method == "POST":
         html = render_to_string("pdf_template.html", {"data": request.POST})
         pdf = pdfkit.from_string(html, False)
         response = HttpResponse(pdf, content_type="application/pdf")
         response["Content-Disposition"] = 'attachment; filename="Event_Report.pdf"'
         return response
 
+
 # Helper to validate and persist text-based sections for proposals
 def _clean_flow_content(content):
-    lines = [line.strip() for line in (content or '').splitlines() if line.strip()]
+    lines = [line.strip() for line in (content or "").splitlines() if line.strip()]
     if not lines:
-        raise forms.ValidationError('Schedule is required.')
+        raise forms.ValidationError("Schedule is required.")
 
     cleaned_lines = []
     for idx, line in enumerate(lines, start=1):
         try:
-            time_str, activity = line.split('||', 1)
+            time_str, activity = line.split("||", 1)
         except ValueError:
-            raise forms.ValidationError(f'Line {idx}: invalid format.')
+            raise forms.ValidationError(f"Line {idx}: invalid format.")
         time_str = time_str.strip()
         activity = activity.strip()
         if not time_str:
-            raise forms.ValidationError(f'Line {idx}: date & time is required.')
+            raise forms.ValidationError(f"Line {idx}: date & time is required.")
         if not activity:
-            raise forms.ValidationError(f'Line {idx}: activity is required.')
+            raise forms.ValidationError(f"Line {idx}: activity is required.")
         try:
             datetime.fromisoformat(time_str)
         except ValueError:
-            raise forms.ValidationError(f'Line {idx}: invalid date & time.')
-        cleaned_lines.append(f'{time_str}||{activity}')
-    return '\n'.join(cleaned_lines)
+            raise forms.ValidationError(f"Line {idx}: invalid date & time.")
+        cleaned_lines.append(f"{time_str}||{activity}")
+    return "\n".join(cleaned_lines)
 
 
 def _save_text_sections(proposal, data):
@@ -194,7 +222,9 @@ def _save_text_sections(proposal, data):
 
 def _save_activities(proposal, data, form=None):
     pattern = re.compile(r"^activity_(?:name|date)_(\d+)$")
-    indices = sorted({int(m.group(1)) for key in data.keys() if (m := pattern.match(key))})
+    indices = sorted(
+        {int(m.group(1)) for key in data.keys() if (m := pattern.match(key))}
+    )
     if not indices:
         return True
     proposal.activities.all().delete()
@@ -239,7 +269,9 @@ def _save_speakers(proposal, data, files):
 def _save_expenses(proposal, data):
     proposal.expense_details.all().delete()
     pattern = re.compile(r"^expense_(?:sl_no|particulars|amount)_(\d+)$")
-    indices = sorted({int(m.group(1)) for key in data.keys() if (m := pattern.match(key))})
+    indices = sorted(
+        {int(m.group(1)) for key in data.keys() if (m := pattern.match(key))}
+    )
     for index in indices:
         particulars = data.get(f"expense_particulars_{index}")
         amount = data.get(f"expense_amount_{index}")
@@ -258,7 +290,9 @@ def _save_income(proposal, data):
     pattern = re.compile(
         r"^income_(?:sl_no|particulars|participants|rate|amount)_(\d+)$"
     )
-    indices = sorted({int(m.group(1)) for key in data.keys() if (m := pattern.match(key))})
+    indices = sorted(
+        {int(m.group(1)) for key in data.keys() if (m := pattern.match(key))}
+    )
     for index in indices:
         particulars = data.get(f"income_particulars_{index}")
         participants = data.get(f"income_participants_{index}")
@@ -288,14 +322,14 @@ def submit_proposal(request, pk=None):
 
     proposal = None
     if pk:
-        proposal = get_object_or_404(
-            EventProposal, pk=pk, submitted_by=request.user
-        )
+        proposal = get_object_or_404(EventProposal, pk=pk, submitted_by=request.user)
 
     if request.method == "POST":
         post_data = request.POST.copy()
         logger.debug("submit_proposal POST data: %s", post_data)
-        logger.debug("Faculty IDs from POST: %s", post_data.getlist("faculty_incharges"))
+        logger.debug(
+            "Faculty IDs from POST: %s", post_data.getlist("faculty_incharges")
+        )
         form = EventProposalForm(
             post_data,
             instance=proposal,
@@ -306,18 +340,18 @@ def submit_proposal(request, pk=None):
         # --------- FACULTY INCHARGES QUERYSET FIX ---------
         faculty_ids = post_data.getlist("faculty_incharges")
         if faculty_ids:
-            form.fields['faculty_incharges'].queryset = User.objects.filter(
+            form.fields["faculty_incharges"].queryset = User.objects.filter(
                 Q(role_assignments__role__name=FACULTY_ROLE) | Q(id__in=faculty_ids)
             ).distinct()
         else:
-            form.fields['faculty_incharges'].queryset = User.objects.filter(
+            form.fields["faculty_incharges"].queryset = User.objects.filter(
                 role_assignments__role__name=FACULTY_ROLE
             ).distinct()
         # --------------------------------------------------
 
     else:
         # Only pre-populate form with existing data if it's still a draft
-        form_instance = proposal if (proposal and proposal.status == 'draft') else None
+        form_instance = proposal if (proposal and proposal.status == "draft") else None
 
         form = EventProposalForm(
             instance=form_instance,
@@ -326,8 +360,12 @@ def submit_proposal(request, pk=None):
         )
         # Populate all faculty as available choices for JS search/select on GET.
         # Include already assigned faculty so their selections remain visible.
-        fac_ids = list(proposal.faculty_incharges.all().values_list('id', flat=True)) if proposal else []
-        form.fields['faculty_incharges'].queryset = User.objects.filter(
+        fac_ids = (
+            list(proposal.faculty_incharges.all().values_list("id", flat=True))
+            if proposal
+            else []
+        )
+        form.fields["faculty_incharges"].queryset = User.objects.filter(
             Q(role_assignments__role__name=FACULTY_ROLE) | Q(id__in=fac_ids)
         ).distinct()
 
@@ -340,30 +378,67 @@ def submit_proposal(request, pk=None):
             return ""
         return ""
 
-    need_analysis = EventNeedAnalysis.objects.filter(proposal=proposal).first() if proposal else None
-    objectives = EventObjectives.objects.filter(proposal=proposal).first() if proposal else None
-    outcomes = EventExpectedOutcomes.objects.filter(proposal=proposal).first() if proposal else None
+    need_analysis = (
+        EventNeedAnalysis.objects.filter(proposal=proposal).first()
+        if proposal
+        else None
+    )
+    objectives = (
+        EventObjectives.objects.filter(proposal=proposal).first() if proposal else None
+    )
+    outcomes = (
+        EventExpectedOutcomes.objects.filter(proposal=proposal).first()
+        if proposal
+        else None
+    )
     flow = TentativeFlow.objects.filter(proposal=proposal).first() if proposal else None
-    activities = list(proposal.activities.values('name', 'date')) if proposal else []
-    speakers = list(proposal.speakers.values('full_name','designation','affiliation','contact_email','contact_number','linkedin_url','detailed_profile')) if proposal else []
-    expenses = list(proposal.expense_details.values('sl_no','particulars','amount')) if proposal else []
-    income = list(proposal.income_details.values('sl_no','particulars','participants','rate','amount')) if proposal else []
+    activities = list(proposal.activities.values("name", "date")) if proposal else []
+    speakers = (
+        list(
+            proposal.speakers.values(
+                "full_name",
+                "designation",
+                "affiliation",
+                "contact_email",
+                "contact_number",
+                "linkedin_url",
+                "detailed_profile",
+            )
+        )
+        if proposal
+        else []
+    )
+    expenses = (
+        list(proposal.expense_details.values("sl_no", "particulars", "amount"))
+        if proposal
+        else []
+    )
+    income = (
+        list(
+            proposal.income_details.values(
+                "sl_no", "particulars", "participants", "rate", "amount"
+            )
+        )
+        if proposal
+        else []
+    )
 
     ctx = {
         "form": form,
         "proposal": proposal,
-        "org_types": OrganizationType.objects.filter(is_active=True).order_by('name'),
+        "org_types": OrganizationType.objects.filter(is_active=True).order_by("name"),
         "need_analysis": need_analysis,
         "objectives": objectives,
         "outcomes": outcomes,
         "flow": flow,
-        "sdg_goals_list": json.dumps(list(SDGGoal.objects.filter(name__in=SDG_GOALS).values('id','name'))),
+        "sdg_goals_list": json.dumps(
+            list(SDGGoal.objects.filter(name__in=SDG_GOALS).values("id", "name"))
+        ),
         "activities_json": json.dumps(activities),
         "speakers_json": json.dumps(speakers),
         "expenses_json": json.dumps(expenses),
         "income_json": json.dumps(income),
     }
-
 
     if request.method == "POST" and form.is_valid():
         proposal = form.save(commit=False)
@@ -409,12 +484,22 @@ def submit_proposal(request, pk=None):
 # ──────────────────────────────────────────────────────────────
 @login_required
 def review_proposal(request, proposal_id):
-    proposal = get_object_or_404(EventProposal, pk=proposal_id, submitted_by=request.user)
+    proposal = get_object_or_404(
+        EventProposal.objects.select_related(
+            "need_analysis",
+            "objectives",
+            "expected_outcomes",
+            "tentative_flow",
+            "cdl_support",
+        ).prefetch_related("speakers", "expense_details", "income_details"),
+        pk=proposal_id,
+        submitted_by=request.user,
+    )
 
-    need_analysis = EventNeedAnalysis.objects.filter(proposal=proposal).first()
-    objectives = EventObjectives.objects.filter(proposal=proposal).first()
-    outcomes = EventExpectedOutcomes.objects.filter(proposal=proposal).first()
-    flow = TentativeFlow.objects.filter(proposal=proposal).first()
+    need_analysis = getattr(proposal, "need_analysis", None)
+    objectives = getattr(proposal, "objectives", None)
+    outcomes = getattr(proposal, "expected_outcomes", None)
+    flow = getattr(proposal, "tentative_flow", None)
     speakers = list(proposal.speakers.all())
     expenses = list(proposal.expense_details.all())
     income = list(proposal.income_details.all())
@@ -468,33 +553,39 @@ def autosave_proposal(request):
     logger.debug("autosave_proposal payload: %s", data)
 
     # Replace department logic with generic organization
-    org_type_val = data.get("organization_type")  # You'll need to capture org type in your frontend/form!
+    org_type_val = data.get(
+        "organization_type"
+    )  # You'll need to capture org type in your frontend/form!
     org_name_val = data.get("organization")
     if org_type_val and org_name_val and not str(org_name_val).isdigit():
         from core.models import Organization, OrganizationType
-        org_type_obj, _ = OrganizationType.objects.get_or_create(name=org_type_val)
-        org_obj, _ = Organization.objects.get_or_create(name=org_name_val, org_type=org_type_obj)
-        data["organization"] = str(org_obj.id)
 
+        org_type_obj, _ = OrganizationType.objects.get_or_create(name=org_type_val)
+        org_obj, _ = Organization.objects.get_or_create(
+            name=org_name_val, org_type=org_type_obj
+        )
+        data["organization"] = str(org_obj.id)
 
     proposal = None
     if pid := data.get("proposal_id"):
         proposal = EventProposal.objects.filter(
             id=pid, submitted_by=request.user
         ).first()
-        
+
         # Don't autosave if proposal is already submitted
         if proposal and proposal.status != "draft":
-            return JsonResponse({"success": False, "error": "Cannot modify submitted proposal"})
+            return JsonResponse(
+                {"success": False, "error": "Cannot modify submitted proposal"}
+            )
 
     form = EventProposalForm(data, instance=proposal, user=request.user)
     faculty_ids = data.get("faculty_incharges") or []
     if faculty_ids:
-        form.fields['faculty_incharges'].queryset = User.objects.filter(
+        form.fields["faculty_incharges"].queryset = User.objects.filter(
             Q(role_assignments__role__name=FACULTY_ROLE) | Q(id__in=faculty_ids)
         ).distinct()
     else:
-        form.fields['faculty_incharges'].queryset = User.objects.filter(
+        form.fields["faculty_incharges"].queryset = User.objects.filter(
             role_assignments__role__name=FACULTY_ROLE
         ).distinct()
 
@@ -506,7 +597,7 @@ def autosave_proposal(request):
     proposal.submitted_by = request.user
     proposal.status = "draft"
     proposal.save()
-    form.save_m2m()               # Keep many-to-many fields in sync.
+    form.save_m2m()  # Keep many-to-many fields in sync.
     text_errors = _save_text_sections(proposal, data)
 
     errors = {}
@@ -635,7 +726,9 @@ def reset_proposal_draft(request):
 
     pid = data.get("proposal_id")
     if not pid:
-        return JsonResponse({"success": False, "error": "proposal_id required"}, status=400)
+        return JsonResponse(
+            {"success": False, "error": "proposal_id required"}, status=400
+        )
 
     proposal = EventProposal.objects.filter(
         id=pid, submitted_by=request.user, status="draft"
@@ -652,8 +745,9 @@ def reset_proposal_draft(request):
 # ──────────────────────────────────────────────────────────────
 @login_required
 def submit_need_analysis(request, proposal_id):
-    proposal = get_object_or_404(EventProposal, id=proposal_id,
-                                 submitted_by=request.user)
+    proposal = get_object_or_404(
+        EventProposal, id=proposal_id, submitted_by=request.user
+    )
     instance = EventNeedAnalysis.objects.filter(proposal=proposal).first()
 
     if request.method == "POST":
@@ -668,14 +762,16 @@ def submit_need_analysis(request, proposal_id):
     else:
         form = NeedAnalysisForm(instance=instance)
 
-    return render(request, "emt/need_analysis.html",
-                  {"form": form, "proposal": proposal})
+    return render(
+        request, "emt/need_analysis.html", {"form": form, "proposal": proposal}
+    )
 
 
 @login_required
 def submit_objectives(request, proposal_id):
-    proposal = get_object_or_404(EventProposal, id=proposal_id,
-                                 submitted_by=request.user)
+    proposal = get_object_or_404(
+        EventProposal, id=proposal_id, submitted_by=request.user
+    )
     instance = EventObjectives.objects.filter(proposal=proposal).first()
 
     if request.method == "POST":
@@ -686,19 +782,18 @@ def submit_objectives(request, proposal_id):
             obj.proposal = proposal
             obj.save()
             logger.debug("Objectives saved for proposal %s", proposal.id)
-            return redirect("emt:submit_expected_outcomes",
-                            proposal_id=proposal.id)
+            return redirect("emt:submit_expected_outcomes", proposal_id=proposal.id)
     else:
         form = ObjectivesForm(instance=instance)
 
-    return render(request, "emt/objectives.html",
-                  {"form": form, "proposal": proposal})
+    return render(request, "emt/objectives.html", {"form": form, "proposal": proposal})
 
 
 @login_required
 def submit_expected_outcomes(request, proposal_id):
-    proposal = get_object_or_404(EventProposal, id=proposal_id,
-                                 submitted_by=request.user)
+    proposal = get_object_or_404(
+        EventProposal, id=proposal_id, submitted_by=request.user
+    )
     instance = EventExpectedOutcomes.objects.filter(proposal=proposal).first()
 
     if request.method == "POST":
@@ -709,19 +804,22 @@ def submit_expected_outcomes(request, proposal_id):
             outcome.proposal = proposal
             outcome.save()
             logger.debug("ExpectedOutcomes saved for proposal %s", proposal.id)
-            return redirect("emt:submit_tentative_flow",
-                            proposal_id=proposal.id)
+            return redirect("emt:submit_tentative_flow", proposal_id=proposal.id)
     else:
         form = ExpectedOutcomesForm(instance=instance)
 
-    return render(request, "emt/submit_expected_outcomes.html",
-                  {"form": form, "proposal": proposal})
+    return render(
+        request,
+        "emt/submit_expected_outcomes.html",
+        {"form": form, "proposal": proposal},
+    )
 
 
 @login_required
 def submit_tentative_flow(request, proposal_id):
-    proposal = get_object_or_404(EventProposal, id=proposal_id,
-                                 submitted_by=request.user)
+    proposal = get_object_or_404(
+        EventProposal, id=proposal_id, submitted_by=request.user
+    )
     instance = TentativeFlow.objects.filter(proposal=proposal).first()
 
     if request.method == "POST":
@@ -732,29 +830,33 @@ def submit_tentative_flow(request, proposal_id):
             flow.proposal = proposal
             flow.save()
             logger.debug("TentativeFlow saved for proposal %s", proposal.id)
-            return redirect("emt:submit_speaker_profile",
-                            proposal_id=proposal.id)
+            return redirect("emt:submit_speaker_profile", proposal_id=proposal.id)
     else:
         form = TentativeFlowForm(instance=instance)
 
-    return render(request, "emt/tentative_flow.html",
-                  {"form": form, "proposal": proposal})
+    return render(
+        request, "emt/tentative_flow.html", {"form": form, "proposal": proposal}
+    )
+
 
 # ──────────────────────────────
 # PROPOSAL STEP 6: Speaker Profile
 # ──────────────────────────────
 @login_required
 def submit_speaker_profile(request, proposal_id):
-    proposal = get_object_or_404(EventProposal, id=proposal_id,
-                                 submitted_by=request.user)
+    proposal = get_object_or_404(
+        EventProposal, id=proposal_id, submitted_by=request.user
+    )
     SpeakerFS = modelformset_factory(
         SpeakerProfile, form=SpeakerProfileForm, extra=1, can_delete=True
     )
 
     if request.method == "POST":
-        formset = SpeakerFS(request.POST, request.FILES,
-                            queryset=SpeakerProfile.objects.filter(
-                                proposal=proposal))
+        formset = SpeakerFS(
+            request.POST,
+            request.FILES,
+            queryset=SpeakerProfile.objects.filter(proposal=proposal),
+        )
         if formset.is_valid():
             objs = formset.save(commit=False)
             for obj in objs:
@@ -762,22 +864,23 @@ def submit_speaker_profile(request, proposal_id):
                 obj.save()
             for obj in formset.deleted_objects:
                 obj.delete()
-            return redirect("emt:submit_expense_details",
-                            proposal_id=proposal.id)
+            return redirect("emt:submit_expense_details", proposal_id=proposal.id)
     else:
-        formset = SpeakerFS(queryset=SpeakerProfile.objects.filter(
-            proposal=proposal))
+        formset = SpeakerFS(queryset=SpeakerProfile.objects.filter(proposal=proposal))
 
-    return render(request, "emt/speaker_profile.html",
-                  {"formset": formset, "proposal": proposal})
+    return render(
+        request, "emt/speaker_profile.html", {"formset": formset, "proposal": proposal}
+    )
+
 
 # ──────────────────────────────
 # PROPOSAL STEP 7: Expense Details
 # ──────────────────────────────
 @login_required
 def submit_expense_details(request, proposal_id):
-    proposal = get_object_or_404(EventProposal, id=proposal_id,
-                                 submitted_by=request.user)
+    proposal = get_object_or_404(
+        EventProposal, id=proposal_id, submitted_by=request.user
+    )
     # Track wizard state for breadcrumb/progress UI
     request.session["proposal_step"] = "expense_details"
     ExpenseFS = modelformset_factory(
@@ -785,8 +888,9 @@ def submit_expense_details(request, proposal_id):
     )
 
     if request.method == "POST":
-        formset = ExpenseFS(request.POST, queryset=ExpenseDetail.objects.filter(
-            proposal=proposal))
+        formset = ExpenseFS(
+            request.POST, queryset=ExpenseDetail.objects.filter(proposal=proposal)
+        )
         if formset.is_valid():
             objs = formset.save(commit=False)
             for obj in objs:
@@ -799,11 +903,11 @@ def submit_expense_details(request, proposal_id):
             messages.info(request, "Expense details saved. Proceed to CDL Support.")
             return redirect("emt:submit_cdl_support", proposal_id=proposal.id)
     else:
-        formset = ExpenseFS(queryset=ExpenseDetail.objects.filter(
-            proposal=proposal))
+        formset = ExpenseFS(queryset=ExpenseDetail.objects.filter(proposal=proposal))
 
-    return render(request, "emt/expense_details.html",
-                  {"proposal": proposal, "formset": formset})
+    return render(
+        request, "emt/expense_details.html", {"proposal": proposal, "formset": formset}
+    )
 
 
 # ──────────────────────────────
@@ -811,7 +915,9 @@ def submit_expense_details(request, proposal_id):
 # ──────────────────────────────
 @login_required
 def submit_cdl_support(request, proposal_id):
-    proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
+    proposal = get_object_or_404(
+        EventProposal, id=proposal_id, submitted_by=request.user
+    )
     # Ensure wizard/breadcrumb reflects final step
     request.session["proposal_step"] = "cdl_support"
     instance = getattr(proposal, "cdl_support", None)
@@ -843,7 +949,9 @@ def submit_cdl_support(request, proposal_id):
 
 @login_required
 def cdl_post_event(request, proposal_id):
-    proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
+    proposal = get_object_or_404(
+        EventProposal, id=proposal_id, submitted_by=request.user
+    )
     support = getattr(proposal, "cdl_support", None)
     if not support:
         return redirect("emt:proposal_status_detail", proposal_id=proposal_id)
@@ -886,64 +994,67 @@ def cdl_post_event(request, proposal_id):
     )
 
 
-
 # ──────────────────────────────
 # Event Management Suite Dashboard
 # ──────────────────────────────
 @login_required
 def proposal_status_detail(request, proposal_id):
     proposal = get_object_or_404(
-        EventProposal.objects.select_related('organization', 'submitted_by')
-        .prefetch_related('sdg_goals', 'faculty_incharges'),
+        EventProposal.objects.select_related(
+            "organization", "submitted_by"
+        ).prefetch_related("sdg_goals", "faculty_incharges"),
         id=proposal_id,
-        submitted_by=request.user
+        submitted_by=request.user,
     )
-    
-    if request.method == 'POST':
-        action = request.POST.get('action') # Assuming you get 'approve' or 'reject' from a form
 
-        if action == 'approve':
-            proposal.status = 'Approved' # Use your actual status value
-            
+    if request.method == "POST":
+        action = request.POST.get(
+            "action"
+        )  # Assuming you get 'approve' or 'reject' from a form
+
+        if action == "approve":
+            proposal.status = "Approved"  # Use your actual status value
+
             # Add the logging statement for approval
             logger.info(
                 f"User '{request.user.username}' APPROVED proposal '{proposal.title}' (ID: {proposal.id})."
             )
-            
+
             proposal.save()
 
-        elif action == 'reject':
-            proposal.status = 'Rejected' # Use your actual status value
-            rejection_reason = request.POST.get('reason', 'No reason provided')
-            
+        elif action == "reject":
+            proposal.status = "Rejected"  # Use your actual status value
+            rejection_reason = request.POST.get("reason", "No reason provided")
+
             # Add the logging statement for rejection
             logger.warning(
                 f"User '{request.user.username}' REJECTED proposal '{proposal.title}' (ID: {proposal.id}). "
                 f"Reason: {rejection_reason}"
             )
-            
+
             proposal.save()
-            
-        return redirect('some-success-url')
+
+        return redirect("some-success-url")
 
     # Get approval steps
-    all_steps = (
-        ApprovalStep.objects.filter(proposal=proposal).order_by("order_index")
-    )
+    all_steps = ApprovalStep.objects.filter(proposal=proposal).order_by("order_index")
     visible_steps = all_steps.visible_for_ui()
 
     # Total budget calculation
-    budget_total = ExpenseDetail.objects.filter(
-        proposal=proposal
-    ).aggregate(total=Sum('amount'))['total'] or 0
+    budget_total = (
+        ExpenseDetail.objects.filter(proposal=proposal).aggregate(total=Sum("amount"))[
+            "total"
+        ]
+        or 0
+    )
 
     # Dynamically assign statuses.
-    db_status = (proposal.status or '').strip().lower()
+    db_status = (proposal.status or "").strip().lower()
 
-    if db_status == 'rejected':
-        statuses = ['draft', 'submitted', 'under_review', 'rejected']
+    if db_status == "rejected":
+        statuses = ["draft", "submitted", "under_review", "rejected"]
     else:
-        statuses = ['draft', 'submitted', 'under_review', 'finalized']
+        statuses = ["draft", "submitted", "under_review", "finalized"]
 
     status_index = statuses.index(db_status) if db_status in statuses else 0
     # Progress should start at 0% for the initial status
@@ -951,31 +1062,37 @@ def proposal_status_detail(request, proposal_id):
         progress_percent = int(status_index * 100 / (len(statuses) - 1))
     else:
         progress_percent = 100
-    current_label = statuses[status_index].replace('_', ' ').capitalize()
+    current_label = statuses[status_index].replace("_", " ").capitalize()
 
-    return render(request, 'emt/proposal_status_detail.html', {
-        'proposal': proposal,
-        'steps': visible_steps,
-        'all_steps': all_steps,
-        'budget_total': budget_total,
-        'statuses': statuses,
-        'status_index': status_index,
-        'progress_percent': progress_percent,
-        'current_label': current_label,
-    })
+    return render(
+        request,
+        "emt/proposal_status_detail.html",
+        {
+            "proposal": proposal,
+            "steps": visible_steps,
+            "all_steps": all_steps,
+            "budget_total": budget_total,
+            "statuses": statuses,
+            "status_index": status_index,
+            "progress_percent": progress_percent,
+            "current_label": current_label,
+        },
+    )
+
 
 # ──────────────────────────────
 # PENDING REPORTS, GENERATION, SUCCESS
 # ──────────────────────────────
 
+
 @login_required
 def pending_reports(request):
     proposals = EventProposal.objects.filter(
         submitted_by=request.user,
-        status__in=['approved', 'finalized'],
-        report_generated=False
-    ).select_related('report_assigned_to')
-    return render(request, 'emt/pending_reports.html', {'proposals': proposals})
+        status__in=["approved", "finalized"],
+        report_generated=False,
+    ).select_related("report_assigned_to")
+    return render(request, "emt/pending_reports.html", {"proposals": proposals})
 
 
 @login_required
@@ -986,24 +1103,31 @@ def api_event_participants(request, proposal_id):
         proposal = get_object_or_404(EventProposal, id=proposal_id)
 
         # Check if user has permission to view this proposal
-        if proposal.submitted_by != request.user and request.user not in proposal.faculty_incharges.all():
-            return JsonResponse({'error': 'Permission denied'}, status=403)
+        if (
+            proposal.submitted_by != request.user
+            and request.user not in proposal.faculty_incharges.all()
+        ):
+            return JsonResponse({"error": "Permission denied"}, status=403)
 
-        query = request.GET.get('q', '').strip().lower()
+        query = request.GET.get("q", "").strip().lower()
 
         # Collect all eligible users
         participants = set()
 
         # Members of the event's organization
         if proposal.organization:
-            memberships = OrganizationMembership.objects.filter(organization=proposal.organization)
+            memberships = OrganizationMembership.objects.filter(
+                organization=proposal.organization
+            )
 
             # Filter by target audience roles if specified
             if proposal.target_audience:
-                target_roles = [r.strip().lower() for r in proposal.target_audience.split(',')]
+                target_roles = [
+                    r.strip().lower() for r in proposal.target_audience.split(",")
+                ]
                 memberships = memberships.filter(role__in=target_roles)
 
-            for membership in memberships.select_related('user'):
+            for membership in memberships.select_related("user"):
                 participants.add(membership.user)
 
         # Always include submitter and faculty incharges
@@ -1014,10 +1138,11 @@ def api_event_participants(request, proposal_id):
         # Apply search filter
         if query:
             filtered_participants = [
-                user for user in participants
-                if query in (user.get_full_name() or '').lower() or
-                   query in user.username.lower() or
-                   query in (user.email or '').lower()
+                user
+                for user in participants
+                if query in (user.get_full_name() or "").lower()
+                or query in user.username.lower()
+                or query in (user.email or "").lower()
             ]
         else:
             filtered_participants = list(participants)
@@ -1030,21 +1155,25 @@ def api_event_participants(request, proposal_id):
             elif user in proposal.faculty_incharges.all():
                 role = "Faculty Incharge"
             else:
-                membership = OrganizationMembership.objects.filter(user=user, organization=proposal.organization).first()
+                membership = OrganizationMembership.objects.filter(
+                    user=user, organization=proposal.organization
+                ).first()
                 role = membership.role.capitalize() if membership else "Member"
 
-            results.append({
-                'id': user.id,
-                'name': user.get_full_name() or user.username,
-                'email': user.email,
-                'role': role,
-                'username': user.username
-            })
+            results.append(
+                {
+                    "id": user.id,
+                    "name": user.get_full_name() or user.username,
+                    "email": user.email,
+                    "role": role,
+                    "username": user.username,
+                }
+            )
 
-        return JsonResponse({'participants': results})
+        return JsonResponse({"participants": results})
 
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse({"error": str(e)}, status=500)
 
 
 @login_required
@@ -1053,22 +1182,27 @@ def assign_report_task(request, proposal_id):
     """API endpoint to assign report generation task to a user"""
     try:
         proposal = get_object_or_404(EventProposal, id=proposal_id)
-        
+
         # Check if user has permission to assign (only submitter can assign)
         if proposal.submitted_by != request.user:
-            return JsonResponse({'error': 'Only the event submitter can assign report tasks'}, status=403)
-        
+            return JsonResponse(
+                {"error": "Only the event submitter can assign report tasks"},
+                status=403,
+            )
+
         data = json.loads(request.body)
-        assigned_user_id = data.get('assigned_user_id')
-        
+        assigned_user_id = data.get("assigned_user_id")
+
         if not assigned_user_id:
-            return JsonResponse({'error': 'assigned_user_id is required'}, status=400)
-        
+            return JsonResponse({"error": "assigned_user_id is required"}, status=400)
+
         # Verify the assigned user is eligible for assignment
         assigned_user = get_object_or_404(User, id=assigned_user_id)
 
-        if (assigned_user != proposal.submitted_by and
-            assigned_user not in proposal.faculty_incharges.all()):
+        if (
+            assigned_user != proposal.submitted_by
+            and assigned_user not in proposal.faculty_incharges.all()
+        ):
 
             membership_qs = OrganizationMembership.objects.filter(
                 user=assigned_user,
@@ -1076,31 +1210,40 @@ def assign_report_task(request, proposal_id):
             )
 
             if proposal.target_audience:
-                target_roles = [r.strip().lower() for r in proposal.target_audience.split(',')]
+                target_roles = [
+                    r.strip().lower() for r in proposal.target_audience.split(",")
+                ]
                 membership_qs = membership_qs.filter(role__in=target_roles)
 
             if not membership_qs.exists():
-                return JsonResponse({'error': 'Can only assign to event organization members or target audience'}, status=400)
-        
+                return JsonResponse(
+                    {
+                        "error": "Can only assign to event organization members or target audience"
+                    },
+                    status=400,
+                )
+
         # Update assignment
         proposal.report_assigned_to = assigned_user
         proposal.report_assigned_at = timezone.now()
         proposal.save()
-        
-        return JsonResponse({
-            'success': True,
-            'assigned_to': {
-                'id': assigned_user.id,
-                'name': assigned_user.get_full_name() or assigned_user.username,
-                'email': assigned_user.email
-            },
-            'assigned_at': proposal.report_assigned_at.isoformat()
-        })
-        
+
+        return JsonResponse(
+            {
+                "success": True,
+                "assigned_to": {
+                    "id": assigned_user.id,
+                    "name": assigned_user.get_full_name() or assigned_user.username,
+                    "email": assigned_user.email,
+                },
+                "assigned_at": proposal.report_assigned_at.isoformat(),
+            }
+        )
+
     except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+        return JsonResponse({"error": "Invalid JSON data"}, status=400)
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse({"error": str(e)}, status=500)
 
 
 @login_required
@@ -1109,55 +1252,67 @@ def unassign_report_task(request, proposal_id):
     """API endpoint to remove report generation assignment"""
     try:
         proposal = get_object_or_404(EventProposal, id=proposal_id)
-        
+
         # Check if user has permission to unassign (only submitter can unassign)
         if proposal.submitted_by != request.user:
-            return JsonResponse({'error': 'Only the event submitter can unassign report tasks'}, status=403)
-        
+            return JsonResponse(
+                {"error": "Only the event submitter can unassign report tasks"},
+                status=403,
+            )
+
         # Remove assignment
         proposal.report_assigned_to = None
         proposal.report_assigned_at = None
         proposal.save()
-        
-        return JsonResponse({'success': True})
-        
+
+        return JsonResponse({"success": True})
+
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse({"error": str(e)}, status=500)
 
 
 @login_required
 def generate_report(request, proposal_id):
-    proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
-    
+    proposal = get_object_or_404(
+        EventProposal, id=proposal_id, submitted_by=request.user
+    )
+
     # Create report instance if not exists
     report, created = EventReport.objects.get_or_create(proposal=proposal)
-    
+
     # Generate report content - replace with your actual generation logic
     # This is just a placeholder - you should integrate with your AI service
     generated_content = f"Report for {proposal.event_title}\n\nGenerated on {timezone.now().strftime('%Y-%m-%d')}"
-    
+
     # Save to database
     report.content = generated_content
     report.generated_at = timezone.now()
     report.save()
-    
+
     # Add logging
-    logger.info(f"User '{request.user.username}' generated report for proposal '{proposal.event_title}' (ID: {proposal.id})")
-    
+    logger.info(
+        f"User '{request.user.username}' generated report for proposal '{proposal.event_title}' (ID: {proposal.id})"
+    )
+
     proposal.report_generated = True
     proposal.save()
-    
-    return redirect('emt:report_success', proposal_id=proposal.id)
+
+    return redirect("emt:report_success", proposal_id=proposal.id)
+
 
 @login_required
 def report_success(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id)
-    return render(request, 'emt/report_success.html', {'proposal': proposal})
+    return render(request, "emt/report_success.html", {"proposal": proposal})
+
 
 @login_required
 def generated_reports(request):
-    reports = EventProposal.objects.filter(report_generated=True, submitted_by=request.user).order_by('-id')
-    return render(request, 'emt/generated_reports.html', {'reports': reports})
+    reports = EventProposal.objects.filter(
+        report_generated=True, submitted_by=request.user
+    ).order_by("-id")
+    return render(request, "emt/generated_reports.html", {"reports": reports})
+
 
 @login_required
 def view_report(request, report_id):
@@ -1167,9 +1322,9 @@ def view_report(request, report_id):
     """
     # Get the report object, ensuring the user has access via the proposal
     report = get_object_or_404(
-        EventReport.objects.select_related('proposal'),
+        EventReport.objects.select_related("proposal"),
         id=report_id,
-        proposal__submitted_by=request.user
+        proposal__submitted_by=request.user,
     )
 
     # Add the logging statement here
@@ -1180,54 +1335,60 @@ def view_report(request, report_id):
 
     # Render the template with the report and its proposal
     context = {
-        'report': report,
-        'proposal': report.proposal  # Pass the proposal for more context
+        "report": report,
+        "proposal": report.proposal,  # Pass the proposal for more context
     }
-    return render(request, 'emt/view_report.html', context)
+    return render(request, "emt/view_report.html", context)
+
 
 # ──────────────────────────────
 # FILE DOWNLOAD (PLACEHOLDER)
 # ──────────────────────────────
 
+
 @login_required
 def download_pdf(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id)
     report = get_object_or_404(EventReport, proposal=proposal)
-    
+
     # Simplified PDF generation - replace with actual PDF creation logic
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="{proposal.event_title}_report.pdf"'
-    
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = (
+        f'attachment; filename="{proposal.event_title}_report.pdf"'
+    )
+
     # Create a simple PDF (using reportlab as example)
     from reportlab.pdfgen import canvas
     from io import BytesIO
-    
+
     buffer = BytesIO()
     p = canvas.Canvas(buffer)
-    
+
     # Add content to PDF
     p.drawString(100, 800, f"Event Report: {proposal.event_title}")
     p.drawString(100, 780, f"Date: {proposal.event_datetime.strftime('%Y-%m-%d')}")
     p.drawString(100, 760, f"Generated on: {timezone.now().strftime('%Y-%m-%d')}")
     p.drawString(100, 740, "Report Content:")
     p.drawString(100, 720, report.content[:500] + "...")  # Show first 500 chars
-    
+
     p.showPage()
     p.save()
-    
+
     pdf = buffer.getvalue()
     buffer.close()
     response.write(pdf)
-    
+
     return response
+
 
 @login_required
 def download_word(request, proposal_id):
     # TODO: Implement actual Word generation and return the file
     return HttpResponse(
         f"Word download for Proposal {proposal_id}",
-        content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
+
 
 # ──────────────────────────────
 # AUTOSAVE Need Analysis (if you use autosave)
@@ -1237,14 +1398,14 @@ def download_word(request, proposal_id):
 def autosave_need_analysis(request):
     if request.method == "POST":
         data = json.loads(request.body.decode("utf-8"))
-        proposal_id = data.get('proposal_id')
-        content = data.get('content', '')
+        proposal_id = data.get("proposal_id")
+        content = data.get("content", "")
         proposal = EventProposal.objects.get(id=proposal_id, submitted_by=request.user)
         na, created = EventNeedAnalysis.objects.get_or_create(proposal=proposal)
         na.content = content
         na.save()
-        return JsonResponse({'success': True})
-    return JsonResponse({'success': False}, status=400)
+        return JsonResponse({"success": True})
+    return JsonResponse({"success": False}, status=400)
 
 
 @csrf_exempt
@@ -1305,10 +1466,13 @@ def autosave_event_report(request):
 
     return JsonResponse({"success": True, "report_id": report.id})
 
+
 @login_required
 def api_organizations(request):
     q = request.GET.get("q", "").strip()
-    org_type = request.GET.get("org_type", "").strip()  # e.g., "Department", "Club", etc.
+    org_type = request.GET.get(
+        "org_type", ""
+    ).strip()  # e.g., "Department", "Club", etc.
     exclude = [e for e in request.GET.get("exclude", "").split(",") if e.isdigit()]
     orgs = Organization.objects.filter(name__icontains=q, is_active=True)
     if org_type:
@@ -1318,20 +1482,18 @@ def api_organizations(request):
     orgs = orgs.order_by("name")[:20]
     return JsonResponse([{"id": o.id, "text": o.name} for o in orgs], safe=False)
 
+
 @login_required
 def api_faculty(request):
     q = request.GET.get("q", "").strip()
     org_id = request.GET.get("org_id")
 
-    users = User.objects.filter(
-        role_assignments__role__name__icontains="faculty"
-    )
+    users = User.objects.filter(role_assignments__role__name__icontains="faculty")
     if org_id:
         users = users.filter(role_assignments__organization_id=org_id)
 
     users = (
-        users
-        .prefetch_related("role_assignments__organization")
+        users.prefetch_related("role_assignments__organization")
         .filter(
             Q(first_name__icontains=q)
             | Q(last_name__icontains=q)
@@ -1344,19 +1506,22 @@ def api_faculty(request):
     data = []
     for u in users:
         assignment = (
-            u.role_assignments
-            .filter(role__name__icontains="faculty", organization__isnull=False)
+            u.role_assignments.filter(
+                role__name__icontains="faculty", organization__isnull=False
+            )
             .select_related("organization")
             .first()
         )
         dept = assignment.organization.name if assignment else ""
         full_name = u.get_full_name() or u.username
-        data.append({
-            "id": u.id,
-            "name": full_name,
-            "department": dept,
-            "text": f"{full_name} ({u.email})",
-        })
+        data.append(
+            {
+                "id": u.id,
+                "name": full_name,
+                "department": dept,
+                "text": f"{full_name} ({u.email})",
+            }
+        )
 
     return JsonResponse(data, safe=False)
 
@@ -1385,10 +1550,7 @@ def api_students(request):
         )
 
     users = users.distinct().order_by("first_name")[:20]
-    data = [
-        {"id": u.id, "text": u.get_full_name() or u.username}
-        for u in users
-    ]
+    data = [{"id": u.id, "text": u.get_full_name() or u.username} for u in users]
     return JsonResponse(data, safe=False)
 
 
@@ -1400,10 +1562,9 @@ def api_classes(request, org_id):
 
     try:
         classes = (
-            Class.objects
-            .filter(organization_id=org_id, is_active=True)
-            .prefetch_related('students__user')
-            .order_by('name')
+            Class.objects.filter(organization_id=org_id, is_active=True)
+            .prefetch_related("students__user")
+            .order_by("name")
         )
         if q:
             classes = classes.filter(name__icontains=q)
@@ -1411,20 +1572,22 @@ def api_classes(request, org_id):
         for cls in classes:
             students = [
                 {
-                    'id': s.user.id,
-                    'name': s.user.get_full_name() or s.user.username,
+                    "id": s.user.id,
+                    "name": s.user.get_full_name() or s.user.username,
                 }
                 for s in cls.students.all()
             ]
-            data.append({
-                'id': cls.id,
-                'name': cls.name,
-                'code': cls.code,
-                'students': students,
-            })
-        return JsonResponse({'success': True, 'classes': data})
+            data.append(
+                {
+                    "id": cls.id,
+                    "name": cls.name,
+                    "code": cls.code,
+                    "students": students,
+                }
+            )
+        return JsonResponse({"success": True, "classes": data})
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
 
 
 @csrf_exempt
@@ -1450,6 +1613,7 @@ def fetch_linkedin_profile(request):
         return JsonResponse({"error": "Unable to fetch profile"}, status=500)
     profile = _parse_public_li(response.text)
     return JsonResponse(profile)
+
 
 # Temporary safe parser stub (prevent NameError if real parser not implemented)
 def _parse_public_li(html: str):  # pragma: no cover
@@ -1492,19 +1656,33 @@ def _parse_public_li(html: str):  # pragma: no cover
 @login_required
 def api_outcomes(request, org_id):
     """Return Program Outcomes and Program Specific Outcomes for an organization."""
-    from core.models import Program, ProgramOutcome, ProgramSpecificOutcome, Organization
+    from core.models import (
+        Program,
+        ProgramOutcome,
+        ProgramSpecificOutcome,
+        Organization,
+    )
+
     try:
         org = Organization.objects.get(id=org_id)
     except Organization.DoesNotExist:
-        return JsonResponse({"success": False, "error": "Organization not found"}, status=404)
+        return JsonResponse(
+            {"success": False, "error": "Organization not found"}, status=404
+        )
 
     programs = Program.objects.filter(organization=org)
     pos = []
     psos = []
     if programs.exists():
         program = programs.first()
-        pos = list(ProgramOutcome.objects.filter(program=program).values("id", "description"))
-        psos = list(ProgramSpecificOutcome.objects.filter(program=program).values("id", "description"))
+        pos = list(
+            ProgramOutcome.objects.filter(program=program).values("id", "description")
+        )
+        psos = list(
+            ProgramSpecificOutcome.objects.filter(program=program).values(
+                "id", "description"
+            )
+        )
 
     return JsonResponse({"success": True, "pos": pos, "psos": psos})
 
@@ -1524,20 +1702,23 @@ def my_approvals(request):
 
 
 @login_required
-@user_passes_test(lambda u: getattr(getattr(u, 'profile', None), 'role', '') != 'student')
+@user_passes_test(
+    lambda u: getattr(getattr(u, "profile", None), "role", "") != "student"
+)
 def review_approval_step(request, step_id):
     step = get_object_or_404(ApprovalStep, id=step_id)
 
     # Fetch the proposal along with all related details in one go.
     proposal = (
-        EventProposal.objects
-        .select_related(
+        EventProposal.objects.select_related(
             "need_analysis",
             "objectives",
             "expected_outcomes",
             "tentative_flow",
         )
-        .prefetch_related("speakers", "expense_details", "faculty_incharges", "sdg_goals")
+        .prefetch_related(
+            "speakers", "expense_details", "faculty_incharges", "sdg_goals"
+        )
         .get(pk=step.proposal_id)
     )
 
@@ -1576,19 +1757,22 @@ def review_approval_step(request, step_id):
 
     optional_candidates = []
     show_optional_picker = False
-    if step.assigned_to_id == request.user.id and step.status == ApprovalStep.Status.PENDING:
+    if (
+        step.assigned_to_id == request.user.id
+        and step.status == ApprovalStep.Status.PENDING
+    ):
         optional_candidates = list(get_downstream_optional_candidates(step))
         show_optional_picker = len(optional_candidates) > 0
 
     history_steps = proposal.approval_steps.visible_for_ui().order_by("order_index")
 
-    if request.method == 'POST':
-        action = request.POST.get('action')
-        comment = request.POST.get('comment', '')
+    if request.method == "POST":
+        action = request.POST.get("action")
+        comment = request.POST.get("comment", "")
         forward_flag = bool(request.POST.get("forward_to_optionals"))
         selected_optionals = request.POST.getlist("optional_step_ids")
 
-        if action == 'approve':
+        if action == "approve":
             step.status = ApprovalStep.Status.APPROVED
             step.approved_by = request.user
             step.approved_at = timezone.now()
@@ -1597,7 +1781,9 @@ def review_approval_step(request, step_id):
             step.comment = comment
             step.save()
 
-            auto_approve_non_optional_duplicates(step.proposal, request.user, request.user)
+            auto_approve_non_optional_duplicates(
+                step.proposal, request.user, request.user
+            )
 
             if forward_flag and selected_optionals:
                 unlock_optionals_after(step, selected_optionals)
@@ -1615,25 +1801,27 @@ def review_approval_step(request, step_id):
                 )
                 if not next_step:
                     return
-                if next_step.status == 'waiting':
-                    next_step.status = 'pending'
+                if next_step.status == "waiting":
+                    next_step.status = "pending"
                     next_step.save()
                 else:
                     activate_next(next_step.order_index)
 
             activate_next(step.order_index)
 
-            if ApprovalStep.objects.filter(proposal=proposal, status='pending').exists():
-                proposal.status = 'under_review'
+            if ApprovalStep.objects.filter(
+                proposal=proposal, status="pending"
+            ).exists():
+                proposal.status = "under_review"
             else:
-                proposal.status = 'finalized'
+                proposal.status = "finalized"
             proposal.save()
-            messages.success(request, 'Proposal approved.')
-            return redirect('emt:my_approvals')
+            messages.success(request, "Proposal approved.")
+            return redirect("emt:my_approvals")
 
-        elif action == 'reject':
+        elif action == "reject":
             if not comment.strip():
-                messages.error(request, 'Comment is required to reject the proposal.')
+                messages.error(request, "Comment is required to reject the proposal.")
             else:
                 step.status = ApprovalStep.Status.REJECTED
                 step.comment = comment
@@ -1641,31 +1829,32 @@ def review_approval_step(request, step_id):
                 step.approved_at = timezone.now()
                 step.decided_by = request.user
                 step.decided_at = step.approved_at
-                proposal.status = 'rejected'
+                proposal.status = "rejected"
                 proposal.save()
                 step.save()
-                messages.error(request, 'Proposal rejected.')
-                return redirect('emt:my_approvals')
+                messages.error(request, "Proposal rejected.")
+                return redirect("emt:my_approvals")
         else:
-            return redirect('emt:my_approvals')
+            return redirect("emt:my_approvals")
 
     return render(
         request,
-        'emt/review_approval_step.html',
+        "emt/review_approval_step.html",
         {
-            'step': step,
-            'proposal': proposal,
-            'need_analysis': need_analysis,
-            'objectives': objectives,
-            'outcomes': outcomes,
-            'flow': flow,
-            'speakers': speakers,
-            'expenses': expenses,
-            'optional_candidates': optional_candidates,
-            'show_optional_picker': show_optional_picker,
-            'history_steps': history_steps,
+            "step": step,
+            "proposal": proposal,
+            "need_analysis": need_analysis,
+            "objectives": objectives,
+            "outcomes": outcomes,
+            "flow": flow,
+            "speakers": speakers,
+            "expenses": expenses,
+            "optional_candidates": optional_candidates,
+            "show_optional_picker": show_optional_picker,
+            "history_steps": history_steps,
         },
     )
+
 
 @login_required
 def submit_event_report(request, proposal_id):
@@ -1685,15 +1874,27 @@ def submit_event_report(request, proposal_id):
 
     if request.method == "POST":
         drafts[str(proposal_id)] = {
-            key: request.POST.getlist(key) if len(request.POST.getlist(key)) > 1 else request.POST.get(key)
+            key: (
+                request.POST.getlist(key)
+                if len(request.POST.getlist(key)) > 1
+                else request.POST.get(key)
+            )
             for key in request.POST.keys()
         }
         request.session.modified = True
 
         form = EventReportForm(request.POST, instance=report)
-        attachments_qs = report.attachments.all() if report else EventReportAttachment.objects.none()
-        formset = AttachmentFormSet(request.POST, request.FILES, queryset=attachments_qs)
-        if form.is_valid() and formset.is_valid() and _save_activities(proposal, request.POST, form):
+        attachments_qs = (
+            report.attachments.all() if report else EventReportAttachment.objects.none()
+        )
+        formset = AttachmentFormSet(
+            request.POST, request.FILES, queryset=attachments_qs
+        )
+        if (
+            form.is_valid()
+            and formset.is_valid()
+            and _save_activities(proposal, request.POST, form)
+        ):
             report = form.save(commit=False)
             report.proposal = proposal
             report.save()
@@ -1715,14 +1916,16 @@ def submit_event_report(request, proposal_id):
             return redirect("emt:ai_report_progress", proposal_id=proposal.id)
     else:
         form = EventReportForm(initial=draft, instance=report)
-        attachments_qs = report.attachments.all() if report else EventReportAttachment.objects.none()
+        attachments_qs = (
+            report.attachments.all() if report else EventReportAttachment.objects.none()
+        )
         formset = AttachmentFormSet(queryset=attachments_qs)
 
     activities_qs = EventActivity.objects.filter(proposal=proposal)
     proposal_activities = [
         {
             "activity_name": a.name,
-            "activity_date": a.date.strftime("%Y-%m-%d") if a.date else ""
+            "activity_date": a.date.strftime("%Y-%m-%d") if a.date else "",
         }
         for a in activities_qs
     ]
@@ -1746,7 +1949,7 @@ def submit_event_report(request, proposal_id):
             "name": s.full_name,
             "designation": s.designation,
             "organization": s.affiliation,
-            "contact": s.contact_email
+            "contact": s.contact_email,
         }
         for s in speakers_qs
     ]
@@ -1773,12 +1976,14 @@ def submit_event_report(request, proposal_id):
     if draft.get("analysis"):
         analysis = SimpleNamespace(content=draft.get("analysis"))
 
-    attendance_qs = report.attendance_rows.all() if report else AttendanceRow.objects.none()
+    attendance_qs = (
+        report.attendance_rows.all() if report else AttendanceRow.objects.none()
+    )
     attendance_present = attendance_qs.filter(absent=False).count()
     attendance_absent = attendance_qs.filter(absent=True).count()
     attendance_volunteers = attendance_qs.filter(volunteer=True).count()
     volunteer_names = list(
-        attendance_qs.filter(volunteer=True).values_list('full_name', flat=True)
+        attendance_qs.filter(volunteer=True).values_list("full_name", flat=True)
     )
     faculty_names = [
         f.get_full_name() or f.username for f in proposal.faculty_incharges.all()
@@ -1786,8 +1991,7 @@ def submit_event_report(request, proposal_id):
 
     # Prepare SDG goal data for modal and proposal prefill
     sdg_goals_list = [
-        {"id": goal.id, "title": goal.name}
-        for goal in SDGGoal.objects.all()
+        {"id": goal.id, "title": goal.name} for goal in SDGGoal.objects.all()
     ]
     proposal_sdg_goals = ", ".join(
         f"SDG{goal.id}: {goal.name}" for goal in proposal.sdg_goals.all()
@@ -1834,7 +2038,9 @@ def preview_event_report(request, proposal_id):
 
     form = EventReportForm(request.POST)
     if not form.is_valid():
-        logger.debug("Preview form invalid for proposal %s: %s", proposal.id, form.errors)
+        logger.debug(
+            "Preview form invalid for proposal %s: %s", proposal.id, form.errors
+        )
 
     context = {
         "proposal": proposal,
@@ -1852,7 +2058,7 @@ def download_audience_csv(request, proposal_id):
     )
 
     audience_type = request.GET.get("type", "students").lower()
-    names = [n.strip() for n in proposal.target_audience.split(',') if n.strip()]
+    names = [n.strip() for n in proposal.target_audience.split(",") if n.strip()]
 
     response = HttpResponse(content_type="text/csv")
     if audience_type == "faculty":
@@ -1893,18 +2099,15 @@ def download_audience_csv(request, proposal_id):
             class_name = ""
             student = students.get(name.lower())
             if student:
-                reg_no = (
-                    student.registration_number
-                    or getattr(getattr(student.user, "profile", None), "register_no", "")
+                reg_no = student.registration_number or getattr(
+                    getattr(student.user, "profile", None), "register_no", ""
                 )
                 cls = student.classes.filter(is_active=True).first()
                 if cls:
                     class_name = cls.code or cls.name
             writer.writerow([reg_no, name, class_name, "", ""])
 
-    logger.info(
-        "Generated %s audience CSV for proposal %s", audience_type, proposal_id
-    )
+    logger.info("Generated %s audience CSV for proposal %s", audience_type, proposal_id)
     return response
 
 
@@ -2072,6 +2275,7 @@ def download_attendance_csv(request, report_id):
 
     return response
 
+
 @login_required
 def suite_dashboard(request):
     """
@@ -2080,55 +2284,63 @@ def suite_dashboard(request):
     """
     # 1) Get proposals excluding finalized + 2-day-old ones
     user_proposals = (
-        EventProposal.objects
-        .filter(submitted_by=request.user)
-        .exclude(
-            status='finalized',
-            updated_at__lt=now() - timedelta(days=2)
-        )
-        .prefetch_related('approval_steps')
-        .order_by('-updated_at')
+        EventProposal.objects.filter(submitted_by=request.user)
+        .exclude(status="finalized", updated_at__lt=now() - timedelta(days=2))
+        .prefetch_related("approval_steps")
+        .order_by("-updated_at")
     )
 
     # 2) Prepare statuses and UI fields
     for p in user_proposals:
-        db_status = (p.status or '').strip().lower()
+        db_status = (p.status or "").strip().lower()
 
-        if db_status == 'rejected':
-            p.statuses = ['draft', 'submitted', 'under_review', 'rejected']
+        if db_status == "rejected":
+            p.statuses = ["draft", "submitted", "under_review", "rejected"]
         else:
-            p.statuses = ['draft', 'submitted', 'under_review', 'finalized']
+            p.statuses = ["draft", "submitted", "under_review", "finalized"]
 
         p.status_index = p.statuses.index(db_status) if db_status in p.statuses else 0
-        p.progress_percent = int(p.status_index * 100 / (len(p.statuses) - 1)) if len(p.statuses) > 1 else 100
-        p.current_label = p.statuses[p.status_index].replace('_', ' ').capitalize()
+        p.progress_percent = (
+            int(p.status_index * 100 / (len(p.statuses) - 1))
+            if len(p.statuses) > 1
+            else 100
+        )
+        p.current_label = p.statuses[p.status_index].replace("_", " ").capitalize()
 
     # 3) Approvals card visibility
-    is_student = getattr(getattr(request.user, 'profile', None), 'role', '') == 'student'
+    is_student = (
+        getattr(getattr(request.user, "profile", None), "role", "") == "student"
+    )
     show_approvals_card = not is_student
 
     # 4) Return dashboard with user_proposals
-    return render(request, 'dashboard.html', {
-        'user_proposals': user_proposals,
-        'show_approvals_card': show_approvals_card,
-    })
+    return render(
+        request,
+        "dashboard.html",
+        {
+            "user_proposals": user_proposals,
+            "show_approvals_card": show_approvals_card,
+        },
+    )
+
 
 @login_required
 def ai_generate_report(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id)
     report, created = EventReport.objects.get_or_create(proposal=proposal)
-    
+
     # This should be replaced with actual AI generation logic
     context = {
         "proposal": proposal,
         "report": report,
-        "ai_content": "This is a placeholder for AI-generated content. Integrate with your AI service here."
+        "ai_content": "This is a placeholder for AI-generated content. Integrate with your AI service here.",
     }
-    return render(request, 'emt/ai_generate_report.html', context)
+    return render(request, "emt/ai_generate_report.html", context)
+
 
 @csrf_exempt
 def generate_ai_report(request):
-    if request.method == 'POST':
+    if request.method == "POST":
         try:
             data = json.loads(request.body)
 
@@ -2190,45 +2402,54 @@ def generate_ai_report(request):
             response = model.generate_content(prompt)
 
             # Google GenAI occasionally returns None
-            if not response or not hasattr(response, 'text'):
-                return JsonResponse({'error': 'AI did not return any text.'}, status=500)
+            if not response or not hasattr(response, "text"):
+                return JsonResponse(
+                    {"error": "AI did not return any text."}, status=500
+                )
 
-            return JsonResponse({'report_text': response.text})
+            return JsonResponse({"report_text": response.text})
 
         except Exception as e:
             print("AI Generation error:", e)
-            return JsonResponse({'error': str(e)}, status=500)
+            return JsonResponse({"error": str(e)}, status=500)
 
+    return JsonResponse({"error": "Only POST allowed"}, status=405)
 
-    return JsonResponse({'error': 'Only POST allowed'}, status=405)
 
 @csrf_exempt
 @login_required
 def save_ai_report(request):
-    if request.method == 'POST':
+    if request.method == "POST":
         data = json.loads(request.body)
-        proposal = get_object_or_404(EventProposal, id=data['proposal_id'], submitted_by=request.user)
+        proposal = get_object_or_404(
+            EventProposal, id=data["proposal_id"], submitted_by=request.user
+        )
         report, _ = EventReport.objects.get_or_create(proposal=proposal)
-        report.summary = data.get('full_text')[:1000]  # or whatever logic
+        report.summary = data.get("full_text")[:1000]  # or whatever logic
         report.save()
-        return JsonResponse({'success': True})
-    return JsonResponse({'error': 'POST only'}, status=405)
+        return JsonResponse({"success": True})
+    return JsonResponse({"error": "POST only"}, status=405)
+
+
 @login_required
 def ai_report_progress(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id)
-    return render(request, 'emt/ai_report_progress.html', {'proposal': proposal})
+    return render(request, "emt/ai_report_progress.html", {"proposal": proposal})
+
+
 @csrf_exempt
 @login_required
 def ai_report_partial(request, proposal_id):
     from .models import EventReport
     import random
     import time
+
     report = EventReport.objects.filter(proposal_id=proposal_id).first()
     if not report or not report.summary:
         # Simulate progress if nothing generated yet
-        return JsonResponse({'text': "", 'status': 'in_progress'})
+        return JsonResponse({"text": "", "status": "in_progress"})
     # For now, always show the full summary and mark as finished
-    return JsonResponse({'text': report.summary, 'status': 'finished'})
+    return JsonResponse({"text": report.summary, "status": "finished"})
 
 
 @login_required
@@ -2266,31 +2487,33 @@ Repeat: Output each field as FIELD: VALUE (colon required), one per line, nothin
     """
 
     model = genai.GenerativeModel("models/gemini-1.5-pro-latest")
-    
+
     chunks = [
         f"# Event Report: {proposal.event_title}\n\n",
         "## Summary\nThis is a simulated AI-generated report...\n\n",
         "## Outcomes\n- Outcome 1\n- Outcome 2\n\n",
-        "## Recommendations\nFuture improvements...\n"
+        "## Recommendations\nFuture improvements...\n",
     ]
 
     def generate():
-        
+
         for chunk in chunks:
             yield chunk
             time.sleep(0.5)  # Simulate delay
-            
+
     report.content = "".join(chunks)
     report.save()
-    
-    return StreamingHttpResponse(generate(), content_type='text/plain')
+
+    return StreamingHttpResponse(generate(), content_type="text/plain")
+
 
 @login_required
 def admin_dashboard(request):
     """
     Render the static admin dashboard template.
     """
-    return render(request, 'core/admin_dashboard.html')
+    return render(request, "core/admin_dashboard.html")
+
 
 @login_required
 def ai_report_edit(request, proposal_id):
@@ -2317,47 +2540,57 @@ def ai_report_edit(request, proposal_id):
         """
 
         # Call Gemini here or set a session variable with prompt and redirect to progress
-        request.session['ai_custom_prompt'] = ai_prompt
-        return redirect('emt:ai_report_progress', proposal_id=proposal.id)
+        request.session["ai_custom_prompt"] = ai_prompt
+        return redirect("emt:ai_report_progress", proposal_id=proposal.id)
 
     # Pre-fill manual_fields with last generated report fields if you want
-    return render(request, "emt/ai_report_edit.html", {
-        "proposal": proposal,
-        "last_instructions": last_instructions,
-        "last_fields": last_fields,
-    })
+    return render(
+        request,
+        "emt/ai_report_edit.html",
+        {
+            "proposal": proposal,
+            "last_instructions": last_instructions,
+            "last_fields": last_fields,
+        },
+    )
+
 
 @login_required
 def ai_report_submit(request, proposal_id):
-    proposal = get_object_or_404(EventProposal, id=proposal_id, submitted_by=request.user)
-    
+    proposal = get_object_or_404(
+        EventProposal, id=proposal_id, submitted_by=request.user
+    )
+
     # Get or create report
     report, created = EventReport.objects.get_or_create(proposal=proposal)
-    
+
     # Update status
     proposal.report_generated = True
     proposal.status = "finalized"
     proposal.save()
-    
+
     # Add success message
     messages.success(request, "Event report submitted successfully!")
-    return redirect('emt:report_success', proposal_id=proposal.id)
+    return redirect("emt:report_success", proposal_id=proposal.id)
+
 
 @user_passes_test(lambda u: u.is_superuser)
 def api_organization_types(request):
-    org_types = OrganizationType.objects.filter(is_active=True).order_by('name')
+    org_types = OrganizationType.objects.filter(is_active=True).order_by("name")
     data = [{"id": ot.name.lower(), "name": ot.name} for ot in org_types]
     return JsonResponse(data, safe=False)
+
 
 # ------------------------------------------------------------------
 # │ NEW FUNCTION ADDED BELOW                                       │
 # ------------------------------------------------------------------
 
+
 @login_required
 def admin_reports_view(request):
     try:
         submitted_reports = Report.objects.all()
-        generated_reports = EventReport.objects.select_related('proposal').all()
+        generated_reports = EventReport.objects.select_related("proposal").all()
 
         # Create a combined list with a consistent sorting attribute
         all_reports_list = []
@@ -2370,20 +2603,25 @@ def admin_reports_view(request):
         # EventReport has 'generated_at', so we use that
         for report in generated_reports:
             # Use generated_at if it exists, otherwise use a fallback like the proposal creation date
-            report.sort_date = report.generated_at if report.generated_at else report.proposal.created_at
+            report.sort_date = (
+                report.generated_at
+                if report.generated_at
+                else report.proposal.created_at
+            )
             all_reports_list.append(report)
 
         # Now sort by the common attribute 'sort_date'
-        all_reports_list.sort(key=attrgetter('sort_date'), reverse=True)
+        all_reports_list.sort(key=attrgetter("sort_date"), reverse=True)
 
-        context = {'reports': all_reports_list}
+        context = {"reports": all_reports_list}
 
-        return render(request, 'core/admin_reports.html', context)
+        return render(request, "core/admin_reports.html", context)
 
     except Exception as e:
         # It's good practice to log the actual exception
         logger.error(f"Error in admin_reports_view: {e}", exc_info=True)
         return HttpResponse(f"An error occurred: {e}", status=500)
+
 
 def _basic_info_context(data):
     parts = []
@@ -2405,9 +2643,9 @@ def _basic_info_context(data):
     return "\n".join(parts)[:3000]
 
 
-NEED_PROMPT = "Write a concise, factual Need Analysis (80–140 words) for the event." 
-OBJ_PROMPT = "Provide 3-5 clear objectives for the event as bullet points." 
-OUT_PROMPT = "List 3-5 expected learning outcomes for participants as bullet points." 
+NEED_PROMPT = "Write a concise, factual Need Analysis (80–140 words) for the event."
+OBJ_PROMPT = "Provide 3-5 clear objectives for the event as bullet points."
+OUT_PROMPT = "List 3-5 expected learning outcomes for participants as bullet points."
 
 
 @login_required
@@ -2430,7 +2668,9 @@ def generate_need_analysis(request):
         return JsonResponse({"ok": False, "error": str(exc)}, status=503)
     except Exception as exc:
         logger.error("Need analysis generation unexpected error: %s", exc)
-        return JsonResponse({"ok": False, "error": f"Unexpected error: {exc}"}, status=500)
+        return JsonResponse(
+            {"ok": False, "error": f"Unexpected error: {exc}"}, status=500
+        )
 
 
 @login_required
@@ -2453,7 +2693,9 @@ def generate_objectives(request):
         return JsonResponse({"ok": False, "error": str(exc)}, status=503)
     except Exception as exc:
         logger.error("Objectives generation unexpected error: %s", exc)
-        return JsonResponse({"ok": False, "error": f"Unexpected error: {exc}"}, status=500)
+        return JsonResponse(
+            {"ok": False, "error": f"Unexpected error: {exc}"}, status=500
+        )
 
 
 @login_required
@@ -2476,4 +2718,6 @@ def generate_expected_outcomes(request):
         return JsonResponse({"ok": False, "error": str(exc)}, status=503)
     except Exception as exc:
         logger.error("Expected outcomes generation unexpected error: %s", exc)
-        return JsonResponse({"ok": False, "error": f"Unexpected error: {exc}"}, status=500)
+        return JsonResponse(
+            {"ok": False, "error": f"Unexpected error: {exc}"}, status=500
+        )
