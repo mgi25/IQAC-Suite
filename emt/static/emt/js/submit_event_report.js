@@ -421,6 +421,9 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
       // Restore field values if switching back to a section
       setTimeout(() => {
           restoreFieldValues(sectionName);
+          if (window.ReportAutosaveManager) {
+              ReportAutosaveManager.reinitialize();
+          }
       }, 100);
   }
   
