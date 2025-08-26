@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.db.models.signals import post_save
 from django.contrib.auth.signals import user_logged_in
 import json
+from django.contrib.auth.models import Permission
 
 from core.signals import create_or_update_user_profile, assign_role_on_login
 from emt.models import EventProposal, EventReport, EventActivity
@@ -112,3 +113,18 @@ class AutosaveEventReportTests(TestCase):
         url = reverse("emt:autosave_event_report")
         resp = self.client.post(url, data="not json", content_type="application/json")
         self.assertEqual(resp.status_code, 400)
+
+    def test_staff_autosave_non_draft(self):
+        staff = User.objects.create_user(
+            username="staff", password="pass", is_staff=True
+        )
+        perm = Permission.objects.get(codename="change_eventreport")
+        staff.user_permissions.add(perm)
+        self.client.force_login(staff)
+        self.proposal.status = EventProposal.Status.SUBMITTED
+        self.proposal.save()
+        url = reverse("emt:autosave_event_report")
+        payload = {"proposal_id": self.proposal.id, "location": "Staff Hall"}
+        resp = self.client.post(url, data=json.dumps(payload), content_type="application/json")
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json().get("success"))

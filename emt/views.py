@@ -1263,8 +1263,11 @@ def autosave_event_report(request):
     proposal_id = data.get("proposal_id")
     report_id = data.get("report_id")
 
-    proposal = EventProposal.objects.filter(id=proposal_id, submitted_by=request.user).first()
-    if not proposal:
+    proposal = EventProposal.objects.filter(id=proposal_id).first()
+    if not proposal or not (
+        proposal.submitted_by == request.user
+        or request.user.has_perm("emt.change_eventreport")
+    ):
         return JsonResponse({"success": False, "error": "Invalid proposal"}, status=400)
 
     report = None
@@ -1810,6 +1813,10 @@ def submit_event_report(request, proposal_id):
         "faculty_names_json": json.dumps(faculty_names),
         "volunteer_names_json": json.dumps(volunteer_names),
     }
+    context["can_autosave"] = (
+        proposal.submitted_by == request.user
+        or request.user.has_perm("emt.change_eventreport")
+    )
     return render(request, "emt/submit_event_report.html", context)
 
 
