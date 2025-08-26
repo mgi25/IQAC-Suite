@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static dict_filters %}
 
 {% block title %}Review Event Report{% endblock %}
 
@@ -23,7 +23,7 @@
             {% endfor %}
             <ol class="report-preview-list">
                 {% for field in form.visible_fields %}
-                    {% with values=form.data.getlist(field.name) %}
+                    {% with values=form.data|get_list:field.name %}
                         <li><strong>{{ field.label }}:</strong> {{ values|join:", "|default:"—" }}</li>
                     {% endwith %}
                 {% endfor %}
