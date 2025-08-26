@@ -1734,7 +1734,11 @@ def review_approval_step(request, step_id):
             "tentative_flow",
         )
         .prefetch_related(
-            "speakers", "expense_details", "faculty_incharges", "sdg_goals"
+            "speakers",
+            "expense_details",
+            "income_details",
+            "faculty_incharges",
+            "sdg_goals",
         )
         .get(pk=step.proposal_id)
     )
@@ -1763,6 +1767,7 @@ def review_approval_step(request, step_id):
 
     speakers = proposal.speakers.all()
     expenses = proposal.expense_details.all()
+    income = proposal.income_details.all()
     logger.debug(
         "Reviewing proposal %s: faculty %s, objectives=%s, outcomes=%s, flow=%s",
         proposal.id,
@@ -1866,6 +1871,7 @@ def review_approval_step(request, step_id):
             "flow": flow,
             "speakers": speakers,
             "expenses": expenses,
+            "income": income,
             "optional_candidates": optional_candidates,
             "show_optional_picker": show_optional_picker,
             "history_steps": history_steps,

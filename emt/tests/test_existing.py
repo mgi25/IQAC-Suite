@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth.models import User
 
-from emt.models import ApprovalStep, EventProposal, Student
+from emt.models import ApprovalStep, EventProposal, Student, IncomeDetail
 from emt.utils import (
     build_approval_chain,
     auto_approve_non_optional_duplicates,
@@ -572,6 +572,46 @@ class ApprovalLogicTests(TestCase):
             proposal.approval_steps.get(role_required=ApprovalStep.Role.DIRECTOR).id,
             ids,
         )
+
+    def test_review_approval_step_shows_income_details(self):
+        ot = OrganizationType.objects.create(name="Dept")
+        org = Organization.objects.create(name="Sci", org_type=ot)
+
+        hod_role = OrganizationRole.objects.create(
+            organization=org, name=ApprovalStep.Role.HOD.value
+        )
+
+        hod = User.objects.create_user("hod", password="pass")
+        RoleAssignment.objects.create(user=hod, role=hod_role, organization=org)
+
+        ApprovalFlowTemplate.objects.create(
+            organization=org,
+            step_order=1,
+            role_required=ApprovalStep.Role.HOD.value,
+            user=hod,
+        )
+
+        proposal = EventProposal.objects.create(
+            submitted_by=hod,
+            organization=org,
+            status=EventProposal.Status.SUBMITTED,
+        )
+        IncomeDetail.objects.create(
+            proposal=proposal,
+            sl_no=1,
+            particulars="Ticket",
+            participants=5,
+            rate=20,
+            amount=100,
+        )
+
+        build_approval_chain(proposal)
+        step = proposal.approval_steps.get(role_required=ApprovalStep.Role.HOD)
+
+        self.client.force_login(hod)
+        resp = self.client.get(reverse("emt:review_approval_step", args=[step.id]))
+        self.assertContains(resp, "Ticket")
+        self.assertContains(resp, "100")
 
 
 class ForwardingFlowTests(TestCase):
