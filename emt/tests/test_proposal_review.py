@@ -155,6 +155,52 @@ class ProposalReviewFlowTests(TestCase):
         self.assertContains(resp2, "AI objectives")
         self.assertContains(resp2, "AI outcomes")
 
+    def test_review_lists_speakers_and_expenses(self):
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(self._payload()),
+            content_type="application/json",
+        )
+        pid = resp.json()["proposal_id"]
+        proposal = EventProposal.objects.get(id=pid)
+
+        SpeakerProfile.objects.create(
+            proposal=proposal,
+            full_name="Alice",
+            designation="Prof",
+            affiliation="Uni",
+            contact_email="a@example.com",
+            contact_number="123",
+            detailed_profile="Bio",
+        )
+        SpeakerProfile.objects.create(
+            proposal=proposal,
+            full_name="Bob",
+            designation="Dr",
+            affiliation="Institute",
+            contact_email="b@example.com",
+            contact_number="321",
+            detailed_profile="Bio2",
+        )
+        ExpenseDetail.objects.create(
+            proposal=proposal, sl_no=1, particulars="Venue", amount=100
+        )
+        ExpenseDetail.objects.create(
+            proposal=proposal, sl_no=2, particulars="Refreshments", amount=200
+        )
+
+        resp2 = self.client.get(reverse("emt:review_proposal", args=[pid]))
+        # Speakers appear
+        self.assertContains(resp2, "Alice")
+        self.assertContains(resp2, "Prof")
+        self.assertContains(resp2, "Bob")
+        self.assertContains(resp2, "Dr")
+        # Expenses appear
+        self.assertContains(resp2, "Venue")
+        self.assertContains(resp2, "100")
+        self.assertContains(resp2, "Refreshments")
+        self.assertContains(resp2, "200")
+
     def test_review_displays_all_sections(self):
         resp = self.client.post(
             reverse("emt:autosave_proposal"),
