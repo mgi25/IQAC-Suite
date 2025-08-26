@@ -5,6 +5,7 @@
     "num_activities",
     "student_coordinators",
     "faculty_incharges",
-    "additional_context"
+    "additional_context",
+    "sdg_value_systems_mapping"
   ]
 }

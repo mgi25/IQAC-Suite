@@ -4,6 +4,7 @@
     "target_audience",
     "num_activities",
     "student_coordinators",
-    "faculty_incharges"
+    "faculty_incharges",
+    "sdg_value_systems_mapping"
   ]
 }
