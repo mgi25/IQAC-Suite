@@ -155,7 +155,7 @@ class ProposalReviewFlowTests(TestCase):
         self.assertContains(resp2, "AI objectives")
         self.assertContains(resp2, "AI outcomes")
 
-    def test_review_lists_speakers_and_expenses(self):
+    def test_review_lists_speakers_expenses_and_income(self):
         resp = self.client.post(
             reverse("emt:autosave_proposal"),
             data=json.dumps(self._payload()),
@@ -188,6 +188,14 @@ class ProposalReviewFlowTests(TestCase):
         ExpenseDetail.objects.create(
             proposal=proposal, sl_no=2, particulars="Refreshments", amount=200
         )
+        IncomeDetail.objects.create(
+            proposal=proposal,
+            sl_no=1,
+            particulars="Ticket",
+            participants=5,
+            rate=50,
+            amount=250,
+        )
 
         resp2 = self.client.get(reverse("emt:review_proposal", args=[pid]))
         # Speakers appear
@@ -200,6 +208,46 @@ class ProposalReviewFlowTests(TestCase):
         self.assertContains(resp2, "100")
         self.assertContains(resp2, "Refreshments")
         self.assertContains(resp2, "200")
+        # Income appears
+        self.assertContains(resp2, "Ticket")
+        self.assertContains(resp2, "250")
+
+    def test_edit_retains_speakers_expenses_and_income(self):
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(self._payload()),
+            content_type="application/json",
+        )
+        pid = resp.json()["proposal_id"]
+
+        initial = {
+            **self._payload(),
+            "speaker_full_name_0": "Alice",
+            "speaker_designation_0": "Prof",
+            "speaker_affiliation_0": "Uni",
+            "speaker_contact_email_0": "a@example.com",
+            "expense_particulars_0": "Venue",
+            "expense_amount_0": "100",
+            "income_particulars_0": "Ticket",
+            "income_amount_0": "200",
+            "review_submit": "1",
+        }
+        resp2 = self.client.post(
+            reverse("emt:submit_proposal_with_pk", args=[pid]), initial
+        )
+        self.assertEqual(resp2.status_code, 302)
+
+        # Edit without resubmitting speaker/expense/income fields
+        edited = {**self._payload(), "review_submit": "1", "event_title": "Updated"}
+        resp3 = self.client.post(
+            reverse("emt:submit_proposal_with_pk", args=[pid]), edited
+        )
+        self.assertEqual(resp3.status_code, 302)
+
+        resp4 = self.client.get(reverse("emt:review_proposal", args=[pid]))
+        self.assertContains(resp4, "Alice")
+        self.assertContains(resp4, "Venue")
+        self.assertContains(resp4, "Ticket")
 
     def test_review_displays_all_sections(self):
         resp = self.client.post(
