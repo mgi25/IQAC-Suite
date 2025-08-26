@@ -15,6 +15,13 @@ body {
   transition: background var(--transition-base), color var(--transition-base);
 }
 
+.review-proposal-container {
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 2rem 1rem 3rem;
+}
+
 /* Reusable Card Component */
 .card-base {
   background: var(--white);
@@ -155,6 +162,38 @@ body {
   background: var(--christ-blue-primary);
   color: var(--white);
   outline: none;
+}
+
+/* -------- Proposal Progress -------- */
+.proposal-progress {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 18px 0 28px 0;
+}
+
+.progress-step {
+  position: relative;
+  padding-left: 24px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--gray-600);
+}
+
+.progress-step::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--gray-300);
+}
+
+.progress-step.progress-complete::before {
+  background: var(--christ-blue-primary);
 }
 
 /* Status badge styling inspired by proposal status detail page */
