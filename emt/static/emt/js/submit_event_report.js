@@ -1970,7 +1970,7 @@ function initializeAutosaveIndicators() {
         indicator.find('.indicator-text').text('Saving...');
     });
 
-    $(document).on('autosave:success', function(e) {
+    $(document).on('autosave:success', function(e, data) {
         const indicator = $('#autosave-indicator');
         indicator.removeClass('saving error').addClass('saved');
         indicator.find('.indicator-text').text('Saved');
@@ -1978,7 +1978,7 @@ function initializeAutosaveIndicators() {
             indicator.removeClass('show');
         }, 2000);
 
-        const reportId = e.originalEvent?.detail?.reportId || e.detail?.reportId;
+        const reportId = data?.reportId || e.originalEvent?.detail?.reportId || e.detail?.reportId;
         if (reportId) {
             const attendanceUrl = `${window.ATTENDANCE_URL_BASE}${reportId}/attendance/upload/`;
             $('#attendance-modern')
