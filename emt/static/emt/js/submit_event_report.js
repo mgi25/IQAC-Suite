@@ -1947,136 +1947,18 @@ function setupDynamicActivities() {
     render();
 }
 
-function setupAttendanceModal() {
+function setupAttendanceLink() {
     const attendanceField = $('#attendance-modern');
-    const modal = $('#attendanceModal');
-    const notesField = $('#attendance-data');
-    const participantInput = $('#num-participants-modern');
-    const volunteerInput = $('#num-volunteers-modern');
-
-    if (!attendanceField.length || !modal.length) return;
-
-    let participants = [];
-
-    if (notesField.val()) {
-        try {
-            participants = JSON.parse(notesField.val());
-            const present = participants.filter(p => !p.absent);
-            attendanceField.val(present.map(p => p.name).join(', '));
-            participantInput.val(present.length);
-            const volunteerCount = present.filter(p => p.student_volunteer).length;
-            volunteerInput.val(volunteerCount).trigger('change').trigger('input');
-        } catch (e) {
-            participants = [];
-        }
-    }
+    if (!attendanceField.length) return;
 
     attendanceField.prop('readonly', true).css('cursor', 'pointer');
+    const url = attendanceField.data('attendance-url');
     $(document).off('click', '#attendance-modern').on('click', '#attendance-modern', () => {
-        renderList();
-        modal.addClass('show');
-    });
-    $('#attendanceCancel').off('click').on('click', () => modal.removeClass('show'));
-
-    function toBool(val) {
-        const v = String(val || '').trim().toLowerCase();
-        return ['yes', 'true', '1', 'y'].includes(v);
-    }
-
-    function parseCSV(text) {
-        if (window.Papa) {
-            const result = Papa.parse(text.trim(), { skipEmptyLines: true });
-            return result.data.slice(1).map(row => {
-                const cells = row.map(c => (c || '').trim());
-                while (cells.length < 5) cells.push('');
-                return cells.slice(0, 5);
-            });
+        if (url) {
+            window.location.href = url;
+        } else {
+            alert('Save report to manage attendance via CSV');
         }
-        return text.trim().split(/\r?\n/).slice(1).map(line => {
-            const cells = line.split(',').map(c => c.trim());
-            while (cells.length < 5) cells.push('');
-            return cells.slice(0, 5);
-        });
-    }
-
-    function handleFile(file, type) {
-        if (!file) return;
-        showLoadingOverlay('Processing file...');
-        const reader = new FileReader();
-        reader.onload = e => {
-            const rows = parseCSV(e.target.result);
-            rows.forEach(cells => {
-                const [number, name, class_or_dept, absent, student_volunteer] = cells;
-                const obj = {
-                    number,
-                    name,
-                    class_or_dept,
-                    absent: toBool(absent),
-                    student_volunteer: toBool(student_volunteer),
-                    type
-                };
-                participants.push(obj);
-                if (type === 'faculty' && !obj.class_or_dept && obj.number) {
-                    fetchWithOverlay(`${window.API_FACULTY}?org_id=${window.PROPOSAL_ORG_ID}&q=${encodeURIComponent(obj.number)}`, { credentials: 'include' }, 'Fetching faculty details...')
-                        .then(r => r.json())
-                        .then(data => {
-                            if (data.length) {
-                                obj.class_or_dept = data[0].department || '';
-                                renderList();
-                            }
-                        })
-                        .catch(() => {});
-                }
-            });
-            renderList();
-            hideLoadingOverlay();
-        };
-        reader.onerror = () => hideLoadingOverlay();
-        reader.readAsText(file);
-    }
-
-    $('#studentCsv').off('change').on('change', function() {
-        handleFile(this.files[0], 'student');
-        this.value = '';
-    });
-    $('#facultyCsv').off('change').on('change', function() {
-        handleFile(this.files[0], 'faculty');
-        this.value = '';
-    });
-
-    function renderList() {
-        const list = $('#attendanceList');
-        if (!participants.length) {
-            list.html('<p>No participants loaded.</p>');
-            return;
-        }
-        let html = '<table class="attendance-table" style="table-layout: fixed; white-space: nowrap;"><thead><tr><th>Name</th><th>Reg/Emp No</th><th>Class/Dept</th><th>Absent</th><th>Student Volunteer</th></tr></thead><tbody>';
-        participants.forEach((p, i) => {
-            html += `<tr><td>${p.name}</td><td>${p.number || ''}</td><td>${p.class_or_dept || ''}</td>` +
-                    `<td><input type="checkbox" class="absent-toggle" data-index="${i}"${p.absent ? ' checked' : ''}></td>` +
-                    `<td><input type="checkbox" class="volunteer-toggle" data-index="${i}"${p.student_volunteer ? ' checked' : ''}></td></tr>`;
-        });
-        html += '</tbody></table>';
-        list.html(html);
-    }
-
-    $('#attendanceList').on('change', '.absent-toggle', function() {
-        const idx = $(this).data('index');
-        participants[idx].absent = this.checked;
-    });
-    $('#attendanceList').on('change', '.volunteer-toggle', function() {
-        const idx = $(this).data('index');
-        participants[idx].student_volunteer = this.checked;
-    });
-
-    $('#attendanceSave').off('click').on('click', () => {
-        notesField.val(JSON.stringify(participants)).trigger('change').trigger('input');
-        const present = participants.filter(p => !p.absent);
-        attendanceField.val(present.map(p => p.name).join(', ')).trigger('change').trigger('input');
-        participantInput.val(present.length).trigger('change').trigger('input');
-        const volunteerCount = present.filter(p => p.student_volunteer).length;
-        volunteerInput.val(volunteerCount).trigger('change').trigger('input');
-        modal.removeClass('show');
     });
 }
 
@@ -2112,7 +1994,7 @@ function initializeAutosaveIndicators() {
 $(document).ready(function() {
     initializeSectionSpecificHandlers();
     setupDynamicActivities();
-    setupAttendanceModal();
+    setupAttendanceLink();
     if (window.ReportAutosaveManager) {
         ReportAutosaveManager.reinitialize();
     }

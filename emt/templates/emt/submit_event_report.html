@@ -202,10 +202,10 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="attendance-modern">Attendance *</label>
-                                <input type="text" id="attendance-modern" readonly value="Present: {{ attendance_present }}, Absent: {{ attendance_absent }}, Volunteers: {{ attendance_volunteers }}">
+                                <input type="text" id="attendance-modern" readonly value="Present: {{ attendance_present }}, Absent: {{ attendance_absent }}, Volunteers: {{ attendance_volunteers }}" {% if report %}data-attendance-url="{% url 'emt:attendance_upload' report.id %}"{% endif %}>
                                 <input type="hidden" id="num-participants-modern" name="num_participants" value="{{ attendance_present }}">
                                 {% if report %}
-                                <div class="help-text"><a href="{% url 'emt:attendance_upload' report.id %}">Manage via CSV</a></div>
+                                <div class="help-text">Click attendance box to manage via CSV</div>
                                 {% else %}
                                 <div class="help-text">Save report to manage attendance via CSV</div>
                                 {% endif %}
@@ -321,22 +321,6 @@
         <div class="modal-actions" style="margin-top: 20px; text-align: center;">
             <button type="button" id="sdgCancel" class="btn-draft-section" style="margin-right: 10px;">Cancel</button>
             <button type="button" id="sdgSave" class="btn-save-section">Save Selection</button>
-        </div>
-    </div>
-</div>
-
-<!-- Attendance Modal -->
-<div id="attendanceModal" class="attendance-modal">
-    <div class="modal-content">
-        <h3>Upload Attendance</h3>
-        <div class="upload-row" style="margin-bottom: 15px;">
-            <label>Student CSV <input type="file" id="studentCsv" accept=".csv"></label>
-            <label style="margin-left:10px;">Faculty CSV <input type="file" id="facultyCsv" accept=".csv"></label>
-        </div>
-        <div id="attendanceList" class="attendance-options"></div>
-        <div class="modal-actions" style="margin-top: 20px; text-align: center;">
-            <button type="button" id="attendanceCancel" class="btn-draft-section" style="margin-right: 10px;">Cancel</button>
-            <button type="button" id="attendanceSave" class="btn-save-section">Save Attendance</button>
         </div>
     </div>
 </div>
