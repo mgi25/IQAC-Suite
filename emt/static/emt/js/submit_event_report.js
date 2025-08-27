@@ -1978,7 +1978,7 @@ function initializeAutosaveIndicators() {
             indicator.removeClass('show');
         }, 2000);
 
-        const reportId = e.originalEvent && e.originalEvent.detail && e.originalEvent.detail.reportId;
+        const reportId = e.originalEvent?.detail?.reportId || e.detail?.reportId;
         if (reportId) {
             const attendanceUrl = `${window.ATTENDANCE_URL_BASE}${reportId}/attendance/upload/`;
             $('#attendance-modern')
