@@ -113,15 +113,21 @@ class SubmitEventReportViewTests(TestCase):
         url = reverse("emt:submit_event_report", args=[self.proposal.id])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, "Manage via CSV", html=False)
+        self.assertContains(
+            response, "Save report to manage attendance via CSV", html=False
+        )
+        self.assertNotContains(response, "data-attendance-url", html=False)
 
         report = EventReport.objects.create(proposal=self.proposal)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Manage via CSV", html=False)
+        self.assertContains(
+            response, "Click attendance box to manage via CSV", html=False
+        )
+        attendance_url = reverse("emt:attendance_upload", args=[report.id])
         self.assertContains(
             response,
-            reverse("emt:attendance_upload", args=[report.id]),
+            f'data-attendance-url="{attendance_url}"',
             html=False,
         )
 
