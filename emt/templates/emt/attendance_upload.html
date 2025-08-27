@@ -43,6 +43,13 @@
         <tbody></tbody>
     </table>
 
+    <div id="grouped-sections" class="mt-4">
+        <h2>Students (Class-wise)</h2>
+        <div id="students-group"></div>
+        <h2 class="mt-3">Faculty (Organization-wise)</h2>
+        <div id="faculty-group"></div>
+    </div>
+
     <div class="actions">
         <button id="save-event-report" class="btn btn-primary">Save to Event Report</button>
         <button id="download-csv" class="btn btn-secondary">Download CSV</button>
@@ -56,6 +63,8 @@
     const dataUrl = "{% url 'emt:attendance_data' report.id %}";
     const downloadFilename = "student_audience_{{ report.id }}.csv";
     const csrftoken = '{{ csrf_token }}';
+    const initialStudents = {{ students_group_json|default:'{}'|safe }};
+    const initialFaculty = {{ faculty_group_json|default:'{}'|safe }};
 </script>
 <script src="{% static 'emt/js/attendance.js' %}"></script>
 {% endblock %}

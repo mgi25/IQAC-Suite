@@ -2151,6 +2151,32 @@ def download_audience_csv(request, proposal_id):
     return response
 
 
+def _group_attendance_rows(rows):
+    """Separate rows into students by class and faculty by organization."""
+    reg_nos = [r.get("registration_no") for r in rows if r.get("registration_no")]
+    student_map = {
+        s.registration_number: s
+        for s in Student.objects.filter(registration_number__in=reg_nos)
+    }
+    faculty_memberships = {
+        m.user.username: m.organization.name
+        for m in OrganizationMembership.objects.filter(
+            user__username__in=reg_nos, role="faculty"
+        ).select_related("organization")
+    }
+    students_by_class = {}
+    faculty_by_org = {}
+    for row in rows:
+        reg_no = row.get("registration_no")
+        if reg_no in student_map:
+            cls = row.get("student_class") or "Unknown"
+            students_by_class.setdefault(cls, []).append(row["full_name"])
+        else:
+            org = faculty_memberships.get(reg_no, "Unknown")
+            faculty_by_org.setdefault(org, []).append(row["full_name"])
+    return students_by_class, faculty_by_org
+
+
 @login_required
 def upload_attendance_csv(request, report_id):
     """Upload and preview attendance CSV for an event report."""
@@ -2178,17 +2204,31 @@ def upload_attendance_csv(request, report_id):
             "absent": len([r for r in rows if r.get("absent")]),
             "volunteers": len([r for r in rows if r.get("volunteer")]),
         }
+        student_groups, faculty_groups = _group_attendance_rows(rows)
     else:
+        saved_rows = [
+            {
+                "registration_no": r.registration_no,
+                "full_name": r.full_name,
+                "student_class": r.student_class,
+                "absent": r.absent,
+                "volunteer": r.volunteer,
+            }
+            for r in report.attendance_rows.all()
+        ]
         counts = {
             "total": report.attendance_rows.count(),
             "present": report.attendance_rows.filter(absent=False).count(),
             "absent": report.attendance_rows.filter(absent=True).count(),
             "volunteers": report.attendance_rows.filter(volunteer=True).count(),
         }
+        student_groups, faculty_groups = _group_attendance_rows(saved_rows)
 
     context = {
         "report": report,
         "rows_json": json.dumps(rows_page),
+        "students_group_json": json.dumps(student_groups),
+        "faculty_group_json": json.dumps(faculty_groups),
         "error": error,
         "page": page,
         "has_prev": page > 1,
@@ -2255,8 +2295,14 @@ def attendance_data(request, report_id):
         "absent": len([r for r in rows if r.get("absent")]),
         "volunteers": len([r for r in rows if r.get("volunteer")]),
     }
+    student_groups, faculty_groups = _group_attendance_rows(rows)
     logger.info("Fetched attendance data for report %s", report_id)
-    return JsonResponse({"rows": rows, "counts": counts})
+    return JsonResponse({
+        "rows": rows,
+        "counts": counts,
+        "students": student_groups,
+        "faculty": faculty_groups,
+    })
 
 
 @login_required
