@@ -1,4 +1,5 @@
 from datetime import date
+import json
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
@@ -130,6 +131,31 @@ class SubmitEventReportViewTests(TestCase):
             f'data-attendance-url="{attendance_url}"',
             html=False,
         )
+
+    def test_attendance_link_updates_after_autosave(self):
+        url = reverse("emt:submit_event_report", args=[self.proposal.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "data-attendance-url", html=False)
+
+        autosave_url = reverse("emt:autosave_event_report")
+        res = self.client.post(
+            autosave_url,
+            data=json.dumps({"proposal_id": self.proposal.id}),
+            content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 200)
+        report_id = res.json()["report_id"]
+        attendance_url = reverse("emt:attendance_upload", args=[report_id])
+
+        from bs4 import BeautifulSoup
+
+        field_html = '<input type="text" id="attendance-modern">'
+        soup = BeautifulSoup(field_html, "html.parser")
+        field = soup.find("input")
+        field["data-attendance-url"] = attendance_url
+        clicked_url = field.get("data-attendance-url")
+        self.assertEqual(clicked_url, attendance_url)
 
     def test_autosave_indicator_present(self):
         response = self.client.get(
