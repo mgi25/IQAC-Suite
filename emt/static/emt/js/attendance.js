@@ -2,6 +2,8 @@ document.addEventListener('DOMContentLoaded', function () {
     let rows = initialRows || [];
     const perPage = 100;
     let currentPage = 1;
+    let studentsGrouped = initialStudents || {};
+    let facultyGrouped = initialFaculty || {};
 
     const tableBody = document.querySelector('#attendance-table tbody');
     const totalEl = document.getElementById('total-count');
@@ -9,6 +11,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const absentEl = document.getElementById('absent-count');
     const volunteerEl = document.getElementById('volunteer-count');
     const loadingEl = document.getElementById('loading');
+    const studentsGroupEl = document.getElementById('students-group');
+    const facultyGroupEl = document.getElementById('faculty-group');
 
     function renderTable() {
         tableBody.innerHTML = '';
@@ -37,6 +41,40 @@ document.addEventListener('DOMContentLoaded', function () {
         presentEl.textContent = present;
         absentEl.textContent = absent;
         volunteerEl.textContent = volunteers;
+    }
+
+    function renderGroups() {
+        studentsGroupEl.innerHTML = '';
+        Object.keys(studentsGrouped).forEach(cls => {
+            const div = document.createElement('div');
+            const h = document.createElement('h4');
+            h.textContent = cls;
+            div.appendChild(h);
+            const ul = document.createElement('ul');
+            studentsGrouped[cls].forEach(name => {
+                const li = document.createElement('li');
+                li.textContent = name;
+                ul.appendChild(li);
+            });
+            div.appendChild(ul);
+            studentsGroupEl.appendChild(div);
+        });
+
+        facultyGroupEl.innerHTML = '';
+        Object.keys(facultyGrouped).forEach(org => {
+            const div = document.createElement('div');
+            const h = document.createElement('h4');
+            h.textContent = org;
+            div.appendChild(h);
+            const ul = document.createElement('ul');
+            facultyGrouped[org].forEach(name => {
+                const li = document.createElement('li');
+                li.textContent = name;
+                ul.appendChild(li);
+            });
+            div.appendChild(ul);
+            facultyGroupEl.appendChild(div);
+        });
     }
 
     tableBody.addEventListener('change', function (e) {
@@ -113,7 +151,10 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(r => r.json())
             .then(data => {
                 rows = data.rows || [];
+                studentsGrouped = data.students || {};
+                facultyGrouped = data.faculty || {};
                 renderTable();
+                renderGroups();
             })
             .finally(() => {
                 loadingEl.style.display = 'none';
@@ -125,5 +166,6 @@ document.addEventListener('DOMContentLoaded', function () {
         fetchRows();
     } else {
         renderTable();
+        renderGroups();
     }
 });

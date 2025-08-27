@@ -3,7 +3,17 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 import json
 
-from emt.models import EventProposal, CDLSupport
+from emt.models import (
+    EventProposal,
+    CDLSupport,
+    EventNeedAnalysis,
+    EventObjectives,
+    EventExpectedOutcomes,
+    TentativeFlow,
+    SpeakerProfile,
+    ExpenseDetail,
+    IncomeDetail,
+)
 from core.models import (
     OrganizationType,
     Organization,
@@ -19,8 +29,12 @@ class ProposalReviewFlowTests(TestCase):
         self.faculty_role = OrganizationRole.objects.create(
             organization=self.org, name="Faculty"
         )
-        self.user = User.objects.create(username="u1", first_name="Test", email="u1@example.com")
-        RoleAssignment.objects.create(user=self.user, role=self.faculty_role, organization=self.org)
+        self.user = User.objects.create(
+            username="u1", first_name="Test", email="u1@example.com"
+        )
+        RoleAssignment.objects.create(
+            user=self.user, role=self.faculty_role, organization=self.org
+        )
         self.client.force_login(self.user)
 
     def _payload(self):
@@ -41,11 +55,17 @@ class ProposalReviewFlowTests(TestCase):
 
         post_data = self._payload()
         post_data["review_submit"] = "1"
-        resp2 = self.client.post(reverse("emt:submit_proposal_with_pk", args=[pid]), post_data)
+        resp2 = self.client.post(
+            reverse("emt:submit_proposal_with_pk", args=[pid]), post_data
+        )
         self.assertEqual(resp2.status_code, 302)
-        self.assertIn(reverse("emt:review_proposal", args=[pid]), resp2.headers["Location"])
+        self.assertIn(
+            reverse("emt:review_proposal", args=[pid]), resp2.headers["Location"]
+        )
 
-        resp3 = self.client.post(reverse("emt:review_proposal", args=[pid]), {"final_submit": "1"})
+        resp3 = self.client.post(
+            reverse("emt:review_proposal", args=[pid]), {"final_submit": "1"}
+        )
         self.assertEqual(resp3.status_code, 302)
         proposal = EventProposal.objects.get(id=pid)
         self.assertEqual(proposal.status, EventProposal.Status.SUBMITTED)
@@ -98,9 +118,13 @@ class ProposalReviewFlowTests(TestCase):
         pid = resp.json()["proposal_id"]
 
         post_data = {"needs_support": "on", "review_submit": "1"}
-        resp2 = self.client.post(reverse("emt:submit_cdl_support", args=[pid]), post_data)
+        resp2 = self.client.post(
+            reverse("emt:submit_cdl_support", args=[pid]), post_data
+        )
         self.assertEqual(resp2.status_code, 302)
-        self.assertIn(reverse("emt:review_proposal", args=[pid]), resp2.headers["Location"])
+        self.assertIn(
+            reverse("emt:review_proposal", args=[pid]), resp2.headers["Location"]
+        )
 
         proposal = EventProposal.objects.get(id=pid)
         self.assertEqual(proposal.status, EventProposal.Status.DRAFT)
@@ -130,3 +154,142 @@ class ProposalReviewFlowTests(TestCase):
         self.assertContains(resp2, "AI need")
         self.assertContains(resp2, "AI objectives")
         self.assertContains(resp2, "AI outcomes")
+
+    def test_review_lists_speakers_expenses_and_income(self):
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(self._payload()),
+            content_type="application/json",
+        )
+        pid = resp.json()["proposal_id"]
+        proposal = EventProposal.objects.get(id=pid)
+
+        SpeakerProfile.objects.create(
+            proposal=proposal,
+            full_name="Alice",
+            designation="Prof",
+            affiliation="Uni",
+            contact_email="a@example.com",
+            contact_number="123",
+            detailed_profile="Bio",
+        )
+        SpeakerProfile.objects.create(
+            proposal=proposal,
+            full_name="Bob",
+            designation="Dr",
+            affiliation="Institute",
+            contact_email="b@example.com",
+            contact_number="321",
+            detailed_profile="Bio2",
+        )
+        ExpenseDetail.objects.create(
+            proposal=proposal, sl_no=1, particulars="Venue", amount=100
+        )
+        ExpenseDetail.objects.create(
+            proposal=proposal, sl_no=2, particulars="Refreshments", amount=200
+        )
+        IncomeDetail.objects.create(
+            proposal=proposal,
+            sl_no=1,
+            particulars="Ticket",
+            participants=5,
+            rate=50,
+            amount=250,
+        )
+
+        resp2 = self.client.get(reverse("emt:review_proposal", args=[pid]))
+        # Speakers appear
+        self.assertContains(resp2, "Alice")
+        self.assertContains(resp2, "Prof")
+        self.assertContains(resp2, "Bob")
+        self.assertContains(resp2, "Dr")
+        # Expenses appear
+        self.assertContains(resp2, "Venue")
+        self.assertContains(resp2, "100")
+        self.assertContains(resp2, "Refreshments")
+        self.assertContains(resp2, "200")
+        # Income appears
+        self.assertContains(resp2, "Ticket")
+        self.assertContains(resp2, "250")
+
+    def test_edit_retains_speakers_expenses_and_income(self):
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(self._payload()),
+            content_type="application/json",
+        )
+        pid = resp.json()["proposal_id"]
+
+        initial = {
+            **self._payload(),
+            "speaker_full_name_0": "Alice",
+            "speaker_designation_0": "Prof",
+            "speaker_affiliation_0": "Uni",
+            "speaker_contact_email_0": "a@example.com",
+            "expense_particulars_0": "Venue",
+            "expense_amount_0": "100",
+            "income_particulars_0": "Ticket",
+            "income_amount_0": "200",
+            "review_submit": "1",
+        }
+        resp2 = self.client.post(
+            reverse("emt:submit_proposal_with_pk", args=[pid]), initial
+        )
+        self.assertEqual(resp2.status_code, 302)
+
+        # Edit without resubmitting speaker/expense/income fields
+        edited = {**self._payload(), "review_submit": "1", "event_title": "Updated"}
+        resp3 = self.client.post(
+            reverse("emt:submit_proposal_with_pk", args=[pid]), edited
+        )
+        self.assertEqual(resp3.status_code, 302)
+
+        resp4 = self.client.get(reverse("emt:review_proposal", args=[pid]))
+        self.assertContains(resp4, "Alice")
+        self.assertContains(resp4, "Venue")
+        self.assertContains(resp4, "Ticket")
+
+    def test_review_displays_all_sections(self):
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(self._payload()),
+            content_type="application/json",
+        )
+        pid = resp.json()["proposal_id"]
+        proposal = EventProposal.objects.get(id=pid)
+
+        EventNeedAnalysis.objects.create(proposal=proposal, content="Need content")
+        EventObjectives.objects.create(proposal=proposal, content="Objective content")
+        EventExpectedOutcomes.objects.create(
+            proposal=proposal, content="Outcome content"
+        )
+        TentativeFlow.objects.create(proposal=proposal, content="Flow content")
+        SpeakerProfile.objects.create(
+            proposal=proposal,
+            full_name="Alice",
+            designation="Prof",
+            affiliation="Uni",
+            contact_email="a@example.com",
+            contact_number="123",
+            detailed_profile="Bio",
+        )
+        ExpenseDetail.objects.create(
+            proposal=proposal, sl_no=1, particulars="Venue", amount=100
+        )
+        IncomeDetail.objects.create(
+            proposal=proposal,
+            sl_no=1,
+            particulars="Ticket",
+            participants=10,
+            rate=100,
+            amount=1000,
+        )
+
+        resp2 = self.client.get(reverse("emt:review_proposal", args=[pid]))
+        self.assertContains(resp2, "Need content")
+        self.assertContains(resp2, "Objective content")
+        self.assertContains(resp2, "Outcome content")
+        self.assertContains(resp2, "Flow content")
+        self.assertContains(resp2, "Alice")
+        self.assertContains(resp2, "Venue")
+        self.assertContains(resp2, "Ticket")

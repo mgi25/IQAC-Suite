@@ -202,9 +202,13 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="attendance-modern">Attendance *</label>
-                                <input type="text" id="attendance-modern" readonly value="Present: {{ attendance_present }}, Absent: {{ attendance_absent }}, Volunteers: {{ attendance_volunteers }}">
+                                <input type="text" id="attendance-modern" readonly value="Present: {{ attendance_present }}, Absent: {{ attendance_absent }}, Volunteers: {{ attendance_volunteers }}" {% if report %}data-attendance-url="{% url 'emt:attendance_upload' report.id %}"{% endif %}>
                                 <input type="hidden" id="num-participants-modern" name="num_participants" value="{{ attendance_present }}">
-                                <div class="help-text"><a href="{% url 'emt:attendance_upload' report.id %}">Manage via CSV</a></div>
+                                {% if report %}
+                                <div class="help-text">Click attendance box to manage via CSV</div>
+                                {% else %}
+                                <div class="help-text">Save report to manage attendance via CSV</div>
+                                {% endif %}
                                 {% if form.num_participants.errors %}
                                     <div class="field-error">{{ form.num_participants.errors.0 }}</div>
                                 {% endif %}
@@ -278,7 +282,6 @@
                         <div class="form-row full-width">
                             <div class="save-section-container" style="display: flex; flex-direction: column; align-items: center;">
                                 <button type="button" class="btn-save-section" style="margin-bottom: 0.5rem;">Save & Continue</button>
-                                <button type="submit" name="save_draft" class="btn-draft-section">Save as Draft</button>
                                 <div class="save-help-text" style="margin-top: 0.75rem;">Complete this section to unlock the next one</div>
                             </div>
                         </div>
@@ -288,7 +291,6 @@
 
             <div class="submit-section hidden">
                 <button type="submit" name="final_submit" class="btn-submit" id="submit-report-btn" disabled>Submit Report</button>
-                <button type="submit" name="save_draft" class="btn-draft" id="save-draft-btn">Save as Draft</button>
                 <div class="submit-help-text">Complete all sections above to enable submission</div>
             </div>
 
@@ -323,20 +325,9 @@
     </div>
 </div>
 
-<!-- Attendance Modal -->
-<div id="attendanceModal" class="attendance-modal">
-    <div class="modal-content">
-        <h3>Upload Attendance</h3>
-        <div class="upload-row" style="margin-bottom: 15px;">
-            <label>Student CSV <input type="file" id="studentCsv" accept=".csv"></label>
-            <label style="margin-left:10px;">Faculty CSV <input type="file" id="facultyCsv" accept=".csv"></label>
-        </div>
-        <div id="attendanceList" class="attendance-options"></div>
-        <div class="modal-actions" style="margin-top: 20px; text-align: center;">
-            <button type="button" id="attendanceCancel" class="btn-draft-section" style="margin-right: 10px;">Cancel</button>
-            <button type="button" id="attendanceSave" class="btn-save-section">Save Attendance</button>
-        </div>
-    </div>
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <p>Loading...</p>
 </div>
 
 {% endblock %}
@@ -355,6 +346,7 @@
         window.REPORT_ID = "{{ report.id|default:'' }}";
         window.PROPOSAL_ID = "{{ proposal.id|default:'' }}";
         window.REPORT_STATUS = "{{ report.status|default:'draft' }}";
+        window.CAN_AUTOSAVE = {{ can_autosave|yesno:"true,false" }};
         window.REPORT_ACTUAL_EVENT_TYPE = "{{ form.actual_event_type.value|default:'' }}";
         window.AUTOSAVE_URL = "{% url 'emt:autosave_event_report' %}";
         window.AUTOSAVE_CSRF = "{{ csrf_token }}";

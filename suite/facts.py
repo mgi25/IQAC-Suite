@@ -7,7 +7,7 @@ BASIC_FIELDS = [
     "organization_type", "department", "committees_collaborations",
     "event_title", "target_audience", "event_focus_type", "location",
     "start_date", "end_date", "academic_year",
-    "pos_pso_management", "sdg_goals",
+    "pos_pso_management", "sdg_goals", "sdg_value_systems_mapping",
     "num_activities", "student_coordinators", "faculty_incharges",
     "additional_context",
 ]
@@ -42,6 +42,7 @@ def collect_basic_facts(request, field_names: List[str] | None = None) -> Dict[s
         "academic_year": get("academic_year", "") or "[TBD]",
         "pos_pso_management": get("pos_pso_management", get("pos_pso", "")) or "[TBD]",
         "sdg_goals": request.POST.getlist("sdg_goals[]") or request.POST.getlist("sdg_goals") or [],
+        "sdg_value_systems_mapping": get("sdg_value_systems_mapping", "") or "[TBD]",
         "num_activities": get("num_activities", "") or "[TBD]",
         "student_coordinators": request.POST.getlist("student_coordinators[]") or [],
         "faculty_incharges": request.POST.getlist("faculty_incharges[]") or [],
