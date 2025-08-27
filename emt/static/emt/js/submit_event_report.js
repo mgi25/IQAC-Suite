@@ -1951,15 +1951,22 @@ function setupAttendanceLink() {
     const attendanceField = $('#attendance-modern');
     if (!attendanceField.length) return;
 
-    attendanceField.prop('readonly', true).css('cursor', 'pointer');
-    $(document).off('click', '#attendance-modern').on('click', '#attendance-modern', () => {
-        const url = attendanceField.data('attendance-url');
-        if (url) {
-            window.location.href = url;
-        } else {
-            alert('Save report to manage attendance via CSV');
-        }
-    });
+    const url = attendanceField.data('attendance-url');
+    attendanceField
+        .prop('readonly', true)
+        .css('cursor', 'pointer')
+        .attr('href', url || '#');
+
+    $(document)
+        .off('click', '#attendance-modern')
+        .on('click', '#attendance-modern', () => {
+            const href = attendanceField.data('attendance-url');
+            if (href) {
+                window.location.href = href;
+            } else {
+                alert('Save report to manage attendance via CSV');
+            }
+        });
 }
 
 
@@ -1980,7 +1987,7 @@ function initializeAutosaveIndicators() {
 
         const reportId = data?.reportId || e.originalEvent?.detail?.reportId || e.detail?.reportId;
         if (reportId) {
-            const attendanceUrl = `${window.ATTENDANCE_URL_BASE}${reportId}/attendance/upload/`;
+            const attendanceUrl = `/reports/${reportId}/attendance/upload/`;
             $('#attendance-modern')
                 .attr('data-attendance-url', attendanceUrl)
                 .data('attendance-url', attendanceUrl);

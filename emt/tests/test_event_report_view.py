@@ -147,7 +147,6 @@ class SubmitEventReportViewTests(TestCase):
         self.assertEqual(res.status_code, 200)
         report_id = res.json()["report_id"]
         attendance_url = reverse("emt:attendance_upload", args=[report_id])
-        base_url = reverse("emt:attendance_upload", args=[0]).rsplit("0/", 1)[0]
 
         # Run a tiny Node script that loads initializeAutosaveIndicators, dispatches
         # autosave:success via $(document).trigger and prints the updated link.
@@ -167,23 +166,34 @@ function extract(name){
   return src.slice(start, idx);
 }
 const initCode = extract('initializeAutosaveIndicators');
+const setupCode = extract('setupAttendanceLink');
 const handlers={};
 const document={};
+const docObj={
+  on:(ev,fn)=>{(handlers[ev]=handlers[ev]||[]).push(fn);return docObj;},
+  trigger:(ev,data)=>{(handlers[ev]||[]).forEach(fn=>fn({type:ev}, data));},
+  off:()=>docObj
+};
 function $(sel){
- if(sel===document) return {on:(ev,fn)=>{(handlers[ev]=handlers[ev]||[]).push(fn);}, trigger:(ev,data)=>{(handlers[ev]||[]).forEach(fn=>fn({type:ev}, data));}, off:()=>{}};
+ if(sel===document) return docObj;
  if(sel==='#attendance-modern') return attendanceEl;
  if(sel==='#autosave-indicator') return indicatorEl;
 }
-const attendanceEl={attrs:{},dataStore:{},length:1,attr:function(n,v){if(v===undefined)return this.attrs[n];this.attrs[n]=v;return this;},data:function(n,v){if(v===undefined)return this.dataStore[n];this.dataStore[n]=v;return this;},prop:function(){return this;},css:function(){return this;}};
+const attendanceEl={attrs:{},dataStore:{},length:1,
+  attr:function(n,v){if(v===undefined)return this.attrs[n];this.attrs[n]=v;return this;},
+  data:function(n,v){if(v===undefined)return this.dataStore[n];this.dataStore[n]=v;return this;},
+  prop:function(){return this;},
+  css:function(){return this;}
+};
 const indicatorEl={removeClass:function(){return this;},addClass:function(){return this;},find:function(){return {text:function(){}};},length:1};
-function setupAttendanceLink(){}
-const window={ATTENDANCE_URL_BASE:'__BASE_URL__'};
+const window={location:{}};
+eval(setupCode);
 eval(initCode);
 initializeAutosaveIndicators();
 $(document).trigger('autosave:success', {reportId:__REPORT_ID__});
-console.log(attendanceEl.attrs['data-attendance-url']);
+console.log(attendanceEl.attrs['href']);
 '''
-        node_script = node_script.replace('__SUBMIT_JS__', str(submit_js)).replace('__BASE_URL__', base_url).replace('__REPORT_ID__', str(report_id))
+        node_script = node_script.replace('__SUBMIT_JS__', str(submit_js)).replace('__REPORT_ID__', str(report_id))
         with tempfile.TemporaryDirectory() as tmp:
             script_path = Path(tmp) / "run.js"
             script_path.write_text(node_script)
