@@ -190,14 +190,8 @@
                     <td>{{ proposal.conf_sponsorship_amount|default:"—" }}</td>
                   </tr>
                 {% endif %}
-                {% if not proposal.fest_fee_participants and
-                      not proposal.fest_fee_rate and
-                      not proposal.fest_fee_amount and
-                      not proposal.fest_sponsorship_amount and
-                      not proposal.conf_fee_participants and
-                      not proposal.conf_fee_rate and
-                      not proposal.conf_fee_amount and
-                      not proposal.conf_sponsorship_amount %}
+                {% if proposal.fest_fee_participants or proposal.fest_fee_rate or proposal.fest_fee_amount or proposal.fest_sponsorship_amount or proposal.conf_fee_participants or proposal.conf_fee_rate or proposal.conf_fee_amount or proposal.conf_sponsorship_amount %}
+                {% else %}
                   <tr>
                     <td colspan="5">—</td>
                   </tr>
