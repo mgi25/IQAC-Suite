@@ -8,244 +8,251 @@
 <link rel="stylesheet" href="{% static 'emt/css/review_proposal.css' %}">
 
 <div class="review-proposal-container">
-  <div class="overview-card review-header">
-    <div class="review-heading">
-      <h1 class="review-title">Event Proposal Review</h1>
-      <div class="overview-fields">
-        <div><span class="label">Event:</span> {{ proposal.event_title }}</div>
-        <div><span class="label">Submitted by:</span> {{ proposal.submitted_by.get_full_name }} ({{ proposal.submitted_by.email }})</div>
-        <div><span class="label">Created on:</span> {{ proposal.created_at|date:"M d, Y H:i" }}</div>
+  <div class="review-grid">
+    <div class="review-main">
+      <div class="overview-card review-header">
+        <div class="review-heading">
+          <h1 class="review-title">Event Proposal Review</h1>
+          <div class="overview-fields">
+            <div><span class="label">Event:</span> {{ proposal.event_title }}</div>
+            <div><span class="label">Submitted by:</span> {{ proposal.submitted_by.get_full_name }} ({{ proposal.submitted_by.email }})</div>
+            <div><span class="label">Created on:</span> {{ proposal.created_at|date:"M d, Y H:i" }}</div>
+          </div>
+        </div>
+        <div class="review-actions">
+          <a href="{% url 'emt:submit_proposal_with_pk' proposal.id %}" class="btn-save-section">Edit</a>
+          <form method="post" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" name="final_submit" class="btn-submit">Confirm Submit</button>
+          </form>
+        </div>
       </div>
-    </div>
-    <div class="review-actions">
-      <a href="{% url 'emt:submit_proposal_with_pk' proposal.id %}" class="btn-save-section">Edit</a>
-      <form method="post" style="display:inline;">
-        {% csrf_token %}
-        <button type="submit" name="final_submit" class="btn-submit">Confirm Submit</button>
-      </form>
-    </div>
-  </div>
 
-  <div class="event-details-card card-base">
-    <h3>Event Details</h3>
-    <div class="event-details-grid">
-      <div class="field">
-        <span class="field-label">Organization</span>
-        <span class="field-value">{{ proposal.organization.name|default:"—" }}</span>
+      {% url 'emt:submit_need_analysis' proposal.id as need_edit %}
+      {% url 'emt:submit_objectives' proposal.id as obj_edit %}
+      {% url 'emt:submit_expected_outcomes' proposal.id as out_edit %}
+      {% url 'emt:submit_tentative_flow' proposal.id as flow_edit %}
+      {% url 'emt:submit_speaker_profile' proposal.id as speaker_edit %}
+      {% url 'emt:submit_expense_details' proposal.id as expense_edit %}
+      {% url 'emt:submit_cdl_support' proposal.id as cdl_edit %}
+
+      {% include "emt/partials/review_section.html" with title="Need Analysis" body=need_analysis.content edit_url=need_edit %}
+      {% include "emt/partials/review_section.html" with title="Objectives" body=objectives.content edit_url=obj_edit %}
+      {% include "emt/partials/review_section.html" with title="Expected Outcomes" body=outcomes.content edit_url=out_edit %}
+      {% include "emt/partials/review_section.html" with title="Tentative Flow" body=flow.content edit_url=flow_edit %}
+
+      <div class="event-details-card card-base">
+        <div class="review-section-header">
+          <h3>Speaker Profile</h3>
+          <a href="{{ speaker_edit }}" class="section-edit-link">Edit</a>
+        </div>
+        {% if speakers %}
+          <ul class="speaker-profile-list">
+            {% for sp in speakers %}
+              <li class="speaker-profile-block">
+                <strong>{{ sp.full_name }}</strong>{% if sp.designation %}<span class="profile-aff">{{ sp.designation }}</span>{% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="detail-block">—</div>
+        {% endif %}
       </div>
-      <div class="field">
-        <span class="field-label">Committees &amp; Collaborations</span>
-        <span class="field-value">
-          {% if proposal.committees_collaborations %}
-            {{ proposal.committees_collaborations }}
-          {% elif proposal.committees %}
-            {{ proposal.committees }}
-          {% else %}
-            —
-          {% endif %}
-        </span>
-      </div>
-      <div class="field">
-        <span class="field-label">No. of Activities</span>
-        <span class="field-value">{{ proposal.num_activities|default:"—" }}</span>
-      </div>
-      <div class="field">
-        <span class="field-label">Start Date</span>
-        <span class="field-value">
-          {% if proposal.event_start_date %}
-            {{ proposal.event_start_date|date:"M d, Y" }}
-          {% elif proposal.event_datetime %}
-            {{ proposal.event_datetime|date:"M d, Y" }}
-          {% else %}
-            —
-          {% endif %}
-        </span>
-      </div>
-      <div class="field">
-        <span class="field-label">End Date</span>
-        <span class="field-value">
-          {% if proposal.event_end_date %}
-            {{ proposal.event_end_date|date:"M d, Y" }}
-          {% elif proposal.event_datetime %}
-            {{ proposal.event_datetime|date:"M d, Y" }}
-          {% else %}
-            —
-          {% endif %}
-        </span>
-      </div>
-      <div class="field">
-        <span class="field-label">Venue</span>
-        <span class="field-value">{{ proposal.venue|default:"—" }}</span>
-      </div>
-      <div class="field">
-        <span class="field-label">Academic Year</span>
-        <span class="field-value">{{ proposal.academic_year|default:"—" }}</span>
-      </div>
-      <div class="field">
-        <span class="field-label">Target Audience</span>
-        <span class="field-value">{{ proposal.target_audience|default:"—" }}</span>
-      </div>
-      <div class="field">
-        <span class="field-label">POS &amp; PSO</span>
-        <span class="field-value">{{ proposal.pos_pso|default:"—" }}</span>
-      </div>
-      <div class="field">
-        <span class="field-label">SDG Goals</span>
-        <span class="field-value">
-          {% with goals=proposal.sdg_goals.all %}
-            {% if goals %}
-              {% for goal in goals %}
-                {{ goal.name }}{% if not forloop.last %}, {% endif %}
+
+      <div class="fin-row">
+        <div class="fin-half event-details-card card-base">
+          <div class="review-section-header">
+            <h3>Expense Details</h3>
+            <a href="{{ expense_edit }}" class="section-edit-link">Edit</a>
+          </div>
+          {% if expenses %}
+            <table class="review-table">
+              <thead>
+                <tr><th>Sl. No.</th><th>Particulars</th><th>Amount</th></tr>
+              </thead>
+              <tbody>
+              {% for e in expenses %}
+                <tr>
+                  <td>{{ e.sl_no }}</td>
+                  <td>{{ e.particulars }}</td>
+                  <td>{{ e.amount }}</td>
+                </tr>
               {% endfor %}
-            {% else %}
-              —
-            {% endif %}
-          {% endwith %}
-        </span>
-      </div>
-      <div class="field">
-        <span class="field-label">Faculty Incharges</span>
-        <span class="field-value">
-          {% with facs=proposal.faculty_incharges.all %}
-            {% if facs %}
-              {% for fac in facs %}
-                {{ fac.get_full_name|default:fac.username }}{% if not forloop.last %}, {% endif %}
+              </tbody>
+            </table>
+          {% else %}
+            <div class="detail-block">—</div>
+          {% endif %}
+        </div>
+
+        <div class="fin-half event-details-card card-base">
+          <div class="review-section-header">
+            <h3>Income Details</h3>
+            <a href="{{ expense_edit }}" class="section-edit-link">Edit</a>
+          </div>
+          {% if income %}
+            <table class="review-table">
+              <tr><th>Sl. No.</th><th>Particulars</th><th>Participants</th><th>Rate</th><th>Amount</th></tr>
+              {% for i in income %}
+                <tr><td>{{ i.sl_no }}</td><td>{{ i.particulars }}</td><td>{{ i.participants }}</td><td>{{ i.rate }}</td><td>{{ i.amount }}</td></tr>
               {% endfor %}
-            {% else %}
-              —
-            {% endif %}
-          {% endwith %}
-        </span>
+            </table>
+          {% else %}
+            <div class="detail-block">—</div>
+          {% endif %}
+        </div>
       </div>
-      <div class="field">
-        <span class="field-label">Student Coordinators</span>
-        <span class="field-value">{{ proposal.student_coordinators|default:"—" }}</span>
-      </div>
-      <div class="field">
-        <span class="field-label">Type (Focus)</span>
-        <span class="field-value">{{ proposal.event_focus_type|default:"—" }}</span>
-      </div>
-    </div>
-  </div>
 
-  <div class="proposal-progress">
-    <div class="progress-step {% if need_analysis.content %}progress-complete{% endif %}">Need Analysis</div>
-    <div class="progress-step {% if objectives.content %}progress-complete{% endif %}">Objectives</div>
-    <div class="progress-step {% if outcomes.content %}progress-complete{% endif %}">Expected Outcomes</div>
-    <div class="progress-step {% if flow.content %}progress-complete{% endif %}">Tentative Flow</div>
-    <div class="progress-step {% if speakers %}progress-complete{% endif %}">Speakers</div>
-    <div class="progress-step {% if expenses %}progress-complete{% endif %}">Finance</div>
-    <div class="progress-step {% if cdl_support %}progress-complete{% endif %}">CDL Support</div>
-  </div>
-  {% url 'emt:submit_need_analysis' proposal.id as need_edit %}
-  {% url 'emt:submit_objectives' proposal.id as obj_edit %}
-  {% url 'emt:submit_expected_outcomes' proposal.id as out_edit %}
-  {% url 'emt:submit_tentative_flow' proposal.id as flow_edit %}
-  {% url 'emt:submit_speaker_profile' proposal.id as speaker_edit %}
-  {% url 'emt:submit_expense_details' proposal.id as expense_edit %}
-  {% url 'emt:submit_cdl_support' proposal.id as cdl_edit %}
-
-  {% include "emt/partials/review_section.html" with title="Need Analysis" body=need_analysis.content edit_url=need_edit %}
-  {% include "emt/partials/review_section.html" with title="Objectives" body=objectives.content edit_url=obj_edit %}
-  {% include "emt/partials/review_section.html" with title="Expected Outcomes" body=outcomes.content edit_url=out_edit %}
-  {% include "emt/partials/review_section.html" with title="Tentative Flow" body=flow.content edit_url=flow_edit %}
-
-  <div class="event-details-card card-base">
-    <div class="review-section-header">
-      <h3>Speaker Profile</h3>
-      <a href="{{ speaker_edit }}" class="section-edit-link">Edit</a>
-    </div>
-    {% if speakers %}
-      <ul class="speaker-profile-list">
-        {% for sp in speakers %}
-          <li class="speaker-profile-block">
-            <strong>{{ sp.full_name }}</strong>{% if sp.designation %}<span class="profile-aff">{{ sp.designation }}</span>{% endif %}
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <div class="detail-block">—</div>
-    {% endif %}
-  </div>
-
-  <div class="fin-row">
-    <div class="fin-half event-details-card card-base">
-      <div class="review-section-header">
-        <h3>Expense Details</h3>
-        <a href="{{ expense_edit }}" class="section-edit-link">Edit</a>
-      </div>
-      {% if expenses %}
+      {% if cdl_support %}
+      <div class="event-details-card card-base">
+        <div class="review-section-header">
+          <h3>CDL Support</h3>
+          <a href="{{ cdl_edit }}" class="section-edit-link">Edit</a>
+        </div>
         <table class="review-table">
-          <thead>
-            <tr><th>Sl. No.</th><th>Particulars</th><th>Amount</th></tr>
-          </thead>
-          <tbody>
-          {% for e in expenses %}
-            <tr>
-              <td>{{ e.sl_no }}</td>
-              <td>{{ e.particulars }}</td>
-              <td>{{ e.amount }}</td>
-            </tr>
-          {% endfor %}
-          </tbody>
+          <tr><th>Needs Support</th><td>{{ cdl_support.needs_support|yesno:"Yes,No" }}</td></tr>
+          {% if cdl_support.poster_required %}
+          <tr><th>Poster</th><td>{{ cdl_support.get_poster_choice_display }}</td></tr>
+          {% if cdl_support.organization_name %}<tr><th>Organization</th><td>{{ cdl_support.organization_name }}</td></tr>{% endif %}
+          {% if cdl_support.poster_event_title %}<tr><th>Poster Title</th><td>{{ cdl_support.poster_event_title }}</td></tr>{% endif %}
+          {% if cdl_support.poster_date %}<tr><th>Poster Date</th><td>{{ cdl_support.poster_date }}</td></tr>{% endif %}
+          {% if cdl_support.poster_time %}<tr><th>Poster Time</th><td>{{ cdl_support.poster_time }}</td></tr>{% endif %}
+          {% if cdl_support.poster_venue %}<tr><th>Poster Venue</th><td>{{ cdl_support.poster_venue }}</td></tr>{% endif %}
+          {% if cdl_support.resource_person_name %}
+          <tr><th>Resource Person</th><td>{{ cdl_support.resource_person_name }}{% if cdl_support.resource_person_designation %} ({{ cdl_support.resource_person_designation }}){% endif %}</td></tr>
+          {% endif %}
+          {% if cdl_support.poster_summary %}<tr><th>Poster Summary</th><td>{{ cdl_support.poster_summary|linebreaksbr }}</td></tr>{% endif %}
+          {% if cdl_support.poster_design_link %}<tr><th>Poster Design Link</th><td><a href="{{ cdl_support.poster_design_link }}">{{ cdl_support.poster_design_link }}</a></td></tr>{% endif %}
+          {% endif %}
+          {% if cdl_support.certificates_required %}
+          <tr><th>Certificates</th><td>{{ cdl_support.get_certificate_choice_display }}</td></tr>
+          {% if cdl_support.certificate_help %}<tr><th>Certificate Help</th><td>Yes</td></tr>{% endif %}
+          {% if cdl_support.certificate_design_link %}<tr><th>Certificate Design Link</th><td><a href="{{ cdl_support.certificate_design_link }}">{{ cdl_support.certificate_design_link }}</a></td></tr>{% endif %}
+          {% endif %}
+          {% if cdl_support.other_services %}
+          <tr><th>Other Services</th><td>{{ cdl_support.other_services|join:", " }}</td></tr>
+          {% endif %}
+          {% if cdl_support.blog_content %}
+          <tr><th>Blog Content</th><td>{{ cdl_support.blog_content|linebreaksbr }}</td></tr>
+          {% endif %}
         </table>
-      {% else %}
-        <div class="detail-block">—</div>
-      {% endif %}
-    </div>
-
-    <div class="fin-half event-details-card card-base">
-      <div class="review-section-header">
-        <h3>Income Details</h3>
-        <a href="{{ expense_edit }}" class="section-edit-link">Edit</a>
       </div>
-      {% if income %}
-        <table class="review-table">
-          <tr><th>Sl. No.</th><th>Particulars</th><th>Participants</th><th>Rate</th><th>Amount</th></tr>
-          {% for i in income %}
-            <tr><td>{{ i.sl_no }}</td><td>{{ i.particulars }}</td><td>{{ i.participants }}</td><td>{{ i.rate }}</td><td>{{ i.amount }}</td></tr>
-          {% endfor %}
-        </table>
-      {% else %}
-        <div class="detail-block">—</div>
       {% endif %}
     </div>
-  </div>
 
-  {% if cdl_support %}
-  <div class="event-details-card card-base">
-    <div class="review-section-header">
-      <h3>CDL Support</h3>
-      <a href="{{ cdl_edit }}" class="section-edit-link">Edit</a>
-    </div>
-    <table class="review-table">
-      <tr><th>Needs Support</th><td>{{ cdl_support.needs_support|yesno:"Yes,No" }}</td></tr>
-      {% if cdl_support.poster_required %}
-      <tr><th>Poster</th><td>{{ cdl_support.get_poster_choice_display }}</td></tr>
-      {% if cdl_support.organization_name %}<tr><th>Organization</th><td>{{ cdl_support.organization_name }}</td></tr>{% endif %}
-      {% if cdl_support.poster_event_title %}<tr><th>Poster Title</th><td>{{ cdl_support.poster_event_title }}</td></tr>{% endif %}
-      {% if cdl_support.poster_date %}<tr><th>Poster Date</th><td>{{ cdl_support.poster_date }}</td></tr>{% endif %}
-      {% if cdl_support.poster_time %}<tr><th>Poster Time</th><td>{{ cdl_support.poster_time }}</td></tr>{% endif %}
-      {% if cdl_support.poster_venue %}<tr><th>Poster Venue</th><td>{{ cdl_support.poster_venue }}</td></tr>{% endif %}
-      {% if cdl_support.resource_person_name %}
-      <tr><th>Resource Person</th><td>{{ cdl_support.resource_person_name }}{% if cdl_support.resource_person_designation %} ({{ cdl_support.resource_person_designation }}){% endif %}</td></tr>
-      {% endif %}
-      {% if cdl_support.poster_summary %}<tr><th>Poster Summary</th><td>{{ cdl_support.poster_summary|linebreaksbr }}</td></tr>{% endif %}
-      {% if cdl_support.poster_design_link %}<tr><th>Poster Design Link</th><td><a href="{{ cdl_support.poster_design_link }}">{{ cdl_support.poster_design_link }}</a></td></tr>{% endif %}
-      {% endif %}
-      {% if cdl_support.certificates_required %}
-      <tr><th>Certificates</th><td>{{ cdl_support.get_certificate_choice_display }}</td></tr>
-      {% if cdl_support.certificate_help %}<tr><th>Certificate Help</th><td>Yes</td></tr>{% endif %}
-      {% if cdl_support.certificate_design_link %}<tr><th>Certificate Design Link</th><td><a href="{{ cdl_support.certificate_design_link }}">{{ cdl_support.certificate_design_link }}</a></td></tr>{% endif %}
-      {% endif %}
-      {% if cdl_support.other_services %}
-      <tr><th>Other Services</th><td>{{ cdl_support.other_services|join:", " }}</td></tr>
-      {% endif %}
-      {% if cdl_support.blog_content %}
-      <tr><th>Blog Content</th><td>{{ cdl_support.blog_content|linebreaksbr }}</td></tr>
-      {% endif %}
-    </table>
+    <aside class="review-side">
+      <div class="event-details-card card-base">
+        <h3>Event Details</h3>
+        <div class="event-details-grid">
+          <div class="field">
+            <span class="field-label">Organization</span>
+            <span class="field-value">{{ proposal.organization.name|default:"—" }}</span>
+          </div>
+          <div class="field">
+            <span class="field-label">Committees &amp; Collaborations</span>
+            <span class="field-value">
+              {% if proposal.committees_collaborations %}
+                {{ proposal.committees_collaborations }}
+              {% elif proposal.committees %}
+                {{ proposal.committees }}
+              {% else %}
+                —
+              {% endif %}
+            </span>
+          </div>
+          <div class="field">
+            <span class="field-label">No. of Activities</span>
+            <span class="field-value">{{ proposal.num_activities|default:"—" }}</span>
+          </div>
+          <div class="field">
+            <span class="field-label">Start Date</span>
+            <span class="field-value">
+              {% if proposal.event_start_date %}
+                {{ proposal.event_start_date|date:"M d, Y" }}
+              {% elif proposal.event_datetime %}
+                {{ proposal.event_datetime|date:"M d, Y" }}
+              {% else %}
+                —
+              {% endif %}
+            </span>
+          </div>
+          <div class="field">
+            <span class="field-label">End Date</span>
+            <span class="field-value">
+              {% if proposal.event_end_date %}
+                {{ proposal.event_end_date|date:"M d, Y" }}
+              {% elif proposal.event_datetime %}
+                {{ proposal.event_datetime|date:"M d, Y" }}
+              {% else %}
+                —
+              {% endif %}
+            </span>
+          </div>
+          <div class="field">
+            <span class="field-label">Venue</span>
+            <span class="field-value">{{ proposal.venue|default:"—" }}</span>
+          </div>
+          <div class="field">
+            <span class="field-label">Academic Year</span>
+            <span class="field-value">{{ proposal.academic_year|default:"—" }}</span>
+          </div>
+          <div class="field">
+            <span class="field-label">Target Audience</span>
+            <span class="field-value">{{ proposal.target_audience|default:"—" }}</span>
+          </div>
+          <div class="field">
+            <span class="field-label">POS &amp; PSO</span>
+            <span class="field-value">{{ proposal.pos_pso|default:"—" }}</span>
+          </div>
+          <div class="field">
+            <span class="field-label">SDG Goals</span>
+            <span class="field-value">
+              {% with goals=proposal.sdg_goals.all %}
+                {% if goals %}
+                  {% for goal in goals %}
+                    {{ goal.name }}{% if not forloop.last %}, {% endif %}
+                  {% endfor %}
+                {% else %}
+                  —
+                {% endif %}
+              {% endwith %}
+            </span>
+          </div>
+          <div class="field">
+            <span class="field-label">Faculty Incharges</span>
+            <span class="field-value">
+              {% with facs=proposal.faculty_incharges.all %}
+                {% if facs %}
+                  {% for fac in facs %}
+                    {{ fac.get_full_name|default:fac.username }}{% if not forloop.last %}, {% endif %}
+                  {% endfor %}
+                {% else %}
+                  —
+                {% endif %}
+              {% endwith %}
+            </span>
+          </div>
+          <div class="field">
+            <span class="field-label">Student Coordinators</span>
+            <span class="field-value">{{ proposal.student_coordinators|default:"—" }}</span>
+          </div>
+          <div class="field">
+            <span class="field-label">Type (Focus)</span>
+            <span class="field-value">{{ proposal.event_focus_type|default:"—" }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="proposal-progress card-base">
+        <div class="progress-step {% if need_analysis.content %}progress-complete{% endif %}">Need Analysis</div>
+        <div class="progress-step {% if objectives.content %}progress-complete{% endif %}">Objectives</div>
+        <div class="progress-step {% if outcomes.content %}progress-complete{% endif %}">Expected Outcomes</div>
+        <div class="progress-step {% if flow.content %}progress-complete{% endif %}">Tentative Flow</div>
+        <div class="progress-step {% if speakers %}progress-complete{% endif %}">Speakers</div>
+        <div class="progress-step {% if expenses %}progress-complete{% endif %}">Finance</div>
+        <div class="progress-step {% if cdl_support %}progress-complete{% endif %}">CDL Support</div>
+      </div>
+    </aside>
   </div>
-  {% endif %}
 </div>
 {% endblock %}
