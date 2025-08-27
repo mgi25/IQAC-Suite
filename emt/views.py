@@ -2215,6 +2215,40 @@ def attendance_data(request, report_id):
         }
         for r in report.attendance_rows.all()
     ]
+
+    if not rows:
+        names = [
+            n.strip()
+            for n in (report.proposal.target_audience or "").split(",")
+            if n.strip()
+        ]
+        if names:
+            students = {
+                (s.user.get_full_name() or s.user.username).strip().lower(): s
+                for s in Student.objects.select_related("user")
+            }
+            rows = []
+            for name in names:
+                student = students.get(name.lower())
+                reg_no = ""
+                class_name = ""
+                if student:
+                    reg_no = student.registration_number or getattr(
+                        getattr(student.user, "profile", None), "register_no", ""
+                    )
+                    cls = student.classes.filter(is_active=True).first()
+                    if cls:
+                        class_name = cls.code or cls.name
+                rows.append(
+                    {
+                        "registration_no": reg_no,
+                        "full_name": name,
+                        "student_class": class_name,
+                        "absent": False,
+                        "volunteer": False,
+                    }
+                )
+
     counts = {
         "total": len(rows),
         "present": len([r for r in rows if not r.get("absent")]),
