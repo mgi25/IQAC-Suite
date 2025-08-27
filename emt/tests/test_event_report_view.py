@@ -147,15 +147,49 @@ class SubmitEventReportViewTests(TestCase):
         self.assertEqual(res.status_code, 200)
         report_id = res.json()["report_id"]
         attendance_url = reverse("emt:attendance_upload", args=[report_id])
+        base_url = reverse("emt:attendance_upload", args=[0]).rsplit("0/", 1)[0]
 
-        from bs4 import BeautifulSoup
+        # Run a tiny Node script that loads initializeAutosaveIndicators, dispatches
+        # autosave:success via $(document).trigger, and prints the updated link.
+        import tempfile
+        import subprocess
+        from pathlib import Path
 
-        field_html = '<input type="text" id="attendance-modern">'
-        soup = BeautifulSoup(field_html, "html.parser")
-        field = soup.find("input")
-        field["data-attendance-url"] = attendance_url
-        clicked_url = field.get("data-attendance-url")
-        self.assertEqual(clicked_url, attendance_url)
+        submit_js = Path(__file__).resolve().parents[1] / "static" / "emt" / "js" / "submit_event_report.js"
+        node_script = '''
+const fs = require('fs');
+const src = fs.readFileSync('__SUBMIT_JS__', 'utf8');
+function extract(name){
+  const start=src.indexOf('function '+name);
+  if(start===-1) throw new Error('not found');
+  let idx=src.indexOf('{', start);let depth=1;idx++;
+  while(idx<src.length && depth>0){if(src[idx]=='{')depth++;else if(src[idx]=='}')depth--;idx++;}
+  return src.slice(start, idx);
+}
+const initCode = extract('initializeAutosaveIndicators');
+const handlers={};
+const document={};
+function $(sel){
+ if(sel===document) return {on:(ev,fn)=>{(handlers[ev]=handlers[ev]||[]).push(fn);}, trigger:(ev)=>{(handlers[ev.type]||[]).forEach(fn=>fn(ev));}, off:()=>{}};
+ if(sel==='#attendance-modern') return attendanceEl;
+ if(sel==='#autosave-indicator') return indicatorEl;
+}
+const attendanceEl={attrs:{},dataStore:{},length:1,attr:function(n,v){if(v===undefined)return this.attrs[n];this.attrs[n]=v;return this;},data:function(n,v){if(v===undefined)return this.dataStore[n];this.dataStore[n]=v;return this;},prop:function(){return this;},css:function(){return this;}};
+const indicatorEl={removeClass:function(){return this;},addClass:function(){return this;},find:function(){return {text:function(){}};},length:1};
+function setupAttendanceLink(){}
+const window={ATTENDANCE_URL_BASE:'__BASE_URL__'};
+eval(initCode);
+initializeAutosaveIndicators();
+const event={type:'autosave:success', detail:{reportId:__REPORT_ID__}};
+$(document).trigger(event);
+console.log(attendanceEl.attrs['data-attendance-url']);
+'''
+        node_script = node_script.replace('__SUBMIT_JS__', str(submit_js)).replace('__BASE_URL__', base_url).replace('__REPORT_ID__', str(report_id))
+        with tempfile.TemporaryDirectory() as tmp:
+            script_path = Path(tmp) / "run.js"
+            script_path.write_text(node_script)
+            result = subprocess.run(["node", str(script_path)], capture_output=True, text=True)
+        self.assertEqual(result.stdout.strip(), attendance_url)
 
     def test_autosave_indicator_present(self):
         response = self.client.get(
