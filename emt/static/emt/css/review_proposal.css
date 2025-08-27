@@ -17,8 +17,6 @@ body {
 
 .review-proposal-container {
   width: 100%;
-  max-width: 1600px;
-  margin: 0 auto;
   padding: 2rem 1rem 3rem;
 }
 
@@ -41,31 +39,33 @@ body {
 .review-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 46px;
+  grid-template-areas:
+    "main"
+    "side";
+  gap: var(--spacing-lg);
   width: 100%;
-  margin: 40px 0 0;
-  padding: 0 1rem;
-  min-height: 88vh;
-}
-
-.review-side {
-  position: static;
-  align-self: flex-start;
-  height: fit-content;
-  z-index: 2;
 }
 
 .review-main {
-  width: 100%;
+  grid-area: main;
 }
 
-@media (min-width: 900px) {
+.review-side {
+  grid-area: side;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+@media (min-width: 1024px) {
   .review-grid {
-    grid-template-columns: minmax(250px, 30%) 1fr;
+    grid-template-columns: 360px 1fr;
+    grid-template-areas: "side main";
+    align-items: start;
   }
   .review-side {
     position: sticky;
-    top: 90px;
+    top: var(--spacing-lg);
   }
 }
 
@@ -163,9 +163,9 @@ body {
 /* -------- Proposal Progress -------- */
 .proposal-progress {
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin: 18px 0 28px 0;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-lg);
 }
 
 .progress-step {
