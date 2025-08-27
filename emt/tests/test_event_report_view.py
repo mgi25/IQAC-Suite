@@ -150,7 +150,7 @@ class SubmitEventReportViewTests(TestCase):
         base_url = reverse("emt:attendance_upload", args=[0]).rsplit("0/", 1)[0]
 
         # Run a tiny Node script that loads initializeAutosaveIndicators, dispatches
-        # autosave:success via $(document).trigger, and prints the updated link.
+        # autosave:success via $(document).trigger and prints the updated link.
         import tempfile
         import subprocess
         from pathlib import Path
@@ -170,7 +170,7 @@ const initCode = extract('initializeAutosaveIndicators');
 const handlers={};
 const document={};
 function $(sel){
- if(sel===document) return {on:(ev,fn)=>{(handlers[ev]=handlers[ev]||[]).push(fn);}, trigger:(ev)=>{(handlers[ev.type]||[]).forEach(fn=>fn(ev));}, off:()=>{}};
+ if(sel===document) return {on:(ev,fn)=>{(handlers[ev]=handlers[ev]||[]).push(fn);}, trigger:(ev,data)=>{(handlers[ev]||[]).forEach(fn=>fn({type:ev}, data));}, off:()=>{}};
  if(sel==='#attendance-modern') return attendanceEl;
  if(sel==='#autosave-indicator') return indicatorEl;
 }
@@ -180,8 +180,7 @@ function setupAttendanceLink(){}
 const window={ATTENDANCE_URL_BASE:'__BASE_URL__'};
 eval(initCode);
 initializeAutosaveIndicators();
-const event={type:'autosave:success', detail:{reportId:__REPORT_ID__}};
-$(document).trigger(event);
+$(document).trigger('autosave:success', {reportId:__REPORT_ID__});
 console.log(attendanceEl.attrs['data-attendance-url']);
 '''
         node_script = node_script.replace('__SUBMIT_JS__', str(submit_js)).replace('__BASE_URL__', base_url).replace('__REPORT_ID__', str(report_id))
