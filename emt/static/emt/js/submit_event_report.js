@@ -1952,8 +1952,8 @@ function setupAttendanceLink() {
     if (!attendanceField.length) return;
 
     attendanceField.prop('readonly', true).css('cursor', 'pointer');
-    const url = attendanceField.data('attendance-url');
     $(document).off('click', '#attendance-modern').on('click', '#attendance-modern', () => {
+        const url = attendanceField.data('attendance-url');
         if (url) {
             window.location.href = url;
         } else {
@@ -1970,13 +1970,22 @@ function initializeAutosaveIndicators() {
         indicator.find('.indicator-text').text('Saving...');
     });
 
-    $(document).on('autosave:success', function() {
+    $(document).on('autosave:success', function(e) {
         const indicator = $('#autosave-indicator');
         indicator.removeClass('saving error').addClass('saved');
         indicator.find('.indicator-text').text('Saved');
         setTimeout(() => {
             indicator.removeClass('show');
         }, 2000);
+
+        const reportId = e.originalEvent && e.originalEvent.detail && e.originalEvent.detail.reportId;
+        if (reportId) {
+            const attendanceUrl = `${window.ATTENDANCE_URL_BASE}${reportId}/attendance/upload/`;
+            $('#attendance-modern')
+                .attr('data-attendance-url', attendanceUrl)
+                .data('attendance-url', attendanceUrl);
+            setupAttendanceLink();
+        }
     });
 
     $(document).on('autosave:error', function() {
