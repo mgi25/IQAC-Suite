@@ -109,6 +109,22 @@ class SubmitEventReportViewTests(TestCase):
             html=False,
         )
 
+    def test_attendance_link_requires_report(self):
+        url = reverse("emt:submit_event_report", args=[self.proposal.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Manage via CSV", html=False)
+
+        report = EventReport.objects.create(proposal=self.proposal)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Manage via CSV", html=False)
+        self.assertContains(
+            response,
+            reverse("emt:attendance_upload", args=[report.id]),
+            html=False,
+        )
+
     def test_autosave_indicator_present(self):
         response = self.client.get(
             reverse("emt:submit_event_report", args=[self.proposal.id])

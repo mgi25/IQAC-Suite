@@ -204,7 +204,11 @@
                                 <label for="attendance-modern">Attendance *</label>
                                 <input type="text" id="attendance-modern" readonly value="Present: {{ attendance_present }}, Absent: {{ attendance_absent }}, Volunteers: {{ attendance_volunteers }}">
                                 <input type="hidden" id="num-participants-modern" name="num_participants" value="{{ attendance_present }}">
+                                {% if report %}
                                 <div class="help-text"><a href="{% url 'emt:attendance_upload' report.id %}">Manage via CSV</a></div>
+                                {% else %}
+                                <div class="help-text">Save report to manage attendance via CSV</div>
+                                {% endif %}
                                 {% if form.num_participants.errors %}
                                     <div class="field-error">{{ form.num_participants.errors.0 }}</div>
                                 {% endif %}
