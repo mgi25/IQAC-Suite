@@ -22,6 +22,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentDate = new Date();
     let selectedDate = null;
 
+    function ymdLocal(d){
+        const y=d.getFullYear();
+        const m=String(d.getMonth()+1).padStart(2,'0');
+        const da=String(d.getDate()).padStart(2,'0');
+        return `${y}-${m}-${da}`;
+    }
+
     function renderCalendar() {
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
@@ -50,9 +57,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        for (let day = 1; day <= daysInMonth; day++) {
+    for (let day = 1; day <= daysInMonth; day++) {
             const date = new Date(year, month, day);
-            const dateStr = date.toISOString().split('T')[0];
+            const dateStr = ymdLocal(date);
             
             const dayEl = document.createElement('button');
             dayEl.className = 'day';
@@ -66,46 +73,46 @@ document.addEventListener('DOMContentLoaded', () => {
                 dayEl.classList.add('selected');
             }
 
-            // Check for events
+            // Check for events and add uniform marker class used by dashboard CSS
             const dayEvents = CALENDAR_EVENTS.filter(e => e.date === dateStr);
             if (dayEvents.length > 0) {
-                dayEl.classList.add('has-events');
+                dayEl.classList.add('has-event');
             }
 
-            // Add click handler for all days
+            // Add interactions (click only; remove hover preview)
             dayEl.addEventListener('click', () => showEventDetails(date));
             elements.grid.appendChild(dayEl);
         }
     }
 
+    // Removed ICS builder; only Google Calendar integration is supported
+
     function showEventDetails(date) {
-        // Adjust for timezone offset
-        const adjustedDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
-        selectedDate = adjustedDate;
-        const dateStr = adjustedDate.toISOString().split('T')[0];
+        selectedDate = date;
+        const dateStr = ymdLocal(date);
         const dayEvents = CALENDAR_EVENTS.filter(e => e.date === dateStr);
         
-        const formattedDate = adjustedDate.toLocaleDateString('default', { 
+        const formattedDate = date.toLocaleDateString('default', { 
             weekday: 'long', 
             year: 'numeric', 
             month: 'long', 
             day: 'numeric' 
         });
 
-        // Debug log to check event data
-        console.log('Events for date:', dayEvents);
-
-        elements.details.innerHTML = `
-            <div class="event-date">${formattedDate}</div>
-            ${dayEvents.length ? dayEvents.map(event => `
-                <div class="event-item">
-                    <div class="event-title">${event.title}</div>
-                    <a href="/emt/proposal-status/${event.event_id || event.id}/" class="view-details-btn">
-                        View Details <i class="fas fa-arrow-right"></i>
-                    </a>
-                </div>
-            `).join('') : '<div class="empty">No events scheduled for this date</div>'}
-        `;
+                elements.details.innerHTML = `
+                        <div class="event-date">${formattedDate}</div>
+                        ${dayEvents.length ? dayEvents.map(event => `
+                                <div class="event-detail-item">
+                                    <div class="row">
+                                        <h4>${event.title}</h4>
+                                        <div class="actions">
+                                            ${event.view_url ? `<a href="${event.view_url}" class="chip-btn">View Details</a>` : ''}
+                                            ${!event.past && event.gcal_url ? `<a class=\"chip-btn\" target=\"_blank\" rel=\"noopener\" href=\"${event.gcal_url}\">Google</a>` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                        `).join('') : '<div class="empty">No events scheduled for this date</div>'}
+                `;
         
         elements.clearDetails.style.display = 'block';
         renderCalendar();
@@ -130,6 +137,15 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCalendar();
     });
 
+    async function loadCalendarFromAPI(){
+        try{
+            const res = await fetch('/api/calendar/?category=all', { headers:{'X-Requested-With':'XMLHttpRequest'} });
+            const j = await res.json();
+            if (Array.isArray(j.items)) CALENDAR_EVENTS = j.items;
+        }catch(e){ /* leave fallback CALENDAR_EVENTS */ }
+        renderCalendar();
+    }
+
     // Initial render
-    renderCalendar();
+    loadCalendarFromAPI();
 });

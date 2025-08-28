@@ -155,6 +155,10 @@ urlpatterns = [
     path('api/organizations/', views.api_organizations, name='api_organizations'),
     path('api/roles/', views.api_roles, name='api_roles'),
     path('api/auth/me', views.api_auth_me, name='frontend_api_auth_me'),
+
+    # --- Calendar (Unified) ---
+    path('api/calendar/', views.api_calendar_events, name='api_calendar_events'),
+    path('api/calendar/faculty/create/', views.api_create_faculty_meeting, name='api_create_faculty_meeting'),
     
     # --- Admin APIs ---
     path('admin-dashboard-api/', views.admin_dashboard_api, name='admin_dashboard_api'),

@@ -96,7 +96,11 @@
       for(let d=1; d<=last.getDate(); d++) cells.push({t:d, iso:iso(calRef,d)});
       while(cells.length%7!==0) cells.push({t:'', muted:true});
       $('#calGrid').innerHTML = cells.map(c=>`<div class="day${c.muted?' muted':''}" data-date="${c.iso||''}"><div class="num">${c.t}</div><div class="dots">${buildDots(c.iso)}</div></div>`).join('');
-      $$('#calGrid .day[data-date]').forEach(d=> d.addEventListener('click',()=>openDay(d.dataset.date)));
+      $$('#calGrid .day[data-date]').forEach(d=> d.addEventListener('click',()=>{
+        $$('#calGrid .day.selected').forEach(x=>x.classList.remove('selected'));
+        d.classList.add('selected');
+        openDay(d.dataset.date);
+      }));
     }
     function iso(base,d){ return `${base.getFullYear()}-${String(base.getMonth()+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
     function buildDots(iso){ if(!iso) return ''; const list=EVENTS.filter(e=>e.date===iso); return list.map(e=>`<span class="dot ${e.type==='coverage'?'blue':'green'}"></span>`).join(''); }

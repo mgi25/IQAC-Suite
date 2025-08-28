@@ -233,11 +233,12 @@
 .cal-nav:hover{background:var(--subtle);border-color:var(--primary)}
 .cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:11px;color:var(--muted);text-align:center;margin-bottom:6px}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.day{padding:6px 2px;text-align:center;border-radius:6px;font-size:13px;cursor:pointer;transition:all .2s;position:relative}
-.day.has-event::after{content:"";position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:#e74c3c}
+.day{padding:6px 2px;text-align:center;border-radius:6px;font-size:13px;cursor:pointer;transition:all .2s;position:relative; height:42px}
+.day.has-event::after{content:"";position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:6px;height:6px;border-radius:50%;background:#e74c3c}
 .day.has-meeting::after{content:"";position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:6px;height:6px;border-radius:50%;background:#0ea5e9}
 .day:hover{background:var(--subtle)}
 .day.today{background:var(--primary);color:#fff;font-weight:600}
+.day.selected{outline:2px solid #93c5fd; outline-offset:0; box-shadow: inset 0 0 0 2px #bfdbfe; background:#eff6ff}
 .day.muted{opacity:.4}
 
 /* -------- Upcoming -------- */
@@ -317,8 +318,14 @@
 
 /* -------- Event Details -------- */
 .event-details-content { padding: 14px 16px; min-height: 120px; max-height: calc(var(--contribH) - 70px); overflow-y: auto }
+.event-detail-item .row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+.event-detail-item .actions{flex-shrink:0; display:flex; gap:8px;}
+.event-detail-item h4{margin:0; font-size:15px; font-weight:600; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .event-detail-item { padding: 12px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 8px; background: white; }
 .event-detail-title { font-size: 16px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+.event-detail-title.with-actions{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+.event-detail-title .title-text{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.event-detail-title .title-actions{flex-shrink:0; display:flex; gap:8px;}
 .event-detail-meta { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
 .event-detail-actions { display: flex; gap: 8px; }
 

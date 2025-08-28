@@ -3687,37 +3687,92 @@ def api_calendar_events(request):
     now = timezone.now()
 
     def build_view_url(item_id):
-        try:
-            return reverse('student_event_details', args=[item_id])
-        except Exception:
-            return f"/event/{item_id}/details/"
+        """
+        Build a details URL per role:
+        - Admin: EMT proposal status detail.
+        - Non-admin: Old user-facing event details page.
+        Fallbacks retained for robustness.
+        """
+        # Admins should land on EMT proposal status detail
+        if request.user.is_superuser:
+            try:
+                return reverse('emt:proposal_status_detail', kwargs={'proposal_id': item_id})
+            except Exception:
+                pass
 
-    # public/approved events
+        # Non-admins: prefer the legacy/user-facing event details
+        try:
+            return reverse('student_event_details', kwargs={'proposal_id': item_id})
+        except Exception:
+            pass
+
+        # Generic fallback to core proposal detail
+        try:
+            return reverse('proposal_detail', kwargs={'proposal_id': item_id})
+        except Exception:
+            pass
+
+        # Last resort legacy path
+        return f"/event/{item_id}/details/"
+
+    # public/approved events + user-owned events
     if category in ("all", "public"):
-        events = EventProposal.objects.filter(
-            status__in=[EventProposal.Status.APPROVED, EventProposal.Status.FINALIZED]
-        ).filter(
-            Q(event_datetime__isnull=False) | Q(event_start_date__isnull=False)
-        )
+        base_q = Q(event_datetime__isnull=False) | Q(event_start_date__isnull=False) | Q(event_end_date__isnull=False)
+        status_q = Q(status__in=[EventProposal.Status.APPROVED, EventProposal.Status.FINALIZED])
+        # Admin sees all scheduled events regardless of status
+        if user.is_superuser:
+            visibility_q = base_q
+        else:
+            # Include approved/finalized for everyone, plus events owned by the user (submitted_by or faculty_incharges)
+            owned_q = Q(submitted_by=user) | Q(faculty_incharges=user)
+            visibility_q = base_q & (status_q | owned_q)
+        events = EventProposal.objects.filter(visibility_q).distinct()
+
         for e in events:
-            # choose a representative date
-            dt = e.event_datetime or (
-                timezone.make_aware(datetime.combine(e.event_start_date, datetime.min.time()))
-                if e.event_start_date else None
-            )
-            if not dt:
+            # Single-date event with datetime
+            if e.event_datetime:
+                dt = e.event_datetime
+                if timezone.is_naive(dt):
+                    dt = timezone.make_aware(dt, timezone.get_current_timezone())
+                dt_local = timezone.localtime(dt)
+                items.append({
+                    "id": e.id,
+                    "title": e.event_title,
+                    "date": dt_local.date().isoformat(),
+                    "datetime": dt_local.isoformat(),
+                    "venue": e.venue or "",
+                    "type": "public",
+                    "past": dt_local < now,
+                    "view_url": build_view_url(e.id),
+                    "gcal_url": build_gcal_link(e),
+                })
                 continue
-            items.append({
-                "id": e.id,
-                "title": e.event_title,
-                "date": dt.date().isoformat(),
-                "datetime": dt.isoformat(),
-                "venue": e.venue or "",
-                "type": "public",
-                "past": dt < now,
-                "view_url": build_view_url(e.id),
-                "gcal_url": build_gcal_link(e),
-            })
+
+            # All-day or multi-day range using start/end dates
+            start_date = e.event_start_date or e.event_end_date
+            end_date = e.event_end_date or e.event_start_date
+            if not start_date:
+                continue
+            if not end_date:
+                end_date = start_date
+
+            # Iterate each day in range inclusive
+            cur = start_date
+            while cur <= end_date:
+                # local midnight for the day
+                dt_local = timezone.make_aware(datetime.combine(cur, datetime.min.time()), timezone.get_current_timezone())
+                items.append({
+                    "id": e.id,
+                    "title": e.event_title,
+                    "date": cur.isoformat(),
+                    "datetime": dt_local.isoformat(),
+                    "venue": e.venue or "",
+                    "type": "public",
+                    "past": dt_local < now,
+                    "view_url": build_view_url(e.id),
+                    "gcal_url": build_gcal_link(e),
+                })
+                cur += timedelta(days=1)
 
     # private category: no stored tasks, front-end will open GCal on date click
     if category == "private":
