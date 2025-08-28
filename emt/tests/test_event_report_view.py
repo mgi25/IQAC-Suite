@@ -8,7 +8,13 @@ from django.contrib.auth.signals import user_logged_in
 
 from core.signals import create_or_update_user_profile, assign_role_on_login
 
-from emt.models import EventProposal, EventActivity, EventReport, AttendanceRow
+from emt.models import (
+    EventProposal,
+    EventActivity,
+    EventReport,
+    AttendanceRow,
+    SpeakerProfile,
+)
 from emt.forms import EventReportForm
 
 
@@ -279,4 +285,105 @@ console.log(attendanceEl.attrs['href']);
             self.assertContains(
                 response, f"<strong>{field.label}:</strong>", html=False
             )
+
+    def test_proposal_speakers_prefilled(self):
+        SpeakerProfile.objects.create(
+            proposal=self.proposal,
+            full_name="Dr. Xavier",
+            designation="Prof",
+            affiliation="Uni",
+            contact_email="x@example.com",
+            contact_number="123",
+            detailed_profile="Bio",
+        )
+
+        # Render the page to ensure speaker data is serialized
+        response = self.client.get(
+            reverse("emt:submit_event_report", args=[self.proposal.id])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Dr. Xavier", response.content.decode())
+
+        # Node script to verify client-side population after section load
+        import tempfile
+        import subprocess
+        from pathlib import Path
+
+        submit_js = Path(__file__).resolve().parents[1] / "static" / "emt" / "js" / "submit_event_report.js"
+        proposal_data = {
+            "proposer": "Alice",
+            "faculty_incharges": ["Prof. B"],
+            "student_coordinators": "Carl",
+            "volunteers": ["Dan"],
+            "speakers": [{"full_name": "Dr. Xavier", "organization": "Uni"}],
+        }
+        node_script = r"""
+const fs = require('fs');
+const src = fs.readFileSync('__SUBMIT_JS__', 'utf8');
+function extract(name){
+  const start = src.indexOf('function ' + name);
+  if(start === -1) throw new Error('not found: '+name);
+  let i = src.indexOf('{', start); i++; let depth = 1;
+  while(i < src.length && depth > 0){
+    if(src[i] === '{') depth++;
+    else if(src[i] === '}') depth--;
+    i++;
+  }
+  return src.slice(start, i);
+}
+const loadSectionContent = extract('loadSectionContent');
+const populateSpeakersFromProposal = extract('populateSpeakersFromProposal');
+const fillOrganizingCommittee = extract('fillOrganizingCommittee');
+const fillActualSpeakers = extract('fillActualSpeakers');
+const fillAttendanceCounts = extract('fillAttendanceCounts');
+
+let domReady = false;
+const speakersDisplay = {innerHTML: ''};
+const orgEl = {value:'', length:1, val:function(v){ if(v===undefined) return this.value; this.value=v; return this; }};
+const actualEl = {value:'', length:1, val:function(v){ if(v===undefined) return this.value; this.value=v; return this; }};
+const totalEl = {value:'', length:1, val:function(v){ if(v===undefined) return this.value; this.value=v; return this; }};
+
+function $(sel){
+  if(sel === '.form-grid') return {html:function(content){ setTimeout(()=>{domReady=true;},0); return this; }};
+  if(!domReady) return {length:0, val:function(){}};
+  if(sel === '#organizing-committee-modern') return orgEl;
+  if(sel === '#actual-speakers-modern') return actualEl;
+  if(sel === '#total-participants-modern') return totalEl;
+  return {length:0, val:function(){}};
+}
+
+global.$ = $;
+global.document = {getElementById: id => (domReady && id === 'speakers-display') ? speakersDisplay : null};
+global.window = {PROPOSAL_DATA: __PROPOSAL_DATA__, ATTENDANCE_PRESENT: 10};
+
+eval(populateSpeakersFromProposal);
+eval(fillOrganizingCommittee);
+eval(fillActualSpeakers);
+eval(fillAttendanceCounts);
+eval(loadSectionContent);
+
+loadSectionContent('participants-information');
+
+setTimeout(()=>{
+  console.log(JSON.stringify({
+    display: speakersDisplay.innerHTML,
+    organizing: orgEl.value,
+    actual: actualEl.value,
+    total: totalEl.value
+  }));
+}, 20);
+"""
+        node_script = (
+            node_script.replace("__SUBMIT_JS__", str(submit_js))
+            .replace("__PROPOSAL_DATA__", json.dumps(proposal_data))
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            script_path = Path(tmp) / "run.js"
+            script_path.write_text(node_script)
+            result = subprocess.run(["node", str(script_path)], capture_output=True, text=True)
+        data = json.loads(result.stdout.strip())
+        self.assertIn("Dr. Xavier", data["display"])
+        self.assertIn("Proposer: Alice", data["organizing"])
+        self.assertIn("Dr. Xavier", data["actual"])
+        self.assertEqual("10", str(data["total"]))
 

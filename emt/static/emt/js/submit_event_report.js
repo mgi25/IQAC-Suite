@@ -452,10 +452,13 @@ $(document).on('click', '#ai-sdg-implementation', function(){
       $('.form-grid').html(content);
 
       if (sectionName === 'participants-information') {
-          populateSpeakersFromProposal();
-          fillOrganizingCommittee();
-          fillActualSpeakers();
-          fillAttendanceCounts();
+          // Defer population until after the new DOM elements are attached
+          setTimeout(() => {
+              populateSpeakersFromProposal();
+              fillOrganizingCommittee();
+              fillActualSpeakers();
+              fillAttendanceCounts();
+          }, 0);
       }
 
       if (sectionName === 'event-relevance') {
