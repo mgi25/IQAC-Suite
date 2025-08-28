@@ -56,6 +56,17 @@ from .forms import CDLRequestForm, CertificateBatchUploadForm, CDLMessageForm
 # ─────────────────────────────────────────────────────────────
 #  Helpers
 # ─────────────────────────────────────────────────────────────
+def is_admin(user):
+    """Return True if the user is staff or superuser.
+
+    Defined near the top so decorators like `@user_passes_test(is_admin)`
+    can resolve this symbol at import time.
+    """
+    try:
+        return bool(getattr(user, "is_staff", False) or getattr(user, "is_superuser", False))
+    except Exception:
+        return False
+
 def superuser_required(view_func):
     def _wrapped_view(request, *args, **kwargs):
         if not (request.user.is_authenticated and request.user.is_superuser):
@@ -1382,6 +1393,7 @@ def api_admin_search_users(request):
     paginated_users = users_qs[start : start + length]
     
     # Serialize the data
+    dashboard_url = reverse('dashboard')
     data = []
     for user in paginated_users:
         roles = []
@@ -1401,7 +1413,7 @@ def api_admin_search_users(request):
         """
         if user.id != request.user.id:
             action_buttons += f"""
-                <a href="/core-admin/impersonate/{user.id}/?next=/dashboard/" class="btn btn-sm btn-outline-secondary ms-1">
+                <a href="/core-admin/impersonate/{user.id}/?next={dashboard_url}" class="btn btn-sm btn-outline-secondary ms-1">
                     <i class="fas fa-user-secret"></i> Login as
                 </a>
             """
@@ -4806,10 +4818,6 @@ def api_quick_summary(request):
 # ---------------------------------------------
 #           Switch View (Admin)
 # ---------------------------------------------
-
-def is_admin(user):
-    """Check if user is admin or superuser"""
-    return user.is_staff or user.is_superuser
 
 @login_required
 def stop_impersonation(request):

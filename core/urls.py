@@ -155,6 +155,11 @@ urlpatterns = [
     path('api/organizations/', views.api_organizations, name='api_organizations'),
     path('api/roles/', views.api_roles, name='api_roles'),
     path('api/auth/me', views.api_auth_me, name='frontend_api_auth_me'),
+    # --- Dashboard data APIs (used by dashboards JS) ---
+    path('api/student/performance-data/', views.api_student_performance_data, name='api_student_performance_data'),
+    path('api/user/events-data/', views.api_user_events_data, name='api_user_events_data'),
+    path('api/student/contributions/', views.api_student_contributions, name='api_student_contributions'),
+    path('api/calendar/', views.api_calendar_events, name='api_calendar_events'),
     
     # --- Admin APIs ---
     path('admin-dashboard-api/', views.admin_dashboard_api, name='admin_dashboard_api'),
