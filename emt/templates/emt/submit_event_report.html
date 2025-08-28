@@ -355,6 +355,9 @@
         window.SDG_GOALS = {{ sdg_goals_list|default:'[]'|safe }};
         window.PROPOSAL_ACTIVITIES = {{ proposal_activities_json|safe }};
         window.EXISTING_SPEAKERS = {{ speakers_json|default:'[]'|safe }};
+        window.ATTENDANCE_PRESENT = {{ attendance_present|default:0 }};
+        window.ATTENDANCE_ABSENT = {{ attendance_absent|default:0 }};
+        window.ATTENDANCE_VOLUNTEERS = {{ attendance_volunteers|default:0 }};
         window.PROPOSAL_DATA = {
             department: "{{ proposal.organization.name|default:'' }}",
             venue: "{{ proposal.venue|default:'' }}",

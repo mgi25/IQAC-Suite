@@ -454,6 +454,8 @@ $(document).on('click', '#ai-sdg-implementation', function(){
       if (sectionName === 'participants-information') {
           populateSpeakersFromProposal();
           fillOrganizingCommittee();
+          fillActualSpeakers();
+          fillAttendanceCounts();
       }
 
       if (sectionName === 'event-relevance') {
@@ -1399,11 +1401,43 @@ function fillOrganizingCommittee() {
     }
 }
 
+function fillActualSpeakers() {
+    const field = $('#actual-speakers-modern');
+    if (
+        field.length &&
+        field.val().trim() === '' &&
+        window.PROPOSAL_DATA &&
+        Array.isArray(window.PROPOSAL_DATA.speakers) &&
+        window.PROPOSAL_DATA.speakers.length
+    ) {
+        const lines = window.PROPOSAL_DATA.speakers.map((sp, idx) => {
+            const name = sp.full_name || sp.name || '';
+            const designation = sp.designation ? ` - ${sp.designation}` : '';
+            const org = sp.organization || sp.affiliation ? ` - ${(sp.organization || sp.affiliation)}` : '';
+            return `• ${name}${designation}${org}`;
+        });
+        field.val(lines.join('\n'));
+    }
+}
+
+function fillAttendanceCounts() {
+    const totalField = $('#total-participants-modern');
+    if (
+        totalField.length &&
+        totalField.val().trim() === '' &&
+        typeof window.ATTENDANCE_PRESENT !== 'undefined'
+    ) {
+        totalField.val(window.ATTENDANCE_PRESENT);
+    }
+}
+
 function populateProposalData() {
     // Initial fill if fields exist
     setTimeout(function() {
         fillEventRelevance();
         fillOrganizingCommittee();
+        fillActualSpeakers();
+        fillAttendanceCounts();
     }, 100);
 
     // Populate when sections become active
@@ -1411,7 +1445,11 @@ function populateProposalData() {
         setTimeout(fillEventRelevance, 100);
     });
     $(document).on('click', '[data-section="participants-information"]', function() {
-        setTimeout(fillOrganizingCommittee, 100);
+        setTimeout(function() {
+            fillOrganizingCommittee();
+            fillActualSpeakers();
+            fillAttendanceCounts();
+        }, 100);
     });
 }
 
