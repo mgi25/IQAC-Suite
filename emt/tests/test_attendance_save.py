@@ -102,3 +102,52 @@ class SaveAttendanceRowsTests(TestCase):
         self.assertTrue(saved["S1"]["volunteer"])
         self.assertTrue(saved["A1"]["absent"])
         self.assertEqual(len(saved), 3)  # empty registration_no excluded from keys
+
+    def test_save_attendance_updates_session_draft(self):
+        url = reverse("emt:attendance_save", args=[self.report.id])
+        session = self.client.session
+        session["event_report_draft"] = {str(self.proposal.id): {}}
+        session.save()
+
+        rows = [
+            {
+                "registration_no": "S1",
+                "full_name": "Stu Dent",
+                "student_class": "CSE",
+                "absent": False,
+                "volunteer": True,
+            },
+            {
+                "registration_no": "F1",
+                "full_name": "Fac Ulty",
+                "student_class": "",
+                "absent": False,
+                "volunteer": False,
+            },
+            {
+                "registration_no": "",
+                "full_name": "Ext Person",
+                "student_class": "",
+                "absent": False,
+                "volunteer": False,
+            },
+            {
+                "registration_no": "A1",
+                "full_name": "Ab Sent",
+                "student_class": "ECE",
+                "absent": True,
+                "volunteer": False,
+            },
+        ]
+        self.client.post(
+            url,
+            data=json.dumps({"rows": rows}),
+            content_type="application/json",
+        )
+        session = self.client.session
+        draft = session["event_report_draft"][str(self.proposal.id)]
+        self.assertEqual(draft["num_participants"], 3)
+        self.assertEqual(draft["num_student_volunteers"], 1)
+        self.assertEqual(draft["num_student_participants"], 1)
+        self.assertEqual(draft["num_faculty_participants"], 1)
+        self.assertEqual(draft["num_external_participants"], 1)

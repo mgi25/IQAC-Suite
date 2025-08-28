@@ -453,8 +453,13 @@ $(document).on('click', '#ai-sdg-implementation', function(){
 
       if (sectionName === 'participants-information') {
           populateSpeakersFromProposal();
+          fillOrganizingCommittee();
       }
-      
+
+      if (sectionName === 'event-relevance') {
+          fillEventRelevance();
+      }
+
       if (sectionName === 'event-information') {
           // Initialize activities after content is loaded
           setTimeout(() => {
@@ -1365,45 +1370,48 @@ function showNotification(message, type = 'info') {
 }
 
 // Populate fields with proposal data
-function populateProposalData() {
-    function fillEventRelevance() {
-        if ($('#pos-pso-modern').length && window.PROPOSAL_DATA && window.PROPOSAL_DATA.pos_pso) {
-            $('#pos-pso-modern').val(window.PROPOSAL_DATA.pos_pso);
-        }
-        if ($('#sdg-implementation-modern').length && window.PROPOSAL_DATA && window.PROPOSAL_DATA.sdg_goals) {
-            $('#sdg-implementation-modern').val(window.PROPOSAL_DATA.sdg_goals);
-        }
+function fillEventRelevance() {
+    if ($('#pos-pso-modern').length && window.PROPOSAL_DATA && window.PROPOSAL_DATA.pos_pso) {
+        $('#pos-pso-modern').val(window.PROPOSAL_DATA.pos_pso);
     }
+    if ($('#sdg-implementation-modern').length && window.PROPOSAL_DATA && window.PROPOSAL_DATA.sdg_goals) {
+        $('#sdg-implementation-modern').val(window.PROPOSAL_DATA.sdg_goals);
+    }
+}
 
-    // Populate on load
-    setTimeout(fillEventRelevance, 100);
+function fillOrganizingCommittee() {
+    const field = $('#organizing-committee-modern');
+    if (field.length && field.val().trim() === '' && window.PROPOSAL_DATA) {
+        const parts = [];
+        if (window.PROPOSAL_DATA.proposer) {
+            parts.push(`Proposer: ${window.PROPOSAL_DATA.proposer}`);
+        }
+        if (window.PROPOSAL_DATA.faculty_incharges && window.PROPOSAL_DATA.faculty_incharges.length) {
+            parts.push(`Faculty In-Charge: ${window.PROPOSAL_DATA.faculty_incharges.join(', ')}`);
+        }
+        if (window.PROPOSAL_DATA.student_coordinators) {
+            parts.push(`Student Coordinators: ${window.PROPOSAL_DATA.student_coordinators}`);
+        }
+        if (window.PROPOSAL_DATA.volunteers && window.PROPOSAL_DATA.volunteers.length) {
+            parts.push(`Volunteers: ${window.PROPOSAL_DATA.volunteers.join(', ')}`);
+        }
+        field.val(parts.join('\n'));
+    }
+}
 
-    // Populate when section becomes active
+function populateProposalData() {
+    // Initial fill if fields exist
+    setTimeout(function() {
+        fillEventRelevance();
+        fillOrganizingCommittee();
+    }, 100);
+
+    // Populate when sections become active
     $(document).on('click', '[data-section="event-relevance"]', function() {
         setTimeout(fillEventRelevance, 100);
     });
-
-    // Populate organizing committee details when section becomes active
     $(document).on('click', '[data-section="participants-information"]', function() {
-        setTimeout(function() {
-            const field = $('#organizing-committee-modern');
-            if (field.length && field.val().trim() === '' && window.PROPOSAL_DATA) {
-                const parts = [];
-                if (window.PROPOSAL_DATA.proposer) {
-                    parts.push(`Proposer: ${window.PROPOSAL_DATA.proposer}`);
-                }
-                if (window.PROPOSAL_DATA.faculty_incharges && window.PROPOSAL_DATA.faculty_incharges.length) {
-                    parts.push(`Faculty In-Charge: ${window.PROPOSAL_DATA.faculty_incharges.join(', ')}`);
-                }
-                if (window.PROPOSAL_DATA.student_coordinators) {
-                    parts.push(`Student Coordinators: ${window.PROPOSAL_DATA.student_coordinators}`);
-                }
-                if (window.PROPOSAL_DATA.volunteers && window.PROPOSAL_DATA.volunteers.length) {
-                    parts.push(`Volunteers: ${window.PROPOSAL_DATA.volunteers.join(', ')}`);
-                }
-                field.val(parts.join('\n'));
-            }
-        }, 100);
+        setTimeout(fillOrganizingCommittee, 100);
     });
 }
 
