@@ -6,25 +6,6 @@
   flex-direction: column;
 }
 
-.ultra-proposal-root {
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 16px;
-  height: auto; /* Allow natural height */
-}
-
-.ultra-side-info {
-  overflow: visible; /* Allow natural scrolling */
-  height: auto;
-  position: sticky;
-  top: 90px;
-}
-
-.ultra-main-content {
-  overflow: visible; /* Allow natural scrolling */
-  height: auto;
-}
-
 .info-card.glass,
 .fadein-card.section-glass,
 .ultra-header {
@@ -46,9 +27,10 @@ body {
 
 /* ------------ Review Page Container and Timeline ------------- */
 .review-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 90px 1rem 4rem 1rem;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 90px 2rem 4rem 2rem;
   display: flex;
   flex-direction: column;
 }
@@ -189,27 +171,29 @@ body {
 
 /* -------- Layout -------- */
 .ultra-proposal-root {
-  display: flex;
-  gap: 46px;
-  max-width: 1440px;
-  margin: 40px auto 0 auto;
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 32px;
+  width: 100%;
+  max-width: none;
+  margin: 40px 2rem 0 2rem;
   min-height: 88vh;
 }
 
 .ultra-side-info {
-  flex: 0 0 390px;
+  flex: 0 0 360px;
   min-width: 340px;
-  max-width: 410px;
+  max-width: 420px;
   position: sticky;
-  top: 90px;   /* Fixes the event info to appear below navbar */
+  top: 90px; /* Fixes the event info to appear below navbar */
   align-self: flex-start;
   height: fit-content;
   z-index: 2;
 }
 
 @media (max-width: 1050px) {
-  .ultra-proposal-root { flex-direction: column; gap: 26px;}
-  .ultra-side-info { position: static; margin-bottom: 28px;}
+  .ultra-proposal-root { grid-template-columns: 1fr; gap: 26px; margin: 20px 1rem 0 1rem; }
+  .ultra-side-info { position: static; margin-bottom: 28px; }
 }
 
 /* -------- Info Card -------- */
@@ -253,7 +237,7 @@ body {
 .ultra-main-content {
   flex: 1 1 0%;
   min-width: 420px;
-  max-width: 960px;
+  max-width: none;
   margin-left: 0;
 }
 
@@ -526,11 +510,6 @@ body {
 @keyframes fadein { from { opacity: 0; transform: translateY(30px);} to { opacity: 1; transform: none; } }
 
 /* -------- Responsive -------- */
-@media (max-width: 1050px) {
-  .ultra-proposal-root { flex-direction: column; gap: 26px;}
-  .ultra-side-info { position: static; margin-bottom: 28px;}
-}
-
 @media (max-width: 900px) {
   .ultra-main-content, .ultra-side-info, .fin-row { min-width: 0; }
   .ultra-main-content, .ultra-side-info { max-width: 100%; }

@@ -2188,7 +2188,8 @@ function getWhyThisEventForm() {
     // ===== CDL SUPPORT SECTION FUNCTIONALITY =====
     function setupCDLForm() {
         const needsSupport = $('#id_needs_support');
-        const cdlSections = $('#cdl-sections');
+        const cdlSections = $('#cdl-services-container');
+        const cdlEmptyState = $('#cdl-empty-state');
         const posterRequired = $('#id_poster_required');
         const posterDetails = $('#poster-details');
         const certificatesRequired = $('#id_certificates_required');
@@ -2204,8 +2205,14 @@ function getWhyThisEventForm() {
 
         // Set up all the toggle functionality
         if (needsSupport.length) {
-            needsSupport.on('change', () => toggle(cdlSections, needsSupport.prop('checked')));
-            toggle(cdlSections, needsSupport.prop('checked'));
+            needsSupport.on('change', () => {
+                const checked = needsSupport.prop('checked');
+                toggle(cdlSections, checked);
+                toggle(cdlEmptyState, !checked);
+            });
+            const initial = needsSupport.prop('checked');
+            toggle(cdlSections, initial);
+            toggle(cdlEmptyState, !initial);
         }
 
         if (posterRequired.length) {

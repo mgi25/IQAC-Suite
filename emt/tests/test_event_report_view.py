@@ -1,4 +1,5 @@
 from datetime import date
+import json
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
@@ -108,6 +109,96 @@ class SubmitEventReportViewTests(TestCase):
             'Present: 1, Absent: 1, Volunteers: 1',
             html=False,
         )
+
+    def test_attendance_link_requires_report(self):
+        url = reverse("emt:submit_event_report", args=[self.proposal.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response, "Save report to manage attendance via CSV", html=False
+        )
+        self.assertNotContains(response, "data-attendance-url", html=False)
+
+        report = EventReport.objects.create(proposal=self.proposal)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response, "Click attendance box to manage via CSV", html=False
+        )
+        attendance_url = reverse("emt:attendance_upload", args=[report.id])
+        self.assertContains(
+            response,
+            f'data-attendance-url="{attendance_url}"',
+            html=False,
+        )
+
+    def test_attendance_link_updates_after_autosave(self):
+        url = reverse("emt:submit_event_report", args=[self.proposal.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "data-attendance-url", html=False)
+
+        autosave_url = reverse("emt:autosave_event_report")
+        res = self.client.post(
+            autosave_url,
+            data=json.dumps({"proposal_id": self.proposal.id}),
+            content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 200)
+        report_id = res.json()["report_id"]
+        attendance_url = reverse("emt:attendance_upload", args=[report_id])
+
+        # Run a tiny Node script that loads initializeAutosaveIndicators, dispatches
+        # autosave:success via $(document).trigger and prints the updated link.
+        import tempfile
+        import subprocess
+        from pathlib import Path
+
+        submit_js = Path(__file__).resolve().parents[1] / "static" / "emt" / "js" / "submit_event_report.js"
+        node_script = '''
+const fs = require('fs');
+const src = fs.readFileSync('__SUBMIT_JS__', 'utf8');
+function extract(name){
+  const start=src.indexOf('function '+name);
+  if(start===-1) throw new Error('not found');
+  let idx=src.indexOf('{', start);let depth=1;idx++;
+  while(idx<src.length && depth>0){if(src[idx]=='{')depth++;else if(src[idx]=='}')depth--;idx++;}
+  return src.slice(start, idx);
+}
+const initCode = extract('initializeAutosaveIndicators');
+const setupCode = extract('setupAttendanceLink');
+const handlers={};
+const document={};
+const docObj={
+  on:(ev,fn)=>{(handlers[ev]=handlers[ev]||[]).push(fn);return docObj;},
+  trigger:(ev,data)=>{(handlers[ev]||[]).forEach(fn=>fn({type:ev}, data));},
+  off:()=>docObj
+};
+function $(sel){
+ if(sel===document) return docObj;
+ if(sel==='#attendance-modern') return attendanceEl;
+ if(sel==='#autosave-indicator') return indicatorEl;
+}
+const attendanceEl={attrs:{},dataStore:{},length:1,
+  attr:function(n,v){if(v===undefined)return this.attrs[n];this.attrs[n]=v;return this;},
+  data:function(n,v){if(v===undefined)return this.dataStore[n];this.dataStore[n]=v;return this;},
+  prop:function(){return this;},
+  css:function(){return this;}
+};
+const indicatorEl={removeClass:function(){return this;},addClass:function(){return this;},find:function(){return {text:function(){}};},length:1};
+const window={location:{}};
+eval(setupCode);
+eval(initCode);
+initializeAutosaveIndicators();
+$(document).trigger('autosave:success', {reportId:__REPORT_ID__});
+console.log(attendanceEl.attrs['href']);
+'''
+        node_script = node_script.replace('__SUBMIT_JS__', str(submit_js)).replace('__REPORT_ID__', str(report_id))
+        with tempfile.TemporaryDirectory() as tmp:
+            script_path = Path(tmp) / "run.js"
+            script_path.write_text(node_script)
+            result = subprocess.run(["node", str(script_path)], capture_output=True, text=True)
+        self.assertEqual(result.stdout.strip(), attendance_url)
 
     def test_autosave_indicator_present(self):
         response = self.client.get(

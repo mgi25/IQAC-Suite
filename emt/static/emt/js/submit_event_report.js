@@ -1,3 +1,30 @@
+let loadingCount = 0;
+
+function showLoadingOverlay(text = 'Loading...') {
+    const overlay = document.getElementById('loadingOverlay');
+    if (!overlay) return;
+    const textEl = overlay.querySelector('p');
+    if (textEl) textEl.textContent = text;
+    loadingCount++;
+    overlay.classList.add('show');
+}
+
+function hideLoadingOverlay() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (!overlay) return;
+    loadingCount = Math.max(loadingCount - 1, 0);
+    if (loadingCount === 0) {
+        overlay.classList.remove('show');
+    }
+}
+
+function fetchWithOverlay(url, options = {}, text = 'Loading...') {
+    showLoadingOverlay(text);
+    return fetch(url, options).finally(() => {
+        hideLoadingOverlay();
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function(){
     // Central init (consolidated single DOMContentLoaded listener)
     const sectionState = {}; // fieldName -> value snapshot
@@ -243,7 +270,16 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
     catch (err) { console.error(err); }
     finally { btn.prop('disabled', false).text(original); }
 });
-  
+
+$(document).on('click', '#ai-sdg-implementation', function(){
+    const btn = $(this);
+    const original = btn.text();
+    btn.prop('disabled', true).text('...');
+    try { aiFill('#sdg-implementation-modern', 120); }
+    catch (err) { console.error(err); }
+    finally { btn.prop('disabled', false).text(original); }
+});
+
   // Add validation styling to form fields with errors
   $('.field-error').each(function() {
       $(this).siblings('input, select, textarea').addClass('error');
@@ -287,6 +323,7 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
           return;
       }
 
+      let submitted = false;
       const proceed = () => {
           markSectionComplete(currentSection);
           const nextSection = getNextSection(currentSection);
@@ -351,17 +388,24 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
               });
 
               form.attr('action', previewUrl);
+              showLoadingOverlay('Generating preview...');
               form[0].submit();
+              submitted = true;
           }
       };
 
+      showLoadingOverlay('Saving...');
       const savePromise = (window.ReportAutosaveManager && window.ReportAutosaveManager.manualSave)
           ? window.ReportAutosaveManager.manualSave()
           : Promise.resolve();
 
-      savePromise.then(proceed).catch(() => {
+      savePromise.then(() => {
+          proceed();
+          if (!submitted) hideLoadingOverlay();
+      }).catch(() => {
           showNotification('Save failed', 'error');
           proceed();
+          if (!submitted) hideLoadingOverlay();
       });
   });
   
@@ -421,6 +465,9 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
       // Restore field values if switching back to a section
       setTimeout(() => {
           restoreFieldValues(sectionName);
+          if (window.ReportAutosaveManager) {
+              ReportAutosaveManager.reinitialize();
+          }
       }, 100);
   }
   
@@ -594,8 +641,8 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
       requiredFields.forEach(function(field) {
           const element = $(field.id);
           if (field.id === '#graduate-attributes-modern') {
-              // Special validation for multi-select
-              if (!element.val() || element.val().length === 0) {
+              const checked = element.find('input[name="needs_grad_attr_mapping"]:checked');
+              if (checked.length === 0) {
                   showFieldError(element, field.name + ' - Please select at least one attribute');
                   isValid = false;
               } else {
@@ -649,6 +696,8 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
           if(sectionState.hasOwnProperty(key)){
               if(el.tagName === 'SELECT' && el.multiple && Array.isArray(sectionState[key])){
                   Array.from(el.options).forEach(o => { o.selected = sectionState[key].includes(o.value); });
+              } else if(el.type === 'checkbox') {
+                  el.checked = Array.isArray(sectionState[key]) ? sectionState[key].includes(el.value) : sectionState[key] === el.value;
               } else {
                   el.value = sectionState[key];
               }
@@ -661,8 +710,11 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
       const el = this;
       if(el.tagName === 'SELECT' && el.multiple){
           sectionState[el.name] = Array.from(el.selectedOptions).map(o => o.value);
-      } else if(el.type === 'checkbox' || el.type === 'radio') {
-          sectionState[el.name] = el.checked ? el.value : '';
+      } else if(el.type === 'checkbox') {
+          const checked = Array.from(document.querySelectorAll(`input[name="${el.name}"]:checked`)).map(cb => cb.value);
+          sectionState[el.name] = checked;
+      } else if(el.type === 'radio') {
+          if(el.checked) sectionState[el.name] = el.value;
       } else {
           sectionState[el.name] = el.value;
       }
@@ -672,13 +724,26 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
   document.querySelectorAll('form#report-form input[name], form#report-form textarea[name], form#report-form select[name]').forEach(el => {
       if(el.tagName === 'SELECT' && el.multiple){
           sectionState[el.name] = Array.from(el.selectedOptions).map(o => o.value);
-      } else if(el.type === 'checkbox' || el.type === 'radio') {
-          sectionState[el.name] = el.checked ? el.value : '';
+      } else if(el.type === 'checkbox') {
+          if(!sectionState[el.name]) sectionState[el.name] = [];
+          if(el.checked) sectionState[el.name].push(el.value);
+      } else if(el.type === 'radio') {
+          if(el.checked) sectionState[el.name] = el.value;
       } else {
           sectionState[el.name] = el.value;
       }
   });
-  
+
+  // Graduate Attributes toggle behavior
+  $(document).on('click', '.ga-toggle', function(){
+      $(this).next('.ga-options').slideToggle();
+  });
+
+  // Clear error when selecting graduate attributes
+  $(document).on('change', 'input[name="needs_grad_attr_mapping"]', function(){
+      clearFieldError($('#graduate-attributes-modern'));
+  });
+
   function getEventInformationContent() {
       const eventTypeValue = window.REPORT_ACTUAL_EVENT_TYPE || (window.PROPOSAL_DATA ? window.PROPOSAL_DATA.event_focus_type || '' : '');
       return `
@@ -809,7 +874,6 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
           <div class="form-row full-width">
               <div class="save-section-container" style="display: flex; flex-direction: column; align-items: center;">
                   <button type="button" class="btn-save-section" style="margin-bottom: 0.5rem;">Save & Continue</button>
-                  <button type="submit" name="save_draft" class="btn-draft-section">Save as Draft</button>
                   <div class="save-help-text" style="margin-top: 0.75rem;">Complete this section to unlock the next one</div>
               </div>
           </div>
@@ -893,7 +957,6 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
           <div class="form-row full-width">
               <div class="save-section-container">
                   <button type="button" class="btn-save-section">Save & Continue</button>
-                  <button type="submit" name="save_draft" class="btn-draft-section">Save as Draft</button>
                   <div class="save-help-text">Complete this section to unlock the next one</div>
               </div>
           </div>
@@ -946,7 +1009,6 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
           <div class="form-row full-width">
               <div class="save-section-container">
                   <button type="button" class="btn-save-section">Save & Continue</button>
-                  <button type="submit" name="save_draft" class="btn-draft-section">Save as Draft</button>
                   <div class="save-help-text">Complete this section to unlock the next one</div>
               </div>
           </div>
@@ -1011,7 +1073,6 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
           <div class="form-row full-width">
               <div class="save-section-container">
                   <button type="button" class="btn-save-section">Save & Continue</button>
-                  <button type="submit" name="save_draft" class="btn-draft-section">Save as Draft</button>
                   <div class="save-help-text">Complete this section to unlock the next one</div>
               </div>
           </div>
@@ -1096,7 +1157,6 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
           <div class="form-row full-width">
               <div class="save-section-container">
                   <button type="button" class="btn-save-section">Save & Continue</button>
-                  <button type="submit" name="save_draft" class="btn-draft-section">Save as Draft</button>
                   <div class="save-help-text">Complete this section to unlock the next one</div>
               </div>
           </div>
@@ -1113,7 +1173,7 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
           <div class="form-row full-width">
               <div class="input-group ai-input">
                   <label for="pos-pso-modern">PO's and PSO's Management *</label>
-                  <textarea id="pos-pso-modern" name="pos_pso" rows="15" required
+                  <textarea id="pos-pso-modern" name="pos_pso_mapping" rows="15" required
                       placeholder="Describe how the event addresses Program Outcomes (POs) and Program Specific Outcomes (PSOs):&#10;&#10;Program Outcomes:&#10;• PO1: Engineering Knowledge&#10;• PO2: Problem Analysis&#10;• PO3: Design/Development of Solutions&#10;&#10;Program Specific Outcomes:&#10;• PSO1: [Specific to your program]&#10;• PSO2: [Specific to your program]&#10;&#10;Provide detailed explanation of how each relevant outcome was addressed through this event."></textarea>
                   <button type="button" id="ai-pos-pso" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <div class="help-text">Detail how the event contributes to achieving specific program outcomes</div>
@@ -1128,20 +1188,91 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
           <div class="form-row">
               <div class="input-group">
                   <label for="graduate-attributes-modern">Graduate Attributes *</label>
-                  <select id="graduate-attributes-modern" name="graduate_attributes" multiple class="graduate-attributes-select" required>
-                      <option value="engineering_knowledge">Engineering Knowledge</option>
-                      <option value="problem_analysis">Problem Analysis</option>
-                      <option value="design_solutions">Design/Development of Solutions</option>
-                      <option value="investigation">Conduct Investigations</option>
-                      <option value="modern_tools">Modern Tool Usage</option>
-                      <option value="engineer_society">The Engineer and Society</option>
-                      <option value="environment_sustainability">Environment and Sustainability</option>
-                      <option value="ethics">Ethics</option>
-                      <option value="individual_teamwork">Individual and Team Work</option>
-                      <option value="communication">Communication</option>
-                      <option value="project_management">Project Management and Finance</option>
-                      <option value="lifelong_learning">Life-long Learning</option>
-                  </select>
+                  <div id="graduate-attributes-modern" class="graduate-attributes-groups">
+                      <div class="ga-category">
+                          <button type="button" class="ga-toggle">Academic Excellence</button>
+                          <div class="ga-options">
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="academic_extensive_knowledge"> Academic Excellence: Extensive knowledge in the chosen discipline with ability to apply it effectively </label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="domain_expertise"> Domain Expertise: Comprehensive specialist knowledge of the field of study and defined professional skills ensuring work readiness</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="problem_solving"> Problem solving: Making informed choices in a variety of situations, useful in a scholarly context that enables the students to understand and develop solutions</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="knowledge_application"> Knowledge Application: Ability to use available knowledge to make decisions and perform tasks</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="self_learning_research"> Self-Learning and research Skills: Ability to create new understanding and knowledge through the process of research and inquiry.</label>
+                          </div>
+                      </div>
+                      <div class="ga-category">
+                          <button type="button" class="ga-toggle">Professional Excellence</button>
+                          <div class="ga-options">
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="professional_excellence"> Professional Excellence: Application of knowledge and its derivatives objectively and effectively accomplishing the organizational goals.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="practical_skills"> Practical Skills: Ability to use theoretical knowledge in real-life situations.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="creative_thinking"> Creative Thinking: Ability to look at problems or situations from a fresh or unorthodox perspective.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="employability"> Employability: Denotes the academic and professional expertise along with the soft skills and pleasant demeanors necessary for success at a job.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="entrepreneurship"> Entrepreneurship: Capacity and willingness to develop, organize and manage any value-adding venture along with any risk.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="continuous_learning"> Continuous Learning: Also referred to as life-long learning, is the ongoing, voluntary, and self-motivated pursuit of knowledge for either personal or professional reasons.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="analytical_skills"> Analytical Skills: Ability to firm up on the relevance of information and its interpretation towards planning, problem-solving or decision making.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="critical_solution_thinking"> Critical and Solution-Oriented Thinking: Ability to objectively analyze and evaluate an issue or problem in order to form a judgement or solution</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="global_perspective"> Global Perspective: Recognition and appreciation of other cultures and recognizing the global context of an issue and/or perceptions in decision making</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="innovativeness"> Innovativeness: The skill and imagination to create new things/ideas/ methods to gain an organizational advantage</label>
+                          </div>
+                      </div>
+                      <div class="ga-category">
+                          <button type="button" class="ga-toggle">Personality</button>
+                          <div class="ga-options">
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="personality"> Personality: Personality refers to individual differences in characteristics, patterns of thinking, feeling and behaving</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="self_awareness"> Self-Awareness: Ability to critically introspect on one's attitude, thoughts, feeling and behavior and their impact in life situations</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="emotional_self_regulation"> Emotional Self-Regulation: Ability to manage emotions effectively</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="self_esteem"> Self-Esteem: Confidence in one's own worth and abilities</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="humility"> Humility: Quality of having a modest or low view of one's importance, not influenced by ego</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="accessibility"> Accessibility: Quality of being approachable by others.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="positive_attitude"> Positive Attitude: Mental perception of optimism that focuses on positive results</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="personal_integrity"> Personal Integrity: An innate moral conviction to stand against things that are not virtuous or morally right</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="adaptability"> Adaptability: Quality of being able to adjust to new conditions in any given circumstance</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="tolerance"> Tolerance: Ability or willingness to forbear the existence of opinions/behavior/development that one dislikes or disagrees with</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="peer_recognition"> Peer Recognition: Genuine expression of appreciation for or exchanged between team members/colleagues</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="sense_of_transcendence"> Sense of Transcendence: Ability to go beyond and connect to the Almighty through a sense of purpose, meaning, hope and gratitude</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="compassion"> Compassion: Genuine concern for others and their life situation</label>
+                          </div>
+                      </div>
+                      <div class="ga-category">
+                          <button type="button" class="ga-toggle">Leadership</button>
+                          <div class="ga-options">
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="leadership"> Leadership: Ability to lead the action of a team or a group or an organization towards achieving the goals with voluntary participation by all</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="logical_resolution"> Logical Resolution of Issues: Attitude of logically resolving the issues which may consequently include questioning, observing physical reality, testing, hypothesizing, analyzing and communicating</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="self_confidence"> Self-Confidence: The belief in one's own capability</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="initiative"> Initiative: Self-motivation and willingness to do things or to get things done by one's own voluntary act</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="dynamism"> Dynamism: Quality of being proactive in terms of thoughts, tasks or responsibility</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="empathy"> Empathy: Capacity to understand or feel what another person is experiencing i.e., the capacity to place oneself in another's position</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="inclusiveness"> Inclusiveness: Quality of including different types of people and treating them fairly and equally</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="team_building"> Team Building Skills: Ability to motivate the team members and increase the overall performance of the team</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="facilitation"> Facilitation: Ability to guide the team members to achieve their task with minimum emphasis on criticism</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="consultative_decision_making"> Consultative Decision Making: Considering the views of others in decision making.</label>
+                          </div>
+                      </div>
+                      <div class="ga-category">
+                          <button type="button" class="ga-toggle">Communication</button>
+                          <div class="ga-options">
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="communication"> Communication: Ability to convey intended meaning through the use of mutually understood means or methods</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="verbal_skills"> Verbal skills: Ability to speak, tell or write in simple understandable language set to a pleasant tone to ensure that the listener or reader is motivated to listen, follow or act</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="non_verbal_skills"> Non-Verbal Skills: Ability to convey information informally in an amicable manner without exchange of words</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="mutual_respect"> Mutual Respect: Ability to maintain decorum and mutual respect while communicating by signs and bodily expressions</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="listening"> Listening: Ability to be a good listener to accurately receive and interpret messages in the communication process</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="clarity_comprehensiveness"> Clarity and Comprehensiveness: Ability to communicate clearly and sequentially to ensure its full understanding to the reader with no scope for misunderstanding or confusion</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="assertiveness"> Assertiveness: Ability to stand up for one's own or other's viewpoints in a calm and positive way, without being either aggressive or passive.</label>
+                          </div>
+                      </div>
+                      <div class="ga-category">
+                          <button type="button" class="ga-toggle">Social Sensitivity</button>
+                          <div class="ga-options">
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="social_sensitivity"> Social Sensitivity: Ability and willingness to perceive, understand and respect the feelings and viewpoints of members of the society and to recognize and respond to social issues.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="respecting_diversity"> Respecting Diversity: Awareness of and insight into differences and diversity and treat them respectfully and equitably.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="civic_sense"> Civic Sense: Responsibility of a person to encompass norms of society that help it run smoothly without disturbing others.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="law_abiding"> Law Abiding: Awareness and voluntary compliance of lawful duties as a citizen of the country and not to carry out anything illegal.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="cross_cultural_recognition"> Cross Cultural Recognition: Acknowledgement of and respect for equality, opportunity in recognition and appreciation of all other cultural beliefs.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="knowledge_sharing"> Knowledge Sharing: Attitude to help and develop the underprivileged members of the society by spreading education.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="environmental_sensitivity"> Environmental Sensitivity: Working to conserving natural environment in all areas and prevent its destruction.</label>
+                              <label><input type="checkbox" name="needs_grad_attr_mapping" value="social_awareness_contribution"> Social Awareness and Contribution: Appreciating the role for removal of problems of the less privileged groups of the society and contribute towards their upliftment.</label>
+                          </div>
+                      </div>
+                  </div>
                   <div class="help-text">Select relevant graduate attributes developed through this event</div>
               </div>
           </div>
@@ -1155,10 +1286,11 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
                   <div class="help-text">Explain how the event addresses employability, entrepreneurship, skill development, etc.</div>
               </div>
 
-              <div class="input-group">
+              <div class="input-group ai-input">
                   <label for="sdg-implementation-modern">SDG Implementation *</label>
-                  <textarea id="sdg-implementation-modern" name="sdg_goals" rows="10" required 
+                  <textarea id="sdg-implementation-modern" name="sdg_value_systems_mapping" rows="10" required
                       placeholder="Click 'Select SDG Goals' to choose from the 17 Sustainable Development Goals&#10;&#10;Selected goals will appear here and can be edited:&#10;&#10;You can modify the SDG selection or add additional context about how your event addresses these goals."></textarea>
+                  <button type="button" id="ai-sdg-implementation" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <button type="button" id="sdg-select-btn" class="btn-select-sdg">Select SDG Goals</button>
                   <div class="help-text">Sustainable Development Goals addressed by this event (editable)</div>
               </div>
@@ -1168,7 +1300,6 @@ $(document).on('click', '#ai-contemporary-requirements', function(){
           <div class="form-row full-width">
               <div class="save-section-container">
                   <button type="button" class="btn-save-section">Save & Continue</button>
-                  <button type="submit" name="save_draft" class="btn-draft-section">Save as Draft</button>
                   <div class="save-help-text">Complete this section to unlock the next one</div>
               </div>
           </div>
@@ -1235,16 +1366,21 @@ function showNotification(message, type = 'info') {
 
 // Populate fields with proposal data
 function populateProposalData() {
-    // Populate PO/PSO field when section becomes active
+    function fillEventRelevance() {
+        if ($('#pos-pso-modern').length && window.PROPOSAL_DATA && window.PROPOSAL_DATA.pos_pso) {
+            $('#pos-pso-modern').val(window.PROPOSAL_DATA.pos_pso);
+        }
+        if ($('#sdg-implementation-modern').length && window.PROPOSAL_DATA && window.PROPOSAL_DATA.sdg_goals) {
+            $('#sdg-implementation-modern').val(window.PROPOSAL_DATA.sdg_goals);
+        }
+    }
+
+    // Populate on load
+    setTimeout(fillEventRelevance, 100);
+
+    // Populate when section becomes active
     $(document).on('click', '[data-section="event-relevance"]', function() {
-        setTimeout(function() {
-            if ($('#pos-pso-modern').length && window.PROPOSAL_DATA && window.PROPOSAL_DATA.pos_pso) {
-                $('#pos-pso-modern').val(window.PROPOSAL_DATA.pos_pso);
-            }
-            if ($('#sdg-implementation-modern').length && window.PROPOSAL_DATA && window.PROPOSAL_DATA.sdg_goals) {
-                $('#sdg-implementation-modern').val(window.PROPOSAL_DATA.sdg_goals);
-            }
-        }, 100);
+        setTimeout(fillEventRelevance, 100);
     });
 
     // Populate organizing committee details when section becomes active
@@ -1422,7 +1558,7 @@ function openOutcomeModal(){
   );
   modal.classList.add('show');
   container.textContent = 'Loading...';
-  fetch(url)
+  fetchWithOverlay(url, {}, 'Loading outcomes...')
     .then(r => r.json())
     .then(data => {
       if(data.success){
@@ -1811,134 +1947,26 @@ function setupDynamicActivities() {
     render();
 }
 
-function setupAttendanceModal() {
+function setupAttendanceLink() {
     const attendanceField = $('#attendance-modern');
-    const modal = $('#attendanceModal');
-    const notesField = $('#attendance-data');
-    const participantInput = $('#num-participants-modern');
-    const volunteerInput = $('#num-volunteers-modern');
+    if (!attendanceField.length) return;
 
-    if (!attendanceField.length || !modal.length) return;
+    const url = attendanceField.data('attendance-url');
+    attendanceField
+        .prop('readonly', true)
+        .css('cursor', 'pointer')
+        .attr('href', url || '#');
 
-    let participants = [];
-
-    if (notesField.val()) {
-        try {
-            participants = JSON.parse(notesField.val());
-            const present = participants.filter(p => !p.absent);
-            attendanceField.val(present.map(p => p.name).join(', '));
-            participantInput.val(present.length);
-            const volunteerCount = present.filter(p => p.student_volunteer).length;
-            volunteerInput.val(volunteerCount).trigger('change').trigger('input');
-        } catch (e) {
-            participants = [];
-        }
-    }
-
-    attendanceField.prop('readonly', true).css('cursor', 'pointer');
-    $(document).off('click', '#attendance-modern').on('click', '#attendance-modern', () => {
-        renderList();
-        modal.addClass('show');
-    });
-    $('#attendanceCancel').off('click').on('click', () => modal.removeClass('show'));
-
-    function toBool(val) {
-        const v = String(val || '').trim().toLowerCase();
-        return ['yes', 'true', '1', 'y'].includes(v);
-    }
-
-    function parseCSV(text) {
-        if (window.Papa) {
-            const result = Papa.parse(text.trim(), { skipEmptyLines: true });
-            return result.data.slice(1).map(row => {
-                const cells = row.map(c => (c || '').trim());
-                while (cells.length < 5) cells.push('');
-                return cells.slice(0, 5);
-            });
-        }
-        return text.trim().split(/\r?\n/).slice(1).map(line => {
-            const cells = line.split(',').map(c => c.trim());
-            while (cells.length < 5) cells.push('');
-            return cells.slice(0, 5);
+    $(document)
+        .off('click', '#attendance-modern')
+        .on('click', '#attendance-modern', () => {
+            const href = attendanceField.data('attendance-url');
+            if (href) {
+                window.location.href = href;
+            } else {
+                alert('Save report to manage attendance via CSV');
+            }
         });
-    }
-
-    function handleFile(file, type) {
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = e => {
-            const rows = parseCSV(e.target.result);
-            rows.forEach(cells => {
-                const [number, name, class_or_dept, absent, student_volunteer] = cells;
-                const obj = {
-                    number,
-                    name,
-                    class_or_dept,
-                    absent: toBool(absent),
-                    student_volunteer: toBool(student_volunteer),
-                    type
-                };
-                participants.push(obj);
-                if (type === 'faculty' && !obj.class_or_dept && obj.number) {
-                    fetch(`${window.API_FACULTY}?org_id=${window.PROPOSAL_ORG_ID}&q=${encodeURIComponent(obj.number)}`, { credentials: 'include' })
-                        .then(r => r.json())
-                        .then(data => {
-                            if (data.length) {
-                                obj.class_or_dept = data[0].department || '';
-                                renderList();
-                            }
-                        })
-                        .catch(() => {});
-                }
-            });
-            renderList();
-        };
-        reader.readAsText(file);
-    }
-
-    $('#studentCsv').off('change').on('change', function() {
-        handleFile(this.files[0], 'student');
-        this.value = '';
-    });
-    $('#facultyCsv').off('change').on('change', function() {
-        handleFile(this.files[0], 'faculty');
-        this.value = '';
-    });
-
-    function renderList() {
-        const list = $('#attendanceList');
-        if (!participants.length) {
-            list.html('<p>No participants loaded.</p>');
-            return;
-        }
-        let html = '<table class="attendance-table" style="table-layout: fixed; white-space: nowrap;"><thead><tr><th>Name</th><th>Reg/Emp No</th><th>Class/Dept</th><th>Absent</th><th>Student Volunteer</th></tr></thead><tbody>';
-        participants.forEach((p, i) => {
-            html += `<tr><td>${p.name}</td><td>${p.number || ''}</td><td>${p.class_or_dept || ''}</td>` +
-                    `<td><input type="checkbox" class="absent-toggle" data-index="${i}"${p.absent ? ' checked' : ''}></td>` +
-                    `<td><input type="checkbox" class="volunteer-toggle" data-index="${i}"${p.student_volunteer ? ' checked' : ''}></td></tr>`;
-        });
-        html += '</tbody></table>';
-        list.html(html);
-    }
-
-    $('#attendanceList').on('change', '.absent-toggle', function() {
-        const idx = $(this).data('index');
-        participants[idx].absent = this.checked;
-    });
-    $('#attendanceList').on('change', '.volunteer-toggle', function() {
-        const idx = $(this).data('index');
-        participants[idx].student_volunteer = this.checked;
-    });
-
-    $('#attendanceSave').off('click').on('click', () => {
-        notesField.val(JSON.stringify(participants)).trigger('change').trigger('input');
-        const present = participants.filter(p => !p.absent);
-        attendanceField.val(present.map(p => p.name).join(', ')).trigger('change').trigger('input');
-        participantInput.val(present.length).trigger('change').trigger('input');
-        const volunteerCount = present.filter(p => p.student_volunteer).length;
-        volunteerInput.val(volunteerCount).trigger('change').trigger('input');
-        modal.removeClass('show');
-    });
 }
 
 
@@ -1949,13 +1977,22 @@ function initializeAutosaveIndicators() {
         indicator.find('.indicator-text').text('Saving...');
     });
 
-    $(document).on('autosave:success', function() {
+    $(document).on('autosave:success', function(e, data) {
         const indicator = $('#autosave-indicator');
         indicator.removeClass('saving error').addClass('saved');
         indicator.find('.indicator-text').text('Saved');
         setTimeout(() => {
             indicator.removeClass('show');
         }, 2000);
+
+        const reportId = data?.reportId || e.originalEvent?.detail?.reportId || e.detail?.reportId;
+        if (reportId) {
+            const attendanceUrl = `/reports/${reportId}/attendance/upload/`;
+            $('#attendance-modern')
+                .attr('data-attendance-url', attendanceUrl)
+                .data('attendance-url', attendanceUrl);
+            setupAttendanceLink();
+        }
     });
 
     $(document).on('autosave:error', function() {
@@ -1973,10 +2010,16 @@ function initializeAutosaveIndicators() {
 $(document).ready(function() {
     initializeSectionSpecificHandlers();
     setupDynamicActivities();
-    setupAttendanceModal();
+    setupAttendanceLink();
     if (window.ReportAutosaveManager) {
         ReportAutosaveManager.reinitialize();
     }
     initializeAutosaveIndicators();
+
+    $('#report-form').on('submit', function() {
+        if (loadingCount === 0) {
+            showLoadingOverlay('Submitting...');
+        }
+    });
 });
 
