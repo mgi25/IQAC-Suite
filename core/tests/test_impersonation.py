@@ -41,3 +41,11 @@ class ImpersonationTests(TestCase):
         response = self.client.get(reverse('admin_impersonate_user', args=[inactive.id]))
         self.assertEqual(response.status_code, 302)
         self.assertEqual(self.client.session['impersonate_user_id'], inactive.id)
+
+    def test_non_admin_cannot_impersonate(self):
+        non_admin = User.objects.create_user('eve', 'eve@example.com', 'pass')
+        self.client.logout()
+        self.client.force_login(non_admin)
+        response = self.client.get(reverse('admin_impersonate_user', args=[self.user.id]))
+        self.assertEqual(response.status_code, 403)
+        self.assertNotIn('impersonate_user_id', self.client.session)
