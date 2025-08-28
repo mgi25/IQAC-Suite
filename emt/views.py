@@ -2431,6 +2431,22 @@ def save_attendance_rows(request, report_id):
         ]
     )
 
+    # Persist counts in session draft so the report form shows updated values
+    drafts = request.session.setdefault("event_report_draft", {})
+    key = str(report.proposal_id)
+    draft = drafts.get(key, {})
+    draft.update(
+        {
+            "num_participants": present,
+            "num_student_volunteers": volunteers,
+            "num_student_participants": student_count,
+            "num_faculty_participants": faculty_count,
+            "num_external_participants": external_count,
+        }
+    )
+    drafts[key] = draft
+    request.session.modified = True
+
     return JsonResponse(
         {
             "total": total,
