@@ -4832,7 +4832,12 @@ def stop_impersonation(request):
 @user_passes_test(is_admin)
 def admin_impersonate_user(request, user_id):
     """Start impersonating a user from admin pages."""
-    target_user = get_object_or_404(User, id=user_id, is_active=True)
+    # Allow impersonation of any existing user regardless of ``is_active`` status.
+    # Previously we restricted to ``is_active=True`` which resulted in a 404
+    # when attempting to impersonate inactive users from the user management
+    # page. By removing that filter the view will locate the user record and
+    # proceed with impersonation.
+    target_user = get_object_or_404(User, id=user_id)
     request.session['impersonate_user_id'] = target_user.id
     request.session['original_user_id'] = request.user.id
 
