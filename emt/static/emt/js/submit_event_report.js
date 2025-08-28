@@ -1424,9 +1424,14 @@ function populateSpeakersFromProposal() {
         return;
     }
 
-    const speakers = (window.PROPOSAL_DATA && window.PROPOSAL_DATA.speakers) || window.EXISTING_SPEAKERS || [];
+    let speakers = [];
+    if (window.PROPOSAL_DATA && Array.isArray(window.PROPOSAL_DATA.speakers) && window.PROPOSAL_DATA.speakers.length) {
+        speakers = window.PROPOSAL_DATA.speakers;
+    } else if (Array.isArray(window.EXISTING_SPEAKERS) && window.EXISTING_SPEAKERS.length) {
+        speakers = window.EXISTING_SPEAKERS;
+    }
     console.log('Speakers data:', speakers);
-    
+
     if (!speakers.length) {
         container.innerHTML = '<div class="no-speakers-message">No speakers were defined in the original proposal</div>';
         return;
