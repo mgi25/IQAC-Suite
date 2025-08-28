@@ -6,7 +6,8 @@ from django.contrib.auth.signals import user_logged_in
 import json
 
 from core.signals import create_or_update_user_profile, assign_role_on_login
-from emt.models import EventProposal, EventReport
+from emt.models import EventProposal, EventReport, Student
+from core.models import Organization, OrganizationType, OrganizationMembership
 
 
 class SaveAttendanceRowsTests(TestCase):
@@ -25,25 +26,54 @@ class SaveAttendanceRowsTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="alice", password="pass")
         self.client.force_login(self.user)
+
+        org_type = OrganizationType.objects.create(name="Dept")
+        self.organization = Organization.objects.create(name="Org", org_type=org_type)
         self.proposal = EventProposal.objects.create(
             submitted_by=self.user,
             event_title="Sample Event",
+            organization=self.organization,
         )
         self.report = EventReport.objects.create(proposal=self.proposal)
+
+        # Participants used in attendance rows
+        student_user = User.objects.create_user(username="S1", password="pass")
+        Student.objects.create(user=student_user, registration_number="S1")
+        faculty_user = User.objects.create_user(username="F1", password="pass")
+        OrganizationMembership.objects.create(
+            user=faculty_user,
+            organization=self.organization,
+            academic_year="2024-2025",
+            role="faculty",
+        )
 
     def test_save_attendance_updates_report(self):
         url = reverse("emt:attendance_save", args=[self.report.id])
         rows = [
             {
-                "registration_no": "R1",
-                "full_name": "Bob",
+                "registration_no": "S1",
+                "full_name": "Stu Dent",
                 "student_class": "CSE",
                 "absent": False,
                 "volunteer": True,
             },
             {
-                "registration_no": "R2",
-                "full_name": "Carol",
+                "registration_no": "F1",
+                "full_name": "Fac Ulty",
+                "student_class": "",
+                "absent": False,
+                "volunteer": False,
+            },
+            {
+                "registration_no": "",
+                "full_name": "Ext Person",
+                "student_class": "",
+                "absent": False,
+                "volunteer": False,
+            },
+            {
+                "registration_no": "A1",
+                "full_name": "Ab Sent",
                 "student_class": "ECE",
                 "absent": True,
                 "volunteer": False,
@@ -56,13 +86,19 @@ class SaveAttendanceRowsTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.report.refresh_from_db()
-        self.assertEqual(self.report.num_participants, 1)
+        self.assertEqual(self.report.num_participants, 3)
         self.assertEqual(self.report.num_student_volunteers, 1)
-        saved = list(
-            self.report.attendance_rows.order_by("registration_no").values(
+        self.assertEqual(self.report.num_student_participants, 1)
+        self.assertEqual(self.report.num_faculty_participants, 1)
+        self.assertEqual(self.report.num_external_participants, 1)
+
+        saved = {
+            r["registration_no"]: r
+            for r in self.report.attendance_rows.values(
                 "registration_no", "absent", "volunteer"
             )
-        )
-        self.assertEqual(len(saved), 2)
-        self.assertTrue(saved[0]["volunteer"])
-        self.assertTrue(saved[1]["absent"])
+            if r["registration_no"]
+        }
+        self.assertTrue(saved["S1"]["volunteer"])
+        self.assertTrue(saved["A1"]["absent"])
+        self.assertEqual(len(saved), 3)  # empty registration_no excluded from keys

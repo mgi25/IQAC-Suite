@@ -2389,11 +2389,47 @@ def save_attendance_rows(request, report_id):
     total = len(rows)
     absent = len([r for r in rows if r.get("absent")])
     volunteers = len([r for r in rows if r.get("volunteer")])
-    present = total - absent
+    present_rows = [r for r in rows if not r.get("absent")]
+    present = len(present_rows)
+
+    # Determine participant types for present attendees
+    reg_nos = [r.get("registration_no") for r in present_rows if r.get("registration_no")]
+    users = {
+        u.username: u
+        for u in User.objects.filter(username__in=reg_nos).select_related("student_profile")
+    }
+    student_usernames = {u for u, obj in users.items() if hasattr(obj, "student_profile")}
+    faculty_usernames = set(
+        OrganizationMembership.objects.filter(
+            user__username__in=reg_nos, role="faculty"
+        ).values_list("user__username", flat=True)
+    )
+
+    student_count = sum(
+        1 for r in present_rows if r.get("registration_no") in student_usernames
+    )
+    faculty_count = sum(
+        1
+        for r in present_rows
+        if r.get("registration_no") in faculty_usernames
+        and r.get("registration_no") not in student_usernames
+    )
+    external_count = present - student_count - faculty_count
 
     report.num_participants = present
     report.num_student_volunteers = volunteers
-    report.save(update_fields=["num_participants", "num_student_volunteers"])
+    report.num_student_participants = student_count
+    report.num_faculty_participants = faculty_count
+    report.num_external_participants = external_count
+    report.save(
+        update_fields=[
+            "num_participants",
+            "num_student_volunteers",
+            "num_student_participants",
+            "num_faculty_participants",
+            "num_external_participants",
+        ]
+    )
 
     return JsonResponse(
         {
@@ -2401,6 +2437,9 @@ def save_attendance_rows(request, report_id):
             "present": present,
             "absent": absent,
             "volunteers": volunteers,
+            "students": student_count,
+            "faculty": faculty_count,
+            "external": external_count,
         }
     )
 
