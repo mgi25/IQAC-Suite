@@ -4088,9 +4088,6 @@ except Exception:
 # -------------------------
 # Access control helper
 # -------------------------
-def is_admin(user):
-    """Return True if user is superuser or has profile.role == 'admin'."""
-    return user.is_superuser or (hasattr(user, 'profile') and getattr(user.profile, 'role', '') == 'admin')
 
 
 # -------------------------
@@ -4829,9 +4826,11 @@ def stop_impersonation(request):
     return redirect('admin_dashboard')
 
 @login_required
-@user_passes_test(is_admin)
 def admin_impersonate_user(request, user_id):
     """Start impersonating a user from admin pages."""
+    if not is_admin(request.user):
+        raise PermissionDenied("You are not authorized to impersonate users.")
+
     # Allow impersonation of any existing user regardless of ``is_active`` status.
     # Previously we restricted to ``is_active=True`` which resulted in a 404
     # when attempting to impersonate inactive users from the user management
@@ -4849,9 +4848,10 @@ def admin_impersonate_user(request, user_id):
     return redirect(next_url)
 
 @login_required
-@user_passes_test(is_admin)
 def get_recent_users_api(request):
     """Get recently switched users"""
+    if not is_admin(request.user):
+        raise PermissionDenied("Admin access required")
     try:
         # Get recent impersonation history (you might want to store this in a model)
         # For now, returning some sample data
@@ -4863,21 +4863,18 @@ def get_recent_users_api(request):
                 'last_switch': '2024-01-15'
             }
         ]
-        
+
         return JsonResponse({'recent_users': recent_users})
-        
+
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
     
-def is_admin(user):
-    """Check if user is admin or superuser"""
-    return user.is_staff or user.is_superuser
-
 @login_required
-@user_passes_test(is_admin)
 def switch_user_view(request):
     """Display the switch user interface"""
+    if not is_admin(request.user):
+        raise PermissionDenied("Admin access required")
     users = User.objects.filter(is_active=True, last_login__isnull=False).select_related().order_by('username')
     
     # Get current impersonated user if any
@@ -4897,9 +4894,10 @@ def switch_user_view(request):
     return render(request, 'core/switch_user.html', context)
 
 @login_required
-@user_passes_test(is_admin)
 def search_users_api(request):
     """API endpoint for quick user search"""
+    if not is_admin(request.user):
+        raise PermissionDenied("Admin access required")
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -4938,10 +4936,11 @@ def search_users_api(request):
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 @login_required
-@user_passes_test(is_admin)
 @require_POST
 def impersonate_user(request):
     """Start impersonating a user"""
+    if not is_admin(request.user):
+        raise PermissionDenied("Admin access required")
     try:
         data = json.loads(request.body)
         user_id = data.get('user_id')
