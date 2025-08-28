@@ -398,7 +398,13 @@ def submit_proposal(request, pk=None):
         else None
     )
     flow = TentativeFlow.objects.filter(proposal=proposal).first() if proposal else None
-    activities = list(proposal.activities.values("name", "date")) if proposal else []
+    activities = (
+        list(proposal.activities.values("name", "date")) if proposal else []
+    )
+    for act in activities:
+        if act.get("date"):
+            act["date"] = act["date"].isoformat()
+
     speakers = (
         list(
             proposal.speakers.values(
@@ -419,6 +425,10 @@ def submit_proposal(request, pk=None):
         if proposal
         else []
     )
+    for ex in expenses:
+        if ex.get("amount") is not None:
+            ex["amount"] = float(ex["amount"])
+
     income = (
         list(
             proposal.income_details.values(
@@ -428,6 +438,10 @@ def submit_proposal(request, pk=None):
         if proposal
         else []
     )
+    for inc in income:
+        for fld in ("rate", "amount"):
+            if inc.get(fld) is not None:
+                inc[fld] = float(inc[fld])
 
     ctx = {
         "form": form,
