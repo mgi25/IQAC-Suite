@@ -8,51 +8,77 @@
 {% endblock %}
 
 {% block content %}
-<div class="attendance-container">
-    <h1 class="page-title">Attendance CSV Upload</h1>
+<div class="attendance-container container py-4">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h1 class="h4 mb-4">Attendance CSV Upload</h1>
 
-    {% if error %}
-    <div class="alert alert-danger">{{ error }}</div>
-    {% endif %}
+            {% if error %}
+            <div class="alert alert-danger">{{ error }}</div>
+            {% endif %}
 
-    <form method="post" enctype="multipart/form-data" class="mb-4">
-        {% csrf_token %}
-        <input type="file" name="csv_file" accept=".csv" class="form-control-file mb-2">
-        <button type="submit" class="btn btn-primary">Upload</button>
-    </form>
+            <form method="post" enctype="multipart/form-data" class="row g-2 mb-4 align-items-center">
+                {% csrf_token %}
+                <div class="col-auto flex-grow-1">
+                    <input type="file" name="csv_file" accept=".csv" class="form-control">
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">Upload</button>
+                </div>
+            </form>
 
-    <div id="summary" class="summary d-none">
-        <span>Total: <span id="total-count">{{ counts.total }}</span></span>
-        <span>Present: <span id="present-count">{{ counts.present }}</span></span>
-        <span>Absent: <span id="absent-count">{{ counts.absent }}</span></span>
-        <span>Volunteers: <span id="volunteer-count">{{ counts.volunteers }}</span></span>
-    </div>
+            <div id="summary" class="stats-grid d-none">
+                <div class="stat">
+                    <div class="stat-label">Total</div>
+                    <div class="stat-value" id="total-count">{{ counts.total }}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Present</div>
+                    <div class="stat-value" id="present-count">{{ counts.present }}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Absent</div>
+                    <div class="stat-value" id="absent-count">{{ counts.absent }}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Volunteers</div>
+                    <div class="stat-value" id="volunteer-count">{{ counts.volunteers }}</div>
+                </div>
+            </div>
 
-    <div id="loading" class="loading">Loading...</div>
+            <div id="loading" class="loading text-center my-3">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
 
-    <table id="attendance-table" class="table table-sm mt-3 d-none">
-        <thead>
-            <tr>
-                <th>Registration No</th>
-                <th>Full Name</th>
-                <th>Class</th>
-                <th>Absent</th>
-                <th>Student Volunteer</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+            <div class="table-responsive mt-4">
+                <table id="attendance-table" class="table table-sm table-striped table-hover align-middle d-none">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Registration No</th>
+                            <th>Full Name</th>
+                            <th>Class</th>
+                            <th>Absent</th>
+                            <th>Student Volunteer</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
 
-    <div id="grouped-sections" class="mt-4 d-none">
-        <h2 id="students-section-title">Students (Class-wise)</h2>
-        <div id="students-group"></div>
-        <h2 id="faculty-section-title" class="mt-3">Faculty (Organization-wise)</h2>
-        <div id="faculty-group"></div>
-    </div>
+            <div id="grouped-sections" class="mt-4 d-none">
+                <h2 id="students-section-title" class="h5 mb-3">Students (Class-wise)</h2>
+                <div id="students-group" class="mb-4"></div>
+                <h2 id="faculty-section-title" class="h5 mb-3">Faculty (Organization-wise)</h2>
+                <div id="faculty-group"></div>
+            </div>
 
-    <div id="actions" class="actions d-none">
-        <button id="save-event-report" class="btn btn-primary">Save to Event Report</button>
-        <button id="download-csv" class="btn btn-secondary">Download CSV</button>
+            <div id="actions" class="actions d-none">
+                <button id="save-event-report" class="btn btn-primary">Save to Event Report</button>
+                <button id="download-csv" class="btn btn-secondary">Download CSV</button>
+            </div>
+        </div>
     </div>
 </div>
 
