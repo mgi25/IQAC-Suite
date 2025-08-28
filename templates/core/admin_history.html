@@ -90,7 +90,19 @@
           <td class="nowrap">{{ log.timestamp|date:"H:i" }}</td>
           <td>{{ log.user.get_full_name|default:log.user.username|default:"System" }}</td>
           <td><a href="{% url 'admin_history_detail' log.pk %}">{{ log.action }}</a></td>
-          <td class="col-desc">{{ log.description|default:"-" }}</td>
+          <td class="col-desc">
+            {% if 'login' in log.action|lower %}
+              {{ log.user.get_full_name|default:log.user.username }} accessed the system successfully
+            {% elif 'GET /accounts/login/' in log.action %}
+              {{ log.user.get_full_name|default:log.user.username }} viewed the login page
+            {% elif 'POST /admin/login/' in log.action %}
+              {{ log.user.get_full_name|default:log.user.username }} submitted login credentials
+            {% elif '/admin/login/' in log.action %}
+              {{ log.user.get_full_name|default:log.user.username }} accessed admin login
+            {% else %}
+              {{ log.description|default:"-" }}
+            {% endif %}
+          </td>
           <td class="nowrap">{{ log.ip_address|default:"-" }}</td>
         </tr>
         {% empty %}
