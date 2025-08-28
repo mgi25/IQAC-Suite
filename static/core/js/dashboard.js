@@ -111,45 +111,69 @@
   let currentCategory = 'all';
   let privateTasksKey = 'ems.privateTasks';
   let eventIndexByDate = new Map();
-  const fmt2 = v => String(v).padStart(2,'0');
-  const isSame = (a,b)=>a.getFullYear()==b.getFullYear()&&a.getMonth()==b.getMonth()&&a.getDate()==b.getDate();
+  let DASHBOARD_EVENTS = [];
+
+  function fmt2(n) { return n.toString().padStart(2, "0"); }
+function isSame(d1, d2) {
+  return d1.getFullYear() === d2.getFullYear() &&
+         d1.getMonth() === d2.getMonth() &&
+         d1.getDate() === d2.getDate();
+}
 
   function buildCalendar() {
-    const headTitle = $('#calTitle');
-    const grid = $('#calGrid');
-    if(!grid || !headTitle) return;
+  const headTitle = document.getElementById("calTitle");
+  const grid = document.getElementById("calGrid");
+  if (!grid || !headTitle) return;
 
-    headTitle.textContent = calRef.toLocaleString(undefined,{month:'long', year:'numeric'});
+  headTitle.textContent = calRef.toLocaleString(undefined, { month: "long", year: "numeric" });
 
-    const first = new Date(calRef.getFullYear(), calRef.getMonth(), 1);
-    const last  = new Date(calRef.getFullYear(), calRef.getMonth()+1, 0);
-    const startIdx = first.getDay();
-    const prevLast = new Date(calRef.getFullYear(), calRef.getMonth(), 0).getDate();
+  const first = new Date(calRef.getFullYear(), calRef.getMonth(), 1);
+  const last  = new Date(calRef.getFullYear(), calRef.getMonth() + 1, 0);
+  const startIdx = first.getDay();
 
-    const cells = [];
-    for(let i=startIdx-1;i>=0;i--){ cells.push({text: prevLast - i, date:null, muted:true}); }
-    for(let d=1; d<=last.getDate(); d++){
-      const dt = new Date(calRef.getFullYear(), calRef.getMonth(), d);
-      cells.push({text:d, date:dt, muted:false});
-    }
-    while(cells.length % 7 !== 0){ cells.push({text: cells.length%7+1, date:null, muted:true}); }
-
-    // compute dates that have events (or private tasks)
-    const eventDates = new Set(eventIndexByDate.keys());
-    const privateTasks = new Set(JSON.parse(localStorage.getItem(privateTasksKey)||'[]'));
-
-    grid.innerHTML = cells.map(c=>{
-      const today = c.date && isSame(c.date, new Date());
-      const iso = c.date ? `${c.date.getFullYear()}-${fmt2(c.date.getMonth()+1)}-${fmt2(c.date.getDate())}` : '';
-      const hasEvent = iso && (eventDates.has(iso) || (currentCategory==='private' && privateTasks.has(iso)));
-      const markerClass = hasEvent ? (currentCategory==='faculty' ? ' has-meeting' : ' has-event') : '';
-      return `<div class="day${c.muted?' muted':''}${today?' today':''}${markerClass}" data-date="${iso}">${c.text}</div>`;
-    }).join('');
-
-    grid.querySelectorAll('.day[data-date]').forEach(el=>{
-      el.addEventListener('click', ()=> onDayClick(new Date(el.dataset.date)));
-    });
+  const cells = [];
+  for (let i = 0; i < startIdx; i++) cells.push({ text: "", date: null });
+  for (let d = 1; d <= last.getDate(); d++) {
+    const dt = new Date(calRef.getFullYear(), calRef.getMonth(), d);
+    const iso = `${dt.getFullYear()}-${fmt2(dt.getMonth() + 1)}-${fmt2(dt.getDate())}`;
+    cells.push({ text: d, date: iso });
   }
+
+  grid.innerHTML = cells.map(c => {
+    if (!c.date) return `<div class="day muted"></div>`;
+    const hasEvent = eventIndexByDate.has(c.date);
+    const today = isSame(new Date(c.date), new Date());
+    return `
+      <div class="day${today ? " today" : ""}" data-date="${c.date}">
+        ${c.text}
+        ${hasEvent ? '<span class="event-dot"></span>' : ""}
+      </div>
+    `;
+  }).join("");
+
+  grid.querySelectorAll(".day[data-date]").forEach(el => {
+    el.addEventListener("click", () => renderDayEvents(el.dataset.date));
+  });
+}
+
+function renderDayEvents(date) {
+  const wrap = document.getElementById("upcomingWrap");
+  const events = eventIndexByDate.get(date) || [];
+  if (events.length === 0) {
+    wrap.innerHTML = `<div class="empty">No events on ${date}.</div>`;
+    return;
+  }
+
+  wrap.innerHTML = events.map(ev => `
+    <article class="list-item">
+      <div class="bullet"><i class="fa-solid fa-calendar"></i></div>
+      <div class="list-body">
+        <h4><a href="/events/${ev.id}/">${ev.title}</a></h4>
+        <p class="muted">${ev.date}</p>
+      </div>
+    </article>
+  `).join("");
+}
 
   function openDay(day){
     const yyyy = day.getFullYear(), mm = String(day.getMonth()+1).padStart(2,'0'), dd = String(day.getDate()).padStart(2,'0');
@@ -379,8 +403,21 @@
     }
   }
 
-  $('#calPrev')?.addEventListener('click', ()=>{ calRef = new Date(calRef.getFullYear(), calRef.getMonth()-1, 1); buildCalendar(); syncHeights(); });
-  $('#calNext')?.addEventListener('click', ()=>{ calRef = new Date(calRef.getFullYear(), calRef.getMonth()+1, 1); buildCalendar(); syncHeights(); });
+  document.getElementById("calPrev")?.addEventListener("click", () => {
+  calRef = new Date(calRef.getFullYear(), calRef.getMonth() - 1, 1);
+  buildCalendar();
+  renderMonthEvents();
+});
+document.getElementById("calNext")?.addEventListener("click", () => {
+  calRef = new Date(calRef.getFullYear(), calRef.getMonth() + 1, 1);
+  buildCalendar();
+  renderMonthEvents();
+});
+
+// Init
+document.addEventListener("DOMContentLoaded", () => {
+  loadCalendarData();
+});
 
   // Add event scope passthrough - now opens modal instead
   $('#addEventBtn')?.addEventListener('click', (e) => {
@@ -498,22 +535,59 @@
     loadCalendarData();
   });
 
-  async function loadCalendarData(){
-    try{
-      const res = await fetch(`/api/calendar/?category=${encodeURIComponent(currentCategory)}`, { headers:{'X-Requested-With':'XMLHttpRequest'} });
-      const j = await res.json();
-      window.DASHBOARD_EVENTS = j.items || [];
-      // index by date for quick highlight
-      eventIndexByDate = new Map();
-      (window.DASHBOARD_EVENTS||[]).forEach(e=>{
-        if (!e.date) return;
-        const list = eventIndexByDate.get(e.date) || [];
-        list.push(e);
-        eventIndexByDate.set(e.date, list);
-      });
-    }catch{ window.DASHBOARD_EVENTS = []; eventIndexByDate = new Map(); }
-    buildCalendar(); openDay(new Date());
+async function loadCalendarData() {
+  try {
+    const res = await fetch(`/api/calendar/?category=all`, {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+    const j = await res.json();
+    DASHBOARD_EVENTS = j.items || [];
+
+    // Index by date
+    eventIndexByDate = new Map();
+    DASHBOARD_EVENTS.forEach(e => {
+      if (!e.date) return;
+      const list = eventIndexByDate.get(e.date) || [];
+      list.push(e);
+      eventIndexByDate.set(e.date, list);
+    });
+  } catch {
+    DASHBOARD_EVENTS = [];
+    eventIndexByDate = new Map();
   }
+  buildCalendar();
+  renderMonthEvents();
+}
+
+function renderMonthEvents() {
+  const wrap = document.getElementById("upcomingWrap");
+  const thisMonth = calRef.getMonth();
+  const thisYear  = calRef.getFullYear();
+
+  const events = DASHBOARD_EVENTS.filter(e => {
+    const d = new Date(e.date);
+    return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+  });
+
+  if (events.length === 0) {
+    wrap.innerHTML = `<div class="empty">No upcoming events this month.</div>`;
+    return;
+  }
+
+wrap.innerHTML = events.map(ev => `
+  <article class="list-item">
+    <div class="bullet"><i class="fa-solid fa-calendar"></i></div>
+    <div class="list-body">
+      <h4><a href="${ev.view_url}">${ev.title}</a></h4>
+      <p class="muted">${ev.date}</p>
+    </div>
+  </article>
+`).join("");
+
+
+}
+
+
 
   // Heatmap
   async function renderHeatmap(){
