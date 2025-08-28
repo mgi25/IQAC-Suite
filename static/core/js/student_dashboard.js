@@ -172,6 +172,7 @@
   let currentCategory = 'all';
   let privateTasksKey = 'ems.privateTasks';
   let eventIndexByDate = new Map();
+  let selectedDateStr = null;
     const fmt2 = v => String(v).padStart(2,'0');
     const isSame = (a,b)=>a.getFullYear()==b.getFullYear()&&a.getMonth()==b.getMonth()&&a.getDate()==b.getDate();
   
@@ -199,11 +200,18 @@
         const today = c.date && isSame(c.date, new Date());
         const iso = c.date ? `${c.date.getFullYear()}-${fmt2(c.date.getMonth()+1)}-${fmt2(c.date.getDate())}` : '';
         const hasEvent = iso && (eventDates.has(iso) || (currentCategory==='private' && privateTasks.has(iso)));
-        return `<div class="day${c.muted?' muted':''}${today?' today':''}${hasEvent?' has-event':''}" data-date="${iso}">${c.text}</div>`;
+        const selected = iso && selectedDateStr === iso ? ' selected' : '';
+        return `<div class="day${c.muted?' muted':''}${today?' today':''}${hasEvent?' has-event':''}${selected}" data-date="${iso}" tabindex="0" role="button">${c.text}</div>`;
       }).join('');
   
       grid.querySelectorAll('.day[data-date]').forEach(el=>{
-        el.addEventListener('click', ()=> onDayClick(new Date(el.dataset.date)));
+        const date = new Date(el.dataset.date);
+        el.addEventListener('click', ()=> {
+          selectedDateStr = el.dataset.date;
+          grid.querySelectorAll('.day.selected').forEach(x=>x.classList.remove('selected'));
+          el.classList.add('selected');
+          onDayClick(date);
+        });
       });
     }
   
@@ -270,18 +278,21 @@
       if (!content) return;
       
       const events = (window.DASHBOARD_EVENTS||[]).filter(e => e.date === dateStr);
-      
+
+  // Removed ICS export; only Google Calendar supported
       if (events.length > 0) {
         content.innerHTML = events.map(e => `
           <div class="event-detail-item">
-            <div class="event-detail-title">${e.title}</div>
+            <div class="row">
+              <h4>${e.title}</h4>
+              <div class="actions">
+                ${e.view_url ? `<a class="chip-btn" href="${e.view_url}"><i class="fa-regular fa-eye"></i> View Details</a>` : ''}
+                ${!e.past && e.gcal_url ? `<a class="chip-btn" target="_blank" href="${e.gcal_url}"><i class="fa-regular fa-calendar-plus"></i> Google</a>` : ''}
+              </div>
+            </div>
             <div class="event-detail-meta">
               <i class="fa-regular fa-clock"></i> ${e.datetime ? new Date(e.datetime).toLocaleString() : 'All day'}
               ${e.venue ? `<br><i class="fa-solid fa-location-dot"></i> ${e.venue}` : ''}
-            </div>
-            <div class="event-detail-actions">
-              ${e.view_url ? `<a class="chip-btn" href="${e.view_url}"><i class="fa-regular fa-eye"></i> View</a>` : ''}
-              ${!e.past && e.gcal_url ? `<a class="chip-btn" target="_blank" href="${e.gcal_url}"><i class="fa-regular fa-calendar-plus"></i> Add to Google</a>` : ''}
             </div>
           </div>
         `).join('');

@@ -211,7 +211,12 @@
         </div>`;
       }).join('');
   
-      $$('#calGrid .day[data-date]').forEach(d=> d.addEventListener('click', ()=> openDay(d.dataset.date)));
+      $$('#calGrid .day[data-date]').forEach(d=> d.addEventListener('click', ()=> {
+        // highlight selection
+        $$('#calGrid .day.selected').forEach(x=>x.classList.remove('selected'));
+        d.classList.add('selected');
+        openDay(d.dataset.date);
+      }));
     }
     function buildDots(iso){
       if(!iso) return '';
