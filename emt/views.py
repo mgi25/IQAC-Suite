@@ -593,6 +593,15 @@ def autosave_proposal(request):
                 {"success": False, "error": "Cannot modify submitted proposal"}
             )
 
+    # If payload only has text sections, skip full form validation
+    text_keys = {"need_analysis", "objectives", "outcomes", "flow"}
+    if proposal and set(data.keys()).issubset(text_keys | {"proposal_id"}):
+        text_errors = _save_text_sections(proposal, data)
+        if text_errors:
+            logger.debug("autosave_proposal text errors: %s", text_errors)
+            return JsonResponse({"success": False, "errors": text_errors})
+        return JsonResponse({"success": True, "proposal_id": proposal.id})
+
     form = EventProposalForm(data, instance=proposal, user=request.user)
     faculty_ids = data.get("faculty_incharges") or []
     if faculty_ids:

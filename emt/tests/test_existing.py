@@ -2,7 +2,16 @@ from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth.models import User
 
-from emt.models import ApprovalStep, EventProposal, Student, IncomeDetail
+from emt.models import (
+    ApprovalStep,
+    EventProposal,
+    Student,
+    IncomeDetail,
+    EventNeedAnalysis,
+    EventObjectives,
+    EventExpectedOutcomes,
+    TentativeFlow,
+)
 from emt.utils import (
     build_approval_chain,
     auto_approve_non_optional_duplicates,
@@ -232,6 +241,7 @@ class AutosaveProposalTests(TestCase):
             "organization": str(self.org.id),
             "academic_year": "2024-2025",
             "faculty_incharges": [str(self.f1.id), str(self.f2.id)],
+            "event_title": "Test Event",
         }
 
     def test_autosave_and_submit_retains_faculty(self):
@@ -399,6 +409,63 @@ class AutosaveProposalTests(TestCase):
         )
         self.assertEqual(resp2.status_code, 200)
         self.assertFalse(EventProposal.objects.filter(id=pid).exists())
+
+    def test_autosave_text_sections_only(self):
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(self._payload()),
+            content_type="application/json",
+        )
+        pid = resp.json()["proposal_id"]
+
+        text_payload = {
+            "proposal_id": pid,
+            "need_analysis": "Need",
+            "objectives": "Objectives",
+            "outcomes": "Outcomes",
+            "flow": "2025-01-01T10:00||Intro",
+        }
+        resp2 = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(text_payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp2.status_code, 200)
+        data = resp2.json()
+        self.assertTrue(data.get("success"))
+        self.assertEqual(data.get("proposal_id"), pid)
+        self.assertEqual(
+            EventNeedAnalysis.objects.get(proposal_id=pid).content, "Need"
+        )
+        self.assertEqual(
+            EventObjectives.objects.get(proposal_id=pid).content, "Objectives"
+        )
+        self.assertEqual(
+            EventExpectedOutcomes.objects.get(proposal_id=pid).content, "Outcomes"
+        )
+        self.assertEqual(
+            TentativeFlow.objects.get(proposal_id=pid).content,
+            "2025-01-01T10:00||Intro",
+        )
+
+    def test_autosave_text_sections_only_errors(self):
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(self._payload()),
+            content_type="application/json",
+        )
+        pid = resp.json()["proposal_id"]
+
+        bad_payload = {"proposal_id": pid, "flow": "invalid"}
+        resp2 = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(bad_payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp2.status_code, 200)
+        data = resp2.json()
+        self.assertFalse(data.get("success"))
+        self.assertIn("flow", data.get("errors", {}))
 
 
 class EventProposalOrganizationPrefillTests(TestCase):
