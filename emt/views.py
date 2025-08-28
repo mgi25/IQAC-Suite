@@ -2263,31 +2263,85 @@ def attendance_data(request, report_id):
             if n.strip()
         ]
         if names:
+            # Map of student display name -> Student
             students = {
                 (s.user.get_full_name() or s.user.username).strip().lower(): s
                 for s in Student.objects.select_related("user")
             }
+
             rows = []
+
+            # Helper: expand a Class into attendance rows for all its students
+            from core.models import Class  # local import to avoid circulars at module import time
+
+            def add_rows_for_class(cls_obj):
+                for stu in cls_obj.students.select_related("user").all():
+                    full_name = (stu.user.get_full_name() or stu.user.username).strip()
+                    reg_no = stu.registration_number or getattr(
+                        getattr(stu.user, "profile", None), "register_no", ""
+                    )
+                    rows.append(
+                        {
+                            "registration_no": reg_no,
+                            "full_name": full_name,
+                            "student_class": cls_obj.code or cls_obj.name,
+                            "absent": False,
+                            "volunteer": False,
+                        }
+                    )
+
             for name in names:
+                # First try exact student name match
                 student = students.get(name.lower())
-                reg_no = ""
-                class_name = ""
                 if student:
                     reg_no = student.registration_number or getattr(
                         getattr(student.user, "profile", None), "register_no", ""
                     )
                     cls = student.classes.filter(is_active=True).first()
-                    if cls:
-                        class_name = cls.code or cls.name
-                rows.append(
-                    {
-                        "registration_no": reg_no,
-                        "full_name": name,
-                        "student_class": class_name,
-                        "absent": False,
-                        "volunteer": False,
-                    }
-                )
+                    rows.append(
+                        {
+                            "registration_no": reg_no,
+                            "full_name": (student.user.get_full_name() or student.user.username).strip(),
+                            "student_class": (cls.code if cls and cls.code else (cls.name if cls else "")),
+                            "absent": False,
+                            "volunteer": False,
+                        }
+                    )
+                    continue
+
+                # Otherwise, interpret it as a Class selection like "CSE (Dept Name)"
+                class_name = name
+                org_name = None
+                if "(" in name and ")" in name:
+                    try:
+                        class_name = name.split("(")[0].strip()
+                        org_name = name[name.index("(") + 1 : name.rindex(")")].strip()
+                    except Exception:
+                        class_name = name.strip()
+                        org_name = None
+
+                cls_qs = Class.objects.filter(name__iexact=class_name)
+                if org_name:
+                    cls_qs = cls_qs.filter(organization__name__iexact=org_name)
+
+                cls_obj = cls_qs.first()
+                if not cls_obj:
+                    # Try matching by code if not found by name
+                    cls_obj = Class.objects.filter(code__iexact=class_name).first()
+
+                if cls_obj:
+                    add_rows_for_class(cls_obj)
+                else:
+                    # Fall back to a generic row using the provided text as a name
+                    rows.append(
+                        {
+                            "registration_no": "",
+                            "full_name": name,
+                            "student_class": "",
+                            "absent": False,
+                            "volunteer": False,
+                        }
+                    )
 
     counts = {
         "total": len(rows),

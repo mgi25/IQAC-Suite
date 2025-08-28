@@ -1959,12 +1959,49 @@ function setupAttendanceLink() {
 
     $(document)
         .off('click', '#attendance-modern')
-        .on('click', '#attendance-modern', () => {
+        .on('click', '#attendance-modern', async () => {
             const href = attendanceField.data('attendance-url');
             if (href) {
                 window.location.href = href;
-            } else {
-                alert('Save report to manage attendance via CSV');
+                return;
+            }
+
+            // No report yet: trigger an autosave to create it, then redirect
+            try {
+                showLoadingOverlay('Preparing attendance...');
+                // Fallback: if autosave URL isn't injected, infer it from current path
+                if (!window.AUTOSAVE_URL) {
+                    const path = window.location.pathname || '';
+                    let prefix = '';
+                    if (path.startsWith('/suite/')) prefix = '/suite';
+                    else if (path.startsWith('/emt/')) prefix = '/emt';
+                    window.AUTOSAVE_URL = `${prefix}/autosave-event-report/`;
+                }
+                const result = (window.ReportAutosaveManager && window.ReportAutosaveManager.manualSave)
+                    ? await window.ReportAutosaveManager.manualSave()
+                    : null;
+
+                const reportId = result?.report_id || window.REPORT_ID;
+                if (reportId) {
+                    // Respect site prefix (/suite or /emt) when building the URL
+                    const path = window.location.pathname || '';
+                    let prefix = '';
+                    if (path.startsWith('/suite/')) prefix = '/suite';
+                    else if (path.startsWith('/emt/')) prefix = '/emt';
+                    const attendanceUrl = `${prefix}/reports/${reportId}/attendance/upload/`;
+                    attendanceField
+                        .attr('data-attendance-url', attendanceUrl)
+                        .data('attendance-url', attendanceUrl)
+                        .attr('href', attendanceUrl);
+                    window.location.href = attendanceUrl;
+                } else {
+                    alert('Unable to prepare attendance. Please try saving once.');
+                }
+            } catch (e) {
+                console.error('Failed to autosave before opening attendance:', e);
+                alert('Save failed. Please fix any errors and try again.');
+            } finally {
+                hideLoadingOverlay();
             }
         });
 }

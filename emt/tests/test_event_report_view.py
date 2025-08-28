@@ -110,12 +110,13 @@ class SubmitEventReportViewTests(TestCase):
             html=False,
         )
 
-    def test_attendance_link_requires_report(self):
+    def test_attendance_link_opens_without_preexisting_report(self):
         url = reverse("emt:submit_event_report", args=[self.proposal.id])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
+        # Help text should always instruct click-to-manage
         self.assertContains(
-            response, "Save report to manage attendance via CSV", html=False
+            response, "Click attendance box to manage via CSV", html=False
         )
         self.assertNotContains(response, "data-attendance-url", html=False)
 

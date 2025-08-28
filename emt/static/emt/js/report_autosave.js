@@ -3,7 +3,17 @@
 
 window.ReportAutosaveManager = (function() {
     let reportId = window.REPORT_ID || '';
-    const proposalId = window.PROPOSAL_ID || '';
+    // Prefer server-injected proposal ID; fall back to parsing from URL
+    function getProposalId() {
+        if (window.PROPOSAL_ID) return window.PROPOSAL_ID;
+        try {
+            const path = window.location.pathname || '';
+            // Matches /suite/report/submit/183/ or /emt/report/submit/183/
+            const m = path.match(/\/(?:suite|emt)\/report\/submit\/(\d+)\/?/);
+            if (m && m[1]) return m[1];
+        } catch (e) {}
+        return '';
+    }
     let timeoutId = null;
     let fields = [];
 
@@ -68,6 +78,7 @@ window.ReportAutosaveManager = (function() {
         }
 
         const formData = collectFieldData();
+        const proposalId = getProposalId();
         if (proposalId) {
             formData['proposal_id'] = proposalId;
         }

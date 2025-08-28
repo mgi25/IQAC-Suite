@@ -99,6 +99,33 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    // Allow the top "Upload" button to save when no CSV is selected.
+    // Many users click Upload expecting it to persist the current marks.
+    const uploadForm = document.querySelector('.attendance-container form');
+    if (uploadForm) {
+        uploadForm.addEventListener('submit', function (e) {
+            const fileInput = uploadForm.querySelector('input[type="file"][name="csv_file"]');
+            const hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
+            if (!hasFile) {
+                e.preventDefault();
+                if (!rows || rows.length === 0) {
+                    alert('No rows to save.');
+                    return;
+                }
+                fetch(saveUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                    body: JSON.stringify({ rows: rows })
+                })
+                .then(r => r.json())
+                .then(() => {
+                    alert('Saved');
+                })
+                .catch(() => alert('Failed to save attendance.'));
+            }
+        });
+    }
+
     document.getElementById('download-csv').addEventListener('click', function () {
         fetch(downloadUrl, {
             method: 'POST',
