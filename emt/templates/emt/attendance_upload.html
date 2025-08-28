@@ -21,7 +21,7 @@
         <button type="submit" class="btn btn-primary">Upload</button>
     </form>
 
-    <div id="summary" class="summary">
+    <div id="summary" class="summary d-none">
         <span>Total: <span id="total-count">{{ counts.total }}</span></span>
         <span>Present: <span id="present-count">{{ counts.present }}</span></span>
         <span>Absent: <span id="absent-count">{{ counts.absent }}</span></span>
@@ -30,7 +30,7 @@
 
     <div id="loading" class="loading">Loading...</div>
 
-    <table id="attendance-table" class="table table-sm mt-3">
+    <table id="attendance-table" class="table table-sm mt-3 d-none">
         <thead>
             <tr>
                 <th>Registration No</th>
@@ -43,14 +43,14 @@
         <tbody></tbody>
     </table>
 
-    <div id="grouped-sections" class="mt-4">
-        <h2>Students (Class-wise)</h2>
+    <div id="grouped-sections" class="mt-4 d-none">
+        <h2 id="students-section-title">Students (Class-wise)</h2>
         <div id="students-group"></div>
-        <h2 class="mt-3">Faculty (Organization-wise)</h2>
+        <h2 id="faculty-section-title" class="mt-3">Faculty (Organization-wise)</h2>
         <div id="faculty-group"></div>
     </div>
 
-    <div class="actions">
+    <div id="actions" class="actions d-none">
         <button id="save-event-report" class="btn btn-primary">Save to Event Report</button>
         <button id="download-csv" class="btn btn-secondary">Download CSV</button>
     </div>

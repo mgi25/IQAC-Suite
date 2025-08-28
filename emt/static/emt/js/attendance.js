@@ -6,6 +6,12 @@ document.addEventListener('DOMContentLoaded', function () {
     let facultyGrouped = initialFaculty || {};
 
     const tableBody = document.querySelector('#attendance-table tbody');
+    const summaryEl = document.getElementById('summary');
+    const tableEl = document.getElementById('attendance-table');
+    const groupedSectionsEl = document.getElementById('grouped-sections');
+    const actionsEl = document.getElementById('actions');
+    const studentsSectionTitle = document.getElementById('students-section-title');
+    const facultySectionTitle = document.getElementById('faculty-section-title');
     const totalEl = document.getElementById('total-count');
     const presentEl = document.getElementById('present-count');
     const absentEl = document.getElementById('absent-count');
@@ -13,6 +19,22 @@ document.addEventListener('DOMContentLoaded', function () {
     const loadingEl = document.getElementById('loading');
     const studentsGroupEl = document.getElementById('students-group');
     const facultyGroupEl = document.getElementById('faculty-group');
+
+    function updateVisibility() {
+        const hasRows = rows.length > 0;
+        summaryEl.classList.toggle('d-none', !hasRows);
+        tableEl.classList.toggle('d-none', !hasRows);
+        actionsEl.classList.toggle('d-none', !hasRows);
+
+        const studentKeys = Object.keys(studentsGrouped || {});
+        const facultyKeys = Object.keys(facultyGrouped || {});
+        const hasStudentGroups = studentKeys.length > 0;
+        const hasFacultyGroups = facultyKeys.length > 0;
+
+        studentsSectionTitle.style.display = hasStudentGroups ? '' : 'none';
+        facultySectionTitle.style.display = hasFacultyGroups ? '' : 'none';
+        groupedSectionsEl.classList.toggle('d-none', !hasStudentGroups && !hasFacultyGroups);
+    }
 
     function renderTable() {
         tableBody.innerHTML = '';
@@ -30,6 +52,7 @@ document.addEventListener('DOMContentLoaded', function () {
             tableBody.appendChild(tr);
         });
         updateCounts();
+        updateVisibility();
     }
 
     function updateCounts() {
@@ -75,6 +98,7 @@ document.addEventListener('DOMContentLoaded', function () {
             div.appendChild(ul);
             facultyGroupEl.appendChild(div);
         });
+        updateVisibility();
     }
 
     tableBody.addEventListener('change', function (e) {
