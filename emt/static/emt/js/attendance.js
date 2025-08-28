@@ -118,9 +118,12 @@ document.addEventListener('DOMContentLoaded', function () {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
             body: JSON.stringify({ rows: rows })
-        }).then(r => r.json()).then(() => {
-            alert('Saved');
-        });
+        })
+        .then(r => r.json())
+        .then(() => {
+            window.location.href = reportUrl;
+        })
+        .catch(() => alert('Failed to save attendance.'));
     });
 
     // Allow the top "Upload" button to save when no CSV is selected.
