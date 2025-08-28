@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 })
                 .then(r => r.json())
                 .then(() => {
-                    alert('Saved');
+                    window.location.href = reportUrl;
                 })
                 .catch(() => alert('Failed to save attendance.'));
             }
