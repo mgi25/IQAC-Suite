@@ -49,6 +49,7 @@
     window.PROPOSAL_ID = "{{ proposal.id|default:'' }}";
     window.AUTOSAVE_URL = "{% url 'emt:autosave_proposal' %}";
     window.AUTOSAVE_CSRF = "{{ csrf_token }}";
+    window.AUTOSAVE_SECTION = 'flow';
   </script>
   <script src="{% static 'emt/js/tentative_flow.js' %}"></script>
   <script src="{% static 'emt/js/autosave_draft.js' %}"></script>

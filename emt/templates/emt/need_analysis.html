@@ -41,6 +41,7 @@
     window.PROPOSAL_ID = "{{ proposal.id|default:'' }}";
     window.AUTOSAVE_URL = "{% url 'emt:autosave_proposal' %}"; // Update if you have a specific endpoint!
     window.AUTOSAVE_CSRF = "{{ csrf_token }}";
+    window.AUTOSAVE_SECTION = 'need_analysis';
     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
     const aiBtn = document.getElementById('generate-ai-btn');
     const aiErr = document.getElementById('ai-error');
