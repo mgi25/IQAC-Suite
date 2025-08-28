@@ -17,7 +17,6 @@ This document maps each CSS file in `static/core/css/` to the templates that inc
 | admin_settings_dashboard.css | admin_settings.html, admin_approval_dashboard.html, admin_outcome_dashboard.html |
 | admin_user_edit.css | admin_user_edit.html |
 | admin_user_management.css | admin_user_management.html |
-| admin_view_roles.css | admin_view_roles.html |
 | base.css | base.html |
 | command-center.css | base.html |
 | dashboard.css | dashboard.html, admin_dashboard.html, admin_approval_dashboard.html, admin_settings.html, user_dashboard.html, admin_user_panel.html, admin_outcome_dashboard.html |
@@ -44,7 +43,6 @@ For each page, verify behavior at 80%, 100%, 125%, and 150% zoom levels across c
 - [ ] admin_pso_po_management.html – notes: _____________________
 - [ ] admin_proposal_detail.html – notes: _____________________
 - [ ] admin_role_management.html – notes: _____________________
-- [ ] admin_view_roles.html – notes: _____________________
 - [ ] admin_settings.html – notes: _____________________
 - [ ] admin_approval_dashboard.html – notes: _____________________
 - [ ] admin_outcome_dashboard.html – notes: _____________________
