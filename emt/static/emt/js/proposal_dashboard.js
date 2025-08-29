@@ -131,12 +131,37 @@ $(document).ready(function() {
 
         const form = document.getElementById('proposal-form');
         if (form) {
+            const orgTypeInput = $('#org-type-modern-input')[0];
+            const orgTypeTS = orgTypeInput ? orgTypeInput.tomselect : null;
+            const orgTypeSelect = $('#django-basic-info [name="organization_type"]');
+            const preservedOrgType = orgTypeTS ? orgTypeTS.getValue() : orgTypeSelect.val();
+            const orgTypeText = orgTypeTS?.options[preservedOrgType]?.text?.toLowerCase().trim() ||
+                orgTypeSelect.find(`option[value="${preservedOrgType}"]`).text().toLowerCase().trim();
+            const preservedOrg = $('#django-basic-info [name="organization"]').val();
+            const preservedAcademicYear = $('#academic-year-modern').val();
+
             form.reset();
             Array.from(form.elements).forEach(el => {
                 el.classList.remove('is-invalid', 'is-valid', 'has-error');
                 $(el).siblings('.error-message').remove();
             });
-            $(form).find('input, textarea, select').trigger('change');
+
+            orgTypeSelect.val(preservedOrgType);
+            $('#django-basic-info [name="organization"]').val(preservedOrg);
+            $('#django-basic-info [name="academic_year"]').val(preservedAcademicYear);
+
+            if (orgTypeTS && preservedOrgType) {
+                orgTypeTS.setValue(preservedOrgType, true);
+                if (orgTypeText) {
+                    handleOrgTypeChange(orgTypeText, true);
+                }
+            }
+
+            if (preservedAcademicYear) {
+                $('#academic-year-modern').val(preservedAcademicYear).trigger('change');
+            }
+
+            $(form).find('input, textarea, select').not('#org-type-modern-input').trigger('change');
         }
 
         ['section_need_analysis', 'section_objectives', 'section_outcomes', 'section_flow']
