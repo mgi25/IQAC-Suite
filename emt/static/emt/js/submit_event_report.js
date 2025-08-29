@@ -827,8 +827,9 @@ $(document).on('click', '#ai-sdg-implementation', function(){
           <div class="form-row">
               <div class="input-group">
                   <label for="academic-year-modern">Academic Year *</label>
-                  <input type="text" id="academic-year-modern" name="academic_year" value="${window.PROPOSAL_DATA ? window.PROPOSAL_DATA.academic_year || '2024-2025' : '2024-2025'}">
-                  <div class="help-text">Academic year from proposal (editable)</div>
+                  <input type="text" id="academic-year-modern" value="${window.PROPOSAL_DATA ? window.PROPOSAL_DATA.academic_year || '2024-2025' : '2024-2025'}" disabled>
+                  <input type="hidden" name="academic_year" value="${window.PROPOSAL_DATA ? window.PROPOSAL_DATA.academic_year || '2024-2025' : '2024-2025'}">
+                  <div class="help-text">Academic year from proposal (not editable)</div>
               </div>
               <div class="input-group">
                   <label for="event-type-modern">Event Type *</label>
