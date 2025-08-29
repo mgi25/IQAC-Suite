@@ -29,10 +29,8 @@
             </ol>
             <h3>Event Report Details</h3>
             <ol class="report-preview-list">
-                {% for field in form.visible_fields %}
-                    {% with values=form.data|get_list:field.name %}
-                        <li><strong>{{ field.label }}:</strong> {{ values|join:", "|default:"—" }}</li>
-                    {% endwith %}
+                {% for label, value in report_fields %}
+                    <li><strong>{{ label }}:</strong> {{ value }}</li>
                 {% endfor %}
             </ol>
             <button type="submit" name="final_submit" class="btn-submit">Submit Report</button>
