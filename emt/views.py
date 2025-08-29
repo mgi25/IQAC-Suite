@@ -2091,9 +2091,10 @@ def preview_event_report(request, proposal_id):
     # Prepare proposal fields for display in preview
     proposal_form = EventProposalForm(instance=proposal)
     proposal_fields = []
-    for field in proposal_form.visible_fields():
-        raw_value = field.value()
-        field_def = field.field
+    for name, field in proposal_form.fields.items():
+        bound_field = proposal_form[name]
+        raw_value = bound_field.value()
+        field_def = bound_field.field
         if isinstance(field_def, forms.ModelMultipleChoiceField):
             objs = field_def.queryset.filter(pk__in=raw_value) if raw_value else []
             display = ", ".join(str(obj) for obj in objs) or "—"
@@ -2102,13 +2103,21 @@ def preview_event_report(request, proposal_id):
             display = str(obj) if obj else "—"
         else:
             display = raw_value or "—"
-        proposal_fields.append((field.label, display))
+        proposal_fields.append((bound_field.label, display))
+
+    # Prepare report form fields for preview
+    report_fields = []
+    for name, field in form.fields.items():
+        values = request.POST.getlist(name)
+        display = ", ".join(values) if values else "—"
+        report_fields.append((field.label, display))
 
     context = {
         "proposal": proposal,
-        "form": form,
         "post_data": request.POST,
         "proposal_fields": proposal_fields,
+        "report_fields": report_fields,
+        "form": form,
     }
     return render(request, "emt/report_preview.html", context)
 
