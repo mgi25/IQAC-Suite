@@ -1932,17 +1932,24 @@ def submit_event_report(request, proposal_id):
         }
         request.session.modified = True
 
-        form = EventReportForm(request.POST, instance=report)
+        post_data = request.POST.copy()
+        # Map front-end field names to model fields
+        if "event_summary" in post_data and "summary" not in post_data:
+            post_data["summary"] = post_data.pop("event_summary")
+        if "event_outcomes" in post_data and "outcomes" not in post_data:
+            post_data["outcomes"] = post_data.pop("event_outcomes")
+
+        form = EventReportForm(post_data, instance=report)
         attachments_qs = (
             report.attachments.all() if report else EventReportAttachment.objects.none()
         )
         formset = AttachmentFormSet(
-            request.POST, request.FILES, queryset=attachments_qs
+            post_data, request.FILES, queryset=attachments_qs
         )
         if (
             form.is_valid()
             and formset.is_valid()
-            and _save_activities(proposal, request.POST, form)
+            and _save_activities(proposal, post_data, form)
         ):
             report = form.save(commit=False)
             report.proposal = proposal
@@ -2085,7 +2092,14 @@ def preview_event_report(request, proposal_id):
     if request.method != "POST":
         return redirect("emt:submit_event_report", proposal_id=proposal.id)
 
-    form = EventReportForm(request.POST)
+    post_data = request.POST.copy()
+    # Front-end uses event_summary/event_outcomes; map them to model fields
+    if "event_summary" in post_data and "summary" not in post_data:
+        post_data["summary"] = post_data.pop("event_summary")
+    if "event_outcomes" in post_data and "outcomes" not in post_data:
+        post_data["outcomes"] = post_data.pop("event_outcomes")
+
+    form = EventReportForm(post_data)
     if not form.is_valid():
         logger.debug(
             "Preview form invalid for proposal %s: %s", proposal.id, form.errors
@@ -2214,17 +2228,17 @@ def preview_event_report(request, proposal_id):
     # Prepare report form fields for preview
     report_fields = []
     for name, field in form.fields.items():
-        values = request.POST.getlist(name)
+        values = post_data.getlist(name)
         display = ", ".join(values) if values else "—"
         report_fields.append((field.label, display))
 
-    num_activities = request.POST.get("num_activities")
+    num_activities = post_data.get("num_activities")
     if num_activities:
         report_fields.append(("Number of Activities Conducted", num_activities))
 
     context = {
         "proposal": proposal,
-        "post_data": request.POST,
+        "post_data": post_data,
         "proposal_fields": proposal_fields,
         "report_fields": report_fields,
         "form": form,
