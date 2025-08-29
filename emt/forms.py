@@ -73,7 +73,7 @@ class EventProposalForm(forms.ModelForm):
     )
 
     def __init__(self, *args, **kwargs):
-        selected_academic_year = kwargs.pop('selected_academic_year', None)
+        self.selected_academic_year = kwargs.pop('selected_academic_year', None)
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
 
@@ -118,9 +118,9 @@ class EventProposalForm(forms.ModelForm):
             self.fields['organization'].queryset = Organization.objects.filter(is_active=True)
 
         # Academic year setup
-        if selected_academic_year and not self.instance.pk:
-            self.fields['academic_year'].initial = selected_academic_year
-            self.fields['academic_year'].widget.attrs['value'] = selected_academic_year
+        if self.selected_academic_year and not self.instance.pk:
+            self.fields['academic_year'].initial = self.selected_academic_year
+            self.fields['academic_year'].widget.attrs['value'] = self.selected_academic_year
         elif not self.instance.pk:
             self.fields['academic_year'].widget.attrs['placeholder'] = 'No academic year set by admin'
 
@@ -166,6 +166,14 @@ class EventProposalForm(forms.ModelForm):
         elif org_type and organization and organization.org_type != org_type:
             self.add_error('organization', 'Selected organization does not match the chosen type.')
         return data
+
+    def clean_academic_year(self):
+        """Ensure academic year comes from admin settings, not user input."""
+        if self.instance and self.instance.pk:
+            return self.instance.academic_year
+        if self.selected_academic_year:
+            return self.selected_academic_year
+        raise forms.ValidationError("Academic year is not set by admin")
 
 # ──────────────────────────────────────────────────────────────
 #  Remaining forms (unchanged, but imports updated)
