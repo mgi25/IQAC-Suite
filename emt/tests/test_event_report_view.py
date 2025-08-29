@@ -286,6 +286,22 @@ console.log(attendanceEl.attrs['href']);
                 response, f"<strong>{field.label}:</strong>", html=False
             )
 
+    def test_preview_shows_faculty_incharges(self):
+        fac = User.objects.create_user(username="facultya")
+        self.proposal.faculty_incharges.add(fac)
+        url = reverse("emt:preview_event_report", args=[self.proposal.id])
+        data = {
+            "actual_event_type": "Seminar",
+            "report_signed_date": "2024-01-10",
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "facultya")
+
     def test_proposal_speakers_prefilled(self):
         SpeakerProfile.objects.create(
             proposal=self.proposal,
