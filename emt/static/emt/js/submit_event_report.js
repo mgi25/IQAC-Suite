@@ -453,12 +453,17 @@ $(document).on('click', '#ai-sdg-implementation', function(){
 
       if (sectionName === 'participants-information') {
           // Defer population until after the new DOM elements are attached
-          setTimeout(() => {
+          const initParticipantsSection = () => {
               populateSpeakersFromProposal();
               fillOrganizingCommittee();
               fillActualSpeakers();
               fillAttendanceCounts();
-          }, 0);
+          };
+          if (document.readyState === 'loading') {
+              $(initParticipantsSection);
+          } else {
+              setTimeout(initParticipantsSection, 0);
+          }
       }
 
       if (sectionName === 'event-relevance') {
