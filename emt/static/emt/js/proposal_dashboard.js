@@ -1136,7 +1136,11 @@ $(document).ready(function() {
 
         container.on('input', '#audienceAvailableSearch', function() {
             const term = $(this).val().trim();
-            if (currentType) loadAvailable(term);
+            if (currentType === 'students') {
+                loadAvailable(term);
+            } else if (currentType === 'faculty') {
+                filterOptions($(this), availableSelect);
+            }
         });
 
         container.on('input', '#audienceSelectedSearch', function() {
