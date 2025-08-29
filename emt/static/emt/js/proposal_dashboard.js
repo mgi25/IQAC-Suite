@@ -2566,14 +2566,30 @@ function getWhyThisEventForm() {
             const need = document.getElementById('need-analysis-modern');
             const obj = document.getElementById('objectives-modern');
             const out = document.getElementById('outcomes-modern');
-            if (need) need.value = getRandom(AUTO_FILL_DATA.need);
-            if (obj) obj.value = getRandom(AUTO_FILL_DATA.objectives);
-            if (out) out.value = getRandom(AUTO_FILL_DATA.outcomes);
+            if (need) {
+                need.value = getRandom(AUTO_FILL_DATA.need);
+                need.dispatchEvent(new Event('input', { bubbles: true }));
+                need.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            if (obj) {
+                obj.value = getRandom(AUTO_FILL_DATA.objectives);
+                obj.dispatchEvent(new Event('input', { bubbles: true }));
+                obj.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            if (out) {
+                out.value = getRandom(AUTO_FILL_DATA.outcomes);
+                out.dispatchEvent(new Event('input', { bubbles: true }));
+                out.dispatchEvent(new Event('change', { bubbles: true }));
+            }
         }
 
         if (section === 'schedule') {
             const sched = document.getElementById('schedule-modern');
-            if (sched) sched.value = getRandom(AUTO_FILL_DATA.schedule);
+            if (sched) {
+                sched.value = getRandom(AUTO_FILL_DATA.schedule);
+                sched.dispatchEvent(new Event('input', { bubbles: true }));
+                sched.dispatchEvent(new Event('change', { bubbles: true }));
+            }
         }
 
         if (section === 'speakers') {
