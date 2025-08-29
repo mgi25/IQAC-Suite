@@ -2105,12 +2105,103 @@ def preview_event_report(request, proposal_id):
             display = raw_value or "—"
         proposal_fields.append((bound_field.label, display))
 
+    # Add related proposal data not covered by EventProposalForm
+    need = getattr(proposal, "need_analysis", None)
+    proposal_fields.append(
+        (
+            "Rationale / \"Why is this event necessary?\"",
+            getattr(need, "content", "") or "—",
+        )
+    )
+    objectives = getattr(proposal, "objectives", None)
+    proposal_fields.append(
+        ("Objectives", getattr(objectives, "content", "") or "—")
+    )
+    outcomes = getattr(proposal, "expected_outcomes", None)
+    proposal_fields.append(
+        (
+            "Expected Learning Outcomes",
+            getattr(outcomes, "content", "") or "—",
+        )
+    )
+
+    flow = getattr(proposal, "tentative_flow", None)
+    if flow and flow.content:
+        lines = [
+            line.strip() for line in flow.content.splitlines() if line.strip()
+        ]
+        for idx, line in enumerate(lines, 1):
+            try:
+                dt_str, activity = line.split("||", 1)
+            except ValueError:
+                dt_str, activity = line, ""
+            proposal_fields.append((f"Schedule Item {idx} – Date & Time", dt_str.strip()))
+            proposal_fields.append((f"Schedule Item {idx} – Activity", activity.strip()))
+
+    for idx, speaker in enumerate(proposal.speakers.all(), 1):
+        proposal_fields.extend(
+            [
+                (f"Speaker {idx}: Full Name", speaker.full_name or "—"),
+                (f"Speaker {idx}: Designation", speaker.designation or "—"),
+                (f"Speaker {idx}: Organization", speaker.affiliation or "—"),
+                (f"Speaker {idx}: Email", speaker.contact_email or "—"),
+                (f"Speaker {idx}: Contact Number", speaker.contact_number or "—"),
+                (
+                    f"Speaker {idx}: LinkedIn Profile",
+                    speaker.linkedin_url or "—",
+                ),
+                (
+                    f"Speaker {idx}: Photo",
+                    speaker.photo.url if speaker.photo else "—",
+                ),
+                (f"Speaker {idx}: Bio", speaker.detailed_profile or "—"),
+                (
+                    f"Speaker {idx}: Topic",
+                    getattr(speaker, "topic", "") or "—",
+                ),
+            ]
+        )
+
+    for idx, expense in enumerate(proposal.expense_details.all(), 1):
+        proposal_fields.extend(
+            [
+                (f"Expense Item {idx}: Particulars", expense.particulars or "—"),
+                (
+                    f"Expense Item {idx}: No. of Participants",
+                    getattr(expense, "participants", "") or "—",
+                ),
+                (
+                    f"Expense Item {idx}: Rate",
+                    getattr(expense, "rate", "") or "—",
+                ),
+                (f"Expense Item {idx}: Amount", expense.amount or "—"),
+            ]
+        )
+
+    for idx, income in enumerate(proposal.income_details.all(), 1):
+        proposal_fields.extend(
+            [
+                (f"Income Item {idx}: Item", income.sl_no or "—"),
+                (f"Income Item {idx}: Particulars", income.particulars or "—"),
+                (
+                    f"Income Item {idx}: No. of Participants",
+                    income.participants or "—",
+                ),
+                (f"Income Item {idx}: Rate", income.rate or "—"),
+                (f"Income Item {idx}: Amount", income.amount or "—"),
+            ]
+        )
+
     # Prepare report form fields for preview
     report_fields = []
     for name, field in form.fields.items():
         values = request.POST.getlist(name)
         display = ", ".join(values) if values else "—"
         report_fields.append((field.label, display))
+
+    num_activities = request.POST.get("num_activities")
+    if num_activities:
+        report_fields.append(("Number of Activities Conducted", num_activities))
 
     context = {
         "proposal": proposal,
