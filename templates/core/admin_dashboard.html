@@ -90,13 +90,18 @@
   /* Custom Grid for Dashboard */
   .grid-3-custom {
     display: grid;
-    grid-template-columns: 1fr 2fr 1fr;
+        grid-template-columns: 1fr 1.8fr 1.2fr;
     gap: 1rem;
   }
 
   .grid-3-custom .card {
-    height: 100%;
+        height: 420px;
   }
+
+    /* Make Event Details a bit shorter to give Calendar more room visually */
+    #cardEventDetails { height: 380px; }
+    #cardNotifications { height: 420px; }
+    #cardCalendar { height: 420px; }
 </style>
 {% endblock %}
 

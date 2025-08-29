@@ -86,9 +86,14 @@
   .cal-nav{width:28px;height:28px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}
   .cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:11px;color:var(--muted);text-align:center;margin-bottom:6px}
   .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-  .day{padding:6px 2px;text-align:center;border-radius:6px;font-size:13px;cursor:pointer;transition:.2s;position:relative}
-  .day.has-event::after{content:"";position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--primary)}
+  .day{height:42px; display:flex; align-items:center; justify-content:center; padding:4px; text-align:center;border-radius:6px;font-size:13px;cursor:pointer;transition:.2s;position:relative}
+  .day.has-event::after{content:"";position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:6px;height:6px;border-radius:50%;background:#e74c3c}
   .day:hover{background:var(--subtle)}.day.today{background:var(--primary);color:#fff;font-weight:600}.day.muted{opacity:.4}
+  .day.selected{outline:2px solid #93c5fd; outline-offset:0; box-shadow: inset 0 0 0 2px #bfdbfe; background:#eff6ff}
+  /* Inline event title + actions for details list */
+  .event-detail-title.with-actions{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .event-detail-title .title-text{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .event-detail-title .title-actions{flex-shrink:0; display:flex; gap:8px;}
   
   /* upcoming */
   .upcoming{padding:14px 16px;border-top:1px solid var(--border);max-height:320px;overflow:auto}
