@@ -974,6 +974,7 @@
     display: contents;
 }
 
+
 .form-row.full-width {
     grid-column: 1 / -1;
     display: grid;
@@ -3261,4 +3262,22 @@ textarea {
     height: 2px;
     background: #264487; /* solid blue */
     border-radius: 1px;
+}
+/* Force form rows to behave as grid for side-by-side fields */
+.proposal-content .form-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+/* Stack vertically only when marked full-width */
+.proposal-content .form-row.full-width {
+    grid-template-columns: 1fr !important;
+}
+
+/* Responsive: stack on smaller screens */
+@media (max-width: 1024px) {
+    .proposal-content .form-row {
+        grid-template-columns: 1fr !important;
+    }
 }

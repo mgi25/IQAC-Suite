@@ -49,14 +49,9 @@
           <span class="app-name">Event Management Suite</span>
         </div>
       </div>
-      <div class="utility-center" style="flex: 1; display: flex; justify-content: center;">
-        <div class="universal-search" style="max-width: 500px; width: 100%;">
-          <i class="fas fa-search search-icon"></i>
-          <input type="text" id="globalSearch" placeholder="Search students, reports, proposals, organizations..." class="search-input" autocomplete="off">
-          <div class="search-shortcut">Ctrl+K</div>
-          <div class="search-results" id="searchResults"></div>
-        </div>
-      </div>
+
+      <!-- (Search removed) -->
+
       <div class="utility-right" style="display: flex; align-items: center; gap: 1.5rem;">
         <div class="notification-section">
           <button class="utility-btn notification-btn" id="notificationBtn" aria-label="Notifications">
@@ -208,8 +203,6 @@
       </div>
       {% endif %}
 
-      
-
       <!-- User Management - Expandable (Admin Only) -->
       {% if user.is_superuser or request.session.role == 'admin' %}
       <div class="nav-section {% if 'users' in request.path or 'user-roles' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' %}expanded{% endif %}">
@@ -286,29 +279,21 @@
       {% endif %}
 
       <div class="json-controls" style="position: fixed; bottom: 0; left: 0; width: 280px; padding: 6px; background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(8px); border-top: 1px solid rgba(229, 231, 235, 0.3); z-index: 100;">
-  <div style="display: flex; gap: 4px;">
-    <button id="download-json-btn" class="json-btn" style="flex: 1; padding: 4px; border-radius: 4px; border: 1px solid rgba(229, 231, 235, 0.4); background: rgba(248, 250, 252, 0.4); color: rgba(55, 65, 81, 0.65); font-size: 0.7rem; display: flex; align-items: center; justify-content: center; gap: 3px; min-height: 24px; transition: all 0.2s ease;">
-      <i class="fas fa-download" style="font-size: 0.7rem; opacity: 0.5;"></i> JSON
-    </button>
-    <label for="upload-json-input" class="json-btn" style="flex: 1; padding: 4px; border-radius: 4px; border: 1px solid rgba(229, 231, 235, 0.4); background: rgba(248, 250, 252, 0.4); color: rgba(55, 65, 81, 0.65); font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 3px; min-height: 24px; transition: all 0.2s ease;">
-      <i class="fas fa-upload" style="font-size: 0.7rem; opacity: 0.5;"></i> JSON
-    </label>
-    <input type="file" id="upload-json-input" accept=".json" style="display: none;">
-  </div>
-</div>
+        <div style="display: flex; gap: 4px;">
+          <button id="download-json-btn" class="json-btn" style="flex: 1; padding: 4px; border-radius: 4px; border: 1px solid rgba(229, 231, 235, 0.4); background: rgba(248, 250, 252, 0.4); color: rgba(55, 65, 81, 0.65); font-size: 0.7rem; display: flex; align-items: center; justify-content: center; gap: 3px; min-height: 24px; transition: all 0.2s ease;">
+            <i class="fas fa-download" style="font-size: 0.7rem; opacity: 0.5;"></i> JSON
+          </button>
+          <label for="upload-json-input" class="json-btn" style="flex: 1; padding: 4px; border-radius: 4px; border: 1px solid rgba(229, 231, 235, 0.4); background: rgba(248, 250, 252, 0.4); color: rgba(55, 65, 81, 0.65); font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 3px; min-height: 24px; transition: all 0.2s ease;">
+            <i class="fas fa-upload" style="font-size: 0.7rem; opacity: 0.5;"></i> JSON
+          </label>
+          <input type="file" id="upload-json-input" accept=".json" style="display: none;">
+        </div>
+      </div>
 
-<style>
-.json-btn:hover {
-  background: rgba(248, 250, 252, 0.8) !important;
-  color: rgba(55, 65, 81, 0.9) !important;
-  border-color: rgba(229, 231, 235, 0.6) !important;
-}
-
-.json-btn:hover i {
-  opacity: 0.8 !important;
-}
-</style>
-
+      <style>
+        .json-btn:hover { background: rgba(248, 250, 252, 0.8) !important; color: rgba(55, 65, 81, 0.9) !important; border-color: rgba(229, 231, 235, 0.6) !important; }
+        .json-btn:hover i { opacity: 0.8 !important; }
+      </style>
 
     </nav>
   </div>
@@ -327,7 +312,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 
-  <!-- JavaScript for interactions -->
+  <!-- JavaScript for interactions (search removed) -->
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       const toasts = document.querySelectorAll('.toast-message');
@@ -358,45 +343,32 @@
           
           // Close profile dropdown if open
           const profileDropdown = document.querySelector('.profile-dropdown');
-          if (profileDropdown) {
-            profileDropdown.classList.remove('active');
-          }
+          if (profileDropdown) profileDropdown.classList.remove('active');
         });
 
         // Mark all as read functionality
         if (markAllReadBtn) {
           markAllReadBtn.addEventListener('click', function() {
             const unreadItems = document.querySelectorAll('.notification-item.unread');
-            unreadItems.forEach(item => {
-              item.classList.remove('unread');
-            });
-            
-            // Update badge
+            unreadItems.forEach(item => item.classList.remove('unread'));
             const badge = document.getElementById('notificationBadge');
-            if (badge) {
-              badge.style.display = 'none';
-            }
+            if (badge) badge.style.display = 'none';
           });
         }
       }
 
       // Navigation section expand/collapse
-  const navHeaders = document.querySelectorAll('.nav-section-header');
-      
+      const navHeaders = document.querySelectorAll('.nav-section-header');
       navHeaders.forEach(header => {
-  header.addEventListener('click', function(e) {
+        header.addEventListener('click', function() {
           const section = this.parentElement;
           const submenu = section.querySelector('.nav-submenu');
           const icon = this.querySelector('.expand-icon');
-
-          // Toggle the section
           if (section.classList.contains('expanded')) {
-            // Collapse
             section.classList.remove('expanded');
             if (submenu) submenu.classList.remove('open');
             if (icon) icon.classList.remove('rotated');
           } else {
-            // Expand  
             section.classList.add('expanded');
             if (submenu) submenu.classList.add('open');
             if (icon) icon.classList.add('rotated');
@@ -410,243 +382,19 @@
         document.body.classList.toggle('sidebar-collapsed');
       });
 
-      // Universal Search Functionality
-      const searchInput = document.getElementById('globalSearch');
-      const searchResults = document.getElementById('searchResults');
-      let searchTimeout;
-
-      if (searchInput) {
-        searchInput.addEventListener('input', function() {
-          const query = this.value.trim();
-          
-          // Clear previous timeout
-          clearTimeout(searchTimeout);
-          
-          if (query.length < 1) {
-            searchResults.classList.remove('show');
-            return;
-          }
-
-          // Show loading state
-          searchResults.innerHTML = '<div class="search-loading">Searching...</div>';
-          searchResults.classList.add('show');
-
-          // Debounce search requests
-          searchTimeout = setTimeout(() => {
-            performSearch(query);
-          }, 300);
-        });
-
-        // Hide search results when clicking outside
-        document.addEventListener('click', function(e) {
-          if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
-            searchResults.classList.remove('show');
-          }
-        });
-
-        // Show search results when focusing back on input
-        searchInput.addEventListener('focus', function() {
-          if (this.value.trim().length >= 2 && searchResults.innerHTML.trim()) {
-            searchResults.classList.add('show');
-          }
-        });
-      }
-
-      function performSearch(query) {
-        // Get CSRF token for Django
-        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
-                         document.querySelector('meta[name=csrf-token]')?.getAttribute('content') ||
-                         getCookie('csrftoken');
-
-        // Make AJAX request to Django API
-        fetch(`/core-admin/api/search/?q=${encodeURIComponent(query)}`, {
-          method: 'GET',
-          headers: {
-            'X-CSRFToken': csrfToken,
-            'Content-Type': 'application/json',
-          },
-          credentials: 'same-origin'
-        })
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              displaySearchResults(
-                data.results.students || [],
-                data.results.proposals || [],
-                data.results.reports || [],
-                data.results.users || [],
-                data.results.organizations || [],
-                query
-              );
-            } else {
-              searchResults.innerHTML = `<div class="search-no-results">Search error: ${data.error || 'Unknown error'}</div>`;
-              searchResults.classList.add('show');
-            }
-          })
-          .catch(error => {
-            console.error('Search error:', error);
-            searchResults.innerHTML = `<div class="search-no-results">Search temporarily unavailable</div>`;
-            searchResults.classList.add('show');
-          });
-      }
-
-      // Helper function to get CSRF token from cookies
-      function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-          const cookies = document.cookie.split(';');
-          for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-              cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-              break;
-            }
-          }
-        }
-        return cookieValue;
-      }
-
-      function displaySearchResults(students, proposals, reports, users, organizations, query) {
-        let html = '';
-
-        if (students.length === 0 && proposals.length === 0 && reports.length === 0 && users.length === 0 && organizations.length === 0) {
-          html = `<div class="search-no-results">No results found for "${query}"</div>`;
-        } else {
-          // Students section
-          if (students.length > 0) {
-            html += '<div class="search-category">Students</div>';
-            students.forEach(student => {
-              html += `
-                <a href="${student.url}" class="search-item">
-                  <div class="search-item-icon">
-                    <i class="fas fa-graduation-cap"></i>
-                  </div>
-                  <div class="search-item-content">
-                    <div class="search-item-title">${student.name}</div>
-                    <div class="search-item-subtitle">Roll: ${student.roll_no} • ${student.course}</div>
-                  </div>
-                </a>
-              `;
-            });
-          }
-
-          // Proposals section
-          if (proposals.length > 0) {
-            html += '<div class="search-category">Event Proposals</div>';
-            proposals.forEach(proposal => {
-              html += `
-                <a href="${proposal.url}" class="search-item">
-                  <div class="search-item-icon">
-                    <i class="fas fa-clipboard-list"></i>
-                  </div>
-                  <div class="search-item-content">
-                    <div class="search-item-title">${proposal.title}</div>
-                    <div class="search-item-subtitle">By ${proposal.faculty} • ${proposal.status} • ${proposal.date}</div>
-                  </div>
-                </a>
-              `;
-            });
-          }
-
-          // Reports section
-          if (reports.length > 0) {
-            html += '<div class="search-category">Reports</div>';
-            reports.forEach(report => {
-              html += `
-                <a href="${report.url}" class="search-item">
-                  <div class="search-item-icon">
-                    <i class="fas fa-file-alt"></i>
-                  </div>
-                  <div class="search-item-content">
-                    <div class="search-item-title">${report.title}</div>
-                    <div class="search-item-subtitle">${report.date} • ${report.type}</div>
-                  </div>
-                </a>
-              `;
-            });
-          }
-
-          // Organizations section
-          if (organizations.length > 0) {
-            html += '<div class="search-category">Organizations</div>';
-            organizations.forEach(org => {
-              html += `
-                <a href="${org.url}" class="search-item">
-                  <div class="search-item-icon">
-                    <i class="fas fa-building"></i>
-                  </div>
-                  <div class="search-item-content">
-                    <div class="search-item-title">${org.name}</div>
-                    <div class="search-item-subtitle">${org.org_type}</div>
-                  </div>
-                </a>
-              `;
-            });
-          }
-
-          // Users section (for admins)
-          if (users.length > 0) {
-            html += '<div class="search-category">Users</div>';
-            users.forEach(user => {
-              html += `
-                <a href="${user.url}" class="search-item">
-                  <div class="search-item-icon">
-                    <i class="fas fa-user"></i>
-                  </div>
-                  <div class="search-item-content">
-                    <div class="search-item-title">${user.name}</div>
-                    <div class="search-item-subtitle">${user.email} • ${user.role} • Last login: ${user.last_login}</div>
-                  </div>
-                </a>
-              `;
-            });
-          }
-        }
-
-        searchResults.innerHTML = html;
-        searchResults.classList.add('show');
-      }
-
-      // Search shortcut (Ctrl+K)
-      document.addEventListener('keydown', function(e) {
-        if (e.ctrlKey && e.key === 'k') {
-          e.preventDefault();
-          const searchInput = document.querySelector('#globalSearch');
-          if (searchInput) {
-            searchInput.focus();
-            searchInput.select();
-          }
-        }
-
-        // Escape key to close search results
-        if (e.key === 'Escape') {
-          const searchResults = document.getElementById('searchResults');
-          if (searchResults) {
-            searchResults.classList.remove('show');
-          }
-        }
-      });
-
       // Close dropdowns when clicking outside
       document.addEventListener('click', function(e) {
-        // Close profile dropdown
         const profileDropdown = document.querySelector('.profile-dropdown');
-        if (profileDropdown && !e.target.closest('.profile-section')) {
-          profileDropdown.classList.remove('active');
-        }
+        if (profileDropdown && !e.target.closest('.profile-section')) profileDropdown.classList.remove('active');
 
-        // Close notification dropdown
         const notificationDropdown = document.getElementById('notificationDropdown');
-        if (notificationDropdown && !e.target.closest('.notification-section')) {
-          notificationDropdown.classList.remove('active');
-        }
+        if (notificationDropdown && !e.target.closest('.notification-section')) notificationDropdown.classList.remove('active');
+      });
     });
-
-    
-  });
   </script>
-<script src="{% static 'emt/js/json_sync.js' %}"></script>
+
+  <script src="{% static 'emt/js/json_sync.js' %}"></script>
   {% block scripts %}{% endblock %}
   {% block scripts_extra %}{% endblock %}
-  </body>
-  </html>
+</body>
+</html>
