@@ -25,8 +25,8 @@
             {% for key, value in post_data.items %}
                 <input type="hidden" name="{{ key }}" value="{{ value|escape }}">
             {% endfor %}
-            <div class="report-section">
-                <h3>Event Proposal Details</h3>
+            <details class="report-section" open>
+                <summary>Event Proposal Details</summary>
                 <ol class="report-preview-list">
                     {% for label, value in proposal_fields %}
                         <li class="field-item">
@@ -35,9 +35,9 @@
                         </li>
                     {% endfor %}
                 </ol>
-            </div>
-            <div class="report-section">
-                <h3>Event Report Details</h3>
+            </details>
+            <details class="report-section">
+                <summary>Event Report Details</summary>
                 <ol class="report-preview-list">
                     {% for label, value in report_fields %}
                         <li class="field-item">
@@ -46,7 +46,7 @@
                         </li>
                     {% endfor %}
                 </ol>
-            </div>
+            </details>
             <div class="content-actions">
                 <button type="submit" name="final_submit" class="btn-submit">Submit Report</button>
             </div>

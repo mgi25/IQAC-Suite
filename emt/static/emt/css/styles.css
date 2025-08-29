@@ -3247,17 +3247,37 @@ textarea {
     background: #fff;
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    padding: 1.5rem;
     margin: 0 auto 2rem;
     max-width: 1200px;
+    overflow: hidden;
 }
 
-.report-section h3 {
-    margin-top: 0;
-    margin-bottom: 1rem;
+.report-section > summary {
+    padding: 1.5rem;
     font-size: 1.25rem;
     font-weight: 600;
     color: var(--primary-blue);
+    cursor: pointer;
+    list-style: none;
+}
+
+.report-section[open] > summary {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.report-section summary::-webkit-details-marker {
+    display: none;
+}
+
+.report-section > summary::after {
+    content: '\25BC';
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    transition: transform 0.2s ease;
+}
+
+.report-section[open] > summary::after {
+    transform: rotate(180deg);
 }
 
 .report-preview-list {
@@ -3267,6 +3287,10 @@ textarea {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 1rem;
+}
+
+.report-section .report-preview-list {
+    padding: 1.5rem;
 }
 
 .report-preview-list .field-item {
