@@ -411,7 +411,7 @@
     display: flex;
     gap: 14px;
     align-items: flex-start;
-    padding: 16px;
+    padding: 7px;
     border-radius: 12px;
     border: 1px solid var(--border);
     background: linear-gradient(135deg, #fff 0%, var(--subtle) 100%);
