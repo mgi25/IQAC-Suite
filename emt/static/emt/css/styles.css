@@ -3241,3 +3241,47 @@ textarea {
         transform: rotate(360deg);
     }
 }
+
+/* Report preview styles */
+.report-section {
+    background: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.report-section h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--primary-blue);
+}
+
+.report-preview-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.report-preview-list li {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+    align-items: flex-start;
+}
+
+.report-preview-list li:last-child {
+    border-bottom: none;
+}
+
+.report-preview-list strong {
+    min-width: 220px;
+    color: var(--text-dark);
+}
+
+.report-preview-list span {
+    color: var(--text-muted);
+}
