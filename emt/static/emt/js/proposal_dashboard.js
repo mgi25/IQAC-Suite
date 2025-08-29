@@ -475,12 +475,20 @@ $(document).ready(function() {
         }
 
         const academicYearField = $('#academic-year-modern');
-        if (academicYearField.length && !academicYearField.val()) {
-            const currentYear = new Date().getFullYear();
-            const currentMonth = new Date().getMonth();
-            const startYear = currentMonth >= 6 ? currentYear : currentYear - 1; // Assuming academic year starts in July
-            const endYear = startYear + 1;
-            academicYearField.val(`${startYear}-${endYear}`).trigger('change');
+        const academicYearHidden = $('#academic-year-hidden');
+        if (academicYearField.length) {
+            if (!academicYearField.val()) {
+                const currentYear = new Date().getFullYear();
+                const currentMonth = new Date().getMonth();
+                const startYear = currentMonth >= 6 ? currentYear : currentYear - 1; // Assuming academic year starts in July
+                const endYear = startYear + 1;
+                academicYearField.val(`${startYear}-${endYear}`);
+            }
+            academicYearField.on('change', function() {
+                if (academicYearHidden.length) {
+                    academicYearHidden.val($(this).val());
+                }
+            }).trigger('change');
         }
 
         // We add the new field IDs to the list of fields to be synced.
@@ -1477,7 +1485,8 @@ $(document).ready(function() {
                 <div class="form-row">
                     <div class="input-group">
                         <label for="academic-year-modern">Academic Year *</label>
-                        <input type="text" id="academic-year-modern" placeholder="2024-2025" required>
+                        <input type="text" id="academic-year-modern" placeholder="2024-2025" disabled>
+                        <input type="hidden" name="academic_year" id="academic-year-hidden">
                         <div class="help-text">Academic year for which this event is planned</div>
                     </div>
                     <div class="input-group">
