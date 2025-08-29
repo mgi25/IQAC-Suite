@@ -3248,7 +3248,8 @@ textarea {
     border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 1.5rem;
-    margin-bottom: 2rem;
+    margin: 0 auto 2rem;
+    max-width: 1200px;
 }
 
 .report-section h3 {
@@ -3263,25 +3264,27 @@ textarea {
     list-style: none;
     padding: 0;
     margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
 }
 
-.report-preview-list li {
+.report-preview-list .field-item {
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
     display: flex;
-    gap: 0.5rem;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid var(--border-color);
-    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.25rem;
 }
 
-.report-preview-list li:last-child {
-    border-bottom: none;
+.report-preview-list .field-label {
+    font-weight: 600;
+    color: var(--primary-blue);
 }
 
-.report-preview-list strong {
-    min-width: 220px;
+.report-preview-list .field-value {
     color: var(--text-dark);
-}
-
-.report-preview-list span {
-    color: var(--text-muted);
+    word-break: break-word;
 }

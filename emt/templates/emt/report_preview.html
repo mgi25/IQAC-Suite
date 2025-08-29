@@ -29,7 +29,10 @@
                 <h3>Event Proposal Details</h3>
                 <ol class="report-preview-list">
                     {% for label, value in proposal_fields %}
-                        <li><strong>{{ label }}:</strong> <span>{{ value }}</span></li>
+                        <li class="field-item">
+                            <span class="field-label">{{ label }}</span>
+                            <span class="field-value">{{ value }}</span>
+                        </li>
                     {% endfor %}
                 </ol>
             </div>
@@ -37,7 +40,10 @@
                 <h3>Event Report Details</h3>
                 <ol class="report-preview-list">
                     {% for label, value in report_fields %}
-                        <li><strong>{{ label }}:</strong> <span>{{ value }}</span></li>
+                        <li class="field-item">
+                            <span class="field-label">{{ label }}</span>
+                            <span class="field-value">{{ value }}</span>
+                        </li>
                     {% endfor %}
                 </ol>
             </div>
