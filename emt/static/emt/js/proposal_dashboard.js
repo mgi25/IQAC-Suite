@@ -862,6 +862,8 @@ $(document).ready(function() {
 
         let available = [];
         let selected = [];
+        let selectedStudents = [];
+        let selectedFaculty = [];
         let currentType = null;
 
         container.html(`
@@ -1059,11 +1061,12 @@ $(document).ready(function() {
         container.find('button[data-type]').on('click', function() {
             currentType = $(this).data('type');
             available = [];
-            selected = [];
+            selected = currentType === 'students' ? selectedStudents : selectedFaculty;
             listContainer.show();
             continueBtn.show();
             step2.hide();
             $('#audienceSave').hide();
+            renderLists();
             loadAvailable('');
         });
 
@@ -1080,7 +1083,7 @@ $(document).ready(function() {
         });
 
         container.on('click', '#audienceAddAll', function() {
-            selected = selected.concat(available);
+            selected.push(...available);
             available = [];
             renderLists();
         });
@@ -1102,7 +1105,7 @@ $(document).ready(function() {
 
         container.on('click', '#audienceRemoveAll', function() {
             available = available.concat(selected.filter(it => !it.id.startsWith('custom-')));
-            selected = [];
+            selected.length = 0;
             renderLists();
         });
 
@@ -1193,16 +1196,14 @@ $(document).ready(function() {
         }
 
         $('#audienceSave').off('click').on('click', () => {
-            const names = selected.map(it => it.name);
+            const groupNames = selectedStudents.concat(selectedFaculty).map(it => it.name);
+            const userNames = userSelected.map(u => u.name);
+            const names = groupNames.concat(userNames);
             audienceField.val(names.join(', ')).trigger('change').trigger('input');
-            if (currentType === 'students') {
-                classIdsField
-                    .val(selected.filter(it => /^\d+$/.test(it.id)).map(it => it.id).join(','))
-                    .trigger('change')
-                    .trigger('input');
-            } else {
-                classIdsField.val('').trigger('change').trigger('input');
-            }
+            classIdsField
+                .val(selectedStudents.filter(it => /^\d+$/.test(it.id)).map(it => it.id).join(','))
+                .trigger('change')
+                .trigger('input');
             modal.removeClass('show');
         });
     }
