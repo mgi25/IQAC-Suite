@@ -2096,10 +2096,26 @@ def preview_event_report(request, proposal_id):
         raw_value = bound_field.value()
         field_def = bound_field.field
         if isinstance(field_def, forms.ModelMultipleChoiceField):
-            objs = field_def.queryset.filter(pk__in=raw_value) if raw_value else []
+            if raw_value:
+                if field_def.queryset.exists():
+                    objs = field_def.queryset.filter(pk__in=raw_value)
+                elif hasattr(proposal, name):
+                    objs = getattr(proposal, name).all()
+                else:
+                    objs = []
+            else:
+                objs = []
             display = ", ".join(str(obj) for obj in objs) or "—"
         elif isinstance(field_def, forms.ModelChoiceField):
-            obj = field_def.queryset.filter(pk=raw_value).first()
+            if raw_value:
+                if field_def.queryset.exists():
+                    obj = field_def.queryset.filter(pk=raw_value).first()
+                elif hasattr(proposal, name):
+                    obj = getattr(proposal, name)
+                else:
+                    obj = None
+            else:
+                obj = None
             display = str(obj) if obj else "—"
         else:
             display = raw_value or "—"
