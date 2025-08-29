@@ -317,6 +317,7 @@ console.log(attendanceEl.attrs['href']);
             "volunteers": ["Dan"],
             "speakers": [{"full_name": "Dr. Xavier", "organization": "Uni"}],
         }
+        existing_speakers = [{"full_name": "Dr. Xavier", "organization": "Uni"}]
         node_script = r"""
 const fs = require('fs');
 const src = fs.readFileSync('__SUBMIT_JS__', 'utf8');
@@ -353,8 +354,15 @@ function $(sel){
 }
 
 global.$ = $;
-global.document = {getElementById: id => (domReady && id === 'speakers-display') ? speakersDisplay : null};
-global.window = {PROPOSAL_DATA: __PROPOSAL_DATA__, ATTENDANCE_PRESENT: 10};
+global.document = {
+  readyState: 'complete',
+  getElementById: id => (domReady && id === 'speakers-display') ? speakersDisplay : null
+};
+global.window = {
+  PROPOSAL_DATA: __PROPOSAL_DATA__,
+  EXISTING_SPEAKERS: __EXISTING_SPEAKERS__,
+  ATTENDANCE_PRESENT: 10
+};
 
 eval(populateSpeakersFromProposal);
 eval(fillOrganizingCommittee);
@@ -376,6 +384,7 @@ setTimeout(()=>{
         node_script = (
             node_script.replace("__SUBMIT_JS__", str(submit_js))
             .replace("__PROPOSAL_DATA__", json.dumps(proposal_data))
+            .replace("__EXISTING_SPEAKERS__", json.dumps(existing_speakers))
         )
         with tempfile.TemporaryDirectory() as tmp:
             script_path = Path(tmp) / "run.js"
