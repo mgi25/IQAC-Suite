@@ -332,6 +332,8 @@ def submit_proposal(request, pk=None):
 
     if request.method == "POST":
         post_data = request.POST.copy()
+        # Ignore client-supplied academic year; enforce server-side value
+        post_data["academic_year"] = selected_academic_year
         logger.debug("submit_proposal POST data: %s", post_data)
         logger.debug(
             "Faculty IDs from POST: %s", post_data.getlist("faculty_incharges")
@@ -462,6 +464,7 @@ def submit_proposal(request, pk=None):
 
     if request.method == "POST" and form.is_valid():
         proposal = form.save(commit=False)
+        proposal.academic_year = selected_academic_year
         proposal.submitted_by = request.user
         is_final = "final_submit" in request.POST
         is_review = "review_submit" in request.POST
