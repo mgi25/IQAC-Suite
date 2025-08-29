@@ -920,12 +920,15 @@
   border-bottom: none;
 }
 
-/* Form Section Headers */
-.form-section-header {
+/* ==========================================
+   Section Headers (cleaned for solid blue only)
+   ========================================== */
+   .form-section-header {
     grid-column: 1 / -1;
-    margin: 2rem 0 1rem 0;
-    padding-bottom: 0.5rem;
-    border-bottom: 2px solid #e5e7eb;
+    margin: 2rem 0 1.5rem 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #264487;  /* ✅ solid blue underline */
+    position: relative;
 }
 
 .form-section-header:first-child {
@@ -941,15 +944,23 @@
     align-items: center;
 }
 
+/* Blue vertical bar on the left of the heading */
 .form-section-header h3::before {
     content: '';
     display: inline-block;
     width: 4px;
     height: 20px;
-    background: linear-gradient(135deg, #264487, #4f46e5);
+    background: #264487;   /* ✅ solid blue only */
     border-radius: 2px;
     margin-right: 0.75rem;
 }
+
+/* REMOVE all extra accent pseudo-elements */
+.form-section-header::before,
+.form-section-header::after {
+    content: none !important;
+}
+
 
 /* Enhanced Form Grid */
 .form-grid {
@@ -3240,4 +3251,14 @@ textarea {
     to {
         transform: rotate(360deg);
     }
+}
+.form-section-header::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background: #264487; /* solid blue */
+    border-radius: 1px;
 }
