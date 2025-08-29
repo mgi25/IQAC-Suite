@@ -56,6 +56,17 @@ from .forms import CDLRequestForm, CertificateBatchUploadForm, CDLMessageForm
 # ─────────────────────────────────────────────────────────────
 #  Helpers
 # ─────────────────────────────────────────────────────────────
+def is_admin(user):
+    """Return True if the user is staff or superuser.
+
+    Defined near the top so decorators like `@user_passes_test(is_admin)`
+    can resolve this symbol at import time.
+    """
+    try:
+        return bool(getattr(user, "is_staff", False) or getattr(user, "is_superuser", False))
+    except Exception:
+        return False
+
 def superuser_required(view_func):
     def _wrapped_view(request, *args, **kwargs):
         if not (request.user.is_authenticated and request.user.is_superuser):
@@ -1382,6 +1393,7 @@ def api_admin_search_users(request):
     paginated_users = users_qs[start : start + length]
     
     # Serialize the data
+    dashboard_url = reverse('dashboard')
     data = []
     for user in paginated_users:
         roles = []
@@ -1401,7 +1413,7 @@ def api_admin_search_users(request):
         """
         if user.id != request.user.id:
             action_buttons += f"""
-                <a href="/core-admin/impersonate/{user.id}/?next=/dashboard/" class="btn btn-sm btn-outline-secondary ms-1">
+                <a href="/core-admin/impersonate/{user.id}/?next={dashboard_url}" class="btn btn-sm btn-outline-secondary ms-1">
                     <i class="fas fa-user-secret"></i> Login as
                 </a>
             """
@@ -4143,9 +4155,6 @@ except Exception:
 # -------------------------
 # Access control helper
 # -------------------------
-def is_admin(user):
-    """Return True if user is superuser or has profile.role == 'admin'."""
-    return user.is_superuser or (hasattr(user, 'profile') and getattr(user.profile, 'role', '') == 'admin')
 
 
 # -------------------------
@@ -4865,10 +4874,6 @@ def api_quick_summary(request):
 #           Switch View (Admin)
 # ---------------------------------------------
 
-def is_admin(user):
-    """Check if user is admin or superuser"""
-    return user.is_staff or user.is_superuser
-
 @login_required
 def stop_impersonation(request):
     """Stop impersonating and return to original user"""
@@ -4884,10 +4889,17 @@ def stop_impersonation(request):
     return redirect('admin_dashboard')
 
 @login_required
-@user_passes_test(is_admin)
 def admin_impersonate_user(request, user_id):
     """Start impersonating a user from admin pages."""
-    target_user = get_object_or_404(User, id=user_id, is_active=True)
+    if not is_admin(request.user):
+        raise PermissionDenied("You are not authorized to impersonate users.")
+
+    # Allow impersonation of any existing user regardless of ``is_active`` status.
+    # Previously we restricted to ``is_active=True`` which resulted in a 404
+    # when attempting to impersonate inactive users from the user management
+    # page. By removing that filter the view will locate the user record and
+    # proceed with impersonation.
+    target_user = get_object_or_404(User, id=user_id)
     request.session['impersonate_user_id'] = target_user.id
     request.session['original_user_id'] = request.user.id
 
@@ -4899,9 +4911,10 @@ def admin_impersonate_user(request, user_id):
     return redirect(next_url)
 
 @login_required
-@user_passes_test(is_admin)
 def get_recent_users_api(request):
     """Get recently switched users"""
+    if not is_admin(request.user):
+        raise PermissionDenied("Admin access required")
     try:
         # Get recent impersonation history (you might want to store this in a model)
         # For now, returning some sample data
@@ -4913,21 +4926,18 @@ def get_recent_users_api(request):
                 'last_switch': '2024-01-15'
             }
         ]
-        
+
         return JsonResponse({'recent_users': recent_users})
-        
+
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
     
-def is_admin(user):
-    """Check if user is admin or superuser"""
-    return user.is_staff or user.is_superuser
-
 @login_required
-@user_passes_test(is_admin)
 def switch_user_view(request):
     """Display the switch user interface"""
+    if not is_admin(request.user):
+        raise PermissionDenied("Admin access required")
     users = User.objects.filter(is_active=True, last_login__isnull=False).select_related().order_by('username')
     
     # Get current impersonated user if any
@@ -4947,9 +4957,10 @@ def switch_user_view(request):
     return render(request, 'core/switch_user.html', context)
 
 @login_required
-@user_passes_test(is_admin)
 def search_users_api(request):
     """API endpoint for quick user search"""
+    if not is_admin(request.user):
+        raise PermissionDenied("Admin access required")
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -4988,10 +4999,11 @@ def search_users_api(request):
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 @login_required
-@user_passes_test(is_admin)
 @require_POST
 def impersonate_user(request):
     """Start impersonating a user"""
+    if not is_admin(request.user):
+        raise PermissionDenied("Admin access required")
     try:
         data = json.loads(request.body)
         user_id = data.get('user_id')

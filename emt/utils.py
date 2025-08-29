@@ -14,7 +14,7 @@ import csv
 from io import TextIOWrapper, TextIOBase
 
 ATTENDANCE_HEADERS = [
-    "Registratio",
+    "Registration No",
     "Full Name",
     "Class",
     "Absent",
@@ -36,7 +36,7 @@ def parse_attendance_csv(file_obj):
     for raw in reader:
         rows.append(
             {
-                "registration_no": raw["Registratio"].strip(),
+                "registration_no": raw["Registration No"].strip(),
                 "full_name": raw["Full Name"].strip(),
                 "student_class": raw["Class"].strip(),
                 "absent": raw.get("Absent", "").strip().upper() == "TRUE",

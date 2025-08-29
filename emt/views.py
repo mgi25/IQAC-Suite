@@ -398,7 +398,13 @@ def submit_proposal(request, pk=None):
         else None
     )
     flow = TentativeFlow.objects.filter(proposal=proposal).first() if proposal else None
-    activities = list(proposal.activities.values("name", "date")) if proposal else []
+    activities = (
+        list(proposal.activities.values("name", "date")) if proposal else []
+    )
+    for act in activities:
+        if act.get("date"):
+            act["date"] = act["date"].isoformat()
+
     speakers = (
         list(
             proposal.speakers.values(
@@ -419,6 +425,10 @@ def submit_proposal(request, pk=None):
         if proposal
         else []
     )
+    for ex in expenses:
+        if ex.get("amount") is not None:
+            ex["amount"] = float(ex["amount"])
+
     income = (
         list(
             proposal.income_details.values(
@@ -428,6 +438,10 @@ def submit_proposal(request, pk=None):
         if proposal
         else []
     )
+    for inc in income:
+        for fld in ("rate", "amount"):
+            if inc.get(fld) is not None:
+                inc[fld] = float(inc[fld])
 
     ctx = {
         "form": form,
@@ -592,6 +606,15 @@ def autosave_proposal(request):
             return JsonResponse(
                 {"success": False, "error": "Cannot modify submitted proposal"}
             )
+
+    # If payload only has text sections, skip full form validation
+    text_keys = {"need_analysis", "objectives", "outcomes", "flow"}
+    if proposal and set(data.keys()).issubset(text_keys | {"proposal_id"}):
+        text_errors = _save_text_sections(proposal, data)
+        if text_errors:
+            logger.debug("autosave_proposal text errors: %s", text_errors)
+            return JsonResponse({"success": False, "errors": text_errors})
+        return JsonResponse({"success": True, "proposal_id": proposal.id})
 
     form = EventProposalForm(data, instance=proposal, user=request.user)
     faculty_ids = data.get("faculty_incharges") or []
@@ -2068,9 +2091,10 @@ def preview_event_report(request, proposal_id):
     # Prepare proposal fields for display in preview
     proposal_form = EventProposalForm(instance=proposal)
     proposal_fields = []
-    for field in proposal_form.visible_fields():
-        raw_value = field.value()
-        field_def = field.field
+    for name, field in proposal_form.fields.items():
+        bound_field = proposal_form[name]
+        raw_value = bound_field.value()
+        field_def = bound_field.field
         if isinstance(field_def, forms.ModelMultipleChoiceField):
             objs = field_def.queryset.filter(pk__in=raw_value) if raw_value else []
             display = ", ".join(str(obj) for obj in objs) or "—"
@@ -2079,13 +2103,112 @@ def preview_event_report(request, proposal_id):
             display = str(obj) if obj else "—"
         else:
             display = raw_value or "—"
-        proposal_fields.append((field.label, display))
+        proposal_fields.append((bound_field.label, display))
+
+    # Add related proposal data not covered by EventProposalForm
+    need = getattr(proposal, "need_analysis", None)
+    proposal_fields.append(
+        (
+            "Rationale / \"Why is this event necessary?\"",
+            getattr(need, "content", "") or "—",
+        )
+    )
+    objectives = getattr(proposal, "objectives", None)
+    proposal_fields.append(
+        ("Objectives", getattr(objectives, "content", "") or "—")
+    )
+    outcomes = getattr(proposal, "expected_outcomes", None)
+    proposal_fields.append(
+        (
+            "Expected Learning Outcomes",
+            getattr(outcomes, "content", "") or "—",
+        )
+    )
+
+    flow = getattr(proposal, "tentative_flow", None)
+    if flow and flow.content:
+        lines = [
+            line.strip() for line in flow.content.splitlines() if line.strip()
+        ]
+        for idx, line in enumerate(lines, 1):
+            try:
+                dt_str, activity = line.split("||", 1)
+            except ValueError:
+                dt_str, activity = line, ""
+            proposal_fields.append((f"Schedule Item {idx} – Date & Time", dt_str.strip()))
+            proposal_fields.append((f"Schedule Item {idx} – Activity", activity.strip()))
+
+    for idx, speaker in enumerate(proposal.speakers.all(), 1):
+        proposal_fields.extend(
+            [
+                (f"Speaker {idx}: Full Name", speaker.full_name or "—"),
+                (f"Speaker {idx}: Designation", speaker.designation or "—"),
+                (f"Speaker {idx}: Organization", speaker.affiliation or "—"),
+                (f"Speaker {idx}: Email", speaker.contact_email or "—"),
+                (f"Speaker {idx}: Contact Number", speaker.contact_number or "—"),
+                (
+                    f"Speaker {idx}: LinkedIn Profile",
+                    speaker.linkedin_url or "—",
+                ),
+                (
+                    f"Speaker {idx}: Photo",
+                    speaker.photo.url if speaker.photo else "—",
+                ),
+                (f"Speaker {idx}: Bio", speaker.detailed_profile or "—"),
+                (
+                    f"Speaker {idx}: Topic",
+                    getattr(speaker, "topic", "") or "—",
+                ),
+            ]
+        )
+
+    for idx, expense in enumerate(proposal.expense_details.all(), 1):
+        proposal_fields.extend(
+            [
+                (f"Expense Item {idx}: Particulars", expense.particulars or "—"),
+                (
+                    f"Expense Item {idx}: No. of Participants",
+                    getattr(expense, "participants", "") or "—",
+                ),
+                (
+                    f"Expense Item {idx}: Rate",
+                    getattr(expense, "rate", "") or "—",
+                ),
+                (f"Expense Item {idx}: Amount", expense.amount or "—"),
+            ]
+        )
+
+    for idx, income in enumerate(proposal.income_details.all(), 1):
+        proposal_fields.extend(
+            [
+                (f"Income Item {idx}: Item", income.sl_no or "—"),
+                (f"Income Item {idx}: Particulars", income.particulars or "—"),
+                (
+                    f"Income Item {idx}: No. of Participants",
+                    income.participants or "—",
+                ),
+                (f"Income Item {idx}: Rate", income.rate or "—"),
+                (f"Income Item {idx}: Amount", income.amount or "—"),
+            ]
+        )
+
+    # Prepare report form fields for preview
+    report_fields = []
+    for name, field in form.fields.items():
+        values = request.POST.getlist(name)
+        display = ", ".join(values) if values else "—"
+        report_fields.append((field.label, display))
+
+    num_activities = request.POST.get("num_activities")
+    if num_activities:
+        report_fields.append(("Number of Activities Conducted", num_activities))
 
     context = {
         "proposal": proposal,
-        "form": form,
         "post_data": request.POST,
         "proposal_fields": proposal_fields,
+        "report_fields": report_fields,
+        "form": form,
     }
     return render(request, "emt/report_preview.html", context)
 
@@ -2263,31 +2386,85 @@ def attendance_data(request, report_id):
             if n.strip()
         ]
         if names:
+            # Map of student display name -> Student
             students = {
                 (s.user.get_full_name() or s.user.username).strip().lower(): s
                 for s in Student.objects.select_related("user")
             }
+
             rows = []
+
+            # Helper: expand a Class into attendance rows for all its students
+            from core.models import Class  # local import to avoid circulars at module import time
+
+            def add_rows_for_class(cls_obj):
+                for stu in cls_obj.students.select_related("user").all():
+                    full_name = (stu.user.get_full_name() or stu.user.username).strip()
+                    reg_no = stu.registration_number or getattr(
+                        getattr(stu.user, "profile", None), "register_no", ""
+                    )
+                    rows.append(
+                        {
+                            "registration_no": reg_no,
+                            "full_name": full_name,
+                            "student_class": cls_obj.code or cls_obj.name,
+                            "absent": False,
+                            "volunteer": False,
+                        }
+                    )
+
             for name in names:
+                # First try exact student name match
                 student = students.get(name.lower())
-                reg_no = ""
-                class_name = ""
                 if student:
                     reg_no = student.registration_number or getattr(
                         getattr(student.user, "profile", None), "register_no", ""
                     )
                     cls = student.classes.filter(is_active=True).first()
-                    if cls:
-                        class_name = cls.code or cls.name
-                rows.append(
-                    {
-                        "registration_no": reg_no,
-                        "full_name": name,
-                        "student_class": class_name,
-                        "absent": False,
-                        "volunteer": False,
-                    }
-                )
+                    rows.append(
+                        {
+                            "registration_no": reg_no,
+                            "full_name": (student.user.get_full_name() or student.user.username).strip(),
+                            "student_class": (cls.code if cls and cls.code else (cls.name if cls else "")),
+                            "absent": False,
+                            "volunteer": False,
+                        }
+                    )
+                    continue
+
+                # Otherwise, interpret it as a Class selection like "CSE (Dept Name)"
+                class_name = name
+                org_name = None
+                if "(" in name and ")" in name:
+                    try:
+                        class_name = name.split("(")[0].strip()
+                        org_name = name[name.index("(") + 1 : name.rindex(")")].strip()
+                    except Exception:
+                        class_name = name.strip()
+                        org_name = None
+
+                cls_qs = Class.objects.filter(name__iexact=class_name)
+                if org_name:
+                    cls_qs = cls_qs.filter(organization__name__iexact=org_name)
+
+                cls_obj = cls_qs.first()
+                if not cls_obj:
+                    # Try matching by code if not found by name
+                    cls_obj = Class.objects.filter(code__iexact=class_name).first()
+
+                if cls_obj:
+                    add_rows_for_class(cls_obj)
+                else:
+                    # Fall back to a generic row using the provided text as a name
+                    rows.append(
+                        {
+                            "registration_no": "",
+                            "full_name": name,
+                            "student_class": "",
+                            "absent": False,
+                            "volunteer": False,
+                        }
+                    )
 
     counts = {
         "total": len(rows),
@@ -2335,11 +2512,63 @@ def save_attendance_rows(request, report_id):
     total = len(rows)
     absent = len([r for r in rows if r.get("absent")])
     volunteers = len([r for r in rows if r.get("volunteer")])
-    present = total - absent
+    present_rows = [r for r in rows if not r.get("absent")]
+    present = len(present_rows)
+
+    # Determine participant types for present attendees
+    reg_nos = [r.get("registration_no") for r in present_rows if r.get("registration_no")]
+    users = {
+        u.username: u
+        for u in User.objects.filter(username__in=reg_nos).select_related("student_profile")
+    }
+    student_usernames = {u for u, obj in users.items() if hasattr(obj, "student_profile")}
+    faculty_usernames = set(
+        OrganizationMembership.objects.filter(
+            user__username__in=reg_nos, role="faculty"
+        ).values_list("user__username", flat=True)
+    )
+
+    student_count = sum(
+        1 for r in present_rows if r.get("registration_no") in student_usernames
+    )
+    faculty_count = sum(
+        1
+        for r in present_rows
+        if r.get("registration_no") in faculty_usernames
+        and r.get("registration_no") not in student_usernames
+    )
+    external_count = present - student_count - faculty_count
 
     report.num_participants = present
     report.num_student_volunteers = volunteers
-    report.save(update_fields=["num_participants", "num_student_volunteers"])
+    report.num_student_participants = student_count
+    report.num_faculty_participants = faculty_count
+    report.num_external_participants = external_count
+    report.save(
+        update_fields=[
+            "num_participants",
+            "num_student_volunteers",
+            "num_student_participants",
+            "num_faculty_participants",
+            "num_external_participants",
+        ]
+    )
+
+    # Persist counts in session draft so the report form shows updated values
+    drafts = request.session.setdefault("event_report_draft", {})
+    key = str(report.proposal_id)
+    draft = drafts.get(key, {})
+    draft.update(
+        {
+            "num_participants": present,
+            "num_student_volunteers": volunteers,
+            "num_student_participants": student_count,
+            "num_faculty_participants": faculty_count,
+            "num_external_participants": external_count,
+        }
+    )
+    drafts[key] = draft
+    request.session.modified = True
 
     return JsonResponse(
         {
@@ -2347,6 +2576,9 @@ def save_attendance_rows(request, report_id):
             "present": present,
             "absent": absent,
             "volunteers": volunteers,
+            "students": student_count,
+            "faculty": faculty_count,
+            "external": external_count,
         }
     )
 

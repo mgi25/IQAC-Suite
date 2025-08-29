@@ -49,6 +49,11 @@ window.AutosaveManager = (function() {
                 data[name] = value;
             }
         });
+
+        // Map generic 'content' field to a specific section if configured.
+        if (data.content !== undefined && window.AUTOSAVE_SECTION) {
+            data[window.AUTOSAVE_SECTION] = data.content;
+        }
         return data;
     }
 

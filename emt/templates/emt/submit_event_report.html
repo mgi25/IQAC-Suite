@@ -204,11 +204,7 @@
                                 <label for="attendance-modern">Attendance *</label>
                                 <input type="text" id="attendance-modern" readonly value="Present: {{ attendance_present }}, Absent: {{ attendance_absent }}, Volunteers: {{ attendance_volunteers }}" {% if report %}data-attendance-url="{% url 'emt:attendance_upload' report.id %}"{% endif %}>
                                 <input type="hidden" id="num-participants-modern" name="num_participants" value="{{ attendance_present }}">
-                                {% if report %}
                                 <div class="help-text">Click attendance box to manage via CSV</div>
-                                {% else %}
-                                <div class="help-text">Save report to manage attendance via CSV</div>
-                                {% endif %}
                                 {% if form.num_participants.errors %}
                                     <div class="field-error">{{ form.num_participants.errors.0 }}</div>
                                 {% endif %}
@@ -359,6 +355,9 @@
         window.SDG_GOALS = {{ sdg_goals_list|default:'[]'|safe }};
         window.PROPOSAL_ACTIVITIES = {{ proposal_activities_json|safe }};
         window.EXISTING_SPEAKERS = {{ speakers_json|default:'[]'|safe }};
+        window.ATTENDANCE_PRESENT = {{ attendance_present|default:0 }};
+        window.ATTENDANCE_ABSENT = {{ attendance_absent|default:0 }};
+        window.ATTENDANCE_VOLUNTEERS = {{ attendance_volunteers|default:0 }};
         window.PROPOSAL_DATA = {
             department: "{{ proposal.organization.name|default:'' }}",
             venue: "{{ proposal.venue|default:'' }}",

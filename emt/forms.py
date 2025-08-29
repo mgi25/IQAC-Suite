@@ -324,6 +324,11 @@ class EventReportForm(forms.ModelForm):
             'attendance_notes': forms.Textarea(attrs={'class': 'ultra-input', 'rows': 2}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.required = True
+
 class EventReportAttachmentForm(forms.ModelForm):
     class Meta:
         model = EventReportAttachment

@@ -67,7 +67,7 @@ urlpatterns = [
     path('core-admin/users/<int:user_id>/edit/', views.admin_user_edit, name='admin_user_edit'),
     path('core-admin/users/<int:user_id>/deactivate/', views.admin_user_deactivate, name='admin_user_deactivate'),
     path('core-admin/users/<int:user_id>/activate/', views.admin_user_activate, name='admin_user_activate'),
-    path('core-admin/impersonate/<int:user_id>/', views.admin_impersonate_user, name='admin_impersonate_user'), # Corrected path
+    path('core-admin/impersonate/<int:user_id>/', views.admin_impersonate_user, name='admin_impersonate_user'),
     path('core-admin/stop-impersonation/', views.stop_impersonation, name='stop_impersonation'),
     path('core-admin/user-roles/', views.admin_role_management, name='admin_role_management'),
     path('core-admin/user-roles/<int:organization_id>/', views.admin_role_management, name='admin_role_management_org'),
@@ -151,20 +151,25 @@ urlpatterns = [
     # ────────────────────────────────────────────────
     # API Endpoints
     # ────────────────────────────────────────────────
+
     # --- General APIs ---
     path('api/organizations/', views.api_organizations, name='api_organizations'),
     path('api/roles/', views.api_roles, name='api_roles'),
     path('api/auth/me', views.api_auth_me, name='frontend_api_auth_me'),
 
+    # --- Dashboard data APIs (used by dashboards JS) ---
+    path('api/student/performance-data/', views.api_student_performance_data, name='api_student_performance_data'),
+    path('api/user/events-data/', views.api_user_events_data, name='api_user_events_data'),
+    path('api/student/contributions/', views.api_student_contributions, name='api_student_contributions'),
+
     # --- Calendar (Unified) ---
     path('api/calendar/', views.api_calendar_events, name='api_calendar_events'),
     path('api/calendar/faculty/create/', views.api_create_faculty_meeting, name='api_create_faculty_meeting'),
-    
+
     # --- Admin APIs ---
     path('admin-dashboard-api/', views.admin_dashboard_api, name='admin_dashboard_api'),
     path('core-admin/api/search-users/', views.api_admin_search_users, name='api_admin_search_users'),
     path('core-admin/api/search/', views.api_global_search, name='api_global_search'),
-    path('core-admin/api/search-users/', views.search_users, name='search_users'),
     path('core-admin/api/org-type/<int:org_type_id>/organizations/', views.api_org_type_organizations, name='api_org_type_organizations'),
     path('core-admin/api/org-type/<int:org_type_id>/roles/', views.api_org_type_roles, name='api_org_type_roles'),
     path('core-admin/api/organization/<int:org_id>/roles/', views.api_organization_roles, name='api_organization_roles'),

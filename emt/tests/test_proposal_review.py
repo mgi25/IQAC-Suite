@@ -42,6 +42,7 @@ class ProposalReviewFlowTests(TestCase):
             "organization_type": str(self.ot.id),
             "organization": str(self.org.id),
             "academic_year": "2024-2025",
+            "event_title": "Test Event",
         }
 
     def test_review_and_final_submit_flow(self):

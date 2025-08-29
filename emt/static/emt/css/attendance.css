@@ -1,29 +1,45 @@
 .attendance-container {
-  background: var(--surface-color, #fff);
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  max-width: 1200px;
+  margin: 0 auto;
 }
-.page-title {
-  margin-bottom: 1rem;
-}
-.summary {
-  display: flex;
-  gap: 1.5rem;
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
   margin-top: 1rem;
-  flex-wrap: wrap;
 }
-.summary span {
+
+.stats-grid .stat {
+  background: var(--surface-color, #fff);
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  text-align: center;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.stats-grid .stat-label {
+  font-size: 0.875rem;
+  color: #6c757d;
+}
+
+.stats-grid .stat-value {
+  font-size: 1.25rem;
   font-weight: 600;
 }
-#attendance-table { margin-top: 1rem; }
+
+#attendance-table {
+  margin-top: 1rem;
+}
+
 .actions {
   margin-top: 1rem;
   display: flex;
   gap: 1rem;
+  justify-content: flex-end;
 }
-.pagination { margin-top: 1rem; }
-.error { color: red; }
+
 .loading {
   margin-top: 1rem;
   display: none;

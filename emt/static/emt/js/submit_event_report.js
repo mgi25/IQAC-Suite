@@ -452,9 +452,24 @@ $(document).on('click', '#ai-sdg-implementation', function(){
       $('.form-grid').html(content);
 
       if (sectionName === 'participants-information') {
-          populateSpeakersFromProposal();
+          // Defer population until after the new DOM elements are attached
+          const initParticipantsSection = () => {
+              populateSpeakersFromProposal();
+              fillOrganizingCommittee();
+              fillActualSpeakers();
+              fillAttendanceCounts();
+          };
+          if (document.readyState === 'loading') {
+              $(initParticipantsSection);
+          } else {
+              setTimeout(initParticipantsSection, 0);
+          }
       }
-      
+
+      if (sectionName === 'event-relevance') {
+          fillEventRelevance();
+      }
+
       if (sectionName === 'event-information') {
           // Initialize activities after content is loaded
           setTimeout(() => {
@@ -1365,44 +1380,83 @@ function showNotification(message, type = 'info') {
 }
 
 // Populate fields with proposal data
-function populateProposalData() {
-    function fillEventRelevance() {
-        if ($('#pos-pso-modern').length && window.PROPOSAL_DATA && window.PROPOSAL_DATA.pos_pso) {
-            $('#pos-pso-modern').val(window.PROPOSAL_DATA.pos_pso);
-        }
-        if ($('#sdg-implementation-modern').length && window.PROPOSAL_DATA && window.PROPOSAL_DATA.sdg_goals) {
-            $('#sdg-implementation-modern').val(window.PROPOSAL_DATA.sdg_goals);
-        }
+function fillEventRelevance() {
+    if ($('#pos-pso-modern').length && window.PROPOSAL_DATA && window.PROPOSAL_DATA.pos_pso) {
+        $('#pos-pso-modern').val(window.PROPOSAL_DATA.pos_pso);
     }
+    if ($('#sdg-implementation-modern').length && window.PROPOSAL_DATA && window.PROPOSAL_DATA.sdg_goals) {
+        $('#sdg-implementation-modern').val(window.PROPOSAL_DATA.sdg_goals);
+    }
+}
 
-    // Populate on load
-    setTimeout(fillEventRelevance, 100);
+function fillOrganizingCommittee() {
+    const field = $('#organizing-committee-modern');
+    if (field.length && field.val().trim() === '' && window.PROPOSAL_DATA) {
+        const parts = [];
+        if (window.PROPOSAL_DATA.proposer) {
+            parts.push(`Proposer: ${window.PROPOSAL_DATA.proposer}`);
+        }
+        if (window.PROPOSAL_DATA.faculty_incharges && window.PROPOSAL_DATA.faculty_incharges.length) {
+            parts.push(`Faculty In-Charge: ${window.PROPOSAL_DATA.faculty_incharges.join(', ')}`);
+        }
+        if (window.PROPOSAL_DATA.student_coordinators) {
+            parts.push(`Student Coordinators: ${window.PROPOSAL_DATA.student_coordinators}`);
+        }
+        if (window.PROPOSAL_DATA.volunteers && window.PROPOSAL_DATA.volunteers.length) {
+            parts.push(`Volunteers: ${window.PROPOSAL_DATA.volunteers.join(', ')}`);
+        }
+        field.val(parts.join('\n'));
+    }
+}
 
-    // Populate when section becomes active
+function fillActualSpeakers() {
+    const field = $('#actual-speakers-modern');
+    if (
+        field.length &&
+        field.val().trim() === '' &&
+        window.PROPOSAL_DATA &&
+        Array.isArray(window.PROPOSAL_DATA.speakers) &&
+        window.PROPOSAL_DATA.speakers.length
+    ) {
+        const lines = window.PROPOSAL_DATA.speakers.map((sp, idx) => {
+            const name = sp.full_name || sp.name || '';
+            const designation = sp.designation ? ` - ${sp.designation}` : '';
+            const org = sp.organization || sp.affiliation ? ` - ${(sp.organization || sp.affiliation)}` : '';
+            return `• ${name}${designation}${org}`;
+        });
+        field.val(lines.join('\n'));
+    }
+}
+
+function fillAttendanceCounts() {
+    const totalField = $('#total-participants-modern');
+    if (
+        totalField.length &&
+        totalField.val().trim() === '' &&
+        typeof window.ATTENDANCE_PRESENT !== 'undefined'
+    ) {
+        totalField.val(window.ATTENDANCE_PRESENT);
+    }
+}
+
+function populateProposalData() {
+    // Initial fill if fields exist
+    setTimeout(function() {
+        fillEventRelevance();
+        fillOrganizingCommittee();
+        fillActualSpeakers();
+        fillAttendanceCounts();
+    }, 100);
+
+    // Populate when sections become active
     $(document).on('click', '[data-section="event-relevance"]', function() {
         setTimeout(fillEventRelevance, 100);
     });
-
-    // Populate organizing committee details when section becomes active
     $(document).on('click', '[data-section="participants-information"]', function() {
         setTimeout(function() {
-            const field = $('#organizing-committee-modern');
-            if (field.length && field.val().trim() === '' && window.PROPOSAL_DATA) {
-                const parts = [];
-                if (window.PROPOSAL_DATA.proposer) {
-                    parts.push(`Proposer: ${window.PROPOSAL_DATA.proposer}`);
-                }
-                if (window.PROPOSAL_DATA.faculty_incharges && window.PROPOSAL_DATA.faculty_incharges.length) {
-                    parts.push(`Faculty In-Charge: ${window.PROPOSAL_DATA.faculty_incharges.join(', ')}`);
-                }
-                if (window.PROPOSAL_DATA.student_coordinators) {
-                    parts.push(`Student Coordinators: ${window.PROPOSAL_DATA.student_coordinators}`);
-                }
-                if (window.PROPOSAL_DATA.volunteers && window.PROPOSAL_DATA.volunteers.length) {
-                    parts.push(`Volunteers: ${window.PROPOSAL_DATA.volunteers.join(', ')}`);
-                }
-                field.val(parts.join('\n'));
-            }
+            fillOrganizingCommittee();
+            fillActualSpeakers();
+            fillAttendanceCounts();
         }, 100);
     });
 }
@@ -1416,9 +1470,14 @@ function populateSpeakersFromProposal() {
         return;
     }
 
-    const speakers = (window.PROPOSAL_DATA && window.PROPOSAL_DATA.speakers) || window.EXISTING_SPEAKERS || [];
+    let speakers = [];
+    if (window.PROPOSAL_DATA && Array.isArray(window.PROPOSAL_DATA.speakers) && window.PROPOSAL_DATA.speakers.length) {
+        speakers = window.PROPOSAL_DATA.speakers;
+    } else if (Array.isArray(window.EXISTING_SPEAKERS) && window.EXISTING_SPEAKERS.length) {
+        speakers = window.EXISTING_SPEAKERS;
+    }
     console.log('Speakers data:', speakers);
-    
+
     if (!speakers.length) {
         container.innerHTML = '<div class="no-speakers-message">No speakers were defined in the original proposal</div>';
         return;
@@ -1959,12 +2018,49 @@ function setupAttendanceLink() {
 
     $(document)
         .off('click', '#attendance-modern')
-        .on('click', '#attendance-modern', () => {
+        .on('click', '#attendance-modern', async () => {
             const href = attendanceField.data('attendance-url');
             if (href) {
                 window.location.href = href;
-            } else {
-                alert('Save report to manage attendance via CSV');
+                return;
+            }
+
+            // No report yet: trigger an autosave to create it, then redirect
+            try {
+                showLoadingOverlay('Preparing attendance...');
+                // Fallback: if autosave URL isn't injected, infer it from current path
+                if (!window.AUTOSAVE_URL) {
+                    const path = window.location.pathname || '';
+                    let prefix = '';
+                    if (path.startsWith('/suite/')) prefix = '/suite';
+                    else if (path.startsWith('/emt/')) prefix = '/emt';
+                    window.AUTOSAVE_URL = `${prefix}/autosave-event-report/`;
+                }
+                const result = (window.ReportAutosaveManager && window.ReportAutosaveManager.manualSave)
+                    ? await window.ReportAutosaveManager.manualSave()
+                    : null;
+
+                const reportId = result?.report_id || window.REPORT_ID;
+                if (reportId) {
+                    // Respect site prefix (/suite or /emt) when building the URL
+                    const path = window.location.pathname || '';
+                    let prefix = '';
+                    if (path.startsWith('/suite/')) prefix = '/suite';
+                    else if (path.startsWith('/emt/')) prefix = '/emt';
+                    const attendanceUrl = `${prefix}/reports/${reportId}/attendance/upload/`;
+                    attendanceField
+                        .attr('data-attendance-url', attendanceUrl)
+                        .data('attendance-url', attendanceUrl)
+                        .attr('href', attendanceUrl);
+                    window.location.href = attendanceUrl;
+                } else {
+                    alert('Unable to prepare attendance. Please try saving once.');
+                }
+            } catch (e) {
+                console.error('Failed to autosave before opening attendance:', e);
+                alert('Save failed. Please fix any errors and try again.');
+            } finally {
+                hideLoadingOverlay();
             }
         });
 }
