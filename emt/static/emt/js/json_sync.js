@@ -14,9 +14,9 @@ document.addEventListener("DOMContentLoaded", function () {
         "student-coordinators-modern": "student_coordinators",
         "faculty-select": "faculty_incharges",
         "committees-collaborations-modern": "committees_collaborations",
-        "id_need_analysis": "need_analysis",
-        "id_objectives": "objectives",
-        "id_learning_outcomes": "outcomes",
+        "need-analysis-modern": "need_analysis",
+        "objectives-modern": "objectives",
+        "outcomes-modern": "outcomes",
         "id_flow": "flow"
     };
 

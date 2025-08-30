@@ -535,6 +535,35 @@ $(document).ready(function() {
                     dateLabel.setAttribute('for', `activity_date_${num}`);
                     dateLabel.textContent = `${num}. Activity Date`;
                 }
+
+                const handler = () => {
+                    if (!(window.AutosaveManager && window.AutosaveManager.manualSave)) {
+                        return;
+                    }
+
+                    const fieldsToSave = [];
+                    const nameValue = nameInput ? nameInput.value.trim() : '';
+                    const dateValue = dateInput ? dateInput.value : '';
+
+                    if (nameValue) {
+                        fieldsToSave.push(`activity_name_${num}`);
+                    }
+                    if (dateValue) {
+                        fieldsToSave.push(`activity_date_${num}`);
+                    }
+
+                    if (fieldsToSave.length) {
+                        window.AutosaveManager.manualSave(fieldsToSave).catch(() => {});
+                    }
+                };
+                if (nameInput) {
+                    nameInput.oninput = handler;
+                    nameInput.onchange = handler;
+                }
+                if (dateInput) {
+                    dateInput.oninput = handler;
+                    dateInput.onchange = handler;
+                }
             });
             numActivitiesInput.value = rows.length;
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
@@ -570,6 +599,9 @@ $(document).ready(function() {
                     });
                 }
                 reindexActivityRows();
+                if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                    window.AutosaveManager.reinitialize();
+                }
             }
         }
 
@@ -617,7 +649,9 @@ $(document).ready(function() {
             load: (query, callback) => {
                 const orgId = djangoOrgSelect.val();
                 if (!query.length || !orgId) return callback();
-                fetch(`${window.API_FACULTY}?org_id=${orgId}&q=${encodeURIComponent(query)}`)
+                fetch(`${window.API_FACULTY}?org_id=${orgId}&q=${encodeURIComponent(query)}`, {
+                    credentials: 'include'
+                })
                     .then(r => r.json())
                     .then(callback)
                     .catch(() => callback());
@@ -634,6 +668,9 @@ $(document).ready(function() {
             });
             djangoFacultySelect.trigger('change');
             clearFieldError(facultySelect);
+            if (window.AutosaveManager) {
+                window.AutosaveManager.manualSave(['faculty_incharges']).catch(() => {});
+            }
         });
 
         const initialValues = djangoFacultySelect.val();
@@ -665,7 +702,9 @@ $(document).ready(function() {
                 if (!query.length) return callback();
                 const orgId = $('#django-basic-info [name="organization"]').val();
                 const exclude = orgId ? `&exclude=${encodeURIComponent(orgId)}` : '';
-                fetch(`${window.API_ORGANIZATIONS}?q=${encodeURIComponent(query)}${exclude}`)
+                fetch(`${window.API_ORGANIZATIONS}?q=${encodeURIComponent(query)}${exclude}`, {
+                    credentials: 'include'
+                })
                     .then(r => r.json())
                     .then(data => callback(data))
                     .catch(() => callback());
@@ -683,7 +722,9 @@ $(document).ready(function() {
         });
 
         if (existingIds.length) {
-            fetch(`${window.API_ORGANIZATIONS}?ids=${existingIds.join(',')}`)
+            fetch(`${window.API_ORGANIZATIONS}?ids=${existingIds.join(',')}`, {
+                credentials: 'include'
+            })
                 .then(r => r.json())
                 .then(data => {
                     data.forEach(opt => tom.addOption(opt));
@@ -747,8 +788,8 @@ $(document).ready(function() {
                     committeesField.val().split(',').map(id => id.trim()).filter(Boolean).forEach(id => ids.push(id));
                 }
                 const orgParam = ids.length ? `&org_ids=${encodeURIComponent(ids.join(','))}` : '';
-                const url = `/suite/api/students/?q=${encodeURIComponent(query)}${orgParam}`;
-                fetch(url)
+                const url = `${window.API_STUDENTS}?q=${encodeURIComponent(query)}${orgParam}`;
+                fetch(url, { credentials: 'include' })
                     .then(response => response.json())
                     .then(json => {
                         callback(json);
@@ -1403,7 +1444,9 @@ $(document).ready(function() {
                 placeholder: `Type ${label} name...`,
                 load: (query, callback) => {
                     if (!query || query.length < 2) return callback();
-                    fetch(`${window.API_ORGANIZATIONS}?q=${encodeURIComponent(query)}&org_type=${encodeURIComponent(label)}`)
+                    fetch(`${window.API_ORGANIZATIONS}?q=${encodeURIComponent(query)}&org_type=${encodeURIComponent(label)}`, {
+                        credentials: 'include'
+                    })
                         .then(r => r.json())
                         .then(callback)
                         .catch(() => callback());
@@ -1895,6 +1938,14 @@ function getWhyThisEventForm() {
                 </div>
             `;
             container.append(html);
+            // Bind autosave to any speaker field changes
+            container
+                .off('input change', '[name^="speaker_"]')
+                .on('input change', '[name^="speaker_"]', function() {
+                    if (window.AutosaveManager && window.AutosaveManager.manualSave) {
+                        window.AutosaveManager.manualSave([this.name]).catch(() => {});
+                    }
+                });
             index++;
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
@@ -1934,6 +1985,19 @@ function getWhyThisEventForm() {
             showEmptyState();
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
+                if (window.AutosaveManager.manualSave) {
+                    const remaining = container.children('.speaker-form-container').length;
+                    let dummy = null;
+                    if (remaining === 0) {
+                        dummy = $('<input type="hidden" name="speaker_full_name_0" value="">').appendTo(container);
+                    }
+                    const fields = container.find('[name^="speaker_"]').map((_, el) => el.name).get();
+                    const p = window.AutosaveManager.manualSave(fields.length ? fields : ['speaker_full_name_0']);
+                    p.catch(() => {});
+                    if (dummy) {
+                        p.finally ? p.finally(() => dummy.remove()) : p.then(() => dummy.remove()).catch(() => dummy.remove());
+                    }
+                }
             }
         });
 
@@ -1984,7 +2048,7 @@ function getWhyThisEventForm() {
             }
         });
 
-        if (window.EXISTING_SPEAKERS && window.EXISTING_SPEAKERS.length) {
+        if (Array.isArray(window.EXISTING_SPEAKERS) && window.EXISTING_SPEAKERS.length) {
             container.empty();
             window.EXISTING_SPEAKERS.forEach(sp => {
                 addSpeakerForm();
@@ -1999,6 +2063,22 @@ function getWhyThisEventForm() {
             });
             showEmptyState();
         } else {
+            try {
+                const saved = JSON.parse(
+                    localStorage.getItem(`proposal_draft_${window.location.pathname}_new`) || '{}'
+                );
+                const idxSet = new Set();
+                Object.keys(saved).forEach(key => {
+                    const m = key.match(/^speaker_(?:full_name|designation|affiliation|contact_email|contact_number|linkedin_url|detailed_profile)_(\d+)$/);
+                    if (m) idxSet.add(parseInt(m[1], 10));
+                });
+                if (idxSet.size) {
+                    container.empty();
+                    Array.from(idxSet).sort((a, b) => a - b).forEach(() => addSpeakerForm());
+                }
+            } catch (err) {
+                console.error('Failed to restore speakers from draft', err);
+            }
             showEmptyState();
         }
     }
@@ -2378,11 +2458,25 @@ function getWhyThisEventForm() {
         if (validateCurrentSection()) {
             showLoadingOverlay();
             if (window.AutosaveManager && window.AutosaveManager.manualSave) {
-                window.AutosaveManager.manualSave()
+                const speakerFields = $('#speakers-list').find('[name^="speaker_"]').map((_, el) => el.name).get();
+                if (speakerFields.length === 0) speakerFields.push('speaker_full_name_0');
+                const expenseFields = $('#expense-rows').find('[name^="expense_"]').map((_, el) => el.name).get();
+                if (expenseFields.length === 0) expenseFields.push('expense_particulars_0');
+                const incomeFields = $('#income-rows').find('[name^="income_"]').map((_, el) => el.name).get();
+                if (incomeFields.length === 0) incomeFields.push('income_particulars_0');
+                const sectionFieldMap = {
+                    'why-this-event': ['need_analysis', 'objectives', 'outcomes'],
+                    'schedule': ['flow'],
+                    'speakers': speakerFields,
+                    'expenses': expenseFields,
+                    'income': incomeFields
+                };
+                const fieldsToSave = sectionFieldMap[currentExpandedCard] || null;
+                window.AutosaveManager.manualSave(fieldsToSave)
                     .then((data) => {
                         hideLoadingOverlay();
                         if (data && data.errors) {
-                            handleAutosaveErrors(data);
+                            handleAutosaveErrors(data, fieldsToSave);
                         }
                         markSectionComplete(currentExpandedCard);
                         showNotification('Section saved successfully!', 'success');
@@ -2405,7 +2499,7 @@ function getWhyThisEventForm() {
                         hideLoadingOverlay();
                         console.error('Autosave failed:', err);
                         if (err && err.errors) {
-                            handleAutosaveErrors(err);
+                            handleAutosaveErrors(err, fieldsToSave);
                             if (firstErrorField && firstErrorField.length) {
                                 $('html, body').animate({
                                     scrollTop: firstErrorField.offset().top - 100
@@ -2582,10 +2676,24 @@ function getWhyThisEventForm() {
 
             // Fill dynamic activity once rendered
             setTimeout(() => {
+                if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                    window.AutosaveManager.reinitialize();
+                }
                 const actName = document.getElementById('activity_name_1');
                 const actDate = document.getElementById('activity_date_1');
-                if (actName) actName.value = 'Intro Session';
-                if (actDate) actDate.value = today;
+                if (actName) {
+                    actName.value = 'Intro Session';
+                    actName.dispatchEvent(new Event('input', { bubbles: true }));
+                    actName.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (actDate) {
+                    actDate.value = today;
+                    actDate.dispatchEvent(new Event('input', { bubbles: true }));
+                    actDate.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (window.AutosaveManager && window.AutosaveManager.manualSave) {
+                    window.AutosaveManager.manualSave();
+                }
             }, 150);
 
             const sc = document.getElementById('student-coordinators-modern');
@@ -2593,6 +2701,10 @@ function getWhyThisEventForm() {
                 sc.appendChild(new Option('Demo Student', '1', true, true));
                 sc.dispatchEvent(new Event('change', { bubbles: true }));
             }
+        }
+
+        if (section === 'basic-info' && window.AutosaveManager && window.AutosaveManager.manualSave) {
+            window.AutosaveManager.manualSave();
         }
 
         if (section === 'why-this-event') {
@@ -2614,6 +2726,9 @@ function getWhyThisEventForm() {
                 out.dispatchEvent(new Event('input', { bubbles: true }));
                 out.dispatchEvent(new Event('change', { bubbles: true }));
             }
+            if (window.AutosaveManager && window.AutosaveManager.manualSave) {
+                window.AutosaveManager.manualSave();
+            }
         }
 
         if (section === 'schedule') {
@@ -2623,11 +2738,17 @@ function getWhyThisEventForm() {
                 sched.dispatchEvent(new Event('input', { bubbles: true }));
                 sched.dispatchEvent(new Event('change', { bubbles: true }));
             }
+            if (window.AutosaveManager && window.AutosaveManager.manualSave) {
+                window.AutosaveManager.manualSave();
+            }
         }
 
         if (section === 'speakers') {
             document.getElementById('add-speaker-btn')?.click();
             setTimeout(() => {
+                if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                    window.AutosaveManager.reinitialize();
+                }
                 const idx = 0;
                 const name = document.getElementById(`speaker_full_name_${idx}`);
                 const desig = document.getElementById(`speaker_designation_${idx}`);
@@ -2636,43 +2757,118 @@ function getWhyThisEventForm() {
                 const phone = document.getElementById(`speaker_contact_number_${idx}`);
                 const linked = document.getElementById(`speaker_linkedin_url_${idx}`);
                 const bio = document.getElementById(`speaker_detailed_profile_${idx}`);
-                if (name) name.value = getRandom(AUTO_FILL_DATA.speakerNames);
-                if (desig) desig.value = getRandom(AUTO_FILL_DATA.designations);
-                if (aff) aff.value = getRandom(AUTO_FILL_DATA.affiliations);
-                if (email) email.value = getRandom(AUTO_FILL_DATA.emails);
-                if (phone) phone.value = getRandom(AUTO_FILL_DATA.phones);
-                if (linked) linked.value = getRandom(AUTO_FILL_DATA.linkedins);
-                if (bio) bio.value = getRandom(AUTO_FILL_DATA.bios);
+                if (name) {
+                    name.value = getRandom(AUTO_FILL_DATA.speakerNames);
+                    name.dispatchEvent(new Event('input', { bubbles: true }));
+                    name.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (desig) {
+                    desig.value = getRandom(AUTO_FILL_DATA.designations);
+                    desig.dispatchEvent(new Event('input', { bubbles: true }));
+                    desig.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (aff) {
+                    aff.value = getRandom(AUTO_FILL_DATA.affiliations);
+                    aff.dispatchEvent(new Event('input', { bubbles: true }));
+                    aff.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (email) {
+                    email.value = getRandom(AUTO_FILL_DATA.emails);
+                    email.dispatchEvent(new Event('input', { bubbles: true }));
+                    email.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (phone) {
+                    phone.value = getRandom(AUTO_FILL_DATA.phones);
+                    phone.dispatchEvent(new Event('input', { bubbles: true }));
+                    phone.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (linked) {
+                    linked.value = getRandom(AUTO_FILL_DATA.linkedins);
+                    linked.dispatchEvent(new Event('input', { bubbles: true }));
+                    linked.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (bio) {
+                    bio.value = getRandom(AUTO_FILL_DATA.bios);
+                    bio.dispatchEvent(new Event('input', { bubbles: true }));
+                    bio.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (window.AutosaveManager && window.AutosaveManager.manualSave) {
+                    window.AutosaveManager.manualSave();
+                }
             }, 100);
         }
 
         if (section === 'expenses') {
             document.getElementById('add-expense-btn')?.click();
             setTimeout(() => {
+                if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                    window.AutosaveManager.reinitialize();
+                }
                 const idx = 0;
                 const sl = document.getElementById(`expense_sl_no_${idx}`);
                 const part = document.getElementById(`expense_particulars_${idx}`);
                 const amt = document.getElementById(`expense_amount_${idx}`);
-                if (sl) sl.value = '1';
-                if (part) part.value = getRandom(AUTO_FILL_DATA.expenseItems);
-                if (amt) amt.value = '1000';
+                if (sl) {
+                    sl.value = '1';
+                    sl.dispatchEvent(new Event('input', { bubbles: true }));
+                    sl.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (part) {
+                    part.value = getRandom(AUTO_FILL_DATA.expenseItems);
+                    part.dispatchEvent(new Event('input', { bubbles: true }));
+                    part.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (amt) {
+                    amt.value = '1000';
+                    amt.dispatchEvent(new Event('input', { bubbles: true }));
+                    amt.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (window.AutosaveManager && window.AutosaveManager.manualSave) {
+                    window.AutosaveManager.manualSave();
+                }
             }, 100);
         }
 
         if (section === 'income') {
             document.getElementById('add-income-btn')?.click();
             setTimeout(() => {
+                if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                    window.AutosaveManager.reinitialize();
+                }
                 const idx = 0;
                 const sl = document.getElementById(`income_sl_no_${idx}`);
                 const part = document.getElementById(`income_particulars_${idx}`);
                 const partCount = document.getElementById(`income_participants_${idx}`);
                 const rate = document.getElementById(`income_rate_${idx}`);
                 const amt = document.getElementById(`income_amount_${idx}`);
-                if (sl) sl.value = '1';
-                if (part) part.value = getRandom(AUTO_FILL_DATA.incomeItems);
-                if (partCount) partCount.value = '50';
-                if (rate) rate.value = '100';
-                if (amt) amt.value = '5000';
+                if (sl) {
+                    sl.value = '1';
+                    sl.dispatchEvent(new Event('input', { bubbles: true }));
+                    sl.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (part) {
+                    part.value = getRandom(AUTO_FILL_DATA.incomeItems);
+                    part.dispatchEvent(new Event('input', { bubbles: true }));
+                    part.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (partCount) {
+                    partCount.value = '50';
+                    partCount.dispatchEvent(new Event('input', { bubbles: true }));
+                    partCount.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (rate) {
+                    rate.value = '100';
+                    rate.dispatchEvent(new Event('input', { bubbles: true }));
+                    rate.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (amt) {
+                    amt.value = '5000';
+                    amt.dispatchEvent(new Event('input', { bubbles: true }));
+                    amt.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (window.AutosaveManager && window.AutosaveManager.manualSave) {
+                    window.AutosaveManager.manualSave();
+                }
             }, 100);
         }
     }
@@ -3132,8 +3328,9 @@ function getWhyThisEventForm() {
         }
     }
 
-    function handleAutosaveErrors(errorData) {
+    function handleAutosaveErrors(errorData, submittedFields) {
         const errors = (errorData && typeof errorData === 'object') ? (errorData.errors || errorData) : null;
+        const allowed = submittedFields || (errorData && errorData.fields) || null;
         if (!errors || typeof errors !== 'object') {
             showNotification('Autosave failed. Please try again.', 'error');
             return;
@@ -3144,6 +3341,7 @@ function getWhyThisEventForm() {
         const nonFieldMessages = [];
 
         const mark = (name, message) => {
+            if (allowed && !allowed.includes(name)) return false;
             let field = $(`#${name.replace(/_/g, '-')}-modern`);
             if (!field.length) {
                 field = $(`[name="${name}"]`);
@@ -3156,16 +3354,20 @@ function getWhyThisEventForm() {
                 showFieldError(field, message);
                 return true;
             }
-            nonFieldMessages.push(message);
+            if (!allowed) {
+                nonFieldMessages.push(message);
+            }
             return false;
         };
 
         Object.entries(errors).forEach(([key, val]) => {
             if (key === '__all__' || key === 'non_field_errors') {
-                if (Array.isArray(val)) {
-                    nonFieldMessages.push(...val);
-                } else if (val) {
-                    nonFieldMessages.push(val);
+                if (!allowed) {
+                    if (Array.isArray(val)) {
+                        nonFieldMessages.push(...val);
+                    } else if (val) {
+                        nonFieldMessages.push(val);
+                    }
                 }
                 return;
             }
@@ -3309,7 +3511,7 @@ function getWhyThisEventForm() {
                 $('#reset-draft-btn').prop('disabled', false).removeAttr('disabled');
             }
             if (detail && detail.errors) {
-                handleAutosaveErrors({errors: detail.errors});
+                handleAutosaveErrors({errors: detail.errors}, detail.fields);
             }
             const indicator = $('#autosave-indicator');
             indicator.removeClass('saving error').addClass('saved');
@@ -3324,7 +3526,8 @@ function getWhyThisEventForm() {
             indicator.removeClass('saving saved').addClass('error show');
             indicator.find('.indicator-text').text('Save Failed');
             if (e.originalEvent && e.originalEvent.detail) {
-                handleAutosaveErrors(e.originalEvent.detail);
+                const d = e.originalEvent.detail;
+                handleAutosaveErrors(d, d.fields);
             }
             setTimeout(() => {
                 indicator.removeClass('show');
@@ -3555,7 +3758,7 @@ function addSubmitSection() {
     <div class="submit-section">
       <h5 class="mb-3" style="color: var(--primary-blue); font-weight: 600;">Submit Proposal</h5>
       <div class="d-flex gap-3 justify-content-center">
-        <button type="submit" class="btn-submit" name="review_submit" id="submit-proposal-btn" disabled>Submit Proposal</button>
+        <button type="submit" class="btn-submit" name="final_submit" id="submit-proposal-btn" disabled>Submit Proposal</button>
       </div>
       <p class="submit-help-text">Review all sections before final submission</p>
     </div>

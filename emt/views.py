@@ -226,26 +226,35 @@ def _save_activities(proposal, data, form=None):
         {int(m.group(1)) for key in data.keys() if (m := pattern.match(key))}
     )
     if not indices:
-        return True
-    success = True
+        return {}
+    errors = {}
     new_activities = []
     for index in indices:
         name = data.get(f"activity_name_{index}")
-        date = data.get(f"activity_date_{index}")
-        if name and date:
-            new_activities.append(
-                EventActivity(proposal=proposal, name=name, date=date)
-            )
-        elif name or date:
+        date_str = data.get(f"activity_date_{index}")
+        if name and date_str:
+            try:
+                date = datetime.strptime(date_str, "%Y-%m-%d").date()
+                new_activities.append(
+                    EventActivity(proposal=proposal, name=name, date=date)
+                )
+            except ValueError:
+                msg = f"Activity {index} has an invalid date."
+                logger.warning(msg)
+                if form is not None:
+                    form.add_error(None, msg)
+                errors.setdefault(index, {})["date"] = "Enter a valid date."
+        elif name or date_str:
             msg = f"Activity {index} requires both name and date."
             logger.warning(msg)
             if form is not None:
                 form.add_error(None, msg)
-            success = False
-    if success:
+            field = "date" if name else "name"
+            errors.setdefault(index, {})[field] = "This field is required."
+    if not errors and new_activities:
         proposal.activities.all().delete()
         EventActivity.objects.bulk_create(new_activities)
-    return success
+    return errors
 
 
 def _save_speakers(proposal, data, files):
@@ -256,21 +265,26 @@ def _save_speakers(proposal, data, files):
     indices = sorted({int(m.group(1)) for key in all_keys if (m := pattern.match(key))})
     if not indices:
         return
-    proposal.speakers.all().delete()
+    new_speakers = []
     for index in indices:
         full_name = data.get(f"speaker_full_name_{index}")
         if full_name:
-            SpeakerProfile.objects.create(
-                proposal=proposal,
-                full_name=full_name,
-                designation=data.get(f"speaker_designation_{index}", ""),
-                affiliation=data.get(f"speaker_affiliation_{index}", ""),
-                contact_email=data.get(f"speaker_contact_email_{index}", ""),
-                contact_number=data.get(f"speaker_contact_number_{index}", ""),
-                linkedin_url=data.get(f"speaker_linkedin_url_{index}", ""),
-                photo=files.get(f"speaker_photo_{index}"),
-                detailed_profile=data.get(f"speaker_detailed_profile_{index}", ""),
+            new_speakers.append(
+                SpeakerProfile(
+                    proposal=proposal,
+                    full_name=full_name,
+                    designation=data.get(f"speaker_designation_{index}", ""),
+                    affiliation=data.get(f"speaker_affiliation_{index}", ""),
+                    contact_email=data.get(f"speaker_contact_email_{index}", ""),
+                    contact_number=data.get(f"speaker_contact_number_{index}", ""),
+                    linkedin_url=data.get(f"speaker_linkedin_url_{index}", ""),
+                    photo=files.get(f"speaker_photo_{index}"),
+                    detailed_profile=data.get(f"speaker_detailed_profile_{index}", ""),
+                )
             )
+    if new_speakers:
+        proposal.speakers.all().delete()
+        SpeakerProfile.objects.bulk_create(new_speakers)
 
 
 def _save_expenses(proposal, data):
@@ -280,18 +294,29 @@ def _save_expenses(proposal, data):
     )
     if not indices:
         return
-    proposal.expense_details.all().delete()
+    new_expenses = []
+    valid = True
     for index in indices:
         particulars = data.get(f"expense_particulars_{index}")
         amount = data.get(f"expense_amount_{index}")
         if particulars and amount:
             sl_no = data.get(f"expense_sl_no_{index}") or 0
-            ExpenseDetail.objects.create(
-                proposal=proposal,
-                sl_no=sl_no or 0,
-                particulars=particulars,
-                amount=amount,
+            new_expenses.append(
+                ExpenseDetail(
+                    proposal=proposal,
+                    sl_no=sl_no or 0,
+                    particulars=particulars,
+                    amount=amount,
+                )
             )
+        elif any(
+            f"expense_{field}_{index}" in data
+            for field in ["sl_no", "particulars", "amount"]
+        ):
+            valid = False
+    if valid and new_expenses:
+        proposal.expense_details.all().delete()
+        ExpenseDetail.objects.bulk_create(new_expenses)
 
 
 def _save_income(proposal, data):
@@ -303,23 +328,33 @@ def _save_income(proposal, data):
     )
     if not indices:
         return
-    proposal.income_details.all().delete()
+    new_income = []
+    valid = True
     for index in indices:
         particulars = data.get(f"income_particulars_{index}")
         participants = data.get(f"income_participants_{index}")
         rate = data.get(f"income_rate_{index}")
         amount = data.get(f"income_amount_{index}")
-        # Allow saving when only particulars and amount are provided
         if particulars and amount:
             sl_no = data.get(f"income_sl_no_{index}") or 0
-            IncomeDetail.objects.create(
-                proposal=proposal,
-                sl_no=sl_no or 0,
-                particulars=particulars,
-                participants=participants or 0,
-                rate=rate or 0,
-                amount=amount,
+            new_income.append(
+                IncomeDetail(
+                    proposal=proposal,
+                    sl_no=sl_no or 0,
+                    particulars=particulars,
+                    participants=participants or 0,
+                    rate=rate or 0,
+                    amount=amount,
+                )
             )
+        elif any(
+            f"income_{field}_{index}" in data
+            for field in ["sl_no", "particulars", "participants", "rate", "amount"]
+        ):
+            valid = False
+    if valid and new_income:
+        proposal.income_details.all().delete()
+        IncomeDetail.objects.bulk_create(new_income)
 
 
 # ──────────────────────────────
@@ -330,7 +365,13 @@ def submit_proposal(request, pk=None):
     from transcript.models import get_active_academic_year
 
     active_year = get_active_academic_year()
-    selected_academic_year = active_year.year if active_year else ""
+    selected_academic_year = active_year.year if active_year else None
+
+    if not selected_academic_year:
+        now = timezone.now()
+        start_year = now.year if now.month >= 6 else now.year - 1
+        end_year = start_year + 1
+        selected_academic_year = f"{start_year}-{end_year}"
 
     proposal = None
     if pk:
@@ -472,8 +513,8 @@ def submit_proposal(request, pk=None):
         proposal = form.save(commit=False)
         proposal.academic_year = selected_academic_year
         proposal.submitted_by = request.user
-        is_final = "final_submit" in request.POST
         is_review = "review_submit" in request.POST
+        is_final = "final_submit" in request.POST and not is_review
         if is_final:
             proposal.status = "submitted"
             proposal.submitted_at = timezone.now()
@@ -499,11 +540,12 @@ def submit_proposal(request, pk=None):
         )
         if is_final:
             build_approval_chain(proposal)
+            request.session.pop("proposal_step", None)
             messages.success(
                 request,
                 f"Proposal '{proposal.event_title}' submitted.",
             )
-            return redirect("emt:proposal_status_detail", proposal_id=proposal.id)
+            return redirect("emt:submit_proposal")
         if is_review:
             return redirect("emt:review_proposal", proposal_id=proposal.id)
         return redirect("emt:submit_need_analysis", proposal_id=proposal.id)
@@ -548,11 +590,12 @@ def review_proposal(request, proposal_id):
         proposal.submitted_at = timezone.now()
         proposal.save()
         build_approval_chain(proposal)
+        request.session.pop("proposal_step", None)
         messages.success(
             request,
             f"Proposal '{proposal.event_title}' submitted.",
         )
-        return redirect("emt:proposal_status_detail", proposal_id=proposal.id)
+        return redirect("emt:submit_proposal")
     else:
         if proposal.status != EventProposal.Status.SUBMITTED:
             proposal.status = EventProposal.Status.DRAFT
@@ -668,23 +711,30 @@ def autosave_proposal(request):
 
     text_errors = _save_text_sections(proposal, data)
 
+    submitted_keys = set(data.keys())
     if not is_valid:
-        errors.update(form.errors)
+        filtered = {
+            field: errs for field, errs in form.errors.items() if field in submitted_keys
+        }
+        errors.update(filtered)
     if text_errors:
         errors.update(text_errors)
 
     # Validate activities
     act_errors = {}
     idx = 1
-    while any(key in data for key in [f"activity_name_{idx}", f"activity_date_{idx}"]):
-        name = data.get(f"activity_name_{idx}")
-        date = data.get(f"activity_date_{idx}")
+    while True:
+        name_key = f"activity_name_{idx}"
+        date_key = f"activity_date_{idx}"
+        if not any(key in data for key in [name_key, date_key]):
+            break
+        name = data.get(name_key)
+        date = data.get(date_key)
         missing = {}
-        if name or date:
-            if not name:
-                missing["name"] = "This field is required."
-            if not date:
-                missing["date"] = "This field is required."
+        if name_key in data and not name:
+            missing["name"] = "This field is required."
+        if date_key in data and not date:
+            missing["date"] = "This field is required."
         if missing:
             act_errors[idx] = missing
         idx += 1
@@ -706,16 +756,18 @@ def autosave_proposal(request):
         for field in sp_fields + ["contact_number", "linkedin_url", "photo"]
     ):
         missing = {}
-        has_any = False
+        nonempty = False
         for field in sp_fields:
-            value = data.get(f"speaker_{field}_{sp_idx}")
-            if value:
-                has_any = True
-                if field == "full_name" and not NAME_RE.fullmatch(value):
-                    missing[field] = "Enter a valid name (letters, spaces, .'- only)."
-            else:
-                missing[field] = "This field is required."
-        if has_any and missing:
+            key = f"speaker_{field}_{sp_idx}"
+            if key in data:
+                value = data.get(key)
+                if value:
+                    nonempty = True
+                    if field == "full_name" and not NAME_RE.fullmatch(value):
+                        missing[field] = "Enter a valid name (letters, spaces, .'- only)."
+                else:
+                    missing[field] = "This field is required."
+        if nonempty and missing:
             sp_errors[sp_idx] = missing
         sp_idx += 1
     if sp_errors:
@@ -728,14 +780,15 @@ def autosave_proposal(request):
         f"expense_{field}_{ex_idx}" in data
         for field in ["sl_no", "particulars", "amount"]
     ):
-        particulars = data.get(f"expense_particulars_{ex_idx}")
-        amount = data.get(f"expense_amount_{ex_idx}")
+        particulars_key = f"expense_particulars_{ex_idx}"
+        amount_key = f"expense_amount_{ex_idx}"
+        particulars = data.get(particulars_key)
+        amount = data.get(amount_key)
         missing = {}
-        if particulars or amount:
-            if not particulars:
-                missing["particulars"] = "This field is required."
-            if not amount:
-                missing["amount"] = "This field is required."
+        if particulars_key in data and not particulars:
+            missing["particulars"] = "This field is required."
+        if amount_key in data and not amount:
+            missing["amount"] = "This field is required."
         if missing:
             ex_errors[ex_idx] = missing
         ex_idx += 1
@@ -749,25 +802,31 @@ def autosave_proposal(request):
         f"income_{field}_{in_idx}" in data
         for field in ["particulars", "participants", "rate", "amount"]
     ):
-        particulars = data.get(f"income_particulars_{in_idx}")
-        participants = data.get(f"income_participants_{in_idx}")
-        rate = data.get(f"income_rate_{in_idx}")
-        amount = data.get(f"income_amount_{in_idx}")
+        particulars_key = f"income_particulars_{in_idx}"
+        amount_key = f"income_amount_{in_idx}"
+        particulars = data.get(particulars_key)
+        amount = data.get(amount_key)
         missing = {}
         # Only require particulars and amount; participants and rate are optional
-        if any([particulars, participants, rate, amount]):
-            if not particulars:
-                missing["particulars"] = "This field is required."
-            if not amount:
-                missing["amount"] = "This field is required."
+        if particulars_key in data and not particulars:
+            missing["particulars"] = "This field is required."
+        if amount_key in data and not amount:
+            missing["amount"] = "This field is required."
         if missing:
             in_errors[in_idx] = missing
         in_idx += 1
     if in_errors:
         errors["income"] = in_errors
 
-    _save_activities(proposal, data)
-    _save_speakers(proposal, data, request.FILES)
+    act_parse_errors = _save_activities(proposal, data)
+    for idx, err in act_parse_errors.items():
+        errors.setdefault("activities", {}).setdefault(idx, {}).update(err)
+    if any(key.startswith("speaker_") for key in list(data.keys()) + list(request.FILES.keys())):
+        try:
+            _save_speakers(proposal, data, request.FILES)
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.exception("Error saving speakers: %s", exc)
+            errors.setdefault("speakers", {}).setdefault("__all__", []).append(str(exc))
     _save_expenses(proposal, data)
     _save_income(proposal, data)
 
@@ -780,7 +839,7 @@ def autosave_proposal(request):
         list(proposal.faculty_incharges.values_list("id", flat=True)),
     )
 
-    response = {"success": not errors, "proposal_id": proposal.id}
+    response = {"success": True, "proposal_id": proposal.id}
     if errors:
         response["errors"] = errors
     return JsonResponse(response)
@@ -1003,10 +1062,25 @@ def submit_cdl_support(request, proposal_id):
             support.other_services = form.cleaned_data.get("other_services", [])
             support.save()
 
-            proposal.status = "draft"
+            is_review = "review_submit" in request.POST
+            is_final = "final_submit" in request.POST and not is_review
+
+            if is_final:
+                proposal.status = "submitted"
+                proposal.submitted_at = timezone.now()
+            else:
+                proposal.status = "draft"
             proposal.save()
 
-            if "review_submit" in request.POST:
+            if is_final:
+                build_approval_chain(proposal)
+                request.session.pop("proposal_step", None)
+                messages.success(
+                    request,
+                    f"Proposal '{proposal.event_title}' submitted.",
+                )
+                return redirect("emt:submit_proposal")
+            if is_review:
                 return redirect("emt:review_proposal", proposal_id=proposal.id)
 
             messages.success(request, "CDL support saved.")

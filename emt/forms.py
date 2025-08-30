@@ -173,6 +173,9 @@ class EventProposalForm(forms.ModelForm):
             return self.instance.academic_year
         if self.selected_academic_year:
             return self.selected_academic_year
+        fallback_year = self.data.get("academic_year")
+        if fallback_year:
+            return fallback_year
         raise forms.ValidationError("Academic year is not set by admin")
 
 # ──────────────────────────────────────────────────────────────
