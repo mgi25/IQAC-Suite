@@ -516,7 +516,6 @@ $(document).ready(function() {
         const numActivitiesInput = document.getElementById('num-activities-modern');
         if (!numActivitiesInput || numActivitiesInput.dataset.listenerAttached) return;
         const container = document.getElementById('dynamic-activities-section');
-        const hiddenNum = document.querySelector('#django-basic-info [name="num_activities"]');
 
         function reindexActivityRows() {
             const rows = container.querySelectorAll('.activity-row');
@@ -586,23 +585,12 @@ $(document).ready(function() {
 
         numActivitiesInput.addEventListener('input', () => {
             const count = parseInt(numActivitiesInput.value, 10);
-            if (hiddenNum) hiddenNum.value = numActivitiesInput.value;
             render(count);
         });
-        if (hiddenNum) {
-            hiddenNum.addEventListener('input', () => {
-                numActivitiesInput.value = hiddenNum.value;
-                const count = parseInt(hiddenNum.value, 10);
-                render(count);
-            });
-        }
         numActivitiesInput.dataset.listenerAttached = 'true';
         if (window.EXISTING_ACTIVITIES && window.EXISTING_ACTIVITIES.length) {
             numActivitiesInput.value = window.EXISTING_ACTIVITIES.length;
             render(window.EXISTING_ACTIVITIES.length);
-        } else if (hiddenNum && hiddenNum.value) {
-            numActivitiesInput.value = hiddenNum.value;
-            render(parseInt(hiddenNum.value, 10));
         }
     }
     
@@ -616,8 +604,6 @@ $(document).ready(function() {
         const existingOptions = Array.from(djangoFacultySelect.find('option')).map(opt => {
             if ($(opt).val()) return { id: $(opt).val(), text: $(opt).text() };
         }).filter(Boolean);
-        const autosaved = djangoFacultySelect.data('autosaveValue');
-        const savedValues = autosaved ? JSON.parse(autosaved) : djangoFacultySelect.val();
 
         const tomselect = new TomSelect(facultySelect[0], {
             plugins: ['remove_button'],
@@ -646,23 +632,13 @@ $(document).ready(function() {
                 const text = tomselect.options[val]?.text || val;
                 djangoFacultySelect.append(new Option(text, val, true, true));
             });
-            djangoFacultySelect[0].dispatchEvent(new Event('input'));
+            djangoFacultySelect.trigger('change');
             clearFieldError(facultySelect);
         });
 
-        const initialValues = savedValues;
+        const initialValues = djangoFacultySelect.val();
         if (initialValues && initialValues.length) {
-            if (existingOptions.length) {
-                tomselect.setValue(initialValues);
-            } else {
-                fetch(`${window.API_FACULTY}?ids=${initialValues.join(',')}`)
-                    .then(r => r.json())
-                    .then(data => {
-                        data.forEach(opt => tomselect.addOption(opt));
-                        tomselect.setValue(initialValues);
-                    })
-                    .catch(() => tomselect.setValue(initialValues));
-            }
+            tomselect.setValue(initialValues);
         }
     }
 
