@@ -7,7 +7,7 @@
     let EVENT_DETAILS = [];
     let WORKLOAD_DATA = {};
     let KPIS = { total_active_requests:0, assets_pending:0, unassigned_tasks:0, total_events_supported:0 };
-    let currentScope = 'all'; // all | support
+  let currentScope = 'all'; // all | support
 
     async function loadData(scope='all'){
       try{
@@ -43,7 +43,8 @@
       const list = $('#eventDetailsList');
       if(!list) return;
       
-      let items = EVENT_DETAILS;
+      // Always show only finalized events
+      let items = EVENT_DETAILS.filter(ev => (ev.status || '').toLowerCase() === 'finalized');
       
       // Filter by type
       if (filter === 'posters') {
@@ -51,7 +52,8 @@
       } else if (filter === 'certificates') {
         items = items.filter(ev => ev.certificates_required);
       } else if (filter === 'coverage') {
-        items = items.filter(ev => ev.status === 'approved');
+        // Keep finalized; treat "coverage" as events (finalized) regardless of support
+        items = items;
       } else if (filter === 'media') {
         items = items.filter(ev => ev.poster_required || ev.certificates_required);
       }
@@ -82,10 +84,10 @@
     }
 
     // Filter tabs event handling
-    $$('.tab-btn').forEach(btn => {
+  $$('.tab-btn').forEach(btn => {
       btn.addEventListener('click', e => {
-        $$('.tab-btn').forEach(b => b.classList.remove('active'));
-        e.currentTarget.classList.add('active');
+    $$('.tab-btn').forEach(b => b.classList.remove('active'));
+    e.currentTarget.classList.add('active');
         currentEventFilter = e.currentTarget.dataset.filter;
         renderNotifications(currentEventFilter);
       });
@@ -254,9 +256,9 @@
 
     // Calendar - updated to work with proposal events
     let calRef = new Date();
-    let currentCalFilter = 'all';
-    const fmt2 = v => String(v).padStart(2,'0');
-    const titleEl = $('#calTitle'), gridEl = $('#calGrid'), upcoming = $('#upcomingWrap');
+  let currentCalFilter = 'all'; // all | support
+  const fmt2 = v => String(v).padStart(2,'0');
+  const titleEl = $('#calTitle'), gridEl = $('#calGrid');
 
     function buildCalendar(){
       if(!gridEl || !titleEl) return;
@@ -280,13 +282,14 @@
           return `<div class="day muted" data-date="">${c.t}</div>`;
         }
         const isToday = c.iso === new Date().toISOString().slice(0,10);
-        // Support filter: show dots only for CDL support when filter is 'support'
-        let dayEvents = EVENTS.filter(e => e.date === c.iso);
+        // Only finalized events are provided by API; keep an extra guard
+        let dayEvents = EVENTS.filter(e => e.date === c.iso && (e.status || '').toLowerCase() === 'finalized');
         if (currentCalFilter === 'support') {
           dayEvents = dayEvents.filter(e => e.type === 'cdl_support');
         }
-        const hasEvents = dayEvents.length > 0;
-        return `<div class="day${hasEvents ? ' has-events' : ''}${isToday ? ' today' : ''}" data-date="${c.iso}">${c.t}</div>`;
+  const hasEvents = dayEvents.length > 0;
+  // use 'has-event' (singular) to match CSS red dot style
+  return `<div class="day${hasEvents ? ' has-event' : ''}${isToday ? ' today' : ''}" data-date="${c.iso}">${c.t}</div>`;
       }).join('');
 
       $$('.day[data-date]').forEach(d => d.addEventListener('click', () => {
@@ -297,26 +300,44 @@
     }
 
     function openDay(iso){
-      let items = EVENTS.filter(e => e.date === iso);
+      // Only finalized events on day open
+      let items = EVENTS.filter(e => e.date === iso && (e.status || '').toLowerCase() === 'finalized');
       if (currentCalFilter === 'support') {
         items = items.filter(e => e.type === 'cdl_support');
       }
-      
+
+      const box = $('#eventDetailsContent');
+      const clearBtn = $('#clearEventDetails');
+      if (!box) return;
       const dateStr = new Date(iso).toLocaleDateString(undefined, {day:'2-digit', month:'2-digit', year:'numeric'});
-      
-      upcoming.innerHTML = items.length ? items.map(e => `
-        <div class="event-item">
-          <div class="event-info">
-            <strong>${e.title}</strong><br>
-            <small>Status: ${e.status} | Org: ${e.organization}</small>
+      if (!items.length){
+        box.innerHTML = `<div class="empty">No events for ${dateStr}</div>`;
+        clearBtn && (clearBtn.style.display = 'none');
+        return;
+      }
+      box.innerHTML = items.map(e => `
+        <div class="event-detail-item">
+          <div class="event-detail-title with-actions">
+            <span class="title-text">${e.title}</span>
+            <div class="title-actions">
+              <a class="chip-btn" href="/proposal/${e.id}/detail/">View</a>
+            </div>
           </div>
-          <a class="view-link" href="/proposal/${e.id}/detail/">View</a>
+          <div class="event-detail-meta">${dateStr} • Org: ${e.organization || 'N/A'} • Status: ${e.status}</div>
         </div>
-      `).join('') : `<div class="empty-state">No items for ${dateStr}</div>`;
+      `).join('');
+      if (clearBtn){
+        clearBtn.style.display = 'inline-flex';
+        clearBtn.onclick = () => {
+          box.innerHTML = '<div class="empty">Select a date in the calendar to view events</div>';
+          clearBtn.style.display = 'none';
+          $$('.day.selected').forEach(x => x.classList.remove('selected'));
+        };
+      }
     }
 
     // Calendar filter
-    $('#calFilter')?.addEventListener('change', e => {
+  $('#calFilter')?.addEventListener('change', e => {
       currentCalFilter = e.target.value;
       currentScope = currentCalFilter;
       loadData(currentScope);
@@ -338,14 +359,7 @@
       renderAssignmentTable();
       viewWorkload();
       buildCalendar();
-      
-      // Select today's date if present
-      const today = new Date().toISOString().slice(0,10);
-      const todayCell = $(`.day[data-date="${today}"]`);
-      if (todayCell) { 
-        todayCell.classList.add('selected'); 
-        openDay(today); 
-      }
+  // Do not auto-open; let user pick date to populate Event Details
     }
 
     document.addEventListener('DOMContentLoaded', () => {
