@@ -1,0 +1,12 @@
+#cdl-support .list{padding:14px 18px}
+#cdl-support .kv{display:grid; grid-template-columns:140px 1fr; gap:8px; padding:8px 0; border-bottom:1px solid var(--border)}
+#cdl-support .kv strong{color:var(--muted); font-size:12px}
+#cdl-support .kv span{font-size:14px}
+#cdl-support .pill{display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; background:#eef2ff; color:#4f46e5; margin-right:6px}
+#cdl-support .pill.warn{background:#fef3c7; color:#a16207}
+#cdl-support .pill.ok{background:#d1fae5; color:#065f46}
+#cdl-support .error{color:#b91c1c; font-size:13px}
+
+@media (max-width: 768px){
+	#cdl-support .kv{grid-template-columns:110px 1fr}
+}

@@ -57,6 +57,10 @@
       } else if (filter === 'media') {
         items = items.filter(ev => ev.poster_required || ev.certificates_required);
       }
+      // If calendar scope is support, ensure only support-needed items are shown
+      if (currentScope === 'support') {
+        items = items.filter(ev => ev.poster_required || ev.certificates_required);
+      }
       
       if(items.length === 0){
         list.innerHTML = '<div class="empty-state">No notifications</div>';
@@ -67,6 +71,7 @@
         const dateStr = ev.date ? new Date(ev.date).toLocaleDateString(undefined, {month:'short', day:'2-digit', year:'numeric'}) : '';
         const org = ev.organization || 'N/A';
         const assigned = ev.assigned_member || 'Unassigned';
+        const viewHref = (currentScope === 'support') ? `/cdl/support/?eventId=${ev.id}` : `/proposal/${ev.id}/detail/`;
         
         return `<div class="notification-item" data-id="${ev.id}">
           <div class="notification-content">
@@ -78,7 +83,7 @@
               ${ev.certificates_required?'<span class="tag certificate">Certificate</span>':''}
             </div>
           </div>
-          <button class="view-btn" data-event-id="${ev.id}">View</button>
+          <a class="view-btn" href="${viewHref}">View</a>
         </div>`;
       }).join('');
     }
@@ -102,7 +107,8 @@
     });
 
     function viewEventDetails(eventId) {
-      window.location.href = `/proposal/${eventId}/detail/`;
+      // Open CDL Support details page with query param for dynamic fetch
+      window.location.href = `/cdl/support/?eventId=${encodeURIComponent(eventId)}`;
     }
 
     // Assignment Manager - build from EVENT_DETAILS
@@ -315,12 +321,12 @@
         clearBtn && (clearBtn.style.display = 'none');
         return;
       }
-      box.innerHTML = items.map(e => `
+  box.innerHTML = items.map(e => `
         <div class="event-detail-item">
           <div class="event-detail-title with-actions">
             <span class="title-text">${e.title}</span>
             <div class="title-actions">
-              <a class="chip-btn" href="/proposal/${e.id}/detail/">View</a>
+      ${currentCalFilter === 'support' ? `<a class="chip-btn" href="/cdl/support/?eventId=${e.id}">View</a>` : `<a class="chip-btn" href="/proposal/${e.id}/detail/">View</a>`}
             </div>
           </div>
           <div class="event-detail-meta">${dateStr} • Org: ${e.organization || 'N/A'} • Status: ${e.status}</div>

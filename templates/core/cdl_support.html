@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}CDL — Support Details{% endblock %}
+
+{% block head_extra %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'core/css/cdl_support.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ems-dashboard" id="cdl-support">
+  <header class="topbar">
+    <div>
+      <h1>CDL — Support Details</h1>
+      <span class="topbar-date">{% now "F j, Y · l" %}</span>
+    </div>
+    <div class="header-actions">
+      <a class="chip-btn" href="{% url 'cdl_head_dashboard' %}"><i class="fa-solid fa-arrow-left"></i> Back</a>
+    </div>
+  </header>
+
+  <main class="grid-3" style="grid-template-columns:2fr 1.2fr 1fr; grid-auto-rows:minmax(280px,auto)">
+    <section class="card eq" id="cardEvent">
+      <div class="card-header"><h3><i class="fa-regular fa-calendar"></i> Event</h3></div>
+      <div class="list" id="eventCard"><div class="empty">Loading…</div></div>
+    </section>
+
+    <section class="card eq" id="cardOrganizer">
+      <div class="card-header"><h3><i class="fa-solid fa-user-tie"></i> Organizer</h3></div>
+      <div class="list" id="organizerCard"><div class="empty">Loading…</div></div>
+    </section>
+
+    <section class="card eq" id="cardStatus">
+      <div class="card-header"><h3><i class="fa-solid fa-circle-check"></i> Status</h3></div>
+      <div class="list" id="statusCard"><div class="empty">Loading…</div></div>
+    </section>
+
+    <section class="card eq" id="cardSpeaker">
+      <div class="card-header"><h3><i class="fa-solid fa-microphone"></i> Speaker</h3></div>
+      <div class="list" id="speakerCard"><div class="empty">Loading…</div></div>
+    </section>
+
+    <section class="card eq" id="cardResources">
+      <div class="card-header"><h3><i class="fa-solid fa-box-open"></i> Resources Requested</h3></div>
+      <div class="list" id="resourcesCard"><div class="empty">Loading…</div></div>
+    </section>
+
+    <section class="card eq" id="cardSupport">
+      <div class="card-header"><h3><i class="fa-solid fa-handshake-angle"></i> CDL Support Required</h3></div>
+      <div class="list" id="supportCard"><div class="empty">Loading…</div></div>
+    </section>
+
+    <section class="card eq" id="cardAssign">
+      <div class="card-header">
+        <h3><i class="fa-solid fa-user-plus"></i> Assign</h3>
+        <div class="header-actions">
+          <button class="btn-primary" id="btnAssign"><i class="fa-solid fa-user-check"></i> Assign</button>
+        </div>
+      </div>
+      <div class="list"><div class="empty">Choose Assign to allocate this event to a CDL member.</div></div>
+    </section>
+
+    <section class="card eq col-span-2" id="cardComm">
+      <div class="card-header"><h3><i class="fa-regular fa-comments"></i> Communication</h3></div>
+      <div class="list"><div class="empty">Coming soon</div></div>
+    </section>
+  </main>
+</div>
+
+<!-- Assign Modal -->
+<div class="modal-overlay" id="assignModal" style="display:none">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Assign to CDL Member</h3>
+      <button class="modal-close" id="assignClose">×</button>
+    </div>
+    <div class="form-group">
+      <label for="assignMember">Member</label>
+      <select id="assignMember" class="select"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="assignCancel">Cancel</button>
+      <button class="btn-primary" id="assignSave">Assign</button>
+    </div>
+  </div>
+  </div>
+
+{% endblock %}
+
+{% block scripts_extra %}
+<script src="{% static 'core/js/cdl_support.js' %}"></script>
+{% endblock %}
