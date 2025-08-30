@@ -607,4 +607,51 @@
     padding: 2px 6px !important;
     margin: 2px 4px 2px 0 !important;
   }
+/* === Proposal form layout hardening (pure visual) === */
+#form-panel-content .form-grid {
+    display: block;            /* the grid will live on .form-row, not here */
+    gap: 0;                    /* spacing handled by rows */
+  }
   
+  /* Every row is a 2-col grid by default */
+  #form-panel-content .form-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
+  }
+  
+  /* Rows that should span full width */
+  #form-panel-content .form-row.full-width {
+    grid-template-columns: 1fr;
+  }
+  
+  /* If a row only has one .input-group, auto full-width */
+  #form-panel-content .form-row > .input-group:only-child {
+    grid-column: 1 / -1;
+  }
+  
+  /* Make controls behave nicely inside the grid */
+  #form-panel-content .input-group,
+  #form-panel-content .ts-wrapper,                 /* TomSelect wrapper */
+  #form-panel-content .ts-control,                 /* TomSelect control */
+  #form-panel-content .ts-dropdown {
+    width: 100%;
+    min-width: 0; /* prevent overflow causing wrap */
+  }
+  
+  /* Responsive collapse on small screens only */
+  @media (max-width: 768px) {
+    #form-panel-content .form-row {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  /* Belt-and-suspenders: if any script adds a "stacked" class, ignore it on wide screens */
+  @media (min-width: 769px) {
+    #form-panel-content .form-grid.stacked,
+    #form-panel-content .form-row.stacked {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+  }
+s    
