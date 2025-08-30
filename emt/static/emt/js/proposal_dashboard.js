@@ -2438,8 +2438,8 @@ function getWhyThisEventForm() {
                     baseName = 'flow';
                 }
                 let djangoField = $(`#django-forms [name="${baseName}"]`);
-                if (!djangoField.length && baseName === 'flow') {
-                    djangoField = $(`textarea[name="flow"]`);
+                if (!djangoField.length) {
+                    djangoField = $(`[name="${baseName}"]`);
                 }
                 if (djangoField.length) {
                     djangoField.val($(this).val());
