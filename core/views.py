@@ -3930,6 +3930,61 @@ def api_calendar_events(request):
                 })
                 cur += timedelta(days=1)
 
+    # CDL Support only
+    if category == "cdl":
+        base_q = Q(event_datetime__isnull=False) | Q(event_start_date__isnull=False) | Q(event_end_date__isnull=False)
+        status_q = Q(status__in=[EventProposal.Status.APPROVED, EventProposal.Status.FINALIZED])
+        try:
+            needs_cdl = Q(cdl_support__needs_support=True)
+        except Exception:
+            needs_cdl = Q()
+        if user.is_superuser:
+            visibility_q = base_q & needs_cdl
+        else:
+            owned_q = Q(submitted_by=user) | Q(faculty_incharges=user)
+            visibility_q = base_q & needs_cdl & (status_q | owned_q)
+        events = EventProposal.objects.filter(visibility_q).distinct()
+
+        for e in events:
+            if e.event_datetime:
+                dt = e.event_datetime
+                if timezone.is_naive(dt):
+                    dt = timezone.make_aware(dt, timezone.get_current_timezone())
+                dt_local = timezone.localtime(dt)
+                items.append({
+                    "id": e.id,
+                    "title": e.event_title,
+                    "date": dt_local.date().isoformat(),
+                    "datetime": dt_local.isoformat(),
+                    "venue": e.venue or "",
+                    "type": "cdl",
+                    "past": dt_local < now,
+                    "view_url": build_view_url(e.id),
+                    "gcal_url": build_gcal_link(e),
+                })
+                continue
+            start_date = e.event_start_date or e.event_end_date
+            end_date = e.event_end_date or e.event_start_date
+            if not start_date:
+                continue
+            if not end_date:
+                end_date = start_date
+            cur = start_date
+            while cur <= end_date:
+                dt_local = timezone.make_aware(datetime.combine(cur, datetime.min.time()), timezone.get_current_timezone())
+                items.append({
+                    "id": e.id,
+                    "title": e.event_title,
+                    "date": cur.isoformat(),
+                    "datetime": dt_local.isoformat(),
+                    "venue": e.venue or "",
+                    "type": "cdl",
+                    "past": dt_local < now,
+                    "view_url": build_view_url(e.id),
+                    "gcal_url": build_gcal_link(e),
+                })
+                cur += timedelta(days=1)
+
     # private category: no stored tasks, front-end will open GCal on date click
     if category == "private":
         return JsonResponse({"items": items, "category": category, "private": True})
@@ -5952,6 +6007,112 @@ def api_cdl_members(request):
     qs = User.objects.filter(groups__name="CDL_MEMBER", is_active=True).order_by('first_name','last_name')
     members = [{'id':u.id,'name':u.get_full_name() or u.username} for u in qs]
     return JsonResponse({'success': True, 'members': members})
+
+@login_required
+@require_GET
+def api_cdl_member_data(request):
+    """Unified data feed for CDL Member dashboard.
+
+    Returns:
+      {
+        success: true,
+        stats: { assigned: int, due_today: int, waiting: int, rework: int, ontime: null, firstpass: null },
+        inbox: [ {id,title,event,type,priority,due_date} ... ],
+        work:  [ {id,event,type,priority,due_date,status,rev,created_at,assigned_at} ... ],
+        events_all: [ {id,title,date,status} ... ],
+        events_assigned: [ {id,title,date,status} ... ]
+      }
+    """
+    user = request.user
+
+    def best_date(p):
+        if getattr(p, 'event_start_date', None):
+            return p.event_start_date
+        if getattr(p, 'event_datetime', None):
+            try:
+                return p.event_datetime.date()
+            except Exception:
+                return None
+        return None
+
+    # Assigned work (reuse the same shape as api_cdl_member_work)
+    work_qs = EMTEventProposal.objects.filter(report_assigned_to=user).select_related('organization')[:200]
+    work = []
+    due_today = 0
+    from datetime import date as _date
+    today = _date.today()
+    for p in work_qs:
+        d = best_date(p)
+        due_iso = d.isoformat() if d else None
+        if d == today:
+            due_today += 1
+        work.append({
+            'id': p.id,
+            'event': p.event_title,
+            'type': 'poster' if getattr(getattr(p,'cdl_support',None),'poster_required',False) else ('certificate' if getattr(getattr(p,'cdl_support',None),'certificates_required',False) else 'coverage'),
+            'priority': 'Medium',
+            'due_date': due_iso,
+            'status': 'pending',
+            'rev': 0,
+            'created_at': p.created_at.isoformat(),
+            'assigned_at': p.report_assigned_at.isoformat() if p.report_assigned_at else None,
+        })
+
+    # Inbox (simple: those not yet accepted -> same as work for now)
+    inbox = []
+    for w in work:
+        inbox.append({
+            'id': w['id'],
+            'title': w['event'],
+            'event': w['event'],
+            'type': w['type'],
+            'priority': w['priority'],
+            'due_date': w['due_date'],
+        })
+
+    # Calendar datasets
+    events_all_qs = (
+        EMTEventProposal.objects.filter(status=EMTEventProposal.Status.FINALIZED)
+        .filter(models.Q(event_datetime__isnull=False) | models.Q(event_start_date__isnull=False))
+        .select_related('organization')
+        .order_by('-updated_at')[:600]
+    )
+    events_all = []
+    for p in events_all_qs:
+        d = best_date(p)
+        events_all.append({
+            'id': p.id,
+            'title': p.event_title,
+            'date': d.isoformat() if d else None,
+            'status': (p.status or '').lower(),
+        })
+
+    events_assigned = []
+    for p in work_qs:
+        d = best_date(p)
+        events_assigned.append({
+            'id': p.id,
+            'title': p.event_title,
+            'date': d.isoformat() if d else None,
+            'status': (p.status or '').lower(),
+        })
+
+    data = {
+        'success': True,
+        'stats': {
+            'assigned': len(work),
+            'due_today': due_today,
+            'waiting': 0,
+            'rework': 0,
+            'ontime': None,
+            'firstpass': None,
+        },
+        'inbox': inbox,
+        'work': work,
+        'events_all': events_all,
+        'events_assigned': events_assigned,
+    }
+    return JsonResponse(data)
 
 
 # ────────────────────────────────────────────────────────────────

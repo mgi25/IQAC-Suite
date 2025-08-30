@@ -1,10 +1,11 @@
 (function(){
     const $  = (s, r=document)=>r.querySelector(s);
     const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
-  const INBOX  = getJSON('memberInboxJson', []);
-  const WORK   = getJSON('memberWorkJson', []);
-    const EVENTS = getJSON('memberEventsJson', []);
-    const STATS  = getJSON('memberStatsJson', {ontime:null, firstpass:null});
+  let INBOX = [];
+  let WORK = [];
+  let EVENTS_ALL = [];
+  let EVENTS_ASSIGNED = [];
+  let STATS = {ontime:null, firstpass:null};
   
     // KPIs
     function computeKPIs(){
@@ -84,18 +85,27 @@
     });
   
     // Calendar
-    let calRef = new Date();
+  let calRef = new Date();
+  let calScope = 'all'; // 'all' | 'assigned'
     $('#calPrev')?.addEventListener('click',()=>{ calRef = new Date(calRef.getFullYear(),calRef.getMonth()-1,1); buildCalendar(); });
     $('#calNext')?.addEventListener('click',()=>{ calRef = new Date(calRef.getFullYear(),calRef.getMonth()+1,1); buildCalendar(); });
-    function buildCalendar(){
+  function buildCalendar(){
       $('#calTitle').textContent = calRef.toLocaleString(undefined,{month:'long',year:'numeric'});
       const first=new Date(calRef.getFullYear(),calRef.getMonth(),1), last=new Date(calRef.getFullYear(),calRef.getMonth()+1,0);
       const startIdx=first.getDay(), prevLast=new Date(calRef.getFullYear(),calRef.getMonth(),0).getDate();
       const cells=[];
-      for(let i=startIdx-1;i>=0;i--) cells.push({t:prevLast-i, muted:true});
-      for(let d=1; d<=last.getDate(); d++) cells.push({t:d, iso:iso(calRef,d)});
-      while(cells.length%7!==0) cells.push({t:'', muted:true});
-      $('#calGrid').innerHTML = cells.map(c=>`<div class="day${c.muted?' muted':''}" data-date="${c.iso||''}"><div class="num">${c.t}</div><div class="dots">${buildDots(c.iso)}</div></div>`).join('');
+      for(let i=startIdx-1;i>=0;i--) cells.push({t:prevLast-i, iso:null, muted:true});
+      for(let d=1; d<=last.getDate(); d++) cells.push({t:d, iso:iso(calRef,d), muted:false});
+      while(cells.length%7!==0) cells.push({t:'', iso:null, muted:true});
+      const todayISO = new Date().toISOString().slice(0,10);
+      $('#calGrid').innerHTML = cells.map(c=>{
+        if(!c.iso){ return `<div class="day muted" data-date="">${c.t}</div>`; }
+        const list = (calScope==='assigned'? EVENTS_ASSIGNED : EVENTS_ALL);
+        const has = list.some(e=>e.date===c.iso);
+        const isToday = c.iso===todayISO;
+        const klass = has? (calScope==='assigned' ? ' has-meeting' : ' has-event') : '';
+        return `<div class="day${klass}${isToday?' today':''}" data-date="${c.iso}">${c.t}</div>`;
+      }).join('');
       $$('#calGrid .day[data-date]').forEach(d=> d.addEventListener('click',()=>{
         $$('#calGrid .day.selected').forEach(x=>x.classList.remove('selected'));
         d.classList.add('selected');
@@ -103,8 +113,21 @@
       }));
     }
     function iso(base,d){ return `${base.getFullYear()}-${String(base.getMonth()+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
-    function buildDots(iso){ if(!iso) return ''; const list=EVENTS.filter(e=>e.date===iso); return list.map(e=>`<span class="dot ${e.type==='coverage'?'blue':'green'}"></span>`).join(''); }
-    function openDay(iso){ const items=EVENTS.filter(e=>e.date===iso); $('#upcomingWrap').innerHTML = items.length? items.map(e=>`<div class="u-item"><div>${esc(e.title||'Event')}</div></div>`).join('') : `<div class="empty">No items</div>`; }
+    function openDay(iso){
+      const list = (calScope==='assigned'? EVENTS_ASSIGNED : EVENTS_ALL);
+      const items=list.filter(e=>e.date===iso);
+      if(!items.length){ $('#upcomingWrap').innerHTML = `<div class="empty">No items</div>`; return; }
+      const dateStr = new Date(iso).toLocaleDateString(undefined,{day:'2-digit',month:'2-digit',year:'numeric'});
+      $('#upcomingWrap').innerHTML = items.map(e=>`
+        <div class="event-detail-item">
+          <div class="event-detail-title with-actions">
+            <span class="title-text">${esc(e.title||'Event')}</span>
+            <div class="title-actions"><a class="chip-btn" href="/proposal/${e.id}/detail/">View</a></div>
+          </div>
+          <div class="event-detail-meta">${dateStr} • Status: ${esc(e.status||'')}</div>
+        </div>`
+      ).join('');
+    }
   
     // Workboard
     function renderWork(){
@@ -173,15 +196,22 @@
   
     async function bootstrap(){
       try{
-        const res = await fetch('/api/cdl/member/work/');
-        if(res.ok){ const data=await res.json(); if(data && data.items){
-          // Merge unique by id at the front
-          const ids = new Set(WORK.map(w=>w.id));
-          (data.items||[]).forEach(it=>{ if(!ids.has(it.id)) WORK.unshift(it); });
-        } }
+        const res = await fetch('/api/cdl/member/data/');
+        if(res.ok){ const data=await res.json(); if(data && data.success){
+          INBOX = data.inbox||[];
+          WORK  = data.work||[];
+          STATS = {ontime:data.stats?.ontime ?? null, firstpass:data.stats?.firstpass ?? null};
+          EVENTS_ALL = data.events_all||[];
+          EVENTS_ASSIGNED = data.events_assigned||[];
+        }}
       }catch{}
       computeKPIs(); renderInbox('all'); renderChart('workload'); buildCalendar(); openDay(new Date().toISOString().slice(0,10)); renderWork();
     }
+    // Calendar scope selector
+    document.addEventListener('change', e=>{
+      if(e.target && e.target.id==='calScope'){ calScope = e.target.value; buildCalendar(); }
+    });
+
     // Boot
     bootstrap();
   })();
