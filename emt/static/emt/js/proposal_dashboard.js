@@ -2696,13 +2696,44 @@ function getWhyThisEventForm() {
                 const phone = document.getElementById(`speaker_contact_number_${idx}`);
                 const linked = document.getElementById(`speaker_linkedin_url_${idx}`);
                 const bio = document.getElementById(`speaker_detailed_profile_${idx}`);
-                if (name) name.value = getRandom(AUTO_FILL_DATA.speakerNames);
-                if (desig) desig.value = getRandom(AUTO_FILL_DATA.designations);
-                if (aff) aff.value = getRandom(AUTO_FILL_DATA.affiliations);
-                if (email) email.value = getRandom(AUTO_FILL_DATA.emails);
-                if (phone) phone.value = getRandom(AUTO_FILL_DATA.phones);
-                if (linked) linked.value = getRandom(AUTO_FILL_DATA.linkedins);
-                if (bio) bio.value = getRandom(AUTO_FILL_DATA.bios);
+                if (name) {
+                    name.value = getRandom(AUTO_FILL_DATA.speakerNames);
+                    name.dispatchEvent(new Event('input', { bubbles: true }));
+                    name.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (desig) {
+                    desig.value = getRandom(AUTO_FILL_DATA.designations);
+                    desig.dispatchEvent(new Event('input', { bubbles: true }));
+                    desig.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (aff) {
+                    aff.value = getRandom(AUTO_FILL_DATA.affiliations);
+                    aff.dispatchEvent(new Event('input', { bubbles: true }));
+                    aff.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (email) {
+                    email.value = getRandom(AUTO_FILL_DATA.emails);
+                    email.dispatchEvent(new Event('input', { bubbles: true }));
+                    email.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (phone) {
+                    phone.value = getRandom(AUTO_FILL_DATA.phones);
+                    phone.dispatchEvent(new Event('input', { bubbles: true }));
+                    phone.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (linked) {
+                    linked.value = getRandom(AUTO_FILL_DATA.linkedins);
+                    linked.dispatchEvent(new Event('input', { bubbles: true }));
+                    linked.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (bio) {
+                    bio.value = getRandom(AUTO_FILL_DATA.bios);
+                    bio.dispatchEvent(new Event('input', { bubbles: true }));
+                    bio.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (window.AutosaveManager && window.AutosaveManager.manualSave) {
+                    window.AutosaveManager.manualSave();
+                }
             }, 100);
         }
 
