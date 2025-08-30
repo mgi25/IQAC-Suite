@@ -9,12 +9,9 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
 <!-- EXACTLY the same CSS as the head dashboard -->
-<link rel="stylesheet" href="{% static 'core/css/cdl_work_dashboard.css' %}">
-<link rel="stylesheet" href="{% static 'core/css/cdl_head_dashboard.css' %}">
-
-{# Intentionally keep member CSS empty (see step 2). Cache-bust anyway #}
+<link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
 {% now "U" as ts %}
-<link rel="stylesheet" href="{% static 'core/css/cdl_work_dashboard.css' %}?v={{ ts }}">
+<link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}?v={{ ts }}">
 {% endblock %}
 
 {% block content %}
@@ -96,7 +93,7 @@
   </section>
 
   <!-- Row 2 (same grid & card shells) -->
-  <main class="grid-3 grid-assign">
+  <main class="grid-3 grid-assign" style="gap:16px; grid-auto-rows:minmax(300px,auto)">
     <section class="card eq" id="cardInbox">
       <div class="card-header">
         <h3><i class="fa-regular fa-bell"></i> My Inbox</h3>
@@ -130,15 +127,19 @@
       </div>
     </section>
 
-    <section class="card eq" id="cardCalendar">
+  <section class="card eq" id="cardCalendar">
       <div class="card-header">
         <h3><i class="fa-regular fa-calendar"></i> My Calendar</h3>
         <div class="header-actions">
+          <select id="calScope" class="select" style="margin-right:8px">
+            <option value="all">All</option>
+            <option value="assigned">Assigned</option>
+          </select>
           <a href="{% url 'create_availability' %}" class="chip-btn"><i class="fa-solid fa-plus"></i> Add</a>
         </div>
       </div>
 
-      <div class="mini-cal" id="miniCalendar">
+      <div class="mini-cal">
         <div class="cal-head">
           <button class="cal-nav" id="calPrev" aria-label="Prev"><i class="fa-solid fa-chevron-left"></i></button>
           <div id="calTitle">Month YYYY</div>
@@ -153,56 +154,56 @@
       </div>
       <div id="upcomingWrap" class="upcoming"></div>
     </section>
-  </main>
 
-  <!-- Row 3 (same table markup) -->
-  <section class="card" id="cardWorkboard">
-    <div class="card-header">
-      <h3><i class="fa-solid fa-table-list"></i> My Workboard</h3>
-      <div class="header-actions">
-        <div class="seg">
-          <select id="wbStatus" class="select">
-            <option value="">All statuses</option>
-            <option value="in_progress">In Progress</option>
-            <option value="waiting">Waiting on Reviewer</option>
-            <option value="returned">Returned</option>
-            <option value="pending">Pending</option>
-          </select>
-          <select id="wbDue" class="select">
-            <option value="">Any due</option>
-            <option value="today">Due today</option>
-            <option value="week">Due this week</option>
-            <option value="overdue">Overdue</option>
-          </select>
-          <input type="search" id="wbSearch" class="input" placeholder="Search event, type, status…">
+    <!-- Workboard inside grid and spanning full width to reduce whitespace -->
+    <section class="card" id="cardWorkboard" style="grid-column:1 / -1">
+      <div class="card-header">
+        <h3><i class="fa-solid fa-table-list"></i> My Workboard</h3>
+        <div class="header-actions">
+          <div class="seg">
+            <select id="wbStatus" class="select">
+              <option value="">All statuses</option>
+              <option value="in_progress">In Progress</option>
+              <option value="waiting">Waiting on Reviewer</option>
+              <option value="returned">Returned</option>
+              <option value="pending">Pending</option>
+            </select>
+            <select id="wbDue" class="select">
+              <option value="">Any due</option>
+              <option value="today">Due today</option>
+              <option value="week">Due this week</option>
+              <option value="overdue">Overdue</option>
+            </select>
+            <input type="search" id="wbSearch" class="input" placeholder="Search event, type, status…">
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="table-wrap">
-      <table class="table compact">
-        <thead>
-          <tr>
-            <th><input type="checkbox" id="wbAll"></th>
-            <th>Event</th>
-            <th>Type</th>
-            <th>Priority</th>
-            <th>Due</th>
-            <th>Status</th>
-            <th>Rev</th>
-            <th class="ta-right">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="workTable"></tbody>
-      </table>
-    </div>
+      <div class="table-wrap">
+        <table class="table compact">
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="wbAll"></th>
+              <th>Event</th>
+              <th>Type</th>
+              <th>Priority</th>
+              <th>Due</th>
+              <th>Status</th>
+              <th>Rev</th>
+              <th class="ta-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="workTable"></tbody>
+        </table>
+      </div>
 
-    <div class="table-actions">
-      <button class="btn xs" id="bulkUpload"><i class="fa-solid fa-upload"></i> Bulk Upload</button>
-      <button class="btn xs success" id="bulkSubmit"><i class="fa-solid fa-paper-plane"></i> Bulk Submit</button>
-      <button class="btn xs warn" id="bulkHelp"><i class="fa-regular fa-circle-question"></i> Bulk Help</button>
-    </div>
-  </section>
+      <div class="table-actions">
+        <button class="btn xs" id="bulkUpload"><i class="fa-solid fa-upload"></i> Bulk Upload</button>
+        <button class="btn xs success" id="bulkSubmit"><i class="fa-solid fa-paper-plane"></i> Bulk Submit</button>
+        <button class="btn xs warn" id="bulkHelp"><i class="fa-regular fa-circle-question"></i> Bulk Help</button>
+      </div>
+    </section>
+  </main>
 
   {{ member_inbox|default:"[]"|json_script:"memberInboxJson" }}
   {{ member_work|default:"[]"|json_script:"memberWorkJson" }}
