@@ -2888,6 +2888,12 @@ function getWhyThisEventForm() {
 
         // Check org type (which is now a TomSelect-backed input)
         const orgTypeInput = $('#org-type-modern-input');
+        console.log('validateBasicInfo: orgType', {
+            id: orgTypeInput.attr('id'),
+            name: orgTypeInput.attr('name'),
+            value: orgTypeInput.val(),
+            tomSelectValue: orgTypeInput[0]?.tomselect?.getValue()
+        });
         if (!orgTypeInput.val() || !orgTypeInput[0].tomselect?.getValue()) {
             showFieldError(orgTypeInput.parent(), 'Organization type is required');
             isValid = false;
@@ -2898,6 +2904,12 @@ function getWhyThisEventForm() {
             // Try select (TomSelect)
             let orgField = $(`.org-specific-field:visible select`);
             if (orgField.length) {
+                console.log('validateBasicInfo: orgField (select)', {
+                    id: orgField.attr('id'),
+                    name: orgField.attr('name'),
+                    value: orgField.val(),
+                    tomSelectValue: orgField[0]?.tomselect?.getValue()
+                });
                 if (!orgField[0].tomselect || !orgField[0].tomselect.getValue()) {
                     showFieldError(orgField.parent(), 'Organization selection is required');
                     isValid = false;
@@ -2905,32 +2917,59 @@ function getWhyThisEventForm() {
             } else {
                 // Fallback: check for input field
                 orgField = $(`.org-specific-field:visible input`);
-                if (orgField.length && (!orgField.val() || !orgField.val().trim())) {
-                    showFieldError(orgField.parent(), 'Organization selection is required');
-                    isValid = false;
+                if (orgField.length) {
+                    console.log('validateBasicInfo: orgField (input)', {
+                        id: orgField.attr('id'),
+                        name: orgField.attr('name'),
+                        value: orgField.val()
+                    });
+                    if (!orgField.val() || !orgField.val().trim()) {
+                        showFieldError(orgField.parent(), 'Organization selection is required');
+                        isValid = false;
+                    }
                 }
             }
         }
-        
+
         $('#form-panel-content input[required], #form-panel-content textarea[required], #form-panel-content select[required]').each(function() {
+            const $field = $(this);
+            const fieldInfo = {
+                id: $field.attr('id'),
+                name: $field.attr('name'),
+                value: this.tomselect ? this.tomselect.getValue() : $field.val()
+            };
+            console.log('validateBasicInfo: field', fieldInfo);
+
             // Skip fields already handled or special cases
-            const id = $(this).attr('id');
             if (
-                id === 'faculty-select' ||
-                id === 'event-focus-type-modern' ||
-                $(this).closest('.org-specific-field').length ||
-                (id && id.startsWith('org-type'))
+                fieldInfo.id === 'faculty-select' ||
+                fieldInfo.id === 'event-focus-type-modern' ||
+                $field.closest('.org-specific-field').length ||
+                (fieldInfo.id && fieldInfo.id.startsWith('org-type'))
             ) return;
 
-            if (!$(this).val() || $(this).val().trim() === '') {
-                const fieldName = $(this).closest('.input-group').find('label').text().replace(' *', '');
-                showFieldError($(this), `${fieldName} is required`);
+            const valueToCheck = this.tomselect ? this.tomselect.getValue() : $field.val();
+            const isEmpty =
+                valueToCheck === undefined ||
+                valueToCheck === null ||
+                (Array.isArray(valueToCheck)
+                    ? valueToCheck.length === 0
+                    : valueToCheck.trim() === '');
+
+            if (isEmpty) {
+                const fieldName = $field.closest('.input-group').find('label').text().replace(' *', '');
+                showFieldError($field, `${fieldName} is required`);
                 isValid = false;
             }
         });
-        
+
         // Special check for faculty select (TomSelect)
         const facultyTomSelect = $('#faculty-select')[0]?.tomselect;
+        console.log('validateBasicInfo: faculty-select', {
+            id: $('#faculty-select').attr('id'),
+            name: $('#faculty-select').attr('name'),
+            value: facultyTomSelect ? facultyTomSelect.getValue() : $('#faculty-select').val()
+        });
         if (facultyTomSelect && facultyTomSelect.getValue().length === 0) {
             showFieldError(facultyTomSelect.$wrapper, 'At least one Faculty Incharge is required.');
             isValid = false;
@@ -3048,8 +3087,20 @@ function getWhyThisEventForm() {
             field.addClass('has-error');
             field.closest('.input-group').addClass('has-error');
 
+            let targetField = field;
+            if (!targetField.is('input, select, textarea')) {
+                targetField = field.find('input, select, textarea').first();
+            }
+            const fieldData = {
+                id: targetField.attr('id'),
+                name: targetField.attr('name'),
+                value: targetField[0]?.tomselect
+                    ? targetField[0].tomselect.getValue()
+                    : targetField.val()
+            };
+
             // Could add error message display here
-            console.warn('Validation error:', message);
+            console.warn('Validation error:', message, fieldData);
             if (!firstErrorField) {
                 firstErrorField = field;
             }
