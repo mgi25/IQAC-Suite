@@ -5819,6 +5819,140 @@ def cdl_templates_certificates(request):
 def cdl_media_guide(request):
     return HttpResponse("Media Naming Guide (stub)")
 
+# ────────────────────────────────────────────────────────────────
+#  CDL SUPPORT DETAIL PAGE + APIS
+# ────────────────────────────────────────────────────────────────
+from django.views.decorators.http import require_http_methods
+
+@login_required
+def cdl_support_detail_page(request):
+    """Render support details shell; data loaded via AJAX using query param eventId."""
+    return render(request, "core/cdl_support.html")
+
+@login_required
+@require_http_methods(["GET"])  # /api/cdl/support/<proposal_id>/
+def api_cdl_support_detail(request, proposal_id:int):
+    from django.shortcuts import get_object_or_404
+    try:
+        p = (
+            EMTEventProposal.objects
+            .select_related('organization', 'submitted_by', 'cdl_support')
+            .prefetch_related('faculty_incharges', 'speakers')
+            .get(id=proposal_id)
+        )
+    except EMTEventProposal.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Event not found"}, status=404)
+
+    s = getattr(p, 'cdl_support', None)
+    # Speakers (from Submit Proposal form)
+    speakers = []
+    try:
+        for sp in getattr(p, 'speakers', []).all():
+            speakers.append({
+                'full_name': sp.full_name,
+                'designation': sp.designation,
+                'affiliation': sp.affiliation,
+                'contact_email': sp.contact_email,
+                'contact_number': sp.contact_number,
+                'linkedin_url': sp.linkedin_url,
+                'profile': sp.detailed_profile,
+            })
+    except Exception:
+        speakers = []
+
+    data = {
+        'id': p.id,
+        'title': p.event_title,
+        'status': p.status,
+        'organization': p.organization.name if p.organization else None,
+        'venue': p.venue,
+        'date': (p.event_datetime.date().isoformat() if p.event_datetime else (p.event_start_date.isoformat() if p.event_start_date else None)),
+        'submitted_by': p.submitted_by.get_full_name() or p.submitted_by.username,
+        'submitter_email': p.submitted_by.email,
+        'faculty_incharges': [u.get_full_name() or u.username for u in p.faculty_incharges.all()],
+        'speakers': speakers,
+        # support details
+        'needs_support': bool(getattr(s, 'needs_support', False)),
+        'poster_required': bool(getattr(s, 'poster_required', False)),
+        'certificates_required': bool(getattr(s, 'certificates_required', False)),
+        'poster_choice': getattr(s, 'poster_choice', None),
+        'certificate_choice': getattr(s, 'certificate_choice', None),
+        'poster_design_link': getattr(s, 'poster_design_link', None),
+        'certificate_design_link': getattr(s, 'certificate_design_link', None),
+        'other_services': getattr(s, 'other_services', []) or [],
+        # assignment placeholder: reuse report_assigned_to if no dedicated field
+        'assigned_to_id': getattr(p, 'report_assigned_to_id', None),
+        'assigned_to_name': (p.report_assigned_to.get_full_name() if p.report_assigned_to else None),
+    }
+    return JsonResponse({"success": True, "data": data})
+
+@login_required
+@require_http_methods(["POST"])  # /api/cdl/support/<proposal_id>/assign/
+def api_cdl_support_assign(request, proposal_id:int):
+    """Assign a proposal to a CDL member. Reuses report_assigned_to as assignment field.
+    Also logs assignment time; member dashboard can pull from this.
+    """
+    try:
+        payload = json.loads(request.body.decode('utf-8')) if request.body else request.POST
+    except Exception:
+        payload = request.POST
+    member_id = payload.get('member_id') or payload.get('user_id')
+    if not member_id:
+        return JsonResponse({"success": False, "error": "member_id is required"}, status=400)
+
+    try:
+        p = EMTEventProposal.objects.get(id=proposal_id)
+    except EMTEventProposal.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Event not found"}, status=404)
+
+    try:
+        member = User.objects.get(id=int(member_id))
+    except Exception:
+        return JsonResponse({"success": False, "error": "Invalid member"}, status=400)
+
+    # Simple permission: admins or CDL members can assign
+    is_cdl_member = request.user.groups.filter(name="CDL_MEMBER").exists()
+    if not (request.user.is_superuser or is_cdl_member):
+        return JsonResponse({"success": False, "error": "Not allowed"}, status=403)
+
+    # Apply assignment (reusing report_assigned_to as tracking field for CDL workboard for now)
+    p.report_assigned_to = member
+    p.report_assigned_at = timezone.now()
+    p.save(update_fields=["report_assigned_to", "report_assigned_at", "updated_at"])
+
+    return JsonResponse({"success": True})
+
+@login_required
+@require_http_methods(["GET"])  # /api/cdl/member/work/
+def api_cdl_member_work(request):
+    """Return proposals assigned to the logged-in member via report_assigned_to.
+    This powers the CDL Team Dashboard 'Assigned Events' list.
+    """
+    me = request.user
+    qs = EMTEventProposal.objects.filter(report_assigned_to=me).select_related('organization')[:100]
+    items = []
+    for p in qs:
+        items.append({
+            'id': p.id,
+            'event': p.event_title,
+            'type': 'poster' if getattr(getattr(p,'cdl_support',None),'poster_required',False) else ('certificate' if getattr(getattr(p,'cdl_support',None),'certificates_required',False) else 'coverage'),
+            'priority': 'Medium',
+            'due_date': (p.event_start_date.isoformat() if p.event_start_date else None) or (p.event_datetime.date().isoformat() if p.event_datetime else None),
+            'status': 'pending',
+            'rev': 0,
+            'created_at': p.created_at.isoformat(),
+            'assigned_at': p.report_assigned_at.isoformat() if p.report_assigned_at else None,
+        })
+    return JsonResponse({'success': True, 'items': items})
+
+@login_required
+@require_http_methods(["GET"])  # /api/cdl/members/
+def api_cdl_members(request):
+    from django.contrib.auth.models import User, Group
+    qs = User.objects.filter(groups__name="CDL_MEMBER", is_active=True).order_by('first_name','last_name')
+    members = [{'id':u.id,'name':u.get_full_name() or u.username} for u in qs]
+    return JsonResponse({'success': True, 'members': members})
+
 
 # ────────────────────────────────────────────────────────────────
 #  CDL WORKFLOWS
