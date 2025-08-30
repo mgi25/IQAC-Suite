@@ -1,7 +1,8 @@
-from django.test import TestCase
+from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth.models import User
 from django import forms
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from emt.models import (
     ApprovalStep,
@@ -36,6 +37,7 @@ from core.models import (
 )
 import json
 from unittest.mock import patch
+from decimal import Decimal
 
 class FacultyAPITests(TestCase):
     def setUp(self):
@@ -323,8 +325,15 @@ class AutosaveProposalTests(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        self.assertTrue(data.get("success"))
-        self.assertNotIn("errors", data)
+        pid = data["proposal_id"]
+        proposal = EventProposal.objects.get(id=pid)
+        incomes = list(proposal.income_details.all())
+        self.assertEqual(len(incomes), 1)
+        income = incomes[0]
+        self.assertEqual(income.particulars, "Registration Fees")
+        self.assertEqual(income.amount, Decimal("5000"))
+        self.assertEqual(income.participants, 0)
+        self.assertEqual(income.rate, Decimal("0"))
 
     def test_autosave_saves_sdg_goals(self):
         g1, _ = SDGGoal.objects.get_or_create(name=SDG_GOALS[0])
@@ -392,6 +401,72 @@ class AutosaveProposalTests(TestCase):
         self.assertFalse(data.get("success"))
         self.assertIn("speakers", data.get("errors", {}))
         self.assertIn("full_name", data["errors"]["speakers"]["0"])
+
+    def test_autosave_requires_csrf_token(self):
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(self.submitter)
+        resp = client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(self._payload()),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 403)
+        token = client.get(reverse("emt:submit_proposal")).cookies["csrftoken"].value
+        resp2 = client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(self._payload()),
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=token,
+        )
+        self.assertEqual(resp2.status_code, 200)
+
+    def test_autosave_with_file_upload(self):
+        payload = self._payload()
+        payload.update({
+            "speaker_full_name_0": "Dr. Jane",
+            "speaker_designation_0": "Prof",
+            "speaker_affiliation_0": "Uni",
+            "speaker_contact_email_0": "a@b.com",
+            "speaker_detailed_profile_0": "Profile",
+        })
+        payload["speaker_photo_0"] = SimpleUploadedFile("photo.jpg", b"file", content_type="image/jpeg")
+        resp = self.client.post(reverse("emt:autosave_proposal"), data=payload)
+        self.assertEqual(resp.status_code, 200)
+        pid = resp.json()["proposal_id"]
+        proposal = EventProposal.objects.get(id=pid)
+        speaker = proposal.speakers.first()
+        self.assertIsNotNone(speaker)
+        self.assertTrue(speaker.photo)
+
+    def test_autosave_uses_existing_organization_by_name(self):
+        payload = self._payload()
+        payload["organization_type"] = self.ot.name
+        payload["organization"] = "science"
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        pid = resp.json()["proposal_id"]
+        proposal = EventProposal.objects.get(id=pid)
+        self.assertEqual(proposal.organization, self.org)
+        self.assertEqual(Organization.objects.filter(name__iexact="Science").count(), 1)
+
+    def test_autosave_rejects_unknown_organization_name(self):
+        payload = self._payload()
+        payload["organization_type"] = self.ot.name
+        payload["organization"] = "Science Club"
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertFalse(data.get("success"))
+        self.assertIn("organization", data.get("errors", {}))
+        self.assertEqual(Organization.objects.filter(name="Science Club").count(), 0)
 
     def test_reset_proposal_draft_deletes_draft(self):
         resp = self.client.post(
