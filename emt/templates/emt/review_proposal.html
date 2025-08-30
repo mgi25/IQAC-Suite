@@ -256,3 +256,24 @@
   </div>
 </div>
 {% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.querySelector('.review-header form');
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      const submitter = e.submitter || {};
+      if (submitter.name === 'final_submit') {
+        Object.keys(localStorage).forEach(function(key) {
+          if (key.startsWith('proposal_draft_')) {
+            localStorage.removeItem(key);
+          }
+        });
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

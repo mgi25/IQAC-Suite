@@ -214,7 +214,12 @@ window.AutosaveManager = (function() {
 
     const formEl = document.querySelector('form');
     if (formEl) {
-        formEl.addEventListener('submit', clearLocal);
+        formEl.addEventListener('submit', (e) => {
+            const submitter = e.submitter || {};
+            if (submitter.name === 'final_submit') {
+                clearLocal();
+            }
+        });
     }
 
     // Expose helpers globally for legacy code
