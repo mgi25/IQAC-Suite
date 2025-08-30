@@ -856,14 +856,18 @@ $(document).ready(function() {
         const preselected = classIdsField.length && classIdsField.val()
             ? classIdsField.val().split(',').map(s => s.trim()).filter(Boolean)
             : [];
+        const storedStudents = audienceField.data('selectedStudents') || [];
+        const storedFaculty = audienceField.data('selectedFaculty') || [];
+        const storedUsers = audienceField.data('selectedUsers') || [];
 
         modal.addClass('show');
 
         let available = [];
         let selected = [];
-        let selectedStudents = [];
-        let selectedFaculty = [];
+        let selectedStudents = [...storedStudents];
+        let selectedFaculty = [...storedFaculty];
         let currentType = null;
+        let userSelected = [...storedUsers];
 
         container.html(`
             <div id="audienceStep1">
@@ -927,7 +931,6 @@ $(document).ready(function() {
         let classStudentMap = {};
         let departmentFacultyMap = {};
         let userAvailable = [];
-        let userSelected = [];
 
         function filterOptions(input, select) {
             const term = input.val().toLowerCase();
@@ -1205,15 +1208,23 @@ $(document).ready(function() {
             }
         });
 
-        if (preselected.length) {
+        if (selectedStudents.length || preselected.length) {
             container.find('button[data-type="students"]').click();
+        } else if (selectedFaculty.length) {
+            container.find('button[data-type="faculty"]').click();
         }
 
         $('#audienceConfirm').off('click').on('click', () => {
             const groupNames = selectedStudents.concat(selectedFaculty).map(it => it.name);
             const userNames = userSelected.map(u => u.name);
             const names = groupNames.concat(userNames);
-            audienceField.val(names.join(', ')).trigger('change').trigger('input');
+            audienceField
+                .val(names.join(', '))
+                .data('selectedStudents', [...selectedStudents])
+                .data('selectedFaculty', [...selectedFaculty])
+                .data('selectedUsers', [...userSelected])
+                .trigger('change')
+                .trigger('input');
             classIdsField
                 .val(selectedStudents.filter(it => /^\d+$/.test(it.id)).map(it => it.id).join(','))
                 .trigger('change')
