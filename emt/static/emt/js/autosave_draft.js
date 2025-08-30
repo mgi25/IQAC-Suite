@@ -52,6 +52,9 @@ window.AutosaveManager = (function() {
             }
         });
 
+        // CSRF token is sent via header; exclude it from payload
+        delete data.csrfmiddlewaretoken;
+
         // Map generic 'content' field to a specific section if configured.
         if (data.content !== undefined && window.AUTOSAVE_SECTION) {
             data[window.AUTOSAVE_SECTION] = data.content;
