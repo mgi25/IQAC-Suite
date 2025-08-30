@@ -165,7 +165,11 @@ window.AutosaveManager = (function() {
             }, 1000);
         };
         field.addEventListener('input', handler);
-        if (field.tagName === 'SELECT') {
+        if (
+            field.tagName === 'SELECT' ||
+            field.type === 'checkbox' ||
+            field.type === 'radio'
+        ) {
             field.addEventListener('change', handler);
         }
         field.dataset.autosaveBound = 'true';
@@ -256,7 +260,7 @@ async function autosave() {
                 payload[key] = value;
             }
         });
-        const res = await fetch('/suite/autosave-proposal/', {
+        const res = await fetch(window.AUTOSAVE_URL || '/suite/autosave-proposal/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
