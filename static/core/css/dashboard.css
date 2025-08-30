@@ -192,6 +192,21 @@
 .col-span-2{ grid-column: span 2; }
 @media (max-width:1200px){ .col-span-2{ grid-column: span 1; } }
 
+/* -------- CDL custom grid (two rows as per mock) -------- */
+.cdl-grid{display:grid; grid-template-columns: 1fr 2fr; gap:20px; grid-auto-rows:minmax(360px,auto)}
+@media (max-width:1200px){ .cdl-grid{ grid-template-columns:1fr; gap:16px } }
+@media (min-width:1201px){
+  .cdl-grid{
+    grid-template-areas:
+      "notifications workload"
+      "calendar      details";
+  }
+  #cardNotifications{ grid-area: notifications; }
+  #cardTeam{ grid-area: workload; }
+  #cardCalendar{ grid-area: calendar; }
+  #cardEventDetails{ grid-area: details; }
+}
+
 /* -------- Cards -------- */
 .card{background:var(--surf)!important;border:1px solid var(--border)!important;border-radius:16px!important;box-shadow:var(--shadow)!important;overflow:hidden}
 .card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--border);background:none!important}
@@ -199,6 +214,8 @@
 
 /* -------- Lists -------- */
 .list{padding:14px 18px; max-height: calc(var(--calH) - 70px); overflow-y: auto}
+/* Ensure Notifications card list scrolls even if --calH is auto */
+#cardNotifications .list{ max-height: clamp(280px, 48vh, 520px); overflow-y: auto; padding-right: 6px }
 .empty{padding:32px 0;text-align:center;color:var(--muted);font-size:15px}
 .list-item{display:flex;gap:14px;align-items:center;padding:14px;border-radius:10px;border:1px solid var(--border);background:#fff;margin-bottom:10px}
 .bullet{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#eef2ff;color:#4f46e5}
@@ -210,6 +227,16 @@
 .chip-btn{padding:6px 12px;border:1px solid var(--border);border-radius:6px;background:#fff;font-size:12px;color:var(--ink);text-decoration:none;transition:all .2s}
 .chip-btn:hover{background:var(--subtle);border-color:var(--primary);color:var(--primary)}
 .chip-btn:focus-visible{outline:3px solid rgba(38,68,135,.3);outline-offset:2px}
+
+/* Notification item layout (to match screenshot) */
+#cardNotifications .notification-item{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:14px; border:1px solid var(--border); border-radius:10px; background:#fff; margin-bottom:10px}
+#cardNotifications .notification-content h4{margin:0 0 4px 0; font-size:14px; font-weight:600; color:var(--ink)}
+#cardNotifications .notification-content p{margin:0; color:var(--muted); font-size:12px}
+#cardNotifications .notification-tags{display:flex; gap:6px; margin-top:6px}
+#cardNotifications .notification-tags .tag{display:inline-block; padding:2px 6px; border-radius:10px; font-size:11px; background:#eef2ff; color:#4f46e5}
+#cardNotifications .notification-tags .tag.certificate{background:#ede9fe; color:#7c3aed}
+#cardNotifications .view-btn{padding:6px 10px; font-size:12px; border:1px solid var(--border); background:#fff; color:var(--ink); border-radius:8px; cursor:pointer}
+#cardNotifications .view-btn:hover{background:var(--subtle); border-color:var(--primary); color:var(--primary)}
 
 /* -------- Chart -------- */
 .chart-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:16px}
@@ -339,3 +366,23 @@
 .status-approved { background: #d1fae5; color: #059669; }
 .status-rejected { background: #fee2e2; color: #dc2626; }
 .status-returned { background: #ede9fe; color: #7c3aed; }
+
+/* -------- Tables (Assignment Manager) -------- */
+.table-wrap{width:100%; overflow:auto}
+.table{width:100%; border-collapse:separate; border-spacing:0;}
+.table thead th{position:sticky; top:0; background:#fff; z-index:1; text-align:left; font-size:12px; color:var(--muted); padding:10px 12px; border-bottom:1px solid var(--border)}
+.table.compact td{padding:10px 12px; border-bottom:1px solid var(--border); font-size:13px}
+.ta-right{text-align:right}
+.empty-row{ text-align:center; color:var(--muted); padding:18px 0; }
+.priority-badge{ display:inline-block; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:700; }
+.priority-badge.normal{ background:#e2e8f0; color:#334155; }
+.status-badge{ display:inline-block; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:700; }
+.status-badge.pending{ background:#fef3c7; color:#a16207; }
+.status-badge.assigned{ background:#d1fae5; color:#065f46; }
+
+/* -------- Dots legend for CDL calendar -------- */
+.cal-legend{display:flex; gap:14px; align-items:center; padding:0 16px 12px; color:var(--muted); font-size:12px}
+.cal-legend .dot{width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px}
+.cal-legend .dot.blue{background:#0ea5e9}
+.cal-legend .dot.green{background:#10b981}
+.cal-legend .dot.red{background:#ef4444}
