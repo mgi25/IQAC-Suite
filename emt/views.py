@@ -332,6 +332,8 @@ def submit_proposal(request, pk=None):
 
     if request.method == "POST":
         post_data = request.POST.copy()
+        # Ignore client-supplied academic year; enforce server-side value
+        post_data["academic_year"] = selected_academic_year
         logger.debug("submit_proposal POST data: %s", post_data)
         logger.debug(
             "Faculty IDs from POST: %s", post_data.getlist("faculty_incharges")
@@ -462,6 +464,7 @@ def submit_proposal(request, pk=None):
 
     if request.method == "POST" and form.is_valid():
         proposal = form.save(commit=False)
+        proposal.academic_year = selected_academic_year
         proposal.submitted_by = request.user
         is_final = "final_submit" in request.POST
         is_review = "review_submit" in request.POST
@@ -613,7 +616,13 @@ def autosave_proposal(request):
         text_errors = _save_text_sections(proposal, data)
         if text_errors:
             logger.debug("autosave_proposal text errors: %s", text_errors)
-            return JsonResponse({"success": False, "errors": text_errors})
+            return JsonResponse(
+                {
+                    "success": True,
+                    "proposal_id": proposal.id,
+                    "errors": text_errors,
+                }
+            )
         return JsonResponse({"success": True, "proposal_id": proposal.id})
 
     form = EventProposalForm(data, instance=proposal, user=request.user)
@@ -627,18 +636,29 @@ def autosave_proposal(request):
             role_assignments__role__name=FACULTY_ROLE
         ).distinct()
 
-    if not form.is_valid():
+    is_valid = form.is_valid()
+    if not is_valid:
         logger.debug("autosave_proposal form errors: %s", form.errors)
-        return JsonResponse({"success": False, "errors": form.errors})
 
-    proposal = form.save(commit=False)
+    # Persist any cleaned fields even if the form has validation errors
+    proposal = form.instance
+    for field, value in form.cleaned_data.items():
+        if isinstance(form.fields.get(field), forms.ModelMultipleChoiceField):
+            continue
+        setattr(proposal, field, value)
     proposal.submitted_by = request.user
     proposal.status = "draft"
     proposal.save()
-    form.save_m2m()  # Keep many-to-many fields in sync.
+
+    for field, value in form.cleaned_data.items():
+        if isinstance(form.fields.get(field), forms.ModelMultipleChoiceField):
+            getattr(proposal, field).set(value)
+
     text_errors = _save_text_sections(proposal, data)
 
     errors = {}
+    if not is_valid:
+        errors.update(form.errors)
     if text_errors:
         errors.update(text_errors)
 
@@ -735,14 +755,13 @@ def autosave_proposal(request):
     if in_errors:
         errors["income"] = in_errors
 
-    if errors:
-        logger.debug("autosave_proposal dynamic errors: %s", errors)
-        return JsonResponse({"success": False, "errors": errors})
-
     _save_activities(proposal, data)
     _save_speakers(proposal, data, request.FILES)
     _save_expenses(proposal, data)
     _save_income(proposal, data)
+
+    if errors:
+        logger.debug("autosave_proposal dynamic errors: %s", errors)
 
     logger.debug(
         "Autosaved proposal %s with faculty %s",
@@ -750,7 +769,10 @@ def autosave_proposal(request):
         list(proposal.faculty_incharges.values_list("id", flat=True)),
     )
 
-    return JsonResponse({"success": True, "proposal_id": proposal.id})
+    response = {"success": True, "proposal_id": proposal.id}
+    if errors:
+        response["errors"] = errors
+    return JsonResponse(response)
 
 
 @login_required
@@ -1929,17 +1951,24 @@ def submit_event_report(request, proposal_id):
         }
         request.session.modified = True
 
-        form = EventReportForm(request.POST, instance=report)
+        post_data = request.POST.copy()
+        # Map front-end field names to model fields
+        if "event_summary" in post_data and "summary" not in post_data:
+            post_data["summary"] = post_data.pop("event_summary")
+        if "event_outcomes" in post_data and "outcomes" not in post_data:
+            post_data["outcomes"] = post_data.pop("event_outcomes")
+
+        form = EventReportForm(post_data, instance=report)
         attachments_qs = (
             report.attachments.all() if report else EventReportAttachment.objects.none()
         )
         formset = AttachmentFormSet(
-            request.POST, request.FILES, queryset=attachments_qs
+            post_data, request.FILES, queryset=attachments_qs
         )
         if (
             form.is_valid()
             and formset.is_valid()
-            and _save_activities(proposal, request.POST, form)
+            and _save_activities(proposal, post_data, form)
         ):
             report = form.save(commit=False)
             report.proposal = proposal
@@ -2082,7 +2111,14 @@ def preview_event_report(request, proposal_id):
     if request.method != "POST":
         return redirect("emt:submit_event_report", proposal_id=proposal.id)
 
-    form = EventReportForm(request.POST)
+    post_data = request.POST.copy()
+    # Front-end uses event_summary/event_outcomes; map them to model fields
+    if "event_summary" in post_data and "summary" not in post_data:
+        post_data["summary"] = post_data.pop("event_summary")
+    if "event_outcomes" in post_data and "outcomes" not in post_data:
+        post_data["outcomes"] = post_data.pop("event_outcomes")
+
+    form = EventReportForm(post_data)
     if not form.is_valid():
         logger.debug(
             "Preview form invalid for proposal %s: %s", proposal.id, form.errors
@@ -2096,10 +2132,26 @@ def preview_event_report(request, proposal_id):
         raw_value = bound_field.value()
         field_def = bound_field.field
         if isinstance(field_def, forms.ModelMultipleChoiceField):
-            objs = field_def.queryset.filter(pk__in=raw_value) if raw_value else []
+            if raw_value:
+                if field_def.queryset.exists():
+                    objs = field_def.queryset.filter(pk__in=raw_value)
+                elif hasattr(proposal, name):
+                    objs = getattr(proposal, name).all()
+                else:
+                    objs = []
+            else:
+                objs = []
             display = ", ".join(str(obj) for obj in objs) or "—"
         elif isinstance(field_def, forms.ModelChoiceField):
-            obj = field_def.queryset.filter(pk=raw_value).first()
+            if raw_value:
+                if field_def.queryset.exists():
+                    obj = field_def.queryset.filter(pk=raw_value).first()
+                elif hasattr(proposal, name):
+                    obj = getattr(proposal, name)
+                else:
+                    obj = None
+            else:
+                obj = None
             display = str(obj) if obj else "—"
         else:
             display = raw_value or "—"
@@ -2195,17 +2247,17 @@ def preview_event_report(request, proposal_id):
     # Prepare report form fields for preview
     report_fields = []
     for name, field in form.fields.items():
-        values = request.POST.getlist(name)
+        values = post_data.getlist(name)
         display = ", ".join(values) if values else "—"
         report_fields.append((field.label, display))
 
-    num_activities = request.POST.get("num_activities")
+    num_activities = post_data.get("num_activities")
     if num_activities:
         report_fields.append(("Number of Activities Conducted", num_activities))
 
     context = {
         "proposal": proposal,
-        "post_data": request.POST,
+        "post_data": post_data,
         "proposal_fields": proposal_fields,
         "report_fields": report_fields,
         "form": form,

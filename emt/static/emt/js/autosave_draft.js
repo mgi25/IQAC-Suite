@@ -92,6 +92,7 @@ window.AutosaveManager = (function() {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': window.AUTOSAVE_CSRF
             },
+            credentials: 'same-origin',
             body: JSON.stringify(formData)
         })
         .then(async res => {
@@ -111,7 +112,9 @@ window.AutosaveManager = (function() {
                 proposalId = data.proposal_id;
                 window.PROPOSAL_ID = data.proposal_id;
                 saveLocal();
-                document.dispatchEvent(new CustomEvent('autosave:success', {detail: {proposalId: data.proposal_id}}));
+                document.dispatchEvent(new CustomEvent('autosave:success', {
+                    detail: { proposalId: data.proposal_id, errors: data.errors }
+                }));
                 return data;
             }
             return Promise.reject(data);
@@ -224,6 +227,7 @@ async function autosave() {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': window.AUTOSAVE_CSRF,
             },
+            credentials: 'same-origin',
             body: JSON.stringify(payload),
         });
         if (!res.ok) {

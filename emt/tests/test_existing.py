@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth.models import User
+from django import forms
 
 from emt.models import (
     ApprovalStep,
@@ -941,3 +942,17 @@ class SDGGoalsFormTests(TestCase):
         names = list(form.fields["sdg_goals"].queryset.values_list("name", flat=True))
         self.assertEqual(set(names), set(SDG_GOALS))
         self.assertEqual(len(names), len(SDG_GOALS))
+
+
+class AcademicYearFormTests(TestCase):
+    def test_user_supplied_academic_year_is_ignored(self):
+        form = EventProposalForm(
+            data={"academic_year": "1999-2000"},
+            selected_academic_year="2024-2025",
+        )
+        self.assertEqual(form.clean_academic_year(), "2024-2025")
+
+    def test_missing_admin_year_raises_error(self):
+        form = EventProposalForm(data={"academic_year": "1999-2000"})
+        with self.assertRaises(forms.ValidationError):
+            form.clean_academic_year()

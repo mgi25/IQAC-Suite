@@ -3,6 +3,10 @@
 
 {% block title %}Review Event Report{% endblock %}
 
+{% block head_extra %}
+<link rel="stylesheet" href="{% static 'emt/css/styles.css' %}">
+{% endblock %}
+
 {% block content %}
 <div class="proposal-layout">
     <nav class="proposal-nav">
@@ -21,19 +25,31 @@
             {% for key, value in post_data.items %}
                 <input type="hidden" name="{{ key }}" value="{{ value|escape }}">
             {% endfor %}
-            <h3>Event Proposal Details</h3>
-            <ol class="report-preview-list">
-                {% for label, value in proposal_fields %}
-                    <li><strong>{{ label }}:</strong> {{ value }}</li>
-                {% endfor %}
-            </ol>
-            <h3>Event Report Details</h3>
-            <ol class="report-preview-list">
-                {% for label, value in report_fields %}
-                    <li><strong>{{ label }}:</strong> {{ value }}</li>
-                {% endfor %}
-            </ol>
-            <button type="submit" name="final_submit" class="btn-submit">Submit Report</button>
+            <details class="report-section" open>
+                <summary>Event Proposal Details</summary>
+                <ol class="report-preview-list">
+                    {% for label, value in proposal_fields %}
+                        <li class="field-item">
+                            <span class="field-label">{{ label }}</span>
+                            <span class="field-value">{{ value }}</span>
+                        </li>
+                    {% endfor %}
+                </ol>
+            </details>
+            <details class="report-section">
+                <summary>Event Report Details</summary>
+                <ol class="report-preview-list">
+                    {% for label, value in report_fields %}
+                        <li class="field-item">
+                            <span class="field-label">{{ label }}</span>
+                            <span class="field-value">{{ value }}</span>
+                        </li>
+                    {% endfor %}
+                </ol>
+            </details>
+            <div class="content-actions">
+                <button type="submit" name="final_submit" class="btn-submit">Submit Report</button>
+            </div>
         </form>
     </main>
 </div>

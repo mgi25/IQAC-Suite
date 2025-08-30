@@ -252,6 +252,22 @@ console.log(attendanceEl.attrs['href']);
             ["engineering_knowledge", "problem_analysis"],
         )
 
+    def test_preview_maps_frontend_field_names(self):
+        url = reverse("emt:preview_event_report", args=[self.proposal.id])
+        data = {
+            "actual_event_type": "Workshop",
+            "event_summary": "Frontend summary",
+            "event_outcomes": "Frontend outcomes",
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Frontend summary")
+        self.assertContains(response, "Frontend outcomes")
+
     def test_preview_preserves_checked_and_unchecked_fields(self):
         url = reverse("emt:preview_event_report", args=[self.proposal.id])
         data = {
@@ -285,6 +301,22 @@ console.log(attendanceEl.attrs['href']);
             self.assertContains(
                 response, f"<strong>{field.label}:</strong>", html=False
             )
+
+    def test_preview_shows_faculty_incharges(self):
+        fac = User.objects.create_user(username="facultya")
+        self.proposal.faculty_incharges.add(fac)
+        url = reverse("emt:preview_event_report", args=[self.proposal.id])
+        data = {
+            "actual_event_type": "Seminar",
+            "report_signed_date": "2024-01-10",
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "facultya")
 
     def test_proposal_speakers_prefilled(self):
         SpeakerProfile.objects.create(

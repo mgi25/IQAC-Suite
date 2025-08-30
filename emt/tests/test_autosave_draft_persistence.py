@@ -1,0 +1,58 @@
+from django.test import TestCase
+from django.urls import reverse
+from django.contrib.auth.models import User
+import json
+
+from emt.models import EventProposal
+from core.models import OrganizationType, Organization, OrganizationRole, RoleAssignment
+
+
+class AutosaveDraftPersistenceTests(TestCase):
+    def setUp(self):
+        self.ot = OrganizationType.objects.create(name="Dept")
+        self.org = Organization.objects.create(name="Science", org_type=self.ot)
+        self.faculty_role = OrganizationRole.objects.create(
+            organization=self.org, name="Faculty"
+        )
+        self.user = User.objects.create(
+            username="u1", first_name="Test", email="u1@example.com"
+        )
+        RoleAssignment.objects.create(
+            user=self.user, role=self.faculty_role, organization=self.org
+        )
+        self.client.force_login(self.user)
+
+    def _payload(self):
+        return {
+            "organization_type": str(self.ot.id),
+            "organization": str(self.org.id),
+            "academic_year": "2024-2025",
+        }
+
+    def test_draft_persists_with_missing_required_fields(self):
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(self._payload()),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data["success"])
+        self.assertIn("event_title", data["errors"])
+        pid = data["proposal_id"]
+        proposal = EventProposal.objects.get(id=pid)
+        self.assertEqual(proposal.event_title, "")
+
+        payload = self._payload()
+        payload.update({"proposal_id": pid, "event_title": "My Event"})
+        resp2 = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp2.status_code, 200)
+        data2 = resp2.json()
+        self.assertTrue(data2["success"])
+        self.assertNotIn("event_title", data2.get("errors", {}))
+        proposal.refresh_from_db()
+        self.assertEqual(proposal.event_title, "My Event")

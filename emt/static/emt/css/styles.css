@@ -548,6 +548,1624 @@
 
 /* ——— Tom Select: ensure only ONE visible box ——— */
 
+
+.expense-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+}
+
+.expense-title::before {
+    content: "\f51e";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    margin-right: 0.75rem;
+    font-size: 1.1rem;
+}
+
+.btn-remove-expense {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    z-index: 1;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-remove-expense:hover {
+    background: rgba(239, 68, 68, 0.9);
+    border-color: rgba(239, 68, 68, 1);
+    transform: scale(1.05);
+}
+
+/* Expense Form Content */
+.expense-form-content {
+    padding: 2rem;
+    background: linear-gradient(135deg, #fafbff 0%, #f8fafc 100%);
+}
+
+.expense-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 0;
+}
+
+.expense-form-grid .input-group {
+    margin-bottom: 0;
+}
+
+.expense-form-grid .input-group label {
+    display: block;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+}
+
+.expense-form-grid .input-group input[required] + .help-text::before {
+    content: '* ';
+    color: #ef4444;
+    font-weight: 600;
+}
+
+.expense-form-grid .input-group input {
+    padding: 0.875rem 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    background: white;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.expense-form-grid .input-group input:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(38, 68, 135, 0.1);
+    transform: translateY(-1px);
+}
+
+.expense-form-grid .input-group .help-text {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+}
+
+/* Validation States */
+.expense-form-grid .input-group.has-error input {
+    border-color: #ef4444;
+    background-color: #fef2f2;
+}
+
+.expense-form-grid .input-group.has-error label {
+    color: #dc2626;
+}
+
+.expense-form-grid .input-group.is-valid input {
+    border-color: #10b981;
+    background-color: #f0fdf4;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .expenses-section {
+        margin: 0 1rem;
+    }
+    
+    .expense-form-container {
+        margin-bottom: 1.5rem;
+    }
+    
+    .expense-form-content {
+        padding: 1.5rem;
+    }
+    
+    .expense-form-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .expense-form-header {
+        padding: 1rem 1.25rem;
+    }
+    
+    .expense-title {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .expenses-section {
+        margin: 0 0.5rem;
+    }
+    
+    .expense-form-content {
+        padding: 1rem;
+    }
+    
+    .expense-form-grid {
+        gap: 0.75rem;
+    }
+}
+
+/* Animation States */
+.expense-form-container.loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.expense-form-container.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid var(--primary-blue);
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* AI fill button styling for textareas */
+.ai-input {
+    position: relative;
+}
+.ai-fill-btn {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: var(--primary-blue);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+.ai-fill-btn:hover {
+    background: var(--primary-blue-dark);
+}
+
+/* Tentative flow schedule table */
+.schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+}
+
+.schedule-table th,
+.schedule-table td {
+    border: 1px solid var(--border-color, #e5e7eb);
+    padding: 0.5rem;
+}
+
+.schedule-table th {
+    background: var(--background, #f9fafb);
+    text-align: left;
+}
+
+.schedule-table .error-message {
+    color: #ef4444;
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+}
+
+#add-row-btn {
+    background: var(--primary-blue, #2563eb);
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 1rem;
+}
+
+#add-row-btn:hover {
+    background: var(--primary-blue-dark, #1e40af);
+}
+
+.btn-remove-row {
+    background: var(--border-color, #e5e7eb);
+    border: none;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+}
+
+/* Override default form grid for expenses section */
+.expenses-section .form-grid,
+.expenses-section .form-row {
+    display: block;
+    grid-template-columns: none;
+    gap: 0;
+    margin-bottom: 1rem;
+}
+
+.expenses-section .form-row.full-width {
+    grid-column: 1 / -1;
+    width: 100%;
+}
+
+/* Ensure expense forms don't inherit unwanted grid styles */
+.expense-form-container * {
+    box-sizing: border-box;
+}
+
+/* Enhanced Add Expense Button */
+#add-expense-btn,
+.btn-add-expense {
+    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 0 auto;
+    box-shadow: 0 4px 20px rgba(38, 68, 135, 0.2);
+}
+
+#add-expense-btn::before,
+.btn-add-expense::before {
+    content: '+ ';
+    font-size: 1.2rem;
+}
+
+#add-expense-btn:hover,
+.btn-add-expense:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(38, 68, 135, 0.3);
+}
+
+/* =====================================
+   INCOME SECTION STYLING
+   ===================================== */
+
+/* Income Section Container */
+.income-section {
+    padding: 2rem;
+    min-height: calc(100vh - 200px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+    width: 100%;
+    max-width: none;
+}
+
+.income-container {
+    margin-bottom: 2rem;
+    width: 100%;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Empty State */
+.income-empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border: 2px dashed #cbd5e1;
+    border-radius: 16px;
+    margin: 2rem 0;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    flex-grow: 1;
+}
+
+.income-empty-state .empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.income-empty-state h4 {
+    color: #475569;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.income-empty-state p {
+    color: #64748b;
+    margin: 0;
+}
+
+/* Add Income Section */
+.add-income-section {
+    text-align: center;
+    margin: 2rem 0;
+    padding: 2rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    width: 100%;
+}
+
+/* Income Form Container */
+.income-form-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+/* Income Form Card */
+.income-form-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(38, 68, 135, 0.08);
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.income-form-card:hover {
+    box-shadow: 0 8px 30px rgba(38, 68, 135, 0.12);
+    transform: translateY(-2px);
+}
+
+/* Income Form Header */
+.income-form-header {
+    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
+    color: white;
+    padding: 1.5rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+}
+
+.income-form-header::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='m0 40l40-40h-40v40zm40 0v-40h-40l40 40z'/%3E%3C/g%3E%3C/svg%3E") repeat;
+}
+
+.income-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+}
+
+.income-title::before {
+    content: '�';
+    margin-right: 0.75rem;
+    font-size: 1.1rem;
+}
+
+.btn-remove-income {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    z-index: 1;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-remove-income:hover {
+    background: rgba(239, 68, 68, 0.9);
+    border-color: rgba(239, 68, 68, 1);
+    transform: scale(1.05);
+}
+
+/* Income Form Content */
+.income-form-content {
+    padding: 2rem;
+    background: linear-gradient(135deg, #fafbff 0%, #f8fafc 100%);
+}
+
+.income-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 0;
+}
+
+.income-form-grid .input-group {
+    margin-bottom: 0;
+}
+
+.income-form-grid .input-group label {
+    display: block;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+}
+
+.income-form-grid .input-group input[required] + .help-text::before {
+    content: '* ';
+    color: #ef4444;
+    font-weight: 600;
+}
+
+.income-form-grid .input-group input {
+    padding: 0.875rem 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    background: white;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.income-form-grid .input-group input:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(38, 68, 135, 0.1);
+    transform: translateY(-1px);
+}
+
+.income-form-grid .input-group .help-text {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+}
+
+/* Validation States for Income */
+.income-form-grid .input-group.has-error input {
+    border-color: #ef4444;
+    background-color: #fef2f2;
+}
+
+.income-form-grid .input-group.has-error label {
+    color: #dc2626;
+}
+
+.income-form-grid .input-group.is-valid input {
+    border-color: #10b981;
+    background-color: #f0fdf4;
+}
+
+/* Enhanced Add Income Button */
+#add-income-btn,
+.btn-add-income {
+    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 0 auto;
+    box-shadow: 0 4px 20px rgba(38, 68, 135, 0.2);
+}
+
+#add-income-btn::before,
+.btn-add-income::before {
+    content: '+ ';
+    font-size: 1.2rem;
+}
+
+#add-income-btn:hover,
+.btn-add-income:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(38, 68, 135, 0.3);
+}
+
+/* Responsive Design for Income */
+@media (max-width: 768px) {
+    .income-section {
+        margin: 0 1rem;
+    }
+    
+    .income-form-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .income-form-content {
+        padding: 1.5rem;
+    }
+}
+
+/* Audience modal enhancements */
+#audienceModal .modal-content,
+#attendanceModal .modal-content {
+    max-width: 800px;
+    width: 95%;
+}
+
+#audienceModal .audience-type-selector,
+#attendanceModal .audience-type-selector {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+#audienceModal .audience-type-selector button,
+#attendanceModal .audience-type-selector button {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-color);
+    background: var(--light-bg);
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+#audienceModal #audienceList,
+#attendanceModal #audienceList {
+    max-height: 50vh;
+    overflow-y: auto;
+    margin-top: 1rem;
+}
+
+#audienceModal .audience-org-header,
+#attendanceModal .audience-org-header {
+    font-weight: 600;
+    margin-top: 1rem;
+}
+
+#audienceModal .btn-continue,
+#attendanceModal .btn-continue {
+    margin-top: 1rem;
+    background: var(--primary-blue);
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+#audienceModal .btn-continue:hover,
+#attendanceModal .btn-continue:hover {
+    background: var(--primary-blue-dark);
+}
+
+#audienceModal .audience-select-all,
+#attendanceModal .audience-select-all {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+#audienceModal .dual-list,
+#attendanceModal .dual-list {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    align-items: flex-start;
+}
+
+#audienceModal .dual-list-column,
+#attendanceModal .dual-list-column {
+    display: flex;
+    flex-direction: column;
+}
+
+#audienceModal .dual-list-column input[type="text"],
+#attendanceModal .dual-list-column input[type="text"] {
+    margin-bottom: 0.5rem;
+    padding: 0.25rem 0.5rem;
+}
+
+#audienceModal .dual-list select,
+#attendanceModal .dual-list select {
+    width: 260px;
+    min-height: 260px;
+}
+
+#audienceModal .dual-list-controls,
+#attendanceModal .dual-list-controls {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+#audienceModal .dual-list-controls button,
+#attendanceModal .dual-list-controls button {
+    padding: 0.25rem 0.5rem;
+    width: 2.5rem;
+}
+
+#audienceModal .audience-custom,
+#attendanceModal .audience-custom {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    align-items: center;
+}
+
+#audienceModal .audience-custom input,
+#attendanceModal .audience-custom input {
+    flex: 1;
+    padding: 0.5rem;
+}
+
+#audienceModal .audience-custom button,
+#attendanceModal .audience-custom button {
+    padding: 0.5rem 1rem;
+}
+
+/* ===========================================
+   SUBMIT EVENT REPORT PAGE INLINE STYLES
+   Moved from submit_event_report.html template
+   =========================================== */
+
+/* Professional Activities Section Styling */
+.activities-reference-card {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    margin: 0.5rem 0;
+}
+
+.activities-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    margin-bottom: 1rem;
+}
+
+.activity-reference-item {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+.activity-reference-item:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+.activity-title {
+    font-weight: 600;
+    color: var(--primary-blue, #2563eb);
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.activity-date {
+    font-size: 0.875rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.activities-summary {
+    text-align: center;
+    padding: 0.75rem;
+    background: rgba(59, 130, 246, 0.05);
+    border-radius: 0.25rem;
+    border: 1px solid rgba(59, 130, 246, 0.1);
+}
+
+.text-muted {
+    color: #6b7280;
+    font-style: italic;
+}
+
+.no-activities-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    color: #64748b;
+    font-style: italic;
+    gap: 0.5rem;
+}
+
+.info-icon {
+    font-size: 1.25rem;
+    color: #3b82f6;
+}
+
+/* Enhanced Form Section Headers */
+.form-section-header {
+    border-bottom: 2px solid var(--primary-blue, #2563eb);
+    margin: 2rem 0 1.5rem 0;
+    padding-bottom: 0.75rem;
+    position: relative;
+}
+
+.form-section-header::before {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 60px;
+    height: 2px;
+    background: var(--accent-color, #10b981);
+}
+
+.form-section-header h3 {
+    color: var(--primary-blue, #2563eb);
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Professional Input Styling */
+.input-group input,
+.input-group select,
+.input-group textarea {
+    transition: all 0.2s ease;
+    border: 1px solid #d1d5db;
+}
+
+.input-group input:focus,
+.input-group select:focus,
+.input-group textarea:focus {
+    border-color: var(--primary-blue, #2563eb);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    outline: none;
+}
+
+.input-group input[readonly] {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+}
+
+/* Enhanced Help Text */
+.help-text {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-top: 0.375rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.25rem;
+}
+
+.help-text::before {
+    content: '';
+    font-size: 0.75rem;
+    margin-top: 0.125rem;
+    opacity: 0.7;
+}
+
+/* Professional Button Styling */
+.btn-save-section {
+    background: linear-gradient(135deg, var(--primary-blue, #2563eb) 0%, #1d4ed8 100%);
+    border: none;
+    color: white;
+    padding: 0.75rem 2rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    font-size: 0.875rem;
+}
+
+.btn-save-section:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+}
+
+.btn-draft-section {
+    background: transparent;
+    border: 2px solid #e5e7eb;
+    color: #6b7280;
+    padding: 0.6rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-draft-section:hover {
+    border-color: #d1d5db;
+    background: #f9fafb;
+}
+
+/* Enhanced Save Section */
+.save-section-container {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 2rem;
+    margin: 2rem 0;
+    text-align: center;
+}
+
+.save-help-text {
+    color: #64748b;
+    font-size: 0.875rem;
+    font-style: italic;
+}
+
+/* Auto-resize textarea functionality */
+textarea {
+    resize: none;
+    overflow: hidden;
+    min-height: 120px;
+    max-height: none;
+    box-sizing: border-box;
+    transition: height 0.2s ease;
+}
+
+/* Equal sizing for form elements */
+.form-row .input-group {
+    flex: 1;
+    min-width: calc(50% - 12.5px);
+}
+
+.form-row .input-group textarea {
+    min-height: 140px;
+}
+
+/* Ensure equal heights for side-by-side textareas */
+.form-row:not(.full-width) .input-group textarea {
+    height: auto;
+    min-height: 140px;
+}
+
+/* Word counter styling */
+.word-counter {
+    font-size: 0.85rem;
+    margin-top: 5px;
+    text-align: right;
+    font-weight: 500;
+}
+
+.word-counter.text-success {
+    color: #10b981 !important;
+}
+
+.word-counter.text-warning {
+    color: #f59e0b !important;
+}
+
+.word-counter.text-danger {
+    color: #ef4444 !important;
+}
+
+/* Graduate Attributes Grouped Checkbox Styling */
+.graduate-attributes-groups {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 12px;
+    border-radius: 6px;
+}
+
+.ga-category {
+    margin-bottom: 8px;
+}
+
+.ga-toggle {
+    width: 100%;
+    text-align: left;
+    background: #f0f0f0;
+    border: none;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.ga-options {
+    display: none;
+    margin-top: 4px;
+    margin-left: 12px;
+}
+
+.ga-options label {
+    display: block;
+    margin: 4px 0;
+}
+
+/* SDG Selection Button */
+.btn-select-sdg {
+    margin-top: 8px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.btn-select-sdg:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+}
+
+/* SDG Modal Styling */
+.sdg-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.sdg-modal-content {
+    background-color: #fff;
+    margin: 5% auto;
+    padding: 20px;
+    border-radius: 10px;
+    width: 80%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.sdg-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.sdg-option {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.sdg-option:hover {
+    border-color: #3498db;
+    background-color: #f8f9fa;
+}
+
+.sdg-option.selected {
+    border-color: #3498db;
+    background-color: #e3f2fd;
+}
+
+.sdg-option input[type="checkbox"] {
+    margin-right: 10px;
+}
+
+/* Attendance Modal */
+.attendance-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.attendance-row input[type="text"] {
+    flex: 1;
+}
+
+/* Navigation States */
+.nav-link.completed {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.nav-link.completed .nav-number {
+    background: white;
+    color: #10b981;
+}
+
+.nav-link.completed::after {
+    content: '✓';
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: white;
+    color: #10b981;
+    border-radius: 50%;
+    width: 1.25rem;
+    height: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+/* Speakers Reference Card */
+.speakers-reference-card {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    margin: 0.5rem 0;
+}
+
+.speaker-reference-item {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.speaker-name {
+    font-weight: 600;
+    color: var(--primary-blue, #2563eb);
+    margin-bottom: 0.25rem;
+}
+
+.speaker-details {
+    font-size: 0.875rem;
+    color: #64748b;
+}
+
+/* Placeholder Section Styling */
+.placeholder-section {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 2px dashed #e2e8f0;
+    border-radius: 0.75rem;
+    color: #64748b;
+    font-size: 1.125rem;
+    font-style: italic;
+}
+
+/* Error Styling */
+.field-error {
+    color: #dc2626;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.field-error::before {
+    content: '';
+    font-size: 0.75rem;
+}
+
+.input-group input.error,
+.input-group select.error,
+.input-group textarea.error {
+    border-color: #dc2626;
+    background-color: #fef2f2;
+}
+
+/* Responsive Grid Improvements */
+@media (max-width: 768px) {
+    .activities-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* AI suggestion cards */
+.ai-loading {
+    background: #f1f5f9;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    text-align: center;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    color: #475569;
+}
+
+.ai-suggestion-card {
+    background: #f8fafc;
+    border-left: 4px solid var(--primary-blue);
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    color: #334155;
+}
+
+.ai-suggestion-card:empty {
+    display: none;
+}
+
+.ai-suggestion-card ul {
+    margin: 0;
+    padding-left: 1.25rem;
+}
+
+.ai-suggestion-card .apply-ai-suggestion {
+    margin-top: 0.5rem;
+    background: var(--primary-blue);
+    color: #fff;
+    border: none;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+/* =====================================
+   CDL SUPPORT SECTION STYLING - MATCHING INCOME SECTION EXACTLY
+   ===================================== */
+
+/* CDL Section Container - Exact Copy of Income Section */
+.cdl-section {
+    padding: 2rem;
+    min-height: calc(100vh - 200px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+    width: 100%;
+    max-width: none;
+}
+
+.cdl-container {
+    margin-bottom: 2rem;
+    width: 100%;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* CDL Empty State - Exact Copy of Income Empty State */
+.cdl-empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border: 2px dashed #cbd5e1;
+    border-radius: 16px;
+    margin: 2rem 0;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    flex-grow: 1;
+}
+
+.cdl-empty-state .empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.cdl-empty-state h4 {
+    color: #475569;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.cdl-empty-state p {
+    color: #64748b;
+    margin: 0;
+}
+
+/* CDL Support Toggle - Simple Toggle Section */
+.cdl-support-toggle {
+    text-align: center;
+    margin: 2rem 0;
+    padding: 2rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    width: 100%;
+}
+
+.cdl-toggle-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    cursor: pointer;
+}
+
+.cdl-toggle-label input[type="checkbox"] {
+    width: 1.5rem;
+    height: 1.5rem;
+    accent-color: var(--primary-blue);
+}
+
+.cdl-toggle-text {
+    color: var(--text-dark);
+}
+
+/* CDL Service Cards - Exact Copy of Income Form Cards */
+.cdl-service-card {
+    width: 100%;
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(38, 68, 135, 0.08);
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.cdl-service-card:hover {
+    box-shadow: 0 8px 30px rgba(38, 68, 135, 0.12);
+    transform: translateY(-2px);
+}
+
+/* CDL Service Header - Exact Copy of Income Form Header */
+.cdl-service-header {
+    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
+    color: white;
+    padding: 1.5rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+}
+
+.cdl-service-header::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='m0 40l40-40h-40v40zm40 0v-40h-40l40 40z'/%3E%3C/g%3E%3C/svg%3E") repeat;
+}
+
+.cdl-service-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+}
+
+.cdl-service-toggle {
+    position: relative;
+    z-index: 1;
+}
+
+.cdl-service-toggle label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.cdl-service-toggle input[type="checkbox"] {
+    width: 1.2rem;
+    height: 1.2rem;
+    accent-color: white;
+}
+
+/* CDL Service Content - Exact Copy of Income Form Content */
+.cdl-service-content {
+    padding: 2rem;
+    background: linear-gradient(135deg, #fafbff 0%, #f8fafc 100%);
+}
+
+.cdl-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 0;
+}
+
+.cdl-form-grid .input-group {
+    margin-bottom: 0;
+}
+
+.cdl-form-grid .input-group label {
+    display: block;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+}
+
+.cdl-form-grid .input-group input[required] + .help-text::before {
+    content: '* ';
+    color: #ef4444;
+    font-weight: 600;
+}
+
+.cdl-form-grid .input-group input,
+.cdl-form-grid .input-group select,
+.cdl-form-grid .input-group textarea {
+    padding: 0.875rem 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    background: white;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.cdl-form-grid .input-group textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.cdl-form-grid .input-group input:focus,
+.cdl-form-grid .input-group select:focus,
+.cdl-form-grid .input-group textarea:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(38, 68, 135, 0.1);
+    transform: translateY(-1px);
+}
+
+.cdl-form-grid .input-group .help-text {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+}
+
+/* CDL Info Banner */
+.cdl-info-banner {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border: 1px solid #93c5fd;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #1e40af;
+    font-size: 0.875rem;
+}
+
+.cdl-info-banner i {
+    color: #3b82f6;
+    font-size: 1rem;
+}
+
+/* Validation States for CDL */
+.cdl-form-grid .input-group.has-error input,
+.cdl-form-grid .input-group.has-error select,
+.cdl-form-grid .input-group.has-error textarea {
+    border-color: #ef4444;
+    background-color: #fef2f2;
+}
+
+.cdl-form-grid .input-group.has-error label {
+    color: #dc2626;
+}
+
+.cdl-form-grid .input-group.is-valid input,
+.cdl-form-grid .input-group.is-valid select,
+.cdl-form-grid .input-group.is-valid textarea {
+    border-color: #10b981;
+    background-color: #f0fdf4;
+}
+
+/* CDL Auto-fill Button - Matching Income Auto-fill */
+#cdl-autofill-btn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.2);
+}
+
+#cdl-autofill-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(16, 185, 129, 0.3);
+}
+
+/* Responsive Design for CDL */
+@media (max-width: 768px) {
+    .cdl-section {
+        margin: 0 1rem;
+    }
+    
+    .cdl-form-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .cdl-service-content {
+        padding: 1.5rem;
+    }
+}
+
+/* Loading overlay displayed during section saves */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    z-index: 2000;
+}
+
+.loading-overlay.show {
+    display: flex;
+}
+
+.loading-overlay .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #e5e7eb;
+    border-top: 4px solid var(--primary-blue, #2563eb);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+.loading-overlay p {
+    margin: 0;
+    color: #374151;
+    font-size: 0.95rem;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Report preview styles */
+.report-section {
+    background: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin: 0 auto 2rem;
+    max-width: 1200px;
+    overflow: hidden;
+}
+
+.report-section > summary {
+    padding: 1.5rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--primary-blue);
+    cursor: pointer;
+    list-style: none;
+}
+
+.report-section[open] > summary {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.report-section summary::-webkit-details-marker {
+    display: none;
+}
+
+.report-section > summary::after {
+    content: '\25BC';
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    transition: transform 0.2s ease;
+}
+
+.report-section[open] > summary::after {
+    transform: rotate(180deg);
+}
+
+.report-preview-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.report-section .report-preview-list {
+    padding: 1.5rem;
+}
+
+.report-preview-list .field-item {
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.report-preview-list .field-label {
+    font-weight: 600;
+    color: var(--primary-blue);
+}
+
+.report-preview-list .field-value {
+    color: var(--text-dark);
+    word-break: break-word;
+}
+
 /* Outer field = the only box */
 .ts-control{
     border: 1px solid var(--border-color, #e2e8f0) !important;
@@ -607,6 +2225,7 @@
     padding: 2px 6px !important;
     margin: 2px 4px 2px 0 !important;
   }
+
 /* === Proposal form layout hardening (pure visual) === */
 #form-panel-content .form-grid {
     display: block;            /* the grid will live on .form-row, not here */
@@ -655,3 +2274,7 @@
     }
   }
 s    
+
+  
+
+

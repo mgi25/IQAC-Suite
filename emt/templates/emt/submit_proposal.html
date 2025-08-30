@@ -121,22 +121,27 @@
                             <h3>Organization Details</h3>
                         </div>
                         
-                        <div class="form-row">
+                        <div class="form-row full-width">
                             <div class="input-group">
-                              <label for="org-type-modern-input">Type of Organisation *</label>
-                              <select id="org-type-modern-input" required>
-                                <option value="">Select Organization Type</option>
-                              </select>
-                              <div class="help-text">Choose the type of organization hosting this event</div>
+                                <label for="org-type-modern-input">Type of Organisation *</label>
+                                <div id="org-type-modern">
+                                    <select required>
+                                        <option value="">Select Organization Type</option>
+                                    </select>
+                                </div>
+                                <div class="help-text">Choose the type of organization hosting this event</div>
                             </div>
-                          
+                        </div>
+
+                        <!-- Dynamic organization field will be inserted here -->
+
+                        <div class="form-row full-width">
                             <div class="input-group">
-                              <label for="committees-collaborations-modern">Committees & Collaborations</label>
-                              <textarea id="committees-collaborations-modern" rows="3"
-                                placeholder="List committees and external collaborations involved"></textarea>
-                              <div class="help-text">Mention internal committees and external partners involved</div>
+                                <label for="committees-collaborations-modern">Committees & Collaborations</label>
+                                <select id="committees-collaborations-modern" multiple placeholder="Type or select organizations..."></select>
+                                <div class="help-text">Mention internal committees and external partners involved</div>
                             </div>
-                          </div>                          
+                        </div>
 
                         <!-- Event Information Section -->
                         <div class="form-section-header">
@@ -191,7 +196,8 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="academic-year-modern">Academic Year *</label>
-                                <input type="text" id="academic-year-modern" placeholder="2024-2025" required>
+                                <input type="text" id="academic-year-modern" value="{{ form.academic_year.value|default:'' }}" disabled>
+                                <input type="hidden" name="academic_year" value="{{ form.academic_year.value|default:'' }}">
                                 <div class="help-text">Academic year for which this event is planned</div>
                             </div>
                             <div class="input-group">
@@ -285,8 +291,6 @@
                     <input type="hidden" name="committees_collaborations_ids" id="committees-collaborations-ids">
                     {{ form.sdg_goals.label_tag }}
                     {{ form.sdg_goals }}
-                    {{ form.academic_year.label_tag }}
-                    {{ form.academic_year }}
                     {{ form.student_coordinators.label_tag }}
                     {{ form.student_coordinators }}
                     {{ form.num_activities.label_tag }}
@@ -341,7 +345,7 @@
         <div id="audienceOptions"></div>
         <div class="modal-actions">
             <button type="button" id="audienceCancel" class="btn-cancel">Cancel</button>
-            <button type="button" id="audienceSave" class="btn-save">Add</button>
+            <button type="button" id="audienceConfirm" class="btn-save">Confirm</button>
         </div>
     </div>
 </div>
