@@ -674,23 +674,30 @@ def autosave_proposal(request):
 
     text_errors = _save_text_sections(proposal, data)
 
+    submitted_keys = set(data.keys())
     if not is_valid:
-        errors.update(form.errors)
+        filtered = {
+            field: errs for field, errs in form.errors.items() if field in submitted_keys
+        }
+        errors.update(filtered)
     if text_errors:
         errors.update(text_errors)
 
     # Validate activities
     act_errors = {}
     idx = 1
-    while any(key in data for key in [f"activity_name_{idx}", f"activity_date_{idx}"]):
-        name = data.get(f"activity_name_{idx}")
-        date = data.get(f"activity_date_{idx}")
+    while True:
+        name_key = f"activity_name_{idx}"
+        date_key = f"activity_date_{idx}"
+        if not any(key in data for key in [name_key, date_key]):
+            break
+        name = data.get(name_key)
+        date = data.get(date_key)
         missing = {}
-        if name or date:
-            if not name:
-                missing["name"] = "This field is required."
-            if not date:
-                missing["date"] = "This field is required."
+        if name_key in data and not name:
+            missing["name"] = "This field is required."
+        if date_key in data and not date:
+            missing["date"] = "This field is required."
         if missing:
             act_errors[idx] = missing
         idx += 1
@@ -712,16 +719,18 @@ def autosave_proposal(request):
         for field in sp_fields + ["contact_number", "linkedin_url", "photo"]
     ):
         missing = {}
-        has_any = False
+        provided = False
         for field in sp_fields:
-            value = data.get(f"speaker_{field}_{sp_idx}")
-            if value:
-                has_any = True
-                if field == "full_name" and not NAME_RE.fullmatch(value):
-                    missing[field] = "Enter a valid name (letters, spaces, .'- only)."
-            else:
-                missing[field] = "This field is required."
-        if has_any and missing:
+            key = f"speaker_{field}_{sp_idx}"
+            if key in data:
+                provided = True
+                value = data.get(key)
+                if value:
+                    if field == "full_name" and not NAME_RE.fullmatch(value):
+                        missing[field] = "Enter a valid name (letters, spaces, .'- only)."
+                else:
+                    missing[field] = "This field is required."
+        if provided and missing:
             sp_errors[sp_idx] = missing
         sp_idx += 1
     if sp_errors:
@@ -734,14 +743,15 @@ def autosave_proposal(request):
         f"expense_{field}_{ex_idx}" in data
         for field in ["sl_no", "particulars", "amount"]
     ):
-        particulars = data.get(f"expense_particulars_{ex_idx}")
-        amount = data.get(f"expense_amount_{ex_idx}")
+        particulars_key = f"expense_particulars_{ex_idx}"
+        amount_key = f"expense_amount_{ex_idx}"
+        particulars = data.get(particulars_key)
+        amount = data.get(amount_key)
         missing = {}
-        if particulars or amount:
-            if not particulars:
-                missing["particulars"] = "This field is required."
-            if not amount:
-                missing["amount"] = "This field is required."
+        if particulars_key in data and not particulars:
+            missing["particulars"] = "This field is required."
+        if amount_key in data and not amount:
+            missing["amount"] = "This field is required."
         if missing:
             ex_errors[ex_idx] = missing
         ex_idx += 1
@@ -755,17 +765,16 @@ def autosave_proposal(request):
         f"income_{field}_{in_idx}" in data
         for field in ["particulars", "participants", "rate", "amount"]
     ):
-        particulars = data.get(f"income_particulars_{in_idx}")
-        participants = data.get(f"income_participants_{in_idx}")
-        rate = data.get(f"income_rate_{in_idx}")
-        amount = data.get(f"income_amount_{in_idx}")
+        particulars_key = f"income_particulars_{in_idx}"
+        amount_key = f"income_amount_{in_idx}"
+        particulars = data.get(particulars_key)
+        amount = data.get(amount_key)
         missing = {}
         # Only require particulars and amount; participants and rate are optional
-        if any([particulars, participants, rate, amount]):
-            if not particulars:
-                missing["particulars"] = "This field is required."
-            if not amount:
-                missing["amount"] = "This field is required."
+        if particulars_key in data and not particulars:
+            missing["particulars"] = "This field is required."
+        if amount_key in data and not amount:
+            missing["amount"] = "This field is required."
         if missing:
             in_errors[in_idx] = missing
         in_idx += 1

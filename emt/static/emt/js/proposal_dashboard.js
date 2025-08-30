@@ -2422,7 +2422,7 @@ function getWhyThisEventForm() {
                     .then((data) => {
                         hideLoadingOverlay();
                         if (data && data.errors) {
-                            handleAutosaveErrors(data);
+                            handleAutosaveErrors(data, fieldsToSave);
                         }
                         markSectionComplete(currentExpandedCard);
                         showNotification('Section saved successfully!', 'success');
@@ -2445,7 +2445,7 @@ function getWhyThisEventForm() {
                         hideLoadingOverlay();
                         console.error('Autosave failed:', err);
                         if (err && err.errors) {
-                            handleAutosaveErrors(err);
+                            handleAutosaveErrors(err, fieldsToSave);
                             if (firstErrorField && firstErrorField.length) {
                                 $('html, body').animate({
                                     scrollTop: firstErrorField.offset().top - 100
@@ -3172,8 +3172,9 @@ function getWhyThisEventForm() {
         }
     }
 
-    function handleAutosaveErrors(errorData) {
+    function handleAutosaveErrors(errorData, submittedFields) {
         const errors = (errorData && typeof errorData === 'object') ? (errorData.errors || errorData) : null;
+        const allowed = submittedFields || (errorData && errorData.fields) || null;
         if (!errors || typeof errors !== 'object') {
             showNotification('Autosave failed. Please try again.', 'error');
             return;
@@ -3184,6 +3185,7 @@ function getWhyThisEventForm() {
         const nonFieldMessages = [];
 
         const mark = (name, message) => {
+            if (allowed && !allowed.includes(name)) return false;
             let field = $(`#${name.replace(/_/g, '-')}-modern`);
             if (!field.length) {
                 field = $(`[name="${name}"]`);
@@ -3196,16 +3198,20 @@ function getWhyThisEventForm() {
                 showFieldError(field, message);
                 return true;
             }
-            nonFieldMessages.push(message);
+            if (!allowed) {
+                nonFieldMessages.push(message);
+            }
             return false;
         };
 
         Object.entries(errors).forEach(([key, val]) => {
             if (key === '__all__' || key === 'non_field_errors') {
-                if (Array.isArray(val)) {
-                    nonFieldMessages.push(...val);
-                } else if (val) {
-                    nonFieldMessages.push(val);
+                if (!allowed) {
+                    if (Array.isArray(val)) {
+                        nonFieldMessages.push(...val);
+                    } else if (val) {
+                        nonFieldMessages.push(val);
+                    }
                 }
                 return;
             }
@@ -3349,7 +3355,7 @@ function getWhyThisEventForm() {
                 $('#reset-draft-btn').prop('disabled', false).removeAttr('disabled');
             }
             if (detail && detail.errors) {
-                handleAutosaveErrors({errors: detail.errors});
+                handleAutosaveErrors({errors: detail.errors}, detail.fields);
             }
             const indicator = $('#autosave-indicator');
             indicator.removeClass('saving error').addClass('saved');
@@ -3364,7 +3370,8 @@ function getWhyThisEventForm() {
             indicator.removeClass('saving saved').addClass('error show');
             indicator.find('.indicator-text').text('Save Failed');
             if (e.originalEvent && e.originalEvent.detail) {
-                handleAutosaveErrors(e.originalEvent.detail);
+                const d = e.originalEvent.detail;
+                handleAutosaveErrors(d, d.fields);
             }
             setTimeout(() => {
                 indicator.removeClass('show');
