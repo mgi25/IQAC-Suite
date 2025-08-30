@@ -6,7 +6,7 @@ from django.template.loader import get_template, render_to_string
 from django.urls import reverse
 import qrcode
 import io
-import weasyprint
+from xhtml2pdf import pisa
 import base64
 import json
 import zipfile
@@ -324,8 +324,9 @@ def bulk_download_handler(request):
 
             combined_html += f'<div style="page-break-after: always;">{html}</div>'
 
-        pdf_file = weasyprint.HTML(string=combined_html).write_pdf()
-        response = HttpResponse(pdf_file, content_type='application/pdf')
+        pdf_buffer = io.BytesIO()
+        pisa.CreatePDF(combined_html, dest=pdf_buffer)
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
         response['Content-Disposition'] = 'attachment; filename="Course_Transcripts.pdf"'
 
         return response
