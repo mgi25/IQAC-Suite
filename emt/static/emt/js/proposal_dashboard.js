@@ -3750,7 +3750,7 @@ function addSubmitSection() {
     <div class="submit-section">
       <h5 class="mb-3" style="color: var(--primary-blue); font-weight: 600;">Submit Proposal</h5>
       <div class="d-flex gap-3 justify-content-center">
-        <button type="submit" class="btn-submit" name="review_submit" id="submit-proposal-btn" disabled>Submit Proposal</button>
+        <button type="submit" class="btn-submit" name="final_submit" id="submit-proposal-btn" disabled>Submit Proposal</button>
       </div>
       <p class="submit-help-text">Review all sections before final submission</p>
     </div>
