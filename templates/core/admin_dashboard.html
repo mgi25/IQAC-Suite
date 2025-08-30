@@ -4,346 +4,239 @@
 {% block title %}Admin Dashboard – Event Management Suite{% endblock %}
 
 {% block head_extra %}
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
-<link rel="stylesheet" href="{% static 'core/css/admin_dashboard.css' %}">
-<style>
-  /* Sidebar */
-  .event-sidebar {
-    position: fixed;
-    top: 0;
-    right: -400px;
-    /* hidden initially */
-    width: 400px;
-    height: 100%;
-    background: var(--surf);
-    box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
-    transition: right 0.3s ease;
-    z-index: 1100;
-    display: flex;
-    flex-direction: column;
-  }
+  <!-- Typography & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
 
-  .event-sidebar.active {
-    right: 0;
-  }
-
-  .sidebar-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .sidebar-header h3 {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 600;
-  }
-
-  .sidebar-header button {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-  }
-
-  .sidebar-content {
-    padding: 1rem;
-    overflow-y: auto;
-    flex: 1;
-  }
-
-  .sidebar-content .event-item {
-    margin-bottom: 0.75rem;
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-  }
-
-  .event-item p {
-    margin: 4px 0 0;
-    font-size: 14px;
-    color: var(--muted);
-  }
-
-  .sidebar-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.4);
-    z-index: 1000;
-    opacity: 1;
-    transition: opacity 0.3s ease;
-    visibility: visible;
-  }
-
-  .sidebar-overlay.hidden {
-    opacity: 0;
-    visibility: hidden;
-  }
-
-  /* Custom Grid for Dashboard */
-  .grid-3-custom {
-    display: grid;
-        grid-template-columns: 1fr 1.8fr 1.2fr;
-    gap: 1rem;
-  }
-
-  .grid-3-custom .card {
-        height: 420px;
-  }
-
-    /* Make Event Details a bit shorter to give Calendar more room visually */
-    #cardEventDetails { height: 380px; }
-    #cardNotifications { height: 420px; }
-    #cardCalendar { height: 420px; }
-</style>
+  <!-- Dashboard CSS -->
+  <link rel="stylesheet" href="{% static 'core/css/admin_dashboard.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="ems-dashboard admin-dash">
+<div class="ems-dashboard admin-dash" data-page="admin">
 
-    <header class="topbar">
-        <div>
-            <h1>Welcome, {{ request.user.first_name|default:request.user.username }}</h1>
-            <span class="topbar-date">{% now "F j, Y · l" %}</span>
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar__left">
+      <h1>Welcome, {{ request.user.first_name|default:request.user.username }}</h1>
+      <span class="topbar-date">{% now "F j, Y · l" %}</span>
+    </div>
+  </header>
+
+  <!-- KPI + Profile (single responsive row) -->
+  <section class="kpi-row" aria-label="Key Performance Indicators">
+    <a href="{% url 'admin_user_management' %}?role=Student" class="kpi-link">
+      <div class="kpi-card">
+        <div class="kpi-icon bg-indigo"><i class="fa-solid fa-user-graduate"></i></div>
+        <div class="kpi-content">
+          <span class="kpi-title">Students</span>
+          <span class="kpi-value">{{ stats.students|default:0 }}</span>
         </div>
-    </header>
+      </div>
+    </a>
 
-    <section class="kpi-row">
-        <a href="{% url 'admin_user_management' %}?role=Student" class="kpi-link">
-            <div class="kpi-card">
-                <div class="kpi-icon bg-indigo"><i class="fa-solid fa-user-graduate"></i></div>
-                <div class="kpi-content">
-                    <span class="kpi-title">Students</span>
-                    <span class="kpi-value">{{ stats.students|default:0 }}</span>
-                </div>
-            </div>
-        </a>
-        <a href="{% url 'admin_user_management' %}?role=Faculty" class="kpi-link">
-            <div class="kpi-card">
-                <div class="kpi-icon bg-sky"><i class="fa-solid fa-chalkboard-user"></i></div>
-                <div class="kpi-content">
-                    <span class="kpi-title">Faculties</span>
-                    <span class="kpi-value">{{ stats.faculties|default:0 }}</span>
-                </div>
-            </div>
-        </a>
-        <a href="{% url 'admin_user_management' %}?role=HOD" class="kpi-link">
-            <div class="kpi-card">
-                <div class="kpi-icon bg-orange"><i class="fa-solid fa-user-tie"></i></div>
-                <div class="kpi-content">
-                    <span class="kpi-title">HODs</span>
-                    <span class="kpi-value">{{ stats.hods|default:0 }}</span>
-                </div>
-            </div>
-        </a>
-        <a href="{% url 'admin_master_data' %}?org_role=Center" class="kpi-link">
-            <div class="kpi-card">
-                <div class="kpi-icon bg-emerald"><i class="fa-solid fa-building-columns"></i></div>
-                <div class="kpi-content">
-                    <span class="kpi-title">Centers / Organizations</span>
-                    <span class="kpi-value">{{ stats.centers|default:0 }}</span>
-                </div>
-            </div>
-        </a>
-        <div class="profile-kpi card">
-            <div class="pkp-avatar">
-                {% if request.user.profile and request.user.profile.photo %}
-                <img src="{{ request.user.profile.photo.url }}" alt="{{ request.user.get_full_name|default:request.user.username }}">
-                {% else %}
-                <span class="pkp-initials">
-                    {% if request.user.first_name %}
-                    {{ request.user.first_name.0|upper }}{% if request.user.last_name %}{{ request.user.last_name.0|upper }}{% endif %}
-                    {% else %}
-                    {{ request.user.username.0|upper }}
-                    {% endif %}
-                </span>
-                {% endif %}
-            </div>
-            <div class="pkp-body">
-                <h1 class="pkp-name">{{ request.user.get_full_name|default:request.user.username }}</h1>
-                <h2 class="pkp-sub">{{ request.user.email }}</h2>
-                <div class="pkp-actions">
-                    <label class="switch-label" for="roleSwitch">Switch to:</label>
-                    <select id="roleSwitch" class="switch-select" onchange="window.location.href=this.value;">
-                        <option value="" selected disabled>Choose CDL view…</option>
-                        <option value="{% url 'cdl_head_dashboard' %}">CDL Head Dashboard</option>
-                        <option value="{% url 'cdl_work_dashboard' %}">CDL Team Dashboard</option>
-                    </select>
-                </div>
-            </div>
+    <a href="{% url 'admin_user_management' %}?role=Faculty" class="kpi-link">
+      <div class="kpi-card">
+        <div class="kpi-icon bg-sky"><i class="fa-solid fa-chalkboard-user"></i></div>
+        <div class="kpi-content">
+          <span class="kpi-title">Faculties</span>
+          <span class="kpi-value">{{ stats.faculties|default:0 }}</span>
         </div>
-    </section> <main class="grid-3">
-        <section class="card eq" data-card="proposals">
-            <div class="card-header">
-                <h3><i class="fa-solid fa-file-signature"></i> Event Proposals Overview</h3>
-            </div>
-            <div class="stats-rows">
-                <div class="sr"><span>Total</span><strong>{{ stats.total_proposals|default:0 }}</strong></div>
-                <div class="sr"><span>Pending</span><strong>{{ stats.pending_proposals|default:0 }}</strong></div>
-                <div class="sr"><span>Approved</span><strong class="ok">{{ stats.approved_proposals|default:0 }}</strong></div>
-                <div class="sr"><span>Rejected</span><strong class="bad">{{ stats.rejected_proposals|default:0 }}</strong></div>
-                <a id="viewAllProposals" class="chip-btn" href="/core-admin/event-proposals/">View All</a>
-            </div>
-        </section>
+      </div>
+    </a>
 
-        <section class="card eq">
-            <div class="card-header">
-                <h3><i class="fa-solid fa-clipboard-list"></i> Event Reports Overview</h3>
-            </div>
-            <div class="stats-rows">
-                <div class="sr"><span>Total Reports</span><strong>{{ stats.total_event_reports|default:0 }}</strong></div>
-                <div class="sr"><span>Pending</span><strong>{{ stats.pending_event_reports|default:0 }}</strong></div>
-                <div class="sr"><span>Reviewed</span><strong class="ok">{{ stats.reviewed_event_reports|default:0 }}</strong></div>
-                <div class="sr"><span>Rejected</span><strong class="bad">{{ stats.rejected_event_reports|default:0 }}</strong></div>
-                <a class="chip-btn" href="/core-admin/reports/">View Reports</a>
-            </div>
-        </section>
-
-        <section class="card eq">
-            <div class="card-header">
-                <h3><i class="fa-solid fa-gauge-high"></i> System Overview</h3>
-            </div>
-            <div class="stats-rows">
-                <div class="sr"><span>Total Users</span><strong>{{ stats.total_users|default:0 }}</strong></div>
-                <div class="sr"><span>Active Users</span><strong>{{ stats.active_users|default:0 }}</strong></div>
-                <div class="sr"><span>New This Week</span><strong>{{ stats.new_users_this_week|default:0 }}</strong></div>
-                <div class="sr"><span>Reports</span><strong>{{ stats.total_reports|default:0 }}</strong></div>
-                <a class="chip-btn" href="{% url 'admin_user_management' %}">Manage Users</a>
-            </div>
-        </section>
-
-        <section class="card eq">
-            <div class="card-header">
-                <h3><i class="fa-solid fa-sitemap"></i> Organizations</h3>
-            </div>
-            <div class="stats-rows">
-                <div class="sr"><span>Departments</span><strong>{{ stats.departments|default:0 }}</strong></div>
-                <div class="sr"><span>Clubs</span><strong>{{ stats.clubs|default:0 }}</strong></div>
-                <div class="sr"><span>Total Organizations</span><strong>{{ stats.centers|default:0 }}</strong></div>
-                <a class="chip-btn" href="/core-admin/master-data/">View Organizations</a>
-            </div>
-        </section>
-
-        <!-- Replace the existing grid-2 div with this new three-column layout -->
-        <div class="grid-3-custom">
-            <!-- Left Column: Notifications -->
-            <section class="card" id="cardNotifications">
-                <div class="card-header">
-                    <h3><i class="fa-regular fa-bell"></i> Notifications</h3>
-                </div>
-                <div class="list list-scroll">
-                    {% if recent_activities %}
-                    {% for a in recent_activities %}
-                    <article class="list-item">
-                        <div class="bullet"><i class="fa-solid fa-circle-info"></i></div>
-                        <div class="list-body">
-                            <h4>{{ a.title }}</h4>
-                            <p class="muted">{{ a.description }}</p>
-                        </div>
-                        {% if a.status %}
-                        <span class="pill status-{{ a.status|lower }}">{{ a.status }}</span>
-                        {% endif %}
-                    </article>
-                    {% endfor %}
-                    {% else %}
-                    <div class="empty">No notifications.</div>
-                    {% endif %}
-                </div>
-            </section>
-
-            <!-- Middle Column: Event Details -->
-            <section class="card" id="cardEventDetails">
-                <div class="card-header">
-                    <h3><i class="fa-regular fa-calendar-days" aria-hidden="true"></i> Event Details</h3>
-                    <button class="chip-btn" id="clearEventDetails" type="button" style="display: none;">
-                        <i class="fa-solid fa-times" aria-hidden="true"></i> Clear
-                    </button>
-                </div>
-                <div id="eventDetailsContent" class="event-details-content">
-                    <div class="empty">Click an event in the calendar to view details</div>
-                </div>
-            </section>
-
-            <!-- Right Column: Calendar -->
-            <section class="card" id="cardCalendar">
-                <div class="card-header">
-                    <h3><i class="fa-regular fa-calendar" aria-hidden="true"></i> Calendar</h3>
-                </div>
-                <div class="mini-cal" id="miniCalendar" aria-live="polite">
-                    <div class="cal-head">
-                        <button class="cal-nav" id="calPrev" aria-label="Previous month">
-                            <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
-                        </button>
-                        <div id="calTitle" aria-live="polite">Month YYYY</div>
-                        <button class="cal-nav" id="calNext" aria-label="Next month">
-                            <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-                        </button>
-                    </div>
-                    <div class="cal-weekdays" aria-hidden="true">
-                        <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
-                    </div>
-                    <div class="cal-grid" id="calGrid" role="grid" aria-label="Monthly calendar"></div>
-                </div>
-            </section>
+    <a href="{% url 'admin_user_management' %}?role=HOD" class="kpi-link">
+      <div class="kpi-card">
+        <div class="kpi-icon bg-orange"><i class="fa-solid fa-user-tie"></i></div>
+        <div class="kpi-content">
+          <span class="kpi-title">HODs</span>
+          <span class="kpi-value">{{ stats.hods|default:0 }}</span>
         </div>
-    </main>
+      </div>
+    </a>
 
-    <section class="sysbar">
-        <div class="chip">
-            DB:
-            <strong class="{% if stats.database_status == 'OK' %}ok{% else %}bad{% endif %}">
-                {{ stats.database_status|default:"—" }}
-            </strong>
+    <a href="{% url 'admin_master_data' %}?org_role=Center" class="kpi-link">
+      <div class="kpi-card">
+        <div class="kpi-icon bg-emerald"><i class="fa-solid fa-building-columns"></i></div>
+        <div class="kpi-content">
+          <span class="kpi-title">Centers / Organizations</span>
+          <span class="kpi-value">{{ stats.centers|default:0 }}</span>
         </div>
-        <div class="chip">
-            Email:
-            <strong class="{% if stats.email_status == 'OK' %}ok{% else %}bad{% endif %}">
-                {{ stats.email_status|default:"—" }}
-            </strong>
-        </div>
-        <div class="chip">
-            Storage:
-            <strong class="{% if stats.storage_status == 'OK' %}ok{% else %}bad{% endif %}">
-                {{ stats.storage_status|default:"—" }}
-            </strong>
-        </div>
-        <div class="chip">
-            Last Backup:
-            <strong>{{ stats.last_backup|default:"—" }}</strong>
-        </div>
+      </div>
+    </a>
 
-        <a id="btnExport" class="btn-solid right" href="{% url 'data_export_filter' %}">
-            <i class="fa-solid fa-download"></i> Export
-        </a>
+    <!-- Profile KPI -->
+    <div class="profile-kpi card">
+      <div class="pkp-avatar">
+        {% if request.user.profile and request.user.profile.photo %}
+          <img src="{{ request.user.profile.photo.url }}" alt="{{ request.user.get_full_name|default:request.user.username }}">
+        {% else %}
+          <span class="pkp-initials">
+            {% if request.user.first_name %}
+              {{ request.user.first_name.0|upper }}{% if request.user.last_name %}{{ request.user.last_name.0|upper }}{% endif %}
+            {% else %}
+              {{ request.user.username.0|upper }}
+            {% endif %}
+          </span>
+        {% endif %}
+      </div>
+      <div class="pkp-body">
+        <h1 class="pkp-name">{{ request.user.get_full_name|default:request.user.username }}</h1>
+        <h2 class="pkp-sub">{{ request.user.email }}</h2>
+        <div class="pkp-actions">
+          <label class="switch-label" for="roleSwitch">Switch to:</label>
+          <select id="roleSwitch" class="switch-select" onchange="if(this.value){window.location.href=this.value;}">
+            <option value="" selected disabled>Choose CDL view…</option>
+            <option value="{% url 'cdl_head_dashboard' %}">CDL Head Dashboard</option>
+            <option value="{% url 'cdl_work_dashboard' %}">CDL Team Dashboard</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main cards grid (equal heights on desktop) -->
+  <main class="grid-3">
+    <section class="card eq" data-card="proposals">
+      <div class="card-header">
+        <h3><i class="fa-solid fa-file-signature"></i> Event Proposals Overview</h3>
+      </div>
+      <div class="stats-rows">
+        <div class="sr"><span>Total</span><strong>{{ stats.total_proposals|default:0 }}</strong></div>
+        <div class="sr"><span>Pending</span><strong>{{ stats.pending_proposals|default:0 }}</strong></div>
+        <div class="sr"><span>Approved</span><strong class="ok">{{ stats.approved_proposals|default:0 }}</strong></div>
+        <div class="sr"><span>Rejected</span><strong class="bad">{{ stats.rejected_proposals|default:0 }}</strong></div>
+        <a id="viewAllProposals" class="chip-btn" href="/core-admin/event-proposals/">View All</a>
+      </div>
     </section>
 
+    <section class="card eq">
+      <div class="card-header">
+        <h3><i class="fa-solid fa-clipboard-list"></i> Event Reports Overview</h3>
+      </div>
+      <div class="stats-rows">
+        <div class="sr"><span>Total Reports</span><strong>{{ stats.total_event_reports|default:0 }}</strong></div>
+        <div class="sr"><span>Pending</span><strong>{{ stats.pending_event_reports|default:0 }}</strong></div>
+        <div class="sr"><span>Reviewed</span><strong class="ok">{{ stats.reviewed_event_reports|default:0 }}</strong></div>
+        <div class="sr"><span>Rejected</span><strong class="bad">{{ stats.rejected_event_reports|default:0 }}</strong></div>
+        <a class="chip-btn" href="/core-admin/reports/">View Reports</a>
+      </div>
+    </section>
+
+    <section class="card eq">
+      <div class="card-header">
+        <h3><i class="fa-solid fa-gauge-high"></i> System Overview</h3>
+      </div>
+      <div class="stats-rows">
+        <div class="sr"><span>Total Users</span><strong>{{ stats.total_users|default:0 }}</strong></div>
+        <div class="sr"><span>Active Users</span><strong>{{ stats.active_users|default:0 }}</strong></div>
+        <div class="sr"><span>New This Week</span><strong>{{ stats.new_users_this_week|default:0 }}</strong></div>
+        <div class="sr"><span>Reports</span><strong>{{ stats.total_reports|default:0 }}</strong></div>
+        <a class="chip-btn" href="{% url 'admin_user_management' %}">Manage Users</a>
+      </div>
+    </section>
+
+    <section class="card eq">
+      <div class="card-header">
+        <h3><i class="fa-solid fa-sitemap"></i> Organizations</h3>
+      </div>
+      <div class="stats-rows">
+        <div class="sr"><span>Departments</span><strong>{{ stats.departments|default:0 }}</strong></div>
+        <div class="sr"><span>Clubs</span><strong>{{ stats.clubs|default:0 }}</strong></div>
+        <div class="sr"><span>Total Organizations</span><strong>{{ stats.centers|default:0 }}</strong></div>
+        <a class="chip-btn" href="/core-admin/master-data/">View Organizations</a>
+      </div>
+    </section>
+
+    <!-- Three column section: Notifications | Event Details | Calendar -->
+    <div class="grid-3-custom">
+      <section class="card" id="cardNotifications">
+        <div class="card-header">
+          <h3><i class="fa-regular fa-bell"></i> Notifications</h3>
+        </div>
+        <div class="list list-scroll">
+          {% if recent_activities %}
+            {% for a in recent_activities %}
+            <article class="list-item">
+              <div class="bullet"><i class="fa-solid fa-circle-info"></i></div>
+              <div class="list-body">
+                <h4>{{ a.title }}</h4>
+                <p class="muted">{{ a.description }}</p>
+              </div>
+              {% if a.status %}
+              <span class="pill status-{{ a.status|lower }}">{{ a.status }}</span>
+              {% endif %}
+            </article>
+            {% endfor %}
+          {% else %}
+            <div class="empty">No notifications.</div>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="card" id="cardEventDetails">
+        <div class="card-header">
+          <h3><i class="fa-regular fa-calendar-days"></i> Event Details</h3>
+          <button class="chip-btn" id="clearEventDetails" type="button" style="display: none;">
+            <i class="fa-solid fa-times"></i> Clear
+          </button>
+        </div>
+        <div id="eventDetailsContent" class="event-details-content">
+          <div class="empty">Click an event in the calendar to view details</div>
+        </div>
+      </section>
+
+      <section class="card" id="cardCalendar">
+        <div class="card-header">
+          <h3><i class="fa-regular fa-calendar"></i> Calendar</h3>
+        </div>
+        <div class="mini-cal" id="miniCalendar" aria-live="polite">
+          <div class="cal-head">
+            <button class="cal-nav" id="calPrev" aria-label="Previous month">
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <div id="calTitle" aria-live="polite">Month YYYY</div>
+            <button class="cal-nav" id="calNext" aria-label="Next month">
+              <i class="fa-solid fa-chevron-right"></i>
+            </button>
+          </div>
+          <div class="cal-weekdays" aria-hidden="true">
+            <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+          </div>
+          <div class="cal-grid" id="calGrid" role="grid" aria-label="Monthly calendar"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Keep only Export button (chips removed) -->
+  <div class="sysbar">
+    <a id="btnExport" class="btn-solid right" href="{% url 'data_export_filter' %}">
+      <i class="fa-solid fa-download"></i> Export
+    </a>
+  </div>
 </div>
 
-<aside id="eventSidebar" class="event-sidebar" aria-hidden="true">
-    <div class="sidebar-header">
-        <h3 id="sidebarDate">Events</h3>
-        <button id="sidebarClose" aria-label="Close sidebar">
-            <i class="fa-solid fa-xmark"></i>
-        </button>
-    </div>
-    <div id="sidebarContent" class="sidebar-content">
-        <p class="empty">No events for this day.</p>
-    </div>
+<!-- Mobile drawer for day events -->
+<aside id="eventSidebar" class="event-sidebar" aria-hidden="true" aria-labelledby="sidebarDate">
+  <div class="sidebar-header">
+    <h3 id="sidebarDate">Events</h3>
+    <button id="sidebarClose" aria-label="Close sidebar">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  </div>
+  <div id="sidebarContent" class="sidebar-content">
+    <p class="empty">No events for this day.</p>
+  </div>
 </aside>
-<div id="sidebarOverlay" class="sidebar-overlay hidden"></div>
+<div id="sidebarOverlay" class="sidebar-overlay hidden" tabindex="-1"></div>
 
+<!-- Events JSON (server-provided) -->
 <script id="events-data" type="application/json">
   {{ events|safe }}
 </script>
 {% endblock %}
 
 {% block scripts_extra %}
-<script src="{% static 'core/js/admin_calendar.js' %}"></script>
+  <script src="{% static 'core/js/admin_calendar.js' %}"></script>
 {% endblock %}
