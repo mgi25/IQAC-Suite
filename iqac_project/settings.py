@@ -289,3 +289,14 @@ LOGGING = {
         },
     },
 }
+ALLOWED_HOSTS = ["iqac-suite.onrender.com", "localhost", "127.0.0.1"]
+
+RENDER_EXTERNAL_HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME")
+if RENDER_EXTERNAL_HOSTNAME:
+    # e.g. "iqac-suite.onrender.com"
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+    CSRF_TRUSTED_ORIGINS = ["https://iqac-suite.onrender.com"]
+else:
+    # fallback for local/dev or if you want to be permissive temporarily
+    # ALLOWED_HOSTS.append("iqac-suite.onrender.com")   # <-- you can hardcode your URL too
+    pass
