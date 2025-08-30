@@ -2642,10 +2642,24 @@ function getWhyThisEventForm() {
 
             // Fill dynamic activity once rendered
             setTimeout(() => {
+                if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                    window.AutosaveManager.reinitialize();
+                }
                 const actName = document.getElementById('activity_name_1');
                 const actDate = document.getElementById('activity_date_1');
-                if (actName) actName.value = 'Intro Session';
-                if (actDate) actDate.value = today;
+                if (actName) {
+                    actName.value = 'Intro Session';
+                    actName.dispatchEvent(new Event('input', { bubbles: true }));
+                    actName.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (actDate) {
+                    actDate.value = today;
+                    actDate.dispatchEvent(new Event('input', { bubbles: true }));
+                    actDate.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (window.AutosaveManager && window.AutosaveManager.manualSave) {
+                    window.AutosaveManager.manualSave();
+                }
             }, 150);
 
             const sc = document.getElementById('student-coordinators-modern');
@@ -2653,6 +2667,10 @@ function getWhyThisEventForm() {
                 sc.appendChild(new Option('Demo Student', '1', true, true));
                 sc.dispatchEvent(new Event('change', { bubbles: true }));
             }
+        }
+
+        if (section === 'basic-info' && window.AutosaveManager && window.AutosaveManager.manualSave) {
+            window.AutosaveManager.manualSave();
         }
 
         if (section === 'why-this-event') {
@@ -2674,6 +2692,9 @@ function getWhyThisEventForm() {
                 out.dispatchEvent(new Event('input', { bubbles: true }));
                 out.dispatchEvent(new Event('change', { bubbles: true }));
             }
+            if (window.AutosaveManager && window.AutosaveManager.manualSave) {
+                window.AutosaveManager.manualSave();
+            }
         }
 
         if (section === 'schedule') {
@@ -2683,11 +2704,17 @@ function getWhyThisEventForm() {
                 sched.dispatchEvent(new Event('input', { bubbles: true }));
                 sched.dispatchEvent(new Event('change', { bubbles: true }));
             }
+            if (window.AutosaveManager && window.AutosaveManager.manualSave) {
+                window.AutosaveManager.manualSave();
+            }
         }
 
         if (section === 'speakers') {
             document.getElementById('add-speaker-btn')?.click();
             setTimeout(() => {
+                if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                    window.AutosaveManager.reinitialize();
+                }
                 const idx = 0;
                 const name = document.getElementById(`speaker_full_name_${idx}`);
                 const desig = document.getElementById(`speaker_designation_${idx}`);
@@ -2740,6 +2767,9 @@ function getWhyThisEventForm() {
         if (section === 'expenses') {
             document.getElementById('add-expense-btn')?.click();
             setTimeout(() => {
+                if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                    window.AutosaveManager.reinitialize();
+                }
                 const idx = 0;
                 const sl = document.getElementById(`expense_sl_no_${idx}`);
                 const part = document.getElementById(`expense_particulars_${idx}`);
@@ -2768,6 +2798,9 @@ function getWhyThisEventForm() {
         if (section === 'income') {
             document.getElementById('add-income-btn')?.click();
             setTimeout(() => {
+                if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                    window.AutosaveManager.reinitialize();
+                }
                 const idx = 0;
                 const sl = document.getElementById(`income_sl_no_${idx}`);
                 const part = document.getElementById(`income_particulars_${idx}`);
