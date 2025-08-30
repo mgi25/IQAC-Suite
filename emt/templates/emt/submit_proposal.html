@@ -6,7 +6,6 @@
 {% block head_extra %}
     <link rel="stylesheet" href="{% static 'emt/css/styles.css' %}">
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet"/>
-    <link href="{% static 'emt/css/tom-select.bootstrap5.min.css' %}" rel="stylesheet"/>
 {% endblock %}
 
 {% block content %}
@@ -373,11 +372,6 @@
         if (!window.jQuery) { document.write("<script src='{% static 'emt/js/jquery-3.7.1.min.js' %}'><\/script>"); }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
-    <script>
-        if (typeof TomSelect === 'undefined') {
-            document.write("<script src='{% static 'emt/js/tom-select.complete.min.js' %}'><\\/script>");
-        }
-    </script>
     <script>
         window.PROPOSAL_ID = "{{ proposal.id|default:'' }}";
         window.PROPOSAL_STATUS = "{{ proposal.status|default:'draft' }}";
