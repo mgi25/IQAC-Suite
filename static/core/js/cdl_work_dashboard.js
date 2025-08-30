@@ -1,8 +1,8 @@
 (function(){
     const $  = (s, r=document)=>r.querySelector(s);
     const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
-    const INBOX  = getJSON('memberInboxJson', []);
-    const WORK   = getJSON('memberWorkJson', []);
+  const INBOX  = getJSON('memberInboxJson', []);
+  const WORK   = getJSON('memberWorkJson', []);
     const EVENTS = getJSON('memberEventsJson', []);
     const STATS  = getJSON('memberStatsJson', {ontime:null, firstpass:null});
   
@@ -171,7 +171,18 @@
     function last7Labels(){ return ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']; }
     function inWeek(d){ const now=new Date(); const s=new Date(now); s.setDate(now.getDate()-((now.getDay()+6)%7)); s.setHours(0,0,0,0); const e=new Date(s); e.setDate(s.getDate()+7); return d>=s && d<e; }
   
+    async function bootstrap(){
+      try{
+        const res = await fetch('/api/cdl/member/work/');
+        if(res.ok){ const data=await res.json(); if(data && data.items){
+          // Merge unique by id at the front
+          const ids = new Set(WORK.map(w=>w.id));
+          (data.items||[]).forEach(it=>{ if(!ids.has(it.id)) WORK.unshift(it); });
+        } }
+      }catch{}
+      computeKPIs(); renderInbox('all'); renderChart('workload'); buildCalendar(); openDay(new Date().toISOString().slice(0,10)); renderWork();
+    }
     // Boot
-    computeKPIs(); renderInbox('all'); renderChart('workload'); buildCalendar(); openDay(new Date().toISOString().slice(0,10)); renderWork();
+    bootstrap();
   })();
   

@@ -29,6 +29,7 @@ urlpatterns = [
     path("cdl/head/", views.cdl_head_dashboard, name="cdl_head_dashboard"),
     path("cdl/work/", views.cdl_work_dashboard, name="cdl_work_dashboard"),
     path("cdl/member/", views.cdl_member_dashboard, name="cdl_member_dashboard"),
+    path("cdl/support/", views.cdl_support_detail_page, name="cdl_support_detail_page"),
     path("cdl/availability/new/", views.cdl_create_availability, name="create_availability"),
     path("cdl/resources/brand-kit/", views.cdl_brand_kit, name="brand_kit"),
     path("cdl/resources/templates/posters/", views.cdl_templates_posters, name="templates_posters"),
@@ -162,6 +163,10 @@ urlpatterns = [
     path('api/user/events-data/', views.api_user_events_data, name='api_user_events_data'),
     path('api/student/contributions/', views.api_student_contributions, name='api_student_contributions'),
     path('api/cdl/head-dashboard/', views.api_cdl_head_dashboard, name='api_cdl_head_dashboard'),
+    path('api/cdl/member/work/', views.api_cdl_member_work, name='api_cdl_member_work'),
+    path('api/cdl/members/', views.api_cdl_members, name='api_cdl_members'),
+    path('api/cdl/support/<int:proposal_id>/', views.api_cdl_support_detail, name='api_cdl_support_detail'),
+    path('api/cdl/support/<int:proposal_id>/assign/', views.api_cdl_support_assign, name='api_cdl_support_assign'),
 
     # --- Calendar (Unified) ---
     path('api/calendar/', views.api_calendar_events, name='api_calendar_events'),
