@@ -1930,6 +1930,14 @@ function getWhyThisEventForm() {
                 </div>
             `;
             container.append(html);
+            // Bind autosave to any speaker field changes
+            container
+                .off('input change', '[name^="speaker_"]')
+                .on('input change', '[name^="speaker_"]', () => {
+                    if (window.AutosaveManager && window.AutosaveManager.manualSave) {
+                        window.AutosaveManager.manualSave();
+                    }
+                });
             index++;
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
@@ -2031,7 +2039,7 @@ function getWhyThisEventForm() {
             }
         });
 
-        if (window.EXISTING_SPEAKERS && window.EXISTING_SPEAKERS.length) {
+        if (Array.isArray(window.EXISTING_SPEAKERS) && window.EXISTING_SPEAKERS.length) {
             container.empty();
             window.EXISTING_SPEAKERS.forEach(sp => {
                 addSpeakerForm();
