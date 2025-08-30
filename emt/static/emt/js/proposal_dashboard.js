@@ -823,7 +823,7 @@ $(document).ready(function() {
                 .get();
 
             // Replace existing content with newly selected outcomes
-            const value = selected.join('\n');
+            const value = selected.join(', ');
             posField.val(value).trigger('input').trigger('change');
 
             if (djangoPosField.length) {
@@ -1249,8 +1249,7 @@ $(document).ready(function() {
             .then(data => {
                 if (data.success) {
                     container.empty();
-                    const existing = posField.val().split('\n').map(s => s.trim()).filter(Boolean);
-                    const selectedCodes = existing.map(s => s.split(':')[0]);
+                    const selectedCodes = (posField.val().match(/\b(?:PO|PSO)\d+\b/g) || []);
                     data.pos.forEach((po, idx) => {
                         addOption(container, `PO${idx + 1}`, po.description, selectedCodes);
                     });
