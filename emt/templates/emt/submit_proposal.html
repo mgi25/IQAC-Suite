@@ -108,10 +108,10 @@
 
         <form method="post" enctype="multipart/form-data" id="proposal-form" autocomplete="off">
             {% csrf_token %}
-            <textarea id="id_need_analysis" name="need_analysis" hidden>{{ need_analysis.content|default_if_none:'' }}</textarea>
-            <textarea id="id_objectives" name="objectives" hidden>{{ objectives.content|default_if_none:'' }}</textarea>
-            <textarea id="id_learning_outcomes" name="outcomes" hidden>{{ outcomes.content|default_if_none:'' }}</textarea>
-            <textarea name="flow" hidden>{{ flow.content|default_if_none:'' }}</textarea>
+            <textarea id="id_need_analysis" name="need_analysis" class="proposal-input" hidden>{{ need_analysis.content|default_if_none:'' }}</textarea>
+            <textarea id="id_objectives" name="objectives" class="proposal-input" hidden>{{ objectives.content|default_if_none:'' }}</textarea>
+            <textarea id="id_learning_outcomes" name="outcomes" class="proposal-input" hidden>{{ outcomes.content|default_if_none:'' }}</textarea>
+            <textarea name="flow" class="proposal-input" hidden>{{ flow.content|default_if_none:'' }}</textarea>
 
             <div class="form-panel" id="form-panel">
                 <div class="form-panel-content" id="form-panel-content">
@@ -151,13 +151,13 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="event-title-modern">Event Title *</label>
-                                <input type="text" id="event-title-modern" required placeholder="Enter a descriptive event title">
+                                <input type="text" id="event-title-modern" class="proposal-input" required placeholder="Enter a descriptive event title">
                                 <div class="help-text">Provide a clear and engaging title for your event</div>
                             </div>
                             <div class="input-group">
                                 <label for="target-audience-modern">Target Audience *</label>
-                                <input type="text" id="target-audience-modern" required readonly placeholder="Select target audience">
-                                <input type="hidden" name="target_audience_class_ids" id="target-audience-class-ids">
+                                <input type="text" id="target-audience-modern" class="proposal-input" required readonly placeholder="Select target audience">
+                <input type="hidden" name="target_audience_class_ids" id="target-audience-class-ids" class="proposal-input">
                                 <div class="help-text">Specify who this event is intended for</div>
                             </div>
                         </div>
@@ -165,12 +165,12 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="event-focus-type-modern">Event Focus Type</label>
-                                <input type="text" id="event-focus-type-modern" placeholder="Enter event focus">
+                                <input type="text" id="event-focus-type-modern" class="proposal-input" placeholder="Enter event focus">
                                 <div class="help-text">Specify the primary focus of your event</div>
                             </div>
                             <div class="input-group">
                                 <label for="venue-modern">Location</label>
-                                <input type="text" id="venue-modern" placeholder="e.g., Main Auditorium, Online">
+                                <input type="text" id="venue-modern" class="proposal-input" placeholder="e.g., Main Auditorium, Online">
                                 <div class="help-text">Specify where the event will take place</div>
                             </div>
                         </div>
@@ -183,12 +183,12 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="event-start-date">Start Date *</label>
-                                <input type="date" id="event-start-date" required>
+                                <input type="date" id="event-start-date" class="proposal-input" required>
                                 <div class="help-text">When does your event begin?</div>
                             </div>
                             <div class="input-group">
                                 <label for="event-end-date">End Date *</label>
-                                <input type="date" id="event-end-date" required>
+                                <input type="date" id="event-end-date" class="proposal-input" required>
                                 <div class="help-text">When does your event end?</div>
                             </div>
                         </div>
@@ -196,13 +196,18 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="academic-year-modern">Academic Year *</label>
-                                <input type="text" id="academic-year-modern" value="{{ form.academic_year.value|default:'' }}" disabled>
-                                <input type="hidden" name="academic_year" value="{{ form.academic_year.value|default:'' }}">
+
+                                <label for="academic-year-modern">Academic Year *</label>
+                                <input type="text" id="academic-year-modern" class="proposal-input"
+                                       value="{{ form.academic_year.value|default:'' }}" disabled>
+                                <input type="hidden" name="academic_year" id="academic-year-hidden"
+                                       class="proposal-input" value="{{ form.academic_year.value|default:'' }}">
                                 <div class="help-text">Academic year for which this event is planned</div>
+
                             </div>
                             <div class="input-group">
                                 <label for="pos-pso-modern">POS & PSO Management</label>
-                                <textarea id="pos-pso-modern" name="pos_pso" rows="2" placeholder="e.g., PO1, PSO2"></textarea>
+                                <textarea id="pos-pso-modern" name="pos_pso" class="proposal-input" rows="2" placeholder="e.g., PO1, PSO2"></textarea>
                                 <div class="help-text">Program outcomes and specific outcomes addressed</div>
                             </div>
                         </div>
@@ -215,7 +220,7 @@
                         <div class="form-row full-width">
                             <div class="input-group">
                                 <label for="sdg-goals-modern">Aligned SDG Goals</label>
-                                <input type="text" id="sdg-goals-modern" placeholder="Select SDG goals">
+                                <input type="text" id="sdg-goals-modern" class="proposal-input" placeholder="Select SDG goals">
                                 <div class="help-text">Specify which Sustainable Development Goals this event addresses</div>
                             </div>
                         </div>
@@ -228,7 +233,7 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="num-activities-modern">Number of Activities</label>
-                                <input type="number" id="num-activities-modern" name="num_activities" min="1" max="50" placeholder="Enter number of activities">
+                                <input type="number" id="num-activities-modern" name="num_activities" class="proposal-input" min="1" max="50" placeholder="Enter number of activities">
                                 <div class="help-text">How many activities will your event include?</div>
                             </div>
                             <div class="input-group">
@@ -288,7 +293,7 @@
                     {{ form.pos_pso }}
                     {{ form.committees_collaborations.label_tag }}
                     {{ form.committees_collaborations }}
-                    <input type="hidden" name="committees_collaborations_ids" id="committees-collaborations-ids">
+                    <input type="hidden" name="committees_collaborations_ids" id="committees-collaborations-ids" class="proposal-input">
                     {{ form.sdg_goals.label_tag }}
                     {{ form.sdg_goals }}
                     {{ form.student_coordinators.label_tag }}

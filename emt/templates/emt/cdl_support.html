@@ -32,8 +32,8 @@
       <!-- CDL Support Toggle (Always visible) -->
       <div class="cdl-support-toggle">
         <div class="input-group">
-          <label for="{{ form.needs_support.id_for_label }}" class="cdl-toggle-label">
-            <input type="checkbox" id="{{ form.needs_support.id_for_label }}" name="{{ form.needs_support.name }}" {% if form.needs_support.value %}checked{% endif %}>
+            <label for="{{ form.needs_support.id_for_label }}" class="cdl-toggle-label">
+              <input type="checkbox" id="{{ form.needs_support.id_for_label }}" name="{{ form.needs_support.name }}" class="proposal-input" {% if form.needs_support.value %}checked{% endif %}>
             <span class="cdl-toggle-text">I need CDL support for this event</span>
           </label>
           <div class="help-text">Check this box to access Content Development Lab services</div>
@@ -49,7 +49,7 @@
             <h3 class="cdl-service-title"><i class="fa-solid fa-paintbrush"></i> Poster Support</h3>
             <div class="cdl-service-toggle">
               <label>
-                <input type="checkbox" id="{{ form.poster_required.id_for_label }}" name="{{ form.poster_required.name }}" {% if form.poster_required.value %}checked{% endif %}>
+                <input type="checkbox" id="{{ form.poster_required.id_for_label }}" name="{{ form.poster_required.name }}" class="proposal-input" {% if form.poster_required.value %}checked{% endif %}>
                 <span>Enable</span>
               </label>
             </div>
@@ -59,52 +59,52 @@
             <div class="cdl-form-grid">
               <div class="input-group">
                 <label for="{{ form.poster_choice.id_for_label }}">Poster Choice</label>
-                {{ form.poster_choice }}
+                  {{ form.poster_choice.as_widget(attrs={'class': 'proposal-input'}) }}
                 <div class="help-text">Select your preferred poster style</div>
               </div>
               <div class="input-group">
                 <label for="{{ form.organization_name.id_for_label }}">Organization Name</label>
-                {{ form.organization_name }}
+                  {{ form.organization_name.as_widget(attrs={'class': 'proposal-input'}) }}
                 <div class="help-text">Name of organizing body</div>
               </div>
               <div class="input-group">
                 <label for="{{ form.poster_time.id_for_label }}">Event Time</label>
-                {{ form.poster_time }}
+                  {{ form.poster_time.as_widget(attrs={'class': 'proposal-input'}) }}
                 <div class="help-text">Time for the event</div>
               </div>
               <div class="input-group">
                 <label for="{{ form.poster_date.id_for_label }}">Event Date</label>
-                {{ form.poster_date }}
+                  {{ form.poster_date.as_widget(attrs={'class': 'proposal-input'}) }}
                 <div class="help-text">Date of the event</div>
               </div>
               <div class="input-group">
                 <label for="{{ form.poster_venue.id_for_label }}">Event Venue</label>
-                {{ form.poster_venue }}
+                  {{ form.poster_venue.as_widget(attrs={'class': 'proposal-input'}) }}
                 <div class="help-text">Location where event will be held</div>
               </div>
               <div class="input-group">
                 <label for="{{ form.resource_person_name.id_for_label }}">Resource Person Name</label>
-                {{ form.resource_person_name }}
+                  {{ form.resource_person_name.as_widget(attrs={'class': 'proposal-input'}) }}
                 <div class="help-text">Name of the main speaker/presenter</div>
               </div>
               <div class="input-group">
                 <label for="{{ form.resource_person_designation.id_for_label }}">Resource Person Designation</label>
-                {{ form.resource_person_designation }}
+                  {{ form.resource_person_designation.as_widget(attrs={'class': 'proposal-input'}) }}
                 <div class="help-text">Title/position of the resource person</div>
               </div>
               <div class="input-group">
                 <label for="{{ form.poster_event_title.id_for_label }}">Event Title for Poster</label>
-                {{ form.poster_event_title }}
+                  {{ form.poster_event_title.as_widget(attrs={'class': 'proposal-input'}) }}
                 <div class="help-text">Title as it should appear on poster</div>
               </div>
               <div class="input-group">
                 <label for="{{ form.poster_summary.id_for_label }}">Event Summary</label>
-                {{ form.poster_summary }}
+                  {{ form.poster_summary.as_widget(attrs={'class': 'proposal-input'}) }}
                 <div class="help-text">Brief description for the poster</div>
               </div>
               <div class="input-group">
                 <label for="{{ form.poster_design_link.id_for_label }}">Design Link/Reference</label>
-                {{ form.poster_design_link }}
+                  {{ form.poster_design_link.as_widget(attrs={'class': 'proposal-input'}) }}
                 <div class="help-text">Link to design references or requirements</div>
               </div>
             </div>
@@ -121,7 +121,7 @@
             <h3 class="cdl-service-title"><i class="fa-solid fa-trophy"></i> Certificate Support</h3>
             <div class="cdl-service-toggle">
               <label>
-                <input type="checkbox" id="{{ form.certificates_required.id_for_label }}" name="{{ form.certificates_required.name }}" {% if form.certificates_required.value %}checked{% endif %}>
+                  <input type="checkbox" id="{{ form.certificates_required.id_for_label }}" name="{{ form.certificates_required.name }}" class="proposal-input" {% if form.certificates_required.value %}checked{% endif %}>
                 <span>Enable</span>
               </label>
             </div>
@@ -131,7 +131,7 @@
             <div class="cdl-form-grid">
               <div class="input-group">
                 <label for="{{ form.certificate_help.id_for_label }}">Certificate Design Help</label>
-                <input type="checkbox" id="{{ form.certificate_help.id_for_label }}" name="{{ form.certificate_help.name }}" {% if form.certificate_help.value %}checked{% endif %}>
+                  <input type="checkbox" id="{{ form.certificate_help.id_for_label }}" name="{{ form.certificate_help.name }}" class="proposal-input" {% if form.certificate_help.value %}checked{% endif %}>
                 <div class="help-text">Do you need design assistance for certificates?</div>
               </div>
             </div>
@@ -140,12 +140,12 @@
               <div class="cdl-form-grid">
                 <div class="input-group">
                   <label for="{{ form.certificate_choice.id_for_label }}">Certificate Choice</label>
-                  {{ form.certificate_choice }}
+                    {{ form.certificate_choice.as_widget(attrs={'class': 'proposal-input'}) }}
                   <div class="help-text">Select your preferred certificate style</div>
                 </div>
                 <div class="input-group">
                   <label for="{{ form.certificate_design_link.id_for_label }}">Design Link/Reference</label>
-                  {{ form.certificate_design_link }}
+                    {{ form.certificate_design_link.as_widget(attrs={'class': 'proposal-input'}) }}
                   <div class="help-text">Link to design references or requirements</div>
                 </div>
               </div>
@@ -167,7 +167,7 @@
             <div class="cdl-form-grid">
               <div class="input-group">
                 <label for="{{ form.other_services.id_for_label }}">Additional Services</label>
-                {{ form.other_services }}
+                  {{ form.other_services.as_widget(attrs={'class': 'proposal-input'}) }}
                 <div class="help-text">Describe any other CDL services you need</div>
               </div>
             </div>
@@ -184,7 +184,7 @@
             <div class="cdl-form-grid">
               <div class="input-group">
                 <label for="{{ form.blog_content.id_for_label }}">Blog Content</label>
-                {{ form.blog_content }}
+                  {{ form.blog_content.as_widget(attrs={'class': 'proposal-input'}) }}
                 <div class="help-text">Provide up to 150 words for blog content</div>
               </div>
             </div>
