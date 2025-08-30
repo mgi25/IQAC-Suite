@@ -649,7 +649,9 @@ $(document).ready(function() {
             load: (query, callback) => {
                 const orgId = djangoOrgSelect.val();
                 if (!query.length || !orgId) return callback();
-                fetch(`${window.API_FACULTY}?org_id=${orgId}&q=${encodeURIComponent(query)}`)
+                fetch(`${window.API_FACULTY}?org_id=${orgId}&q=${encodeURIComponent(query)}`, {
+                    credentials: 'include'
+                })
                     .then(r => r.json())
                     .then(callback)
                     .catch(() => callback());
@@ -700,7 +702,9 @@ $(document).ready(function() {
                 if (!query.length) return callback();
                 const orgId = $('#django-basic-info [name="organization"]').val();
                 const exclude = orgId ? `&exclude=${encodeURIComponent(orgId)}` : '';
-                fetch(`${window.API_ORGANIZATIONS}?q=${encodeURIComponent(query)}${exclude}`)
+                fetch(`${window.API_ORGANIZATIONS}?q=${encodeURIComponent(query)}${exclude}`, {
+                    credentials: 'include'
+                })
                     .then(r => r.json())
                     .then(data => callback(data))
                     .catch(() => callback());
@@ -718,7 +722,9 @@ $(document).ready(function() {
         });
 
         if (existingIds.length) {
-            fetch(`${window.API_ORGANIZATIONS}?ids=${existingIds.join(',')}`)
+            fetch(`${window.API_ORGANIZATIONS}?ids=${existingIds.join(',')}`, {
+                credentials: 'include'
+            })
                 .then(r => r.json())
                 .then(data => {
                     data.forEach(opt => tom.addOption(opt));
@@ -782,8 +788,8 @@ $(document).ready(function() {
                     committeesField.val().split(',').map(id => id.trim()).filter(Boolean).forEach(id => ids.push(id));
                 }
                 const orgParam = ids.length ? `&org_ids=${encodeURIComponent(ids.join(','))}` : '';
-                const url = `/suite/api/students/?q=${encodeURIComponent(query)}${orgParam}`;
-                fetch(url)
+                const url = `${window.API_STUDENTS}?q=${encodeURIComponent(query)}${orgParam}`;
+                fetch(url, { credentials: 'include' })
                     .then(response => response.json())
                     .then(json => {
                         callback(json);
@@ -1438,7 +1444,9 @@ $(document).ready(function() {
                 placeholder: `Type ${label} name...`,
                 load: (query, callback) => {
                     if (!query || query.length < 2) return callback();
-                    fetch(`${window.API_ORGANIZATIONS}?q=${encodeURIComponent(query)}&org_type=${encodeURIComponent(label)}`)
+                    fetch(`${window.API_ORGANIZATIONS}?q=${encodeURIComponent(query)}&org_type=${encodeURIComponent(label)}`, {
+                        credentials: 'include'
+                    })
                         .then(r => r.json())
                         .then(callback)
                         .catch(() => callback());
