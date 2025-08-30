@@ -162,8 +162,9 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="academic-year-modern">Academic Year *</label>
-                                <input type="text" id="academic-year-modern" name="academic_year" value="{{ proposal.academic_year|default:'2024-2025' }}">
-                                <div class="help-text">Academic year from proposal (editable)</div>
+                                <input type="text" id="academic-year-modern" value="{{ proposal.academic_year|default:'2024-2025' }}" disabled>
+                                <input type="hidden" name="academic_year" value="{{ proposal.academic_year|default:'2024-2025' }}">
+                                <div class="help-text">Academic year from proposal (not editable)</div>
                             </div>
                             <div class="input-group">
                                 <label for="event-type-modern">Event Type *</label>

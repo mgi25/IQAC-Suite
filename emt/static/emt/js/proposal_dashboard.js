@@ -131,12 +131,37 @@ $(document).ready(function() {
 
         const form = document.getElementById('proposal-form');
         if (form) {
+            const orgTypeInput = $('#org-type-modern-input')[0];
+            const orgTypeTS = orgTypeInput ? orgTypeInput.tomselect : null;
+            const orgTypeSelect = $('#django-basic-info [name="organization_type"]');
+            const preservedOrgType = orgTypeTS ? orgTypeTS.getValue() : orgTypeSelect.val();
+            const orgTypeText = orgTypeTS?.options[preservedOrgType]?.text?.toLowerCase().trim() ||
+                orgTypeSelect.find(`option[value="${preservedOrgType}"]`).text().toLowerCase().trim();
+            const preservedOrg = $('#django-basic-info [name="organization"]').val();
+            const preservedAcademicYear = $('#academic-year-modern').val();
+
             form.reset();
             Array.from(form.elements).forEach(el => {
                 el.classList.remove('is-invalid', 'is-valid', 'has-error');
                 $(el).siblings('.error-message').remove();
             });
-            $(form).find('input, textarea, select').trigger('change');
+
+            orgTypeSelect.val(preservedOrgType);
+            $('#django-basic-info [name="organization"]').val(preservedOrg);
+            $('#django-basic-info [name="academic_year"]').val(preservedAcademicYear);
+
+            if (orgTypeTS && preservedOrgType) {
+                orgTypeTS.setValue(preservedOrgType, true);
+                if (orgTypeText) {
+                    handleOrgTypeChange(orgTypeText, true);
+                }
+            }
+
+            if (preservedAcademicYear) {
+                $('#academic-year-modern').val(preservedAcademicYear).trigger('change');
+            }
+
+            $(form).find('input, textarea, select').not('#org-type-modern-input').trigger('change');
         }
 
         ['section_need_analysis', 'section_objectives', 'section_outcomes', 'section_flow']
@@ -450,12 +475,20 @@ $(document).ready(function() {
         }
 
         const academicYearField = $('#academic-year-modern');
-        if (academicYearField.length && !academicYearField.val()) {
-            const currentYear = new Date().getFullYear();
-            const currentMonth = new Date().getMonth();
-            const startYear = currentMonth >= 6 ? currentYear : currentYear - 1; // Assuming academic year starts in July
-            const endYear = startYear + 1;
-            academicYearField.val(`${startYear}-${endYear}`).trigger('change');
+        const academicYearHidden = $('#academic-year-hidden');
+        if (academicYearField.length) {
+            if (!academicYearField.val()) {
+                const currentYear = new Date().getFullYear();
+                const currentMonth = new Date().getMonth();
+                const startYear = currentMonth >= 6 ? currentYear : currentYear - 1; // Assuming academic year starts in July
+                const endYear = startYear + 1;
+                academicYearField.val(`${startYear}-${endYear}`);
+            }
+            academicYearField.on('change', function() {
+                if (academicYearHidden.length) {
+                    academicYearHidden.val($(this).val());
+                }
+            }).trigger('change');
         }
 
         // We add the new field IDs to the list of fields to be synced.
@@ -829,6 +862,8 @@ $(document).ready(function() {
 
         let available = [];
         let selected = [];
+        let selectedStudents = [];
+        let selectedFaculty = [];
         let currentType = null;
 
         container.html(`
@@ -1026,11 +1061,12 @@ $(document).ready(function() {
         container.find('button[data-type]').on('click', function() {
             currentType = $(this).data('type');
             available = [];
-            selected = [];
+            selected = currentType === 'students' ? selectedStudents : selectedFaculty;
             listContainer.show();
             continueBtn.show();
             step2.hide();
             $('#audienceSave').hide();
+            renderLists();
             loadAvailable('');
         });
 
@@ -1047,7 +1083,7 @@ $(document).ready(function() {
         });
 
         container.on('click', '#audienceAddAll', function() {
-            selected = selected.concat(available);
+            selected.push(...available);
             available = [];
             renderLists();
         });
@@ -1069,7 +1105,7 @@ $(document).ready(function() {
 
         container.on('click', '#audienceRemoveAll', function() {
             available = available.concat(selected.filter(it => !it.id.startsWith('custom-')));
-            selected = [];
+            selected.length = 0;
             renderLists();
         });
 
@@ -1100,7 +1136,11 @@ $(document).ready(function() {
 
         container.on('input', '#audienceAvailableSearch', function() {
             const term = $(this).val().trim();
-            if (currentType) loadAvailable(term);
+            if (currentType === 'students') {
+                loadAvailable(term);
+            } else if (currentType === 'faculty') {
+                filterOptions($(this), availableSelect);
+            }
         });
 
         container.on('input', '#audienceSelectedSearch', function() {
@@ -1160,16 +1200,14 @@ $(document).ready(function() {
         }
 
         $('#audienceSave').off('click').on('click', () => {
-            const names = selected.map(it => it.name);
+            const groupNames = selectedStudents.concat(selectedFaculty).map(it => it.name);
+            const userNames = userSelected.map(u => u.name);
+            const names = groupNames.concat(userNames);
             audienceField.val(names.join(', ')).trigger('change').trigger('input');
-            if (currentType === 'students') {
-                classIdsField
-                    .val(selected.filter(it => /^\d+$/.test(it.id)).map(it => it.id).join(','))
-                    .trigger('change')
-                    .trigger('input');
-            } else {
-                classIdsField.val('').trigger('change').trigger('input');
-            }
+            classIdsField
+                .val(selectedStudents.filter(it => /^\d+$/.test(it.id)).map(it => it.id).join(','))
+                .trigger('change')
+                .trigger('input');
             modal.removeClass('show');
         });
     }
@@ -1452,7 +1490,8 @@ $(document).ready(function() {
                 <div class="form-row">
                     <div class="input-group">
                         <label for="academic-year-modern">Academic Year *</label>
-                        <input type="text" id="academic-year-modern" placeholder="2024-2025" required>
+                        <input type="text" id="academic-year-modern" placeholder="2024-2025" disabled>
+                        <input type="hidden" name="academic_year" id="academic-year-hidden">
                         <div class="help-text">Academic year for which this event is planned</div>
                     </div>
                     <div class="input-group">
@@ -2532,14 +2571,30 @@ function getWhyThisEventForm() {
             const need = document.getElementById('need-analysis-modern');
             const obj = document.getElementById('objectives-modern');
             const out = document.getElementById('outcomes-modern');
-            if (need) need.value = getRandom(AUTO_FILL_DATA.need);
-            if (obj) obj.value = getRandom(AUTO_FILL_DATA.objectives);
-            if (out) out.value = getRandom(AUTO_FILL_DATA.outcomes);
+            if (need) {
+                need.value = getRandom(AUTO_FILL_DATA.need);
+                need.dispatchEvent(new Event('input', { bubbles: true }));
+                need.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            if (obj) {
+                obj.value = getRandom(AUTO_FILL_DATA.objectives);
+                obj.dispatchEvent(new Event('input', { bubbles: true }));
+                obj.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            if (out) {
+                out.value = getRandom(AUTO_FILL_DATA.outcomes);
+                out.dispatchEvent(new Event('input', { bubbles: true }));
+                out.dispatchEvent(new Event('change', { bubbles: true }));
+            }
         }
 
         if (section === 'schedule') {
             const sched = document.getElementById('schedule-modern');
-            if (sched) sched.value = getRandom(AUTO_FILL_DATA.schedule);
+            if (sched) {
+                sched.value = getRandom(AUTO_FILL_DATA.schedule);
+                sched.dispatchEvent(new Event('input', { bubbles: true }));
+                sched.dispatchEvent(new Event('change', { bubbles: true }));
+            }
         }
 
         if (section === 'speakers') {
