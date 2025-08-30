@@ -12,186 +12,189 @@
 {% endblock %}
 
 {% block content %}
-<div class="ems-dashboard">
-  <header class="topbar">
-    <div>
+<div class="cdl-page">
+  <!-- Simple page header (no duplicated user/profile/notifications) -->
+  <header class="dashboard-header">
+    <div class="header-left">
       <h1>Centre for Digital Learning (CDL)</h1>
-      <span class="topbar-date">{% now "F j, Y · l" %}</span>
+      <span class="header-date">{% now "F j, Y" %} • {% now "l" %}</span>
     </div>
   </header>
 
-  <!-- KPIs + Profile -->
-  <section class="kpi-row">
-    <button class="kpi-card" id="kpiActive">
-      <div class="kpi-icon bg-indigo"><i class="fa-solid fa-list-check"></i></div>
-      <div class="kpi-content">
-        <span class="kpi-title">Total Active Requests</span>
-        <span class="kpi-value" id="valActive">0</span>
-        <span class="kpi-bar" style="--pct:60%"></span>
-      </div>
-    </button>
-
-    <button class="kpi-card" id="kpiAssets">
-      <div class="kpi-icon bg-sky"><i class="fa-solid fa-folder-open"></i></div>
-      <div class="kpi-content">
-        <span class="kpi-title">Assets Delivery Pending</span>
-        <span class="kpi-value" id="valAssetsPending">0</span>
-        <span class="kpi-bar" style="--pct:45%"></span>
-      </div>
-    </button>
-
-    <button class="kpi-card" id="kpiUnassigned">
-      <div class="kpi-icon bg-orange"><i class="fa-solid fa-user-clock"></i></div>
-      <div class="kpi-content">
-        <span class="kpi-title">Unassigned Tasks</span>
-        <span class="kpi-value" id="valUnassigned">0</span>
-        <span class="kpi-bar" style="--pct:35%"></span>
-      </div>
-    </button>
-
-    <button class="kpi-card" id="kpiEvents">
-      <div class="kpi-icon bg-emerald"><i class="fa-solid fa-calendar-check"></i></div>
-      <div class="kpi-content">
-        <span class="kpi-title">Total Events Supported</span>
-        <span class="kpi-value" id="valEvents">0</span>
-        <span class="kpi-bar" style="--pct:70%"></span>
-      </div>
-    </button>
-
-    <!-- PROFILE (student layout, no switch) -->
-    <div class="profile-kpi">
-      <div class="pkp-avatar">
-        {% if user.profile and user.profile.photo %}
-          <img src="{{ user.profile.photo.url }}" alt="{{ user.get_full_name|default:user.username }}">
-        {% else %}
-          <span class="pkp-initials">
-            {% if user.first_name %}{{ user.first_name.0|upper }}{% if user.last_name %}{{ user.last_name.0|upper }}{% endif %}{% else %}{{ user.username.0|upper }}{% endif %}
-          </span>
-        {% endif %}
-      </div>
-      <div class="pkp-body">
-        <h1 class="pkp-name">{{ user.get_full_name|default:"Admin" }}</h1>
-        <p class="pkp-sub">{{ user.email|default:"admin@gmail.com" }}</p>
-        <div class="pkp-meta">
-          <span>Role: <strong>CDL Head</strong></span>
-          <span>Dept: <strong>Centre for Digital Learning</strong></span>
+    <!-- KPI Cards -->
+    <section class="kpi-section">
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon">
+            <i class="fas fa-list-check"></i>
+          </div>
+          <div class="kpi-content">
+            <span class="kpi-label">Total Active Requests</span>
+            <span class="kpi-value" id="valActive">0</span>
+          </div>
         </div>
-      </div>
-    </div>
-  </section>
 
-  <!-- Row 2 -->
-  <main class="grid-3 grid-assign">
-    <section class="card eq" id="cardNotifications">
-      <div class="card-header">
-        <h3><i class="fa-regular fa-bell"></i> Notifications</h3>
-        <div class="header-actions">
-          <div class="seg">
-            <button class="seg-btn active" data-nf="all">All</button>
-            <button class="seg-btn" data-nf="posters">Posters</button>
-            <button class="seg-btn" data-nf="certificates">Certificates</button>
-            <button class="seg-btn" data-nf="coverage">Coverage</button>
-            <button class="seg-btn" data-nf="media">Media</button>
+        <div class="kpi-card">
+          <div class="kpi-icon blue">
+            <i class="fas fa-folder-open"></i>
+          </div>
+          <div class="kpi-content">
+            <span class="kpi-label">Assets Delivery Pending</span>
+            <span class="kpi-value" id="valAssetsPending">0</span>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-icon orange">
+            <i class="fas fa-user-clock"></i>
+          </div>
+          <div class="kpi-content">
+            <span class="kpi-label">Unassigned Tasks</span>
+            <span class="kpi-value" id="valUnassigned">0</span>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-icon green">
+            <i class="fas fa-calendar-check"></i>
+          </div>
+          <div class="kpi-content">
+            <span class="kpi-label">Total Events Supported</span>
+            <span class="kpi-value" id="valEvents">0</span>
           </div>
         </div>
       </div>
-      <div class="list" id="notifList"></div>
-      <div class="empty muted" id="notifEmpty" style="display:none;padding:12px;">No notifications</div>
     </section>
 
-    <section class="card eq" id="cardTeam">
-      <div class="card-header">
-        <h3><i class="fa-solid fa-chart-line"></i> <span id="teamTitle">Workload Distribution</span></h3>
-        <div class="header-actions">
-          <div class="seg">
-            <button class="seg-btn active" data-view="workload">Workload</button>
-            <button class="seg-btn" data-view="ontime">On-time %</button>
-            <button class="seg-btn" data-view="firstpass">First-pass %</button>
-          </div>
-          <div class="seg">
-            <button class="seg-btn ghost" data-range="7">7d</button>
-            <button class="seg-btn ghost active" data-range="30">30d</button>
-            <button class="seg-btn ghost" data-range="90">90d</button>
+    <!-- Main Content Grid -->
+    <section class="content-grid">
+      <!-- Notifications Panel -->
+      <div class="content-card notifications-panel">
+        <div class="card-header">
+          <h3><i class="fas fa-bell"></i> Notifications</h3>
+          <div class="filter-tabs">
+            <button class="tab-btn active" data-filter="all">All</button>
+            <button class="tab-btn" data-filter="posters">Posters</button>
+            <button class="tab-btn" data-filter="certificates">Certificates</button>
+            <button class="tab-btn" data-filter="coverage">Coverage</button>
+            <button class="tab-btn" data-filter="media">Media</button>
           </div>
         </div>
+        <div class="card-content">
+          <div class="notifications-list" id="eventDetailsList">
+            <div class="empty-state">No notifications</div>
+          </div>
+        </div>
       </div>
-      <div class="chart-wrap">
-        <canvas id="teamChart" height="150"></canvas>
+
+      <!-- Workload Distribution Chart -->
+      <div class="content-card chart-panel">
+        <div class="card-header">
+          <h3><i class="fas fa-chart-bar"></i> Workload Distribution</h3>
+          <div class="chart-controls">
+            <button class="control-btn active" data-view="workload">Workload</button>
+            <button class="control-btn" data-view="ontime">On-time %</button>
+            <button class="control-btn" data-view="firstpass">First-pass %</button>
+            <div class="time-filter">
+              <button class="time-btn" data-range="7">7d</button>
+              <button class="time-btn active" data-range="30">30d</button>
+              <button class="time-btn" data-range="90">90d</button>
+            </div>
+          </div>
+        </div>
+        <div class="card-content">
+          <div class="chart-container">
+            <canvas id="teamChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Calendar Panel -->
+  <div class="content-card calendar-panel">
+        <div class="card-header">
+          <h3><i class="fas fa-calendar"></i> Calendar</h3>
+          <div class="calendar-controls">
+            <select id="calFilter" class="filter-select">
+              <option value="all">All</option>
+              <option value="support">Support</option>
+            </select>
+    <button class="add-btn" id="addEventBtn">
+      <i class="fas fa-plus"></i> New Event
+            </button>
+          </div>
+        </div>
+        <div class="card-content">
+          <div class="calendar-widget" id="miniCalendar">
+            <div class="calendar-header">
+              <button class="nav-btn" id="calPrev"><i class="fas fa-chevron-left"></i></button>
+              <div class="calendar-title" id="calTitle">August 2025</div>
+              <button class="nav-btn" id="calNext"><i class="fas fa-chevron-right"></i></button>
+            </div>
+            <div class="calendar-weekdays">
+              <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+            </div>
+            <div class="calendar-grid" id="calGrid"></div>
+          </div>
+          <div class="calendar-legend">
+            <div class="legend-item">
+              <span class="legend-dot coverage"></span>
+              <span>Coverage</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot approval"></span>
+              <span>Approval</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot conflict"></span>
+              <span>Conflict</span>
+            </div>
+          </div>
+          <div class="calendar-details" id="upcomingWrap">
+            <div class="empty-state">No items for 20/08/2025</div>
+          </div>
+        </div>
       </div>
     </section>
 
-    <section class="card eq" id="cardCalendar">
-      <div class="card-header">
-        <h3><i class="fa-regular fa-calendar"></i> Calendar</h3>
-        <div class="header-actions">
-          <select id="calFilter" class="select">
-            <option value="all">All</option>
-            <option value="coverage">Coverage</option>
-            <option value="approvals">Approvals</option>
-          </select>
-          <a href="#" class="chip-btn" id="addEventBtn"><i class="fa-solid fa-plus"></i> Add</a>
+    <!-- Assignment Manager -->
+    <section class="assignment-manager">
+      <div class="manager-header">
+        <h3><i class="fas fa-tasks"></i> Assignment Manager</h3>
+        <div class="manager-controls">
+          <button class="control-btn active" data-filter="all">All</button>
+          <button class="control-btn" data-filter="unassigned">Unassigned</button>
+          <button class="control-btn" data-filter="urgent">Urgent</button>
+          <div class="time-display">
+            SLA: 3 - 24h
+          </div>
         </div>
       </div>
-      <div class="mini-cal" id="miniCalendar">
-        <div class="cal-head">
-          <button class="cal-nav" id="calPrev" aria-label="Prev"><i class="fa-solid fa-chevron-left"></i></button>
-          <div id="calTitle">Month YYYY</div>
-          <button class="cal-nav" id="calNext" aria-label="Next"><i class="fa-solid fa-chevron-right"></i></button>
-        </div>
-        <div class="cal-weekdays"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
-        <div class="cal-grid" id="calGrid"></div>
+      <div class="assignment-table">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th width="5%"><input type="checkbox" /></th>
+              <th width="20%">Event</th>
+              <th width="10%">Type</th>
+              <th width="10%">Priority</th>
+              <th width="15%">Due</th>
+              <th width="15%">Assignee</th>
+              <th width="10%">Status</th>
+              <th width="10%">Rev</th>
+              <th width="5%">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="taskList">
+            <tr>
+              <td colspan="9" class="empty-row">No items</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <div class="cal-legend">
-        <span class="dot blue"></span> Coverage
-        <span class="dot green"></span> Approval
-        <span class="dot red"></span> Conflict
-      </div>
-      <div id="upcomingWrap" class="upcoming"></div>
     </section>
-  </main>
+  </div>
 
-  <!-- Row 3 -->
-  <section class="card" id="cardAssignAll">
-    <div class="card-header">
-      <h3><i class="fa-solid fa-users-gear"></i> Assignment Manager</h3>
-      <div class="header-actions">
-        <div class="seg">
-          <button class="seg-btn active" data-am="all">All</button>
-          <button class="seg-btn" data-am="unassigned">Unassigned</button>
-          <button class="seg-btn" data-am="urgent">Urgent</button>
-          <button class="seg-btn" data-am="due24">SLA ≤ 24h</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="table-wrap">
-      <table class="table compact" id="assignTable">
-        <thead>
-          <tr>
-            <th><input type="checkbox" id="amSelectAll"></th>
-            <th>Event</th>
-            <th>Type</th>
-            <th>Priority</th>
-            <th>Due</th>
-            <th>Assignee</th>
-            <th>Status</th>
-            <th>Rev</th>
-            <th class="ta-right">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="assignBody"></tbody>
-      </table>
-    </div>
-
-    <div class="table-actions">
-      <button class="btn xs" id="amBulkAssign"><i class="fa-solid fa-user-plus"></i> Assign</button>
-      <button class="btn xs success" id="amBulkApprove"><i class="fa-solid fa-check"></i> Approve</button>
-      <button class="btn xs warn" id="amBulkReturn"><i class="fa-solid fa-rotate-left"></i> Return</button>
-    </div>
-  </section>
-
-  {{ calendar_events|json_script:"calendarEventsJson" }}
-</div>
+<!-- Data is loaded via AJAX; no inline JSON -->
 {% endblock %}
 
 {% block scripts_extra %}

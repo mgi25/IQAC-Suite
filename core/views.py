@@ -286,6 +286,145 @@ def calculate_faculty_profile_completion(user, context):
     return sum(completion_factors)
 
 
+# ─────────────────────────────────────────────────────────────
+#  API: CDL Head Dashboard (AJAX data source)
+# ─────────────────────────────────────────────────────────────
+@login_required
+@require_GET
+def api_cdl_head_dashboard(request):
+    """Return CDL Head dashboard data for the given scope (all|support).
+
+    Response schema:
+    {
+      "kpis": {
+        "total_active_requests": int,
+        "assets_pending": int,
+        "unassigned_tasks": int,
+        "total_events_supported": int
+      },
+      "events": [
+        {"id": int, "title": str, "date": "YYYY-MM-DD"|null, "status": str, "organization": str|null, "type": "cdl_support"|"proposal"}
+      ],
+      "event_details": [
+        {"id": int, "title": str, "date": "YYYY-MM-DD"|null, "status": str, "organization": str|null, "assigned_member": str|null,
+         "poster_required": bool, "certificates_required": bool}
+      ],
+      "workload": {"members": [str,...], "assignments": [int,...]}
+    }
+    """
+    scope = request.GET.get("scope", "all").lower().strip()
+
+    # Base queryset
+    qs = (
+        EventProposal.objects.all()
+        .select_related("organization")
+        .prefetch_related("cdl_support")
+    )
+
+    # Filter: support => only proposals with CDL support requested
+    if scope == "support":
+        qs = qs.filter(cdl_support__needs_support=True)
+
+    # Helper: get best date for calendar/listing
+    def _get_date(p: EventProposal):
+        if getattr(p, "event_start_date", None):
+            return p.event_start_date
+        if getattr(p, "event_datetime", None):
+            try:
+                return p.event_datetime.date()
+            except Exception:
+                return None
+        return None
+
+    # Active statuses (interpreted as in-progress)
+    active_statuses = [
+        EventProposal.Status.SUBMITTED,
+        EventProposal.Status.UNDER_REVIEW,
+        EventProposal.Status.WAITING,
+    ]
+
+    # KPI calculations (scoped)
+    scoped = qs
+
+    total_active_requests = scoped.filter(status__in=active_statuses).count()
+
+    assets_pending = scoped.filter(
+        cdl_support__needs_support=True,
+    ).filter(
+        models.Q(cdl_support__poster_required=True) | models.Q(cdl_support__certificates_required=True)
+    ).filter(
+        status__in=[
+            EventProposal.Status.SUBMITTED,
+            EventProposal.Status.UNDER_REVIEW,
+            EventProposal.Status.WAITING,
+            EventProposal.Status.APPROVED,
+        ]
+    ).count()
+
+    # No explicit CDL assignment model exists; return 0 as per "missing → 0"
+    unassigned_tasks = 0
+
+    total_events_supported = scoped.filter(cdl_support__needs_support=True).count()
+
+    # Events (for calendar)
+    events = []
+    for p in scoped:
+        d = _get_date(p)
+        events.append({
+            "id": p.id,
+            "title": p.title,
+            "date": d.isoformat() if d else None,
+            "status": (p.status or "").lower(),
+            "organization": getattr(p.organization, "name", None),
+            "type": "cdl_support" if getattr(getattr(p, "cdl_support", None), "needs_support", False) else "proposal",
+        })
+
+    # Event Details (right panel)
+    event_details = []
+    for p in scoped.select_related("cdl_support"):
+        d = _get_date(p)
+        cs = getattr(p, "cdl_support", None)
+        event_details.append({
+            "id": p.id,
+            "title": p.title,
+            "date": d.isoformat() if d else None,
+            "status": (p.status or "").lower(),
+            "organization": getattr(p.organization, "name", None),
+            "assigned_member": None,  # Missing assignment model → null (UI should show Unassigned)
+            "poster_required": bool(getattr(cs, "poster_required", False)),
+            "certificates_required": bool(getattr(cs, "certificates_required", False)),
+        })
+
+    # Workload - get CDL team members from groups
+    from django.contrib.auth.models import Group
+    try:
+        cdl_group = Group.objects.get(name="CDL_MEMBER")
+        cdl_members = [user.get_full_name() or user.username for user in cdl_group.user_set.all()]
+        if not cdl_members:
+            cdl_members = []
+    except Group.DoesNotExist:
+        cdl_members = []
+    
+    workload = {
+        "members": cdl_members,
+        "assignments": [0] * len(cdl_members) if cdl_members else []
+    }
+
+    data = {
+        "kpis": {
+            "total_active_requests": total_active_requests or 0,
+            "assets_pending": assets_pending or 0,
+            "unassigned_tasks": unassigned_tasks or 0,
+            "total_events_supported": total_events_supported or 0,
+        },
+        "events": events,
+        "event_details": event_details,
+        "workload": workload,
+    }
+
+    return JsonResponse(data)
+
+
 @login_required
 def registration_form(request):
     """Collect registration number and role assignments for a user."""
@@ -5552,7 +5691,89 @@ def api_log_popso_change(request):
 def cdl_head_dashboard(request):
     if not (request.user.is_superuser or request.user.groups.filter(name="CDL_HEAD").exists()):
         return HttpResponseForbidden()
-    return render(request, "cdl/cdl_head_dashboard.html")
+    
+    from emt.models import EventProposal, CDLSupport
+    from django.db.models import Q, Count
+    from django.utils import timezone
+    from datetime import datetime, timedelta
+    
+    # Calculate KPIs from proposal data
+    # Total Active Requests - Count of proposals with status "Active" (submitted, under_review, waiting)
+    active_statuses = ['submitted', 'under_review', 'waiting']
+    total_active_requests = EventProposal.objects.filter(status__in=active_statuses).count()
+    
+    # Assets Delivery Pending - Events with CDL support where assets are not yet delivered
+    assets_pending = CDLSupport.objects.filter(
+        proposal__status__in=['approved', 'finalized'],
+        needs_support=True
+    ).filter(
+        Q(poster_required=True) | Q(certificates_required=True)
+    ).count()
+    
+    # Unassigned Tasks - Events that need CDL support but don't have assignees yet
+    unassigned_tasks = CDLSupport.objects.filter(
+        needs_support=True,
+        proposal__status__in=active_statuses
+    ).count()  # You can add assignee field logic here when implemented
+    
+    # Total Events Supported - Count of proposals where CDL Support = Yes
+    total_events_supported = CDLSupport.objects.filter(needs_support=True).count()
+    
+    # Get calendar events from proposals with CDL support
+    calendar_events = []
+    proposals_with_cdl = EventProposal.objects.filter(
+        cdl_support__needs_support=True
+    ).select_related('cdl_support').order_by('event_start_date')
+    
+    for proposal in proposals_with_cdl:
+        if proposal.event_start_date:
+            calendar_events.append({
+                'id': proposal.id,
+                'title': proposal.event_title,
+                'date': proposal.event_start_date.strftime('%Y-%m-%d'),
+                'status': proposal.status,
+                'venue': proposal.venue,
+                'organization': proposal.organization.name if proposal.organization else '',
+                'type': 'cdl_support',
+                'poster_required': proposal.cdl_support.poster_required if hasattr(proposal, 'cdl_support') else False,
+                'certificates_required': proposal.cdl_support.certificates_required if hasattr(proposal, 'cdl_support') else False,
+            })
+    
+    # Get event details for notifications section
+    event_details = []
+    recent_proposals = EventProposal.objects.filter(
+        cdl_support__needs_support=True
+    ).select_related('cdl_support', 'organization').order_by('-created_at')[:10]
+    
+    for proposal in recent_proposals:
+        event_details.append({
+            'id': proposal.id,
+            'title': proposal.event_title,
+            'status': proposal.get_status_display(),
+            'date': proposal.event_start_date,
+            'organization': proposal.organization.name if proposal.organization else '',
+            'created_at': proposal.created_at,
+            'poster_required': proposal.cdl_support.poster_required if hasattr(proposal, 'cdl_support') else False,
+            'certificates_required': proposal.cdl_support.certificates_required if hasattr(proposal, 'cdl_support') else False,
+        })
+    
+    # Get workload distribution data (placeholder for now)
+    workload_data = {
+        'members': ['CDL Member 1', 'CDL Member 2', 'CDL Member 3'],
+        'assignments': [5, 3, 7]  # Number of assignments per member
+    }
+    
+    context = {
+        'total_active_requests': total_active_requests,
+        'assets_pending': assets_pending,
+        'unassigned_tasks': unassigned_tasks,
+        'total_events_supported': total_events_supported,
+        'calendar_events': calendar_events,
+        'event_details': event_details,
+        'workload_data': workload_data,
+    }
+    
+    return render(request, "core/cdl_head_dashboard.html", context)
 
 
 @login_required
