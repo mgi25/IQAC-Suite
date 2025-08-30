@@ -1933,9 +1933,9 @@ function getWhyThisEventForm() {
             // Bind autosave to any speaker field changes
             container
                 .off('input change', '[name^="speaker_"]')
-                .on('input change', '[name^="speaker_"]', () => {
+                .on('input change', '[name^="speaker_"]', function() {
                     if (window.AutosaveManager && window.AutosaveManager.manualSave) {
-                        window.AutosaveManager.manualSave();
+                        window.AutosaveManager.manualSave([this.name]).catch(() => {});
                     }
                 });
             index++;
@@ -1983,7 +1983,8 @@ function getWhyThisEventForm() {
                     if (remaining === 0) {
                         dummy = $('<input type="hidden" name="speaker_full_name_0" value="">').appendTo(container);
                     }
-                    const p = window.AutosaveManager.manualSave();
+                    const fields = container.find('[name^="speaker_"]').map((_, el) => el.name).get();
+                    const p = window.AutosaveManager.manualSave(fields.length ? fields : ['speaker_full_name_0']);
                     p.catch(() => {});
                     if (dummy) {
                         p.finally ? p.finally(() => dummy.remove()) : p.then(() => dummy.remove()).catch(() => dummy.remove());
@@ -2433,9 +2434,18 @@ function getWhyThisEventForm() {
         if (validateCurrentSection()) {
             showLoadingOverlay();
             if (window.AutosaveManager && window.AutosaveManager.manualSave) {
+                const speakerFields = $('#speakers-list').find('[name^="speaker_"]').map((_, el) => el.name).get();
+                if (speakerFields.length === 0) speakerFields.push('speaker_full_name_0');
+                const expenseFields = $('#expense-rows').find('[name^="expense_"]').map((_, el) => el.name).get();
+                if (expenseFields.length === 0) expenseFields.push('expense_particulars_0');
+                const incomeFields = $('#income-rows').find('[name^="income_"]').map((_, el) => el.name).get();
+                if (incomeFields.length === 0) incomeFields.push('income_particulars_0');
                 const sectionFieldMap = {
                     'why-this-event': ['need_analysis', 'objectives', 'outcomes'],
-                    'schedule': ['flow']
+                    'schedule': ['flow'],
+                    'speakers': speakerFields,
+                    'expenses': expenseFields,
+                    'income': incomeFields
                 };
                 const fieldsToSave = sectionFieldMap[currentExpandedCard] || null;
                 window.AutosaveManager.manualSave(fieldsToSave)
