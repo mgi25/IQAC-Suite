@@ -537,11 +537,23 @@ $(document).ready(function() {
                 }
 
                 const handler = () => {
-                    if (window.AutosaveManager && window.AutosaveManager.manualSave) {
-                        window.AutosaveManager.manualSave([
-                            `activity_name_${num}`,
-                            `activity_date_${num}`
-                        ]).catch(() => {});
+                    if (!(window.AutosaveManager && window.AutosaveManager.manualSave)) {
+                        return;
+                    }
+
+                    const fieldsToSave = [];
+                    const nameValue = nameInput ? nameInput.value.trim() : '';
+                    const dateValue = dateInput ? dateInput.value : '';
+
+                    if (nameValue) {
+                        fieldsToSave.push(`activity_name_${num}`);
+                    }
+                    if (dateValue) {
+                        fieldsToSave.push(`activity_date_${num}`);
+                    }
+
+                    if (fieldsToSave.length) {
+                        window.AutosaveManager.manualSave(fieldsToSave).catch(() => {});
                     }
                 };
                 if (nameInput) {
