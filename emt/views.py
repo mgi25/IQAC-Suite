@@ -1023,10 +1023,26 @@ def submit_cdl_support(request, proposal_id):
             support.other_services = form.cleaned_data.get("other_services", [])
             support.save()
 
-            proposal.status = "draft"
+            is_final = "final_submit" in request.POST
+            is_review = "review_submit" in request.POST
+
+            if is_final:
+                proposal.status = "submitted"
+                proposal.submitted_at = timezone.now()
+            else:
+                proposal.status = "draft"
             proposal.save()
 
-            if "review_submit" in request.POST:
+            if is_final:
+                build_approval_chain(proposal)
+                messages.success(
+                    request,
+                    f"Proposal '{proposal.event_title}' submitted.",
+                )
+                return redirect(
+                    "emt:proposal_status_detail", proposal_id=proposal.id
+                )
+            if is_review:
                 return redirect("emt:review_proposal", proposal_id=proposal.id)
 
             messages.success(request, "CDL support saved.")
