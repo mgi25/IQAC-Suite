@@ -3078,9 +3078,10 @@ function getWhyThisEventForm() {
             showNotification('Autosave failed. Please try again.', 'error');
             return;
         }
-        showNotification('Draft saved with validation warnings. Please review highlighted fields.', 'info');
+
         clearValidationErrors();
         firstErrorField = null;
+        const nonFieldMessages = [];
 
         const mark = (name, message) => {
             let field = $(`#${name.replace(/_/g, '-')}-modern`);
@@ -3093,13 +3094,24 @@ function getWhyThisEventForm() {
             }
             if (field.length) {
                 showFieldError(field, message);
+                return true;
             }
+            nonFieldMessages.push(message);
+            return false;
         };
 
         Object.entries(errors).forEach(([key, val]) => {
+            if (key === '__all__' || key === 'non_field_errors') {
+                if (Array.isArray(val)) {
+                    nonFieldMessages.push(...val);
+                } else if (val) {
+                    nonFieldMessages.push(val);
+                }
+                return;
+            }
             if (Array.isArray(val)) {
                 mark(key, val[0]);
-            } else if (typeof val === 'object') {
+            } else if (typeof val === 'object' && val !== null) {
                 Object.entries(val).forEach(([idx, sub]) => {
                     if (key === 'activities') {
                         if (sub.name) mark(`activity_name_${idx}`, sub.name);
@@ -3122,12 +3134,19 @@ function getWhyThisEventForm() {
                         if (sub.amount) mark(`income_amount_${idx}`, sub.amount);
                     }
                 });
+            } else if (val) {
+                mark(key, val);
             }
         });
 
         if (firstErrorField && firstErrorField.length) {
+            showNotification('Draft saved with validation warnings. Please review highlighted fields.', 'info');
             $('html, body').animate({scrollTop: firstErrorField.offset().top - 100}, 500);
             firstErrorField.focus();
+        } else if (nonFieldMessages.length) {
+            showNotification(nonFieldMessages.join(' '), 'error');
+        } else {
+            showNotification('Autosave failed. Please try again.', 'error');
         }
     }
 
