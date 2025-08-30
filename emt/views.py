@@ -719,18 +719,18 @@ def autosave_proposal(request):
         for field in sp_fields + ["contact_number", "linkedin_url", "photo"]
     ):
         missing = {}
-        provided = False
+        nonempty = False
         for field in sp_fields:
             key = f"speaker_{field}_{sp_idx}"
             if key in data:
-                provided = True
                 value = data.get(key)
                 if value:
+                    nonempty = True
                     if field == "full_name" and not NAME_RE.fullmatch(value):
                         missing[field] = "Enter a valid name (letters, spaces, .'- only)."
                 else:
                     missing[field] = "This field is required."
-        if provided and missing:
+        if nonempty and missing:
             sp_errors[sp_idx] = missing
         sp_idx += 1
     if sp_errors:
