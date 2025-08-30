@@ -4,447 +4,160 @@
 {% block title %}Transcript Generator{% endblock %}
 
 {% block head_extra %}
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-.dashboard-container {
-  padding: 64px 1.5rem;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background: linear-gradient(to bottom right, #f0f6ff, #ffffff);
-  /* Initially center the content */
-  justify-content: center;
-  transition: justify-content 0.6s ease, padding 0.6s ease;
-  overflow: hidden;
+:root{
+  --primary:#1e60b1; --primary-dark:#164c8d;
+  --ink:#0f172a; --muted:#64748b; --border:#e5e7eb;
+  --surf:#ffffff; --subtle:#f8fafc;
+  --shadow:0 8px 24px rgba(2,6,23,.06);
+  --shadow-lg:0 12px 40px rgba(2,6,23,.10);
+  --shadow-sm:0 4px 12px rgba(2,6,23,.04);
 }
 
-/* When students are shown, move content to top */
-.dashboard-container.students-shown {
-  justify-content: flex-start;
-  padding-top: 0.5rem;
-  padding-bottom: 1rem;
+/* Typography baseline */
+body, .dashboard-container, .transcript-form-card, .student-table{
+  font-family:"Open Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  color:var(--ink);
 }
 
-.transcript-form-card {
-  width: 100%;
-  max-width: 1200px;
-  background: linear-gradient(to top right, #ffffff, #f9fbff);
-  padding: 2.5rem;
-  position: relative;
-  transition: all 0.6s ease;
-  transform: translateY(0);
+/* PAGE: white from top-left, full width (override dashboard.css centering/max-width) */
+.dashboard-container{
+  width:100% !important; max-width:none !important; margin:0 !important;
+  min-height:100vh; background:#fff; padding:16px;
+  display:flex; flex-direction:column; gap:12px; align-items:stretch !important;
+}
+.dashboard-container > *{ max-width:none !important; }
+
+/* Top-left heading (outside any box) */
+.page-header{ width:100%; }
+.page-header h1{
+  margin:0 0 4px; font-size:clamp(20px,2.2vw,28px); font-weight:800; letter-spacing:-.01em; color:var(--ink);
+}
+.page-header p{ margin:0; color:var(--muted); font-size:13px; font-weight:600; }
+
+/* Main card */
+.transcript-form-card{
+  width:100% !important; max-width:none !important; margin:0 !important;
+  background:#fff; border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow);
+  padding:12px;
+}
+/* Hide legacy in-card title block */
+.transcript-form-header, .transcript-form-title, .transcript-form-subtitle{ display:none !important; }
+
+/* Controls row */
+.form-inline{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:flex-start; margin:0; }
+.form-inline select, .form-inline button{ min-width:200px; padding:10px 14px; border-radius:10px; font-size:14px; transition:.18s ease; }
+.form-inline select{
+  border:1px solid var(--border); background:#fff; position:relative; z-index:1;
+}
+.form-inline select:focus{ border-color:var(--primary); outline:none; box-shadow:0 0 0 3px rgba(30,96,177,.12); }
+.form-inline select:disabled{ opacity:.6; cursor:not-allowed; }
+.form-inline button{
+  background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+  color:#fff; font-weight:800; border:1px solid var(--primary);
+  display:inline-flex; align-items:center; gap:8px;
+}
+.form-inline button:hover{ transform:translateY(-2px); box-shadow:var(--shadow); filter:brightness(1.05); }
+.form-inline button:disabled{ background:#9aa3ae; border-color:#9aa3ae; cursor:not-allowed; transform:none; box-shadow:none; }
+
+/* Students block */
+.student-list-container{ margin-top:10px; display:flex; flex-direction:column; gap:10px; }
+.student-list-header{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; padding-bottom:8px; border-bottom:1px solid var(--border); }
+.student-list-title{ font-size:16px; font-weight:800; color:var(--ink); display:flex; align-items:center; gap:8px; }
+.student-list-title i{ color:var(--primary); }
+.student-header-right{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.student-count{
+  font-size:12px; color:var(--ink); background:#eef2ff; padding:6px 10px; border-radius:999px;
+  font-weight:800; border:1px solid #e0e7ff;
 }
 
-/* Initially larger padding for centered look */
-.transcript-form-card.initial {
-  padding: 3rem 2.5rem;
+/* Primary action buttons */
+.btn-download-all{
+  background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+  color:#fff; padding:10px 14px; font-size:13px; font-weight:800; border-radius:10px; border:1px solid var(--primary);
+  display:inline-flex; align-items:center; gap:8px; transition:.18s ease; box-shadow:var(--shadow-sm);
 }
+.btn-download-all:hover{ transform:translateY(-2px); box-shadow:var(--shadow); filter:brightness(1.05); }
 
-/* Compact version when students are shown */
-.transcript-form-card.compact {
-  padding: 1rem 2rem;
-  margin-bottom: 1rem;
+/* Search chip */
+.search-bar-wrapper{ display:flex; align-items:center; gap:8px; background:#fff; border-radius:999px; border:1px solid var(--border); padding:8px 12px; max-width:400px; margin-left:auto; }
+.search-bar-wrapper input{ border:none; outline:none; background:transparent; font-size:14px; flex:1; }
+.search-bar-wrapper i{ color:var(--primary); font-size:14px; }
+
+/* TABLE */
+.student-table-wrapper{ overflow-x:auto; }
+.student-table{
+  width:100%; border-collapse:collapse; background:#fff;
+  border:1px solid var(--border); border-radius:12px; overflow:hidden;
+  font-size:13px; box-shadow:var(--shadow-sm);
 }
-
-.transcript-form-header {
-  text-align: center;
-  font-size: 1.1rem;
-  text-transform: uppercase;
-  font-weight: 700;
-  color: #2274CB;
-  margin-bottom: 0.5rem;
-  letter-spacing: 1px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.7rem;
+.student-table thead{
+  background:linear-gradient(135deg,var(--primary),var(--primary-dark)); color:#fff;
 }
+.student-table th, .student-table td{ padding:10px 12px; text-align:left; border-bottom:1px solid var(--border); }
+.student-table th{ font-size:12px; text-transform:uppercase; letter-spacing:.5px; font-weight:800; color:#fff; }
+/* Keep header blue on hover/click */
+.student-table thead tr:hover{ background:inherit; }
+.student-table tbody tr{ transition:background .15s ease; }
+.student-table tbody tr:hover{ background:#f8fafc; }
+.student-table td:last-child{ white-space:nowrap; }
 
-.transcript-form-header i {
-  font-size: 1.3rem;
-  color: #2274CB;
+/* Status chips + row buttons */
+.status-badge{ padding:4px 10px; border-radius:999px; font-weight:800; font-size:12px; border:1px solid transparent; }
+.status-active{ background:#ecfdf5; color:#16a34a; border-color:#a7f3d0; }
+.status-inactive{ background:#fffbeb; color:#b45309; border-color:#fde68a; }
+.action-btn{
+  padding:8px 12px; font-size:13px; border-radius:10px; border:1px solid var(--border);
+  text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-weight:800; transition:.15s ease;
 }
+.btn-view, .btn-download{ background:#fff; color:var(--ink); }
+.btn-view:hover, .btn-download:hover{ transform:translateY(-1px); box-shadow:var(--shadow-sm); border-color:var(--primary); color:var(--primary); }
 
-.transcript-form-title {
-  font-size: 2.4rem;
-  text-align: center;
-  font-weight: 900;
-  background: linear-gradient(to right, #185a9d, #43cea2);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin-bottom: 0.5rem;
-  letter-spacing: 1px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.7rem;
-  transition: font-size 0.6s ease;
-}
+/* Empty */
+.empty-state{ text-align:center; color:var(--muted); font-size:14px; margin:16px 0; padding:20px 0; }
 
-/* Smaller title when compact */
-.transcript-form-card.compact .transcript-form-title {
-  font-size: 1.6rem;
-}
-
-.transcript-form-subtitle {
-  text-align: center;
-  font-size: 1.1rem;
-  color: #4b5c6b;
-  font-style: italic;
-  font-weight: 500;
-  margin-bottom: 2rem;
-  transition: font-size 0.6s ease;
-}
-
-.transcript-form-card.compact .transcript-form-subtitle {
-  font-size: 0.95rem;
-  margin-bottom: 1rem;
-}
-
-.form-inline {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: 2rem;
-}
-
-.transcript-form-card.compact .form-inline {
-  margin-bottom: 0;
-}
-
-.form-inline select,
-.form-inline button {
-  min-width: 200px;
-  padding: 0.9rem 1.2rem;
-  border-radius: 1rem;
-  font-size: 1rem;
-  transition: all 0.2s ease-in-out;
-}
-
-.form-inline select {
-  border: 1px solid #e3eaf3;
-  background-color: #f9fafb;
-  box-shadow: 0 1px 4px rgba(34, 116, 203, 0.04);
-}
-
-.form-inline select:focus {
-  border-color: #2274CB;
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(34, 116, 203, 0.10);
-}
-
-.form-inline button {
-  background-color: #3b82f6;
-  color: white;
-  font-weight: 700;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.13);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.form-inline button:hover {
-  background-color: #2563eb;
-  transform: translateY(-2px) scale(1.03);
-  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.18);
-}
-
-.form-inline button:disabled {
-  background-color: #94a3b8;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.student-list-container {
-  display: none;
-  opacity: 0;
-  transform: translateY(20px);
-  transition: all 0.5s ease;
-  margin-top: 0;
-  width: 100%;
-  max-width: 1200px;
-  flex: 1;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.student-list-container.show {
-  display: flex;
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.student-list-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 2px solid #e5e7eb;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.student-list-title {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: #1f2937;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.student-header-right {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.student-count {
-  font-size: 1rem;
-  color: #6b7280;
-  background: #e0e7ff;
-  padding: 0.3rem 0.9rem;
-  border-radius: 1rem;
-  font-weight: 600;
-}
-
-.btn-download-all {
-  background: #f59e0b;
-  color: white;
-  padding: 0.7rem 1.4rem;
-  font-size: 1rem;
-  font-weight: 700;
-  border-radius: 0.7rem;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.13);
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: 0.2s ease;
-}
-
-.btn-download-all:hover {
-  background: #d97706;
-  transform: translateY(-1px) scale(1.03);
-  box-shadow: 0 8px 20px rgba(245, 158, 11, 0.18);
-}
-
-.search-bar-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-  background: #fff;
-  border-radius: 30px;
-  border: 1px solid #e3eaf3;
-  padding: 0.5rem 1rem;
-  box-shadow: 0 1px 4px rgba(34, 116, 203, 0.04);
-  max-width: 400px;
-  margin-left: auto;
-}
-
-.search-bar-wrapper input {
-  border: none;
-  outline: none;
-  background: transparent;
-  font-size: 1rem;
-  flex: 1;
-  padding: 0.5rem 0.5rem;
-}
-
-.search-bar-wrapper i {
-  color: #2274CB;
-  font-size: 1.1rem;
-}
-
-.student-table-wrapper {
-  overflow-x: auto;
-  margin-top: 1rem;
-}
-
-.student-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border-radius: 1rem;
-  overflow: hidden;
-  font-size: 0.95rem;
-}
-
-
-.student-table thead {
-  background-color: #3b82f6;
-  color: white;
-  pointer-events: none;
-}
-
-.student-table tr {
-  transition: background 0.3s ease;
-}
-
-.student-table th,
-.student-table td {
-  padding: 1rem 1.2rem;
-  text-align: left;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.student-table td:last-child {
-  white-space: nowrap;
-}
-
-.student-table tr:hover {
-  background-color: #f9fafb;
-}
-
-.status-badge {
-  padding: 0.3rem 0.7rem;
-  border-radius: 999px;
-  font-weight: 600;
-  font-size: 0.85rem;
-}
-
-.status-active {
-  background-color: #dcfce7;
-  color: #16a34a;
-}
-
-.status-inactive {
-  background-color: #fef3c7;
-  color: #b45309;
-}
-
-.action-btn {
-  padding: 0.5rem 0.9rem;
-  font-size: 0.9rem;
-  border-radius: 0.5rem;
-  border: none;
-  cursor: pointer;
-  margin-right: 0.4rem;
-  font-weight: 600;
-  transition: transform 0.2s ease-in-out, background-color 0.2s ease-in-out;
-  text-decoration: none;
-}
-
-.btn-view {
-  background-color: #3b82f6;
-  color: white;
-}
-
-.btn-download {
-  background-color: #10b981;
-  color: white;
-}
-
-.btn-view:hover {
-  background-color: #2563eb;
-  transform: scale(1.03);
-}
-
-.btn-download:hover {
-  background-color: #059669;
-  transform: scale(1.03);
-}
-
-.empty-state {
-  text-align: center;
-  color: #b0b8c1;
-  font-size: 1.1rem;
-  margin-top: 2rem;
-  padding: 2rem 0;
-}
-
-/* Responsive design */
-@media (max-width: 768px) {
-  .dashboard-container {
-    padding: 1rem;
-  }
-
-  .dashboard-container.students-shown {
-    padding-top: 1rem;
-  }
-
-  .transcript-form-card {
-    padding: 1.5rem;
-  }
-
-  .transcript-form-card.initial {
-    padding: 2rem 1.5rem;
-  }
-
-  .transcript-form-card.compact {
-    padding: 1.5rem;
-  }
-
-  .transcript-form-title {
-    font-size: 1.8rem;
-  }
-
-  .transcript-form-card.compact .transcript-form-title {
-    font-size: 1.5rem;
-  }
-
-  .form-inline {
-    flex-direction: column;
-  }
-
-  .form-inline select,
-  .form-inline button {
-    width: 100%;
-    min-width: auto;
-  }
-
-  .student-header-right {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .search-bar-wrapper {
-    max-width: 100%;
-    margin-left: 0;
-  }
+/* Responsive */
+@media (max-width:768px){
+  .dashboard-container{ padding:12px; }
+  .form-inline{ flex-direction:column; align-items:stretch; }
+  .form-inline select, .form-inline button{ width:100%; min-width:auto; }
+  .student-header-right{ width:100%; justify-content:space-between; }
+  .search-bar-wrapper{ max-width:100%; margin-left:0; }
 }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="dashboard-container">
-  <div class="transcript-form-card">
-    <div class="transcript-form-header"><i class="fa-solid fa-file-lines"></i> Student Character Strength Transcript
-    </div>
-    <div class="transcript-form-title"><i class="fa-solid fa-graduation-cap"></i> Select Academic Info</div>
-    <div class="transcript-form-subtitle">View and manage student character strength transcripts</div>
+  <div class="page-header">
+    <h1>Transcript Generator</h1>
+    <p>View and manage student character strength transcripts</p>
+  </div>
 
+  <div class="transcript-form-card">
     <form id="transcriptForm">
       <div class="form-inline">
-        <select id="academicYearSelect" required>
+        <select id="academicYearSelect" required aria-label="Select Academic Year">
           <option value="">Select Academic Year</option>
           {% for year in years %}
-          <option value="{{ year.year }}">{{ year.year }}</option>
+            <option value="{{ year.year }}">{{ year.year }}</option>
           {% endfor %}
         </select>
 
-        <select id="schoolSelect" required disabled>
+        <select id="schoolSelect" required disabled aria-label="Select School">
           <option value="">Select School</option>
         </select>
 
-        <select id="courseSelect" required disabled>
+        <select id="courseSelect" required disabled aria-label="Select Course">
           <option value="">Select Course</option>
         </select>
 
-        <button type="submit" id="showStudentsBtn" disabled><i class="fa-solid fa-users"></i> Show Students</button>
+        <button type="submit" id="showStudentsBtn" disabled>
+          <i class="fa-solid fa-users"></i> Show Students
+        </button>
       </div>
     </form>
 
@@ -453,174 +166,152 @@
         <div class="student-list-title"><i class="fa-solid fa-users"></i> Students</div>
         <div class="student-header-right">
           <div class="student-count" id="studentCount">0 students</div>
-          <button id="downloadAllPDFBtn" class="btn-download-all"><i class="fa-solid fa-download"></i> Download Combined
-            PDF</button>
-          <button id="downloadAllZIPBtn" class="btn-download-all"><i class="fa-solid fa-file-zipper"></i> Download All
-            (ZIP)</button>
+          <button id="downloadAllPDFBtn" class="btn-download-all"><i class="fa-solid fa-download"></i> Download Combined PDF</button>
+          <button id="downloadAllZIPBtn" class="btn-download-all"><i class="fa-solid fa-file-zipper"></i> Download All (ZIP)</button>
         </div>
       </div>
 
       <div class="search-bar-wrapper">
         <i class="fa-solid fa-magnifying-glass"></i>
-        <input type="text" id="studentSearchInput" placeholder="Search students by name or roll no..."
-          oninput="filterStudentList()">
+        <input type="text" id="studentSearchInput" placeholder="Search students by name or roll no..." oninput="filterStudentList()">
       </div>
 
       <div class="student-table-wrapper">
         <table class="student-table" id="studentListTable">
           <thead>
-            <tr>
-              <th>Name</th>
-              <th>Roll No</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
+            <tr><th>Name</th><th>Roll No</th><th>Status</th><th>Actions</th></tr>
           </thead>
           <tbody id="studentListTableBody"></tbody>
         </table>
       </div>
 
-      <div class="empty-state" id="emptyState" style="display:none;"><i class="fa-solid fa-user-slash"></i> No students
-        found for this filter.</div>
+      <div class="empty-state" id="emptyState" style="display:none;">No students found for this filter.</div>
     </div>
   </div>
 </div>
 
 <!-- Spinner Overlay -->
-<div id="downloadSpinner"
-  style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 9999; justify-content: center; align-items: center;">
+<div id="downloadSpinner" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:9999; justify-content:center; align-items:center;">
   <div class="loader"></div>
 </div>
-
-<iframe id="downloadIframe" style="display: none;"></iframe>
+<iframe id="downloadIframe" style="display:none;"></iframe>
 {% endblock %}
 
 {% block scripts %}
 <script>
-  const academicYearSelect = document.getElementById('academicYearSelect');
-  const schoolSelect = document.getElementById('schoolSelect');
-  const courseSelect = document.getElementById('courseSelect');
-  const showStudentsBtn = document.getElementById('showStudentsBtn');
+  /* ----- DOM refs ----- */
+  const transcriptForm       = document.getElementById('transcriptForm');
+  const academicYearSelect   = document.getElementById('academicYearSelect');
+  const schoolSelect         = document.getElementById('schoolSelect');
+  const courseSelect         = document.getElementById('courseSelect');
+  const showStudentsBtn      = document.getElementById('showStudentsBtn');
   const studentListContainer = document.getElementById('studentListContainer');
-  const studentCount = document.getElementById('studentCount');
-  const downloadAllPDFBtn = document.getElementById('downloadAllPDFBtn');
-  const downloadAllZIPBtn = document.getElementById('downloadAllZIPBtn');
-  const studentSearchInput = document.getElementById('studentSearchInput');
-  const iframe = document.getElementById('downloadIframe');
-  const studentRawData = JSON.parse(`{{ student_data|escapejs }}`);
-  const studentData = studentRawData;
-  let originalStudentList = [];
-  let currentStudents = [];
+  const studentCount         = document.getElementById('studentCount');
+  const downloadAllPDFBtn    = document.getElementById('downloadAllPDFBtn');
+  const downloadAllZIPBtn    = document.getElementById('downloadAllZIPBtn');
+  const studentSearchInput   = document.getElementById('studentSearchInput');
+  const iframe               = document.getElementById('downloadIframe');
+  const emptyState           = document.getElementById('emptyState');
 
+  /* ----- Data ----- */
+  const studentRawData = JSON.parse(`{{ student_data|escapejs }}`);
+  const studentData    = studentRawData;
+  let originalStudentList = [];
+  let currentStudents      = [];
+
+  /* ----- Helpers ----- */
   const resetDropdown = (dropdown, placeholder) => {
     dropdown.innerHTML = `<option value="">${placeholder}</option>`;
     dropdown.disabled = true;
   };
 
   const populateDropdown = (dropdown, options) => {
-    const currentPlaceholder = dropdown.querySelector('option[value=""]').textContent;
-    dropdown.innerHTML = `<option value="">${currentPlaceholder}</option>`;
-    options.forEach(option => {
-      const optionElement = document.createElement('option');
-      optionElement.value = option;
-      optionElement.textContent = option;
-      dropdown.appendChild(optionElement);
+    const ph = dropdown.querySelector('option[value=""]').textContent;
+    dropdown.innerHTML = `<option value="">${ph}</option>`;
+    options.forEach(opt => {
+      const o = document.createElement('option');
+      o.value = opt; o.textContent = opt;
+      dropdown.appendChild(o);
     });
   };
 
   const displayStudents = (students) => {
     const tbody = document.getElementById("studentListTableBody");
     tbody.innerHTML = "";
-
     studentCount.textContent = `${students.length} students`;
 
-    if (students.length === 0) {
+    if (!students.length) {
       emptyState.style.display = '';
       studentListContainer.classList.add('show');
       return;
     }
-
     emptyState.style.display = 'none';
 
-    students.forEach(student => {
+    students.forEach(s => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-      <td>${student.name}</td>
-      <td>${student.roll_no}</td>
-      <td>
-        <span class="status-badge ${student.active === false ? 'status-inactive' : 'status-active'}">
-          ${student.active === false ? 'Inactive' : 'Active'}
-        </span>
-      </td>
-      <td>
-        <a href="/transcript/${student.roll_no}/" class="action-btn btn-view"><i class="fa-solid fa-eye"></i> View</a>
-        <a href="/transcript/${student.roll_no}/pdf/" class="action-btn btn-download"><i class="fa-solid fa-download"></i> PDF</a>
-      </td>
-    `;
+        <td>${s.name}</td>
+        <td>${s.roll_no}</td>
+        <td>
+          <span class="status-badge ${s.active === false ? 'status-inactive' : 'status-active'}">
+            ${s.active === false ? 'Inactive' : 'Active'}
+          </span>
+        </td>
+        <td>
+          <a href="/transcript/${s.roll_no}/" class="action-btn btn-view"><i class="fa-solid fa-eye"></i> View</a>
+          <a href="/transcript/${s.roll_no}/pdf/" class="action-btn btn-download"><i class="fa-solid fa-download"></i> PDF</a>
+        </td>`;
       tbody.appendChild(tr);
     });
-
     studentListContainer.classList.add('show');
   };
 
   function filterStudentList() {
-    const input = studentSearchInput.value.toLowerCase().trim();
-
-    if (input === "") {
-      // If search bar is cleared, show full course list again
-      displayStudents(originalStudentList);
-      return;
-    }
-
-    const filtered = originalStudentList.filter(student =>
-      student.name.toLowerCase().includes(input) ||
-      student.roll_no.toLowerCase().includes(input)
-    );
-
+    const q = studentSearchInput.value.toLowerCase().trim();
+    if (!q) { displayStudents(originalStudentList); return; }
+    const filtered = originalStudentList.filter(s => s.name.toLowerCase().includes(q) || s.roll_no.toLowerCase().includes(q));
     displayStudents(filtered);
   }
 
-
-
-  function downloadAll(type = 'pdf') {
-    const year = academicYearSelect.value;
-    const school = schoolSelect.value;
-    const course = courseSelect.value;
-    if (!year || !school || !course) {
-      alert("Please select year, school, and course first.");
-      return;
-    }
-    const downloadUrl = `/transcript/pdf/all/?year=${encodeURIComponent(year)}&school=${encodeURIComponent(school)}&course=${encodeURIComponent(course)}&type=${type}`;
+  function downloadAll(type='pdf') {
+    const year = academicYearSelect.value, school = schoolSelect.value, course = courseSelect.value;
+    if (!year || !school || !course) { alert("Please select year, school, and course first."); return; }
+    const url = `/transcript/pdf/all/?year=${encodeURIComponent(year)}&school=${encodeURIComponent(school)}&course=${encodeURIComponent(course)}&type=${type}`;
     document.getElementById('downloadSpinner').style.display = 'flex';
-    iframe.src = downloadUrl;
-    setTimeout(() => {
-      document.getElementById('downloadSpinner').style.display = 'none';
-    }, 15000);
+    iframe.src = url;
+    setTimeout(() => { document.getElementById('downloadSpinner').style.display = 'none'; }, 15000);
   }
 
+  /* ----- Event wiring ----- */
   academicYearSelect.addEventListener('change', function () {
-    const selectedYear = this.value;
+    const yearKey = this.value;
+
     resetDropdown(schoolSelect, 'Select School');
     resetDropdown(courseSelect, 'Select Course');
     studentListContainer.classList.remove('show');
     showStudentsBtn.disabled = true;
-    if (selectedYear && studentData[selectedYear]) {
-      const schools = Object.keys(studentData[selectedYear]);
-      populateDropdown(schoolSelect, schools);
+
+    const yearObj = studentData && studentData[yearKey];
+    if (yearObj && Object.keys(yearObj).length) {
+      populateDropdown(schoolSelect, Object.keys(yearObj));
       schoolSelect.disabled = false;
+      schoolSelect.style.pointerEvents = 'auto';
+      schoolSelect.focus({ preventScroll:true });
     }
   });
 
   schoolSelect.addEventListener('change', function () {
-    const selectedYear = academicYearSelect.value;
-    const selectedSchool = this.value;
+    const yearKey = academicYearSelect.value;
+    const schoolKey = this.value;
+
     resetDropdown(courseSelect, 'Select Course');
     studentListContainer.classList.remove('show');
     showStudentsBtn.disabled = true;
-    if (selectedYear && selectedSchool && studentData[selectedYear][selectedSchool]) {
-      const courses = Object.keys(studentData[selectedYear][selectedSchool]);
-      populateDropdown(courseSelect, courses);
+
+    if (yearKey && schoolKey && studentData[yearKey][schoolKey]) {
+      populateDropdown(courseSelect, Object.keys(studentData[yearKey][schoolKey]));
       courseSelect.disabled = false;
+      courseSelect.style.pointerEvents = 'auto';
     }
   });
 
@@ -628,22 +319,18 @@
     showStudentsBtn.disabled = !this.value;
     studentListContainer.classList.remove('show');
   });
+
   transcriptForm.addEventListener('submit', function (e) {
     e.preventDefault();
-
-    const year = academicYearSelect.value;
-    const school = schoolSelect.value;
-    const course = courseSelect.value;
-
+    const year = academicYearSelect.value, school = schoolSelect.value, course = courseSelect.value;
     if (!year || !school || !course) return;
 
     showStudentsBtn.innerHTML = '<span class="skeleton" style="width:80px;height:20px;"></span>';
     showStudentsBtn.disabled = true;
 
-    // Sort students by roll number.
-    const students = studentData[year][school][course].slice().sort((a, b) =>
-      a.roll_no.localeCompare(b.roll_no, undefined, { numeric: true, sensitivity: 'base' })
-    );
+    const students = studentData[year][school][course]
+      .slice()
+      .sort((a,b) => a.roll_no.localeCompare(b.roll_no, undefined, { numeric:true, sensitivity:'base' }));
 
     originalStudentList = students;
     currentStudents = students;
@@ -652,18 +339,10 @@
       displayStudents(students);
       showStudentsBtn.innerHTML = '<i class="fa-solid fa-users"></i> Show Students';
       showStudentsBtn.disabled = false;
-    }, 500);
+    }, 350);
   });
 
-
-  downloadAllPDFBtn.addEventListener("click", function (e) {
-    e.preventDefault();
-    downloadAll('pdf');
-  });
-
-  downloadAllZIPBtn.addEventListener("click", function (e) {
-    e.preventDefault();
-    downloadAll('zip');
-  });
+  downloadAllPDFBtn.addEventListener("click", e => { e.preventDefault(); downloadAll('pdf'); });
+  downloadAllZIPBtn.addEventListener("click", e => { e.preventDefault(); downloadAll('zip'); });
 </script>
 {% endblock %}

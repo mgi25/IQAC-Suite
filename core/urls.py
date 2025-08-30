@@ -161,6 +161,7 @@ urlpatterns = [
     path('api/student/performance-data/', views.api_student_performance_data, name='api_student_performance_data'),
     path('api/user/events-data/', views.api_user_events_data, name='api_user_events_data'),
     path('api/student/contributions/', views.api_student_contributions, name='api_student_contributions'),
+    path('api/cdl/head-dashboard/', views.api_cdl_head_dashboard, name='api_cdl_head_dashboard'),
 
     # --- Calendar (Unified) ---
     path('api/calendar/', views.api_calendar_events, name='api_calendar_events'),

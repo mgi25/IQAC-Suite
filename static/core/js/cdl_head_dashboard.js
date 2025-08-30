@@ -2,256 +2,353 @@
     const $ = (s, r = document) => r.querySelector(s);
     const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   
-    const NOTIFS = [
-      {id:101, type:'poster',       title:'Business Summit — Poster',       priority:'Urgent',  due:'2025-08-18'},
-      {id:102, type:'certificate',  title:'Tech Fest — Certificates',       priority:'Normal',  due:'2025-08-20'},
-      {id:103, type:'coverage',     title:'AI Workshop — Coverage',         priority:'Normal',  due:'2025-08-19'},
-      {id:104, type:'media',        title:'Cultural Night — Media Upload',  priority:'Urgent',  due:'2025-08-17'},
-    ];
-    let ASSIGN_LIST = [];
-  
-    const EVENTS = (()=>{
-      try { return JSON.parse(document.getElementById('calendarEventsJson').textContent) || []; }
-      catch { return [
-        {id:1, title:'Coverage: Business Summit', date:'2025-08-18', type:'coverage', member:'Priya'},
-        {id:2, title:'Poster Approval: Tech Fest', date:'2025-08-20', type:'approval'},
-        {id:3, title:'Coverage: Cultural Night', date:'2025-08-17', type:'coverage', member:'John'},
-      ]; }
-    })();
-  
-    function computeKPIs(){
-      const totalActive = NOTIFS.length + ASSIGN_LIST.length;
-      const assetsPending = 0;
-      const unassignedTasks = ASSIGN_LIST.filter(x=>!x.assignee).length;
-      const eventsSupported = 0;
-      $('#valActive').textContent = totalActive;
-      $('#valAssetsPending').textContent = assetsPending;
-      $('#valUnassigned').textContent = unassignedTasks;
-      $('#valEvents').textContent = eventsSupported;
+    // State loaded via AJAX
+    let EVENTS = [];
+    let EVENT_DETAILS = [];
+    let WORKLOAD_DATA = {};
+    let KPIS = { total_active_requests:0, assets_pending:0, unassigned_tasks:0, total_events_supported:0 };
+    let currentScope = 'all'; // all | support
+
+    async function loadData(scope='all'){
+      try{
+        const res = await fetch(`/api/cdl/head-dashboard/?scope=${encodeURIComponent(scope)}`, {headers:{'Accept':'application/json'}});
+        if(!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        KPIS = data.kpis || KPIS;
+        EVENTS = (data.events || []).filter(Boolean);
+        EVENT_DETAILS = (data.event_details || []).filter(Boolean);
+        WORKLOAD_DATA = data.workload || {};
+        renderAll();
+      }catch(err){
+        console.warn('Failed to load CDL dashboard data:', err);
+        // Keep UI with zeros as per requirement
+        KPIS = { total_active_requests:0, assets_pending:0, unassigned_tasks:0, total_events_supported:0 };
+        EVENTS = [];
+        EVENT_DETAILS = [];
+        WORKLOAD_DATA = {};
+        renderAll();
+      }
     }
-  
-    // KPIs shortcuts
-    $('#kpiActive')?.addEventListener('click', ()=> document.querySelector('#cardNotifications')?.scrollIntoView({behavior:'smooth'}));
-    $('#kpiUnassigned')?.addEventListener('click', ()=>{ setAMFilter('unassigned'); document.querySelector('#cardAssignAll')?.scrollIntoView({behavior:'smooth'}); });
-  
-    // Notifications
-    let currentNotifFilter = 'all';
+
+    function renderKPIs(){
+      $('#valActive').textContent = KPIS.total_active_requests ?? 0;
+      $('#valAssetsPending').textContent = KPIS.assets_pending ?? 0;
+      $('#valUnassigned').textContent = KPIS.unassigned_tasks ?? 0;
+      $('#valEvents').textContent = KPIS.total_events_supported ?? 0;
+    }
+
+    // Notifications (Event Details) filtering
+    let currentEventFilter = 'all';
     function renderNotifications(filter='all'){
-      const list = $('#notifList');
-      const empty = $('#notifEmpty');
-      const rows = NOTIFS
-        .filter(n => filter==='all' ? true : n.type === filter.slice(0,-1))
-        .map(n => `
-          <article class="list-item" data-id="${n.id}" data-type="${n.type}">
-            <div class="bullet under_review"><i class="fa-regular fa-bell"></i></div>
-            <div class="list-body">
-              <h4>${n.title}</h4>
-              <p>Priority: ${n.priority} · Due: ${fmt(n.due)}</p>
+      const list = $('#eventDetailsList');
+      if(!list) return;
+      
+      let items = EVENT_DETAILS;
+      
+      // Filter by type
+      if (filter === 'posters') {
+        items = items.filter(ev => ev.poster_required);
+      } else if (filter === 'certificates') {
+        items = items.filter(ev => ev.certificates_required);
+      } else if (filter === 'coverage') {
+        items = items.filter(ev => ev.status === 'approved');
+      } else if (filter === 'media') {
+        items = items.filter(ev => ev.poster_required || ev.certificates_required);
+      }
+      
+      if(items.length === 0){
+        list.innerHTML = '<div class="empty-state">No notifications</div>';
+        return;
+      }
+      
+      list.innerHTML = items.map(ev => {
+        const dateStr = ev.date ? new Date(ev.date).toLocaleDateString(undefined, {month:'short', day:'2-digit', year:'numeric'}) : '';
+        const org = ev.organization || 'N/A';
+        const assigned = ev.assigned_member || 'Unassigned';
+        
+        return `<div class="notification-item" data-id="${ev.id}">
+          <div class="notification-content">
+            <h4>${ev.title}</h4>
+            <p>Status: ${ev.status} ${dateStr?`• Date: ${dateStr}`:''}</p>
+            <p>Department: ${org} • Assigned: ${assigned}</p>
+            <div class="notification-tags">
+              ${ev.poster_required?'<span class="tag poster">Poster</span>':''}
+              ${ev.certificates_required?'<span class="tag certificate">Certificate</span>':''}
             </div>
-            <div class="btn-group">
-              <button class="chip-btn success" data-nact="approve"><i class="fa-solid fa-check"></i> Approve</button>
-              <button class="chip-btn warn" data-nact="decline"><i class="fa-solid fa-xmark"></i> Decline</button>
-            </div>
-          </article>
-        `).join('');
-      list.innerHTML = rows;
-      empty.style.display = rows ? 'none' : 'block';
-  
-      list.querySelectorAll('[data-nact]').forEach(btn=>{
-        btn.addEventListener('click', e=>{
-          const item = e.currentTarget.closest('.list-item');
-          const id = +item.dataset.id;
-          const act = e.currentTarget.dataset.nact;
-  
-          if (act==='approve') {
-            const n = NOTIFS.find(x=>x.id===id);
-            if (n) {
-              ASSIGN_LIST.unshift({
-                id:n.id, event:n.title.split(' — ')[0],
-                type:n.type, priority:n.priority, due:n.due,
-                assignee:null, status:'Pending', rev:0
-              });
-            }
-            const idx = NOTIFS.findIndex(x=>x.id===id);
-            if (idx>-1) NOTIFS.splice(idx,1);
-            renderNotifications(currentNotifFilter);
-            renderAssignTable();
-            computeKPIs();
-          }
-  
-          if (act==='decline') {
-            const idx = NOTIFS.findIndex(x=>x.id===id);
-            if (idx>-1) NOTIFS.splice(idx,1);
-            renderNotifications(currentNotifFilter);
-            computeKPIs();
-          }
-        });
-      });
+          </div>
+          <button class="view-btn" data-event-id="${ev.id}">View</button>
+        </div>`;
+      }).join('');
     }
-    $$('.seg-btn[data-nf]').forEach(b=>{
-      b.addEventListener('click', e=>{
-        $$('.seg-btn[data-nf]').forEach(x=>x.classList.remove('active'));
+
+    // Filter tabs event handling
+    $$('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        $$('.tab-btn').forEach(b => b.classList.remove('active'));
         e.currentTarget.classList.add('active');
-        currentNotifFilter = e.currentTarget.dataset.nf;
-        renderNotifications(currentNotifFilter);
+        currentEventFilter = e.currentTarget.dataset.filter;
+        renderNotifications(currentEventFilter);
       });
     });
-  
-    // Assignment Manager
-    let amFilter = 'all';
-    function setAMFilter(f){ amFilter = f; $$('.seg-btn[data-am]').forEach(b=> b.classList.toggle('active', b.dataset.am===f)); renderAssignTable(); }
-  
-    function renderAssignTable(){
-      const tb = $('#assignBody');
-      const now = new Date();
-      const rows = ASSIGN_LIST
-        .filter(r=>{
-          if (amFilter==='all') return true;
-          if (amFilter==='unassigned') return !r.assignee;
-          if (amFilter==='urgent') return r.priority==='Urgent';
-          if (amFilter==='due24'){ const ms = new Date(r.due) - now; return ms>=0 && ms<=24*60*60*1000; }
-          return true;
-        })
-        .map(r=>{
-          const pr = r.priority==='Urgent' ? 'danger' : 'amber';
-          const st = r.status==='Pending' ? 'warn' : (r.status==='In Review' ? 'info' : (r.status==='Approved'?'success':'gray'));
-          const ass = r.assignee ? r.assignee : '<span class="chip gray">Unassigned</span>';
-          return `
-          <tr data-id="${r.id}">
-            <td><input type="checkbox" class="amRow"></td>
-            <td>${r.event}</td>
-            <td>${cap(r.type)}</td>
-            <td><span class="chip ${pr}">${r.priority}</span></td>
-            <td>${fmt(r.due)}</td>
-            <td>${ass}</td>
-            <td><span class="chip ${st}">${r.status}</span></td>
-            <td>${r.rev}</td>
-            <td class="ta-right">
-              <button class="btn xs" data-am="assign">Assign</button>
-              <button class="btn xs success" data-am="approve">Approve</button>
-              <button class="btn xs warn" data-am="return">Return</button>
-            </td>
-          </tr>`;
-        }).join('');
-      tb.innerHTML = rows || `<tr><td colspan="9">No items</td></tr>`;
-  
-      tb.querySelectorAll('[data-am]').forEach(b=>{
-        b.addEventListener('click', e=>{
-          const tr = e.currentTarget.closest('tr');
-          const id = +tr.dataset.id;
-          const act = e.currentTarget.dataset.am;
-          const row = ASSIGN_LIST.find(x=>x.id===id);
-          if (!row) return;
-          if (act==='assign'){ row.assignee = prompt('Assign to (name)?') || row.assignee; }
-          if (act==='approve'){ row.status = 'Approved'; }
-          if (act==='return'){ row.status = 'Returned'; row.rev += 1; }
-          renderAssignTable(); computeKPIs();
+
+    // Event details view button
+    document.addEventListener('click', e => {
+      if (e.target.closest('[data-event-id]')) {
+        const eventId = e.target.closest('[data-event-id]').dataset.eventId;
+        viewEventDetails(eventId);
+      }
+    });
+
+    function viewEventDetails(eventId) {
+      window.location.href = `/proposal/${eventId}/detail/`;
+    }
+
+    // Assignment Manager - build from EVENT_DETAILS
+    function renderAssignmentTable(){
+      const tbody = $('#taskList'); 
+      if(!tbody) return;
+      
+      const tasks = EVENT_DETAILS.filter(ev => ev.poster_required || ev.certificates_required);
+      
+      if(tasks.length === 0){ 
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-row">No items</td></tr>'; 
+        return; 
+      }
+      
+      tbody.innerHTML = tasks.map((ev, index) => {
+        const dateStr = ev.date ? new Date(ev.date).toLocaleDateString(undefined, {month:'short', day:'2-digit'}) : '';
+        const org = ev.organization || 'N/A';
+        const type = [];
+        if (ev.poster_required) type.push('Poster');
+        if (ev.certificates_required) type.push('Certificate');
+        
+        return `<tr data-id="${ev.id}">
+          <td><input type="checkbox" /></td>
+          <td>${ev.title}</td>
+          <td>${type.join(', ')}</td>
+          <td><span class="priority-badge normal">Normal</span></td>
+          <td>${dateStr}</td>
+          <td>
+            <select class="assignee-select">
+              <option value="">Unassigned</option>
+              ${WORKLOAD_DATA.members ? WORKLOAD_DATA.members.map(member => 
+                `<option value="${member.toLowerCase()}">${member}</option>`
+              ).join('') : ''}
+            </select>
+          </td>
+          <td><span class="status-badge pending">Pending</span></td>
+          <td>1</td>
+          <td>
+            <button class="action-btn" data-action="assign">Assign</button>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    // Assignment Manager controls
+    $$('.control-btn[data-filter]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        $$('.control-btn[data-filter]').forEach(b => b.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        
+        const filter = e.currentTarget.dataset.filter;
+        const rows = $$('#taskList tr[data-id]');
+        
+        rows.forEach(row => {
+          let show = true;
+          
+          if (filter === 'unassigned') {
+            const select = row.querySelector('.assignee-select');
+            show = !select.value || select.value === '';
+          } else if (filter === 'urgent') {
+            // For demo, mark items with certificates as urgent
+            const typeCell = row.cells[2];
+            show = typeCell.textContent.includes('Certificate');
+          }
+          
+          row.style.display = show ? '' : 'none';
         });
       });
-    }
-  
-    $$('.seg-btn[data-am]').forEach(b=> b.addEventListener('click', ()=> setAMFilter(b.dataset.am)));
-    $('#amSelectAll')?.addEventListener('change', e=> $$('#assignBody .amRow').forEach(cb=> cb.checked = e.target.checked));
-    $('#amBulkAssign')?.addEventListener('click', ()=>{ const name = prompt('Assign selected to (name)?'); if(!name) return; getSel().forEach(id=>{ const r=ASSIGN_LIST.find(x=>x.id===id); if(r) r.assignee=name; }); renderAssignTable(); computeKPIs(); });
-    $('#amBulkApprove')?.addEventListener('click', ()=>{ getSel().forEach(id=>{ const r=ASSIGN_LIST.find(x=>x.id===id); if(r) r.status='Approved'; }); renderAssignTable(); computeKPIs(); });
-    $('#amBulkReturn')?.addEventListener('click', ()=>{ getSel().forEach(id=>{ const r=ASSIGN_LIST.find(x=>x.id===id); if(r){ r.status='Returned'; r.rev+=1; } }); renderAssignTable(); computeKPIs(); });
-    const getSel = ()=> $$('#assignBody .amRow:checked').map(cb=> +cb.closest('tr').dataset.id);
-  
-    // Team Analytics
+    });
+
+    // Task assign handler
+    document.addEventListener('click', e => {
+      if (e.target.dataset.action === 'assign') {
+        const row = e.target.closest('tr');
+        const select = row.querySelector('.assignee-select');
+        const assignee = select.value;
+        
+        if (!assignee) {
+          alert('Please select an assignee first');
+          return;
+        }
+        
+        console.log('Assigning task to:', assignee);
+        alert(`Task assigned to ${assignee}`);
+        
+        // Update UI
+        const statusCell = row.querySelector('.status-badge');
+        statusCell.textContent = 'Assigned';
+        statusCell.className = 'status-badge assigned';
+        e.target.textContent = 'Assigned';
+        e.target.disabled = true;
+      }
+    });
+
+    // Team Analytics - updated to use workload data
     let teamChart;
     function buildTeamChart(labels, data, title){
-      const ctx = $('#teamChart'); if(!ctx) return;
+      const ctx = $('#teamChart'); 
+      if(!ctx) return;
+      
       teamChart?.destroy();
       teamChart = new Chart(ctx, {
         type: 'bar',
-        data: { labels, datasets:[{ data, borderWidth:0 }] },
-        options: { plugins:{legend:{display:false}}, responsive:true, maintainAspectRatio:false, scales:{y:{beginAtZero:true}} }
+        data: { 
+          labels, 
+          datasets: [{ 
+            data, 
+            borderWidth: 0,
+            backgroundColor: ['#4f46e5', '#3b82f6', '#22c55e', '#f59e0b', '#ef4444']
+          }] 
+        },
+        options: { 
+          plugins: { legend: { display: false } }, 
+          responsive: true, 
+          maintainAspectRatio: false, 
+          scales: { y: { beginAtZero: true } } 
+        }
       });
-      $('#teamTitle').textContent = title;
     }
-    function viewWorkload(){ buildTeamChart(['John','Priya','Aarav','Meera'], [5,8,3,6], 'Workload Distribution'); }
-    function viewOnTime(){ buildTeamChart(['John','Priya','Aarav','Meera'], [82,74,91,69], 'On-time Completion (%)'); }
-    function viewFirstPass(){ buildTeamChart(['John','Priya','Aarav','Meera'], [64,71,55,77], 'First-pass Approval (%)'); }
-    $$('.seg-btn[data-view]').forEach(b=>{
-      b.addEventListener('click', e=>{
-        $$('.seg-btn[data-view]').forEach(x=>x.classList.remove('active'));
+    
+    function viewWorkload(){ 
+      if (WORKLOAD_DATA.members && WORKLOAD_DATA.assignments && WORKLOAD_DATA.members.length) {
+        buildTeamChart(WORKLOAD_DATA.members, WORKLOAD_DATA.assignments, 'Workload Distribution');
+      } else {
+        buildTeamChart(['No Members'], [0], 'Workload Distribution');
+      }
+    }
+    
+    function viewOnTime(){ 
+      const members = WORKLOAD_DATA.members && WORKLOAD_DATA.members.length ? WORKLOAD_DATA.members : ['No Members'];
+      const onTimeData = members.map(() => 0);
+      buildTeamChart(members, onTimeData, 'On-time %'); 
+    }
+    
+    function viewFirstPass(){ 
+      const members = WORKLOAD_DATA.members && WORKLOAD_DATA.members.length ? WORKLOAD_DATA.members : ['No Members'];
+      const firstPassData = members.map(() => 0);
+      buildTeamChart(members, firstPassData, 'First-pass %'); 
+    }
+    
+    $$('.control-btn[data-view]').forEach(b => {
+      b.addEventListener('click', e => {
+        $$('.control-btn[data-view]').forEach(x => x.classList.remove('active'));
         e.currentTarget.classList.add('active');
         const v = e.currentTarget.dataset.view;
-        if(v==='workload') viewWorkload();
-        if(v==='ontime') viewOnTime();
-        if(v==='firstpass') viewFirstPass();
+        if(v === 'workload') viewWorkload();
+        if(v === 'ontime') viewOnTime();
+        if(v === 'firstpass') viewFirstPass();
       });
     });
-  
-    // Calendar
+
+    // Calendar - updated to work with proposal events
     let calRef = new Date();
+    let currentCalFilter = 'all';
     const fmt2 = v => String(v).padStart(2,'0');
     const titleEl = $('#calTitle'), gridEl = $('#calGrid'), upcoming = $('#upcomingWrap');
-  
+
     function buildCalendar(){
-      if(!gridEl||!titleEl) return;
-      titleEl.textContent = calRef.toLocaleString(undefined,{month:'long',year:'numeric'});
+      if(!gridEl || !titleEl) return;
+      
+      titleEl.textContent = calRef.toLocaleString(undefined, {month:'long', year:'numeric'});
       const first = new Date(calRef.getFullYear(), calRef.getMonth(), 1);
       const last  = new Date(calRef.getFullYear(), calRef.getMonth()+1, 0);
       const startIdx = first.getDay();
       const prevLast = new Date(calRef.getFullYear(), calRef.getMonth(), 0).getDate();
       const cells = [];
-      for(let i=startIdx-1;i>=0;i--) cells.push({t: prevLast - i, iso:null, muted:true});
-      for(let d=1; d<=last.getDate(); d++){
+      
+      for(let i = startIdx-1; i >= 0; i--) cells.push({t: prevLast - i, iso:null, muted:true});
+      for(let d = 1; d <= last.getDate(); d++){
         const iso = `${calRef.getFullYear()}-${fmt2(calRef.getMonth()+1)}-${fmt2(d)}`;
         cells.push({t:d, iso, muted:false});
       }
-      while(cells.length%7!==0) cells.push({t:'',iso:null, muted:true});
-  
-      gridEl.innerHTML = cells.map(c=>{
-        const dots = buildDots(c.iso);
-        return `<div class="day${c.muted?' muted':''}" data-date="${c.iso||''}">
-          <div class="num">${c.t}</div>
-          <div class="dots">${dots}</div>
-        </div>`;
+      while(cells.length % 7 !== 0) cells.push({t:'', iso:null, muted:true});
+
+      gridEl.innerHTML = cells.map(c => {
+        if (!c.iso) {
+          return `<div class="day muted" data-date="">${c.t}</div>`;
+        }
+        const isToday = c.iso === new Date().toISOString().slice(0,10);
+        // Support filter: show dots only for CDL support when filter is 'support'
+        let dayEvents = EVENTS.filter(e => e.date === c.iso);
+        if (currentCalFilter === 'support') {
+          dayEvents = dayEvents.filter(e => e.type === 'cdl_support');
+        }
+        const hasEvents = dayEvents.length > 0;
+        return `<div class="day${hasEvents ? ' has-events' : ''}${isToday ? ' today' : ''}" data-date="${c.iso}">${c.t}</div>`;
       }).join('');
-  
-      $$('#calGrid .day[data-date]').forEach(d=> d.addEventListener('click', ()=> {
-        // highlight selection
-        $$('#calGrid .day.selected').forEach(x=>x.classList.remove('selected'));
+
+      $$('.day[data-date]').forEach(d => d.addEventListener('click', () => {
+        $$('.day.selected').forEach(x => x.classList.remove('selected'));
         d.classList.add('selected');
         openDay(d.dataset.date);
       }));
     }
-    function buildDots(iso){
-      if(!iso) return '';
-      const list = EVENTS.filter(e=>e.date===iso);
-      const hasConflict = (()=>{ const m={}; list.forEach(e=>{ if(e.member){ m[e.member]=(m[e.member]||0)+1; }}); return Object.values(m).some(v=>v>1); })();
-      return list.map(e=>`<span class="dot ${e.type==='coverage'?'blue':'green'}"></span>`).join('') + (hasConflict? `<span class="dot red" title="Conflict"></span>`:'');
-    }
+
     function openDay(iso){
-      const items = EVENTS.filter(e=>e.date===iso);
-      upcoming.innerHTML = items.length ? items.map(e=>`
-        <div class="u-item">
-          <div>${e.title}</div>
-          <a class="chip-btn" href="/proposal/${e.id}/detail/"><i class="fa-regular fa-eye"></i> View</a>
+      let items = EVENTS.filter(e => e.date === iso);
+      if (currentCalFilter === 'support') {
+        items = items.filter(e => e.type === 'cdl_support');
+      }
+      
+      const dateStr = new Date(iso).toLocaleDateString(undefined, {day:'2-digit', month:'2-digit', year:'numeric'});
+      
+      upcoming.innerHTML = items.length ? items.map(e => `
+        <div class="event-item">
+          <div class="event-info">
+            <strong>${e.title}</strong><br>
+            <small>Status: ${e.status} | Org: ${e.organization}</small>
+          </div>
+          <a class="view-link" href="/proposal/${e.id}/detail/">View</a>
         </div>
-      `).join('') : `<div class="empty">No items for ${new Date(iso).toLocaleDateString()}</div>`;
+      `).join('') : `<div class="empty-state">No items for ${dateStr}</div>`;
     }
-    $('#calPrev')?.addEventListener('click', ()=>{ calRef = new Date(calRef.getFullYear(), calRef.getMonth()-1, 1); buildCalendar(); });
-    $('#calNext')?.addEventListener('click', ()=>{ calRef = new Date(calRef.getFullYear(), calRef.getMonth()+1, 1); buildCalendar(); });
-    $('#addEventBtn')?.addEventListener('click', (e)=>{
-      const scope = $('#calFilter')?.value || 'all';
-      e.currentTarget.href = `/suite/submit/?via=dashboard&scope=${encodeURIComponent(scope)}`;
+
+    // Calendar filter
+    $('#calFilter')?.addEventListener('change', e => {
+      currentCalFilter = e.target.value;
+      currentScope = currentCalFilter;
+      loadData(currentScope);
     });
-  
-    // Utils
-    function cap(s){ return s ? s.charAt(0).toUpperCase()+s.slice(1) : s; }
-    function fmt(iso){ const d=new Date(iso); return d.toLocaleString(undefined,{month:'short',day:'2-digit'}); }
-  
-    document.addEventListener('DOMContentLoaded', ()=>{
-      computeKPIs();
-      renderNotifications('all');
-      setAMFilter('all');
-      renderAssignTable();
+
+  $('#calPrev')?.addEventListener('click', () => { 
+      calRef = new Date(calRef.getFullYear(), calRef.getMonth()-1, 1); 
+      buildCalendar(); 
+    });
+    
+  $('#calNext')?.addEventListener('click', () => { 
+      calRef = new Date(calRef.getFullYear(), calRef.getMonth()+1, 1); 
+      buildCalendar(); 
+    });
+
+    function renderAll(){
+      renderKPIs();
+      renderNotifications(currentEventFilter);
+      renderAssignmentTable();
       viewWorkload();
       buildCalendar();
-      openDay(new Date().toISOString().slice(0,10));
+      
+      // Select today's date if present
+      const today = new Date().toISOString().slice(0,10);
+      const todayCell = $(`.day[data-date="${today}"]`);
+      if (todayCell) { 
+        todayCell.classList.add('selected'); 
+        openDay(today); 
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadData('all');
     });
-  })();
-  
+  })();  
