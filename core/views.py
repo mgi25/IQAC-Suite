@@ -314,16 +314,23 @@ def api_cdl_head_dashboard(request):
     """
     scope = request.GET.get("scope", "all").lower().strip()
 
-    # Base queryset
-    qs = (
+    # Base queryset for KPIs (can include non-finalized where appropriate)
+    kpi_qs = (
         EventProposal.objects.all()
         .select_related("organization")
         .prefetch_related("cdl_support")
     )
 
-    # Filter: support => only proposals with CDL support requested
+    # Events/notifications must be FINALIZED only
+    events_qs = (
+        EventProposal.objects.filter(status=EventProposal.Status.FINALIZED)
+        .select_related("organization")
+        .prefetch_related("cdl_support")
+    )
+
+    # Filter: support => only proposals with CDL support requested (and finalized)
     if scope == "support":
-        qs = qs.filter(cdl_support__needs_support=True)
+        events_qs = events_qs.filter(cdl_support__needs_support=True)
 
     # Helper: get best date for calendar/listing
     def _get_date(p: EventProposal):
@@ -343,12 +350,10 @@ def api_cdl_head_dashboard(request):
         EventProposal.Status.WAITING,
     ]
 
-    # KPI calculations (scoped)
-    scoped = qs
+    # KPI calculations (independent of finalized-only constraint)
+    total_active_requests = kpi_qs.filter(status__in=active_statuses).count()
 
-    total_active_requests = scoped.filter(status__in=active_statuses).count()
-
-    assets_pending = scoped.filter(
+    assets_pending = kpi_qs.filter(
         cdl_support__needs_support=True,
     ).filter(
         models.Q(cdl_support__poster_required=True) | models.Q(cdl_support__certificates_required=True)
@@ -364,11 +369,11 @@ def api_cdl_head_dashboard(request):
     # No explicit CDL assignment model exists; return 0 as per "missing → 0"
     unassigned_tasks = 0
 
-    total_events_supported = scoped.filter(cdl_support__needs_support=True).count()
+    total_events_supported = kpi_qs.filter(cdl_support__needs_support=True).count()
 
     # Events (for calendar)
     events = []
-    for p in scoped:
+    for p in events_qs:
         d = _get_date(p)
         events.append({
             "id": p.id,
@@ -381,7 +386,7 @@ def api_cdl_head_dashboard(request):
 
     # Event Details (right panel)
     event_details = []
-    for p in scoped.select_related("cdl_support"):
+    for p in events_qs.select_related("cdl_support"):
         d = _get_date(p)
         cs = getattr(p, "cdl_support", None)
         event_details.append({
