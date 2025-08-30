@@ -92,6 +92,7 @@ window.AutosaveManager = (function() {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': window.AUTOSAVE_CSRF
             },
+            credentials: 'same-origin',
             body: JSON.stringify(formData)
         })
         .then(async res => {
@@ -224,6 +225,7 @@ async function autosave() {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': window.AUTOSAVE_CSRF,
             },
+            credentials: 'same-origin',
             body: JSON.stringify(payload),
         });
         if (!res.ok) {
