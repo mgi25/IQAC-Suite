@@ -2886,21 +2886,21 @@ function getWhyThisEventForm() {
     function validateBasicInfo() {
         let isValid = true;
 
-        // Check org type (which is now a TomSelect-backed input)
+        // Check org type (TomSelect input)
         const orgTypeInput = $('#org-type-modern-input');
+        const orgTypeValue = orgTypeInput[0]?.tomselect?.getValue();
         console.log('validateBasicInfo: orgType', {
             id: orgTypeInput.attr('id'),
             name: orgTypeInput.attr('name'),
-            value: orgTypeInput.val(),
-            tomSelectValue: orgTypeInput[0]?.tomselect?.getValue()
+            value: orgTypeValue
         });
-        if (!orgTypeInput.val() || !orgTypeInput[0].tomselect?.getValue()) {
+        if (!orgTypeValue) {
             showFieldError(orgTypeInput.parent(), 'Organization type is required');
             isValid = false;
         }
 
         // Check organization if org type is selected
-        if (orgTypeInput.val()) {
+        if (orgTypeValue) {
             // Try select (TomSelect)
             let orgField = $(`.org-specific-field:visible select`);
             if (orgField.length) {
