@@ -634,6 +634,9 @@ $(document).ready(function() {
             });
             djangoFacultySelect.trigger('change');
             clearFieldError(facultySelect);
+            if (window.AutosaveManager) {
+                window.AutosaveManager.manualSave(['faculty_incharges']).catch(() => {});
+            }
         });
 
         const initialValues = djangoFacultySelect.val();
