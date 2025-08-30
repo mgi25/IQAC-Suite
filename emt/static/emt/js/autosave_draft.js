@@ -155,7 +155,8 @@ window.AutosaveManager = (function() {
 
     function bindField(field) {
         if (field.dataset.autosaveBound) return;
-        const handler = () => {
+        const handler = (e) => {
+            if (e.autosaveSkip) return;
             clearTimeout(timeoutId);
             timeoutId = setTimeout(() => {
                 autosaveDraft().catch(() => {});
@@ -188,11 +189,23 @@ window.AutosaveManager = (function() {
                     f.checked = val === f.value;
                 } else if (f.multiple) {
                     const values = Array.isArray(val) ? val : [val];
-                    Array.from(f.options).forEach(o => {
-                        o.selected = values.includes(o.value);
-                    });
+                    if (f.options.length) {
+                        Array.from(f.options).forEach(o => {
+                            o.selected = values.includes(o.value);
+                        });
+                    } else {
+                        f.dataset.autosaveValue = JSON.stringify(values);
+                    }
                 } else if (!f.value) {
                     f.value = val;
+                }
+                const evt = new Event('input', { bubbles: true });
+                evt.autosaveSkip = true;
+                f.dispatchEvent(evt);
+                if (f.tagName === 'SELECT') {
+                    const chEvt = new Event('change', { bubbles: true });
+                    chEvt.autosaveSkip = true;
+                    f.dispatchEvent(chEvt);
                 }
             }
             bindField(f);
