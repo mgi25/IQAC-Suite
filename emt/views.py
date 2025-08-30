@@ -330,7 +330,13 @@ def submit_proposal(request, pk=None):
     from transcript.models import get_active_academic_year
 
     active_year = get_active_academic_year()
-    selected_academic_year = active_year.year if active_year else ""
+    selected_academic_year = active_year.year if active_year else None
+
+    if not selected_academic_year:
+        now = timezone.now()
+        start_year = now.year if now.month >= 6 else now.year - 1
+        end_year = start_year + 1
+        selected_academic_year = f"{start_year}-{end_year}"
 
     proposal = None
     if pk:
