@@ -3087,20 +3087,25 @@ function getWhyThisEventForm() {
             field.addClass('has-error');
             field.closest('.input-group').addClass('has-error');
 
-            let targetField = field;
-            if (!targetField.is('input, select, textarea')) {
-                targetField = field.find('input, select, textarea').first();
+            let targetField;
+            if (field[0]?.tomselect) {
+                targetField = $(field[0].tomselect.input);
+            } else if (field.is('input[id], input[name], select[id], select[name], textarea[id], textarea[name]')) {
+                targetField = field;
+            } else {
+                targetField = field
+                    .find('input[id], input[name], select[id], select[name], textarea[id], textarea[name]')
+                    .first();
             }
-            const fieldData = {
+            const fieldData = targetField && targetField.length ? {
                 id: targetField.attr('id'),
                 name: targetField.attr('name'),
                 value: targetField[0]?.tomselect
                     ? targetField[0].tomselect.getValue()
-                    : targetField.val()
-            };
+                    : targetField.val(),
+            } : {};
 
-            // Could add error message display here
-            console.warn('Validation error:', message, fieldData);
+            console.warn(message, fieldData);
             if (!firstErrorField) {
                 firstErrorField = field;
             }
