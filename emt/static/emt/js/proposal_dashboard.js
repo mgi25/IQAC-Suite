@@ -858,7 +858,6 @@ $(document).ready(function() {
             : [];
 
         modal.addClass('show');
-        $('#audienceSave').hide();
 
         let available = [];
         let selected = [];
@@ -908,6 +907,7 @@ $(document).ready(function() {
                 <div class="audience-custom">
                     <select id="audienceCustomInput" placeholder="Add custom audience"></select>
                 </div>
+                <button type="button" id="audienceAddSelection" class="btn-continue">Add</button>
                 <button type="button" id="audienceBack" class="btn-continue">Back</button>
             </div>
         `);
@@ -921,6 +921,7 @@ $(document).ready(function() {
         const step1 = container.find('#audienceStep1');
         const step2 = container.find('#audienceStep2');
         const continueBtn = container.find('#audienceContinue');
+        const addBtn = container.find('#audienceAddSelection');
         const backBtn = container.find('#audienceBack');
 
         let classStudentMap = {};
@@ -1065,7 +1066,7 @@ $(document).ready(function() {
             listContainer.show();
             continueBtn.show();
             step2.hide();
-            $('#audienceSave').hide();
+            addBtn.hide();
             renderLists();
             loadAvailable('');
         });
@@ -1114,14 +1115,23 @@ $(document).ready(function() {
             step1.hide();
             step2.show();
             continueBtn.hide();
-            $('#audienceSave').show();
+            addBtn.show();
         });
 
         backBtn.on('click', function() {
             step2.hide();
             step1.show();
             continueBtn.show();
-            $('#audienceSave').hide();
+            addBtn.hide();
+        });
+
+        addBtn.on('click', function() {
+            step2.hide();
+            step1.show();
+            listContainer.hide();
+            continueBtn.hide();
+            addBtn.hide();
+            currentType = null;
         });
 
         const customTS = new TomSelect('#audienceCustomInput', {
@@ -1199,7 +1209,7 @@ $(document).ready(function() {
             container.find('button[data-type="students"]').click();
         }
 
-        $('#audienceSave').off('click').on('click', () => {
+        $('#audienceConfirm').off('click').on('click', () => {
             const groupNames = selectedStudents.concat(selectedFaculty).map(it => it.name);
             const userNames = userSelected.map(u => u.name);
             const names = groupNames.concat(userNames);
