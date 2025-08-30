@@ -2055,6 +2055,22 @@ function getWhyThisEventForm() {
             });
             showEmptyState();
         } else {
+            try {
+                const saved = JSON.parse(
+                    localStorage.getItem(`proposal_draft_${window.location.pathname}_new`) || '{}'
+                );
+                const idxSet = new Set();
+                Object.keys(saved).forEach(key => {
+                    const m = key.match(/^speaker_(?:full_name|designation|affiliation|contact_email|contact_number|linkedin_url|detailed_profile)_(\d+)$/);
+                    if (m) idxSet.add(parseInt(m[1], 10));
+                });
+                if (idxSet.size) {
+                    container.empty();
+                    Array.from(idxSet).sort((a, b) => a - b).forEach(() => addSpeakerForm());
+                }
+            } catch (err) {
+                console.error('Failed to restore speakers from draft', err);
+            }
             showEmptyState();
         }
     }
