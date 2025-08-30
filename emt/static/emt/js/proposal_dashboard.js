@@ -1969,6 +1969,18 @@ function getWhyThisEventForm() {
             showEmptyState();
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
+                if (window.AutosaveManager.manualSave) {
+                    const remaining = container.children('.speaker-form-container').length;
+                    let dummy = null;
+                    if (remaining === 0) {
+                        dummy = $('<input type="hidden" name="speaker_full_name_0" value="">').appendTo(container);
+                    }
+                    const p = window.AutosaveManager.manualSave();
+                    p.catch(() => {});
+                    if (dummy) {
+                        p.finally ? p.finally(() => dummy.remove()) : p.then(() => dummy.remove()).catch(() => dummy.remove());
+                    }
+                }
             }
         });
 

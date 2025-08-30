@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 import json
 
 from core.models import OrganizationType, Organization, OrganizationRole, RoleAssignment
-from emt.models import EventProposal, EventActivity
+from emt.models import EventProposal, EventActivity, SpeakerProfile
 
 
 class AutosavePartialUpdateTests(TestCase):
@@ -72,3 +72,36 @@ class AutosavePartialUpdateTests(TestCase):
 
         get_resp = self.client.get(reverse("emt:submit_proposal_with_pk", args=[pid]))
         self.assertContains(get_resp, f'value="{self.faculty.id}" selected')
+
+    def test_autosave_remove_all_speakers(self):
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(self._payload()),
+            content_type="application/json",
+        )
+        pid = resp.json()["proposal_id"]
+
+        add_payload = {
+            "proposal_id": pid,
+            "speaker_full_name_0": "Dr. Jane",
+            "speaker_designation_0": "Prof",
+            "speaker_affiliation_0": "Uni",
+            "speaker_contact_email_0": "jane@example.com",
+            "speaker_detailed_profile_0": "Profile",
+        }
+        resp2 = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(add_payload),
+            content_type="application/json",
+        )
+        self.assertTrue(resp2.json()["success"])
+        self.assertEqual(SpeakerProfile.objects.filter(proposal_id=pid).count(), 1)
+
+        remove_payload = {"proposal_id": pid, "speaker_full_name_0": ""}
+        resp3 = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(remove_payload),
+            content_type="application/json",
+        )
+        self.assertTrue(resp3.json()["success"])
+        self.assertEqual(SpeakerProfile.objects.filter(proposal_id=pid).count(), 0)
