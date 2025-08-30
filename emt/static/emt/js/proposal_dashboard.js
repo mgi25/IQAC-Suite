@@ -3073,8 +3073,11 @@ function getWhyThisEventForm() {
     }
 
     function handleAutosaveErrors(errorData) {
-        const errors = errorData?.errors || errorData;
-        if (!errors) return;
+        const errors = (errorData && typeof errorData === 'object') ? (errorData.errors || errorData) : null;
+        if (!errors || typeof errors !== 'object') {
+            showNotification('Autosave failed. Please try again.', 'error');
+            return;
+        }
         showNotification('Draft saved with validation warnings. Please review highlighted fields.', 'info');
         clearValidationErrors();
         firstErrorField = null;
