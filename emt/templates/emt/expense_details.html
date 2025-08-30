@@ -28,11 +28,11 @@
         {% for form in formset %}
           <div class="section expense-form">
             <h4>Expense {{ forloop.counter }}</h4>
-            <div class="input-group">{{ form.sl_no.label_tag }} {{ form.sl_no }}</div>
-            <div class="input-group">{{ form.particulars.label_tag }} {{ form.particulars }}</div>
-            <div class="input-group">{{ form.amount.label_tag }} {{ form.amount }}</div>
+            <div class="input-group">{{ form.sl_no.label_tag }} {{ form.sl_no.as_widget(attrs={'class': 'proposal-input'}) }}</div>
+            <div class="input-group">{{ form.particulars.label_tag }} {{ form.particulars.as_widget(attrs={'class': 'proposal-input'}) }}</div>
+            <div class="input-group">{{ form.amount.label_tag }} {{ form.amount.as_widget(attrs={'class': 'proposal-input'}) }}</div>
             {% if form.DELETE %}
-              <div class="input-group">{{ form.DELETE }} Remove this expense</div>
+              <div class="input-group">{{ form.DELETE.as_widget(attrs={'class': 'proposal-input'}) }} Remove this expense</div>
             {% endif %}
           </div>
           <hr>

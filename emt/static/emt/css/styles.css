@@ -245,6 +245,23 @@
     color: #9ca3af;
   }
   .proposal-content .input-group textarea { resize: vertical; min-height: 100px; }
+
+  /* Reusable proposal input */
+  .proposal-input {
+    background-color: #f8f9fa !important;
+    border: 1px solid #ced4da !important;
+    border-radius: 0.25rem !important;
+    padding: 0.5rem 0.75rem !important;
+    transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+  }
+  .proposal-input:hover {
+    border-color: #adb5bd !important;
+  }
+  .proposal-input:focus {
+    outline: none !important;
+    border-color: #0d6efd !important;
+    box-shadow: 0 0 0 0.25rem rgba(13,110,253,.25) !important;
+  }
   
   /* Help text */
   .proposal-content .help-text { font-size: .75rem; color: var(--text-muted); margin-top: .25rem; }
