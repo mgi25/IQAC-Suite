@@ -142,6 +142,8 @@ ALLOWED_HOSTS=127.0.0.1,localhost
 GEMINI_API_KEY=your-gemini-api-key
 ```
 
+If `DATABASE_URL` is omitted, the project falls back to a local SQLite database at `db.sqlite3`. Provide a PostgreSQL URL only when you have access to that server.
+
 ### 4. Database Migrations
 
 ```bash
