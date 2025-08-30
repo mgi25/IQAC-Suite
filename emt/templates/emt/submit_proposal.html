@@ -386,7 +386,7 @@
         window.API_FETCH_LINKEDIN = "{% url 'emt:fetch_linkedin_profile' %}";
         window.SDG_GOALS = {{ sdg_goals_list|safe }};
         window.EXISTING_ACTIVITIES = {{ activities_json|safe }};
-        window.EXISTING_SPEAKERS = {{ speakers_json|safe }};
+        window.EXISTING_SPEAKERS = {{ speakers_json|default:'[]'|safe }};
         window.EXISTING_EXPENSES = {{ expenses_json|safe }};
         window.EXISTING_INCOME = {{ income_json|default:'[]'|safe }};
         // window.AI_NEED_URL = "{% url 'emt:generate_need_analysis' %}";

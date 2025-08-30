@@ -105,3 +105,31 @@ class AutosavePartialUpdateTests(TestCase):
         )
         self.assertTrue(resp3.json()["success"])
         self.assertEqual(SpeakerProfile.objects.filter(proposal_id=pid).count(), 0)
+
+    def test_autosave_add_speaker_persists(self):
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(self._payload()),
+            content_type="application/json",
+        )
+        pid = resp.json()["proposal_id"]
+
+        add_payload = {
+            "proposal_id": pid,
+            "speaker_full_name_0": "Dr. Jane",
+            "speaker_designation_0": "Prof",
+            "speaker_affiliation_0": "Uni",
+            "speaker_contact_email_0": "jane@example.com",
+            "speaker_detailed_profile_0": "Profile",
+        }
+        resp2 = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(add_payload),
+            content_type="application/json",
+        )
+        self.assertTrue(resp2.json()["success"])
+
+        get_resp = self.client.get(reverse("emt:submit_proposal_with_pk", args=[pid]))
+        speakers = json.loads(get_resp.context["speakers_json"])
+        self.assertEqual(len(speakers), 1)
+        self.assertEqual(speakers[0]["full_name"], "Dr. Jane")

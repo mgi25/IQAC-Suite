@@ -782,7 +782,12 @@ def autosave_proposal(request):
         errors["income"] = in_errors
 
     _save_activities(proposal, data)
-    _save_speakers(proposal, data, request.FILES)
+    if any(key.startswith("speaker_") for key in list(data.keys()) + list(request.FILES.keys())):
+        try:
+            _save_speakers(proposal, data, request.FILES)
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.exception("Error saving speakers: %s", exc)
+            errors.setdefault("speakers", {}).setdefault("__all__", []).append(str(exc))
     _save_expenses(proposal, data)
     _save_income(proposal, data)
 
