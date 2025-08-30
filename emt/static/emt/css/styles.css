@@ -220,29 +220,18 @@
     border: 1px solid var(--input-border) !important;
     border-radius: 8px !important;
     font-size: .875rem;
-    transition: background-color .2s, border-color .2s, box-shadow .2s;
+    transition: border-color .2s, box-shadow .2s, background .2s;
     width: 100%;
     box-sizing: border-box;
-    background: #f9fafb !important;
-  }
-  .proposal-content .input-group input:hover,
-  .proposal-content .input-group select:hover,
-  .proposal-content .input-group textarea:hover,
-  .ts-control:hover {
-    border-color: var(--primary-blue) !important;
+    background: #fff !important;
   }
   .proposal-content .input-group input:focus,
   .proposal-content .input-group select:focus,
   .proposal-content .input-group textarea:focus,
   .ts-control:focus-within {
     outline: none;
-    background: #fff !important;
     border-color: var(--primary-blue) !important;
     box-shadow: 0 0 0 3px rgba(38,68,135,.12) !important;
-  }
-  .proposal-content .input-group input::placeholder,
-  .proposal-content .input-group textarea::placeholder {
-    color: #9ca3af;
   }
   .proposal-content .input-group textarea { resize: vertical; min-height: 100px; }
   
@@ -458,22 +447,7 @@
   .cdl-form-grid .input-group input,
   .cdl-form-grid .input-group select,
   .cdl-form-grid .input-group textarea {
-    padding: .75rem 1rem;
-    border: 1px solid var(--input-border);
-    border-radius: 8px;
-    font-size: .875rem;
-    background: #f9fafb;
-    transition: background-color .2s, border-color .2s, box-shadow .2s;
-  }
-  .speaker-form-grid .input-group input:hover,
-  .speaker-form-grid .input-group select:hover,
-  .bio-section textarea:hover,
-  .expense-form-grid .input-group input:hover,
-  .income-form-grid .input-group input:hover,
-  .cdl-form-grid .input-group input:hover,
-  .cdl-form-grid .input-group select:hover,
-  .cdl-form-grid .input-group textarea:hover {
-    border-color: var(--primary-blue);
+    padding: .75rem 1rem; border: 1px solid var(--input-border); border-radius: 8px; font-size: .875rem; background: #fff;
   }
   .speaker-form-grid .input-group input:focus,
   .speaker-form-grid .input-group select:focus,
@@ -483,10 +457,7 @@
   .cdl-form-grid .input-group input:focus,
   .cdl-form-grid .input-group select:focus,
   .cdl-form-grid .input-group textarea:focus {
-    outline: none;
-    background: #fff;
-    border-color: var(--primary-blue);
-    box-shadow: 0 0 0 3px rgba(38,68,135,.12);
+    outline: none; border-color: var(--primary-blue); box-shadow: 0 0 0 3px rgba(38,68,135,.12);
   }
   
   /* File input */

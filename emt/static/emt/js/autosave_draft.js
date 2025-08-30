@@ -18,11 +18,10 @@ window.AutosaveManager = (function() {
         }
     }
 
-    function collectFieldData(onlyFields) {
+    function collectFieldData() {
         const grouped = {};
         fields.forEach(f => {
             if (f.disabled || !f.name) return;
-            if (Array.isArray(onlyFields) && !onlyFields.includes(f.name)) return;
             (grouped[f.name] ||= []).push(f);
         });
         const data = {};
@@ -53,9 +52,6 @@ window.AutosaveManager = (function() {
             }
         });
 
-        // CSRF token is sent via header; exclude it from payload
-        delete data.csrfmiddlewaretoken;
-
         // Map generic 'content' field to a specific section if configured.
         if (data.content !== undefined && window.AUTOSAVE_SECTION) {
             data[window.AUTOSAVE_SECTION] = data.content;
@@ -78,14 +74,14 @@ window.AutosaveManager = (function() {
         localStorage.removeItem(pageKey);
     }
 
-    function autosaveDraft(onlyFields) {
+    function autosaveDraft() {
         // Don't autosave for submitted proposals
         if (window.PROPOSAL_STATUS && window.PROPOSAL_STATUS !== 'draft') {
             clearLocal();
             return Promise.resolve();
         }
 
-        const formData = collectFieldData(onlyFields);
+        const formData = collectFieldData();
         if (proposalId) {
             formData['proposal_id'] = proposalId;
         }
@@ -93,7 +89,7 @@ window.AutosaveManager = (function() {
         const formEl = document.querySelector('form');
         const hasFile = formEl && Array.from(formEl.querySelectorAll('input[type="file"]')).some(f => f.files.length > 0);
 
-        document.dispatchEvent(new CustomEvent('autosave:start', { detail: { fields: onlyFields }}));
+        document.dispatchEvent(new Event('autosave:start'));
 
         const headers = { 'X-CSRFToken': window.AUTOSAVE_CSRF };
         const options = {
@@ -141,16 +137,14 @@ window.AutosaveManager = (function() {
                 window.PROPOSAL_ID = data.proposal_id;
                 saveLocal();
                 document.dispatchEvent(new CustomEvent('autosave:success', {
-                    detail: { proposalId: data.proposal_id, errors: data.errors, fields: onlyFields }
+                    detail: { proposalId: data.proposal_id, errors: data.errors }
                 }));
                 return data;
             }
             return Promise.reject(data);
         })
         .catch(err => {
-            const detail = (err && typeof err === 'object') ? { ...err } : { error: err };
-            detail.fields = onlyFields;
-            document.dispatchEvent(new CustomEvent('autosave:error', {detail}));
+            document.dispatchEvent(new CustomEvent('autosave:error', {detail: err}));
             return Promise.reject(err);
         });
     }
@@ -165,11 +159,7 @@ window.AutosaveManager = (function() {
             }, 1000);
         };
         field.addEventListener('input', handler);
-        if (
-            field.tagName === 'SELECT' ||
-            field.type === 'checkbox' ||
-            field.type === 'radio'
-        ) {
+        if (field.tagName === 'SELECT') {
             field.addEventListener('change', handler);
         }
         field.dataset.autosaveBound = 'true';
@@ -214,9 +204,9 @@ window.AutosaveManager = (function() {
         }
     }
 
-    function manualSave(onlyFields) {
+    function manualSave() {
         saveLocal();
-        return autosaveDraft(onlyFields);
+        return autosaveDraft();
     }
 
     // Initial setup
@@ -224,12 +214,7 @@ window.AutosaveManager = (function() {
 
     const formEl = document.querySelector('form');
     if (formEl) {
-        formEl.addEventListener('submit', (e) => {
-            const submitter = e.submitter || {};
-            if (submitter.name === 'final_submit') {
-                clearLocal();
-            }
-        });
+        formEl.addEventListener('submit', clearLocal);
     }
 
     // Expose helpers globally for legacy code
@@ -260,7 +245,7 @@ async function autosave() {
                 payload[key] = value;
             }
         });
-        const res = await fetch(window.AUTOSAVE_URL || '/suite/autosave-proposal/', {
+        const res = await fetch('/suite/autosave-proposal/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
