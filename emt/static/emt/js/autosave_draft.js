@@ -93,7 +93,7 @@ window.AutosaveManager = (function() {
         const formEl = document.querySelector('form');
         const hasFile = formEl && Array.from(formEl.querySelectorAll('input[type="file"]')).some(f => f.files.length > 0);
 
-        document.dispatchEvent(new Event('autosave:start'));
+        document.dispatchEvent(new CustomEvent('autosave:start', { detail: { fields: onlyFields }}));
 
         const headers = { 'X-CSRFToken': window.AUTOSAVE_CSRF };
         const options = {
@@ -141,14 +141,16 @@ window.AutosaveManager = (function() {
                 window.PROPOSAL_ID = data.proposal_id;
                 saveLocal();
                 document.dispatchEvent(new CustomEvent('autosave:success', {
-                    detail: { proposalId: data.proposal_id, errors: data.errors }
+                    detail: { proposalId: data.proposal_id, errors: data.errors, fields: onlyFields }
                 }));
                 return data;
             }
             return Promise.reject(data);
         })
         .catch(err => {
-            document.dispatchEvent(new CustomEvent('autosave:error', {detail: err}));
+            const detail = (err && typeof err === 'object') ? { ...err } : { error: err };
+            detail.fields = onlyFields;
+            document.dispatchEvent(new CustomEvent('autosave:error', {detail}));
             return Promise.reject(err);
         });
     }
