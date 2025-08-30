@@ -478,8 +478,8 @@ def submit_proposal(request, pk=None):
         proposal = form.save(commit=False)
         proposal.academic_year = selected_academic_year
         proposal.submitted_by = request.user
-        is_final = "final_submit" in request.POST
         is_review = "review_submit" in request.POST
+        is_final = "final_submit" in request.POST and not is_review
         if is_final:
             proposal.status = "submitted"
             proposal.submitted_at = timezone.now()
@@ -505,11 +505,12 @@ def submit_proposal(request, pk=None):
         )
         if is_final:
             build_approval_chain(proposal)
+            request.session.pop("proposal_step", None)
             messages.success(
                 request,
                 f"Proposal '{proposal.event_title}' submitted.",
             )
-            return redirect("emt:proposal_status_detail", proposal_id=proposal.id)
+            return redirect("emt:submit_proposal")
         if is_review:
             return redirect("emt:review_proposal", proposal_id=proposal.id)
         return redirect("emt:submit_need_analysis", proposal_id=proposal.id)
@@ -554,11 +555,12 @@ def review_proposal(request, proposal_id):
         proposal.submitted_at = timezone.now()
         proposal.save()
         build_approval_chain(proposal)
+        request.session.pop("proposal_step", None)
         messages.success(
             request,
             f"Proposal '{proposal.event_title}' submitted.",
         )
-        return redirect("emt:proposal_status_detail", proposal_id=proposal.id)
+        return redirect("emt:submit_proposal")
     else:
         if proposal.status != EventProposal.Status.SUBMITTED:
             proposal.status = EventProposal.Status.DRAFT
@@ -1023,8 +1025,8 @@ def submit_cdl_support(request, proposal_id):
             support.other_services = form.cleaned_data.get("other_services", [])
             support.save()
 
-            is_final = "final_submit" in request.POST
             is_review = "review_submit" in request.POST
+            is_final = "final_submit" in request.POST and not is_review
 
             if is_final:
                 proposal.status = "submitted"
@@ -1035,13 +1037,12 @@ def submit_cdl_support(request, proposal_id):
 
             if is_final:
                 build_approval_chain(proposal)
+                request.session.pop("proposal_step", None)
                 messages.success(
                     request,
                     f"Proposal '{proposal.event_title}' submitted.",
                 )
-                return redirect(
-                    "emt:proposal_status_detail", proposal_id=proposal.id
-                )
+                return redirect("emt:submit_proposal")
             if is_review:
                 return redirect("emt:review_proposal", proposal_id=proposal.id)
 
