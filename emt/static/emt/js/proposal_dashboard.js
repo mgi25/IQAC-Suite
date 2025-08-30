@@ -2378,7 +2378,12 @@ function getWhyThisEventForm() {
         if (validateCurrentSection()) {
             showLoadingOverlay();
             if (window.AutosaveManager && window.AutosaveManager.manualSave) {
-                window.AutosaveManager.manualSave()
+                const sectionFieldMap = {
+                    'why-this-event': ['need_analysis', 'objectives', 'outcomes'],
+                    'schedule': ['flow']
+                };
+                const fieldsToSave = sectionFieldMap[currentExpandedCard] || null;
+                window.AutosaveManager.manualSave(fieldsToSave)
                     .then((data) => {
                         hideLoadingOverlay();
                         if (data && data.errors) {

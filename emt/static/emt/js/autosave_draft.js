@@ -18,10 +18,11 @@ window.AutosaveManager = (function() {
         }
     }
 
-    function collectFieldData() {
+    function collectFieldData(onlyFields) {
         const grouped = {};
         fields.forEach(f => {
             if (f.disabled || !f.name) return;
+            if (Array.isArray(onlyFields) && !onlyFields.includes(f.name)) return;
             (grouped[f.name] ||= []).push(f);
         });
         const data = {};
@@ -77,14 +78,14 @@ window.AutosaveManager = (function() {
         localStorage.removeItem(pageKey);
     }
 
-    function autosaveDraft() {
+    function autosaveDraft(onlyFields) {
         // Don't autosave for submitted proposals
         if (window.PROPOSAL_STATUS && window.PROPOSAL_STATUS !== 'draft') {
             clearLocal();
             return Promise.resolve();
         }
 
-        const formData = collectFieldData();
+        const formData = collectFieldData(onlyFields);
         if (proposalId) {
             formData['proposal_id'] = proposalId;
         }
@@ -207,9 +208,9 @@ window.AutosaveManager = (function() {
         }
     }
 
-    function manualSave() {
+    function manualSave(onlyFields) {
         saveLocal();
-        return autosaveDraft();
+        return autosaveDraft(onlyFields);
     }
 
     // Initial setup
