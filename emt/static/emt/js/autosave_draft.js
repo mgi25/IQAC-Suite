@@ -112,7 +112,9 @@ window.AutosaveManager = (function() {
                 proposalId = data.proposal_id;
                 window.PROPOSAL_ID = data.proposal_id;
                 saveLocal();
-                document.dispatchEvent(new CustomEvent('autosave:success', {detail: {proposalId: data.proposal_id}}));
+                document.dispatchEvent(new CustomEvent('autosave:success', {
+                    detail: { proposalId: data.proposal_id, errors: data.errors }
+                }));
                 return data;
             }
             return Promise.reject(data);

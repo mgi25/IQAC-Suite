@@ -2375,8 +2375,11 @@ function getWhyThisEventForm() {
             showLoadingOverlay();
             if (window.AutosaveManager && window.AutosaveManager.manualSave) {
                 window.AutosaveManager.manualSave()
-                    .then(() => {
+                    .then((data) => {
                         hideLoadingOverlay();
+                        if (data && data.errors) {
+                            handleAutosaveErrors(data);
+                        }
                         markSectionComplete(currentExpandedCard);
                         showNotification('Section saved successfully!', 'success');
 
@@ -3072,6 +3075,7 @@ function getWhyThisEventForm() {
     function handleAutosaveErrors(errorData) {
         const errors = errorData?.errors || errorData;
         if (!errors) return;
+        showNotification('Draft saved with validation warnings. Please review highlighted fields.', 'info');
         clearValidationErrors();
         firstErrorField = null;
 
@@ -3221,6 +3225,9 @@ function getWhyThisEventForm() {
                 window.PROPOSAL_ID = detail.proposalId;
                 updateCdlNavLink(detail.proposalId);
                 $('#reset-draft-btn').prop('disabled', false).removeAttr('disabled');
+            }
+            if (detail && detail.errors) {
+                handleAutosaveErrors({errors: detail.errors});
             }
             const indicator = $('#autosave-indicator');
             indicator.removeClass('saving error').addClass('saved');

@@ -616,7 +616,13 @@ def autosave_proposal(request):
         text_errors = _save_text_sections(proposal, data)
         if text_errors:
             logger.debug("autosave_proposal text errors: %s", text_errors)
-            return JsonResponse({"success": False, "errors": text_errors})
+            return JsonResponse(
+                {
+                    "success": True,
+                    "proposal_id": proposal.id,
+                    "errors": text_errors,
+                }
+            )
         return JsonResponse({"success": True, "proposal_id": proposal.id})
 
     form = EventProposalForm(data, instance=proposal, user=request.user)
@@ -630,18 +636,29 @@ def autosave_proposal(request):
             role_assignments__role__name=FACULTY_ROLE
         ).distinct()
 
-    if not form.is_valid():
+    is_valid = form.is_valid()
+    if not is_valid:
         logger.debug("autosave_proposal form errors: %s", form.errors)
-        return JsonResponse({"success": False, "errors": form.errors})
 
-    proposal = form.save(commit=False)
+    # Persist any cleaned fields even if the form has validation errors
+    proposal = form.instance
+    for field, value in form.cleaned_data.items():
+        if isinstance(form.fields.get(field), forms.ModelMultipleChoiceField):
+            continue
+        setattr(proposal, field, value)
     proposal.submitted_by = request.user
     proposal.status = "draft"
     proposal.save()
-    form.save_m2m()  # Keep many-to-many fields in sync.
+
+    for field, value in form.cleaned_data.items():
+        if isinstance(form.fields.get(field), forms.ModelMultipleChoiceField):
+            getattr(proposal, field).set(value)
+
     text_errors = _save_text_sections(proposal, data)
 
     errors = {}
+    if not is_valid:
+        errors.update(form.errors)
     if text_errors:
         errors.update(text_errors)
 
@@ -738,14 +755,13 @@ def autosave_proposal(request):
     if in_errors:
         errors["income"] = in_errors
 
-    if errors:
-        logger.debug("autosave_proposal dynamic errors: %s", errors)
-        return JsonResponse({"success": False, "errors": errors})
-
     _save_activities(proposal, data)
     _save_speakers(proposal, data, request.FILES)
     _save_expenses(proposal, data)
     _save_income(proposal, data)
+
+    if errors:
+        logger.debug("autosave_proposal dynamic errors: %s", errors)
 
     logger.debug(
         "Autosaved proposal %s with faculty %s",
@@ -753,7 +769,10 @@ def autosave_proposal(request):
         list(proposal.faculty_incharges.values_list("id", flat=True)),
     )
 
-    return JsonResponse({"success": True, "proposal_id": proposal.id})
+    response = {"success": True, "proposal_id": proposal.id}
+    if errors:
+        response["errors"] = errors
+    return JsonResponse(response)
 
 
 @login_required
