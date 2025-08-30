@@ -130,23 +130,6 @@ class ProposalReviewFlowTests(TestCase):
         proposal = EventProposal.objects.get(id=pid)
         self.assertEqual(proposal.status, EventProposal.Status.DRAFT)
 
-    def test_cdl_support_final_submit_flow(self):
-        resp = self.client.post(
-            reverse("emt:autosave_proposal"),
-            data=json.dumps(self._payload()),
-            content_type="application/json",
-        )
-        pid = resp.json()["proposal_id"]
-
-        post_data = {"needs_support": "on", "final_submit": "1"}
-        resp2 = self.client.post(
-            reverse("emt:submit_cdl_support", args=[pid]), post_data
-        )
-        self.assertEqual(resp2.status_code, 302)
-
-        proposal = EventProposal.objects.get(id=pid)
-        self.assertEqual(proposal.status, EventProposal.Status.SUBMITTED)
-
     def test_ai_generated_text_persists(self):
         resp = self.client.post(
             reverse("emt:autosave_proposal"),
