@@ -2744,9 +2744,24 @@ function getWhyThisEventForm() {
                 const sl = document.getElementById(`expense_sl_no_${idx}`);
                 const part = document.getElementById(`expense_particulars_${idx}`);
                 const amt = document.getElementById(`expense_amount_${idx}`);
-                if (sl) sl.value = '1';
-                if (part) part.value = getRandom(AUTO_FILL_DATA.expenseItems);
-                if (amt) amt.value = '1000';
+                if (sl) {
+                    sl.value = '1';
+                    sl.dispatchEvent(new Event('input', { bubbles: true }));
+                    sl.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (part) {
+                    part.value = getRandom(AUTO_FILL_DATA.expenseItems);
+                    part.dispatchEvent(new Event('input', { bubbles: true }));
+                    part.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (amt) {
+                    amt.value = '1000';
+                    amt.dispatchEvent(new Event('input', { bubbles: true }));
+                    amt.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (window.AutosaveManager && window.AutosaveManager.manualSave) {
+                    window.AutosaveManager.manualSave();
+                }
             }, 100);
         }
 
@@ -2759,11 +2774,34 @@ function getWhyThisEventForm() {
                 const partCount = document.getElementById(`income_participants_${idx}`);
                 const rate = document.getElementById(`income_rate_${idx}`);
                 const amt = document.getElementById(`income_amount_${idx}`);
-                if (sl) sl.value = '1';
-                if (part) part.value = getRandom(AUTO_FILL_DATA.incomeItems);
-                if (partCount) partCount.value = '50';
-                if (rate) rate.value = '100';
-                if (amt) amt.value = '5000';
+                if (sl) {
+                    sl.value = '1';
+                    sl.dispatchEvent(new Event('input', { bubbles: true }));
+                    sl.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (part) {
+                    part.value = getRandom(AUTO_FILL_DATA.incomeItems);
+                    part.dispatchEvent(new Event('input', { bubbles: true }));
+                    part.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (partCount) {
+                    partCount.value = '50';
+                    partCount.dispatchEvent(new Event('input', { bubbles: true }));
+                    partCount.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (rate) {
+                    rate.value = '100';
+                    rate.dispatchEvent(new Event('input', { bubbles: true }));
+                    rate.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (amt) {
+                    amt.value = '5000';
+                    amt.dispatchEvent(new Event('input', { bubbles: true }));
+                    amt.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (window.AutosaveManager && window.AutosaveManager.manualSave) {
+                    window.AutosaveManager.manualSave();
+                }
             }, 100);
         }
     }
