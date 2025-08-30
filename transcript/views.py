@@ -12,7 +12,10 @@ import json
 import zipfile
 from datetime import date
 from urllib.parse import unquote
-from django.db.models import Prefetch, Prefetch, Q, F
+import logging
+import weasyprint
+
+logger = logging.getLogger(__name__)
 
 # ─────────────────────────────────────────────
 # HOME
@@ -20,11 +23,11 @@ from django.db.models import Prefetch, Prefetch, Q, F
 def home(request):
     years = AcademicYear.objects.all().order_by('year')
     
-    # DEBUG: Print what we're sending to template
-    print("=== DEBUG: Years being sent to template ===")
+    # DEBUG: Log what we're sending to template
+    logger.debug("=== DEBUG: Years being sent to template ===")
     for year in years:
-        print(f"Year: {year.year}")
-    print("=== END DEBUG ===")
+        logger.debug("Year: %s", year.year)
+    logger.debug("=== END DEBUG ===")
     
     students = Student.objects.select_related('academic_year', 'course__school').all().order_by('name')
     
@@ -41,12 +44,12 @@ def home(request):
                 'roll_no': student.roll_no
             })
     
-    # DEBUG: Print student data structure
-    print("=== DEBUG: Student data keys ===")
-    print(f"Years in student_data: {list(student_data.keys())}")
+    # DEBUG: Log student data structure
+    logger.debug("=== DEBUG: Student data keys ===")
+    logger.debug("Years in student_data: %s", list(student_data.keys()))
     for year_key, schools in student_data.items():
-        print(f"  {year_key}: {list(schools.keys())}")
-    print("=== END DEBUG ===")
+        logger.debug("  %s: %s", year_key, list(schools.keys()))
+    logger.debug("=== END DEBUG ===")
     
     return render(request, 'transcript_app/home.html', {
         'years': years,
