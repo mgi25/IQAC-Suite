@@ -1,5 +1,5 @@
 from pathlib import Path
-import os
+import os, dj_database_url
 try:
     from dotenv import load_dotenv
     BASE_DIR = Path(__file__).resolve().parent.parent
@@ -7,7 +7,6 @@ try:
 except Exception:
     pass
 import logging
-import dj_database_url
 
 # ---- .env loader (django-environ if available, else os.getenv) ----
 
@@ -55,16 +54,20 @@ OPENROUTER_MODEL   = _env("OPENROUTER_MODEL", default="qwen/qwen3.5:free")
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-…')
 DEBUG = True
 
-ALLOWED_HOSTS = [
-    '127.0.0.1',
-    'localhost',
-    '192.168.0.104',
-    '7c40-103-229-129-85.ngrok-free.app',
-]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+RENDER_EXTERNAL_HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME")
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+    CSRF_TRUSTED_ORIGINS = [f"https://{RENDER_EXTERNAL_HOSTNAME}"]
+else:
+    ALLOWED_HOSTS += ["iqac-suite.onrender.com"]
+    CSRF_TRUSTED_ORIGINS = ["https://iqac-suite.onrender.com"]
 
-CSRF_TRUSTED_ORIGINS = [
-    "https://7c40-103-229-129-85.ngrok-free.app",
-]
+DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL:
+    DATABASES = {"default": dj_database_url.config(default=DATABASE_URL, conn_max_age=600, ssl_require=True)}
+else:
+    DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}}
 
 # ──────────────────────────────────────────────────────────────────────────────
 # INSTALLED APPS
@@ -92,7 +95,6 @@ INSTALLED_APPS = [
     'transcript',
 ]
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 # ──────────────────────────────────────────────────────────────────────────────
 # MIDDLEWARE
 # ──────────────────────────────────────────────────────────────────────────────
@@ -139,22 +141,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'iqac_project.wsgi.application'
-
-# ──────────────────────────────────────────────────────────────────────────────
-# DATABASE
-# ──────────────────────────────────────────────────────────────────────────────
-
-DATABASES = {
-    "default": dj_database_url.config(
-        env="DATABASE_URL",
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600,
-        ssl_require=False,
-    )
-}
-if "railway.internal" in DATABASES["default"].get("HOST", ""):
-    raise RuntimeError("Invalid DB host — still pointing to Railway.")
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # AUTHENTICATION
@@ -289,14 +275,3 @@ LOGGING = {
         },
     },
 }
-ALLOWED_HOSTS = ["iqac-suite.onrender.com", "localhost", "127.0.0.1"]
-
-RENDER_EXTERNAL_HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME")
-if RENDER_EXTERNAL_HOSTNAME:
-    # e.g. "iqac-suite.onrender.com"
-    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
-    CSRF_TRUSTED_ORIGINS = ["https://iqac-suite.onrender.com"]
-else:
-    # fallback for local/dev or if you want to be permissive temporarily
-    # ALLOWED_HOSTS.append("iqac-suite.onrender.com")   # <-- you can hardcode your URL too
-    pass
