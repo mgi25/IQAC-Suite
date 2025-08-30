@@ -27,7 +27,9 @@ window.AutosaveManager = (function() {
         const data = {};
         Object.entries(grouped).forEach(([name, inputs]) => {
             const field = inputs[0];
-            if (field.type === 'checkbox') {
+            if (field.type === 'file') {
+                return; // handled separately when sending FormData
+            } else if (field.type === 'checkbox') {
                 if (inputs.length > 1) {
                     data[name] = inputs.filter(i => i.checked).map(i => i.value);
                 } else {
@@ -84,17 +86,39 @@ window.AutosaveManager = (function() {
             formData['proposal_id'] = proposalId;
         }
 
+        const formEl = document.querySelector('form');
+        const hasFile = formEl && Array.from(formEl.querySelectorAll('input[type="file"]')).some(f => f.files.length > 0);
+
         document.dispatchEvent(new Event('autosave:start'));
 
-        return fetch(window.AUTOSAVE_URL, {
+        const headers = { 'X-CSRFToken': window.AUTOSAVE_CSRF };
+        const options = {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': window.AUTOSAVE_CSRF
-            },
+            headers,
             credentials: 'same-origin',
-            body: JSON.stringify(formData)
-        })
+        };
+
+        if (hasFile) {
+            const body = new FormData();
+            Object.entries(formData).forEach(([k, v]) => {
+                if (Array.isArray(v)) {
+                    v.forEach(val => body.append(k, val));
+                } else {
+                    body.append(k, v);
+                }
+            });
+            Array.from(formEl.querySelectorAll('input[type="file"]')).forEach(inp => {
+                if (inp.files.length > 0) {
+                    body.append(inp.name, inp.files[0]);
+                }
+            });
+            options.body = body;
+        } else {
+            headers['Content-Type'] = 'application/json';
+            options.body = JSON.stringify(formData);
+        }
+
+        return fetch(window.AUTOSAVE_URL, options)
         .then(async res => {
             let data = null;
             try {
