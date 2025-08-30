@@ -227,19 +227,24 @@ def _save_activities(proposal, data, form=None):
     )
     if not indices:
         return True
-    proposal.activities.all().delete()
     success = True
+    new_activities = []
     for index in indices:
         name = data.get(f"activity_name_{index}")
         date = data.get(f"activity_date_{index}")
         if name and date:
-            EventActivity.objects.create(proposal=proposal, name=name, date=date)
+            new_activities.append(
+                EventActivity(proposal=proposal, name=name, date=date)
+            )
         elif name or date:
             msg = f"Activity {index} requires both name and date."
             logger.warning(msg)
             if form is not None:
                 form.add_error(None, msg)
             success = False
+    if success:
+        proposal.activities.all().delete()
+        EventActivity.objects.bulk_create(new_activities)
     return success
 
 
@@ -304,14 +309,15 @@ def _save_income(proposal, data):
         participants = data.get(f"income_participants_{index}")
         rate = data.get(f"income_rate_{index}")
         amount = data.get(f"income_amount_{index}")
-        if particulars and participants and rate and amount:
+        # Allow saving when only particulars and amount are provided
+        if particulars and amount:
             sl_no = data.get(f"income_sl_no_{index}") or 0
             IncomeDetail.objects.create(
                 proposal=proposal,
                 sl_no=sl_no or 0,
                 particulars=particulars,
-                participants=participants,
-                rate=rate,
+                participants=participants or 0,
+                rate=rate or 0,
                 amount=amount,
             )
 
@@ -569,34 +575,40 @@ def review_proposal(request, proposal_id):
 # ──────────────────────────────────────────────────────────────
 #  Autosave draft (XHR from JS)
 # ──────────────────────────────────────────────────────────────
-@csrf_exempt
 @login_required
 def autosave_proposal(request):
     if request.method != "POST":
         return JsonResponse({"error": "Invalid request"}, status=400)
-
-    try:
-        raw = request.body.decode("utf-8")
-        data = json.loads(raw) if raw else {}
-    except json.JSONDecodeError:
-        logger.debug("autosave_proposal invalid json: %s", raw)
-        return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
+    errors = {}
+    if request.content_type and request.content_type.startswith("multipart/form-data"):
+        data = {}
+        for key in request.POST:
+            values = request.POST.getlist(key)
+            data[key] = values if len(values) > 1 else values[0]
+    else:
+        try:
+            raw = request.body.decode("utf-8")
+            data = json.loads(raw) if raw else {}
+        except json.JSONDecodeError:
+            logger.debug("autosave_proposal invalid json: %s", raw)
+            return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
 
     logger.debug("autosave_proposal payload: %s", data)
 
     # Replace department logic with generic organization
-    org_type_val = data.get(
-        "organization_type"
-    )  # You'll need to capture org type in your frontend/form!
+    org_type_val = data.get("organization_type")
     org_name_val = data.get("organization")
     if org_type_val and org_name_val and not str(org_name_val).isdigit():
         from core.models import Organization, OrganizationType
 
         org_type_obj, _ = OrganizationType.objects.get_or_create(name=org_type_val)
-        org_obj, _ = Organization.objects.get_or_create(
-            name=org_name_val, org_type=org_type_obj
-        )
-        data["organization"] = str(org_obj.id)
+        existing = Organization.objects.filter(
+            org_type=org_type_obj, name__iexact=str(org_name_val).strip()
+        ).first()
+        if existing:
+            data["organization"] = str(existing.id)
+        else:
+            errors["organization"] = ["Organization not found"]
 
     proposal = None
     if pid := data.get("proposal_id"):
@@ -656,7 +668,6 @@ def autosave_proposal(request):
 
     text_errors = _save_text_sections(proposal, data)
 
-    errors = {}
     if not is_valid:
         errors.update(form.errors)
     if text_errors:
@@ -769,7 +780,7 @@ def autosave_proposal(request):
         list(proposal.faculty_incharges.values_list("id", flat=True)),
     )
 
-    response = {"success": True, "proposal_id": proposal.id}
+    response = {"success": not errors, "proposal_id": proposal.id}
     if errors:
         response["errors"] = errors
     return JsonResponse(response)

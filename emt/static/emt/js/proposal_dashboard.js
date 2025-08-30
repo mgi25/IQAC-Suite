@@ -823,7 +823,7 @@ $(document).ready(function() {
                 .get();
 
             // Replace existing content with newly selected outcomes
-            const value = selected.join('\n');
+            const value = selected.join(', ');
             posField.val(value).trigger('input').trigger('change');
 
             if (djangoPosField.length) {
@@ -1249,9 +1249,13 @@ $(document).ready(function() {
             .then(data => {
                 if (data.success) {
                     container.empty();
-                    const existing = posField.val().split('\n').map(s => s.trim());
-                    data.pos.forEach((po, idx) => { addOption(container, `PO${idx+1}: ` + po.description, existing); });
-                    data.psos.forEach((pso, idx) => { addOption(container, `PSO${idx+1}: ` + pso.description, existing); });
+                    const selectedCodes = (posField.val().match(/\b(?:PO|PSO)\d+\b/g) || []);
+                    data.pos.forEach((po, idx) => {
+                        addOption(container, `PO${idx + 1}`, po.description, selectedCodes);
+                    });
+                    data.psos.forEach((pso, idx) => {
+                        addOption(container, `PSO${idx + 1}`, pso.description, selectedCodes);
+                    });
                 } else {
                     container.text('No data');
                 }
@@ -1259,11 +1263,11 @@ $(document).ready(function() {
             .catch(() => { container.text('Error loading'); });
     }
 
-    function addOption(container, labelText, existing) {
+    function addOption(container, code, description, selectedCodes) {
         const lbl = $('<label>');
-        const cb = $('<input type="checkbox">').val(labelText);
-        if (existing.includes(labelText)) cb.prop('checked', true);
-        lbl.append(cb).append(' ' + labelText);
+        const cb = $('<input type="checkbox">').val(code);
+        if (selectedCodes.includes(code)) cb.prop('checked', true);
+        lbl.append(cb).append(` ${code}: ${description}`);
         container.append(lbl).append('<br>');
     }
 
@@ -2438,8 +2442,8 @@ function getWhyThisEventForm() {
                     baseName = 'flow';
                 }
                 let djangoField = $(`#django-forms [name="${baseName}"]`);
-                if (!djangoField.length && baseName === 'flow') {
-                    djangoField = $(`textarea[name="flow"]`);
+                if (!djangoField.length) {
+                    djangoField = $(`[name="${baseName}"]`);
                 }
                 if (djangoField.length) {
                     djangoField.val($(this).val());
