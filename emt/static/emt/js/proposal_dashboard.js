@@ -860,58 +860,73 @@ $(document).ready(function() {
         modal.addClass('show');
         $('#audienceSave').hide();
 
-        let studentAvailable = [];
-        let studentSelected = [];
-        let facultyAvailable = [];
-        let facultySelected = [];
+        let available = [];
+        let selected = [];
+        let selectedStudents = [];
+        let selectedFaculty = [];
+        let currentType = null;
 
         container.html(`
-            <div id="audienceStudents">
-                <div class="dual-list">
+            <div id="audienceStep1">
+                <div class="audience-type-selector">
+                    <button type="button" data-type="students">Students</button>
+                    <button type="button" data-type="faculty">Faculty</button>
+                </div>
+                <div class="dual-list" id="audienceGroupList" style="display:none;">
                     <div class="dual-list-column">
-                        <input type="text" id="studentAvailableSearch" placeholder="Search available">
-                        <select id="studentAvailable" multiple></select>
+                        <input type="text" id="audienceAvailableSearch" placeholder="Search available">
+                        <select id="audienceAvailable" multiple></select>
                     </div>
                     <div class="dual-list-controls">
-                        <button type="button" id="studentAddAll">&raquo;</button>
-                        <button type="button" id="studentAdd">&gt;</button>
-                        <button type="button" id="studentRemove">&lt;</button>
-                        <button type="button" id="studentRemoveAll">&laquo;</button>
+                        <button type="button" id="audienceAddAll">&raquo;</button>
+                        <button type="button" id="audienceAdd">&gt;</button>
+                        <button type="button" id="audienceRemove">&lt;</button>
+                        <button type="button" id="audienceRemoveAll">&laquo;</button>
                     </div>
                     <div class="dual-list-column">
-                        <input type="text" id="studentSelectedSearch" placeholder="Search selected">
-                        <select id="studentSelected" multiple></select>
+                        <input type="text" id="audienceSelectedSearch" placeholder="Search selected">
+                        <select id="audienceSelected" multiple></select>
                     </div>
                 </div>
-                <button type="button" id="audienceStudentsContinue" class="btn-continue">Continue</button>
+                <button type="button" id="audienceContinue" class="btn-continue" style="display:none;">Continue</button>
             </div>
-            <div id="audienceFaculty" style="display:none;">
-                <div class="dual-list">
+            <div id="audienceStep2" style="display:none;">
+                <div class="dual-list user-list" id="audienceUserList">
                     <div class="dual-list-column">
-                        <input type="text" id="facultyAvailableSearch" placeholder="Search available">
-                        <select id="facultyAvailable" multiple></select>
+                        <input type="text" id="userAvailableSearch" placeholder="Search available">
+                        <select id="userAvailable" multiple></select>
                     </div>
                     <div class="dual-list-controls">
-                        <button type="button" id="facultyAddAll">&raquo;</button>
-                        <button type="button" id="facultyAdd">&gt;</button>
-                        <button type="button" id="facultyRemove">&lt;</button>
-                        <button type="button" id="facultyRemoveAll">&laquo;</button>
+                        <button type="button" id="userAdd">&gt;</button>
+                        <button type="button" id="userRemove">&lt;</button>
                     </div>
                     <div class="dual-list-column">
-                        <input type="text" id="facultySelectedSearch" placeholder="Search selected">
-                        <select id="facultySelected" multiple></select>
+                        <input type="text" id="userSelectedSearch" placeholder="Search selected">
+                        <select id="userSelected" multiple></select>
                     </div>
                 </div>
-                <button type="button" id="audienceFacultyBack" class="btn-continue">Back</button>
+                <div class="audience-custom">
+                    <select id="audienceCustomInput" placeholder="Add custom audience"></select>
+                </div>
+                <button type="button" id="audienceBack" class="btn-continue">Back</button>
             </div>
         `);
 
-        const studentsStep = container.find('#audienceStudents');
-        const facultyStep = container.find('#audienceFaculty');
-        const studentAvailableSelect = container.find('#studentAvailable');
-        const studentSelectedSelect = container.find('#studentSelected');
-        const facultyAvailableSelect = container.find('#facultyAvailable');
-        const facultySelectedSelect = container.find('#facultySelected');
+        const listContainer = container.find('#audienceGroupList');
+        const availableSelect = container.find('#audienceAvailable');
+        const selectedSelect = container.find('#audienceSelected');
+        const userListContainer = container.find('#audienceUserList');
+        const userAvailableSelect = container.find('#userAvailable');
+        const userSelectedSelect = container.find('#userSelected');
+        const step1 = container.find('#audienceStep1');
+        const step2 = container.find('#audienceStep2');
+        const continueBtn = container.find('#audienceContinue');
+        const backBtn = container.find('#audienceBack');
+
+        let classStudentMap = {};
+        let departmentFacultyMap = {};
+        let userAvailable = [];
+        let userSelected = [];
 
         function filterOptions(input, select) {
             const term = input.val().toLowerCase();
@@ -921,28 +936,52 @@ $(document).ready(function() {
             });
         }
 
-        function renderStudentLists() {
-            studentAvailableSelect.empty();
-            studentSelectedSelect.empty();
-            studentAvailable.forEach(item => {
-                studentAvailableSelect.append($('<option>').val(item.id).text(item.name));
+        function renderLists() {
+            availableSelect.empty();
+            selectedSelect.empty();
+            available.forEach(item => {
+                availableSelect.append($('<option>').val(item.id).text(item.name));
             });
-            studentSelected.forEach(item => {
-                studentSelectedSelect.append($('<option>').val(item.id).text(item.name));
+            selected.forEach(item => {
+                selectedSelect.append($('<option>').val(item.id).text(item.name));
             });
-            filterOptions($('#studentSelectedSearch'), studentSelectedSelect);
+            filterOptions($('#audienceSelectedSearch'), selectedSelect);
         }
 
-        function renderFacultyLists() {
-            facultyAvailableSelect.empty();
-            facultySelectedSelect.empty();
-            facultyAvailable.forEach(item => {
-                facultyAvailableSelect.append($('<option>').val(item.id).text(item.name));
+        function renderUserLists() {
+            userAvailableSelect.empty();
+            userSelectedSelect.empty();
+            userAvailable.forEach(u => {
+                userAvailableSelect.append($('<option>').val(u.id).text(u.name));
             });
-            facultySelected.forEach(item => {
-                facultySelectedSelect.append($('<option>').val(item.id).text(item.name));
+            userSelected.forEach(u => {
+                userSelectedSelect.append($('<option>').val(u.id).text(u.name));
             });
-            filterOptions($('#facultySelectedSearch'), facultySelectedSelect);
+            filterOptions($('#userSelectedSearch'), userSelectedSelect);
+        }
+
+        function updateUserLists() {
+            userAvailable = [];
+            if (currentType === 'students') {
+                selected.forEach(cls => {
+                    (classStudentMap[cls.id] || []).forEach(stu => {
+                        if (!userSelected.some(u => u.id === `stu-${stu.id}`) &&
+                            !userAvailable.some(u => u.id === `stu-${stu.id}`)) {
+                            userAvailable.push({ id: `stu-${stu.id}`, name: stu.name });
+                        }
+                    });
+                });
+            } else if (currentType === 'faculty') {
+                selected.forEach(dept => {
+                    (departmentFacultyMap[dept.id] || []).forEach(f => {
+                        if (!userSelected.some(u => u.id === `fac-${f.id}`) &&
+                            !userAvailable.some(u => u.id === `fac-${f.id}`)) {
+                            userAvailable.push({ id: `fac-${f.id}`, name: f.name });
+                        }
+                    });
+                });
+            }
+            renderUserLists();
         }
 
         function collectOrgIds() {
@@ -962,182 +1001,215 @@ $(document).ready(function() {
             return orgIds;
         }
 
-        function loadStudents(term = '') {
-            studentAvailable = [];
+        function loadAvailable(term = '') {
+            available = [];
             const orgIds = collectOrgIds();
             if (!orgIds.length) {
-                studentAvailableSelect.html('<option>Select an organization first.</option>');
+                availableSelect.html('<option>Select an organization first.</option>');
                 return;
             }
-            Promise.all(orgIds.map(o =>
-                fetch(`${window.API_CLASSES_BASE}${o.id}/?q=${encodeURIComponent(term)}`, { credentials: 'include' })
-                    .then(r => r.json().then(data => ({ org: o, data })))
-            ))
-            .then(results => {
-                results.forEach(res => {
-                    const { org, data } = res;
-                    if (data.success && data.classes.length) {
-                        data.classes.forEach(cls => {
-                            const item = { id: String(cls.id), name: `${cls.name} (${org.name})` };
-                            if (preselected.includes(String(cls.id)) && !studentSelected.some(it => it.id === item.id)) {
-                                studentSelected.push(item);
-                            } else if (!studentSelected.some(it => it.id === item.id)) {
-                                studentAvailable.push(item);
-                            }
-                        });
-                    }
-                });
-                renderStudentLists();
-            })
-            .catch(() => {
-                studentAvailableSelect.html('<option>Error loading</option>');
-            });
-        }
-
-        function loadFaculty(term = '') {
-            facultyAvailable = [];
-            const orgIds = collectOrgIds();
-            if (!orgIds.length) {
-                facultyAvailableSelect.html('<option>Select an organization first.</option>');
-                return;
-            }
-            Promise.all(orgIds.map(o =>
-                fetch(`${window.API_FACULTY}?org_id=${o.id}&q=${encodeURIComponent(term)}`, { credentials: 'include' })
-                    .then(r => r.json())
-            ))
-            .then(results => {
-                results.forEach(data => {
-                    (data || []).forEach(f => {
-                        const item = { id: String(f.id), name: f.name };
-                        if (!facultySelected.some(it => it.id === item.id)) {
-                            facultyAvailable.push(item);
+            if (currentType === 'students') {
+                classStudentMap = {};
+                Promise.all(orgIds.map(o =>
+                    fetch(`${window.API_CLASSES_BASE}${o.id}/?q=${encodeURIComponent(term)}`, { credentials: 'include' })
+                        .then(r => r.json().then(data => ({ org: o, data })))
+                ))
+                .then(results => {
+                    results.forEach(res => {
+                        const { org, data } = res;
+                        if (data.success && data.classes.length) {
+                            data.classes.forEach(cls => {
+                                classStudentMap[String(cls.id)] = cls.students || [];
+                                const item = { id: String(cls.id), name: `${cls.name} (${org.name})` };
+                                if (preselected.includes(String(cls.id)) && !selected.some(it => it.id === String(cls.id))) {
+                                    selected.push(item);
+                                } else if (!selected.some(it => it.id === String(cls.id))) {
+                                    available.push(item);
+                                }
+                            });
                         }
                     });
+                    renderLists();
+                })
+                .catch(() => {
+                    availableSelect.html('<option>Error loading</option>');
                 });
-                renderFacultyLists();
-            })
-            .catch(() => {
-                facultyAvailableSelect.html('<option>Error loading</option>');
-            });
+            } else if (currentType === 'faculty') {
+                departmentFacultyMap = {};
+                Promise.all(orgIds.map(o =>
+                    fetch(`${window.API_FACULTY}?org_id=${o.id}&q=${encodeURIComponent(term)}`, { credentials: 'include' })
+                        .then(r => r.json().then(data => ({ org: o, data })))
+                ))
+                .then(results => {
+                    results.forEach(res => {
+                        res.data.forEach(f => {
+                            const dept = f.department || 'General';
+                            if (!departmentFacultyMap[dept]) departmentFacultyMap[dept] = [];
+                            departmentFacultyMap[dept].push({ id: f.id, name: f.name });
+                        });
+                    });
+                    available = Object.keys(departmentFacultyMap).map(dept => ({ id: dept, name: dept }));
+                    available.sort((a, b) => a.name.localeCompare(b.name));
+                    renderLists();
+                })
+                .catch(() => {
+                    availableSelect.html('<option>Error loading</option>');
+                });
+            }
         }
 
-        // student events
-        container.on('click', '#studentAdd', function() {
-            const ids = studentAvailableSelect.val() || [];
+        container.find('button[data-type]').on('click', function() {
+            currentType = $(this).data('type');
+            available = [];
+            selected = currentType === 'students' ? selectedStudents : selectedFaculty;
+            listContainer.show();
+            continueBtn.show();
+            step2.hide();
+            $('#audienceSave').hide();
+            renderLists();
+            loadAvailable('');
+        });
+
+        container.on('click', '#audienceAdd', function() {
+            const ids = availableSelect.val() || [];
             ids.forEach(id => {
-                const idx = studentAvailable.findIndex(it => it.id === id);
+                const idx = available.findIndex(it => it.id === id);
                 if (idx > -1) {
-                    studentSelected.push(studentAvailable[idx]);
-                    studentAvailable.splice(idx, 1);
+                    selected.push(available[idx]);
+                    available.splice(idx, 1);
                 }
             });
-            renderStudentLists();
+            renderLists();
         });
 
-        container.on('click', '#studentAddAll', function() {
-            studentSelected.push(...studentAvailable);
-            studentAvailable = [];
-            renderStudentLists();
+        container.on('click', '#audienceAddAll', function() {
+            selected.push(...available);
+            available = [];
+            renderLists();
         });
 
-        container.on('click', '#studentRemove', function() {
-            const ids = studentSelectedSelect.val() || [];
+        container.on('click', '#audienceRemove', function() {
+            const ids = selectedSelect.val() || [];
             ids.forEach(id => {
-                const idx = studentSelected.findIndex(it => it.id === id);
+                const idx = selected.findIndex(it => it.id === id);
                 if (idx > -1) {
-                    studentAvailable.push(studentSelected[idx]);
-                    studentSelected.splice(idx, 1);
+                    const item = selected[idx];
+                    if (!item.id.startsWith('custom-')) {
+                        available.push(item);
+                    }
+                    selected.splice(idx, 1);
                 }
             });
-            renderStudentLists();
+            renderLists();
         });
 
-        container.on('click', '#studentRemoveAll', function() {
-            studentAvailable = studentAvailable.concat(studentSelected);
-            studentSelected = [];
-            renderStudentLists();
+        container.on('click', '#audienceRemoveAll', function() {
+            available = available.concat(selected.filter(it => !it.id.startsWith('custom-')));
+            selected.length = 0;
+            renderLists();
         });
 
-        container.on('input', '#studentAvailableSearch', function() {
-            const term = $(this).val().trim();
-            loadStudents(term);
-        });
-
-        container.on('input', '#studentSelectedSearch', function() {
-            filterOptions($(this), studentSelectedSelect);
-        });
-
-        // faculty events
-        container.on('click', '#facultyAdd', function() {
-            const ids = facultyAvailableSelect.val() || [];
-            ids.forEach(id => {
-                const idx = facultyAvailable.findIndex(it => it.id === id);
-                if (idx > -1) {
-                    facultySelected.push(facultyAvailable[idx]);
-                    facultyAvailable.splice(idx, 1);
-                }
-            });
-            renderFacultyLists();
-        });
-
-        container.on('click', '#facultyAddAll', function() {
-            facultySelected.push(...facultyAvailable);
-            facultyAvailable = [];
-            renderFacultyLists();
-        });
-
-        container.on('click', '#facultyRemove', function() {
-            const ids = facultySelectedSelect.val() || [];
-            ids.forEach(id => {
-                const idx = facultySelected.findIndex(it => it.id === id);
-                if (idx > -1) {
-                    facultyAvailable.push(facultySelected[idx]);
-                    facultySelected.splice(idx, 1);
-                }
-            });
-            renderFacultyLists();
-        });
-
-        container.on('click', '#facultyRemoveAll', function() {
-            facultyAvailable = facultyAvailable.concat(facultySelected);
-            facultySelected = [];
-            renderFacultyLists();
-        });
-
-        container.on('input', '#facultyAvailableSearch', function() {
-            const term = $(this).val().trim();
-            loadFaculty(term);
-        });
-
-        container.on('input', '#facultySelectedSearch', function() {
-            filterOptions($(this), facultySelectedSelect);
-        });
-
-        // navigation
-        container.on('click', '#audienceStudentsContinue', function() {
-            studentsStep.hide();
-            facultyStep.show();
+        continueBtn.on('click', function() {
+            updateUserLists();
+            step1.hide();
+            step2.show();
+            continueBtn.hide();
             $('#audienceSave').show();
-            loadFaculty('');
         });
 
-        container.on('click', '#audienceFacultyBack', function() {
-            facultyStep.hide();
-            studentsStep.show();
+        backBtn.on('click', function() {
+            step2.hide();
+            step1.show();
+            continueBtn.show();
             $('#audienceSave').hide();
         });
 
+        const customTS = new TomSelect('#audienceCustomInput', {
+            persist: false,
+            create: true,
+            onItemAdd(value, text) {
+                userSelected.push({ id: `custom-${Date.now()}`, name: text });
+                customTS.clear();
+                renderUserLists();
+            }
+        });
+
+        container.on('input', '#audienceAvailableSearch', function() {
+            const term = $(this).val().trim();
+            if (currentType === 'students') {
+                loadAvailable(term);
+            } else if (currentType === 'faculty') {
+                filterOptions($(this), availableSelect);
+            }
+        });
+
+        container.on('input', '#audienceSelectedSearch', function() {
+            filterOptions($(this), selectedSelect);
+        });
+
+        container.on('click', '#userAdd', function() {
+            const ids = userAvailableSelect.val() || [];
+            ids.forEach(id => {
+                const idx = userAvailable.findIndex(u => u.id === id);
+                if (idx > -1) {
+                    userSelected.push(userAvailable[idx]);
+                    userAvailable.splice(idx, 1);
+                }
+            });
+            renderUserLists();
+        });
+
+        container.on('click', '#userRemove', function() {
+            const ids = userSelectedSelect.val() || [];
+            ids.forEach(id => {
+                const idx = userSelected.findIndex(u => u.id === id);
+                if (idx > -1) {
+                    userAvailable.push(userSelected[idx]);
+                    userSelected.splice(idx, 1);
+                }
+            });
+            renderUserLists();
+        });
+
+        container.on('input', '#userAvailableSearch', function() {
+            const term = $(this).val().toLowerCase();
+            userAvailableSelect.find('option').each(function() {
+                const txt = $(this).text().toLowerCase();
+                $(this).toggle(txt.includes(term));
+            });
+        });
+
+        container.on('input', '#userSelectedSearch', function() {
+            filterOptions($(this), userSelectedSelect);
+        });
+
+        container.on('dblclick', '#audienceSelected option', function() {
+            const id = $(this).val();
+            const idx = selected.findIndex(it => it.id === id);
+            if (idx > -1) {
+                const newName = prompt('Edit name', selected[idx].name);
+                if (newName) {
+                    selected[idx].name = newName.trim();
+                    renderLists();
+                }
+            }
+        });
+
+        if (preselected.length) {
+            container.find('button[data-type="students"]').click();
+        }
+
         $('#audienceSave').off('click').on('click', () => {
-            const names = studentSelected.concat(facultySelected).map(it => it.name);
+            const groupNames = selectedStudents.concat(selectedFaculty).map(it => it.name);
+            const userNames = userSelected.map(u => u.name);
+            const names = groupNames.concat(userNames);
             audienceField.val(names.join(', ')).trigger('change').trigger('input');
             classIdsField
-                .val(studentSelected.filter(it => /^\d+$/.test(it.id)).map(it => it.id).join(','))
+                .val(selectedStudents.filter(it => /^\d+$/.test(it.id)).map(it => it.id).join(','))
                 .trigger('change')
                 .trigger('input');
             modal.removeClass('show');
         });
-
-        loadStudents('');
     }
 
     function openOutcomeModal() {
