@@ -535,6 +535,23 @@ $(document).ready(function() {
                     dateLabel.setAttribute('for', `activity_date_${num}`);
                     dateLabel.textContent = `${num}. Activity Date`;
                 }
+
+                const handler = () => {
+                    if (window.AutosaveManager && window.AutosaveManager.manualSave) {
+                        window.AutosaveManager.manualSave([
+                            `activity_name_${num}`,
+                            `activity_date_${num}`
+                        ]).catch(() => {});
+                    }
+                };
+                if (nameInput) {
+                    nameInput.oninput = handler;
+                    nameInput.onchange = handler;
+                }
+                if (dateInput) {
+                    dateInput.oninput = handler;
+                    dateInput.onchange = handler;
+                }
             });
             numActivitiesInput.value = rows.length;
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
@@ -570,6 +587,9 @@ $(document).ready(function() {
                     });
                 }
                 reindexActivityRows();
+                if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                    window.AutosaveManager.reinitialize();
+                }
             }
         }
 
