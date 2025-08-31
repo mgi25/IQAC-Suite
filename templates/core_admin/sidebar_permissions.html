@@ -200,11 +200,6 @@
 
 {% block scripts %}
 <script>
-  /* Keep your existing JS intact; only selectors/IDs are reused.
-     Below is your script with no functional changes, just two tiny hooks:
-     - a Clear button for search (#clearSearchBtn)
-     - duplicated Save button (#saveBtnDup) submits the same form
-  */
   document.addEventListener('DOMContentLoaded', function() {
     const $ = (sel) => document.querySelector(sel);
     const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -217,10 +212,28 @@
     }
 
     const availableData = JSON.parse('{{ available_permissions|safe|escapejs }}'.replace(/&quot;/g,'"') || '[]');
-    const assignedData  = JSON.parse('{{ assigned_permissions|safe|escapejs }}'.replace(/&quot;/g,'"') || '[]');
+const assignedData  = JSON.parse('{{ assigned_permissions|safe|escapejs }}'.replace(/&quot;/g,'"') || '[]');
 
-    let available=[...availableData]; let assigned=[...assignedData];
-    let selectedAvailable=new Set(); let selectedAssigned=new Set();
+// 🔹 Helper: remove assigned items from available list
+function removeAssignedFromAvailable(avail, assigned) {
+  const assignedIds = new Set(assigned.map(p => p.id));
+  return avail.filter(item => {
+    if (assignedIds.has(item.id)) {
+      return false; // hide if already assigned
+    }
+    if (item.children) {
+      item.children = removeAssignedFromAvailable(item.children, assigned);
+    }
+    return true;
+  });
+}
+
+let available = removeAssignedFromAvailable(availableData, assignedData);
+let assigned  = assignedData;
+
+let selectedAvailable = new Set(); 
+let selectedAssigned  = new Set();
+
 
     const availableList = $('#availableList');
     const assignedList  = $('#assignedList');
@@ -230,15 +243,17 @@
     const availableEmpty=$('#availableEmpty');
     const assignedEmpty =$('#assignedEmpty');
     const globalSearch  =$('#globalSearch');
-    const userSelect=$('#userSelect'); const roleSelect=$('#roleSelect');
-    const orgTypeSelect=$('#orgTypeSelect'); const orgRoleSelect=$('#orgRoleSelect');
+    const userSelect=$('#userSelect'); 
+    const roleSelect=$('#roleSelect');
+    const orgTypeSelect=$('#orgTypeSelect'); 
+    const orgRoleSelect=$('#orgRoleSelect');
     const changeIndicator=$('#changeIndicator');
 
     const addBtn=$('#addBtn'), removeBtn=$('#removeBtn'),
           moveUpBtn=$('#moveUpBtn'), moveDownBtn=$('#moveDownBtn'),
           selectAllBtn=$('#selectAllBtn'), clearBtn=$('#clearBtn');
 
-    function reloadWithFilters(extraParams={}){
+    function reloadWithFilters(extraParams={}) {
       const params=new URLSearchParams(window.location.search);
       const setOrDelete=(k,v)=>{ if(v){params.set(k,v)} else {params.delete(k)} };
       setOrDelete('org_type', orgTypeSelect?orgTypeSelect.value:'');
@@ -257,38 +272,94 @@
       return map[key]||'fas fa-cube';
     }
 
-    function renderPermissionItem(p,isAssigned){
-      const div=document.createElement('div'); div.className='item'; div.dataset.id=p.id;
-      const isSel=isAssigned?selectedAssigned.has(p.id):selectedAvailable.has(p.id);
-      if(isSel) div.classList.add('selected');
-      div.innerHTML = `
-        <input type="checkbox" class="chk" ${isSel?'checked':''}>
-        <i class="${getPermissionIcon(p)}" style="color:var(--primary);min-width:18px"></i>
-        <div style="flex:1">
-          <div class="name">${p.label}</div>
-          <div class="desc">${p.description||'No description available'}</div>
-        </div>`;
-      div.addEventListener('click',e=>{ if(e.target.type==='checkbox')return; toggle(p.id,isAssigned);});
-      div.querySelector('.chk').addEventListener('change',e=>{
-        (isAssigned?selectedAssigned:selectedAvailable)[e.target.checked?'add':'delete'](p.id);
-        updateUI();
-      });
-      return div;
-    }
+    // 🔹 Render an item (parent or child)
+   // 🔹 Render item (parent = folder, leaf = checkbox)
+function renderPermissionItem(p, isAssigned) {
+  const div = document.createElement('div'); 
+  div.className = 'item'; 
+  div.dataset.id = p.id;
 
-    function toggle(id,isAssigned){
-      const set=isAssigned?selectedAssigned:selectedAvailable;
-      set[set.has(id)?'delete':'add'](id); render();
-    }
+  if (p.children && p.children.length > 0) {
+    // ----- Parent (folder only, no checkbox) -----
+    div.innerHTML = `
+      <i class="fas fa-folder" style="color:var(--primary);margin-right:6px"></i>
+      <span class="name">${p.label}</span>
+      <div class="children" style="display:none;margin-left:20px"></div>
+    `;
 
+    const childrenContainer = div.querySelector('.children');
+    p.children.forEach(child => {
+      const childDiv = renderPermissionItem(child, isAssigned);
+      childrenContainer.appendChild(childDiv);
+    });
+
+    // expand/collapse toggle
+    div.addEventListener('click', e => {
+      if (e.target.closest('.children')) return;
+      childrenContainer.style.display = 
+        childrenContainer.style.display === 'none' ? 'block' : 'none';
+    });
+
+  } else {
+    // ----- Leaf (selectable with checkbox) -----
+    const isSel = isAssigned ? selectedAssigned.has(p.id) : selectedAvailable.has(p.id);
+    if (isSel) div.classList.add('selected');
+
+    div.innerHTML = `
+      <input type="checkbox" class="chk" ${isSel ? 'checked' : ''}>
+      <i class="${getPermissionIcon(p)}" style="color:var(--primary);min-width:18px"></i>
+      <div style="flex:1">
+        <div class="name">${p.label}</div>
+      </div>
+    `;
+
+    div.querySelector('.chk').addEventListener('change', e => {
+      (isAssigned ? selectedAssigned : selectedAvailable)[e.target.checked ? 'add' : 'delete'](p.id);
+      updateUI();
+    });
+  }
+
+  return div;
+}
+
+// 🔹 Collect only leaf IDs (ignores parents)
+function collectLeafIds(list) {
+  let result = [];
+  for (const item of list) {
+    if (item.children) {
+      result = result.concat(collectLeafIds(item.children));
+    } else {
+      result.push(item.id);
+    }
+  }
+  return result;
+}
+
+// 🔹 On Save → dump only leaf IDs into hidden field
+document.getElementById('permissionsForm').addEventListener('submit', e => {
+  if (!userSelect.value && !roleSelect.value) {
+    e.preventDefault();
+    showToast('Please select a User or a Role before saving.','error');
+    return;
+  }
+
+  const leafIds = collectLeafIds(assigned);
+  document.getElementById('assigned_order').value = JSON.stringify(leafIds);
+
+  document.getElementById('saveText').textContent = 'Saving…';
+  const sp = document.getElementById('saveSpinner'); 
+  if (sp) sp.style.display = 'inline-block';
+});
     function applyFilters(list){
       const q=globalSearch.value.trim().toLowerCase();
       return list.filter(p=>!q||p.label.toLowerCase().includes(q));
     }
 
     function render(){
-      const av=applyFilters(available); const as=assigned;
-      availableList.innerHTML=''; assignedList.innerHTML='';
+      const av=applyFilters(available); 
+      const as=assigned;
+      availableList.innerHTML=''; 
+      assignedList.innerHTML='';
       if(av.length===0){ availableList.appendChild(availableEmpty.cloneNode(true)); }
       else av.forEach(p=>availableList.appendChild(renderPermissionItem(p,false)));
       if(as.length===0){ assignedList.appendChild(assignedEmpty.cloneNode(true)); }
@@ -312,24 +383,40 @@
       changeIndicator.style.color = changed?'#b45309':'var(--muted)';
 
       const ab=$('#availableBadge'), bb=$('#assignedBadge');
-      if(ab) ab.textContent=available.length; if(bb) bb.textContent=assigned.length;
+      if(ab) ab.textContent=available.length; 
+      if(bb) bb.textContent=assigned.length;
     }
 
+    // 🔹 Assign / Remove
     addBtn.addEventListener('click',()=>{
       selectedAvailable.forEach(id=>{
-        const p=available.find(x=>x.id===id); if(p){assigned.push(p); available=available.filter(x=>x.id!==id);}
+        const p=findAndRemove(available,id); 
+        if(p){assigned.push(p);}
       });
       selectedAvailable.clear(); render();
     });
 
     removeBtn.addEventListener('click',()=>{
       selectedAssigned.forEach(id=>{
-        const p=assigned.find(x=>x.id===id); if(p){available.push(p); assigned=assigned.filter(x=>x.id!==id);}
+        const p=findAndRemove(assigned,id); 
+        if(p){available.push(p);}
       });
       selectedAssigned.clear(); render();
     });
 
-    selectAllBtn.addEventListener('click',()=>{ available.forEach(p=>selectedAvailable.add(p.id)); render(); });
+    function findAndRemove(list,id){
+      let idx=list.findIndex(x=>x.id===id);
+      if(idx>-1){return list.splice(idx,1)[0];}
+      for(const item of list){
+        if(item.children){
+          const c=findAndRemove(item.children,id);
+          if(c) return c;
+        }
+      }
+      return null;
+    }
+
+    selectAllBtn.addEventListener('click',()=>{ flatten(available).forEach(p=>selectedAvailable.add(p.id)); render(); });
     clearBtn.addEventListener('click',()=>{ selectedAvailable.clear(); selectedAssigned.clear(); render(); });
 
     globalSearch.addEventListener('input',()=> setTimeout(render,120));
@@ -342,25 +429,46 @@
 
     $('#saveBtnDup')?.addEventListener('click',()=> document.getElementById('permissionsForm').requestSubmit());
 
-    document.getElementById('permissionsForm').addEventListener('submit',e=>{
-      if(!userSelect.value && !roleSelect.value){ e.preventDefault(); showToast('Please select a User or a Role before saving.','error'); return; }
-      document.getElementById('assigned_order').value = JSON.stringify(assigned.map(p=>p.id));
-      document.getElementById('saveText').textContent='Saving…';
-      const sp=document.getElementById('saveSpinner'); if(sp) sp.style.display='inline-block';
-    });
+    document.getElementById('permissionsForm').addEventListener('submit', e => {
+  if (!userSelect.value && !roleSelect.value) {
+    e.preventDefault();
+    showToast('Please select a User or a Role before saving.', 'error');
+    return;
+  }
 
-    /* Move Up / Down order (assigned) */
+  // Save flat list of assigned IDs
+  document.getElementById('assigned_order').value = JSON.stringify(
+    assigned.map(p => p.id)
+  );
+
+  // UI feedback
+  document.getElementById('saveText').textContent = 'Saving…';
+  const sp = document.getElementById('saveSpinner');
+  if (sp) sp.style.display = 'inline-block';
+});
+
+
     function move(sel,dir){
-      const ids=Array.from(sel); const idxs=ids.map(id=>assigned.findIndex(p=>p.id===id)).sort((a,b)=>dir>0?b-a:a-b);
+      const ids=Array.from(sel); 
+      const idxs=ids.map(id=>assigned.findIndex(p=>p.id===id)).sort((a,b)=>dir>0?b-a:a-b);
       idxs.forEach(i=>{
-        const j=i+dir; if(j>=0 && j<assigned.length){ [assigned[i],assigned[j]]=[assigned[j],assigned[i]]; }
+        const j=i+dir; 
+        if(j>=0 && j<assigned.length){ [assigned[i],assigned[j]]=[assigned[j],assigned[i]]; }
       });
       render();
     }
     document.getElementById('moveUpBtn').addEventListener('click',()=>move(selectedAssigned,-1));
     document.getElementById('moveDownBtn').addEventListener('click',()=>move(selectedAssigned, 1));
 
-    /* Initial render */
+    function flatten(list){
+      let result=[];
+      for(const item of list){
+        if(item.children) result=result.concat(flatten(item.children));
+        else result.push(item);
+      }
+      return result;
+    }
+
     render();
   });
 </script>

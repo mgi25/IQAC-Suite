@@ -2013,14 +2013,17 @@ def proposal_detail(request, proposal_id):
 def admin_settings_dashboard(request):
     return render(request, "core/admin_settings.html")
 
-
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def admin_sidebar_permissions(request):
     """Allow admin to configure sidebar items per user or role."""
-    from django.contrib.auth.models import User
     import json
-    from .models import OrganizationType, OrganizationRole, RoleAssignment
+    from django.contrib.auth.models import User
+    from django.urls import reverse
+    from django.contrib import messages
+    from .models import OrganizationType, OrganizationRole, RoleAssignment, SidebarPermission
+    import logging
+    logger = logging.getLogger(__name__)
 
     roles = ["admin", "faculty", "student"]
 
@@ -2028,7 +2031,7 @@ def admin_sidebar_permissions(request):
     org_type_id = (request.GET.get("org_type") or "").strip()
     org_role_id = (request.GET.get("org_role") or "").strip()
 
-    # Base users queryset, filtered by organization type and role if provided
+    # Base users queryset
     users_qs = User.objects.all().order_by("username")
     if org_type_id:
         ra_qs = RoleAssignment.objects.filter(role__organization__org_type_id=org_type_id)
@@ -2037,34 +2040,87 @@ def admin_sidebar_permissions(request):
         users_qs = users_qs.filter(id__in=ra_qs.values_list("user_id", flat=True)).distinct()
     users = users_qs
 
-    # Top-level nav keys used site-wide (kept centralized here)
+    # Top-level nav items (hierarchical!)
     nav_items = [
-        ("dashboard", "Dashboard"),
-        ("events", "Event Management Suite"),
-        ("transcript", "Graduate Transcript"),
-        ("cdl", "CDL"),
-        ("pso_psos", "POs & PSOs Management"),
-        ("user_management", "User Management"),
-        ("event_proposals", "Event Proposals"),
-        ("reports", "Reports"),
-        ("settings", "Settings"),
+        {
+            "id": "dashboard",
+            "label": "Dashboard",
+            "children": [
+                {"id": "dashboard:admin", "label": "Admin Dashboard"},
+                {"id": "dashboard:faculty", "label": "Faculty Dashboard"},
+                {"id": "dashboard:student", "label": "Student Dashboard"},
+                {"id": "dashboard:cdl_head", "label": "CDL Head Dashboard"},
+                {"id": "dashboard:cdl_work", "label": "CDL Work Dashboard"},
+            ]
+        },
+        {"id": "events", "label": "Event Management Suite", "children": [
+            {"id": "events:submit_proposal", "label": "Event Proposal"},
+            {"id": "events:pending_reports", "label": "Report Generation"},
+            {"id": "events:generated_reports", "label": "View Reports"},
+            {"id": "events:my_approvals", "label": "Event Approvals"},
+        ]},
+        {"id": "transcript", "label": "Graduate Transcript"},
+        {"id": "cdl", "label": "CDL"},
+        {
+            "id": "settings",
+            "label": "Settings",
+            "children": [
+                {"id": "settings:user_settings", "label": "User Settings"},
+                {"id": "settings:approval_flow", "label": "Approval Flow Management"},
+                {"id": "settings:pso_psos", "label": "POs & PSOs Management"},
+                {"id": "settings:academic_year", "label": "Academic Year Settings"},
+                {"id": "settings:history", "label": "History"},
+                {"id": "settings:sidebar_permissions", "label": "Sidebar Permissions"},
+            ]
+        },
+        {"id": "user_management", "label": "User Management"},
+        {"id": "event_proposals", "label": "Event Proposals"},
+        {"id": "reports", "label": "Reports"},
     ]
 
-    # Sub-permissions that map to submenu links (aligned with base.html)
-    sub_nav_items = [
-        ("events:submit_proposal", "Event Proposal"),
-        ("events:pending_reports", "Report Generation"),
-        ("events:generated_reports", "View Reports"),
-        ("events:my_approvals", "Event Approvals"),
-        # Extend here if other menus expose sub-items
-    ]
+    # Utility: build assigned tree
+    def build_assigned_tree(assigned_ids, items):
+        result = []
+        for item in items:
+            if "children" in item:
+                children = build_assigned_tree(assigned_ids, item["children"])
+                if children:
+                    result.append({
+                        "id": item["id"],
+                        "label": item["label"],
+                        "children": children
+                    })
+            else:
+                if item["id"] in assigned_ids:
+                    result.append({"id": item["id"], "label": item["label"]})
+        return result
 
+    # Utility: build available = all minus assigned
+    def build_available_tree(assigned_ids, items):
+        result = []
+        for item in items:
+            if "children" in item:
+                children = build_available_tree(assigned_ids, item["children"])
+                if children:
+                    result.append({
+                        "id": item["id"],
+                        "label": item["label"],
+                        "children": children
+                    })
+                elif item["id"] not in assigned_ids:
+                    result.append({"id": item["id"], "label": item["label"]})
+            else:
+                if item["id"] not in assigned_ids:
+                    result.append({"id": item["id"], "label": item["label"]})
+        return result
+
+    # Load current permission
     selected_user = request.GET.get("user")
     selected_role = request.GET.get("role")
     if selected_role:
-        selected_role = selected_role.lower()
+        selected_role = selected_role.strip()
+
     permission = None
-    from .models import SidebarPermission
     if selected_user:
         permission = SidebarPermission.objects.filter(user_id=selected_user).first()
     elif selected_role:
@@ -2074,67 +2130,53 @@ def admin_sidebar_permissions(request):
 
     if request.method == "POST":
         target_user = request.POST.get("user") or None
-        target_role = (request.POST.get("role") or "").lower()
-        # Support modern UI submitting a JSON array "assigned_order" or legacy list "items"
+        target_role = (request.POST.get("role") or "").strip()
+
         assigned_order_raw = request.POST.get("assigned_order")
         try:
-            assigned_items = json.loads(assigned_order_raw) if assigned_order_raw else None
+            assigned_items = json.loads(assigned_order_raw) if assigned_order_raw else []
         except Exception:
-            assigned_items = None
-        items = assigned_items if assigned_items is not None else request.POST.getlist("items")
+            assigned_items = []
 
-        if target_user:
-            permission, _ = SidebarPermission.objects.get_or_create(
-                user_id=target_user, role=""
-            )
+        # 🔐 Prevent breaking admin sidebar
+        if (target_role and target_role.lower() == "admin") or (
+            target_user and User.objects.filter(id=target_user, is_superuser=True).exists()
+        ):
+            if not assigned_items:
+                messages.warning(request, "Admin must always retain full sidebar; ignoring empty assignment.")
+            else:
+                permission, _ = SidebarPermission.objects.get_or_create(
+                    user_id=target_user if target_user else None,
+                    role="" if target_user else target_role.lower()
+                )
+                permission.items = assigned_items
+                permission.save()
         else:
             permission, _ = SidebarPermission.objects.get_or_create(
-                user=None, role=target_role
+                user_id=target_user if target_user else None,
+                role="" if target_user else target_role.lower()
             )
-        permission.items = items
-        permission.save()
+            permission.items = assigned_items
+            permission.save()
+
         messages.success(request, "Sidebar permissions updated")
         logger.info("Sidebar permissions updated for user=%s role=%s", target_user, target_role)
+
         redirect_url = reverse("admin_sidebar_permissions")
         if target_user:
             redirect_url += f"?user={target_user}"
         elif target_role:
             redirect_url += f"?role={target_role}"
-        # Preserve filters
-        extras = []
         if org_type_id:
-            extras.append(f"org_type={org_type_id}")
+            redirect_url += f"&org_type={org_type_id}"
         if org_role_id:
-            extras.append(f"org_role={org_role_id}")
-        if extras:
-            sep = '&' if ('?' in redirect_url) else '?'
-            redirect_url += sep + '&'.join(extras)
+            redirect_url += f"&org_role={org_role_id}"
         return redirect(redirect_url)
 
-    # Prepare data for the modern template
-    available_permissions = []
-    assigned_permissions = []
-    
-    # Build available permissions list
-    # Prepare a lookup for labels
-    label_map = {k: v for k, v in nav_items}
-    label_map.update({k: v for k, v in sub_nav_items})
-
-    # Build available permissions list from known nav + sub-nav, excluding assigned
+    # Build available/assigned lists
     assigned_set = set(permission.items) if permission else set()
-    for key, label in nav_items + sub_nav_items:
-        if key not in assigned_set:
-            available_permissions.append({"id": key, "label": label})
-    
-    # Build assigned permissions list
-    if permission:
-        for item in permission.items:
-            # Find label from map; fallback to prettified key
-            label = label_map.get(item)
-            if not label:
-                # For sub-keys like events:submit_proposal -> "Submit Proposal"
-                label = item.split(":")[-1].replace("_", " ").title()
-            assigned_permissions.append({"id": item, "label": label})
+    assigned_permissions = build_assigned_tree(assigned_set, nav_items)
+    available_permissions = build_available_tree(assigned_set, nav_items)
 
     context = {
         "roles": [{"id": r, "name": r.title()} for r in roles],
@@ -2153,7 +2195,6 @@ def admin_sidebar_permissions(request):
         "assigned_permissions": json.dumps(assigned_permissions),
     }
     return render(request, "core_admin/sidebar_permissions.html", context)
-
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
