@@ -364,7 +364,9 @@ class AutosaveProposalTests(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        self.assertFalse(data.get("success"))
+        # Autosave should succeed but return validation warnings for
+        # incomplete activity rows.
+        self.assertTrue(data.get("success"))
         self.assertIn("activities", data.get("errors", {}))
         self.assertIn("date", data["errors"]["activities"]["1"])
 
@@ -378,7 +380,7 @@ class AutosaveProposalTests(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        self.assertFalse(data.get("success"))
+        self.assertTrue(data.get("success"))
         self.assertIn("speakers", data.get("errors", {}))
         self.assertIn("designation", data["errors"]["speakers"]["0"])
 
@@ -398,7 +400,7 @@ class AutosaveProposalTests(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        self.assertFalse(data.get("success"))
+        self.assertTrue(data.get("success"))
         self.assertIn("speakers", data.get("errors", {}))
         self.assertIn("full_name", data["errors"]["speakers"]["0"])
 
@@ -464,7 +466,7 @@ class AutosaveProposalTests(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        self.assertFalse(data.get("success"))
+        self.assertTrue(data.get("success"))
         self.assertIn("organization", data.get("errors", {}))
         self.assertEqual(Organization.objects.filter(name="Science Club").count(), 0)
 
@@ -540,7 +542,7 @@ class AutosaveProposalTests(TestCase):
         )
         self.assertEqual(resp2.status_code, 200)
         data = resp2.json()
-        self.assertFalse(data.get("success"))
+        self.assertTrue(data.get("success"))
         self.assertIn("flow", data.get("errors", {}))
 
 
