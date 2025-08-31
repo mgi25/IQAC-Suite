@@ -300,4 +300,3 @@ else:
     # fallback for local/dev or if you want to be permissive temporarily
     # ALLOWED_HOSTS.append("iqac-suite.onrender.com")   # <-- you can hardcode your URL too
     pass
-}
