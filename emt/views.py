@@ -780,7 +780,11 @@ def autosave_proposal(request):
         list(proposal.faculty_incharges.values_list("id", flat=True)),
     )
 
-    response = {"success": not errors, "proposal_id": proposal.id}
+    # Always report success so that drafts are stored even when validation
+    # errors are present. The frontend will surface any issues using the
+    # returned ``errors`` map but the save itself should not be treated as a
+    # failure.
+    response = {"success": True, "proposal_id": proposal.id}
     if errors:
         response["errors"] = errors
     return JsonResponse(response)
