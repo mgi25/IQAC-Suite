@@ -1,11 +1,8 @@
 from pathlib import Path
 import os
-from decouple import config
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-
 try:
     from dotenv import load_dotenv
+    BASE_DIR = Path(__file__).resolve().parent.parent
     load_dotenv(dotenv_path=BASE_DIR / ".env")
 except Exception:
     pass
@@ -56,20 +53,18 @@ OPENROUTER_MODEL   = _env("OPENROUTER_MODEL", default="qwen/qwen3.5:free")
 
 # SECRET_KEY loaded from environment with a development fallback
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-…')
-DEBUG = config("DEBUG", default="False").lower() == "true"
+DEBUG = True
+
 ALLOWED_HOSTS = [
-    "iqac-suite.onrender.com",
-    ".onrender.com",
-    "localhost",
-    "127.0.0.1",
+    '127.0.0.1',
+    'localhost',
+    '192.168.0.104',
+    '7c40-103-229-129-85.ngrok-free.app',
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://iqac-suite.onrender.com",
-    "https://*.onrender.com",
+    "https://7c40-103-229-129-85.ngrok-free.app",
 ]
-
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # ──────────────────────────────────────────────────────────────────────────────
 # INSTALLED APPS
@@ -82,8 +77,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # 3rd-party
-    # whitenoise has no app entry; it’s middleware only
     'django.contrib.sites',  # ← required by allauth
     'django_extensions',
 
@@ -93,18 +86,18 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
 
-    # local apps
+    # Your apps
     'core.apps.CoreConfig',
     'emt',
     'transcript',
 ]
+
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 # ──────────────────────────────────────────────────────────────────────────────
 # MIDDLEWARE
 # ──────────────────────────────────────────────────────────────────────────────
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    # WhiteNoise must come right after SecurityMiddleware
-    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -218,21 +211,16 @@ USE_TZ = True
 # ──────────────────────────────────────────────────────────────────────────────
 # STATIC FILES
 # ──────────────────────────────────────────────────────────────────────────────
-STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [BASE_DIR / "static"] if (BASE_DIR / "static").exists() else []
-
-# WhiteNoise: hashed filenames + gzip/brotli
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-
-# Ensure default finders are present
-STATICFILES_FINDERS = [
-    "django.contrib.staticfiles.finders.FileSystemFinder",
-    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
 ]
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+# settings.py
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -301,3 +289,14 @@ LOGGING = {
         },
     },
 }
+ALLOWED_HOSTS = ["iqac-suite.onrender.com", "localhost", "127.0.0.1"]
+
+RENDER_EXTERNAL_HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME")
+if RENDER_EXTERNAL_HOSTNAME:
+    # e.g. "iqac-suite.onrender.com"
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+    CSRF_TRUSTED_ORIGINS = ["https://iqac-suite.onrender.com"]
+else:
+    # fallback for local/dev or if you want to be permissive temporarily
+    # ALLOWED_HOSTS.append("iqac-suite.onrender.com")   # <-- you can hardcode your URL too
+    pass
