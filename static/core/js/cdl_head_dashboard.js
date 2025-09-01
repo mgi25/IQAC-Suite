@@ -71,7 +71,7 @@
         const dateStr = ev.date ? new Date(ev.date).toLocaleDateString(undefined, {month:'short', day:'2-digit', year:'numeric'}) : '';
         const org = ev.organization || 'N/A';
         const assigned = ev.assigned_member || 'Unassigned';
-        const viewHref = (currentScope === 'support') ? `/cdl/support/?eventId=${ev.id}` : `/proposal/${ev.id}/detail/`;
+  const viewHref = `/cdl/support/?eventId=${ev.id}`;
         
         return `<div class="notification-item" data-id="${ev.id}">
           <div class="notification-content">
@@ -137,20 +137,20 @@
           <td><span class="priority-badge normal">Normal</span></td>
           <td>${dateStr}</td>
           <td>
-            <select class="assignee-select">
-              <option value="">Unassigned</option>
-              ${WORKLOAD_DATA.members ? WORKLOAD_DATA.members.map(member => 
-                `<option value="${member.toLowerCase()}">${member}</option>`
-              ).join('') : ''}
+            <select class="assignee-select" data-role="CDL Employee">
+              <option value="">Select member…</option>
             </select>
           </td>
           <td><span class="status-badge pending">Pending</span></td>
           <td>1</td>
           <td>
-            <button class="action-btn" data-action="assign">Assign</button>
+    <button class="action-btn" data-action="assign">Assign</button>
           </td>
         </tr>`;
       }).join('');
+
+  // Populate selects via /api/cdl/users
+  populateAssigneeSelects();
     }
 
     // Assignment Manager controls
@@ -185,23 +185,57 @@
         const row = e.target.closest('tr');
         const select = row.querySelector('.assignee-select');
         const assignee = select.value;
+        const role = select.dataset.role || 'CDL Employee';
         
         if (!assignee) {
-          alert('Please select an assignee first');
+          toast('Please select an assignee first');
           return;
         }
-        
-        console.log('Assigning task to:', assignee);
-        alert(`Task assigned to ${assignee}`);
-        
-        // Update UI
-        const statusCell = row.querySelector('.status-badge');
-        statusCell.textContent = 'Assigned';
-        statusCell.className = 'status-badge assigned';
-        e.target.textContent = 'Assigned';
-        e.target.disabled = true;
+        // Call backend
+        const id = row.dataset.id;
+        assignToUser(id, assignee, role).then(ok=>{
+          if(ok){
+            const statusCell = row.querySelector('.status-badge');
+            statusCell.textContent = 'Assigned';
+            statusCell.className = 'status-badge assigned';
+            e.target.textContent = 'Assigned';
+            e.target.disabled = true;
+          }
+        });
       }
     });
+
+    async function populateAssigneeSelects(){
+      try{
+        const res = await fetch('/api/cdl/users/'); if(!res.ok) return;
+        const data = await res.json(); const users=data.users||{};
+        $$('.assignee-select').forEach(sel=>{
+          const isHead = (sel.dataset.role||'').includes('Head');
+          const list = isHead ? (users.head||[]) : (users.employee||[]);
+          sel.innerHTML = '<option value="">Select member…</option>' + list.map(u=>`<option value="${u.id}">${u.name}${u.role?' — '+u.role:''}</option>`).join('');
+        });
+      }catch{}
+    }
+
+    async function assignToUser(proposalId, userId, role){
+      try{
+        const res = await fetch(`/api/cdl/support/${encodeURIComponent(proposalId)}/assign/`, {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCSRF()}, body:JSON.stringify({member_id:userId, role})});
+        const out = await res.json();
+        if(!res.ok || !out.success) throw new Error(out.error||('HTTP '+res.status));
+        toast('Assigned successfully'); return true;
+      }catch(e){ toast('Assignment failed'); return false; }
+    }
+
+    function getCSRF(){
+      const name='csrftoken'; const m=document.cookie.match('(^|;)\\s*'+name+'\\s*=\\s*([^;]+)'); return m?m.pop():'';
+    }
+
+    function toast(msg){
+      let t=$('#toast'); if(!t){ t=document.createElement('div'); t.id='toast'; Object.assign(t.style,{position:'fixed',right:'16px',bottom:'16px',zIndex:1000,display:'none',background:'#164c8d',color:'#fff',padding:'10px 12px',borderRadius:'10px',boxShadow:'0 12px 40px rgba(2,6,23,.2)',fontWeight:700}); document.body.appendChild(t);} 
+      t.textContent=msg; t.style.display='block'; t.style.opacity='0'; t.style.transform='translateY(10px)';
+      requestAnimationFrame(()=>{ t.style.transition='.25s'; t.style.opacity='1'; t.style.transform='translateY(0)';});
+      setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateY(10px)'; setTimeout(()=>{ t.style.display='none'; },250); }, 1600);
+    }
 
     // Team Analytics - updated to use workload data
     let teamChart;
@@ -326,7 +360,7 @@
           <div class="event-detail-title with-actions">
             <span class="title-text">${e.title}</span>
             <div class="title-actions">
-      ${currentCalFilter === 'support' ? `<a class="chip-btn" href="/cdl/support/?eventId=${e.id}">View</a>` : `<a class="chip-btn" href="/proposal/${e.id}/detail/">View</a>`}
+      <a class="chip-btn" href="/cdl/support/?eventId=${e.id}">View</a>
             </div>
           </div>
           <div class="event-detail-meta">${dateStr} • Org: ${e.organization || 'N/A'} • Status: ${e.status}</div>

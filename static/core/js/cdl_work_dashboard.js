@@ -113,19 +113,19 @@
       }));
     }
     function iso(base,d){ return `${base.getFullYear()}-${String(base.getMonth()+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
-    function openDay(iso){
+  function openDay(iso){
       const list = (calScope==='assigned'? EVENTS_ASSIGNED : EVENTS_ALL);
       const items=list.filter(e=>e.date===iso);
       if(!items.length){ $('#upcomingWrap').innerHTML = `<div class="empty">No items</div>`; return; }
       const dateStr = new Date(iso).toLocaleDateString(undefined,{day:'2-digit',month:'2-digit',year:'numeric'});
-      $('#upcomingWrap').innerHTML = items.map(e=>`
-        <div class="event-detail-item">
-          <div class="event-detail-title with-actions">
-            <span class="title-text">${esc(e.title||'Event')}</span>
-            <div class="title-actions"><a class="chip-btn" href="/proposal/${e.id}/detail/">View</a></div>
-          </div>
-          <div class="event-detail-meta">${dateStr} • Status: ${esc(e.status||'')}</div>
-        </div>`
+    $('#upcomingWrap').innerHTML = items.map(e=>`
+          <div class="event-detail-item">
+            <div class="event-detail-title with-actions">
+              <span class="title-text">${esc(e.title||'Event')}</span>
+              <div class="title-actions"><a class="chip-btn" href="/cdl/support/?eventId=${e.id}">View</a></div>
+            </div>
+      <div class="event-detail-meta">${dateStr} • Status: ${esc(e.status||'')}${e.assigned_role?` • Role: ${esc(e.assigned_role)}`:''}${e.assigned_by?` • Assigned by: ${esc(e.assigned_by)}`:''}</div>
+          </div>`
       ).join('');
     }
   

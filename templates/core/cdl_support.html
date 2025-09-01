@@ -78,6 +78,14 @@
       <button class="modal-close" id="assignClose">×</button>
     </div>
     <div class="form-group">
+      <label for="assignRole">Role</label>
+      <select id="assignRole" class="select">
+        <option value="">Select role…</option>
+        <option value="CDL Head">CDL Head</option>
+        <option value="CDL Employee">CDL Employee</option>
+      </select>
+    </div>
+    <div class="form-group">
       <label for="assignMember">Member</label>
       <select id="assignMember" class="select"></select>
     </div>
@@ -87,6 +95,9 @@
     </div>
   </div>
   </div>
+
+<!-- Toast -->
+<div id="toast" style="position:fixed;right:16px;bottom:16px;z-index:1000;display:none;background:#164c8d;color:#fff;padding:10px 12px;border-radius:10px;box-shadow:0 12px 40px rgba(2,6,23,.2);font-weight:700"></div>
 
 {% endblock %}
 
