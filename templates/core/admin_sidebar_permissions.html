@@ -26,7 +26,7 @@
           <select name="role" id="role_select" class="form-select">
             <option value="">-- Select Role --</option>
             {% for r in roles %}
-            <option value="{{ r }}" {% if selected_role == r %}selected{% endif %}>{{ r|capfirst }}</option>
+            <option value="{{ r.id }}" {% if selected_role == r.id|stringformat:'s' %}selected{% endif %}>{{ r.name }}</option>
             {% endfor %}
           </select>
         </div>

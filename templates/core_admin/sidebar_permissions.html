@@ -116,15 +116,7 @@
         </select>
       </label>
 
-      <label class="filter">
-        <span>Role</span>
-        <select id="roleSelect" name="role" aria-label="Role">
-          <option value="">-- Select Role --</option>
-          {% for r in roles %}
-            <option value="{{ r.id }}" {% if selected_role == r.id %}selected{% endif %}>{{ r.name }}</option>
-          {% endfor %}
-        </select>
-      </label>
+  {# Removed generic Role selector; Organization Role above is the only role control #}
 
       <div class="search-bar">
         <i class="fas fa-search"></i>
@@ -152,6 +144,7 @@
   <form id="permissionsForm" method="post" action="{% url 'admin_sidebar_permissions' %}">
     {% csrf_token %}
     <input type="hidden" name="assigned_order" id="assigned_order" value="[]">
+  <input type="hidden" name="role" id="hidden_role" value="{{ selected_org_role|default:selected_role|default:'' }}">
 
     <div class="panel-grid">
       <!-- Available -->
@@ -243,8 +236,7 @@ let selectedAssigned  = new Set();
     const availableEmpty=$('#availableEmpty');
     const assignedEmpty =$('#assignedEmpty');
     const globalSearch  =$('#globalSearch');
-    const userSelect=$('#userSelect'); 
-    const roleSelect=$('#roleSelect');
+  const userSelect=$('#userSelect'); 
     const orgTypeSelect=$('#orgTypeSelect'); 
     const orgRoleSelect=$('#orgRoleSelect');
     const changeIndicator=$('#changeIndicator');
@@ -256,10 +248,10 @@ let selectedAssigned  = new Set();
     function reloadWithFilters(extraParams={}) {
       const params=new URLSearchParams(window.location.search);
       const setOrDelete=(k,v)=>{ if(v){params.set(k,v)} else {params.delete(k)} };
-      setOrDelete('org_type', orgTypeSelect?orgTypeSelect.value:'');
-      setOrDelete('org_role', orgRoleSelect?orgRoleSelect.value:'');
-      setOrDelete('user', userSelect.value);
-      setOrDelete('role', roleSelect.value);
+  setOrDelete('org_type', orgTypeSelect?orgTypeSelect.value:'');
+  setOrDelete('org_role', orgRoleSelect?orgRoleSelect.value:'');
+  setOrDelete('user', userSelect.value);
+  setOrDelete('role', orgRoleSelect?orgRoleSelect.value:'');
       for(const [k,v] of Object.entries(extraParams)) setOrDelete(k,v);
       const qs=params.toString(); window.location.search = qs?('?'+qs):'';
     }
@@ -337,14 +329,18 @@ function collectLeafIds(list) {
 
 // 🔹 On Save → dump only leaf IDs into hidden field
 document.getElementById('permissionsForm').addEventListener('submit', e => {
-  if (!userSelect.value && !roleSelect.value) {
+  if (!userSelect.value && !(orgRoleSelect && orgRoleSelect.value)) {
     e.preventDefault();
-    showToast('Please select a User or a Role before saving.','error');
+    showToast('Please select a User or an Organization Role before saving.','error');
     return;
   }
 
   const leafIds = collectLeafIds(assigned);
   document.getElementById('assigned_order').value = JSON.stringify(leafIds);
+
+  // ensure hidden role (org role id) is submitted
+  const hiddenRole = document.getElementById('hidden_role');
+  if (hiddenRole && orgRoleSelect) hiddenRole.value = orgRoleSelect.value || '';
 
   document.getElementById('saveText').textContent = 'Saving…';
   const sp = document.getElementById('saveSpinner'); 
@@ -422,17 +418,16 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
     globalSearch.addEventListener('input',()=> setTimeout(render,120));
     $('#clearSearchBtn')?.addEventListener('click',()=>{ globalSearch.value=''; render(); });
 
-    userSelect.addEventListener('change',()=>{ roleSelect.value=''; reloadWithFilters(); });
-    roleSelect.addEventListener('change',()=>{ userSelect.value=''; reloadWithFilters(); });
+  userSelect.addEventListener('change',()=>{ reloadWithFilters(); });
     if(orgTypeSelect) orgTypeSelect.addEventListener('change',()=>{ if(!orgTypeSelect.value){ orgRoleSelect && (orgRoleSelect.value=''); } reloadWithFilters(); });
     if(orgRoleSelect) orgRoleSelect.addEventListener('change',()=> reloadWithFilters());
 
     $('#saveBtnDup')?.addEventListener('click',()=> document.getElementById('permissionsForm').requestSubmit());
 
     document.getElementById('permissionsForm').addEventListener('submit', e => {
-  if (!userSelect.value && !roleSelect.value) {
+  if (!userSelect.value && !(orgRoleSelect && orgRoleSelect.value)) {
     e.preventDefault();
-    showToast('Please select a User or a Role before saving.', 'error');
+    showToast('Please select a User or an Organization Role before saving.', 'error');
     return;
   }
 
@@ -445,6 +440,8 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
   document.getElementById('saveText').textContent = 'Saving…';
   const sp = document.getElementById('saveSpinner');
   if (sp) sp.style.display = 'inline-block';
+  const hiddenRole2 = document.getElementById('hidden_role');
+  if (hiddenRole2 && orgRoleSelect) hiddenRole2.value = orgRoleSelect.value || '';
 });
 
 
