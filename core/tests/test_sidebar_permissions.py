@@ -3,9 +3,11 @@ from django.contrib.auth.models import User
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import Client
 from django.urls import reverse
+import json
 
 from core.context_processors import sidebar_permissions
 from core.models import SidebarPermission
+from core.navigation import SIDEBAR_ITEM_IDS
 
 
 class SidebarPermissionsTests(TestCase):
@@ -126,8 +128,56 @@ class SidebarPermissionsViewTests(TestCase):
     def test_assign_permission_to_user(self):
         target = User.objects.create_user("dave", password="pass")
         url = reverse("admin_sidebar_permissions")
-        response = self.client.post(url, {"user": str(target.id), "items": ["dashboard", "events"]})
+        response = self.client.post(
+            url,
+            {
+                "user": str(target.id),
+                "assigned_order": json.dumps(["dashboard", "events"]),
+            },
+        )
         self.assertEqual(response.status_code, 302)
         self.assertIn(f"?user={target.id}", response["Location"])
         perm = SidebarPermission.objects.get(user=target)
         self.assertEqual(perm.items, ["dashboard", "events"])
+
+
+class SidebarPermissionsAPITests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.admin = User.objects.create_superuser("apiadmin", "api@example.com", "pass")
+        self.client.login(username="apiadmin", password="pass")
+
+    def test_api_save_user_success(self):
+        url = reverse("api_save_sidebar_permissions")
+        payload = {
+            "assignments": [next(iter(SIDEBAR_ITEM_IDS))],
+            "user": self.admin.id,
+        }
+        resp = self.client.post(url, data=json.dumps(payload), content_type="application/json")
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json()["success"])
+
+    def test_api_save_exclusive_validation(self):
+        url = reverse("api_save_sidebar_permissions")
+        payload = {"assignments": [], "user": self.admin.id, "role": "faculty"}
+        resp = self.client.post(url, data=json.dumps(payload), content_type="application/json")
+        self.assertFalse(resp.json()["success"])
+
+    def test_api_save_unknown_id(self):
+        url = reverse("api_save_sidebar_permissions")
+        payload = {"assignments": ["unknown"], "user": self.admin.id}
+        resp = self.client.post(url, data=json.dumps(payload), content_type="application/json")
+        self.assertFalse(resp.json()["success"])
+
+    def test_api_get_user_success(self):
+        u = User.objects.create_user("bobapi", password="pass")
+        SidebarPermission.objects.create(user=u, items=["dashboard"])
+        url = reverse("api_get_sidebar_permissions") + f"?user={u.id}"
+        resp = self.client.get(url)
+        self.assertEqual(resp.json()["assignments"], ["dashboard"])
+
+    def test_api_get_role_trimmed(self):
+        SidebarPermission.objects.create(role="faculty", items=["events"])
+        url = reverse("api_get_sidebar_permissions") + "?role=%20faculty%20"
+        resp = self.client.get(url)
+        self.assertEqual(resp.json()["assignments"], ["events"])

@@ -787,7 +787,7 @@ class SidebarPermission(models.Model):
         - Otherwise, combine role + user-specific assignments.
         - Expands children → parents (so parent is always shown if child assigned).
         """
-        from core_admin.views import nav_items  # wherever nav_items is defined
+        from core.navigation import NAV_ITEMS
 
         # Admin users see everything
         if user.is_superuser:
@@ -825,7 +825,7 @@ class SidebarPermission(models.Model):
             recurse(navs)
             return expanded
 
-        return list(expand_with_parents(allowed, nav_items))
+        return list(expand_with_parents(allowed, NAV_ITEMS))
 
 class DashboardAssignment(models.Model):
     """Stores dashboard assignments for users and roles."""
