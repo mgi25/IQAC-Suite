@@ -26,7 +26,13 @@ def create_or_update_user_profile(sender, instance, created, **kwargs):
 
 @receiver(user_logged_in)
 def assign_role_on_login(sender, user, request, **kwargs):
-    """Assign the user's role for the current organization on login."""
+    """Assign the user's session role on login.
+
+    Rules:
+    - If an explicit Organization Role assignment exists (respecting selected org in session),
+      store session["role"] as key "orgrole:<id>". Profile.role keeps the human-readable name.
+    - Else, derive by email domain: *.christuniversity.in -> "student"; otherwise -> "faculty".
+    """
 
     if request is None:
         return
@@ -34,25 +40,34 @@ def assign_role_on_login(sender, user, request, **kwargs):
     org_id = request.session.get("org_id") or request.session.get("organization_id")
     role_assignment = None
     if org_id is not None:
-        role_assignment = RoleAssignment.objects.filter(
-            user=user, organization_id=org_id
-        ).select_related("role").first()
+        role_assignment = (
+            RoleAssignment.objects.filter(user=user, organization_id=org_id)
+            .select_related("role")
+            .first()
+        )
     if role_assignment is None:
-        role_assignment = RoleAssignment.objects.filter(user=user).select_related("role").first()
+        role_assignment = (
+            RoleAssignment.objects.filter(user=user)
+            .select_related("role")
+            .first()
+        )
 
     profile, _ = Profile.objects.get_or_create(user=user)
     update_fields = []
 
-    if role_assignment:
-        role_name = role_assignment.role.name
+    if role_assignment and role_assignment.role_id:
+        # Persist human-readable role name on profile for convenience
+        role_name_display = role_assignment.role.name
+        session_role_key = f"orgrole:{role_assignment.role_id}"
     else:
         domain = user.email.split("@")[-1].lower() if user.email else ""
-        role_name = "student" if domain.endswith("christuniversity.in") else "faculty"
+        role_name_display = "student" if domain.endswith("christuniversity.in") else "faculty"
+        session_role_key = role_name_display
 
-    if profile.role != role_name:
-        profile.role = role_name
+    if profile.role != role_name_display:
+        profile.role = role_name_display
         update_fields.append("role")
-    request.session["role"] = role_name
+    request.session["role"] = session_role_key
 
     if not user.is_active:
         user.is_active = True

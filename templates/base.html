@@ -129,10 +129,10 @@
   <div class="left-control-panel">
     <nav class="control-navigation">
       
-      {% if user.is_superuser or request.session.role == 'admin' or not allowed_nav_items or 'dashboard' in allowed_nav_items %}
+  {% if unrestricted_nav or 'dashboard' in allowed_nav_items %}
       <!-- Dashboard - Always Visible -->
       <div class="nav-item">
-        {% if user.is_superuser or request.session.role == 'admin' %}
+  {% if unrestricted_nav %}
         <a href="{% url 'admin_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
           <i class="fas fa-chart-pie nav-icon"></i>
           <span class="nav-text">Dashboard</span>
@@ -146,7 +146,7 @@
       </div>
       {% endif %}
 
-      {% if user.is_superuser or request.session.role == 'admin' or not allowed_nav_items or 'events' in allowed_nav_items %}
+  {% if unrestricted_nav or 'events' in allowed_nav_items %}
       <!-- Event Management Suite - Expandable -->
       <div class="nav-section {% if 'suite' in request.resolver_match.url_name or '/suite/' in request.path or request.resolver_match.namespace == 'emt' %}expanded{% endif %}">
         <div class="nav-section-header">
@@ -164,7 +164,7 @@
           <a href="/suite/generated-reports/" class="nav-sublink {% if request.resolver_match.url_name == 'generated_reports' %}active{% endif %}">
             <i class="fas fa-eye"></i> View Reports
           </a>
-          {% if user.is_superuser or request.session.role == 'admin' or request.session.role != 'student' %}
+          {% if unrestricted_nav or 'my_approvals' in allowed_nav_items %}
           <a href="{% url 'emt:my_approvals' %}" class="nav-sublink {% if request.resolver_match.url_name == 'my_approvals' %}active{% endif %}">
             <i class="fas fa-check-circle"></i> Event Approvals
           </a>
@@ -174,7 +174,7 @@
       {% endif %}
 
       <!-- Graduate Transcript - Standalone (Admin-controlled) -->
-      {% if user.is_superuser or request.session.role == 'admin' or not allowed_nav_items or 'transcript' in allowed_nav_items %}
+  {% if unrestricted_nav or 'transcript' in allowed_nav_items %}
       <div class="nav-item">
         <a href="/transcript/" class="nav-link {% if request.resolver_match.namespace == 'transcript' or 'transcript' in request.resolver_match.url_name or '/transcript/' in request.path %}active{% endif %}">
           <i class="fas fa-graduation-cap nav-icon"></i>
@@ -184,7 +184,7 @@
       {% endif %}
 
       <!-- CDL - Expandable (Admin-controlled) -->
-      {% if user.is_superuser or request.session.role == 'admin' or not allowed_nav_items or 'cdl' in allowed_nav_items %}
+  {% if unrestricted_nav or 'cdl' in allowed_nav_items %}
       <div class="nav-section {% if 'cdl' in request.resolver_match.url_name or '/cdl/' in request.path %}expanded{% endif %}">
         <div class="nav-section-header">
           <i class="fas fa-photo-video nav-icon"></i>
@@ -203,7 +203,7 @@
       {% endif %}
 
       <!-- User Management - Expandable (Admin Only) -->
-      {% if user.is_superuser or request.session.role == 'admin' or 'user_management' in allowed_nav_items %}
+  {% if unrestricted_nav or 'user_management' in allowed_nav_items %}
 <div class="nav-section {% if 'users' in request.path or 'user-roles' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' %}expanded{% endif %}">
   <div class="nav-section-header">
     <i class="fas fa-users nav-icon"></i>
@@ -223,7 +223,7 @@
 
 
       <!-- Event Proposals - Standalone (Admin Only) -->
-      {% if user.is_superuser or request.session.role == 'admin' or 'event_proposals' in allowed_nav_items %}
+  {% if unrestricted_nav or 'event_proposals' in allowed_nav_items %}
         <div class="nav-item">
           <a href="/core-admin/event-proposals/" class="nav-link {% if request.resolver_match.url_name == 'admin_event_proposals' %}active{% endif %}">
             <i class="fas fa-list nav-icon"></i>
@@ -235,7 +235,7 @@
 
 
       <!-- Reports - Standalone (Admin Only) -->
-      {% if user.is_superuser or request.session.role == 'admin' %}
+  {% if unrestricted_nav %}
       <div class="nav-item">
         <a href="/core-admin/reports/" class="nav-link {% if request.resolver_match.url_name == 'admin_reports' or request.resolver_match.url_name == 'admin_reports_view' %}active{% endif %}">
           <i class="fas fa-file-alt nav-icon"></i>
@@ -245,7 +245,7 @@
       {% endif %}
 
       <!-- Settings - Expandable (Admin Only) -->
-      {% if user.is_superuser or request.session.role == 'admin' or 'settings' in allowed_nav_items %}
+  {% if unrestricted_nav or 'settings' in allowed_nav_items %}
   <div class="nav-section {% if 'settings' in request.path %}expanded{% endif %}">
     <div class="nav-section-header">
       <i class="fas fa-cog nav-icon"></i>
@@ -254,37 +254,37 @@
     </div>
     <div class="nav-submenu {% if 'settings' in request.path %}open{% endif %}">
 
-      {% if user.is_superuser or request.session.role == 'admin' or 'user_settings' in allowed_nav_items %}
+  {% if unrestricted_nav or 'user_settings' in allowed_nav_items %}
       <a href="{% url 'admin_master_data' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_master_data' %}active{% endif %}">
         <i class="fas fa-user-cog"></i> User Settings
       </a>
       {% endif %}
 
-      {% if user.is_superuser or request.session.role == 'admin' or 'approval_flow' in allowed_nav_items %}
+  {% if unrestricted_nav or 'approval_flow' in allowed_nav_items %}
       <a href="{% url 'admin_approval_flow' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_approval_flow' %}active{% endif %}">
         <i class="fas fa-route"></i> Approval Flow
       </a>
       {% endif %}
 
-      {% if user.is_superuser or request.session.role == 'admin' or 'pso_psos' in allowed_nav_items %}
+  {% if unrestricted_nav or 'pso_psos' in allowed_nav_items %}
       <a href="{% url 'admin_pso_po_management' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_pso_po_management' %}active{% endif %}">
         <i class="fas fa-clipboard-list"></i> POs & PSOs Management
       </a>
       {% endif %}
 
-      {% if user.is_superuser or request.session.role == 'admin' or 'academic_year' in allowed_nav_items %}
+  {% if unrestricted_nav or 'academic_year' in allowed_nav_items %}
       <a href="{% url 'admin_academic_year_settings' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_academic_year_settings' %}active{% endif %}">
         <i class="fas fa-calendar-alt"></i> Academic Year
       </a>
       {% endif %}
 
-      {% if user.is_superuser or request.session.role == 'admin' or 'history' in allowed_nav_items %}
+  {% if unrestricted_nav or 'history' in allowed_nav_items %}
       <a href="{% url 'admin_history' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_history' %}active{% endif %}">
         <i class="fas fa-history"></i> History
       </a>
       {% endif %}
 
-      {% if user.is_superuser or request.session.role == 'admin' or 'sidebar_permissions' in allowed_nav_items %}
+  {% if unrestricted_nav or 'sidebar_permissions' in allowed_nav_items %}
       <a href="{% url 'admin_sidebar_permissions' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_sidebar_permissions' %}active{% endif %}">
         <i class="fas fa-bars"></i> Sidebar Permissions
       </a>

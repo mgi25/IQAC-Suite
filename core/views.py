@@ -2025,7 +2025,11 @@ def admin_sidebar_permissions(request):
     import logging
     logger = logging.getLogger(__name__)
 
-    roles = ["admin", "faculty", "student"]
+    # Roles are now OrganizationRole entries (no generic labels)
+
+    # Housekeeping: remove stale records where both user and role are set
+    # (we only support either user-specific override (role="") or role-based with user=None)
+    SidebarPermission.objects.filter(user__isnull=False).exclude(role__in=["", None]).delete()
 
     # Filters from query params
     org_type_id = (request.GET.get("org_type") or "").strip()
@@ -2123,14 +2127,19 @@ def admin_sidebar_permissions(request):
     permission = None
     if selected_user:
         permission = SidebarPermission.objects.filter(user_id=selected_user).first()
-    elif selected_role:
-        permission = SidebarPermission.objects.filter(
-            user__isnull=True, role__iexact=selected_role
-        ).first()
+    else:
+        # Prefer numeric org role id passed via 'role' or 'org_role'
+        selected_role_id = request.GET.get("role") or request.GET.get("org_role")
+        if selected_role_id and selected_role_id.isdigit():
+            role_key = f"orgrole:{selected_role_id}"
+            permission = SidebarPermission.objects.filter(
+                user__isnull=True, role=role_key
+            ).first()
 
     if request.method == "POST":
         target_user = request.POST.get("user") or None
-        target_role = (request.POST.get("role") or "").strip()
+        # Accept numeric OrganizationRole id in 'role' field
+        target_role_id = (request.POST.get("role") or "").strip()
 
         assigned_order_raw = request.POST.get("assigned_order")
         try:
@@ -2138,35 +2147,45 @@ def admin_sidebar_permissions(request):
         except Exception:
             assigned_items = []
 
-        # 🔐 Prevent breaking admin sidebar
-        if (target_role and target_role.lower() == "admin") or (
-            target_user and User.objects.filter(id=target_user, is_superuser=True).exists()
-        ):
+        # 🔐 Prevent breaking admin sidebar for superusers
+        if target_user and User.objects.filter(id=target_user, is_superuser=True).exists():
             if not assigned_items:
                 messages.warning(request, "Admin must always retain full sidebar; ignoring empty assignment.")
             else:
                 permission, _ = SidebarPermission.objects.get_or_create(
-                    user_id=target_user if target_user else None,
-                    role="" if target_user else target_role.lower()
+                    user_id=target_user,
+                    role=""
                 )
                 permission.items = assigned_items
                 permission.save()
         else:
-            permission, _ = SidebarPermission.objects.get_or_create(
-                user_id=target_user if target_user else None,
-                role="" if target_user else target_role.lower()
-            )
+            if target_user:
+                permission, _ = SidebarPermission.objects.get_or_create(
+                    user_id=target_user,
+                    role=""
+                )
+            else:
+                # Role-based via OrganizationRole id
+                if target_role_id and target_role_id.isdigit():
+                    role_key = f"orgrole:{target_role_id}"
+                    permission, _ = SidebarPermission.objects.get_or_create(
+                        user=None,
+                        role=role_key
+                    )
+                else:
+                    messages.error(request, "Please select a valid organization role to save permissions.")
+                    return redirect(reverse("admin_sidebar_permissions"))
             permission.items = assigned_items
             permission.save()
 
         messages.success(request, "Sidebar permissions updated")
-        logger.info("Sidebar permissions updated for user=%s role=%s", target_user, target_role)
+        logger.info("Sidebar permissions updated for user=%s role=%s", target_user, target_role_id)
 
         redirect_url = reverse("admin_sidebar_permissions")
         if target_user:
             redirect_url += f"?user={target_user}"
-        elif target_role:
-            redirect_url += f"?role={target_role}"
+        elif target_role_id:
+            redirect_url += f"?role={target_role_id}"
         if org_type_id:
             redirect_url += f"&org_type={org_type_id}"
         if org_role_id:
@@ -2178,8 +2197,14 @@ def admin_sidebar_permissions(request):
     assigned_permissions = build_assigned_tree(assigned_set, nav_items)
     available_permissions = build_available_tree(assigned_set, nav_items)
 
+    # Build roles list from OrganizationRole (optionally filtered by org type)
+    if org_type_id:
+        roles_qs = OrganizationRole.objects.filter(organization__org_type_id=org_type_id)
+    else:
+        roles_qs = OrganizationRole.objects.all()
+
     context = {
-        "roles": [{"id": r, "name": r.title()} for r in roles],
+        "roles": list(roles_qs.values("id", "name")),
         "organization_types": list(OrganizationType.objects.filter(is_active=True).values("id", "name")),
         "org_roles": list(OrganizationRole.objects.filter(organization__org_type_id=org_type_id).values("id", "name")) if org_type_id else [],
         "selected_org_type": org_type_id,
@@ -2188,9 +2213,10 @@ def admin_sidebar_permissions(request):
         "nav_items": nav_items,
         "permission": permission,
         "selected_user": selected_user,
-        "selected_role": selected_role,
+    # Use organization role id for selection; plain role labels are not used in UI
+    "selected_role": request.GET.get("role") or request.GET.get("org_role") or "",
         "selected_user_id": selected_user,
-        "selected_role_id": selected_role,
+        "selected_role_id": request.GET.get("role") or request.GET.get("org_role") or "",
         "available_permissions": json.dumps(available_permissions),
         "assigned_permissions": json.dumps(assigned_permissions),
     }
@@ -2301,10 +2327,10 @@ def api_save_sidebar_permissions(request):
         assignments = data.get('assignments', [])
         user_id = data.get('user')
         role = data.get('role')
-        
+
         if not user_id and not role:
             return JsonResponse({'success': False, 'error': 'Must specify either user or role'})
-        
+
         # Get or create permission record
         if user_id:
             permission, created = SidebarPermission.objects.get_or_create(
@@ -2316,17 +2342,19 @@ def api_save_sidebar_permissions(request):
                 permission.items = assignments
                 permission.save()
         else:
+            # Accept numeric org role id; store as key orgrole:<id>
+            role_key = f"orgrole:{role}" if str(role).isdigit() else str(role)
             permission, created = SidebarPermission.objects.get_or_create(
                 user=None,
-                role=role,
+                role=role_key,
                 defaults={'items': assignments}
             )
             if not created:
                 permission.items = assignments
                 permission.save()
-        
+
         return JsonResponse({'success': True})
-        
+
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
@@ -2372,8 +2400,9 @@ def api_get_sidebar_permissions(request):
         if permission:
             assignments = permission.items
     elif role:
+        role_key = f"orgrole:{role}" if role.isdigit() else role
         permission = SidebarPermission.objects.filter(
-            user__isnull=True, role=role
+            user__isnull=True, role=role_key
         ).first()
         if permission:
             assignments = permission.items
@@ -5956,6 +5985,10 @@ def api_cdl_support_detail(request, proposal_id:int):
     except Exception:
         speakers = []
 
+    # CDL assignment details (if present)
+    from emt.models import CDLAssignment as _CDLAssignment
+    asg = getattr(p, 'cdl_assignment', None)
+
     data = {
         'id': p.id,
         'title': p.event_title,
@@ -5976,9 +6009,11 @@ def api_cdl_support_detail(request, proposal_id:int):
         'poster_design_link': getattr(s, 'poster_design_link', None),
         'certificate_design_link': getattr(s, 'certificate_design_link', None),
         'other_services': getattr(s, 'other_services', []) or [],
-        # assignment placeholder: reuse report_assigned_to if no dedicated field
-        'assigned_to_id': getattr(p, 'report_assigned_to_id', None),
-        'assigned_to_name': (p.report_assigned_to.get_full_name() if p.report_assigned_to else None),
+    # assignment details
+    'assigned_to_id': (asg.assignee_id if asg else getattr(p, 'report_assigned_to_id', None)),
+    'assigned_to_name': ((asg.assignee.get_full_name() or asg.assignee.username) if asg else (p.report_assigned_to.get_full_name() if p.report_assigned_to else None)),
+    'assigned_role': (asg.role if asg else None),
+    'assigned_status': (asg.status if asg else None),
     }
     return JsonResponse({"success": True, "data": data})
 
@@ -5993,6 +6028,7 @@ def api_cdl_support_assign(request, proposal_id:int):
     except Exception:
         payload = request.POST
     member_id = payload.get('member_id') or payload.get('user_id')
+    role_name = (payload.get('role') or '').strip()
     if not member_id:
         return JsonResponse({"success": False, "error": "member_id is required"}, status=400)
 
@@ -6011,7 +6047,18 @@ def api_cdl_support_assign(request, proposal_id:int):
     if not (request.user.is_superuser or is_cdl_member):
         return JsonResponse({"success": False, "error": "Not allowed"}, status=403)
 
-    # Apply assignment (reusing report_assigned_to as tracking field for CDL workboard for now)
+    # Create or update CDLAssignment
+    from emt.models import CDLAssignment as _CDLAssignment
+    asg, _ = _CDLAssignment.objects.update_or_create(
+        proposal=p,
+        defaults={
+            'assignee': member,
+            'assigned_by': request.user,
+            'role': role_name,
+            'status': _CDLAssignment.Status.ASSIGNED,
+        }
+    )
+    # Keep legacy field for compatibility
     p.report_assigned_to = member
     p.report_assigned_at = timezone.now()
     p.save(update_fields=["report_assigned_to", "report_assigned_at", "updated_at"])
@@ -6050,6 +6097,37 @@ def api_cdl_members(request):
     return JsonResponse({'success': True, 'members': members})
 
 @login_required
+@require_http_methods(["GET"])  # /api/cdl/users/
+def api_cdl_users(request):
+    """Return CDL users grouped by role for org_type = 'CDL'.
+
+    Output example:
+      { success: true, users: { head: [ {id,name}... ], employee: [ ... ] } }
+    """
+    from django.contrib.auth.models import User
+    from .models import OrganizationType, RoleAssignment
+
+    # Find org_type "CDL"
+    org_types = OrganizationType.objects.filter(name__iexact="CDL")
+    role_asg = RoleAssignment.objects.filter(organization__org_type__in=org_types).select_related('user', 'role', 'organization')
+    users = {'head': [], 'employee': []}
+    seen = set()
+    for ra in role_asg:
+        key = None
+        rn = (ra.role.name or '').strip().lower()
+        if 'head' in rn:
+            key = 'head'
+        elif 'employee' in rn or 'member' in rn:
+            key = 'employee'
+        if key:
+            uid = ra.user.id
+            if (key, uid) in seen:
+                continue
+            seen.add((key, uid))
+            users[key].append({'id': uid, 'name': ra.user.get_full_name() or ra.user.username, 'role': ra.role.name})
+    return JsonResponse({'success': True, 'users': users})
+
+@login_required
 @require_GET
 def api_cdl_member_data(request):
     """Unified data feed for CDL Member dashboard.
@@ -6076,8 +6154,12 @@ def api_cdl_member_data(request):
                 return None
         return None
 
-    # Assigned work (reuse the same shape as api_cdl_member_work)
-    work_qs = EMTEventProposal.objects.filter(report_assigned_to=user).select_related('organization')[:200]
+    # Assigned work via CDLAssignment fallback to legacy report_assigned_to
+    from emt.models import CDLAssignment as _CDLAssignment
+    asg_ids = list(_CDLAssignment.objects.filter(assignee=user).values_list('proposal_id', flat=True))
+    legacy_qs = EMTEventProposal.objects.filter(report_assigned_to=user).values_list('id', flat=True)
+    proposal_ids = list(set(asg_ids) | set(legacy_qs))
+    work_qs = EMTEventProposal.objects.filter(id__in=proposal_ids).select_related('organization')[:200]
     work = []
     due_today = 0
     from datetime import date as _date
@@ -6087,16 +6169,20 @@ def api_cdl_member_data(request):
         due_iso = d.isoformat() if d else None
         if d == today:
             due_today += 1
+        # Pull assignment info if present
+        _asg = getattr(p, 'cdl_assignment', None)
         work.append({
             'id': p.id,
             'event': p.event_title,
             'type': 'poster' if getattr(getattr(p,'cdl_support',None),'poster_required',False) else ('certificate' if getattr(getattr(p,'cdl_support',None),'certificates_required',False) else 'coverage'),
             'priority': 'Medium',
             'due_date': due_iso,
-            'status': 'pending',
+            'status': (_asg.status if _asg else 'assigned'),
             'rev': 0,
             'created_at': p.created_at.isoformat(),
-            'assigned_at': p.report_assigned_at.isoformat() if p.report_assigned_at else None,
+            'assigned_at': (_asg.assigned_at.isoformat() if _asg else (p.report_assigned_at.isoformat() if p.report_assigned_at else None)),
+            'assigned_role': (_asg.role if _asg else None),
+            'assigned_by': ((_asg.assigned_by.get_full_name() or _asg.assigned_by.username) if (_asg and _asg.assigned_by) else None),
         })
 
     # Inbox (simple: those not yet accepted -> same as work for now)
@@ -6128,14 +6214,16 @@ def api_cdl_member_data(request):
             'status': (p.status or '').lower(),
         })
 
+    # Build assigned events list from "work" so we can include role/assigned_by metadata
     events_assigned = []
-    for p in work_qs:
-        d = best_date(p)
+    for w in work:
         events_assigned.append({
-            'id': p.id,
-            'title': p.event_title,
-            'date': d.isoformat() if d else None,
-            'status': (p.status or '').lower(),
+            'id': w['id'],
+            'title': w['event'],
+            'date': w.get('due_date'),
+            'status': (w.get('status') or '').lower(),
+            'assigned_role': w.get('assigned_role'),
+            'assigned_by': w.get('assigned_by'),
         })
 
     data = {

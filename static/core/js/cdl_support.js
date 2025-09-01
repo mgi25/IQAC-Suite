@@ -11,8 +11,8 @@
       if(!res.ok) throw new Error(`HTTP ${res.status}`);
       const d = await res.json();
       if(!d.success){ throw new Error(d.error||'Failed'); }
-      render(d.data);
-      await loadMembers();
+  render(d.data);
+  await loadMembers();
     }catch(e){ renderError(e.message||'Failed to load'); }
   }
 
@@ -79,36 +79,53 @@
   }
 
   // Assign flow
-  function openAssign(){ $('#assignModal').style.display='flex'; }
+  function openAssign(){ $('#assignModal').style.display='flex'; fetchUsersByRole(); }
   $('#assignClose')?.addEventListener('click', ()=> $('#assignModal').style.display='none');
   $('#assignCancel')?.addEventListener('click', ()=> $('#assignModal').style.display='none');
 
   async function loadMembers(){
+    try{ await fetchUsersByRole(); }catch{}
+  }
+
+  async function fetchUsersByRole(){
     try{
-      const res = await fetch('/api/cdl/members/');
+      const res = await fetch('/api/cdl/users/');
+      if(!res.ok) return;
       const data = await res.json();
-      const list = (data.members||[]);
-      const sel = $('#assignMember');
-      sel.innerHTML = '<option value="">Select member…</option>' + list.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
+      const roleSel = $('#assignRole');
+      const memSel = $('#assignMember');
+      const role = roleSel.value;
+      const users = data.users||{};
+      const group = role.includes('Head') ? users.head : users.employee;
+      memSel.innerHTML = '<option value="">Select member…</option>' + (group||[]).map(u=>`<option value="${u.id}">${esc(u.name)}${u.role? ' — '+esc(u.role): ''}</option>`).join('');
     }catch{}
   }
+  document.addEventListener('change', e=>{ if(e.target && e.target.id==='assignRole'){ fetchUsersByRole(); }});
 
   $('#assignSave')?.addEventListener('click', async ()=>{
     const memberId = $('#assignMember')?.value;
-    if(!memberId){ alert('Select a member'); return; }
+    const role = $('#assignRole')?.value || '';
+    if(!memberId){ toast('Select a member'); return; }
     try{
-      const res = await fetch(`/api/cdl/support/${encodeURIComponent(eventId)}/assign/`, {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCSRF()}, body:JSON.stringify({member_id: memberId})});
+      const res = await fetch(`/api/cdl/support/${encodeURIComponent(eventId)}/assign/`, {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCSRF()}, body:JSON.stringify({member_id: memberId, role})});
       const out = await res.json();
       if(!res.ok || !out.success) throw new Error(out.error||('HTTP '+res.status));
-      alert('Assigned successfully');
-      location.reload(); // quick refresh to show assigned_to
-    }catch(e){ alert('Assignment failed: '+(e.message||'Error')); }
+      toast('Assigned successfully');
+      setTimeout(()=>location.reload(), 600);
+    }catch(e){ toast('Assignment failed: '+(e.message||'Error')); }
   });
 
   function getCSRF(){
     const name='csrftoken';
     const m=document.cookie.match('(^|;)\\s*'+name+'\\s*=\\s*([^;]+)');
     return m?m.pop():'';
+  }
+
+  function toast(msg){
+    const t=document.getElementById('toast'); if(!t) return alert(msg);
+    t.textContent=msg; t.style.display='block'; t.style.opacity='0'; t.style.transform='translateY(10px)';
+    requestAnimationFrame(()=>{ t.style.transition='.25s'; t.style.opacity='1'; t.style.transform='translateY(0)';});
+    setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateY(10px)'; setTimeout(()=>{ t.style.display='none'; },250); }, 1600);
   }
 
   // wire from notification list -> cdl_support
