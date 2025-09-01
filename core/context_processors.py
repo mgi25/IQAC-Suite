@@ -53,48 +53,53 @@ def active_academic_year(request):
 from .models import SidebarPermission, RoleAssignment
 
 def sidebar_permissions(request):
-    """Provide allowed sidebar items for the current user or role."""
+    """Provide allowed sidebar items for the current user.
 
+    Rules (requested):
+    - Superusers/admins: unrestricted.
+    - Else: resolve by session["role"]. If that's an org role key (orgrole:<id>),
+      use that record; else treat it as a plain baseline label (student/faculty).
+    - If no record exists for the resolved role, fallback to faculty baseline.
+    - User-specific (role empty) overrides all of the above.
+    """
+
+    # Anonymous users: nothing and restricted
     if not request.user.is_authenticated:
-        return {"allowed_nav_items": []}  # nothing for anonymous
+        return {"allowed_nav_items": [], "unrestricted_nav": False}
 
-    # Superusers/admins always see everything
-    if request.user.is_superuser or request.session.get("role", "").lower() == "admin":
-        return {"allowed_nav_items": None}  # None = unrestricted
+    # Superusers: unrestricted; keep allowed_nav_items as [] for backward compat
+    if request.user.is_superuser:
+        return {"allowed_nav_items": [], "unrestricted_nav": True}
 
-    items = []
+    def _expand_with_parents(ids):
+        if not ids:
+            return ids
+        expanded = set(ids)
+        for item in list(ids):
+            if ":" in item:
+                parent = item.split(":", 1)[0]
+                expanded.add(parent)
+        # Add leaf aliases for legacy template checks
+        expanded.update({item.split(":", 1)[1] for item in ids if ":" in item})
+        return list(expanded)
 
-    # --- Check user-specific permissions first ---
-    user_perm = SidebarPermission.objects.filter(
-        user=request.user, role__in=["", None]
-    ).first()
+    # 1) User-specific override
+    user_perm = SidebarPermission.objects.filter(user=request.user, role__in=["", None]).first()
     if user_perm:
-        items = user_perm.items
-    else:
-        # --- If no user-specific, check role-based permissions ---
-        session_role = request.session.get("role")
+        return {"allowed_nav_items": _expand_with_parents(user_perm.items), "unrestricted_nav": False}
 
-        # If role not already cached in session, derive it
-        if not session_role:
-            roles = RoleAssignment.objects.filter(user=request.user).select_related("role")
-            role_names = [ra.role.name.lower() for ra in roles]
+    # 2) Role from session, with fallback to faculty
+    session_role = (request.session.get("role") or "").strip()
+    role_perm = None
+    if session_role:
+        role_perm = SidebarPermission.objects.filter(user__isnull=True, role=session_role).first()
 
-            email = (request.user.email or "").lower()
-            if "student" in role_names or email.endswith("@christuniversity.in"):
-                session_role = "student"
-            elif "faculty" in role_names:
-                session_role = "faculty"
-            else:
-                session_role = "faculty"  # default fallback
+    if not role_perm:
+        # Faculty baseline fallback
+        role_perm = SidebarPermission.objects.filter(user__isnull=True, role="faculty").first()
 
-            request.session["role"] = session_role
+    if role_perm:
+        return {"allowed_nav_items": _expand_with_parents(role_perm.items), "unrestricted_nav": False}
 
-        # Check for role-based sidebar permissions
-        role_perm = SidebarPermission.objects.filter(
-            user__isnull=True, role__iexact=session_role
-        ).first()
-        if role_perm:
-            items = role_perm.items
-    print("Allowed items for", request.user.username, "=>", items)
-    return {"allowed_nav_items": items}
+    return {"allowed_nav_items": [], "unrestricted_nav": False}
 
