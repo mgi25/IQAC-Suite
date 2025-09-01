@@ -91,16 +91,48 @@
           <td>{{ log.user.get_full_name|default:log.user.username|default:"System" }}</td>
           <td><a href="{% url 'admin_history_detail' log.pk %}">{{ log.action }}</a></td>
           <td class="col-desc">
-            {% if 'login' in log.action|lower %}
-              {{ log.user.get_full_name|default:log.user.username }} accessed the system successfully
+            {% if 'login' in log.action|lower and 'logout' not in log.action|lower %}
+              {{ log.user.get_full_name|default:log.user.username }} logged into the system
+            {% elif 'logout' in log.action|lower %}
+              {{ log.user.get_full_name|default:log.user.username }} logged out of the system
             {% elif 'GET /accounts/login/' in log.action %}
-              {{ log.user.get_full_name|default:log.user.username }} viewed the login page
+              {{ log.user.get_full_name|default:log.user.username }} visited the login page
             {% elif 'POST /admin/login/' in log.action %}
-              {{ log.user.get_full_name|default:log.user.username }} submitted login credentials
+              {{ log.user.get_full_name|default:log.user.username }} attempted to login
             {% elif '/admin/login/' in log.action %}
-              {{ log.user.get_full_name|default:log.user.username }} accessed admin login
+              {{ log.user.get_full_name|default:log.user.username }} accessed admin login page
+            {% elif 'GET /api/calendar/' in log.action %}
+              {{ log.user.get_full_name|default:log.user.username }} viewed calendar events
+            {% elif 'GET /api/user/proposals/' in log.action %}
+              {{ log.user.get_full_name|default:log.user.username }} viewed event proposals
+            {% elif 'GET /api/student/contributions/' in log.action %}
+              {{ log.user.get_full_name|default:log.user.username }} viewed student contributions
+            {% elif 'GET /api/student/performance-data/' in log.action %}
+              {{ log.user.get_full_name|default:log.user.username }} viewed student performance data
+            {% elif 'GET /' in log.action and log.action == 'GET /' %}
+              {{ log.user.get_full_name|default:log.user.username }} visited the dashboard
+            {% elif 'GET /core-admin/dashboard/' in log.action %}
+              {{ log.user.get_full_name|default:log.user.username }} viewed admin dashboard
+            {% elif 'GET /core-admin/sidebar-permissions/' in log.action %}
+              {{ log.user.get_full_name|default:log.user.username }} viewed admin sidebar permissions
+            {% elif 'POST' in log.action and 'create' in log.action|lower %}
+              {{ log.user.get_full_name|default:log.user.username }} created a new record
+            {% elif 'POST' in log.action and 'update' in log.action|lower %}
+              {{ log.user.get_full_name|default:log.user.username }} updated a record
+            {% elif 'DELETE' in log.action %}
+              {{ log.user.get_full_name|default:log.user.username }} deleted a record
+            {% elif 'PUT' in log.action or 'PATCH' in log.action %}
+              {{ log.user.get_full_name|default:log.user.username }} modified a record
+            {% elif 'GET' in log.action and '/admin/' in log.action %}
+              {{ log.user.get_full_name|default:log.user.username }} accessed admin panel
+            {% elif 'GET' in log.action and '/api/' in log.action %}
+              {{ log.user.get_full_name|default:log.user.username }} retrieved data via API
+            {% elif 'GET' in log.action %}
+              {{ log.user.get_full_name|default:log.user.username }} viewed a page
+            {% elif 'POST' in log.action %}
+              {{ log.user.get_full_name|default:log.user.username }} submitted data
             {% else %}
-              {{ log.description|default:"-" }}
+              {{ log.description|default:log.action|default:"-" }}
             {% endif %}
           </td>
           <td class="nowrap">{{ log.ip_address|default:"-" }}</td>
