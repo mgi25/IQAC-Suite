@@ -81,7 +81,7 @@ def sidebar_permissions(request):
                 expanded.add(parent)
         # Add leaf aliases for legacy template checks
         expanded.update({item.split(":", 1)[1] for item in ids if ":" in item})
-        return list(expanded)
+        return sorted(expanded)
 
     # 1) User-specific override
     user_perm = SidebarPermission.objects.filter(user=request.user, role__in=["", None]).first()
@@ -90,13 +90,20 @@ def sidebar_permissions(request):
 
     # 2) Role from session, with fallback to faculty
     session_role = (request.session.get("role") or "").strip()
+    if session_role.lower() == "admin":
+        return {"allowed_nav_items": [], "unrestricted_nav": True}
+
     role_perm = None
     if session_role:
-        role_perm = SidebarPermission.objects.filter(user__isnull=True, role=session_role).first()
+        role_perm = SidebarPermission.objects.filter(
+            user__isnull=True, role__iexact=session_role
+        ).first()
 
     if not role_perm:
-        # Faculty baseline fallback
-        role_perm = SidebarPermission.objects.filter(user__isnull=True, role="faculty").first()
+        # Faculty baseline fallback (case-insensitive)
+        role_perm = SidebarPermission.objects.filter(
+            user__isnull=True, role__iexact="faculty"
+        ).first()
 
     if role_perm:
         return {"allowed_nav_items": _expand_with_parents(role_perm.items), "unrestricted_nav": False}
