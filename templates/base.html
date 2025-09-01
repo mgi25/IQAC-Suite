@@ -13,7 +13,6 @@
   <!-- Styles -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
   <link rel="stylesheet" href="{% static 'core/css/base.css' %}">
-  <link rel="stylesheet" href="{% static 'core/css/command-center.css' %}">
   {% block extra_css %}{% endblock %}
   
   {% block head_extra %}{% endblock %}
@@ -204,33 +203,36 @@
       {% endif %}
 
       <!-- User Management - Expandable (Admin Only) -->
-      {% if user.is_superuser or request.session.role == 'admin' %}
-      <div class="nav-section {% if 'users' in request.path or 'user-roles' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' %}expanded{% endif %}">
-        <div class="nav-section-header">
-          <i class="fas fa-users nav-icon"></i>
-          <span class="nav-text">User Management</span>
-          <i class="fas fa-chevron-right expand-icon {% if 'users' in request.path or 'user-roles' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' %}rotated{% endif %}"></i>
-        </div>
-        <div class="nav-submenu {% if 'users' in request.path or 'user-roles' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' %}open{% endif %}">
-          <a href="/core-admin/users/" class="nav-sublink {% if request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_user_panel' %}active{% endif %}">
-            <i class="fas fa-user"></i> Manage Users
-          </a>
-          <a href="/core-admin/user-roles/" class="nav-sublink {% if request.resolver_match.url_name == 'admin_role_management' %}active{% endif %}">
-            <i class="fas fa-tags"></i> Add Roles
-          </a>
-        </div>
-      </div>
-      {% endif %}
+      {% if user.is_superuser or request.session.role == 'admin' or 'user_management' in allowed_nav_items %}
+<div class="nav-section {% if 'users' in request.path or 'user-roles' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' %}expanded{% endif %}">
+  <div class="nav-section-header">
+    <i class="fas fa-users nav-icon"></i>
+    <span class="nav-text">User Management</span>
+    <i class="fas fa-chevron-right expand-icon {% if 'users' in request.path or 'user-roles' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' %}rotated{% endif %}"></i>
+  </div>
+  <div class="nav-submenu {% if 'users' in request.path or 'user-roles' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' %}open{% endif %}">
+    <a href="/core-admin/users/" class="nav-sublink {% if request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_user_panel' %}active{% endif %}">
+      <i class="fas fa-user"></i> Manage Users
+    </a>
+    <a href="/core-admin/user-roles/" class="nav-sublink {% if request.resolver_match.url_name == 'admin_role_management' %}active{% endif %}">
+      <i class="fas fa-tags"></i> Add Roles
+    </a>
+  </div>
+</div>
+{% endif %}
+
 
       <!-- Event Proposals - Standalone (Admin Only) -->
-      {% if user.is_superuser or request.session.role == 'admin' %}
-      <div class="nav-item">
-        <a href="/core-admin/event-proposals/" class="nav-link {% if request.resolver_match.url_name == 'admin_event_proposals' %}active{% endif %}">
-          <i class="fas fa-list nav-icon"></i>
-          <span class="nav-text">Event Proposals</span>
-        </a>
-      </div>
+      {% if user.is_superuser or request.session.role == 'admin' or 'event_proposals' in allowed_nav_items %}
+        <div class="nav-item">
+          <a href="/core-admin/event-proposals/" class="nav-link {% if request.resolver_match.url_name == 'admin_event_proposals' %}active{% endif %}">
+            <i class="fas fa-list nav-icon"></i>
+            <span class="nav-text">Event Proposals</span>
+          </a>
+        </div>
       {% endif %}
+
+
 
       <!-- Reports - Standalone (Admin Only) -->
       {% if user.is_superuser or request.session.role == 'admin' %}
@@ -243,40 +245,55 @@
       {% endif %}
 
       <!-- Settings - Expandable (Admin Only) -->
-      {% if user.is_superuser or request.session.role == 'admin' %}
-      <div class="nav-section {% if 'settings' in request.path or 'approval' in request.path or 'pso-po' in request.path or 'master-data' in request.path or 'outcomes' in request.path or 'sdg-goals' in request.path or 'history' in request.path or request.resolver_match.url_name == 'admin_settings' or request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'admin_pso_po_management' or request.resolver_match.url_name == 'admin_outcome_dashboard' or request.resolver_match.url_name == 'admin_sdg_management' or request.resolver_match.url_name == 'admin_academic_year_settings' or request.resolver_match.url_name == 'admin_history' or request.resolver_match.url_name == 'admin_history_detail' %}expanded{% endif %}">
-        <div class="nav-section-header">
-          <i class="fas fa-cog nav-icon"></i>
-          <span class="nav-text">Settings</span>
-          <i class="fas fa-chevron-right expand-icon {% if 'settings' in request.path or 'approval' in request.path or 'pso-po' in request.path or 'master-data' in request.path or 'outcomes' in request.path or 'sdg-goals' in request.path or 'history' in request.path or request.resolver_match.url_name == 'admin_settings' or request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'admin_pso_po_management' or request.resolver_match.url_name == 'admin_outcome_dashboard' or request.resolver_match.url_name == 'admin_sdg_management' or request.resolver_match.url_name == 'admin_academic_year_settings' or request.resolver_match.url_name == 'admin_history' or request.resolver_match.url_name == 'admin_history_detail' %}rotated{% endif %}"></i>
-        </div>
-        <div class="nav-submenu {% if 'settings' in request.path or 'approval' in request.path or 'pso-po' in request.path or 'master-data' in request.path or 'outcomes' in request.path or 'sdg-goals' in request.path or 'history' in request.path or request.resolver_match.url_name == 'admin_settings' or request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'admin_pso_po_management' or request.resolver_match.url_name == 'admin_outcome_dashboard' or request.resolver_match.url_name == 'admin_sdg_management' or request.resolver_match.url_name == 'admin_academic_year_settings' or request.resolver_match.url_name == 'admin_history' or request.resolver_match.url_name == 'admin_history_detail' %}open{% endif %}">
-          <a href="{% url 'admin_master_data' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'master_data_dashboard' %}active{% endif %}">
-            <i class="fas fa-user-cog"></i> User Settings
-          </a>
-          <div class="nav-subsection">
-            <div class="nav-subsection-header">
-              <i class="fas fa-check"></i> Approval Settings
-            </div>
-            <a href="{% url 'admin_approval_flow' %}" class="nav-sublink nested {% if request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'admin_approval_flow_manage' %}active{% endif %}">
-              <i class="fas fa-route"></i> Approval Flow Management
-            </a>
-          </div>
-          <a href="{% url 'admin_pso_po_management' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_outcome_dashboard' or request.resolver_match.url_name == 'admin_pso_po_management' or request.resolver_match.url_name == 'admin_sdg_management' %}active{% endif %}">
-            <i class="fas fa-clipboard-list"></i> POs & PSOs Management
-          </a>
-          <a href="{% url 'admin_academic_year_settings' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_academic_year_settings' %}active{% endif %}">
-            <i class="fas fa-calendar-alt"></i> Academic Year Settings
-          </a>
-          <a href="{% url 'admin_history' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_history' or request.resolver_match.url_name == 'admin_history_detail' %}active{% endif %}">
-            <i class="fas fa-history"></i> History
-          </a>
-          <a href="{% url 'admin_sidebar_permissions' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_sidebar_permissions' %}active{% endif %}">
-            <i class="fas fa-bars"></i> Sidebar Permissions
-          </a>
-        </div>
-      </div>
+      {% if user.is_superuser or request.session.role == 'admin' or 'settings' in allowed_nav_items %}
+  <div class="nav-section {% if 'settings' in request.path %}expanded{% endif %}">
+    <div class="nav-section-header">
+      <i class="fas fa-cog nav-icon"></i>
+      <span class="nav-text">Settings</span>
+      <i class="fas fa-chevron-right expand-icon {% if 'settings' in request.path %}rotated{% endif %}"></i>
+    </div>
+    <div class="nav-submenu {% if 'settings' in request.path %}open{% endif %}">
+
+      {% if user.is_superuser or request.session.role == 'admin' or 'user_settings' in allowed_nav_items %}
+      <a href="{% url 'admin_master_data' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_master_data' %}active{% endif %}">
+        <i class="fas fa-user-cog"></i> User Settings
+      </a>
       {% endif %}
+
+      {% if user.is_superuser or request.session.role == 'admin' or 'approval_flow' in allowed_nav_items %}
+      <a href="{% url 'admin_approval_flow' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_approval_flow' %}active{% endif %}">
+        <i class="fas fa-route"></i> Approval Flow
+      </a>
+      {% endif %}
+
+      {% if user.is_superuser or request.session.role == 'admin' or 'pso_psos' in allowed_nav_items %}
+      <a href="{% url 'admin_pso_po_management' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_pso_po_management' %}active{% endif %}">
+        <i class="fas fa-clipboard-list"></i> POs & PSOs Management
+      </a>
+      {% endif %}
+
+      {% if user.is_superuser or request.session.role == 'admin' or 'academic_year' in allowed_nav_items %}
+      <a href="{% url 'admin_academic_year_settings' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_academic_year_settings' %}active{% endif %}">
+        <i class="fas fa-calendar-alt"></i> Academic Year
+      </a>
+      {% endif %}
+
+      {% if user.is_superuser or request.session.role == 'admin' or 'history' in allowed_nav_items %}
+      <a href="{% url 'admin_history' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_history' %}active{% endif %}">
+        <i class="fas fa-history"></i> History
+      </a>
+      {% endif %}
+
+      {% if user.is_superuser or request.session.role == 'admin' or 'sidebar_permissions' in allowed_nav_items %}
+      <a href="{% url 'admin_sidebar_permissions' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_sidebar_permissions' %}active{% endif %}">
+        <i class="fas fa-bars"></i> Sidebar Permissions
+      </a>
+      {% endif %}
+
+    </div>
+  </div>
+{% endif %}
+
 
       <div class="json-controls" style="position: fixed; bottom: 0; left: 0; width: 280px; padding: 6px; background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(8px); border-top: 1px solid rgba(229, 231, 235, 0.3); z-index: 100;">
         <div style="display: flex; gap: 4px;">

@@ -762,7 +762,12 @@ class CertificateEntry(models.Model):
         return f"{self.name} ({self.role})"  # pragma: no cover
 
 class SidebarPermission(models.Model):
-    """Stores allowed sidebar navigation items for a user or role."""
+    """
+    Stores allowed sidebar navigation items for a user or role.
+    - Admins always bypass this (see all items).
+    - If both user and role are blank → invalid.
+    - 'items' stores a list of module keys: ["dashboard", "events", "cdl"].
+    """
     user = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE)
     role = models.CharField(max_length=50, blank=True)
     items = models.JSONField(default=list, blank=True)
@@ -774,6 +779,53 @@ class SidebarPermission(models.Model):
         target = self.user.username if self.user else self.role or "(unspecified)"
         return f"Sidebar permissions for {target}"
 
+    @classmethod
+    def get_allowed_items(cls, user):
+        """
+        Compute allowed sidebar items for a user.
+        - Superuser/admins always get ALL.
+        - Otherwise, combine role + user-specific assignments.
+        - Expands children → parents (so parent is always shown if child assigned).
+        """
+        from core_admin.views import nav_items  # wherever nav_items is defined
+
+        # Admin users see everything
+        if user.is_superuser:
+            return "ALL"
+
+        # Try to get role safely from profile (if it exists)
+        role = getattr(getattr(user, "profile", None), "role", None)
+        if role and role.lower() == "admin":
+            return "ALL"
+
+        allowed = set()
+
+        # --- Role-based permissions ---
+        if role:
+            role_perm = cls.objects.filter(role__iexact=role).first()
+            if role_perm:
+                allowed.update(role_perm.items)
+
+        # --- User-specific overrides ---
+        user_perm = cls.objects.filter(user=user).first()
+        if user_perm:
+            allowed.update(user_perm.items)
+
+        # --- Expand to include parents ---
+        def expand_with_parents(selected_ids, navs):
+            expanded = set(selected_ids)
+
+            def recurse(items, parent_id=None):
+                for item in items:
+                    if "children" in item:
+                        for child in item["children"]:
+                            if child["id"] in expanded:
+                                expanded.add(item["id"])  # ensure parent is included
+                        recurse(item["children"], item["id"])
+            recurse(navs)
+            return expanded
+
+        return list(expand_with_parents(allowed, nav_items))
 
 class DashboardAssignment(models.Model):
     """Stores dashboard assignments for users and roles."""
