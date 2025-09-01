@@ -2335,19 +2335,21 @@ def api_save_sidebar_permissions(request):
         if user_id:
             permission, created = SidebarPermission.objects.get_or_create(
                 user_id=user_id,
-                role='',
-                defaults={'items': assignments}
+                role="",
+                defaults={"items": assignments}
             )
             if not created:
                 permission.items = assignments
                 permission.save()
         else:
             # Accept numeric org role id; store as key orgrole:<id>
-            role_key = f"orgrole:{role}" if str(role).isdigit() else str(role)
+            role_key = (
+                f"orgrole:{role}" if str(role).isdigit() else str(role).lower()
+            )
             permission, created = SidebarPermission.objects.get_or_create(
                 user=None,
                 role=role_key,
-                defaults={'items': assignments}
+                defaults={"items": assignments}
             )
             if not created:
                 permission.items = assignments
@@ -2400,9 +2402,9 @@ def api_get_sidebar_permissions(request):
         if permission:
             assignments = permission.items
     elif role:
-        role_key = f"orgrole:{role}" if role.isdigit() else role
+        role_key = f"orgrole:{role}" if role.isdigit() else role.lower()
         permission = SidebarPermission.objects.filter(
-            user__isnull=True, role=role_key
+            user__isnull=True, role__iexact=role_key
         ).first()
         if permission:
             assignments = permission.items
