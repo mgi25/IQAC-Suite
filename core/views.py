@@ -5956,6 +5956,10 @@ def api_cdl_support_detail(request, proposal_id:int):
     except Exception:
         speakers = []
 
+    # CDL assignment details (if present)
+    from emt.models import CDLAssignment as _CDLAssignment
+    asg = getattr(p, 'cdl_assignment', None)
+
     data = {
         'id': p.id,
         'title': p.event_title,
@@ -5976,9 +5980,11 @@ def api_cdl_support_detail(request, proposal_id:int):
         'poster_design_link': getattr(s, 'poster_design_link', None),
         'certificate_design_link': getattr(s, 'certificate_design_link', None),
         'other_services': getattr(s, 'other_services', []) or [],
-        # assignment placeholder: reuse report_assigned_to if no dedicated field
-        'assigned_to_id': getattr(p, 'report_assigned_to_id', None),
-        'assigned_to_name': (p.report_assigned_to.get_full_name() if p.report_assigned_to else None),
+    # assignment details
+    'assigned_to_id': (asg.assignee_id if asg else getattr(p, 'report_assigned_to_id', None)),
+    'assigned_to_name': ((asg.assignee.get_full_name() or asg.assignee.username) if asg else (p.report_assigned_to.get_full_name() if p.report_assigned_to else None)),
+    'assigned_role': (asg.role if asg else None),
+    'assigned_status': (asg.status if asg else None),
     }
     return JsonResponse({"success": True, "data": data})
 
@@ -5993,6 +5999,7 @@ def api_cdl_support_assign(request, proposal_id:int):
     except Exception:
         payload = request.POST
     member_id = payload.get('member_id') or payload.get('user_id')
+    role_name = (payload.get('role') or '').strip()
     if not member_id:
         return JsonResponse({"success": False, "error": "member_id is required"}, status=400)
 
@@ -6011,7 +6018,18 @@ def api_cdl_support_assign(request, proposal_id:int):
     if not (request.user.is_superuser or is_cdl_member):
         return JsonResponse({"success": False, "error": "Not allowed"}, status=403)
 
-    # Apply assignment (reusing report_assigned_to as tracking field for CDL workboard for now)
+    # Create or update CDLAssignment
+    from emt.models import CDLAssignment as _CDLAssignment
+    asg, _ = _CDLAssignment.objects.update_or_create(
+        proposal=p,
+        defaults={
+            'assignee': member,
+            'assigned_by': request.user,
+            'role': role_name,
+            'status': _CDLAssignment.Status.ASSIGNED,
+        }
+    )
+    # Keep legacy field for compatibility
     p.report_assigned_to = member
     p.report_assigned_at = timezone.now()
     p.save(update_fields=["report_assigned_to", "report_assigned_at", "updated_at"])
@@ -6050,6 +6068,37 @@ def api_cdl_members(request):
     return JsonResponse({'success': True, 'members': members})
 
 @login_required
+@require_http_methods(["GET"])  # /api/cdl/users/
+def api_cdl_users(request):
+    """Return CDL users grouped by role for org_type = 'CDL'.
+
+    Output example:
+      { success: true, users: { head: [ {id,name}... ], employee: [ ... ] } }
+    """
+    from django.contrib.auth.models import User
+    from .models import OrganizationType, RoleAssignment
+
+    # Find org_type "CDL"
+    org_types = OrganizationType.objects.filter(name__iexact="CDL")
+    role_asg = RoleAssignment.objects.filter(organization__org_type__in=org_types).select_related('user', 'role', 'organization')
+    users = {'head': [], 'employee': []}
+    seen = set()
+    for ra in role_asg:
+        key = None
+        rn = (ra.role.name or '').strip().lower()
+        if 'head' in rn:
+            key = 'head'
+        elif 'employee' in rn or 'member' in rn:
+            key = 'employee'
+        if key:
+            uid = ra.user.id
+            if (key, uid) in seen:
+                continue
+            seen.add((key, uid))
+            users[key].append({'id': uid, 'name': ra.user.get_full_name() or ra.user.username, 'role': ra.role.name})
+    return JsonResponse({'success': True, 'users': users})
+
+@login_required
 @require_GET
 def api_cdl_member_data(request):
     """Unified data feed for CDL Member dashboard.
@@ -6076,8 +6125,12 @@ def api_cdl_member_data(request):
                 return None
         return None
 
-    # Assigned work (reuse the same shape as api_cdl_member_work)
-    work_qs = EMTEventProposal.objects.filter(report_assigned_to=user).select_related('organization')[:200]
+    # Assigned work via CDLAssignment fallback to legacy report_assigned_to
+    from emt.models import CDLAssignment as _CDLAssignment
+    asg_ids = list(_CDLAssignment.objects.filter(assignee=user).values_list('proposal_id', flat=True))
+    legacy_qs = EMTEventProposal.objects.filter(report_assigned_to=user).values_list('id', flat=True)
+    proposal_ids = list(set(asg_ids) | set(legacy_qs))
+    work_qs = EMTEventProposal.objects.filter(id__in=proposal_ids).select_related('organization')[:200]
     work = []
     due_today = 0
     from datetime import date as _date
@@ -6087,16 +6140,20 @@ def api_cdl_member_data(request):
         due_iso = d.isoformat() if d else None
         if d == today:
             due_today += 1
+        # Pull assignment info if present
+        _asg = getattr(p, 'cdl_assignment', None)
         work.append({
             'id': p.id,
             'event': p.event_title,
             'type': 'poster' if getattr(getattr(p,'cdl_support',None),'poster_required',False) else ('certificate' if getattr(getattr(p,'cdl_support',None),'certificates_required',False) else 'coverage'),
             'priority': 'Medium',
             'due_date': due_iso,
-            'status': 'pending',
+            'status': (_asg.status if _asg else 'assigned'),
             'rev': 0,
             'created_at': p.created_at.isoformat(),
-            'assigned_at': p.report_assigned_at.isoformat() if p.report_assigned_at else None,
+            'assigned_at': (_asg.assigned_at.isoformat() if _asg else (p.report_assigned_at.isoformat() if p.report_assigned_at else None)),
+            'assigned_role': (_asg.role if _asg else None),
+            'assigned_by': ((_asg.assigned_by.get_full_name() or _asg.assigned_by.username) if (_asg and _asg.assigned_by) else None),
         })
 
     # Inbox (simple: those not yet accepted -> same as work for now)
@@ -6128,14 +6185,16 @@ def api_cdl_member_data(request):
             'status': (p.status or '').lower(),
         })
 
+    # Build assigned events list from "work" so we can include role/assigned_by metadata
     events_assigned = []
-    for p in work_qs:
-        d = best_date(p)
+    for w in work:
         events_assigned.append({
-            'id': p.id,
-            'title': p.event_title,
-            'date': d.isoformat() if d else None,
-            'status': (p.status or '').lower(),
+            'id': w['id'],
+            'title': w['event'],
+            'date': w.get('due_date'),
+            'status': (w.get('status') or '').lower(),
+            'assigned_role': w.get('assigned_role'),
+            'assigned_by': w.get('assigned_by'),
         })
 
     data = {

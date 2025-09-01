@@ -387,6 +387,30 @@ class CDLMessage(models.Model):
         return f"Message by {self.sender} on {self.created_at:%Y-%m-%d}"
 
 # ────────────────────────────────────────────────────────────────
+#  CDL ASSIGNMENT (WORK TRACKING)
+# ────────────────────────────────────────────────────────────────
+class CDLAssignment(models.Model):
+    class Status(models.TextChoices):
+        ASSIGNED = 'assigned', 'Assigned'
+        PENDING = 'pending', 'Pending'
+        IN_PROGRESS = 'in_progress', 'In Progress'
+        COMPLETED = 'completed', 'Completed'
+
+    proposal = models.OneToOneField('EventProposal', on_delete=models.CASCADE, related_name='cdl_assignment')
+    assignee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='cdl_assignments')
+    assigned_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='cdl_assigned_events')
+    role = models.CharField(max_length=100, blank=True, help_text="Role context, e.g., 'CDL Head' or 'CDL Employee'")
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.ASSIGNED)
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-assigned_at']
+
+    def __str__(self):
+        return f"{self.proposal.event_title} → {self.assignee.get_full_name() or self.assignee.username} ({self.get_status_display()})"
+
+# ────────────────────────────────────────────────────────────────
 #  EVENT REPORT
 # ────────────────────────────────────────────────────────────────
 class EventReport(models.Model):

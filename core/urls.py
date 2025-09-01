@@ -165,6 +165,7 @@ urlpatterns = [
     path('api/cdl/head-dashboard/', views.api_cdl_head_dashboard, name='api_cdl_head_dashboard'),
     path('api/cdl/member/work/', views.api_cdl_member_work, name='api_cdl_member_work'),
     path('api/cdl/members/', views.api_cdl_members, name='api_cdl_members'),
+    path('api/cdl/users/', views.api_cdl_users, name='api_cdl_users'),
     path('api/cdl/member/data/', views.api_cdl_member_data, name='api_cdl_member_data'),
     path('api/cdl/support/<int:proposal_id>/', views.api_cdl_support_detail, name='api_cdl_support_detail'),
     path('api/cdl/support/<int:proposal_id>/assign/', views.api_cdl_support_assign, name='api_cdl_support_assign'),
