@@ -9,7 +9,10 @@
   <style>
     /* ----- Page shell (reuses admin_master_data.css primitives) ----- */
     .permissions-page .topbar h1{margin:0;font-size:28px;font-weight:800;color:var(--ink)}
-    .permissions-page .controls-container{position:sticky;top:0;z-index:40}
+  .permissions-page .controls-container{position:sticky;top:0;z-index:40;background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 16px;box-shadow:var(--shadow)}
+
+  /* Single-row toolbar */
+  .permissions-page .toolbar-row{display:flex;align-items:center;gap:14px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}
 
     /* Wrap the two lists + action column */
     .permissions-page .panel-grid{
@@ -71,8 +74,25 @@
     .permissions-page .savebar .save-btn{border-radius:10px}
 
     /* Tiny helpers */
-    .permissions-page .search-bar input{min-width:220px}
+  .permissions-page .search-bar{display:flex;align-items:center;gap:8px;background:#f1f5f9;border:1px solid var(--border);border-radius:9999px;padding:6px 10px}
+  .permissions-page .search-bar input{min-width:220px;border:none;background:transparent;outline:none}
+  .permissions-page .search-bar i{color:var(--muted)}
+  .permissions-page .search-bar .search-clear{background:transparent;border:none;color:var(--muted)}
     .permissions-page .empty{padding:24px;color:var(--muted);text-align:center}
+
+    /* Dropdown/input polish for filters (pill look) */
+    .permissions-page .filters-left .filter select,
+    .permissions-page .filters-left .filter input,
+    .permissions-page .controls-center .filter input,
+    .permissions-page .controls-center .filter select{
+      font-size:14px;line-height:1.4;padding:8px 12px;border:1px solid var(--border);border-radius:9999px;max-width:280px;background:#fff
+    }
+    .permissions-page .filters-left .filter select:focus,
+    .permissions-page .filters-left .filter input:focus,
+    .permissions-page .controls-center .filter input:focus,
+    .permissions-page .controls-center .filter select:focus{outline:none;border-color:var(--primary)}
+    .permissions-page .filters-left .filter{display:flex;flex-direction:column;gap:6px;margin-right:12px}
+  .permissions-page .main-actions .btn{border-radius:9999px;padding:8px 14px}
   </style>
 {% endblock %}
 
@@ -85,53 +105,56 @@
 
   <!-- Sticky controls bar (uses master-data filters & btns) -->
   <div class="controls-container">
-    <div class="filters-left">
-      <label class="filter">
-        <span>Organization Type</span>
-        <select id="orgTypeSelect" aria-label="Organization Type">
-          <option value="">All Types</option>
-          {% for t in organization_types %}
-            <option value="{{ t.id }}" {% if selected_org_type == t.id|stringformat:'s' %}selected{% endif %}>{{ t.name }}</option>
-          {% endfor %}
-        </select>
-      </label>
+    <div class="toolbar-row">
+      <div class="filters-left" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+  <label class="filter" style="flex:0 0 auto">
+          <span>Organization Type</span>
+          <select id="orgTypeSelect" aria-label="Organization Type">
+            <option value="">All Types</option>
+            {% for t in organization_types %}
+              <option value="{{ t.id }}" {% if selected_org_type == t.id|stringformat:'s' %}selected{% endif %}>{{ t.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
 
-      <label class="filter">
-        <span>Organization Role</span>
-        <select id="orgRoleSelect" aria-label="Organization Role">
-          <option value="">All Roles</option>
-          {% for r in org_roles %}
-            <option value="{{ r.id }}" {% if selected_org_role == r.id|stringformat:'s' %}selected{% endif %}>{{ r.name }}</option>
-          {% endfor %}
-        </select>
-      </label>
+  <label class="filter" style="flex:0 0 auto">
+          <span>Organization</span>
+          <select id="orgSelect" aria-label="Organization">
+            <option value="">All Organizations</option>
+          </select>
+        </label>
 
-      <label class="filter">
-        <span>User(s)</span>
-        <input type="text" id="userFilter" placeholder="Search users…" style="margin-bottom:6px;">
-        <select id="userSelect" name="users" multiple aria-label="Users">
-          {% for u in users %}
-            <option value="{{ u.id }}" {% if selected_user == u.id|stringformat:'s' %}selected{% endif %}>{{ u.name }}</option>
-          {% endfor %}
-        </select>
-        <button type="button" id="selectAllUsersBtn" class="btn btn-secondary" style="margin-top:4px;">Select All Users</button>
-        <small class="hint">Use Ctrl/Command to select multiple users. Navbar updates may require logout/login.</small>
-      </label>
+  <label class="filter" style="flex:0 0 auto">
+          <span>Organization Role</span>
+          <select id="orgRoleSelect" aria-label="Organization Role">
+            <option value="">All Roles</option>
+            {% for r in org_roles %}
+              <option value="{{ r.id }}" {% if selected_org_role == r.id|stringformat:'s' %}selected{% endif %}>{{ r.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
 
-  {# Removed generic Role selector; Organization Role above is the only role control #}
-
-      <div class="search-bar">
-        <i class="fas fa-search"></i>
-        <input id="globalSearch" type="text" placeholder="Search modules…" autocomplete="off" aria-label="Search modules">
-        <button class="search-clear" type="button" id="clearSearchBtn" title="Clear">×</button>
+        <label class="filter" style="flex:0 0 auto">
+          <span>User(s)</span>
+          <select id="userSelect" name="users" multiple aria-label="Users" style="min-width:220px">
+            {% for u in users %}
+              <option value="{{ u.id }}" {% if selected_user == u.id|stringformat:'s' %}selected{% endif %}>{{ u.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
       </div>
-    </div>
 
-    <div class="main-actions">
-      <button type="submit" form="permissionsForm" id="saveBtn" class="btn btn-primary save-btn">
-        <i class="fas fa-save"></i><span id="saveText">Save Changes</span>
-        <i id="saveSpinner" class="fas fa-spinner fa-spin" style="display:none"></i>
-      </button>
+  <div class="main-actions" style="display:flex;gap:12px;align-items:center;justify-content:flex-end;flex:0 0 auto">
+        <div class="search-bar">
+          <i class="fas fa-search"></i>
+          <input id="globalSearch" type="text" placeholder="Search modules…" autocomplete="off" aria-label="Search modules">
+          <button class="search-clear" type="button" id="clearSearchBtn" title="Clear">×</button>
+        </div>
+        <button type="submit" form="permissionsForm" id="saveBtn" class="btn btn-primary save-btn">
+          <i class="fas fa-save"></i><span id="saveText">Save Changes</span>
+          <i id="saveSpinner" class="fas fa-spinner fa-spin" style="display:none"></i>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -255,6 +278,7 @@ let selectedAssigned  = new Set();
   const userSelect=$('#userSelect');
   const selectAllUsersBtn=$('#selectAllUsersBtn');
     const orgTypeSelect=$('#orgTypeSelect');
+  const orgSelect=$('#orgSelect');
     const orgRoleSelect=$('#orgRoleSelect');
     const changeIndicator=$('#changeIndicator');
 
@@ -266,11 +290,85 @@ let selectedAssigned  = new Set();
       const params=new URLSearchParams(window.location.search);
       const setOrDelete=(k,v)=>{ if(v){params.set(k,v)} else {params.delete(k)} };
   setOrDelete('org_type', orgTypeSelect?orgTypeSelect.value:'');
+  setOrDelete('organization', orgSelect?orgSelect.value:'');
   const selUsers=Array.from(userSelect.selectedOptions).map(o=>o.value).filter(Boolean);
   setOrDelete('user', selUsers.length===1?selUsers[0]:'');
   setOrDelete('role', orgRoleSelect?orgRoleSelect.value:'');
       for(const [k,v] of Object.entries(extraParams)) setOrDelete(k,v);
-      const qs=params.toString(); window.location.search = qs?('?'+qs):'';
+      const current = window.location.search.replace(/^\?/,'');
+      const next = params.toString();
+      if (next !== current) {
+        window.location.search = next ? ('?'+next) : '';
+      }
+    }
+
+    // Helpers for clean labels
+    function toTitleCase(str){
+      if(!str) return '';
+      return str.replace(/\w\S*/g,(w)=>/^(?:[A-Z]{2,}|[IVXLCM]+)$/.test(w)?w:w[0].toUpperCase()+w.slice(1).toLowerCase());
+    }
+    function cleanOrgName(name){
+      if(!name) return '';
+      return name.replace(/\s*\((?:Department|School|Center|Centre)\)\s*$/i,'').trim();
+    }
+    function dedupeByName(items){
+      const seen=new Set();
+      return items.filter(r=>{
+        const k=(r.name||'').trim().toLowerCase();
+        if(seen.has(k)) return false; seen.add(k); return true;
+      });
+    }
+
+    async function fetchJson(url){
+      const r=await fetch(url,{headers:{'X-Requested-With':'fetch'}});
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      return r.json();
+    }
+
+    async function populateOrganizations({triggerChange=true}={}){
+      if(!orgTypeSelect) return;
+      const typeId = orgTypeSelect.value;
+      const search = new URLSearchParams(window.location.search);
+      const selectedOrg = search.get('organization') || '';
+      orgSelect.innerHTML = '<option value="">All Organizations</option>';
+      if(!typeId){ if(triggerChange) orgSelect.dispatchEvent(new Event('change')); return; }
+      try{
+        const data = await fetchJson(`/core-admin/api/org-type/${typeId}/organizations/`);
+        const orgs = (data.organizations||[]).slice().sort((a,b)=>a.name.localeCompare(b.name));
+        orgs.forEach(o=>{
+          const opt=document.createElement('option');
+          opt.value=o.id; opt.textContent=o.name; if(String(o.id)===String(selectedOrg)) opt.selected=true; orgSelect.appendChild(opt);
+        });
+      }catch(e){ console.error('Failed to load organizations',e); }
+      // trigger role refresh after orgs are ready (optional)
+      if(triggerChange) orgSelect.dispatchEvent(new Event('change'));
+    }
+
+    async function populateRoles(){
+      const orgId = orgSelect?orgSelect.value:'';
+      orgRoleSelect.innerHTML = '';
+      try{
+        let data;
+        if (orgId) {
+          data = await fetchJson(`/core-admin/api/organization/${orgId}/roles/`);
+        } else if (orgTypeSelect && orgTypeSelect.value) {
+          data = await fetchJson(`/core-admin/api/org-type/${orgTypeSelect.value}/roles/`);
+        } else {
+          orgRoleSelect.appendChild(new Option('All Roles',''));
+          return;
+        }
+        let roles = dedupeByName(data.roles||[]).map(r=>({id:r.id, name: toTitleCase(r.name)}));
+        roles.sort((a,b)=>a.name.localeCompare(b.name));
+        if(roles.length===0){
+          const opt=new Option('No roles available',''); opt.disabled=true; opt.selected=true; orgRoleSelect.appendChild(opt);
+        }else{
+          orgRoleSelect.appendChild(new Option('All Roles',''));
+          roles.forEach(r=> orgRoleSelect.appendChild(new Option(r.name, r.id)) );
+        }
+      }catch(e){
+        console.error('Failed to load roles',e);
+        const opt=new Option('No roles available',''); opt.disabled=true; opt.selected=true; orgRoleSelect.appendChild(opt);
+      }
     }
 
     function getPermissionIcon(p){
@@ -443,8 +541,9 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
   selectAllUsersBtn?.addEventListener('click',()=>{
     Array.from(userSelect.options).forEach(o=>o.selected=true);
   });
-    if(orgTypeSelect) orgTypeSelect.addEventListener('change',()=>{ if(!orgTypeSelect.value){ orgRoleSelect && (orgRoleSelect.value=''); } reloadWithFilters(); });
-    if(orgRoleSelect) orgRoleSelect.addEventListener('change',()=> reloadWithFilters());
+  if(orgTypeSelect) orgTypeSelect.addEventListener('change',()=>{ if(!orgTypeSelect.value){ orgRoleSelect && (orgRoleSelect.value=''); orgSelect && (orgSelect.value=''); } populateOrganizations({triggerChange:true}).then(()=> reloadWithFilters()); });
+  if(orgSelect) orgSelect.addEventListener('change',()=>{ populateRoles().then(()=> reloadWithFilters()); });
+  if(orgRoleSelect) orgRoleSelect.addEventListener('change',()=> reloadWithFilters());
 
     $('#saveBtnDup')?.addEventListener('click',()=> document.getElementById('permissionsForm').requestSubmit());
 
@@ -531,6 +630,21 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
       }
       return result;
     }
+
+    // Initial prepopulation using URL params
+    (async function initFilters(){
+      const params=new URLSearchParams(window.location.search);
+      // Ensure organizations list matches selected org type
+      await populateOrganizations({triggerChange:false});
+      // Populate roles based on selected org or org type without reloading
+      await populateRoles();
+      // If URL has role, keep it selected after roles load
+      const roleId = params.get('role');
+      if(roleId){
+        // Wait a tick to ensure options present
+        setTimeout(()=>{ const opt=[...orgRoleSelect.options].find(o=>o.value===roleId); if(opt){ orgRoleSelect.value=roleId; } }, 100);
+      }
+    })();
 
     render();
   });
