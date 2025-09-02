@@ -152,7 +152,8 @@ body.command-center-layout{
   box-shadow:var(--shadow-md);
   display:flex; align-items:center; justify-content:space-between;
   padding:0 var(--sp-4);
-  z-index:40;
+  position:relative;
+  z-index:2000;
 }
 
 /* Hide the campus logo image (keep text) */
@@ -200,7 +201,7 @@ body.command-center-layout{
   width:320px; max-width:90vw; max-height:500px;
   background:#fff; border:1px solid var(--gray-200); border-radius:12px;
   box-shadow:var(--shadow-lg); opacity:0; visibility:hidden; transform:translateY(-10px);
-  transition:var(--tr); z-index:1000; overflow:hidden; color:var(--ink-900);
+  transition:var(--tr); z-index:20000; overflow:hidden; color:var(--ink-900);
 }
 .notification-dropdown.active{ opacity:1; visibility:visible; transform:translateY(0); }
 .notification-header{ display:flex; align-items:center; justify-content:space-between; padding:.75rem 1rem; border-bottom:1px solid var(--gray-200); }
@@ -222,7 +223,7 @@ body.command-center-layout{
 .profile-dropdown{
   position:absolute; top:calc(100% + .5rem); right:0; min-width:200px; background:#fff;
   border:1px solid var(--gray-200); border-radius:12px; box-shadow:var(--shadow-lg);
-  opacity:0; visibility:hidden; transform:translateY(-10px); transition:var(--tr); z-index:1000; color:var(--ink-900);
+  opacity:0; visibility:hidden; transform:translateY(-10px); transition:var(--tr); z-index:20000; color:var(--ink-900);
 }
 .profile-dropdown.active{ opacity:1; visibility:visible; transform:translateY(0); }
 .profile-dropdown .dropdown-header{
