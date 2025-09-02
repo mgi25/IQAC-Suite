@@ -334,8 +334,9 @@ class EventReportForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for field in self.fields.values():
-            field.required = True
+        # Do NOT force all fields to be required. Model fields already declare blank=True
+        # and the UI enforces per-section requirements. Leaving defaults preserves optional fields
+        # like blog_link, external_contact_details, iqac_feedback, etc.
 
 class EventReportAttachmentForm(forms.ModelForm):
     class Meta:

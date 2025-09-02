@@ -1550,6 +1550,9 @@ def autosave_event_report(request):
             data[key] = ", ".join(value)
 
     form = EventReportForm(data, instance=report)
+    # For autosave, allow partial payloads by disabling field-level required flags
+    for f in form.fields.values():
+        f.required = False
     form.fields.get("report_signed_date").required = False
     if not form.is_valid():
         logger.debug("autosave_event_report form errors: %s", form.errors)
@@ -2061,9 +2064,11 @@ def submit_event_report(request, proposal_id):
     speakers_qs = SpeakerProfile.objects.filter(proposal=proposal)
     speakers_json = [
         {
-            "name": s.full_name,
+            "full_name": s.full_name,
+            "name": s.full_name,  # Backward compatibility
             "designation": s.designation,
-            "organization": s.affiliation,
+            "affiliation": s.affiliation,
+            "organization": s.affiliation,  # Backward compatibility
             "contact": s.contact_email,
         }
         for s in speakers_qs
@@ -2451,6 +2456,47 @@ def upload_attendance_csv(request, report_id):
         "counts": counts,
     }
     return render(request, "emt/attendance_upload.html", context)
+
+
+@login_required
+def graduate_attributes_edit(request, report_id):
+    """Render Graduate Attributes editor page for an event report."""
+    report = get_object_or_404(
+        EventReport, id=report_id, proposal__submitted_by=request.user
+    )
+    context = {
+        "report": report,
+    }
+    return render(request, "emt/graduate_attributes_edit.html", context)
+
+
+@login_required
+@require_POST
+def graduate_attributes_save(request, report_id):
+    """Save Graduate Attributes selections into the report and redirect back to the form."""
+    report = get_object_or_404(
+        EventReport, id=report_id, proposal__submitted_by=request.user
+    )
+    # Accept either a combined string or a list of categories
+    mapping_text = request.POST.get("needs_grad_attr_mapping", "")
+    if not mapping_text:
+        items = request.POST.getlist("needs_grad_attr_mapping[]") or request.POST.getlist("needs_grad_attr_mapping")
+        if items:
+            mapping_text = ", ".join(items)
+
+    report.needs_grad_attr_mapping = mapping_text
+    # Optional: contemporary requirements and sdg text from editor page
+    if "contemporary_requirements" in request.POST:
+        report.contemporary_requirements = request.POST.get("contemporary_requirements", "")
+    if "sdg_value_systems_mapping" in request.POST:
+        report.sdg_value_systems_mapping = request.POST.get("sdg_value_systems_mapping", "")
+    report.save()
+
+    messages.success(request, "Graduate Attributes updated.")
+    # Preserve return to Event Relevance section
+    response = redirect("emt:submit_event_report", proposal_id=report.proposal.id)
+    response['Location'] += "?section=event-relevance"
+    return response
 
 
 @login_required

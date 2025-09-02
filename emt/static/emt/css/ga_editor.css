@@ -1,0 +1,154 @@
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;color:#334155;line-height:1.6}
+
+/* Force wider layout only on GA editor page, overriding Bootstrap container max-widths */
+.ga-editor-container{
+	max-width:none !important;
+	width:100% !important;
+	padding-left:8px !important;
+	padding-right:8px !important;
+	min-height: calc(100vh - 0px);
+	display: flex;
+	flex-direction: column;
+	padding-bottom: 0 !important;
+	margin-bottom: 0 !important;
+}
+
+/* Trim the parent viewscreen side padding when GA editor is present */
+/* Compact the main viewscreen padding when the GA editor is present */
+.viewscreen-content.ga-compact{
+	padding-left: 0 !important;
+	padding-right: 0 !important;
+	max-width: none !important;
+	padding-bottom: 0 !important;
+}
+.ga-editor-container .header{background:var(--christ-blue);color:#fff;padding:32px;border-radius:16px;margin-bottom:32px;box-shadow:0 10px 25px rgb(44 90 160 / .20)}
+.header h1{font-size:2.2rem;font-weight:700;margin-bottom:8px}
+.header p{font-size:1rem;opacity:.95}
+.progress-bar,.progress-fill{display:none}
+.section{background:#fff;border-radius:16px;box-shadow:0 4px 6px rgba(0,0,0,.05);margin-bottom:24px;overflow:hidden}
+.section-header{background:#f1f5f9;padding:18px 24px;border-bottom:1px solid #e2e8f0}
+.section-title{font-size:1.3rem;font-weight:600;color:#1e293b;margin-bottom:4px;display:flex;align-items:center;gap:10px}
+.section-subtitle{color:#64748b;font-size:.95rem}
+.section-content{padding:24px}
+.attributes-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin-bottom:24px}
+.attribute-category{background:#f8fafc;border:2px solid #e2e8f0;border-radius:12px;padding:20px;transition:all .25s ease;cursor:pointer}
+.attribute-category:hover{border-color:var(--christ-blue);box-shadow:0 4px 12px rgba(44,90,160,.18);transform:translateY(-2px)}
+.attribute-category.selected{border-color:#10b981;background:#f0fdf4;box-shadow:0 4px 12px rgba(16,185,129,.15)}
+/* Collapsible panels under each category */
+.ga-panel{display:none;margin-top:12px;border:1px solid #e2e8f0;border-radius:10px;background:#ffffff;padding:12px}
+.attribute-category.open>.ga-panel{display:block}
+.panel-actions{display:flex;gap:8px;margin-bottom:10px}
+.btn-sm{padding:6px 10px;font-size:.8rem;border-radius:6px}
+.panel-options{display:flex;flex-direction:column;gap:8px}
+.panel-options label{display:block;font-size:.9rem;color:#334155}
+.panel-options input[type="checkbox"]{margin-right:8px}
+
+/* Theme alignment: solid colors, no gradients; reuse primary tone of .btn-primary */
+.ga-panel{box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.attribute-category.open{border-color:var(--christ-blue);background:#f0f7ff}
+.attribute-category.open .category-title{color:var(--christ-blue)}
+.attribute-category.open .skill-tag{background:#dbeafe;color:#1e3a8a}
+.category-header{display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+.category-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-right:12px;font-size:1.2rem}
+.academic .category-icon{background:#ddd6fe;color:#7c3aed}
+.professional .category-icon{background:#dbeafe;color:var(--christ-blue)}
+.personality .category-icon{background:#fef3c7;color:#d97706}
+.leadership .category-icon{background:#fed7d7;color:#dc2626}
+.communication .category-icon{background:#d1fae5;color:#059669}
+.social .category-icon{background:#fce7f3;color:#be185d}
+.category-title{font-size:1.05rem;font-weight:600;color:#1e293b}
+.category-description{font-size:.9rem;color:#64748b;margin-bottom:14px;text-align:center}
+.attribute-skills{display:none !important}
+.skill-tag{background:#e2e8f0;color:#475569;padding:4px 12px;border-radius:20px;font-size:.8rem;font-weight:500}
+.controls{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap}
+.btn{padding:10px 20px;border:none;border-radius:8px;font-weight:500;cursor:pointer;transition:all .2s ease;font-size:.9rem}
+.btn-primary{background:var(--christ-blue);color:#fff}
+.btn-primary:hover{background:var(--blue-700);transform:translateY(-1px)}
+.btn-secondary{background:#f1f5f9;color:#475569;border:1px solid #e2e8f0}
+.btn-secondary:hover{background:#e2e8f0}
+.requirements-section{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:32px}
+.requirement-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px}
+.requirement-title{font-size:1.1rem;font-weight:600;color:#1e293b;margin-bottom:12px;display:flex;align-items:center}
+.requirement-text{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px;min-height:120px;resize:vertical;font-size:.9rem;line-height:1.5;font-family:inherit}
+.requirement-text:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.sdg-section{margin-top:24px}
+.sdg-button{background:linear-gradient(135deg,#10b981 0%,#059669 100%);color:#fff;padding:12px 24px;border:none;border-radius:8px;font-weight:600;cursor:pointer;transition:all .3s ease;display:flex;align-items:center;gap:8px}
+.sdg-button:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(16,185,129,.3)}
+.selection-summary{background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:20px;margin-bottom:24px}
+.summary-title{font-weight:600;color:#1e40af;margin-bottom:8px}
+.selected-count{background:#3b82f6;color:#fff;padding:4px 12px;border-radius:20px;font-size:.8rem;font-weight:600;display:inline-block;margin-left:8px}
+@media (max-width:768px){.attributes-grid{grid-template-columns:1fr}.requirements-section{grid-template-columns:1fr}.header h1{font-size:2rem}}
+.ai-assist{display:none!important}
+.tooltip{position:relative;display:inline-block;cursor:help}
+
+/* GA Modal */
+.ga-modal{position:fixed;inset:0;background:rgba(15,23,42,.4);display:none;align-items:center;justify-content:center;z-index:1000}
+.ga-modal.show{display:flex}
+.ga-modal-dialog{background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 20px 48px rgba(0,0,0,.2);max-width:780px;width:92vw;max-height:80vh;display:flex;flex-direction:column}
+.ga-modal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #e2e8f0;background:#f8fafc}
+.ga-modal-header h3{margin:0;font-size:1.05rem;color:#0f172a}
+.ga-modal-actions{display:flex;gap:8px}
+.ga-modal-body{padding:16px;overflow:auto}
+.ga-modal-body .panel-options{gap:10px}
+.ga-modal-body label{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;background:#ffffff}
+.ga-modal-body input[type="checkbox"]{margin-top:3px}
+#ga-editor-page{display:flex;flex-direction:column;min-height:100%;}
+#ga-editor-page form{display:flex;flex-direction:column;flex:1;}
+#ga-editor-page form{margin-bottom:0 !important;}
+#ga-editor-page .section{flex:1;display:flex;flex-direction:column;}
+#ga-editor-page .section-content{flex:1;display:flex;flex-direction:column;}
+#ga-editor-page .attributes-grid{flex:1 1 auto}
+#ga-editor-page .selection-summary{flex:0 0 auto}
+#ga-editor-page .controls{flex:0 0 auto}
+/* Footer inside card */
+.ga-form-footer{display:flex;justify-content:space-between;gap:12px;margin-top:auto;padding-top:16px;border-top:1px solid #e2e8f0;background:transparent}
+
+/* Pin form footer actions to the bottom on tall screens */
+/* Remove fixed footer now that it's inside the section */
+#ga-editor-page form > div:last-child{position:static;left:auto;right:auto;bottom:auto;margin-top:auto}
+
+/* Back to Report button color */
+.btn-back-report{
+	background:#2C5AA0 !important;
+	color:#fff !important;
+	border:1px solid #2C5AA0 !important;
+	box-shadow:0 6px 16px rgba(44,90,160,.24);
+}
+.btn-back-report:hover{
+	background:#274d8a !important;
+	border-color:#274d8a !important;
+	box-shadow:0 8px 22px rgba(44,90,160,.34);
+	transform:translateY(-1px);
+}
+.btn-back-report:focus-visible{
+	outline:none;
+	box-shadow:0 0 0 3px rgba(44,90,160,.25),0 8px 22px rgba(44,90,160,.34);
+}
+
+/* Emphasize Select All / Clear buttons with #2C5AA0 */
+#btn-select-all,
+#btn-clear-all,
+#ga-modal-select-all,
+#ga-modal-clear{
+	background:#2C5AA0 !important;
+	color:#fff !important;
+	border:1px solid #2C5AA0 !important;
+	box-shadow:0 6px 16px rgba(44,90,160,.32);
+}
+#btn-select-all:hover,
+#btn-clear-all:hover,
+#ga-modal-select-all:hover,
+#ga-modal-clear:hover{
+	background:#274d8a !important;
+	border-color:#274d8a !important;
+	box-shadow:0 8px 22px rgba(44,90,160,.4);
+	transform:translateY(-1px);
+}
+#btn-select-all:focus-visible,
+#btn-clear-all:focus-visible,
+#ga-modal-select-all:focus-visible,
+#ga-modal-clear:focus-visible{
+	outline:none;
+	box-shadow:0 0 0 3px rgba(44,90,160,.25), 0 8px 22px rgba(44,90,160,.4);
+}
