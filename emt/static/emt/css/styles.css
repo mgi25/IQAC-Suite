@@ -136,6 +136,7 @@
   #add-speaker-btn, .btn-add-speaker,
   #add-expense-btn, .btn-add-expense,
   #add-income-btn, .btn-add-income,
+    .btn-add-activity,
   .btn-cancel, .btn-save,
   #cdl-autofill-btn,
   #add-row-btn, .btn-remove-row,
@@ -154,6 +155,7 @@
   #add-speaker-btn, .btn-add-speaker,
   #add-expense-btn, .btn-add-expense,
   #add-income-btn, .btn-add-income,
+    .btn-add-activity,
   .btn-save, #add-row-btn, #cdl-autofill-btn {
     background: var(--primary-blue);
     color: var(--white);
@@ -166,11 +168,21 @@
   #add-speaker-btn:hover, .btn-add-speaker:hover,
   #add-expense-btn:hover, .btn-add-expense:hover,
   #add-income-btn:hover, .btn-add-income:hover,
+    .btn-add-activity:hover,
   .btn-save:hover, #add-row-btn:hover, #cdl-autofill-btn:hover {
     background: var(--primary-blue-dark);
     transform: translateY(-1px);
     box-shadow: var(--shadow-2);
   }
+
+    /* Full-width bar style for Add Activity */
+    .btn-add-activity {
+        display: block;
+        width: 100%;
+        text-align: center;
+        text-transform: uppercase;
+        letter-spacing: .02em;
+    }
   .proposal-content .btn-submit:disabled,
   .btn-draft:disabled, .btn-draft-section:disabled {
     background: #9ca3af; color: #fff; cursor: not-allowed; transform: none; box-shadow: none;
@@ -1507,11 +1519,16 @@ textarea {
 
 /* Graduate Attributes Grouped Checkbox Styling */
 .graduate-attributes-groups {
-    max-height: 300px;
+    max-height: 420px;
     overflow-y: auto;
-    border: 1px solid #ccc;
+    border: 1px solid #dbe1ea;
     padding: 12px;
-    border-radius: 6px;
+    border-radius: 10px;
+    background: #f8fbff;
+    box-shadow: var(--shadow-1);
+}
+.graduate-attributes-groups.ga-expanded {
+    max-height: 680px;
 }
 
 .ga-category {
@@ -1521,23 +1538,57 @@ textarea {
 .ga-toggle {
     width: 100%;
     text-align: left;
-    background: #f0f0f0;
-    border: none;
-    padding: 8px;
-    border-radius: 4px;
+    background: #eef2f7;
+    border: 1px solid #dbe1ea;
+    padding: 10px 12px;
+    border-radius: 8px;
     cursor: pointer;
-    font-weight: 600;
+    font-weight: 700;
+    color: #1f2937;
+}
+.ga-category.open > .ga-toggle {
+    background: #e5ecf6;
+    border-color: var(--primary-blue);
+}
+.ga-options { position: relative; }
+.ga-cat-actions {
+    position: sticky;
+    top: 0;
+    display: flex;
+    gap: 6px;
+    padding: 6px 0 8px;
+    background: linear-gradient(180deg, #f8fbff 70%, rgba(248,251,255,0));
+    z-index: 1;
+}
+.ga-cat-btn {
+    font-size: 12px;
+    line-height: 1.2;
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid #cfe0f5;
+    background: #fff;
+    color: var(--primary-blue);
+}
+.ga-cat-btn:hover { background: #f0f6ff; }
+.ga-toggle:hover {
+    background: #e5ecf6;
 }
 
 .ga-options {
     display: none;
-    margin-top: 4px;
-    margin-left: 12px;
+    margin-top: 8px;
+    margin-left: 8px;
+    padding: 8px 10px;
+    border-left: 3px solid var(--primary-blue);
 }
 
 .ga-options label {
     display: block;
-    margin: 4px 0;
+    margin: 6px 0;
+    line-height: 1.35;
+}
+.ga-options input[type="checkbox"] {
+    margin-right: 6px;
 }
 
 /* SDG Selection Button */
@@ -1625,33 +1676,8 @@ textarea {
     flex: 1;
 }
 
-/* Navigation States */
-.nav-link.completed {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    color: white;
-}
-
-.nav-link.completed .nav-number {
-    background: white;
-    color: #10b981;
-}
-
-.nav-link.completed::after {
-    content: '✓';
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    background: white;
-    color: #10b981;
-    border-radius: 50%;
-    width: 1.25rem;
-    height: 1.25rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.75rem;
-    font-weight: bold;
-}
+/* Navigation States (reverted to neutral) */
+/* Intentionally remove green gradient styles to restore original look */
 
 /* Speakers Reference Card */
 .speakers-reference-card {
@@ -1675,11 +1701,59 @@ textarea {
     font-weight: 600;
     color: var(--primary-blue, #2563eb);
     margin-bottom: 0.25rem;
+    font-size: 1rem;
 }
 
 .speaker-details {
     font-size: 0.875rem;
     color: #64748b;
+}
+
+.speaker-designation {
+    font-weight: 500;
+    color: #475569;
+    margin-bottom: 0.125rem;
+}
+
+.speaker-affiliation {
+    color: #64748b;
+}
+
+.speaker-contact {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-top: 0.125rem;
+}
+
+.no-speakers-message {
+    text-align: center;
+    padding: 2rem;
+    background: #f8fafc;
+    border: 1px dashed #e2e8f0;
+    border-radius: 0.375rem;
+}
+
+.no-speakers-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.5;
+}
+
+.no-speakers-text {
+    color: #64748b;
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.no-speakers-help {
+    color: #9ca3af;
+    font-size: 0.875rem;
+    font-style: italic;
+}
+
+.speakers-list {
+    max-height: 400px;
+    overflow-y: auto;
 }
 
 /* Placeholder Section Styling */
@@ -2289,8 +2363,7 @@ textarea {
     #form-panel-content .form-row.stacked {
       grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     }
-  }
-s    
+  }  
 
   
 

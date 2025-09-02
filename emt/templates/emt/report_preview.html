@@ -25,6 +25,11 @@
             {% for key, value in post_data.items %}
                 <input type="hidden" name="{{ key }}" value="{{ value|escape }}">
             {% endfor %}
+            {# Ensure attachment formset management fields exist (even if there are no attachments) #}
+            <input type="hidden" name="form-TOTAL_FORMS" value="{{ post_data|get_item:'form-TOTAL_FORMS'|default:'0' }}">
+            <input type="hidden" name="form-INITIAL_FORMS" value="{{ post_data|get_item:'form-INITIAL_FORMS'|default:'0' }}">
+            <input type="hidden" name="form-MIN_NUM_FORMS" value="{{ post_data|get_item:'form-MIN_NUM_FORMS'|default:'0' }}">
+            <input type="hidden" name="form-MAX_NUM_FORMS" value="{{ post_data|get_item:'form-MAX_NUM_FORMS'|default:'1000' }}">
             <details class="report-section" open>
                 <summary>Event Proposal Details</summary>
                 <ol class="report-preview-list">

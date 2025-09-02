@@ -294,7 +294,8 @@
             <div style="display: none;" id="django-forms">
                 <!-- Include all remaining Django form fields that aren't shown in the UI -->
                 {% for field in form %}
-                    {% if field.name not in "blog_link,location,num_participants,num_student_volunteers,actual_event_type" %}
+                    {# Use explicit comparisons to avoid substring-matching bug #}
+                    {% if field.name != 'blog_link' and field.name != 'location' and field.name != 'num_participants' and field.name != 'num_student_volunteers' and field.name != 'actual_event_type' %}
                         {{ field }}
                     {% endif %}
                 {% endfor %}
@@ -322,6 +323,25 @@
     </div>
 </div>
 
+<!-- Outcomes (PO/PSO) Modal -->
+<div id="outcomeModal" class="sdg-modal" data-url="">
+    <div class="sdg-modal-content">
+        <h3>Select Program Outcomes (PO) and Program Specific Outcomes (PSO)</h3>
+        <div id="outcomeOptions" class="sdg-options" style="max-height: 360px; overflow: auto;">
+            <!-- Options populated by JS from outcomes API -->
+        </div>
+        <div class="modal-actions" style="margin-top: 20px; text-align: center;">
+            <button type="button" id="outcomeCancel" class="btn-draft-section" style="margin-right: 10px;">Cancel</button>
+            <button type="button" id="outcomeSave" class="btn-save-section">Save Selection</button>
+        </div>
+    </div>
+    <style>
+        /* Reuse SDG modal styling */
+        #outcomeModal.sdg-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 1000; }
+        #outcomeModal.sdg-modal.show { display: block; }
+    </style>
+</div>
+
 <div id="loadingOverlay" class="loading-overlay">
     <div class="spinner"></div>
     <p>Loading...</p>
@@ -338,6 +358,8 @@
         }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+    <!-- Fallback inline JSON payload for proposal speakers -->
+    <script type="application/json" id="proposal-speakers-json">{{ speakers_json|default:'[]'|safe }}</script>
     <script>
         // Global variables for the Event Report Form
         window.REPORT_ID = "{{ report.id|default:'' }}";
@@ -347,12 +369,13 @@
         window.REPORT_ACTUAL_EVENT_TYPE = "{{ form.actual_event_type.value|default:'' }}";
         window.AUTOSAVE_URL = "{% url 'emt:autosave_event_report' %}";
         window.AUTOSAVE_CSRF = "{{ csrf_token }}";
-        window.API_ORGANIZATIONS = "#"; // TODO: Add API URLs
+    window.API_ORGANIZATIONS = "#"; // TODO: Add API URLs (not used on this page)
         window.API_CLASSES_BASE = "{% url 'emt:api_classes' 0 %}".split('0/')[0];
         window.API_FACULTY = "{% url 'emt:api_faculty' %}";
         window.PROPOSAL_ORG_ID = "{{ proposal.organization.id|default:'' }}";
         window.PROPOSAL_ORG_NAME = "{{ proposal.organization.name|default:'' }}";
-        window.API_OUTCOMES_BASE = "#"; // TODO: Add API URLs
+    window.API_OUTCOMES_BASE = "{% url 'emt:api_outcomes' 0 %}".split('0/')[0];
+    window.GA_EDIT_BASE = "{% url 'emt:graduate_attributes_edit' 0 %}".split('0/')[0];
         window.SDG_GOALS = {{ sdg_goals_list|default:'[]'|safe }};
         window.PROPOSAL_ACTIVITIES = {{ proposal_activities_json|safe }};
         window.EXISTING_SPEAKERS = {{ speakers_json|default:'[]'|safe }};
@@ -382,4 +405,36 @@
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <script src="{% static 'emt/js/report_autosave.js' %}"></script>
     <script src="{% static 'emt/js/submit_event_report.js' %}"></script>
+    <script>
+        // Lightweight page-only wiring for Attendance and GA buttons without touching core JS
+        (function(){
+            document.addEventListener('DOMContentLoaded', function(){
+                // Attendance click: open upload page if report exists
+                var att = document.getElementById('attendance-modern');
+                if (att) {
+                    att.style.cursor = 'pointer';
+                    att.addEventListener('click', function(){
+                        var url = att.getAttribute('data-attendance-url');
+                        if (!url) { return; }
+                        window.location.href = url;
+                    });
+                }
+
+                // GA editor button
+                document.addEventListener('click', function(e){
+                    if (e.target && e.target.id === 'ga-open-editor-btn') {
+                        var rid = window.REPORT_ID;
+                        var go = function(id){ if (!window.GA_EDIT_BASE) return; window.location.href = window.GA_EDIT_BASE + id + '/'; };
+                        if (!rid) {
+                            if (window.ReportAutosaveManager && window.ReportAutosaveManager.manualSave) {
+                                window.ReportAutosaveManager.manualSave().then(function(){
+                                    if (window.REPORT_ID) go(window.REPORT_ID);
+                                }).catch(function(){});
+                            }
+                        } else { go(rid); }
+                    }
+                });
+            });
+        })();
+    </script>
 {% endblock %}

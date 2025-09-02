@@ -40,6 +40,10 @@ urlpatterns = [
     path('reports/<int:report_id>/attendance/download/', views.download_attendance_csv, name='attendance_download'),
     path('reports/<int:report_id>/attendance/data/', views.attendance_data, name='attendance_data'),
 
+    # Graduate Attributes editor
+    path('reports/<int:report_id>/graduate-attributes/edit/', views.graduate_attributes_edit, name='graduate_attributes_edit'),
+    path('reports/<int:report_id>/graduate-attributes/save/', views.graduate_attributes_save, name='graduate_attributes_save'),
+
     # THE NEW, GENERIC ORG API ENDPOINT:
     path('api/organizations/', views.api_organizations, name='api_organizations'),
 
