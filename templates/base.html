@@ -53,8 +53,8 @@
 
       <div class="utility-right" style="display: flex; align-items: center; gap: 1.5rem;">
         <div class="notification-section">
-          <button class="utility-btn notification-btn" id="notificationBtn" aria-label="Notifications">
-            <i class="fa-solid fa-bell"></i>
+          <button class="utility-btn notification-btn" id="notificationBtn" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
+            <i class="fa-solid fa-bell notification-icon"></i>
             {% if notifications and notifications|length > 0 %}
             <span class="notification-badge" id="notificationBadge">{{ notifications|length }}</span>
             {% endif %}
@@ -356,8 +356,9 @@
       if (notificationBtn && notificationDropdown) {
         notificationBtn.addEventListener('click', function(e) {
           e.stopPropagation();
-          notificationDropdown.classList.toggle('active');
-          
+          const expanded = notificationDropdown.classList.toggle('active');
+          notificationBtn.setAttribute('aria-expanded', expanded);
+
           // Close profile dropdown if open
           const profileDropdown = document.querySelector('.profile-dropdown');
           if (profileDropdown) profileDropdown.classList.remove('active');
@@ -405,7 +406,10 @@
         if (profileDropdown && !e.target.closest('.profile-section')) profileDropdown.classList.remove('active');
 
         const notificationDropdown = document.getElementById('notificationDropdown');
-        if (notificationDropdown && !e.target.closest('.notification-section')) notificationDropdown.classList.remove('active');
+        if (notificationDropdown && !e.target.closest('.notification-section')) {
+          notificationDropdown.classList.remove('active');
+          if (notificationBtn) notificationBtn.setAttribute('aria-expanded', false);
+        }
       });
     });
   </script>
