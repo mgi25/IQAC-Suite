@@ -2099,7 +2099,12 @@ def admin_sidebar_permissions(request):
             ).first()
 
     if request.method == "POST":
-        target_user = request.POST.get("user") or None
+        target_users = request.POST.getlist("users") or []
+        # Backward compat: single "user" param
+        if not target_users:
+            u = request.POST.get("user")
+            if u:
+                target_users = [u]
         target_role_id = (request.POST.get("role") or "").strip()
 
         assigned_order_raw = request.POST.get("assigned_order")
@@ -2113,45 +2118,46 @@ def admin_sidebar_permissions(request):
             messages.error(request, f"Unknown sidebar item(s): {', '.join(invalid_ids)}")
             return redirect(reverse("admin_sidebar_permissions"))
 
-        if target_user and User.objects.filter(id=target_user, is_superuser=True).exists():
-            if not assigned_items:
-                messages.warning(request, "Admin must always retain full sidebar; ignoring empty assignment.")
-                redirect_url = reverse("admin_sidebar_permissions")
-                redirect_url += f"?user={target_user}"
-                if org_type_id:
-                    redirect_url += f"&org_type={org_type_id}"
-                return redirect(redirect_url)
-            permission, _ = SidebarPermission.objects.get_or_create(
-                user_id=target_user,
-                role="",
-            )
-            permission.items = assigned_items
-            permission.save()
-        else:
-            if target_user:
+        if target_users:
+            for uid in target_users:
+                if User.objects.filter(id=uid, is_superuser=True).exists() and not assigned_items:
+                    messages.warning(
+                        request,
+                        "Admin must always retain full sidebar; ignoring empty assignment.",
+                    )
+                    continue
                 permission, _ = SidebarPermission.objects.get_or_create(
-                    user_id=target_user,
+                    user_id=uid,
                     role="",
                 )
+                permission.items = assigned_items
+                permission.save()
+        else:
+            if target_role_id and target_role_id.isdigit():
+                role_key = f"orgrole:{target_role_id}"
+                permission, _ = SidebarPermission.objects.get_or_create(
+                    user=None,
+                    role=role_key,
+                )
+                permission.items = assigned_items
+                permission.save()
             else:
-                if target_role_id and target_role_id.isdigit():
-                    role_key = f"orgrole:{target_role_id}"
-                    permission, _ = SidebarPermission.objects.get_or_create(
-                        user=None,
-                        role=role_key,
-                    )
-                else:
-                    messages.error(request, "Please select a valid organization role to save permissions.")
-                    return redirect(reverse("admin_sidebar_permissions"))
-            permission.items = assigned_items
-            permission.save()
+                messages.error(
+                    request,
+                    "Please select a valid organization role to save permissions.",
+                )
+                return redirect(reverse("admin_sidebar_permissions"))
 
         messages.success(request, "Sidebar permissions updated")
-        logger.info("Sidebar permissions updated for user=%s role=%s", target_user, target_role_id)
+        logger.info(
+            "Sidebar permissions updated for users=%s role=%s",
+            ",".join(target_users) or None,
+            target_role_id,
+        )
 
         redirect_url = reverse("admin_sidebar_permissions")
-        if target_user:
-            redirect_url += f"?user={target_user}"
+        if len(target_users) == 1:
+            redirect_url += f"?user={target_users[0]}"
         elif target_role_id:
             redirect_url += f"?role={target_role_id}"
         if org_type_id:
@@ -2299,42 +2305,61 @@ def api_save_sidebar_permissions(request):
     
     try:
         data = json.loads(request.body)
-        assignments = data.get('assignments', [])
-        user_id = data.get('user')
-        role = data.get('role')
+        assignments = data.get("assignments", [])
+        users = data.get("users") or []
+        single_user = data.get("user")
+        role = data.get("role")
 
-        if bool(user_id) == bool(role):
-            return JsonResponse({'success': False, 'error': 'Specify exactly one of user or role'})
+        if single_user:
+            users = [single_user]
+
+        if bool(users) == bool(role):
+            return JsonResponse(
+                {"success": False, "error": "Specify exactly one of users or role"}
+            )
 
         invalid_ids = [i for i in assignments if i not in SIDEBAR_ITEM_IDS]
         if invalid_ids:
-            return JsonResponse({'success': False, 'error': f"Unknown sidebar item(s): {', '.join(invalid_ids)}"})
-
-        # Get or create permission record
-        if user_id:
-            permission, created = SidebarPermission.objects.get_or_create(
-                user_id=user_id,
-                role="",
-                defaults={"items": assignments}
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": f"Unknown sidebar item(s): {', '.join(invalid_ids)}",
+                }
             )
-            if not created:
-                permission.items = assignments
-                permission.save()
+
+        if users:
+            from django.contrib.auth.models import User
+
+            valid_ids = list(
+                User.objects.filter(id__in=users).values_list("id", flat=True)
+            )
+            if len(valid_ids) != len(users):
+                return JsonResponse({"success": False, "error": "Invalid user id"})
+
+            for uid in users:
+                perm, created = SidebarPermission.objects.get_or_create(
+                    user_id=uid,
+                    role="",
+                    defaults={"items": assignments},
+                )
+                if not created:
+                    perm.items = assignments
+                    perm.save()
         else:
             # Accept numeric org role id; store as key orgrole:<id>
             role_key = (
                 f"orgrole:{role}" if str(role).isdigit() else str(role).lower()
             )
-            permission, created = SidebarPermission.objects.get_or_create(
+            perm, created = SidebarPermission.objects.get_or_create(
                 user=None,
                 role=role_key,
-                defaults={"items": assignments}
+                defaults={"items": assignments},
             )
             if not created:
-                permission.items = assignments
-                permission.save()
+                perm.items = assignments
+                perm.save()
 
-        return JsonResponse({'success': True})
+        return JsonResponse({"success": True})
 
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
