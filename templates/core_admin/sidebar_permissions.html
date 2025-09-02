@@ -108,12 +108,12 @@
 
       <label class="filter">
         <span>User(s)</span>
-        <select id="userSelect" name="users" multiple aria-label="Users">
+        <select id="userSelect" name="users" aria-label="Users">
+          <option value="all">Select All Users</option>
           {% for u in users %}
             <option value="{{ u.id }}" {% if selected_user == u.id|stringformat:'s' %}selected{% endif %}>{{ u.name }}</option>
           {% endfor %}
         </select>
-        <small class="hint">Use Ctrl/Command to select multiple users. Navbar updates may require logout/login.</small>
       </label>
 
   {# Removed generic Role selector; Organization Role above is the only role control #}
@@ -252,8 +252,8 @@ let selectedAssigned  = new Set();
       const params=new URLSearchParams(window.location.search);
       const setOrDelete=(k,v)=>{ if(v){params.set(k,v)} else {params.delete(k)} };
   setOrDelete('org_type', orgTypeSelect?orgTypeSelect.value:'');
-  const selUsers=Array.from(userSelect.selectedOptions).map(o=>o.value).filter(Boolean);
-  setOrDelete('user', selUsers.length===1?selUsers[0]:'');
+  const selUser=userSelect.value;
+  setOrDelete('user', selUser && selUser!=='all'?selUser:'');
   setOrDelete('role', orgRoleSelect?orgRoleSelect.value:'');
       for(const [k,v] of Object.entries(extraParams)) setOrDelete(k,v);
       const qs=params.toString(); window.location.search = qs?('?'+qs):'';
@@ -332,11 +332,18 @@ function collectLeafIds(list) {
 
 // 🔹 On Save → dump only leaf IDs into hidden field
 document.getElementById('permissionsForm').addEventListener('submit', e => {
-  const selectedUsers = Array.from(userSelect.selectedOptions).map(o=>o.value).filter(Boolean);
-  if (selectedUsers.length===0 && !(orgRoleSelect && orgRoleSelect.value)) {
+  const selectedUser = userSelect.value;
+  if (!selectedUser && !(orgRoleSelect && orgRoleSelect.value)) {
     e.preventDefault();
     showToast('Please select a User or an Organization Role before saving.','error');
     return;
+  }
+  if (selectedUser === 'all') {
+    const allFlag=document.createElement('input');
+    allFlag.type='hidden';
+    allFlag.name='all';
+    allFlag.value='true';
+    e.target.appendChild(allFlag);
   }
 
   const leafIds = collectLeafIds(assigned);
@@ -347,7 +354,7 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
   if (hiddenRole && orgRoleSelect) hiddenRole.value = orgRoleSelect.value || '';
 
   document.getElementById('saveText').textContent = 'Saving…';
-  const sp = document.getElementById('saveSpinner'); 
+  const sp = document.getElementById('saveSpinner');
   if (sp) sp.style.display = 'inline-block';
 });
     function applyFilters(list){
@@ -423,8 +430,7 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
     $('#clearSearchBtn')?.addEventListener('click',()=>{ globalSearch.value=''; render(); });
 
   userSelect.addEventListener('change',()=>{
-    const ids=Array.from(userSelect.selectedOptions).map(o=>o.value).filter(Boolean);
-    if(ids.length<=1) reloadWithFilters();
+    reloadWithFilters();
   });
     if(orgTypeSelect) orgTypeSelect.addEventListener('change',()=>{ if(!orgTypeSelect.value){ orgRoleSelect && (orgRoleSelect.value=''); } reloadWithFilters(); });
     if(orgRoleSelect) orgRoleSelect.addEventListener('change',()=> reloadWithFilters());

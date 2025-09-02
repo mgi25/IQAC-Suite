@@ -154,7 +154,7 @@ class SidebarPermissionsViewTests(TestCase):
         response = self.client.post(
             url,
             {
-                "users": [str(target.id)],
+                "users": str(target.id),
                 "assigned_order": json.dumps(["dashboard", "events"]),
             },
         )
@@ -163,19 +163,19 @@ class SidebarPermissionsViewTests(TestCase):
         perm = SidebarPermission.objects.get(user=target)
         self.assertEqual(perm.items, ["dashboard", "events"])
 
-    def test_assign_permission_to_multiple_users(self):
+    def test_assign_permission_to_all_users(self):
         u1 = User.objects.create_user("u1", password="pass")
         u2 = User.objects.create_user("u2", password="pass")
         url = reverse("admin_sidebar_permissions")
         response = self.client.post(
             url,
             {
-                "users": [str(u1.id), str(u2.id)],
+                "users": "all",
                 "assigned_order": json.dumps(["dashboard"]),
             },
         )
         self.assertEqual(response.status_code, 302)
-        for u in (u1, u2):
+        for u in (self.admin, u1, u2):
             perm = SidebarPermission.objects.get(user=u)
             self.assertEqual(perm.items, ["dashboard"])
 
@@ -204,6 +204,25 @@ class SidebarPermissionsAPITests(TestCase):
         resp = self.client.post(url, data=json.dumps(payload), content_type="application/json")
         self.assertTrue(resp.json()["success"])
         for u in (u1, u2):
+            self.assertEqual(SidebarPermission.objects.get(user=u).items, ["dashboard"])
+
+    def test_api_save_all_users(self):
+        url = reverse("api_save_sidebar_permissions")
+        u1 = User.objects.create_user("apiu1a", password="pass")
+        u2 = User.objects.create_user("apiu2a", password="pass")
+        payload = {"assignments": ["dashboard"], "users": "all"}
+        resp = self.client.post(url, data=json.dumps(payload), content_type="application/json")
+        self.assertTrue(resp.json()["success"])
+        for u in (self.admin, u1, u2):
+            self.assertEqual(SidebarPermission.objects.get(user=u).items, ["dashboard"])
+
+    def test_api_save_all_users_flag(self):
+        url = reverse("api_save_sidebar_permissions")
+        u1 = User.objects.create_user("apiu1b", password="pass")
+        payload = {"assignments": ["dashboard"], "all_users": True}
+        resp = self.client.post(url, data=json.dumps(payload), content_type="application/json")
+        self.assertTrue(resp.json()["success"])
+        for u in (self.admin, u1):
             self.assertEqual(SidebarPermission.objects.get(user=u).items, ["dashboard"])
 
     def test_api_save_exclusive_validation(self):
