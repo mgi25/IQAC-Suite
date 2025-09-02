@@ -136,6 +136,7 @@ urlpatterns = [
     path('core-admin/api/sidebar-permissions/', views.api_get_sidebar_permissions, name='api_get_sidebar_permissions'),
     path('core-admin/api/save-dashboard-assignments/', views.api_save_dashboard_assignments, name='api_save_dashboard_assignments'),
     path('core-admin/api/save-sidebar-permissions/', views.api_save_sidebar_permissions, name='api_save_sidebar_permissions'),
+    path('core-admin/api/my-sidebar/', views.api_my_sidebar, name='api_my_sidebar'),
 
     # ────────────────────────────────────────────────
     # Admin - Data Export

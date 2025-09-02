@@ -108,6 +108,7 @@
 
       <label class="filter">
         <span>User(s)</span>
+        <input type="text" id="userFilter" placeholder="Search users…" style="margin-bottom:6px;">
         <select id="userSelect" name="users" multiple aria-label="Users">
           {% for u in users %}
             <option value="{{ u.id }}" {% if selected_user == u.id|stringformat:'s' %}selected{% endif %}>{{ u.name }}</option>
@@ -196,6 +197,17 @@
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     const $ = (sel) => document.querySelector(sel);
+    // --- User filter ---
+    const userFilter = $('#userFilter');
+    if(userFilter){
+      userFilter.addEventListener('input', ()=>{
+        const term = userFilter.value.trim().toLowerCase();
+        Array.from(userSelect.options).forEach(opt=>{
+          const txt = (opt.textContent||'').toLowerCase();
+          opt.style.display = (!term || txt.includes(term)) ? '' : 'none';
+        });
+      });
+    }
     const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
     function showToast(message, type='success'){
@@ -435,6 +447,68 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
     if(orgRoleSelect) orgRoleSelect.addEventListener('change',()=> reloadWithFilters());
 
     $('#saveBtnDup')?.addEventListener('click',()=> document.getElementById('permissionsForm').requestSubmit());
+
+    // --- AJAX submit: apply propagation rules ---
+    const formEl = document.getElementById('permissionsForm');
+    if(formEl){
+      formEl.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        // collect assignments (leaf ids in assigned panel)
+        const assignedLeafIds = collectLeafIds(assigned);
+        const selUsers = Array.from(userSelect.selectedOptions).map(o=>o.value).filter(Boolean);
+        const roleId = orgRoleSelect ? (orgRoleSelect.value||'') : '';
+
+        if(selUsers.length===0 && !roleId){
+          showToast('Select a user or an organization role.','error');
+          return;
+        }
+
+        // Payload per rules: if users picked => per-user override; else => role-based assignment
+        const payload = selUsers.length>0 ? {
+          assignments: assignedLeafIds,
+          users: selUsers
+        } : {
+          assignments: assignedLeafIds,
+          role: roleId
+        };
+
+        try{
+          $('#saveText').textContent = 'Saving…';
+          const sp = $('#saveSpinner'); if(sp) sp.style.display = 'inline-block';
+          const res = await fetch('{% url "api_save_sidebar_permissions" %}', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': (document.querySelector('[name=csrfmiddlewaretoken]')||{}).value || ''
+            },
+            body: JSON.stringify(payload)
+          });
+          const out = await res.json().catch(()=>({success:false}));
+          if(!res.ok || !out.success) throw new Error(out.error||('HTTP '+res.status));
+          showToast('Permissions saved.');
+          // Refresh sidebar immediately
+          try{ await refreshSidebarSnapshot(); }catch(_e){}
+        }catch(err){
+          console.error(err);
+          showToast('Failed to save permissions.','error');
+        }finally{
+          $('#saveText').textContent = 'Save Changes';
+          const sp = $('#saveSpinner'); if(sp) sp.style.display = 'none';
+        }
+      });
+    }
+
+    // After successful POST redirect, the page reloads. For AJAX save flows (future),
+    // call this endpoint to force sidebar refresh in the current tab.
+    async function refreshSidebarSnapshot(){
+      try{
+        const r = await fetch('{% url "api_my_sidebar" %}', {headers:{'X-Requested-With':'fetch'}});
+        if(r.ok){
+          // Optionally, trigger a soft reload to rebuild template conditionals
+          window.location.reload();
+        }
+      }catch(_e){/*noop*/}
+    }
 
 
     function move(sel,dir){

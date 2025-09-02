@@ -318,6 +318,15 @@
   <!-- ZONE 3: MAIN VIEWSCREEN -->
   <div class="main-viewscreen main-content">
     <div class="viewscreen-content">
+      <script>
+        // Expose a helper for future live-updates of the sidebar
+        window.refreshSidebar = async function(){
+          try{
+            const r = await fetch('{% url "api_my_sidebar" %}', {headers:{'X-Requested-With':'fetch'}});
+            if(r.ok){ location.reload(); }
+          }catch(e){}
+        };
+      </script>
       {% block content %}
       <div class="welcome-screen">
         <h1>Welcome to IQAC Command Center</h1>
