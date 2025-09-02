@@ -420,6 +420,12 @@ class CDLSupportForm(forms.ModelForm):
             "poster_summary": forms.Textarea(attrs={"rows": 4}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            existing = field.widget.attrs.get("class", "")
+            field.widget.attrs["class"] = f"{existing} proposal-input".strip()
+
     def clean_poster_summary(self):
         text = self.cleaned_data.get("poster_summary", "").strip()
         if text and len(text.split()) > 150:

@@ -3,9 +3,17 @@ from django.contrib.auth.models import User
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import Client
 from django.urls import reverse
+import json
 
 from core.context_processors import sidebar_permissions
-from core.models import SidebarPermission
+from core.models import (
+    SidebarPermission,
+    Organization,
+    OrganizationType,
+    OrganizationRole,
+    RoleAssignment,
+)
+from core.navigation import SIDEBAR_ITEM_IDS
 
 
 class SidebarPermissionsTests(TestCase):
@@ -116,6 +124,38 @@ class SidebarPermissionsTests(TestCase):
 
         self.assertEqual(result["allowed_nav_items"], role_items)
 
+    def test_role_assignment_permissions_merged(self):
+        """Sidebar permissions from multiple org roles should merge."""
+        user = User.objects.create_user("multi", password="pass")
+        org_type = OrganizationType.objects.create(name="Type")
+        org = Organization.objects.create(name="Org", org_type=org_type)
+        role1 = OrganizationRole.objects.create(name="Role1", organization=org)
+        role2 = OrganizationRole.objects.create(name="Role2", organization=org)
+        RoleAssignment.objects.create(user=user, role=role1, organization=org)
+        RoleAssignment.objects.create(user=user, role=role2, organization=org)
+        SidebarPermission.objects.create(role=f"orgrole:{role1.id}", items=["dashboard"])
+        SidebarPermission.objects.create(role=f"orgrole:{role2.id}", items=["events"])
+
+        request = self._get_request(user)
+        result = sidebar_permissions(request)
+
+        self.assertEqual(sorted(result["allowed_nav_items"]), ["dashboard", "events"])
+
+    def test_get_allowed_items_merges_assignments(self):
+        """Model helper should merge user-specific and role-based permissions."""
+        user = User.objects.create_user("helper", password="pass")
+        org_type = OrganizationType.objects.create(name="Type")
+        org = Organization.objects.create(name="Org", org_type=org_type)
+        role1 = OrganizationRole.objects.create(name="Role1", organization=org)
+        role2 = OrganizationRole.objects.create(name="Role2", organization=org)
+        RoleAssignment.objects.create(user=user, role=role1, organization=org)
+        RoleAssignment.objects.create(user=user, role=role2, organization=org)
+        SidebarPermission.objects.create(role=f"orgrole:{role1.id}", items=["dashboard"])
+        SidebarPermission.objects.create(role=f"orgrole:{role2.id}", items=["events"])
+
+        allowed = SidebarPermission.get_allowed_items(user)
+        self.assertEqual(sorted(allowed), ["dashboard", "events"])
+
 
 class SidebarPermissionsViewTests(TestCase):
     def setUp(self):
@@ -126,8 +166,82 @@ class SidebarPermissionsViewTests(TestCase):
     def test_assign_permission_to_user(self):
         target = User.objects.create_user("dave", password="pass")
         url = reverse("admin_sidebar_permissions")
-        response = self.client.post(url, {"user": str(target.id), "items": ["dashboard", "events"]})
+        response = self.client.post(
+            url,
+            {
+                "users": [str(target.id)],
+                "assigned_order": json.dumps(["dashboard", "events"]),
+            },
+        )
         self.assertEqual(response.status_code, 302)
         self.assertIn(f"?user={target.id}", response["Location"])
         perm = SidebarPermission.objects.get(user=target)
         self.assertEqual(perm.items, ["dashboard", "events"])
+
+    def test_assign_permission_to_multiple_users(self):
+        u1 = User.objects.create_user("u1", password="pass")
+        u2 = User.objects.create_user("u2", password="pass")
+        url = reverse("admin_sidebar_permissions")
+        response = self.client.post(
+            url,
+            {
+                "users": [str(u1.id), str(u2.id)],
+                "assigned_order": json.dumps(["dashboard"]),
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        for u in (u1, u2):
+            perm = SidebarPermission.objects.get(user=u)
+            self.assertEqual(perm.items, ["dashboard"])
+
+
+class SidebarPermissionsAPITests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.admin = User.objects.create_superuser("apiadmin", "api@example.com", "pass")
+        self.client.login(username="apiadmin", password="pass")
+
+    def test_api_save_user_success(self):
+        url = reverse("api_save_sidebar_permissions")
+        payload = {
+            "assignments": [next(iter(SIDEBAR_ITEM_IDS))],
+            "users": [self.admin.id],
+        }
+        resp = self.client.post(url, data=json.dumps(payload), content_type="application/json")
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json()["success"])
+
+    def test_api_save_multiple_users(self):
+        url = reverse("api_save_sidebar_permissions")
+        u1 = User.objects.create_user("apiu1", password="pass")
+        u2 = User.objects.create_user("apiu2", password="pass")
+        payload = {"assignments": ["dashboard"], "users": [u1.id, u2.id]}
+        resp = self.client.post(url, data=json.dumps(payload), content_type="application/json")
+        self.assertTrue(resp.json()["success"])
+        for u in (u1, u2):
+            self.assertEqual(SidebarPermission.objects.get(user=u).items, ["dashboard"])
+
+    def test_api_save_exclusive_validation(self):
+        url = reverse("api_save_sidebar_permissions")
+        payload = {"assignments": [], "users": [self.admin.id], "role": "faculty"}
+        resp = self.client.post(url, data=json.dumps(payload), content_type="application/json")
+        self.assertFalse(resp.json()["success"])
+
+    def test_api_save_unknown_id(self):
+        url = reverse("api_save_sidebar_permissions")
+        payload = {"assignments": ["unknown"], "users": [self.admin.id]}
+        resp = self.client.post(url, data=json.dumps(payload), content_type="application/json")
+        self.assertFalse(resp.json()["success"])
+
+    def test_api_get_user_success(self):
+        u = User.objects.create_user("bobapi", password="pass")
+        SidebarPermission.objects.create(user=u, items=["dashboard"])
+        url = reverse("api_get_sidebar_permissions") + f"?user={u.id}"
+        resp = self.client.get(url)
+        self.assertEqual(resp.json()["assignments"], ["dashboard"])
+
+    def test_api_get_role_trimmed(self):
+        SidebarPermission.objects.create(role="faculty", items=["events"])
+        url = reverse("api_get_sidebar_permissions") + "?role=%20faculty%20"
+        resp = self.client.get(url)
+        self.assertEqual(resp.json()["assignments"], ["events"])

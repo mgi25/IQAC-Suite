@@ -152,7 +152,8 @@ body.command-center-layout{
   box-shadow:var(--shadow-md);
   display:flex; align-items:center; justify-content:space-between;
   padding:0 var(--sp-4);
-  z-index:40;
+  position:relative;
+  z-index:2000;
 }
 
 /* Hide the campus logo image (keep text) */
@@ -168,8 +169,9 @@ body.command-center-layout{
 #sidebarToggle span,
 #sidebarToggle span span{ background:#ffffff !important; }
 
-.utility-right{ display:flex; align-items:center; gap:1.5rem; color:#ffffff !important; }
-.utility-right *{ color:#ffffff !important; }
+.utility-right{ display:flex; align-items:center; gap:1.5rem; }
+/* Limit white text to topbar controls only */
+.utility-right > *{ color:#ffffff; }
 
 /* Notification bell (forced GOLD) */
 .notification-section{ position:relative; }
@@ -178,14 +180,12 @@ body.command-center-layout{
   display:inline-flex; align-items:center; justify-content:center;
   background:transparent; border:0; cursor:pointer;
 }
-.notification-section .notification-btn > i.fa-bell,
-.notification-section .notification-btn > i.fa-solid.fa-bell,
-.notification-section .notification-btn > i.fa-bell::before,
-.notification-section .notification-btn > i.fa-solid.fa-bell::before{
+.notification-btn .notification-icon{
   font-family:"Font Awesome 6 Free", var(--fa-font-solid,"Font Awesome 6 Free") !important;
   font-weight:900 !important;
   font-size:1.35rem !important;
   line-height:1 !important;
+  width:auto; height:auto; background:none;
   color:var(--gold-accent) !important;
 }
 .notification-badge{
@@ -201,14 +201,14 @@ body.command-center-layout{
   width:320px; max-width:90vw; max-height:500px;
   background:#fff; border:1px solid var(--gray-200); border-radius:12px;
   box-shadow:var(--shadow-lg); opacity:0; visibility:hidden; transform:translateY(-10px);
-  transition:var(--tr); z-index:1000; overflow:hidden;
+  transition:var(--tr); z-index:20000; overflow:hidden; color:var(--ink-900);
 }
 .notification-dropdown.active{ opacity:1; visibility:visible; transform:translateY(0); }
 .notification-header{ display:flex; align-items:center; justify-content:space-between; padding:.75rem 1rem; border-bottom:1px solid var(--gray-200); }
 .notification-list{ max-height:400px; overflow-y:auto; }
 .notification-item{ display:flex; gap:.75rem; padding:.75rem 1rem; border-bottom:1px solid var(--gray-100); }
 .notification-item.unread{ background:var(--gray-050); }
-.notification-icon{ width:32px; height:32px; border-radius:50%; display:grid; place-items:center; background:var(--gray-200); color:var(--christ-blue); }
+.notification-item .notification-icon{ width:32px; height:32px; border-radius:50%; display:grid; place-items:center; background:var(--gray-200); color:var(--christ-blue); }
 
 /* Profile (gold avatar) */
 .profile-section{ position:relative; }
@@ -223,9 +223,23 @@ body.command-center-layout{
 .profile-dropdown{
   position:absolute; top:calc(100% + .5rem); right:0; min-width:200px; background:#fff;
   border:1px solid var(--gray-200); border-radius:12px; box-shadow:var(--shadow-lg);
-  opacity:0; visibility:hidden; transform:translateY(-10px); transition:var(--tr); z-index:1000;
+  opacity:0; visibility:hidden; transform:translateY(-10px); transition:var(--tr); z-index:20000; color:var(--ink-900);
 }
 .profile-dropdown.active{ opacity:1; visibility:visible; transform:translateY(0); }
+.profile-dropdown .dropdown-header{
+  padding:.75rem 1rem;
+  border-bottom:1px solid var(--gray-200);
+}
+.profile-dropdown .user-info strong{ display:block; }
+.profile-dropdown .user-info small{ color:var(--muted-500); }
+.profile-dropdown .dropdown-item{
+  display:flex; align-items:center; gap:.5rem;
+  padding:.5rem 1rem; color:var(--ink-900); text-decoration:none;
+}
+.profile-dropdown .dropdown-item:hover{ background:var(--gray-050); }
+.profile-dropdown .dropdown-divider{
+  height:1px; background:var(--gray-200); margin:.25rem 0;
+}
 
 /* =============================================================================
    LEFT CONTROL PANEL

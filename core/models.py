@@ -787,7 +787,7 @@ class SidebarPermission(models.Model):
         - Otherwise, combine role + user-specific assignments.
         - Expands children → parents (so parent is always shown if child assigned).
         """
-        from core_admin.views import nav_items  # wherever nav_items is defined
+        from core.navigation import NAV_ITEMS
 
         # Admin users see everything
         if user.is_superuser:
@@ -798,34 +798,46 @@ class SidebarPermission(models.Model):
         if role and role.lower() == "admin":
             return "ALL"
 
-        allowed = set()
-
-        # --- Role-based permissions ---
-        if role:
-            role_perm = cls.objects.filter(role__iexact=role).first()
-            if role_perm:
-                allowed.update(role_perm.items)
+        allowed: set[str] = set()
 
         # --- User-specific overrides ---
-        user_perm = cls.objects.filter(user=user).first()
+        user_perm = cls.objects.filter(user=user, role__in=["", None]).first()
         if user_perm:
             allowed.update(user_perm.items)
 
-        # --- Expand to include parents ---
+        # --- Organization role assignments ---
+        role_ids = RoleAssignment.objects.filter(user=user).values_list("role_id", flat=True)
+        if role_ids:
+            role_keys = [f"orgrole:{rid}" for rid in role_ids]
+            for perm in cls.objects.filter(user__isnull=True, role__in=role_keys):
+                allowed.update(perm.items)
+
+        # --- Legacy role fallback ---
+        if not allowed and role:
+            role_perm = cls.objects.filter(user__isnull=True, role__iexact=role).first()
+            if role_perm:
+                allowed.update(role_perm.items)
+
+        # --- Expand to include parents and legacy aliases ---
         def expand_with_parents(selected_ids, navs):
             expanded = set(selected_ids)
 
-            def recurse(items, parent_id=None):
+            def recurse(items):
                 for item in items:
-                    if "children" in item:
-                        for child in item["children"]:
+                    children = item.get("children")
+                    if children:
+                        for child in children:
                             if child["id"] in expanded:
-                                expanded.add(item["id"])  # ensure parent is included
-                        recurse(item["children"], item["id"])
+                                expanded.add(item["id"])
+                        recurse(children)
             recurse(navs)
+            # Add leaf aliases for backwards compatibility (e.g. events:submit_proposal → submit_proposal)
+            for item in list(expanded):
+                if ":" in item:
+                    expanded.add(item.split(":", 1)[1])
             return expanded
 
-        return list(expand_with_parents(allowed, nav_items))
+        return sorted(expand_with_parents(allowed, NAV_ITEMS))
 
 class DashboardAssignment(models.Model):
     """Stores dashboard assignments for users and roles."""

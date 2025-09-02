@@ -294,3 +294,34 @@ class ProposalReviewFlowTests(TestCase):
         self.assertContains(resp2, "Alice")
         self.assertContains(resp2, "Venue")
         self.assertContains(resp2, "Ticket")
+
+    def test_edit_section_redirects_back_to_review(self):
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(self._payload()),
+            content_type="application/json",
+        )
+        pid = resp.json()["proposal_id"]
+        next_url = reverse("emt:review_proposal", args=[pid])
+        edit_url = (
+            reverse("emt:submit_need_analysis", args=[pid]) + f"?next={next_url}"
+        )
+        resp2 = self.client.post(edit_url, {"content": "updated"})
+        self.assertEqual(resp2.status_code, 302)
+        self.assertEqual(resp2.headers["Location"], next_url)
+
+    def test_edit_event_details_returns_to_review(self):
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(self._payload()),
+            content_type="application/json",
+        )
+        pid = resp.json()["proposal_id"]
+        review_url = reverse("emt:review_proposal", args=[pid])
+        edit_url = (
+            reverse("emt:submit_proposal_with_pk", args=[pid]) + f"?next={review_url}"
+        )
+        post_data = self._payload()
+        resp2 = self.client.post(edit_url, post_data)
+        self.assertEqual(resp2.status_code, 302)
+        self.assertEqual(resp2.headers["Location"], review_url)

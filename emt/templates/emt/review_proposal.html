@@ -20,7 +20,7 @@
           </div>
         </div>
         <div class="review-actions">
-          <a href="{% url 'emt:submit_proposal_with_pk' proposal.id %}" class="btn-save-section">Edit</a>
+          <a href="{% url 'emt:submit_proposal_with_pk' proposal.id %}?next={{ request.path }}" class="btn-save-section">Edit</a>
           <form method="post" style="display:inline;">
             {% csrf_token %}
             <button type="submit" name="final_submit" class="btn-submit">Confirm Submit</button>
@@ -28,20 +28,26 @@
         </div>
       </div>
 
-      {% url 'emt:submit_need_analysis' proposal.id as need_edit %}
-      {% url 'emt:submit_objectives' proposal.id as obj_edit %}
-      {% url 'emt:submit_expected_outcomes' proposal.id as out_edit %}
-      {% url 'emt:submit_tentative_flow' proposal.id as flow_edit %}
-      {% url 'emt:submit_speaker_profile' proposal.id as speaker_edit %}
-      {% url 'emt:submit_expense_details' proposal.id as expense_edit %}
-      {% url 'emt:submit_cdl_support' proposal.id as cdl_edit %}
+      {% url 'emt:submit_need_analysis' proposal.id as need_base %}
+      {% with need_edit=need_base|add:'?next='|add:request.path|add:'%23need-analysis' %}
+        {% include "emt/partials/review_section.html" with title="Need Analysis" body=need_analysis.content edit_url=need_edit %}
+      {% endwith %}
+      {% url 'emt:submit_objectives' proposal.id as obj_base %}
+      {% with obj_edit=obj_base|add:'?next='|add:request.path|add:'%23objectives' %}
+        {% include "emt/partials/review_section.html" with title="Objectives" body=objectives.content edit_url=obj_edit %}
+      {% endwith %}
+      {% url 'emt:submit_expected_outcomes' proposal.id as out_base %}
+      {% with out_edit=out_base|add:'?next='|add:request.path|add:'%23expected-outcomes' %}
+        {% include "emt/partials/review_section.html" with title="Expected Outcomes" body=outcomes.content edit_url=out_edit %}
+      {% endwith %}
+      {% url 'emt:submit_tentative_flow' proposal.id as flow_base %}
+      {% with flow_edit=flow_base|add:'?next='|add:request.path|add:'%23tentative-flow' %}
+        {% include "emt/partials/review_section.html" with title="Tentative Flow" body=flow.content edit_url=flow_edit %}
+      {% endwith %}
 
-      {% include "emt/partials/review_section.html" with title="Need Analysis" body=need_analysis.content edit_url=need_edit %}
-      {% include "emt/partials/review_section.html" with title="Objectives" body=objectives.content edit_url=obj_edit %}
-      {% include "emt/partials/review_section.html" with title="Expected Outcomes" body=outcomes.content edit_url=out_edit %}
-      {% include "emt/partials/review_section.html" with title="Tentative Flow" body=flow.content edit_url=flow_edit %}
-
-      <div class="event-details-card card-base">
+      {% url 'emt:submit_speaker_profile' proposal.id as speaker_base %}
+      {% with speaker_edit=speaker_base|add:'?next='|add:request.path|add:'%23speaker-profile' %}
+      <div id="speaker-profile" class="event-details-card card-base">
         <div class="review-section-header">
           <h3>Speaker Profile</h3>
           <a href="{{ speaker_edit }}" class="section-edit-link">Edit</a>
@@ -58,9 +64,12 @@
           <div class="detail-block">—</div>
         {% endif %}
       </div>
+      {% endwith %}
 
+      {% url 'emt:submit_expense_details' proposal.id as expense_base %}
+      {% with expense_edit=expense_base|add:'?next='|add:request.path|add:'%23expense-details' %}
       <div class="fin-row">
-        <div class="fin-half event-details-card card-base">
+        <div id="expense-details" class="fin-half event-details-card card-base">
           <div class="review-section-header">
             <h3>Expense Details</h3>
             <a href="{{ expense_edit }}" class="section-edit-link">Edit</a>
@@ -85,7 +94,7 @@
           {% endif %}
         </div>
 
-        <div class="fin-half event-details-card card-base">
+        <div id="income-details" class="fin-half event-details-card card-base">
           <div class="review-section-header">
             <h3>Income Details</h3>
             <a href="{{ expense_edit }}" class="section-edit-link">Edit</a>
@@ -102,9 +111,12 @@
           {% endif %}
         </div>
       </div>
+      {% endwith %}
 
+      {% url 'emt:submit_cdl_support' proposal.id as cdl_base %}
+      {% with cdl_edit=cdl_base|add:'?next='|add:request.path|add:'%23cdl-support' %}
       {% if cdl_support %}
-      <div class="event-details-card card-base">
+      <div id="cdl-support" class="event-details-card card-base">
         <div class="review-section-header">
           <h3>CDL Support</h3>
           <a href="{{ cdl_edit }}" class="section-edit-link">Edit</a>
@@ -138,6 +150,7 @@
         </table>
       </div>
       {% endif %}
+      {% endwith %}
     </div>
 
     <aside class="review-side">

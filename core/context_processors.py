@@ -52,15 +52,17 @@ def active_academic_year(request):
 
 from .models import SidebarPermission, RoleAssignment
 
+
 def sidebar_permissions(request):
     """Provide allowed sidebar items for the current user.
 
-    Rules (requested):
+    Logic overview:
     - Superusers/admins: unrestricted.
-    - Else: resolve by session["role"]. If that's an org role key (orgrole:<id>),
-      use that record; else treat it as a plain baseline label (student/faculty).
-    - If no record exists for the resolved role, fallback to faculty baseline.
-    - User-specific (role empty) overrides all of the above.
+    - User-specific permissions (role empty) override everything.
+    - Otherwise merge sidebar items for all ``RoleAssignment`` records using
+      ``SidebarPermission`` entries with ``role=orgrole:<id>``.
+    - If no role-based records exist, fallback to the legacy session ``role``
+      and finally to the faculty baseline.
     """
 
     # Anonymous users: nothing and restricted
@@ -81,25 +83,54 @@ def sidebar_permissions(request):
                 expanded.add(parent)
         # Add leaf aliases for legacy template checks
         expanded.update({item.split(":", 1)[1] for item in ids if ":" in item})
-        return list(expanded)
+        return sorted(expanded)
 
     # 1) User-specific override
-    user_perm = SidebarPermission.objects.filter(user=request.user, role__in=["", None]).first()
+    user_perm = SidebarPermission.objects.filter(
+        user=request.user, role__in=["", None]
+    ).first()
     if user_perm:
-        return {"allowed_nav_items": _expand_with_parents(user_perm.items), "unrestricted_nav": False}
+        return {
+            "allowed_nav_items": _expand_with_parents(user_perm.items),
+            "unrestricted_nav": False,
+        }
 
-    # 2) Role from session, with fallback to faculty
+    # 2) Merge permissions from all assigned organization roles
+    role_items = set()
+    role_ids = RoleAssignment.objects.filter(user=request.user).values_list(
+        "role_id", flat=True
+    )
+    if role_ids:
+        role_keys = [f"orgrole:{rid}" for rid in role_ids]
+        for perm in SidebarPermission.objects.filter(
+            user__isnull=True, role__in=role_keys
+        ):
+            role_items.update(perm.items)
+
+    # 3) Legacy session role with faculty fallback
     session_role = (request.session.get("role") or "").strip()
-    role_perm = None
+    if session_role.lower() == "admin":
+        return {"allowed_nav_items": [], "unrestricted_nav": True}
+
     if session_role:
-        role_perm = SidebarPermission.objects.filter(user__isnull=True, role=session_role).first()
+        perm = SidebarPermission.objects.filter(
+            user__isnull=True, role__iexact=session_role
+        ).first()
+        if perm:
+            role_items.update(perm.items)
 
-    if not role_perm:
-        # Faculty baseline fallback
-        role_perm = SidebarPermission.objects.filter(user__isnull=True, role="faculty").first()
+    if not role_items:
+        perm = SidebarPermission.objects.filter(
+            user__isnull=True, role__iexact="faculty"
+        ).first()
+        if perm:
+            role_items.update(perm.items)
 
-    if role_perm:
-        return {"allowed_nav_items": _expand_with_parents(role_perm.items), "unrestricted_nav": False}
+    if role_items:
+        return {
+            "allowed_nav_items": _expand_with_parents(sorted(role_items)),
+            "unrestricted_nav": False,
+        }
 
     return {"allowed_nav_items": [], "unrestricted_nav": False}
 

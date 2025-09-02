@@ -336,6 +336,8 @@ def submit_proposal(request, pk=None):
     if pk:
         proposal = get_object_or_404(EventProposal, pk=pk, submitted_by=request.user)
 
+    next_url = request.GET.get("next")
+
     if request.method == "POST":
         post_data = request.POST.copy()
         # Ignore client-supplied academic year; enforce server-side value
@@ -504,6 +506,8 @@ def submit_proposal(request, pk=None):
                 f"Proposal '{proposal.event_title}' submitted.",
             )
             return redirect("emt:proposal_status_detail", proposal_id=proposal.id)
+        if next_url:
+            return redirect(next_url)
         if is_review:
             return redirect("emt:review_proposal", proposal_id=proposal.id)
         return redirect("emt:submit_need_analysis", proposal_id=proposal.id)
@@ -824,6 +828,7 @@ def submit_need_analysis(request, proposal_id):
         EventProposal, id=proposal_id, submitted_by=request.user
     )
     instance = EventNeedAnalysis.objects.filter(proposal=proposal).first()
+    next_url = request.GET.get("next")
 
     if request.method == "POST":
         form = NeedAnalysisForm(request.POST, instance=instance)
@@ -833,6 +838,8 @@ def submit_need_analysis(request, proposal_id):
             need.proposal = proposal
             need.save()
             logger.debug("NeedAnalysis saved for proposal %s", proposal.id)
+            if next_url:
+                return redirect(next_url)
             return redirect("emt:submit_objectives", proposal_id=proposal.id)
     else:
         form = NeedAnalysisForm(instance=instance)
@@ -848,6 +855,7 @@ def submit_objectives(request, proposal_id):
         EventProposal, id=proposal_id, submitted_by=request.user
     )
     instance = EventObjectives.objects.filter(proposal=proposal).first()
+    next_url = request.GET.get("next")
 
     if request.method == "POST":
         form = ObjectivesForm(request.POST, instance=instance)
@@ -857,6 +865,8 @@ def submit_objectives(request, proposal_id):
             obj.proposal = proposal
             obj.save()
             logger.debug("Objectives saved for proposal %s", proposal.id)
+            if next_url:
+                return redirect(next_url)
             return redirect("emt:submit_expected_outcomes", proposal_id=proposal.id)
     else:
         form = ObjectivesForm(instance=instance)
@@ -870,6 +880,7 @@ def submit_expected_outcomes(request, proposal_id):
         EventProposal, id=proposal_id, submitted_by=request.user
     )
     instance = EventExpectedOutcomes.objects.filter(proposal=proposal).first()
+    next_url = request.GET.get("next")
 
     if request.method == "POST":
         form = ExpectedOutcomesForm(request.POST, instance=instance)
@@ -879,6 +890,8 @@ def submit_expected_outcomes(request, proposal_id):
             outcome.proposal = proposal
             outcome.save()
             logger.debug("ExpectedOutcomes saved for proposal %s", proposal.id)
+            if next_url:
+                return redirect(next_url)
             return redirect("emt:submit_tentative_flow", proposal_id=proposal.id)
     else:
         form = ExpectedOutcomesForm(instance=instance)
@@ -896,6 +909,7 @@ def submit_tentative_flow(request, proposal_id):
         EventProposal, id=proposal_id, submitted_by=request.user
     )
     instance = TentativeFlow.objects.filter(proposal=proposal).first()
+    next_url = request.GET.get("next")
 
     if request.method == "POST":
         form = TentativeFlowForm(request.POST, instance=instance)
@@ -905,6 +919,8 @@ def submit_tentative_flow(request, proposal_id):
             flow.proposal = proposal
             flow.save()
             logger.debug("TentativeFlow saved for proposal %s", proposal.id)
+            if next_url:
+                return redirect(next_url)
             return redirect("emt:submit_speaker_profile", proposal_id=proposal.id)
     else:
         form = TentativeFlowForm(instance=instance)
@@ -927,6 +943,7 @@ def submit_speaker_profile(request, proposal_id):
     SpeakerFS = modelformset_factory(
         SpeakerProfile, form=SpeakerProfileForm, extra=1, can_delete=True
     )
+    next_url = request.GET.get("next")
 
     if request.method == "POST":
         formset = SpeakerFS(
@@ -941,6 +958,8 @@ def submit_speaker_profile(request, proposal_id):
                 obj.save()
             for obj in formset.deleted_objects:
                 obj.delete()
+            if next_url:
+                return redirect(next_url)
             return redirect("emt:submit_expense_details", proposal_id=proposal.id)
     else:
         formset = SpeakerFS(queryset=SpeakerProfile.objects.filter(proposal=proposal))
@@ -963,6 +982,7 @@ def submit_expense_details(request, proposal_id):
     ExpenseFS = modelformset_factory(
         ExpenseDetail, form=ExpenseDetailForm, extra=1, can_delete=True
     )
+    next_url = request.GET.get("next")
 
     if request.method == "POST":
         formset = ExpenseFS(
@@ -975,6 +995,8 @@ def submit_expense_details(request, proposal_id):
                 obj.save()
             for obj in formset.deleted_objects:
                 obj.delete()
+            if next_url:
+                return redirect(next_url)
             # Move wizard to CDL support step and notify user
             request.session["proposal_step"] = "cdl_support"
             messages.info(request, "Expense details saved. Proceed to CDL Support.")
@@ -998,6 +1020,7 @@ def submit_cdl_support(request, proposal_id):
     # Ensure wizard/breadcrumb reflects final step
     request.session["proposal_step"] = "cdl_support"
     instance = getattr(proposal, "cdl_support", None)
+    next_url = request.GET.get("next")
 
     if request.method == "POST":
         form = CDLSupportForm(request.POST, instance=instance)
@@ -1012,6 +1035,8 @@ def submit_cdl_support(request, proposal_id):
 
             if "review_submit" in request.POST:
                 return redirect("emt:review_proposal", proposal_id=proposal.id)
+            if next_url:
+                return redirect(next_url)
 
             messages.success(request, "CDL support saved.")
             return redirect("emt:submit_cdl_support", proposal_id=proposal.id)

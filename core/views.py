@@ -2022,6 +2022,7 @@ def admin_sidebar_permissions(request):
     from django.urls import reverse
     from django.contrib import messages
     from .models import OrganizationType, OrganizationRole, RoleAssignment, SidebarPermission
+    from core.navigation import NAV_ITEMS, SIDEBAR_ITEM_IDS
     import logging
     logger = logging.getLogger(__name__)
 
@@ -2033,7 +2034,7 @@ def admin_sidebar_permissions(request):
 
     # Filters from query params
     org_type_id = (request.GET.get("org_type") or "").strip()
-    org_role_id = (request.GET.get("org_role") or "").strip()
+    org_role_id = (request.GET.get("org_role") or request.GET.get("role") or "").strip()
 
     # Base users queryset
     users_qs = User.objects.all().order_by("username")
@@ -2045,42 +2046,7 @@ def admin_sidebar_permissions(request):
     users = users_qs
 
     # Top-level nav items (hierarchical!)
-    nav_items = [
-        {
-            "id": "dashboard",
-            "label": "Dashboard",
-            "children": [
-                {"id": "dashboard:admin", "label": "Admin Dashboard"},
-                {"id": "dashboard:faculty", "label": "Faculty Dashboard"},
-                {"id": "dashboard:student", "label": "Student Dashboard"},
-                {"id": "dashboard:cdl_head", "label": "CDL Head Dashboard"},
-                {"id": "dashboard:cdl_work", "label": "CDL Work Dashboard"},
-            ]
-        },
-        {"id": "events", "label": "Event Management Suite", "children": [
-            {"id": "events:submit_proposal", "label": "Event Proposal"},
-            {"id": "events:pending_reports", "label": "Report Generation"},
-            {"id": "events:generated_reports", "label": "View Reports"},
-            {"id": "events:my_approvals", "label": "Event Approvals"},
-        ]},
-        {"id": "transcript", "label": "Graduate Transcript"},
-        {"id": "cdl", "label": "CDL"},
-        {
-            "id": "settings",
-            "label": "Settings",
-            "children": [
-                {"id": "settings:user_settings", "label": "User Settings"},
-                {"id": "settings:approval_flow", "label": "Approval Flow Management"},
-                {"id": "settings:pso_psos", "label": "POs & PSOs Management"},
-                {"id": "settings:academic_year", "label": "Academic Year Settings"},
-                {"id": "settings:history", "label": "History"},
-                {"id": "settings:sidebar_permissions", "label": "Sidebar Permissions"},
-            ]
-        },
-        {"id": "user_management", "label": "User Management"},
-        {"id": "event_proposals", "label": "Event Proposals"},
-        {"id": "reports", "label": "Reports"},
-    ]
+    nav_items = NAV_ITEMS
 
     # Utility: build assigned tree
     def build_assigned_tree(assigned_ids, items):
@@ -2120,16 +2086,12 @@ def admin_sidebar_permissions(request):
 
     # Load current permission
     selected_user = request.GET.get("user")
-    selected_role = request.GET.get("role")
-    if selected_role:
-        selected_role = selected_role.strip()
+    selected_role_id = (request.GET.get("role") or request.GET.get("org_role") or "").strip()
 
     permission = None
     if selected_user:
         permission = SidebarPermission.objects.filter(user_id=selected_user).first()
     else:
-        # Prefer numeric org role id passed via 'role' or 'org_role'
-        selected_role_id = request.GET.get("role") or request.GET.get("org_role")
         if selected_role_id and selected_role_id.isdigit():
             role_key = f"orgrole:{selected_role_id}"
             permission = SidebarPermission.objects.filter(
@@ -2137,8 +2099,12 @@ def admin_sidebar_permissions(request):
             ).first()
 
     if request.method == "POST":
-        target_user = request.POST.get("user") or None
-        # Accept numeric OrganizationRole id in 'role' field
+        target_users = request.POST.getlist("users") or []
+        # Backward compat: single "user" param
+        if not target_users:
+            u = request.POST.get("user")
+            if u:
+                target_users = [u]
         target_role_id = (request.POST.get("role") or "").strip()
 
         assigned_order_raw = request.POST.get("assigned_order")
@@ -2147,49 +2113,57 @@ def admin_sidebar_permissions(request):
         except Exception:
             assigned_items = []
 
-        # 🔐 Prevent breaking admin sidebar for superusers
-        if target_user and User.objects.filter(id=target_user, is_superuser=True).exists():
-            if not assigned_items:
-                messages.warning(request, "Admin must always retain full sidebar; ignoring empty assignment.")
-            else:
+        invalid_ids = [i for i in assigned_items if i not in SIDEBAR_ITEM_IDS]
+        if invalid_ids:
+            messages.error(request, f"Unknown sidebar item(s): {', '.join(invalid_ids)}")
+            return redirect(reverse("admin_sidebar_permissions"))
+
+        if target_users:
+            for uid in target_users:
+                if User.objects.filter(id=uid, is_superuser=True).exists() and not assigned_items:
+                    messages.warning(
+                        request,
+                        "Admin must always retain full sidebar; ignoring empty assignment.",
+                    )
+                    continue
                 permission, _ = SidebarPermission.objects.get_or_create(
-                    user_id=target_user,
-                    role=""
+                    user_id=uid,
+                    role="",
                 )
                 permission.items = assigned_items
                 permission.save()
         else:
-            if target_user:
+            if target_role_id and target_role_id.isdigit():
+                role_key = f"orgrole:{target_role_id}"
                 permission, _ = SidebarPermission.objects.get_or_create(
-                    user_id=target_user,
-                    role=""
+                    user=None,
+                    role=role_key,
                 )
+                permission.items = assigned_items
+                permission.save()
             else:
-                # Role-based via OrganizationRole id
-                if target_role_id and target_role_id.isdigit():
-                    role_key = f"orgrole:{target_role_id}"
-                    permission, _ = SidebarPermission.objects.get_or_create(
-                        user=None,
-                        role=role_key
-                    )
-                else:
-                    messages.error(request, "Please select a valid organization role to save permissions.")
-                    return redirect(reverse("admin_sidebar_permissions"))
-            permission.items = assigned_items
-            permission.save()
+                messages.error(
+                    request,
+                    "Please select a valid organization role to save permissions.",
+                )
+                return redirect(reverse("admin_sidebar_permissions"))
 
         messages.success(request, "Sidebar permissions updated")
-        logger.info("Sidebar permissions updated for user=%s role=%s", target_user, target_role_id)
+        logger.info(
+            "Sidebar permissions updated for users=%s role=%s",
+            ",".join(target_users) or None,
+            target_role_id,
+        )
 
         redirect_url = reverse("admin_sidebar_permissions")
-        if target_user:
-            redirect_url += f"?user={target_user}"
+        if len(target_users) == 1:
+            redirect_url += f"?user={target_users[0]}"
         elif target_role_id:
             redirect_url += f"?role={target_role_id}"
         if org_type_id:
             redirect_url += f"&org_type={org_type_id}"
-        if org_role_id:
-            redirect_url += f"&org_role={org_role_id}"
+        if org_role_id and not target_role_id:
+            redirect_url += f"&role={org_role_id}"
         return redirect(redirect_url)
 
     # Build available/assigned lists
@@ -2198,25 +2172,31 @@ def admin_sidebar_permissions(request):
     available_permissions = build_available_tree(assigned_set, nav_items)
 
     # Build roles list from OrganizationRole (optionally filtered by org type)
+    roles_qs = OrganizationRole.objects.all()
     if org_type_id:
-        roles_qs = OrganizationRole.objects.filter(organization__org_type_id=org_type_id)
-    else:
-        roles_qs = OrganizationRole.objects.all()
+        roles_qs = roles_qs.filter(organization__org_type_id=org_type_id)
+
+    # De-duplicate roles by name so repeated roles from different organizations are not shown multiple times
+    seen_roles = set()
+    org_roles = []
+    for role in roles_qs.order_by("name"):
+        if role.name not in seen_roles:
+            seen_roles.add(role.name)
+            org_roles.append({"id": role.id, "name": role.name})
 
     context = {
-        "roles": list(roles_qs.values("id", "name")),
         "organization_types": list(OrganizationType.objects.filter(is_active=True).values("id", "name")),
-        "org_roles": list(OrganizationRole.objects.filter(organization__org_type_id=org_type_id).values("id", "name")) if org_type_id else [],
+        "org_roles": org_roles,
         "selected_org_type": org_type_id,
         "selected_org_role": org_role_id,
-        "users": [{"id": u.id, "name": u.get_full_name() or u.username} for u in users],
+        "users": [{"id": u.id, "name": (u.get_full_name().strip() or u.username)} for u in users],
         "nav_items": nav_items,
         "permission": permission,
         "selected_user": selected_user,
-    # Use organization role id for selection; plain role labels are not used in UI
-    "selected_role": request.GET.get("role") or request.GET.get("org_role") or "",
+        # Use organization role id for selection; plain role labels are not used in UI
+        "selected_role": selected_role_id,
         "selected_user_id": selected_user,
-        "selected_role_id": request.GET.get("role") or request.GET.get("org_role") or "",
+        "selected_role_id": selected_role_id,
         "available_permissions": json.dumps(available_permissions),
         "assigned_permissions": json.dumps(assigned_permissions),
     }
@@ -2320,40 +2300,66 @@ def api_save_sidebar_permissions(request):
     """API endpoint to save sidebar permissions"""
     from .models import SidebarPermission
     from django.http import JsonResponse
+    from core.navigation import SIDEBAR_ITEM_IDS
     import json
     
     try:
         data = json.loads(request.body)
-        assignments = data.get('assignments', [])
-        user_id = data.get('user')
-        role = data.get('role')
+        assignments = data.get("assignments", [])
+        users = data.get("users") or []
+        single_user = data.get("user")
+        role = data.get("role")
 
-        if not user_id and not role:
-            return JsonResponse({'success': False, 'error': 'Must specify either user or role'})
+        if single_user:
+            users = [single_user]
 
-        # Get or create permission record
-        if user_id:
-            permission, created = SidebarPermission.objects.get_or_create(
-                user_id=user_id,
-                role='',
-                defaults={'items': assignments}
+        if bool(users) == bool(role):
+            return JsonResponse(
+                {"success": False, "error": "Specify exactly one of users or role"}
             )
-            if not created:
-                permission.items = assignments
-                permission.save()
+
+        invalid_ids = [i for i in assignments if i not in SIDEBAR_ITEM_IDS]
+        if invalid_ids:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": f"Unknown sidebar item(s): {', '.join(invalid_ids)}",
+                }
+            )
+
+        if users:
+            from django.contrib.auth.models import User
+
+            valid_ids = list(
+                User.objects.filter(id__in=users).values_list("id", flat=True)
+            )
+            if len(valid_ids) != len(users):
+                return JsonResponse({"success": False, "error": "Invalid user id"})
+
+            for uid in users:
+                perm, created = SidebarPermission.objects.get_or_create(
+                    user_id=uid,
+                    role="",
+                    defaults={"items": assignments},
+                )
+                if not created:
+                    perm.items = assignments
+                    perm.save()
         else:
             # Accept numeric org role id; store as key orgrole:<id>
-            role_key = f"orgrole:{role}" if str(role).isdigit() else str(role)
-            permission, created = SidebarPermission.objects.get_or_create(
+            role_key = (
+                f"orgrole:{role}" if str(role).isdigit() else str(role).lower()
+            )
+            perm, created = SidebarPermission.objects.get_or_create(
                 user=None,
                 role=role_key,
-                defaults={'items': assignments}
+                defaults={"items": assignments},
             )
             if not created:
-                permission.items = assignments
-                permission.save()
+                perm.items = assignments
+                perm.save()
 
-        return JsonResponse({'success': True})
+        return JsonResponse({"success": True})
 
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
@@ -2367,7 +2373,7 @@ def api_get_dashboard_assignments(request):
     from django.http import JsonResponse
     
     user_id = request.GET.get('user')
-    role = request.GET.get('role')
+    role = (request.GET.get('role') or '').strip()
     
     assignments = []
     
@@ -2391,7 +2397,7 @@ def api_get_sidebar_permissions(request):
     from django.http import JsonResponse
     
     user_id = request.GET.get('user')
-    role = request.GET.get('role')
+    role = (request.GET.get('role') or '').strip()
     
     assignments = []
     
@@ -2400,9 +2406,9 @@ def api_get_sidebar_permissions(request):
         if permission:
             assignments = permission.items
     elif role:
-        role_key = f"orgrole:{role}" if role.isdigit() else role
+        role_key = f"orgrole:{role}" if role.isdigit() else role.lower()
         permission = SidebarPermission.objects.filter(
-            user__isnull=True, role=role_key
+            user__isnull=True, role__iexact=role_key
         ).first()
         if permission:
             assignments = permission.items
