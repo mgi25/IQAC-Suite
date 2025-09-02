@@ -113,6 +113,7 @@
             <option value="{{ u.id }}" {% if selected_user == u.id|stringformat:'s' %}selected{% endif %}>{{ u.name }}</option>
           {% endfor %}
         </select>
+        <button type="button" id="selectAllUsersBtn" class="btn btn-secondary" style="margin-top:4px;">Select All Users</button>
         <small class="hint">Use Ctrl/Command to select multiple users. Navbar updates may require logout/login.</small>
       </label>
 
@@ -240,7 +241,8 @@ let selectedAssigned  = new Set();
     const assignedEmpty =$('#assignedEmpty');
     const globalSearch  =$('#globalSearch');
   const userSelect=$('#userSelect');
-    const orgTypeSelect=$('#orgTypeSelect'); 
+  const selectAllUsersBtn=$('#selectAllUsersBtn');
+    const orgTypeSelect=$('#orgTypeSelect');
     const orgRoleSelect=$('#orgRoleSelect');
     const changeIndicator=$('#changeIndicator');
 
@@ -424,7 +426,10 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
 
   userSelect.addEventListener('change',()=>{
     const ids=Array.from(userSelect.selectedOptions).map(o=>o.value).filter(Boolean);
-    if(ids.length<=1) reloadWithFilters();
+    if(ids.length===1) reloadWithFilters();
+  });
+  selectAllUsersBtn?.addEventListener('click',()=>{
+    Array.from(userSelect.options).forEach(o=>o.selected=true);
   });
     if(orgTypeSelect) orgTypeSelect.addEventListener('change',()=>{ if(!orgTypeSelect.value){ orgRoleSelect && (orgRoleSelect.value=''); } reloadWithFilters(); });
     if(orgRoleSelect) orgRoleSelect.addEventListener('change',()=> reloadWithFilters());

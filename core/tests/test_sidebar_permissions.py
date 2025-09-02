@@ -141,6 +141,21 @@ class SidebarPermissionsTests(TestCase):
 
         self.assertEqual(sorted(result["allowed_nav_items"]), ["dashboard", "events"])
 
+    def test_get_allowed_items_merges_assignments(self):
+        """Model helper should merge user-specific and role-based permissions."""
+        user = User.objects.create_user("helper", password="pass")
+        org_type = OrganizationType.objects.create(name="Type")
+        org = Organization.objects.create(name="Org", org_type=org_type)
+        role1 = OrganizationRole.objects.create(name="Role1", organization=org)
+        role2 = OrganizationRole.objects.create(name="Role2", organization=org)
+        RoleAssignment.objects.create(user=user, role=role1, organization=org)
+        RoleAssignment.objects.create(user=user, role=role2, organization=org)
+        SidebarPermission.objects.create(role=f"orgrole:{role1.id}", items=["dashboard"])
+        SidebarPermission.objects.create(role=f"orgrole:{role2.id}", items=["events"])
+
+        allowed = SidebarPermission.get_allowed_items(user)
+        self.assertEqual(sorted(allowed), ["dashboard", "events"])
+
 
 class SidebarPermissionsViewTests(TestCase):
     def setUp(self):
