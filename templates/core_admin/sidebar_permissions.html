@@ -98,7 +98,7 @@
 
       <label class="filter">
         <span>Organization Role</span>
-        <select id="orgRoleSelect" {% if not selected_org_type %}disabled{% endif %} aria-label="Organization Role">
+        <select id="orgRoleSelect" aria-label="Organization Role">
           <option value="">All Roles</option>
           {% for r in org_roles %}
             <option value="{{ r.id }}" {% if selected_org_role == r.id|stringformat:'s' %}selected{% endif %}>{{ r.name }}</option>
