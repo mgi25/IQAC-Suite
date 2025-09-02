@@ -168,7 +168,7 @@ body.command-center-layout{
 #sidebarToggle span,
 #sidebarToggle span span{ background:#ffffff !important; }
 
-.utility-right{ display:flex; align-items:center; gap:1.5rem; color:#ffffff !important; }
+.utility-right{ display:flex; align-items:center; gap:1.5rem; }
 /* Limit white text to topbar controls only */
 .utility-right > *{ color:#ffffff; }
 
@@ -179,10 +179,7 @@ body.command-center-layout{
   display:inline-flex; align-items:center; justify-content:center;
   background:transparent; border:0; cursor:pointer;
 }
-.notification-section .notification-btn > i.fa-bell,
-.notification-section .notification-btn > i.fa-solid.fa-bell,
-.notification-section .notification-btn > i.fa-bell::before,
-.notification-section .notification-btn > i.fa-solid.fa-bell::before{
+.notification-section .notification-btn > i.fa-bell{
   font-family:"Font Awesome 6 Free", var(--fa-font-solid,"Font Awesome 6 Free") !important;
   font-weight:900 !important;
   font-size:1.35rem !important;
