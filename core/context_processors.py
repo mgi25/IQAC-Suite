@@ -51,6 +51,8 @@ def active_academic_year(request):
     return {"active_academic_year": get_active_academic_year()}
 
 from .models import SidebarPermission, RoleAssignment
+import logging
+logger = logging.getLogger(__name__)
 
 
 def sidebar_permissions(request):
@@ -90,6 +92,13 @@ def sidebar_permissions(request):
         user=request.user, role__in=["", None]
     ).first()
     if user_perm:
+        try:
+            logger.debug(
+                "sidebar_permissions CP: user=%s override items=%s",
+                request.user.id, user_perm.items,
+            )
+        except Exception:
+            pass
         return {
             "allowed_nav_items": _expand_with_parents(user_perm.items),
             "unrestricted_nav": False,
@@ -106,6 +115,13 @@ def sidebar_permissions(request):
             user__isnull=True, role__in=role_keys
         ):
             role_items.update(perm.items)
+    try:
+        logger.debug(
+            "sidebar_permissions CP: user=%s role_ids=%s merged_items=%s session_role=%s",
+            request.user.id, list(role_ids), sorted(role_items), request.session.get("role"),
+        )
+    except Exception:
+        pass
 
     # 3) Legacy session role with faculty fallback
     session_role = (request.session.get("role") or "").strip()
@@ -127,10 +143,24 @@ def sidebar_permissions(request):
             role_items.update(perm.items)
 
     if role_items:
+        try:
+            logger.debug(
+                "sidebar_permissions CP: user=%s final allowed=%s",
+                request.user.id, sorted(role_items),
+            )
+        except Exception:
+            pass
         return {
             "allowed_nav_items": _expand_with_parents(sorted(role_items)),
             "unrestricted_nav": False,
         }
 
+    try:
+        logger.debug(
+            "sidebar_permissions CP: user=%s default none (no role/org or perms)",
+            request.user.id,
+        )
+    except Exception:
+        pass
     return {"allowed_nav_items": [], "unrestricted_nav": False}
 

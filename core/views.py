@@ -506,13 +506,34 @@ def dashboard(request):
         return redirect('select_dashboard', dashboard_key=dashboard_key)
 
     # ---- role / domain detection (fallback for users without assignments) ----
-    roles = RoleAssignment.objects.filter(user=user).select_related('role', 'organization')
-    role_lc = [ra.role.name.lower() for ra in roles]
+    roles = (
+        RoleAssignment.objects.filter(user=user)
+        .select_related('role', 'organization', 'organization__org_type')
+    )
+    role_lc = [ra.role.name.lower() for ra in roles if ra.role]
 
     if user.is_superuser:
         return redirect('admin_dashboard')
 
     email = (user.email or "").lower()
+    # CDL mapping first (bug fix: CDL users were getting faculty dashboard)
+    is_cdl_admin = any(
+        (ra.role and ra.role.name.lower() in {"cdl admin", "cdl head"})
+        and (ra.organization and ra.organization.org_type and ra.organization.org_type.name.lower() == "cdl")
+        for ra in roles
+    )
+    is_cdl_employee = any(
+        (ra.role and ra.role.name.lower() in {"cdl employee", "cdl member", "cdl team"})
+        and (ra.organization and ra.organization.org_type and ra.organization.org_type.name.lower() == "cdl")
+        for ra in roles
+    )
+    if is_cdl_admin:
+        logger.debug("dashboard(): user=%s mapped to CDL Head dashboard via role fallback", user.id)
+        return redirect('cdl_head_dashboard')
+    if is_cdl_employee:
+        logger.debug("dashboard(): user=%s mapped to CDL Work dashboard via role fallback", user.id)
+        return redirect('cdl_work_dashboard')
+
     is_student = ('student' in role_lc) or email.endswith('@christuniversity.in')
     
     # Set session role for sidebar permissions
@@ -658,6 +679,21 @@ def dashboard(request):
 
     candidates = ["core/student_dashboard.html", "student_dashboard.html"] if is_student else ["core/dashboard.html", "dashboard.html"]
     tpl = select_template(candidates)  # picks the first that actually exists
+    try:
+        roles_dbg = [
+            {
+                'role': (ra.role.name if ra.role else None),
+                'org': (ra.organization.name if ra.organization else None),
+                'org_type': (ra.organization.org_type.name if ra.organization and ra.organization.org_type else None),
+            }
+            for ra in roles
+        ]
+        logger.debug(
+            "dashboard(): rendering %s for user=%s roles=%s",
+            tpl.template.name, user.id, roles_dbg,
+        )
+    except Exception:
+        pass
     return render(request, tpl.template.name, context)
 
 
@@ -805,13 +841,17 @@ def select_dashboard(request, dashboard_key):
         return redirect('admin_dashboard')
     elif dashboard_key == 'faculty':
         request.session["role"] = "faculty"
+        logger.debug("select_dashboard: user=%s -> faculty dashboard", request.user.id)
         return _render_faculty_dashboard(request)
     elif dashboard_key == 'student':
         request.session["role"] = "student"
+        logger.debug("select_dashboard: user=%s -> student dashboard", request.user.id)
         return _render_student_dashboard(request)
     elif dashboard_key == 'cdl_head':
+        logger.debug("select_dashboard: user=%s -> cdl_head dashboard", request.user.id)
         return redirect('cdl_head_dashboard')
     elif dashboard_key == 'cdl_work':
+        logger.debug("select_dashboard: user=%s -> cdl_work dashboard", request.user.id)
         return redirect('cdl_work_dashboard')
     else:
         messages.error(request, "Invalid dashboard selection.")
@@ -2172,17 +2212,17 @@ def admin_sidebar_permissions(request):
     available_permissions = build_available_tree(assigned_set, nav_items)
 
     # Build roles list from OrganizationRole (optionally filtered by org type)
-    roles_qs = OrganizationRole.objects.all()
+    # NOTE: Keep org context in label to distinguish same-named roles across orgs
+    roles_qs = OrganizationRole.objects.select_related("organization", "organization__org_type").all()
     if org_type_id:
         roles_qs = roles_qs.filter(organization__org_type_id=org_type_id)
 
-    # De-duplicate roles by name so repeated roles from different organizations are not shown multiple times
-    seen_roles = set()
     org_roles = []
-    for role in roles_qs.order_by("name"):
-        if role.name not in seen_roles:
-            seen_roles.add(role.name)
-            org_roles.append({"id": role.id, "name": role.name})
+    for role in roles_qs.order_by("name", "organization__name"):
+        label = role.name
+        if role.organization:
+            label = f"{role.name} – {role.organization.name} ({role.organization.org_type.name})"
+        org_roles.append({"id": role.id, "name": label})
 
     context = {
         "organization_types": list(OrganizationType.objects.filter(is_active=True).values("id", "name")),
@@ -2302,37 +2342,36 @@ def api_save_sidebar_permissions(request):
     from django.http import JsonResponse
     from core.navigation import SIDEBAR_ITEM_IDS
     import json
-    
+
     try:
         data = json.loads(request.body)
         assignments = data.get("assignments", [])
         users = data.get("users") or []
         single_user = data.get("user")
-        role = data.get("role")
+        role = (data.get("role") or "").strip()
 
         if single_user:
             users = [single_user]
 
+        # Exactly one target: users OR role
         if bool(users) == bool(role):
-            return JsonResponse(
-                {"success": False, "error": "Specify exactly one of users or role"}
-            )
+            return JsonResponse({
+                "success": False,
+                "error": "Specify exactly one of users or role",
+            })
 
+        # Validate IDs
         invalid_ids = [i for i in assignments if i not in SIDEBAR_ITEM_IDS]
         if invalid_ids:
-            return JsonResponse(
-                {
-                    "success": False,
-                    "error": f"Unknown sidebar item(s): {', '.join(invalid_ids)}",
-                }
-            )
+            return JsonResponse({
+                "success": False,
+                "error": f"Unknown sidebar item(s): {', '.join(invalid_ids)}",
+            })
 
+        # Persist
         if users:
             from django.contrib.auth.models import User
-
-            valid_ids = list(
-                User.objects.filter(id__in=users).values_list("id", flat=True)
-            )
+            valid_ids = list(User.objects.filter(id__in=users).values_list("id", flat=True))
             if len(valid_ids) != len(users):
                 return JsonResponse({"success": False, "error": "Invalid user id"})
 
@@ -2344,12 +2383,10 @@ def api_save_sidebar_permissions(request):
                 )
                 if not created:
                     perm.items = assignments
-                    perm.save()
+                perm.save()
         else:
             # Accept numeric org role id; store as key orgrole:<id>
-            role_key = (
-                f"orgrole:{role}" if str(role).isdigit() else str(role).lower()
-            )
+            role_key = f"orgrole:{role}" if role.isdigit() else role.lower()
             perm, created = SidebarPermission.objects.get_or_create(
                 user=None,
                 role=role_key,
@@ -2357,12 +2394,13 @@ def api_save_sidebar_permissions(request):
             )
             if not created:
                 perm.items = assignments
-                perm.save()
+            perm.save()
 
-        return JsonResponse({"success": True})
-
+        resp = JsonResponse({"success": True})
+        resp["Cache-Control"] = "no-store"
+        return resp
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
+        return JsonResponse({"success": False, "error": str(e)})
 
 
 @login_required
@@ -2414,6 +2452,52 @@ def api_get_sidebar_permissions(request):
             assignments = permission.items
     
     return JsonResponse({'assignments': assignments})
+
+
+@login_required
+def api_my_sidebar(request):
+    """Return computed sidebar permissions for the current user.
+
+    Used by the client to detect changes and refresh the page/sidebar.
+    """
+    from django.http import JsonResponse
+    from .models import SidebarPermission, RoleAssignment
+    import logging
+
+    logger = logging.getLogger(__name__)
+    items = SidebarPermission.get_allowed_items(request.user)
+    unrestricted = False
+    allowed = []
+    if items == "ALL":
+        unrestricted = True
+    else:
+        allowed = items
+
+    # Debug: user roles/org context
+    try:
+        roles = (
+            RoleAssignment.objects.filter(user=request.user)
+            .select_related('role', 'organization', 'organization__org_type')
+        )
+        roles_dbg = [
+            {
+                'role': (ra.role.name if ra.role else None),
+                'org': (ra.organization.name if ra.organization else None),
+                'org_type': (ra.organization.org_type.name if ra.organization and ra.organization.org_type else None),
+            }
+            for ra in roles
+        ]
+        logger.debug(
+            "api_my_sidebar: user=%s unrestricted=%s allowed_count=%d roles=%s",
+            request.user.id, unrestricted, len(allowed), roles_dbg,
+        )
+    except Exception:
+        pass
+
+    return JsonResponse({
+        'unrestricted_nav': unrestricted,
+        'allowed_nav_items': allowed,
+    })
 
 
 @login_required
@@ -5825,7 +5909,27 @@ def api_log_popso_change(request):
 
 @login_required
 def cdl_head_dashboard(request):
-    if not (request.user.is_superuser or request.user.groups.filter(name="CDL_HEAD").exists()):
+    # Allow superusers, group CDL_HEAD, or users with CDL Admin/Head org roles in CDL orgs
+    is_allowed = False
+    if request.user.is_superuser or request.user.groups.filter(name="CDL_HEAD").exists():
+        is_allowed = True
+    else:
+        try:
+            from .models import RoleAssignment
+            ras = (
+                RoleAssignment.objects.filter(user=request.user)
+                .select_related('role', 'organization', 'organization__org_type')
+            )
+            for ra in ras:
+                role_name = (ra.role.name if ra.role else '').lower()
+                org_type = (ra.organization.org_type.name if ra.organization and ra.organization.org_type else '').lower()
+                if org_type == 'cdl' and role_name in {"cdl admin", "cdl head"}:
+                    is_allowed = True
+                    break
+        except Exception:
+            pass
+    if not is_allowed:
+        logger.warning("cdl_head_dashboard: access denied for user=%s", request.user.id)
         return HttpResponseForbidden()
     
     from emt.models import EventProposal, CDLSupport
@@ -5926,7 +6030,27 @@ def cdl_member_dashboard(request):
 
 @login_required
 def cdl_work_dashboard(request):
-    if not (request.user.is_superuser or request.user.groups.filter(name="CDL_MEMBER").exists()):
+    # Allow superusers, group CDL_MEMBER, or users with CDL Employee/Member/Team org roles in CDL orgs
+    is_allowed = False
+    if request.user.is_superuser or request.user.groups.filter(name="CDL_MEMBER").exists():
+        is_allowed = True
+    else:
+        try:
+            from .models import RoleAssignment
+            ras = (
+                RoleAssignment.objects.filter(user=request.user)
+                .select_related('role', 'organization', 'organization__org_type')
+            )
+            for ra in ras:
+                role_name = (ra.role.name if ra.role else '').lower()
+                org_type = (ra.organization.org_type.name if ra.organization and ra.organization.org_type else '').lower()
+                if org_type == 'cdl' and role_name in {"cdl employee", "cdl member", "cdl team"}:
+                    is_allowed = True
+                    break
+        except Exception:
+            pass
+    if not is_allowed:
+        logger.warning("cdl_work_dashboard: access denied for user=%s", request.user.id)
         return HttpResponseForbidden()
     return render(request, "core/cdl_work_dashboard.html")
 
