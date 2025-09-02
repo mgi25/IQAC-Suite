@@ -2166,18 +2166,24 @@ def admin_sidebar_permissions(request):
     available_permissions = build_available_tree(assigned_set, nav_items)
 
     # Build roles list from OrganizationRole (optionally filtered by org type)
+    roles_qs = OrganizationRole.objects.all()
     if org_type_id:
-        roles_qs = OrganizationRole.objects.filter(organization__org_type_id=org_type_id)
-    else:
-        roles_qs = OrganizationRole.objects.all()
+        roles_qs = roles_qs.filter(organization__org_type_id=org_type_id)
+
+    # De-duplicate roles by name so repeated roles from different organizations are not shown multiple times
+    seen_roles = set()
+    org_roles = []
+    for role in roles_qs.order_by("name"):
+        if role.name not in seen_roles:
+            seen_roles.add(role.name)
+            org_roles.append({"id": role.id, "name": role.name})
 
     context = {
-        "roles": list(roles_qs.values("id", "name")),
         "organization_types": list(OrganizationType.objects.filter(is_active=True).values("id", "name")),
-        "org_roles": list(OrganizationRole.objects.filter(organization__org_type_id=org_type_id).values("id", "name")) if org_type_id else [],
+        "org_roles": org_roles,
         "selected_org_type": org_type_id,
         "selected_org_role": org_role_id,
-        "users": [{"id": u.id, "name": u.get_full_name() or u.username} for u in users],
+        "users": [{"id": u.id, "name": (u.get_full_name().strip() or u.username)} for u in users],
         "nav_items": nav_items,
         "permission": permission,
         "selected_user": selected_user,
