@@ -184,6 +184,7 @@ body.command-center-layout{
   font-weight:900 !important;
   font-size:1.35rem !important;
   line-height:1 !important;
+  width:auto; height:auto; background:none;
   color:var(--gold-accent) !important;
 }
 .notification-badge{
@@ -206,7 +207,7 @@ body.command-center-layout{
 .notification-list{ max-height:400px; overflow-y:auto; }
 .notification-item{ display:flex; gap:.75rem; padding:.75rem 1rem; border-bottom:1px solid var(--gray-100); }
 .notification-item.unread{ background:var(--gray-050); }
-.notification-icon{ width:32px; height:32px; border-radius:50%; display:grid; place-items:center; background:var(--gray-200); color:var(--christ-blue); }
+.notification-item .notification-icon{ width:32px; height:32px; border-radius:50%; display:grid; place-items:center; background:var(--gray-200); color:var(--christ-blue); }
 
 /* Profile (gold avatar) */
 .profile-section{ position:relative; }
