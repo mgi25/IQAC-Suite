@@ -539,6 +539,10 @@ $(document).ready(function() {
             numActivitiesInput.value = rows.length;
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
+                // Immediately persist the updated activity structure so that
+                // newly added/removed rows and their values are saved without
+                // requiring further user interaction.
+                window.AutosaveManager.autosaveDraft().catch(() => {});
             }
         }
 
@@ -634,6 +638,11 @@ $(document).ready(function() {
             });
             djangoFacultySelect.trigger('change');
             clearFieldError(facultySelect);
+            // Persist faculty selections immediately so autosave tracks them
+            // even if the user doesn't interact with other fields afterwards.
+            if (window.AutosaveManager && window.AutosaveManager.autosaveDraft) {
+                window.AutosaveManager.autosaveDraft().catch(() => {});
+            }
         });
 
         const initialValues = djangoFacultySelect.val();

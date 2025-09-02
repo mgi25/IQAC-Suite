@@ -38,6 +38,7 @@ from core.models import (
 import json
 from unittest.mock import patch
 from decimal import Decimal
+from datetime import date
 
 class FacultyAPITests(TestCase):
     def setUp(self):
@@ -302,6 +303,26 @@ class AutosaveProposalTests(TestCase):
         self.assertEqual(resp2.status_code, 200)
         proposal.refresh_from_db()
         self.assertEqual(proposal.activities.count(), 1)
+
+    def test_autosave_saves_activity_fields(self):
+        payload = self._payload()
+        payload.update({
+            "num_activities": "1",
+            "activity_name_1": "Orientation",
+            "activity_date_1": "2025-05-01",
+        })
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        pid = resp.json()["proposal_id"]
+        proposal = EventProposal.objects.get(id=pid)
+        acts = list(proposal.activities.all())
+        self.assertEqual(len(acts), 1)
+        self.assertEqual(acts[0].name, "Orientation")
+        self.assertEqual(acts[0].date, date(2025, 5, 1))
 
     def test_autosave_proposal_invalid_json(self):
         resp = self.client.post(
