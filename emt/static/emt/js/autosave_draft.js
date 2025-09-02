@@ -159,9 +159,11 @@ window.AutosaveManager = (function() {
             }, 1000);
         };
         field.addEventListener('input', handler);
-        if (field.tagName === 'SELECT') {
-            field.addEventListener('change', handler);
-        }
+        // Some inputs (e.g. date pickers or custom widgets) may not fire
+        // `input` events reliably when their value changes. Bind to the
+        // `change` event for all fields so autosave is triggered even when
+        // users select a date or pick values via a custom UI like TomSelect.
+        field.addEventListener('change', handler);
         field.dataset.autosaveBound = 'true';
     }
 
