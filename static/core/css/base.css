@@ -169,7 +169,8 @@ body.command-center-layout{
 #sidebarToggle span span{ background:#ffffff !important; }
 
 .utility-right{ display:flex; align-items:center; gap:1.5rem; color:#ffffff !important; }
-.utility-right *{ color:#ffffff !important; }
+/* Limit white text to topbar controls only */
+.utility-right > *{ color:#ffffff; }
 
 /* Notification bell (forced GOLD) */
 .notification-section{ position:relative; }
@@ -201,7 +202,7 @@ body.command-center-layout{
   width:320px; max-width:90vw; max-height:500px;
   background:#fff; border:1px solid var(--gray-200); border-radius:12px;
   box-shadow:var(--shadow-lg); opacity:0; visibility:hidden; transform:translateY(-10px);
-  transition:var(--tr); z-index:1000; overflow:hidden;
+  transition:var(--tr); z-index:1000; overflow:hidden; color:var(--ink-900);
 }
 .notification-dropdown.active{ opacity:1; visibility:visible; transform:translateY(0); }
 .notification-header{ display:flex; align-items:center; justify-content:space-between; padding:.75rem 1rem; border-bottom:1px solid var(--gray-200); }
@@ -223,7 +224,7 @@ body.command-center-layout{
 .profile-dropdown{
   position:absolute; top:calc(100% + .5rem); right:0; min-width:200px; background:#fff;
   border:1px solid var(--gray-200); border-radius:12px; box-shadow:var(--shadow-lg);
-  opacity:0; visibility:hidden; transform:translateY(-10px); transition:var(--tr); z-index:1000;
+  opacity:0; visibility:hidden; transform:translateY(-10px); transition:var(--tr); z-index:1000; color:var(--ink-900);
 }
 .profile-dropdown.active{ opacity:1; visibility:visible; transform:translateY(0); }
 
