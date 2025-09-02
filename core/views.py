@@ -2100,11 +2100,8 @@ def admin_sidebar_permissions(request):
 
     if request.method == "POST":
         target_users = request.POST.getlist("users") or []
-        # "Select All Users" option
-        if target_users == ["all"]:
-            target_users = list(User.objects.values_list("id", flat=True))
-        elif not target_users:
-            # Backward compat: single "user" param
+        # Backward compat: single "user" param
+        if not target_users:
             u = request.POST.get("user")
             if u:
                 target_users = [u]
@@ -2154,7 +2151,7 @@ def admin_sidebar_permissions(request):
         messages.success(request, "Sidebar permissions updated")
         logger.info(
             "Sidebar permissions updated for users=%s role=%s",
-            ",".join(map(str, target_users)) or None,
+            ",".join(target_users) or None,
             target_role_id,
         )
 
@@ -2309,23 +2306,12 @@ def api_save_sidebar_permissions(request):
     try:
         data = json.loads(request.body)
         assignments = data.get("assignments", [])
-        users = data.get("users")
+        users = data.get("users") or []
         single_user = data.get("user")
-        all_users_flag = data.get("all_users")
         role = data.get("role")
 
-        if all_users_flag or users == "all" or single_user == "all":
-            from django.contrib.auth.models import User
-            users = list(User.objects.values_list("id", flat=True))
-        else:
-            if single_user:
-                users = [single_user]
-            elif isinstance(users, list):
-                users = users
-            elif users:
-                users = [users]
-            else:
-                users = []
+        if single_user:
+            users = [single_user]
 
         if bool(users) == bool(role):
             return JsonResponse(
