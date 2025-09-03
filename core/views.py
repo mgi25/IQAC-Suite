@@ -13,7 +13,7 @@ from django.db.models import Q, Sum, Count
 from django.forms import inlineformset_factory
 from django import forms
 from django.urls import reverse
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.views.decorators.http import require_http_methods
 from django.db import models, transaction
 from django.db.models.functions import TruncDate
@@ -21,7 +21,7 @@ from django.utils import timezone
 import json
 import logging
 logger = logging.getLogger(__name__)
-from .decorators import popso_manager_required, popso_program_access_required
+from .decorators import popso_manager_required, popso_program_access_required, prevent_impersonation_of_admins
 from .forms import RoleAssignmentForm, RegistrationForm
 from .models import (
     Profile,
@@ -38,6 +38,7 @@ from .models import (
 )
 from emt.models import EventProposal, Student
 from django.views.decorators.http import require_GET, require_POST
+from django.middleware.csrf import get_token
 from .models import (
     ApprovalFlowTemplate,
     ApprovalFlowConfig,
@@ -1578,6 +1579,7 @@ def api_admin_search_users(request):
     
     # Serialize the data
     dashboard_url = reverse('dashboard')
+    csrf_token = get_token(request)
     data = []
     for user in paginated_users:
         roles = []
@@ -1597,9 +1599,12 @@ def api_admin_search_users(request):
         """
         if user.id != request.user.id:
             action_buttons += f"""
-                <a href="/core-admin/impersonate/{user.id}/?next={dashboard_url}" class="btn btn-sm btn-outline-secondary ms-1">
-                    <i class="fas fa-user-secret"></i> Login as
-                </a>
+                <form method="post" action="/core-admin/impersonate/{user.id}/?next={dashboard_url}" style="display:inline;">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="{csrf_token}" />
+                    <button type="submit" class="btn btn-sm btn-outline-secondary ms-1">
+                        <i class="fas fa-user-secret"></i> Login as
+                    </button>
+                </form>
             """
             
         data.append({
@@ -5248,6 +5253,9 @@ def stop_impersonation(request):
     return redirect('admin_dashboard')
 
 @login_required
+@csrf_protect
+@require_POST
+@prevent_impersonation_of_admins
 def admin_impersonate_user(request, user_id):
     """Start impersonating a user from admin pages."""
     if not is_admin(request.user):
