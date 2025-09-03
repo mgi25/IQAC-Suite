@@ -20,6 +20,9 @@
   <meta name="csrf-token" content="{{ csrf_token }}">
   <!-- Auth status for JS (avoids inline template in script) -->
   <meta name="authenticated" content="{{ request.user.is_authenticated|yesno:'true,false' }}">
+  <script>
+    window.USER_ID = "{{ request.user.id|default:'' }}";
+  </script>
 </head>
 <body class="command-center-layout">
 

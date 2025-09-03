@@ -6,8 +6,9 @@ window.AutosaveManager = (function() {
     let timeoutId = null;
     let fields = [];
 
-    // Unique key for this page's local storage
-    const pageKey = `proposal_draft_${window.location.pathname}_new`;
+    // Unique key for this page's local storage scoped per-user
+    const pageKey = `proposal_draft_${window.USER_ID}_${window.location.pathname}_new`;
+    const legacyPageKey = `proposal_draft_${window.location.pathname}_new`;
 
     function getSavedData() {
         try {
@@ -15,6 +16,17 @@ window.AutosaveManager = (function() {
         } catch (e) {
             console.error('Error parsing saved draft:', e);
             return {};
+        }
+    }
+
+    function migrateLegacyDraft() {
+        if (legacyPageKey === pageKey) return;
+        const legacyData = localStorage.getItem(legacyPageKey);
+        if (legacyData) {
+            if (!localStorage.getItem(pageKey)) {
+                localStorage.setItem(pageKey, legacyData);
+            }
+            localStorage.removeItem(legacyPageKey);
         }
     }
 
@@ -72,6 +84,7 @@ window.AutosaveManager = (function() {
 
     function clearLocal() {
         localStorage.removeItem(pageKey);
+        localStorage.removeItem(legacyPageKey);
     }
 
     function autosaveDraft() {
@@ -168,6 +181,7 @@ window.AutosaveManager = (function() {
     }
 
     function reinitialize() {
+        migrateLegacyDraft();
         fields = Array.from(document.querySelectorAll('input[name], textarea[name], select[name]'));
         const saved = getSavedData();
 
