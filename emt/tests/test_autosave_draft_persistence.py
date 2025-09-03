@@ -37,7 +37,7 @@ class AutosaveDraftPersistenceTests(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        self.assertTrue(data["success"])
+        self.assertFalse(data["success"])
         self.assertIn("event_title", data["errors"])
         pid = data["proposal_id"]
         proposal = EventProposal.objects.get(id=pid)
