@@ -604,15 +604,17 @@ def autosave_proposal(request):
     org_name_val = data.get("organization")
     if org_type_val and org_name_val and not str(org_name_val).isdigit():
         from core.models import Organization, OrganizationType
-
-        org_type_obj, _ = OrganizationType.objects.get_or_create(name=org_type_val)
-        existing = Organization.objects.filter(
-            org_type=org_type_obj, name__iexact=str(org_name_val).strip()
-        ).first()
-        if existing:
-            data["organization"] = str(existing.id)
+        org_type_obj = OrganizationType.objects.filter(name=org_type_val).first()
+        if not org_type_obj:
+            errors["organization_type"] = ["Organization type not found"]
         else:
-            errors["organization"] = ["Organization not found"]
+            existing = Organization.objects.filter(
+                org_type=org_type_obj, name__iexact=str(org_name_val).strip()
+            ).first()
+            if existing:
+                data["organization"] = str(existing.id)
+            else:
+                errors["organization"] = ["Organization not found"]
 
     proposal = None
     if pid := data.get("proposal_id"):

@@ -491,6 +491,22 @@ class AutosaveProposalTests(TestCase):
         self.assertIn("organization", data.get("errors", {}))
         self.assertEqual(Organization.objects.filter(name="Science Club").count(), 0)
 
+    def test_autosave_rejects_unknown_organization_type(self):
+        payload = self._payload()
+        payload["organization_type"] = "Unknown"
+        payload["organization"] = "science"
+        count_before = OrganizationType.objects.count()
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data.get("success"))
+        self.assertIn("organization_type", data.get("errors", {}))
+        self.assertEqual(OrganizationType.objects.count(), count_before)
+
     def test_reset_proposal_draft_deletes_draft(self):
         resp = self.client.post(
             reverse("emt:autosave_proposal"),
