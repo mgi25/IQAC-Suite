@@ -132,12 +132,12 @@ window.AutosaveManager = (function() {
             return data;
         })
         .then(data => {
-            if (data && data.success && data.proposal_id) {
+            if (data && data.proposal_id) {
                 proposalId = data.proposal_id;
                 window.PROPOSAL_ID = data.proposal_id;
                 saveLocal();
                 document.dispatchEvent(new CustomEvent('autosave:success', {
-                    detail: { proposalId: data.proposal_id, errors: data.errors }
+                    detail: { proposalId: data.proposal_id, errors: data.errors, success: data.success }
                 }));
                 return data;
             }
