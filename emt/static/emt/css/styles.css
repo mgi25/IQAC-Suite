@@ -329,11 +329,6 @@
   /* ---- TomSelect ---- */
   .proposal-content .ts-wrapper { margin: 0; }
   .ts-control .ts-input { font-size: .875rem !important; }
-  .ts-dropdown {
-    border: 1px solid var(--input-border) !important;
-    border-radius: 8px !important;
-    box-shadow: var(--shadow-2) !important;
-  }
   
   /* ---- Validation ---- */
   .proposal-content .has-error input,
@@ -2278,13 +2273,35 @@ textarea {
     word-break: break-word;
 }
 
-/* Outer field = the only box */
-.ts-control{
-    border: 1px solid var(--border-color, #e2e8f0) !important;
-    border-radius: 8px !important;
-    background: #fff !important;
-    padding: 10px 12px !important;        /* uniform field padding */
+/* Outer field matches proposal-input */
+.ts-wrapper{
+    background-color: #fff !important;
+    border: 1px solid #d0d5dd !important;
+    border-radius: 0.5rem !important;
+    transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
+  }
+
+  .ts-wrapper:hover{
+    border-color: #b6bbc2 !important;
+    background-color: #f9fafb !important;
+  }
+
+  .ts-wrapper.focus,
+  .ts-wrapper:focus-within{
+    outline: none !important;
+    background-color: #fff !important;
+    border-color: var(--primary-blue) !important;
+    box-shadow: 0 0 0 3px rgba(38,68,135,.15) !important;
+  }
+
+  .ts-wrapper .ts-control{
+    background-color: transparent !important;
+    border: none !important;
+    border-radius: 0.5rem !important;
+    padding: 0.625rem 0.75rem !important;
     min-height: 42px !important;
+    line-height: 22px !important;
+    box-shadow: none !important;
   }
   
   /* Kill any inner box styling */
@@ -2323,19 +2340,39 @@ textarea {
     padding: 0 !important;
   }
   
-  /* Focus ring only on the outer box */
-  .ts-control:focus-within{
+  /* Hover and focus states handled above */
+
+  .ts-dropdown {
+    background-color: #fff !important;
+    border: 1px solid #d0d5dd !important;
+    border-radius: 0.5rem !important;
+    padding: 0.625rem 0.75rem !important;
+    box-shadow: var(--shadow-2) !important;
+    transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
+  }
+  .ts-dropdown:hover {
+    border-color: #b6bbc2 !important;
+    background-color: #f9fafb !important;
+  }
+  .ts-dropdown:focus {
+    outline: none !important;
+    background-color: #fff !important;
     border-color: var(--primary-blue) !important;
-    box-shadow: 0 0 0 3px rgba(38,68,135,.12) !important;
+    box-shadow: 0 0 0 3px rgba(38,68,135,.15) !important;
   }
   
-  /* Optional: multi-select chips keep their look */
+  /* Optional: multi-select chips and placeholders inherit line-height/background */
   .ts-wrapper:not(.single) .ts-control .item{
-    background: #eef2f7 !important;
+    background-color: inherit !important;
+    line-height: inherit !important;
     border: 1px solid #dbe1ea !important;
     border-radius: 6px !important;
     padding: 2px 6px !important;
     margin: 2px 4px 2px 0 !important;
+  }
+  .ts-wrapper .ts-control .ts-placeholder {
+    line-height: inherit !important;
+    background-color: inherit !important;
   }
 
 /* === Proposal form layout hardening (pure visual) === */
