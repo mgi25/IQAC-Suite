@@ -556,11 +556,11 @@ $(document).ready(function() {
                         <div class="activity-row">
                             <div class="input-group">
                                 <label for="activity_name_${i}">${i}. Activity Name</label>
-                                <input type="text" id="activity_name_${i}" name="activity_name_${i}" required>
+                                <input type="text" id="activity_name_${i}" name="activity_name_${i}" class="proposal-input" required>
                             </div>
                             <div class="input-group">
                                 <label for="activity_date_${i}">${i}. Activity Date</label>
-                                <input type="date" id="activity_date_${i}" name="activity_date_${i}" required>
+                                <input type="date" id="activity_date_${i}" name="activity_date_${i}" class="proposal-input" required>
                             </div>
                             <button type="button" class="remove-activity btn btn-sm btn-outline-danger">×</button>
                         </div>`;
