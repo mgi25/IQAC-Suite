@@ -543,11 +543,12 @@ $(document).ready(function() {
             });
             numActivitiesInput.value = rows.length;
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                // Persist current values *before* reinitializing to avoid
+                // overwriting renamed activity fields with stale data.
+                if (window.AutosaveManager.autosaveDraft) {
+                    window.AutosaveManager.autosaveDraft().catch(() => {});
+                }
                 window.AutosaveManager.reinitialize();
-                // Immediately persist the updated activity structure so that
-                // newly added/removed rows and their values are saved without
-                // requiring further user interaction.
-                window.AutosaveManager.autosaveDraft().catch(() => {});
             }
         }
 
