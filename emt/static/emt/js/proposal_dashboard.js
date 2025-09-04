@@ -566,6 +566,7 @@ $(document).ready(function() {
                         </div>`;
                 }
                 container.innerHTML = html;
+                enhanceProposalInputs();
                 if (window.EXISTING_ACTIVITIES && window.EXISTING_ACTIVITIES.length) {
                     window.EXISTING_ACTIVITIES.forEach((act, idx) => {
                         const index = idx + 1;
