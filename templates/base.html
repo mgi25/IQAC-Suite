@@ -20,6 +20,9 @@
   <meta name="csrf-token" content="{{ csrf_token }}">
   <!-- Auth status for JS (avoids inline template in script) -->
   <meta name="authenticated" content="{{ request.user.is_authenticated|yesno:'true,false' }}">
+  <script>
+    window.USER_ID = "{{ request.user.id|default:'' }}";
+  </script>
 </head>
 <body class="command-center-layout">
 
@@ -54,7 +57,7 @@
       <div class="utility-right" style="display: flex; align-items: center; gap: 1.5rem;">
         <div class="notification-section">
           <button class="utility-btn notification-btn" id="notificationBtn" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
-            <i class="fa-regular fa-bell notification-icon"></i>
+            <i class="fa-solid fa-bell notification-icon"></i>
             {% if notifications and notifications|length > 0 %}
             <span class="notification-badge" id="notificationBadge">{{ notifications|length }}</span>
             {% endif %}

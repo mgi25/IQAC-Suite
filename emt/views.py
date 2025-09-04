@@ -14,6 +14,7 @@ import time
 from bs4 import BeautifulSoup
 from datetime import datetime
 from django.db.models import Q
+from django.utils.dateparse import parse_date
 from .models import (
     EventProposal,
     EventNeedAnalysis,
@@ -586,9 +587,13 @@ def autosave_proposal(request):
     errors = {}
     if request.content_type and request.content_type.startswith("multipart/form-data"):
         data = {}
+        multi_fields = {"faculty_incharges", "sdg_goals"}
         for key in request.POST:
             values = request.POST.getlist(key)
-            data[key] = values if len(values) > 1 else values[0]
+            if key in multi_fields:
+                data[key] = values
+            else:
+                data[key] = values if len(values) > 1 else values[0]
     else:
         try:
             raw = request.body.decode("utf-8")
@@ -604,15 +609,17 @@ def autosave_proposal(request):
     org_name_val = data.get("organization")
     if org_type_val and org_name_val and not str(org_name_val).isdigit():
         from core.models import Organization, OrganizationType
-
-        org_type_obj, _ = OrganizationType.objects.get_or_create(name=org_type_val)
-        existing = Organization.objects.filter(
-            org_type=org_type_obj, name__iexact=str(org_name_val).strip()
-        ).first()
-        if existing:
-            data["organization"] = str(existing.id)
+        org_type_obj = OrganizationType.objects.filter(name=org_type_val).first()
+        if not org_type_obj:
+            errors["organization_type"] = ["Organization type not found"]
         else:
-            errors["organization"] = ["Organization not found"]
+            existing = Organization.objects.filter(
+                org_type=org_type_obj, name__iexact=str(org_name_val).strip()
+            ).first()
+            if existing:
+                data["organization"] = str(existing.id)
+            else:
+                errors["organization"] = ["Organization not found"]
 
     proposal = None
     if pid := data.get("proposal_id"):
@@ -634,7 +641,7 @@ def autosave_proposal(request):
             logger.debug("autosave_proposal text errors: %s", text_errors)
             return JsonResponse(
                 {
-                    "success": True,
+                    "success": False,
                     "proposal_id": proposal.id,
                     "errors": text_errors,
                 }
@@ -689,6 +696,12 @@ def autosave_proposal(request):
                 missing["name"] = "This field is required."
             if not date:
                 missing["date"] = "This field is required."
+            else:
+                parsed = parse_date(str(date))
+                if not parsed:
+                    missing["date"] = "Enter a valid date."
+                else:
+                    data[f"activity_date_{idx}"] = parsed.isoformat()
         if missing:
             act_errors[idx] = missing
         idx += 1
@@ -784,11 +797,11 @@ def autosave_proposal(request):
         list(proposal.faculty_incharges.values_list("id", flat=True)),
     )
 
-    # Always report success so that drafts are stored even when validation
-    # errors are present. The frontend will surface any issues using the
-    # returned ``errors`` map but the save itself should not be treated as a
-    # failure.
-    response = {"success": True, "proposal_id": proposal.id}
+    # Indicate overall success based on whether any validation errors were
+    # encountered. Drafts are still persisted even when ``success`` is False so
+    # the frontend can surface issues without clearing the user's progress.
+    success = not errors
+    response = {"success": success, "proposal_id": proposal.id}
     if errors:
         response["errors"] = errors
     return JsonResponse(response)

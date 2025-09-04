@@ -2,31 +2,43 @@
    ADMIN ROLE MANAGEMENT - COMMAND CENTER STYLE WITH EDIT FUNCTIONALITY
    ============================================================================= */
 
-/* Main container styling to match command center */
-.container-fluid {
-  max-width: 1200px !important;
-  margin: 0 auto !important;
-  padding: 0 !important;
+/* Main container styling */
+.role-management-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0;
 }
 
-/* Page header styling */
-.role-management-header {
+/* Status tabs */
+.status-tabs {
   display: flex;
-  align-items: center;
+  justify-content: center;
   gap: 1rem;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid var(--gray-100);
 }
 
-.role-management-header h2 {
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--christ-blue-dark);
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+.status-tabs a {
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius-md);
+  background: var(--gray-100);
+  color: var(--gray-700);
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+.status-tabs a.active,
+.status-tabs a:hover {
+  background: var(--christ-blue);
+  color: var(--white);
+}
+
+/* Action area */
+.actions {
+  text-align: right;
+}
+
+/* Role section wrapper */
+.roles-section {
+  margin-bottom: 2rem;
 }
 
 /* Card styling to match command center */
@@ -62,46 +74,30 @@
   padding: 2rem !important;
 }
 
-/* Organization type cards styling */
-.org-type-cards {
+/* Organization type selection */
+.admin-dashboard-navcards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 1.5rem;
   margin-top: 1rem;
 }
 
-.org-type-card {
+.admin-navcard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
   background: var(--white);
   border: 1px solid var(--gray-200);
   border-radius: var(--border-radius-lg);
-  padding: 2rem;
-  text-align: center;
-  transition: var(--transition);
+  padding: 2rem 1rem;
   box-shadow: var(--shadow);
-  position: relative;
-  overflow: hidden;
+  transition: var(--transition);
   text-decoration: none;
   color: inherit;
 }
 
-.org-type-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: var(--christ-blue);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.3s ease;
-}
-
-.org-type-card:hover::before {
-  transform: scaleX(1);
-}
-
-.org-type-card:hover {
+.admin-navcard:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-lg);
   border-color: var(--christ-blue);
@@ -109,38 +105,45 @@
   color: inherit;
 }
 
-.org-type-card h5 {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--christ-blue-dark);
+.navcard-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--christ-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--white);
+  font-size: 1.5rem;
   margin-bottom: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
+  transition: var(--transition);
 }
 
-/* Add role form styling */
-.add-role-section {
-  background: linear-gradient(135deg, var(--christ-blue-light) 0%, rgba(44, 90, 160, 0.05) 100%);
-  border: 2px dashed var(--christ-blue);
-  border-radius: var(--border-radius-lg);
-  padding: 2rem;
-  margin-bottom: 2rem;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
+.admin-navcard:hover .navcard-icon {
+  background: var(--christ-blue-dark);
 }
 
-.add-role-section h5 {
-  color: var(--christ-blue-dark);
+.navcard-title {
+  font-size: 1.1rem;
   font-weight: 700;
-  text-align: center;
-  margin-bottom: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
+  color: var(--gray-800);
+}
+
+.navcard-desc {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--gray-600);
+}
+
+
+/* Status nav styling */
+.role-status-nav .nav-link {
+  color: var(--christ-blue);
+}
+
+.role-status-nav .nav-link.active {
+  background-color: var(--christ-blue);
+  color: var(--white);
 }
 
 /* Form styling */
@@ -536,17 +539,6 @@
   padding-left: 0.75rem;
 }
 
-/* Custom grid for organization cards */
-.org-cards-container .row {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
-  gap: 1.5rem !important;
-  margin: 0 !important;
-}
-
-.org-cards-container .col-md-6.col-lg-4 {
-  display: contents !important;
-}
 
 /* Border utilities */
 .border-success {
@@ -589,12 +581,6 @@
     padding: 1rem !important;
   }
   
-  .add-role-section {
-    margin-left: 1rem;
-    margin-right: 1rem;
-    padding: 1.5rem;
-  }
-  
   .table-responsive {
     font-size: 0.875rem;
   }
@@ -630,22 +616,26 @@
     flex: 0 0 100%;
     max-width: 100%;
   }
-  
-  .org-cards-container .row {
-    grid-template-columns: 1fr !important;
+
+  .org-type-grid {
+    grid-template-columns: 1fr;
   }
+
 }
 
 @media (max-width: 480px) {
-  .container-fluid {
-    padding: 0 0.5rem !important;
+  .role-management-page {
+    padding: 0 0.5rem;
   }
-  
-  .role-management-header h2 {
-    font-size: 1.5rem;
+
+  .page-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
+  }
+
+  .page-header h1 {
+    font-size: 1.5rem;
   }
   
   .card-header .d-flex {
@@ -657,10 +647,20 @@
   .btn-light {
     align-self: flex-end !important;
   }
-  
+
   .table tbody td .btn {
     display: block;
     margin-bottom: 0.5rem;
     width: 100%;
+  }
+
+  .org-type-card {
+    padding: 1.5rem 1rem;
+  }
+
+  .org-type-card .icon-circle {
+    width: 48px;
+    height: 48px;
+    font-size: 1.25rem;
   }
 }

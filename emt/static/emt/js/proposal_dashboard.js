@@ -539,6 +539,10 @@ $(document).ready(function() {
             numActivitiesInput.value = rows.length;
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
+                // Immediately persist the updated activity structure so that
+                // newly added/removed rows and their values are saved without
+                // requiring further user interaction.
+                window.AutosaveManager.autosaveDraft().catch(() => {});
             }
         }
 
@@ -552,16 +556,17 @@ $(document).ready(function() {
                         <div class="activity-row">
                             <div class="input-group">
                                 <label for="activity_name_${i}">${i}. Activity Name</label>
-                                <input type="text" id="activity_name_${i}" name="activity_name_${i}" required>
+                                <input type="text" id="activity_name_${i}" name="activity_name_${i}" class="proposal-input" required>
                             </div>
                             <div class="input-group">
                                 <label for="activity_date_${i}">${i}. Activity Date</label>
-                                <input type="date" id="activity_date_${i}" name="activity_date_${i}" required>
+                                <input type="date" id="activity_date_${i}" name="activity_date_${i}" class="proposal-input" required>
                             </div>
                             <button type="button" class="remove-activity btn btn-sm btn-outline-danger">×</button>
                         </div>`;
                 }
                 container.innerHTML = html;
+                enhanceProposalInputs();
                 if (window.EXISTING_ACTIVITIES && window.EXISTING_ACTIVITIES.length) {
                     window.EXISTING_ACTIVITIES.forEach((act, idx) => {
                         const index = idx + 1;
@@ -634,6 +639,11 @@ $(document).ready(function() {
             });
             djangoFacultySelect.trigger('change');
             clearFieldError(facultySelect);
+            // Persist faculty selections immediately so autosave tracks them
+            // even if the user doesn't interact with other fields afterwards.
+            if (window.AutosaveManager && window.AutosaveManager.autosaveDraft) {
+                window.AutosaveManager.autosaveDraft().catch(() => {});
+            }
         });
 
         const initialValues = djangoFacultySelect.val();
@@ -3335,6 +3345,9 @@ function getWhyThisEventForm() {
     // Initialize autosave indicators
     initializeAutosaveIndicators();
 
+    // Enhance text inputs with improved interactions
+    enhanceProposalInputs();
+
     console.log('Dashboard initialized successfully.');
     console.log('All original functionality preserved with new UI');
 });
@@ -3570,5 +3583,25 @@ function removeSubmitSection() {
   if (submitSection) {
     submitSection.remove();
   }
+}
+
+// Apply focus styling and auto-resize behavior to text inputs
+function enhanceProposalInputs() {
+  document.querySelectorAll('.proposal-content .input-group .proposal-input').forEach((el) => {
+    const group = el.closest('.input-group');
+    if (!group) return;
+
+    el.addEventListener('focus', () => group.classList.add('focused'));
+    el.addEventListener('blur', () => group.classList.remove('focused'));
+
+    if (el.tagName === 'TEXTAREA') {
+      const resize = () => {
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
+      };
+      el.addEventListener('input', resize);
+      resize();
+    }
+  });
 }
 

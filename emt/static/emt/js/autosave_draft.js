@@ -6,8 +6,9 @@ window.AutosaveManager = (function() {
     let timeoutId = null;
     let fields = [];
 
-    // Unique key for this page's local storage
-    const pageKey = `proposal_draft_${window.location.pathname}_new`;
+    // Unique key for this page's local storage scoped per-user
+    const pageKey = `proposal_draft_${window.USER_ID}_${window.location.pathname}_new`;
+    const legacyPageKey = `proposal_draft_${window.location.pathname}_new`;
 
     function getSavedData() {
         try {
@@ -15,6 +16,17 @@ window.AutosaveManager = (function() {
         } catch (e) {
             console.error('Error parsing saved draft:', e);
             return {};
+        }
+    }
+
+    function migrateLegacyDraft() {
+        if (legacyPageKey === pageKey) return;
+        const legacyData = localStorage.getItem(legacyPageKey);
+        if (legacyData) {
+            if (!localStorage.getItem(pageKey)) {
+                localStorage.setItem(pageKey, legacyData);
+            }
+            localStorage.removeItem(legacyPageKey);
         }
     }
 
@@ -72,6 +84,7 @@ window.AutosaveManager = (function() {
 
     function clearLocal() {
         localStorage.removeItem(pageKey);
+        localStorage.removeItem(legacyPageKey);
     }
 
     function autosaveDraft() {
@@ -132,12 +145,12 @@ window.AutosaveManager = (function() {
             return data;
         })
         .then(data => {
-            if (data && data.success && data.proposal_id) {
+            if (data && data.proposal_id) {
                 proposalId = data.proposal_id;
                 window.PROPOSAL_ID = data.proposal_id;
                 saveLocal();
                 document.dispatchEvent(new CustomEvent('autosave:success', {
-                    detail: { proposalId: data.proposal_id, errors: data.errors }
+                    detail: { proposalId: data.proposal_id, errors: data.errors, success: data.success }
                 }));
                 return data;
             }
@@ -159,13 +172,16 @@ window.AutosaveManager = (function() {
             }, 1000);
         };
         field.addEventListener('input', handler);
-        if (field.tagName === 'SELECT') {
-            field.addEventListener('change', handler);
-        }
+        // Some inputs (e.g. date pickers or custom widgets) may not fire
+        // `input` events reliably when their value changes. Bind to the
+        // `change` event for all fields so autosave is triggered even when
+        // users select a date or pick values via a custom UI like TomSelect.
+        field.addEventListener('change', handler);
         field.dataset.autosaveBound = 'true';
     }
 
     function reinitialize() {
+        migrateLegacyDraft();
         fields = Array.from(document.querySelectorAll('input[name], textarea[name], select[name]'));
         const saved = getSavedData();
 
@@ -245,7 +261,7 @@ async function autosave() {
                 payload[key] = value;
             }
         });
-        const res = await fetch('/suite/autosave-proposal/', {
+        const res = await fetch(window.AUTOSAVE_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

@@ -38,6 +38,7 @@ from core.models import (
 import json
 from unittest.mock import patch
 from decimal import Decimal
+from datetime import date
 
 class FacultyAPITests(TestCase):
     def setUp(self):
@@ -303,6 +304,26 @@ class AutosaveProposalTests(TestCase):
         proposal.refresh_from_db()
         self.assertEqual(proposal.activities.count(), 1)
 
+    def test_autosave_saves_activity_fields(self):
+        payload = self._payload()
+        payload.update({
+            "num_activities": "1",
+            "activity_name_1": "Orientation",
+            "activity_date_1": "2025-05-01",
+        })
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        pid = resp.json()["proposal_id"]
+        proposal = EventProposal.objects.get(id=pid)
+        acts = list(proposal.activities.all())
+        self.assertEqual(len(acts), 1)
+        self.assertEqual(acts[0].name, "Orientation")
+        self.assertEqual(acts[0].date, date(2025, 5, 1))
+
     def test_autosave_proposal_invalid_json(self):
         resp = self.client.post(
             reverse("emt:autosave_proposal"),
@@ -364,9 +385,8 @@ class AutosaveProposalTests(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        # Autosave should succeed but return validation warnings for
-        # incomplete activity rows.
-        self.assertTrue(data.get("success"))
+        # Autosave should surface validation warnings for incomplete activity rows.
+        self.assertFalse(data.get("success"))
         self.assertIn("activities", data.get("errors", {}))
         self.assertIn("date", data["errors"]["activities"]["1"])
 
@@ -380,7 +400,7 @@ class AutosaveProposalTests(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        self.assertTrue(data.get("success"))
+        self.assertFalse(data.get("success"))
         self.assertIn("speakers", data.get("errors", {}))
         self.assertIn("designation", data["errors"]["speakers"]["0"])
 
@@ -400,9 +420,22 @@ class AutosaveProposalTests(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        self.assertTrue(data.get("success"))
+        self.assertFalse(data.get("success"))
         self.assertIn("speakers", data.get("errors", {}))
         self.assertIn("full_name", data["errors"]["speakers"]["0"])
+
+    def test_autosave_returns_success_false_on_invalid_fields(self):
+        payload = self._payload()
+        payload["event_title"] = ""  # Required field left blank
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertFalse(data.get("success"))
+        self.assertIn("event_title", data.get("errors", {}))
 
     def test_autosave_requires_csrf_token(self):
         client = Client(enforce_csrf_checks=True)
@@ -440,6 +473,42 @@ class AutosaveProposalTests(TestCase):
         self.assertIsNotNone(speaker)
         self.assertTrue(speaker.photo)
 
+    def test_autosave_file_upload_preserves_faculty_and_activity(self):
+        # Ensure we have a faculty user with a multi-digit ID to catch parsing issues
+        for i in range(10):
+            User.objects.create(username=f"extra{i}")
+        high_faculty = User.objects.create(username="high", first_name="Gamma")
+        RoleAssignment.objects.create(
+            user=high_faculty, role=self.faculty_role, organization=self.org
+        )
+        payload = self._payload()
+        payload.update({
+            "faculty_incharges": [str(high_faculty.id)],
+            "num_activities": "1",
+            "activity_name_1": "Session",
+            "activity_date_1": "2025-06-01",
+            "speaker_full_name_0": "Dr. Jane",
+            "speaker_designation_0": "Prof",
+            "speaker_affiliation_0": "Uni",
+            "speaker_contact_email_0": "a@b.com",
+            "speaker_detailed_profile_0": "Profile",
+        })
+        payload["speaker_photo_0"] = SimpleUploadedFile(
+            "photo.jpg", b"file", content_type="image/jpeg"
+        )
+        resp = self.client.post(reverse("emt:autosave_proposal"), data=payload)
+        self.assertEqual(resp.status_code, 200)
+        pid = resp.json()["proposal_id"]
+        proposal = EventProposal.objects.get(id=pid)
+        self.assertEqual(
+            list(proposal.faculty_incharges.values_list("id", flat=True)),
+            [high_faculty.id],
+        )
+        acts = list(proposal.activities.all())
+        self.assertEqual(len(acts), 1)
+        self.assertEqual(acts[0].name, "Session")
+        self.assertEqual(str(acts[0].date), "2025-06-01")
+
     def test_autosave_uses_existing_organization_by_name(self):
         payload = self._payload()
         payload["organization_type"] = self.ot.name
@@ -466,9 +535,25 @@ class AutosaveProposalTests(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        self.assertTrue(data.get("success"))
+        self.assertFalse(data.get("success"))
         self.assertIn("organization", data.get("errors", {}))
         self.assertEqual(Organization.objects.filter(name="Science Club").count(), 0)
+
+    def test_autosave_rejects_unknown_organization_type(self):
+        payload = self._payload()
+        payload["organization_type"] = "Unknown"
+        payload["organization"] = "science"
+        count_before = OrganizationType.objects.count()
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertFalse(data.get("success"))
+        self.assertIn("organization_type", data.get("errors", {}))
+        self.assertEqual(OrganizationType.objects.count(), count_before)
 
     def test_reset_proposal_draft_deletes_draft(self):
         resp = self.client.post(
@@ -542,7 +627,7 @@ class AutosaveProposalTests(TestCase):
         )
         self.assertEqual(resp2.status_code, 200)
         data = resp2.json()
-        self.assertTrue(data.get("success"))
+        self.assertFalse(data.get("success"))
         self.assertIn("flow", data.get("errors", {}))
 
 
