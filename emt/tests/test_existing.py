@@ -473,6 +473,42 @@ class AutosaveProposalTests(TestCase):
         self.assertIsNotNone(speaker)
         self.assertTrue(speaker.photo)
 
+    def test_autosave_file_upload_preserves_faculty_and_activity(self):
+        # Ensure we have a faculty user with a multi-digit ID to catch parsing issues
+        for i in range(10):
+            User.objects.create(username=f"extra{i}")
+        high_faculty = User.objects.create(username="high", first_name="Gamma")
+        RoleAssignment.objects.create(
+            user=high_faculty, role=self.faculty_role, organization=self.org
+        )
+        payload = self._payload()
+        payload.update({
+            "faculty_incharges": [str(high_faculty.id)],
+            "num_activities": "1",
+            "activity_name_1": "Session",
+            "activity_date_1": "2025-06-01",
+            "speaker_full_name_0": "Dr. Jane",
+            "speaker_designation_0": "Prof",
+            "speaker_affiliation_0": "Uni",
+            "speaker_contact_email_0": "a@b.com",
+            "speaker_detailed_profile_0": "Profile",
+        })
+        payload["speaker_photo_0"] = SimpleUploadedFile(
+            "photo.jpg", b"file", content_type="image/jpeg"
+        )
+        resp = self.client.post(reverse("emt:autosave_proposal"), data=payload)
+        self.assertEqual(resp.status_code, 200)
+        pid = resp.json()["proposal_id"]
+        proposal = EventProposal.objects.get(id=pid)
+        self.assertEqual(
+            list(proposal.faculty_incharges.values_list("id", flat=True)),
+            [high_faculty.id],
+        )
+        acts = list(proposal.activities.all())
+        self.assertEqual(len(acts), 1)
+        self.assertEqual(acts[0].name, "Session")
+        self.assertEqual(str(acts[0].date), "2025-06-01")
+
     def test_autosave_uses_existing_organization_by_name(self):
         payload = self._payload()
         payload["organization_type"] = self.ot.name
