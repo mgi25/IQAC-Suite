@@ -63,30 +63,29 @@
 }
 
 /* Organization type selection */
-.org-type-grid {
+.admin-dashboard-navcards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 1.5rem;
   margin-top: 1rem;
 }
 
-.org-type-card {
+.admin-navcard {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  text-align: center;
   background: var(--white);
   border: 1px solid var(--gray-200);
   border-radius: var(--border-radius-lg);
   padding: 2rem 1rem;
-  text-align: center;
-  transition: var(--transition);
   box-shadow: var(--shadow);
+  transition: var(--transition);
   text-decoration: none;
   color: inherit;
 }
 
-.org-type-card:hover {
+.admin-navcard:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-lg);
   border-color: var(--christ-blue);
@@ -94,7 +93,7 @@
   color: inherit;
 }
 
-.org-type-card .icon-circle {
+.navcard-icon {
   width: 60px;
   height: 60px;
   border-radius: 50%;
@@ -104,27 +103,24 @@
   justify-content: center;
   color: var(--white);
   font-size: 1.5rem;
+  margin-bottom: 1rem;
   transition: var(--transition);
 }
 
-.org-type-card h5 {
+.admin-navcard:hover .navcard-icon {
+  background: var(--christ-blue-dark);
+}
+
+.navcard-title {
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--gray-800);
-  margin: 0;
 }
 
-.org-type-card .manage-link {
-  margin-top: auto;
-  font-weight: 600;
-  color: var(--christ-blue);
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.org-type-card:hover .icon-circle {
-  background: var(--christ-blue-dark);
+.navcard-desc {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--gray-600);
 }
 
 /* Add role form styling */
