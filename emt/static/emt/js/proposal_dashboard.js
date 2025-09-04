@@ -596,6 +596,11 @@ $(document).ready(function() {
         if (window.EXISTING_ACTIVITIES && window.EXISTING_ACTIVITIES.length) {
             numActivitiesInput.value = window.EXISTING_ACTIVITIES.length;
             render(window.EXISTING_ACTIVITIES.length);
+        } else {
+            const savedCount = parseInt(numActivitiesInput.value, 10);
+            if (savedCount > 0) {
+                render(savedCount);
+            }
         }
     }
     
