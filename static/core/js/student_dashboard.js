@@ -219,7 +219,7 @@
       const yyyy=day.getFullYear(), mm=String(day.getMonth()+1).padStart(2,'0'), dd=String(day.getDate()).padStart(2,'0');
       const dateStr = `${yyyy}-${mm}-${dd}`;
       const list = $('#upcomingWrap'); if(!list) return;
-      const items = (window.DASHBOARD_EVENTS||[]).filter(e => e.date === dateStr);
+      const items = (window.DASHBOARD_EVENTS||[]).filter(e => e.date === dateStr && (e.status||'').toLowerCase()==='finalized');
       list.innerHTML = items.length
         ? items.map(e => {
             const viewBtn = e.view_url ? `<a class="chip-btn" href="${e.view_url}"><i class="fa-regular fa-eye"></i> View</a>` : '';
@@ -277,7 +277,7 @@
       
       if (!content) return;
       
-      const events = (window.DASHBOARD_EVENTS||[]).filter(e => e.date === dateStr);
+      const events = (window.DASHBOARD_EVENTS||[]).filter(e => e.date === dateStr && (e.status||'').toLowerCase()==='finalized');
 
   // Removed ICS export; only Google Calendar supported
       if (events.length > 0) {
@@ -362,6 +362,8 @@
         eventIndexByDate = new Map();
         (window.DASHBOARD_EVENTS||[]).forEach(e=>{
           if (!e.date) return;
+          const status = (e.status||'').toLowerCase();
+          if (status !== 'finalized') return; // finalized-only markers
           const list = eventIndexByDate.get(e.date) || [];
           list.push(e);
           eventIndexByDate.set(e.date, list);

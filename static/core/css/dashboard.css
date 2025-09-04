@@ -338,4 +338,111 @@
 .status-under_review { background: #fef3c7; color: #d97706; }
 .status-approved { background: #d1fae5; color: #059669; }
 .status-rejected { background: #fee2e2; color: #dc2626; }
+
+/* ===== CDL Head page specific compaction and layout ===== */
+.ems-dashboard.cdl-head .kpi-row{
+  /* exactly 4 compact KPI cards on top row */
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.ems-dashboard.cdl-head .kpi-card{
+  padding: 6px 8px;
+  min-height: 80px;
+}
+.ems-dashboard.cdl-head .kpi-icon{ width:32px; height:32px; font-size:14px; border-radius:10px; }
+.ems-dashboard.cdl-head .kpi-title{ font-size:11px; }
+.ems-dashboard.cdl-head .kpi-value{ font-size:22px!important; margin-top:2px; }
+.ems-dashboard.cdl-head .kpi-value::after{ height:1px; margin-top:4px; }
+
+/* two-column main grid with stacked sections per spec */
+.ems-dashboard.cdl-head .cdl-grid{
+  display:grid;
+  grid-template-columns: 1.1fr 1fr; /* left slightly wider for list + calendar */
+  gap:16px;
+  align-items:start;
+}
+
+@media (max-width: 1200px){
+  .ems-dashboard.cdl-head .cdl-grid{ grid-template-columns: 1fr; }
+}
+
+/* equal-height stacks: use fixed max-heights with inner scrolls */
+.ems-dashboard.cdl-head #cardNotifications .list,
+.ems-dashboard.cdl-head #cardCalendar .mini-cal,
+.ems-dashboard.cdl-head #cardTeam .chart-wrap,
+.ems-dashboard.cdl-head #cardEventDetails .event-details-content{
+  max-height: 260px;
+  overflow: auto;
+}
+
+/* place cards explicitly to left/right stacks on wide screens */
+@media (min-width: 1201px){
+  .ems-dashboard.cdl-head .cdl-grid{
+    grid-template-areas:
+      "left1 right1"
+      "left2 right2";
+  }
+  .ems-dashboard.cdl-head #cardNotifications{ grid-area: left1; }
+  .ems-dashboard.cdl-head #cardCalendar{ grid-area: left2; }
+  .ems-dashboard.cdl-head #cardTeam{ grid-area: right1; }
+  .ems-dashboard.cdl-head #cardEventDetails{ grid-area: right2; }
+}
+
+/* compact card spacing and visible inner scrollbars; reduce page whitespace */
+.ems-dashboard.cdl-head .card{ border-radius:12px!important; }
+.ems-dashboard.cdl-head .card-header{ padding:8px 10px; }
+.ems-dashboard.cdl-head .card-header h3{ font-size:13px!important; }
+.ems-dashboard.cdl-head .list{ padding:10px 12px; }
+.ems-dashboard.cdl-head .empty{ padding:16px 0; }
+
+/* keep page scroll minimal; assignment manager full-width at bottom */
+.ems-dashboard.cdl-head #cardAssignAll .table-wrap{ max-height: 280px; overflow:auto; }
+.ems-dashboard.cdl-head #cardAssignAll{ margin-top:16px; }
+
+/* Compact notifications list and texts */
+.ems-dashboard.cdl-head .notification-item{ padding:10px; }
+.ems-dashboard.cdl-head .notification-content h4{ font-size:13px; }
+.ems-dashboard.cdl-head .notification-content p{ font-size:11px; }
+.ems-dashboard.cdl-head .view-btn{ font-size:11px; padding:5px 8px; }
+
+/* Compact calendar day size and title */
+.ems-dashboard.cdl-head #calTitle{ font-size:13px; }
+.ems-dashboard.cdl-head .cal-weekdays{ font-size:10px; }
+.ems-dashboard.cdl-head .day{ height:32px; font-size:12px; }
+
+/* Event details compaction */
+.ems-dashboard.cdl-head .event-detail-title{ font-size:13px; }
+.ems-dashboard.cdl-head .event-detail-meta{ font-size:11px; }
+
+/* Segmented controls and chips smaller */
+.ems-dashboard.cdl-head .seg-btn{ font-size:11px; padding:5px 8px; }
+.ems-dashboard.cdl-head .chip-btn{ font-size:10px; padding:5px 8px; }
+.ems-dashboard.cdl-head .select{ font-size:11px; padding:5px 8px; }
+
+/* Chart area slightly shorter */
+.ems-dashboard.cdl-head #cardTeam .chart-wrap{ padding:10px; max-height:220px; }
+
+/* Assignment Manager typography compaction */
+.ems-dashboard.cdl-head .table.compact th,
+.ems-dashboard.cdl-head .table.compact td{ font-size:11px; padding:5px 8px; }
+.ems-dashboard.cdl-head .priority-badge,
+.ems-dashboard.cdl-head .status-badge{ font-size:9px; }
+.ems-dashboard.cdl-head .assignee-select{ font-size:11px; padding:4px 6px; }
+
+/* Compact topbar for CDL Head */
+.ems-dashboard.cdl-head .topbar{ margin-bottom:12px; padding-bottom:8px; }
+.ems-dashboard.cdl-head .topbar h1{ font-size:22px; }
+.ems-dashboard.cdl-head .topbar .topbar-date{ font-size:12px; }
+
+/* show slim scrollbars inside panels only */
+.ems-dashboard.cdl-head .list::-webkit-scrollbar,
+.ems-dashboard.cdl-head .mini-cal::-webkit-scrollbar,
+.ems-dashboard.cdl-head .chart-wrap::-webkit-scrollbar,
+.ems-dashboard.cdl-head .event-details-content::-webkit-scrollbar,
+.ems-dashboard.cdl-head #cardAssignAll .table-wrap::-webkit-scrollbar{ width:6px; height:6px; }
+.ems-dashboard.cdl-head .list::-webkit-scrollbar-thumb,
+.ems-dashboard.cdl-head .mini-cal::-webkit-scrollbar-thumb,
+.ems-dashboard.cdl-head .chart-wrap::-webkit-scrollbar-thumb,
+.ems-dashboard.cdl-head .event-details-content::-webkit-scrollbar-thumb,
+.ems-dashboard.cdl-head #cardAssignAll .table-wrap::-webkit-scrollbar-thumb{ background:#c1c1c1; border-radius:3px; }
 .status-returned { background: #ede9fe; color: #7c3aed; }

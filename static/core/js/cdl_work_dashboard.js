@@ -101,7 +101,7 @@
       $('#calGrid').innerHTML = cells.map(c=>{
         if(!c.iso){ return `<div class="day muted" data-date="">${c.t}</div>`; }
         const list = (calScope==='assigned'? EVENTS_ASSIGNED : EVENTS_ALL);
-        const has = list.some(e=>e.date===c.iso);
+        const has = list.some(e=>e.date===c.iso && (e.status||'').toLowerCase()==='finalized');
         const isToday = c.iso===todayISO;
         const klass = has? (calScope==='assigned' ? ' has-meeting' : ' has-event') : '';
         return `<div class="day${klass}${isToday?' today':''}" data-date="${c.iso}">${c.t}</div>`;
@@ -115,7 +115,7 @@
     function iso(base,d){ return `${base.getFullYear()}-${String(base.getMonth()+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
   function openDay(iso){
       const list = (calScope==='assigned'? EVENTS_ASSIGNED : EVENTS_ALL);
-      const items=list.filter(e=>e.date===iso);
+      const items=list.filter(e=>e.date===iso && (e.status||'').toLowerCase()==='finalized');
       if(!items.length){ $('#upcomingWrap').innerHTML = `<div class="empty">No items</div>`; return; }
       const dateStr = new Date(iso).toLocaleDateString(undefined,{day:'2-digit',month:'2-digit',year:'numeric'});
     $('#upcomingWrap').innerHTML = items.map(e=>`
