@@ -550,10 +550,12 @@ $(document).ready(function() {
                     const inp = row.querySelector('input');
                     return inp && inp.dataset.autosaveBound === 'true';
                 });
+                // Reinitialize first so new rows get included in the autosave field list
+                window.AutosaveManager.reinitialize();
+                // Then persist existing values if autosave was already bound
                 if (alreadyBound && window.AutosaveManager.autosaveDraft) {
                     window.AutosaveManager.autosaveDraft().catch(() => {});
                 }
-                window.AutosaveManager.reinitialize();
             }
         }
 
