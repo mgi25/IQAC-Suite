@@ -665,17 +665,8 @@ def dashboard(request):
     "org_count": org_count,
     }
 
-        # --- robust template selection + debug ---
-    from django.conf import settings
+        # --- robust template selection ---
     from django.template.loader import select_template
-    import os
-
-    # quick runtime checks (remove after verifying)
-    print("TEMPLATE_DIRS:", settings.TEMPLATES[0]['DIRS'])
-    exp1 = os.path.join(settings.BASE_DIR, "templates", "core", "student_dashboard.html")
-    exp2 = os.path.join(settings.BASE_DIR, "templates", "student_dashboard.html")
-    print("EXPECTS:", exp1, "EXISTS:", os.path.exists(exp1))
-    print("EXPECTS:", exp2, "EXISTS:", os.path.exists(exp2))
 
     candidates = ["core/student_dashboard.html", "student_dashboard.html"] if is_student else ["core/dashboard.html", "dashboard.html"]
     tpl = select_template(candidates)  # picks the first that actually exists
