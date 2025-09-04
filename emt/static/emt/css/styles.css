@@ -2303,7 +2303,15 @@ textarea {
     line-height: 22px !important;
     box-shadow: none !important;
   }
-  
+
+  .ts-wrapper .ts-control input {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
   /* Kill any inner box styling */
   .ts-control .ts-input{
     border: 0 !important;
