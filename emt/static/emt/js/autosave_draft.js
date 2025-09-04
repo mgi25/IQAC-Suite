@@ -211,9 +211,10 @@ window.AutosaveManager = (function() {
                             o.selected = values.includes(o.value);
                         });
                     }
-                } else if (!f.value) {
+                } else {
                     f.value = val;
                 }
+                f.dispatchEvent(new Event('change', { bubbles: true }));
             }
             bindField(f);
         });
