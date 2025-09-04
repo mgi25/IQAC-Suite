@@ -14,6 +14,7 @@ import time
 from bs4 import BeautifulSoup
 from datetime import datetime
 from django.db.models import Q
+from django.utils.dateparse import parse_date
 from .models import (
     EventProposal,
     EventNeedAnalysis,
@@ -586,9 +587,13 @@ def autosave_proposal(request):
     errors = {}
     if request.content_type and request.content_type.startswith("multipart/form-data"):
         data = {}
+        multi_fields = {"faculty_incharges", "sdg_goals"}
         for key in request.POST:
             values = request.POST.getlist(key)
-            data[key] = values if len(values) > 1 else values[0]
+            if key in multi_fields:
+                data[key] = values
+            else:
+                data[key] = values if len(values) > 1 else values[0]
     else:
         try:
             raw = request.body.decode("utf-8")
@@ -691,6 +696,12 @@ def autosave_proposal(request):
                 missing["name"] = "This field is required."
             if not date:
                 missing["date"] = "This field is required."
+            else:
+                parsed = parse_date(str(date))
+                if not parsed:
+                    missing["date"] = "Enter a valid date."
+                else:
+                    data[f"activity_date_{idx}"] = parsed.isoformat()
         if missing:
             act_errors[idx] = missing
         idx += 1
