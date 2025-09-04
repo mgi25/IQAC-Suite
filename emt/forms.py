@@ -165,6 +165,14 @@ class EventProposalForm(forms.ModelForm):
             self.add_error('organization', 'Please select an organization name.')
         elif org_type and organization and organization.org_type != org_type:
             self.add_error('organization', 'Selected organization does not match the chosen type.')
+        else:
+            committees = (data.get('committees_collaborations') or '').split(',')
+            committees = [c.strip().lower() for c in committees if c.strip()]
+            if organization.name.lower() in committees:
+                self.add_error(
+                    'committees_collaborations',
+                    'Organization cannot be both host and committee/collaboration.',
+                )
         return data
 
     def clean_academic_year(self):

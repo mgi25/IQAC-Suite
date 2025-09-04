@@ -688,6 +688,7 @@ $(document).ready(function() {
         const select = $('#committees-collaborations-modern');
         const djangoField = $('#django-basic-info [name="committees_collaborations"]');
         const idsField = $('#django-basic-info [name="committees_collaborations_ids"]');
+        const orgSelect = $('#django-basic-info [name="organization"]');
         if (!select.length || !djangoField.length || select[0].tomselect) return;
 
         let existingNames = djangoField.val()
@@ -717,15 +718,25 @@ $(document).ready(function() {
             create: false,
             load: (query, callback) => {
                 if (!query.length) return callback();
+                const mainOrg = orgSelect.val();
                 fetch(`${window.API_ORGANIZATIONS}?q=${encodeURIComponent(query)}`)
                     .then(r => r.json())
-                    .then(data => callback(data))
+                    .then(data => {
+                        if (mainOrg) {
+                            data = data.filter(opt => String(opt.id) !== String(mainOrg));
+                        }
+                        callback(data);
+                    })
                     .catch(() => callback());
             }
         });
 
         tom.on('option_add', (value, data) => {
             const newText = (data.text || '').toLowerCase();
+            if (orgSelect.val() && String(orgSelect.val()) === String(value)) {
+                tom.removeOption(value);
+                return;
+            }
             Object.keys(tom.options).forEach(id => {
                 if (id === value) return;
                 const opt = tom.options[id];
@@ -735,7 +746,22 @@ $(document).ready(function() {
             });
         });
 
+        const filterMainOrg = () => {
+            const main = orgSelect.val();
+            if (!main) return;
+            let ids = tom.getValue();
+            if (!Array.isArray(ids)) ids = [ids].filter(Boolean);
+            const filtered = ids.filter(id => String(id) !== String(main));
+            if (filtered.length !== ids.length) {
+                tom.setValue(filtered, true);
+            }
+            tom.removeOption(main);
+        };
+
+        orgSelect.off('change.committees').on('change.committees', filterMainOrg);
+
         tom.on('change', () => {
+            filterMainOrg();
             let ids = tom.getValue();
             if (!Array.isArray(ids)) ids = [ids];
             const seen = new Set();
@@ -761,32 +787,40 @@ $(document).ready(function() {
         });
 
         if (existingIds.length) {
-            fetch(`${window.API_ORGANIZATIONS}?ids=${existingIds.join(',')}`)
-                .then(r => r.json())
-                .then(data => {
-                    data.forEach(opt => tom.addOption(opt));
-                    tom.setValue(existingIds);
-                })
-                .catch(() => {
-                    if (existingNames.length) {
-                        existingNames.forEach((name, idx) => {
-                            const id = existingIds[idx] || name;
-                            tom.addOption({ id, text: name });
-                        });
-                        tom.setValue(existingIds.length ? existingIds : existingNames);
-                    }
-                });
+            const main = orgSelect.val();
+            const filteredIds = main ? existingIds.filter(id => String(id) !== String(main)) : existingIds;
+            if (filteredIds.length) {
+                fetch(`${window.API_ORGANIZATIONS}?ids=${filteredIds.join(',')}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        data.forEach(opt => tom.addOption(opt));
+                        tom.setValue(filteredIds);
+                    })
+                    .catch(() => {
+                        if (existingNames.length) {
+                            existingNames.forEach((name, idx) => {
+                                const id = filteredIds[idx] || name;
+                                tom.addOption({ id, text: name });
+                            });
+                            tom.setValue(filteredIds.length ? filteredIds : existingNames);
+                        }
+                    });
+            }
         } else if (existingNames.length) {
-            existingNames.forEach((name, idx) => {
-                const id = existingIds[idx] || name;
-                tom.addOption({ id, text: name });
-            });
-            tom.setValue(existingIds.length ? existingIds : existingNames);
+            const main = orgSelect.val();
+            const filteredPairs = existingNames.map((name, idx) => ({ name, id: existingIds[idx] || name }))
+                .filter(p => !main || String(p.id) !== String(main));
+            filteredPairs.forEach(p => tom.addOption({ id: p.id, text: p.name }));
+            const filteredIds = filteredPairs.map(p => p.id);
+            const filteredNames = filteredPairs.map(p => p.name);
+            if (filteredIds.length) {
+                tom.setValue(filteredIds);
+            } else if (filteredNames.length) {
+                tom.setValue(filteredNames);
+            }
         }
 
-        // Allow the same organization to be selected both as the main
-        // organization and as part of the committees/collaborations list,
-        // so no filtering or removal is performed here.
+        filterMainOrg();
     }
 
     function setupStudentCoordinatorSelect() {
