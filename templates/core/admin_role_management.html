@@ -4,82 +4,101 @@
 {% block title %}Role Management{% endblock %}
 
 {% block head_extra %}
+<link rel="stylesheet" href="{% static 'core/css/admin_dashboard.css' %}">
 <link rel="stylesheet" href="{% static 'core/css/admin_role_management.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="role-management-container">
-    <div class="page-header">
-        <h1 class="page-title">Role Management</h1>
-        {% if step == 'org_type_roles' and organizations and organizations.0 %}
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRoleModal">
-            <i class="fas fa-plus"></i> Add Role
-        </button>
-        {% endif %}
-    </div>
-
-    {% if step == 'org_type_roles' %}
-        <div class="status-tabs">
-            <a href="?org_type_id={{ selected_org_type.id }}" class="status-tab {% if not show_archived %}active{% endif %}">Active</a>
-            <a href="?org_type_id={{ selected_org_type.id }}&archived=1" class="status-tab {% if show_archived %}active{% endif %}">Archived</a>
+<div class="ems-dashboard role-management-page">
+    <header class="topbar">
+        <div>
+            <h1>Role Management</h1>
         </div>
-
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-list me-2"></i>{{ selected_org_type.name }} Roles</h5>
-                <a href="{% url 'admin_role_management' %}" class="btn btn-light btn-sm">
-                    <i class="fas fa-arrow-left"></i> Back
-                </a>
+    </header>
+    
+    {% if step == 'org_type_roles' %}
+        <div class="roles-section card">
+            <div class="card-header bg-info text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-list"></i> {{ selected_org_type.name }} Roles
+                    </h4>
+                    <a href="{% url 'admin_role_management' %}" class="btn btn-light btn-sm">
+                        <i class="fas fa-arrow-left"></i> Back to Organization Types
+                    </a>
+                </div>
             </div>
             <div class="card-body">
+                <div class="status-tabs mb-3">
+                    <a href="?org_type_id={{ selected_org_type.id }}" class="{% if not show_archived %}active{% endif %}">Active</a>
+                    <a href="?org_type_id={{ selected_org_type.id }}&archived=1" class="{% if show_archived %}active{% endif %}">Archived</a>
+                </div>
                 {% if organizations and organizations.0 %}
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle text-center">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Role Name</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for role in roles %}
-                                <tr>
-                                    <td class="fw-semibold">{{ role.name }}</td>
-                                    <td>
-                                        {% if role.status == 'archived' %}
-                                            <span class="badge bg-secondary">Archived</span>
-                                        {% else %}
-                                            <span class="badge bg-primary">Active</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if show_archived %}
-                                            <form method="post" action="{% url 'restore_org_role' role.id %}" class="d-inline" onsubmit="return confirm('Restore this archived role across all organizations of this type?');">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn btn-sm btn-success"><i class="fas fa-undo"></i> Restore</button>
-                                            </form>
-                                        {% else %}
-                                            <form method="post" action="{% url 'delete_org_role' role.id %}" class="d-inline" onsubmit="return confirm('Archive this role across all organizations of this type?');">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn btn-sm btn-warning"><i class="fas fa-archive"></i> Archive</button>
-                                            </form>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="3" class="py-4 text-muted">No {% if show_archived %}archived{% else %}active{% endif %} roles found.</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="actions mb-3">
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRoleModal">
+                        <i class="fas fa-plus"></i> Add Role
+                    </button>
+                </div>
                 {% else %}
-                    <div class="alert alert-warning text-center mb-0">
-                        <i class="fas fa-exclamation-triangle me-1"></i>No organizations found for this type.
-                    </div>
+                <div class="alert alert-warning text-center">
+                    <i class="fas fa-exclamation-triangle"></i> No organizations found for this type. Please add an organization.
+                </div>
                 {% endif %}
+
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped table-hover">
+                        <thead>
+                            <tr class="text-center">
+                                <th>Role Name</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for role in roles %}
+                            <tr class="align-middle text-center">
+                                <td><strong>{{ role.name }}</strong></td>
+                                <td>
+                                    {% if role.status == 'archived' %}
+                                        <span class="badge badge-secondary">Archived</span>
+                                    {% else %}
+                                        <span class="badge badge-primary">Active</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if show_archived %}
+                                        <form method="post" action="{% url 'restore_org_role' role.id %}" class="d-inline" onsubmit="return confirm('Restore this archived role across all organizations of this type?');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-success">
+                                                <i class="fas fa-undo"></i> Restore
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <form method="post" action="{% url 'delete_org_role' role.id %}" class="d-inline" onsubmit="return confirm('Archive this role across all organizations of this type?');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-warning">
+                                                <i class="fas fa-archive"></i> Archive
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center">
+                                    <div style="padding: 2rem;">
+                                        <i class="fas fa-users" style="font-size: 3rem; color: var(--gray-400); margin-bottom: 1rem;"></i>
+                                        <h5 style="color: var(--gray-500);">No {% if show_archived %}archived{% else %}active{% endif %} roles found</h5>
+                                        {% if not show_archived %}
+                                        <p style="color: var(--gray-400);">Add your first role using the form above.</p>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -110,26 +129,30 @@
         {% endif %}
 
     {% elif step == 'single_org_roles' %}
-        <div class="status-tabs">
-            <a href="{% url 'admin_role_management_org' selected_organization.id %}" class="status-tab {% if not show_archived %}active{% endif %}">Active</a>
-            <a href="{% url 'admin_role_management_org' selected_organization.id %}?archived=1" class="status-tab {% if show_archived %}active{% endif %}">Archived</a>
-        </div>
-
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-building me-2"></i>{{ selected_organization.name }} Roles</h5>
-                <a href="{% url 'admin_role_management' %}?org_type_id={{ selected_organization.org_type.id }}" class="btn btn-light btn-sm">
-                    <i class="fas fa-arrow-left"></i> Back
-                </a>
+        <!-- Roles and assignments for a single organization -->
+        <div class="roles-section card">
+            <div class="card-header bg-info text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-building"></i> {{ selected_organization.name }} Roles
+                    </h4>
+                    <a href="{% url 'admin_role_management' %}?org_type_id={{ selected_organization.org_type.id }}" class="btn btn-light btn-sm">
+                        <i class="fas fa-arrow-left"></i> Back
+                    </a>
+                </div>
             </div>
             <div class="card-body">
-                <div class="section-header mb-3">
-                    <h6 class="mb-0"><i class="fas fa-list me-2"></i>Defined Roles</h6>
+                <div class="status-tabs mb-3">
+                    <a href="{% url 'admin_role_management_org' selected_organization.id %}" class="{% if not show_archived %}active{% endif %}">Active</a>
+                    <a href="{% url 'admin_role_management_org' selected_organization.id %}?archived=1" class="{% if show_archived %}active{% endif %}">Archived</a>
+                </div>
+                <div class="section-header">
+                    <h5><i class="fas fa-list"></i> Defined Roles</h5>
                 </div>
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle text-center">
-                        <thead class="table-light">
-                            <tr>
+                    <table class="table table-bordered table-striped table-hover">
+                        <thead>
+                            <tr class="text-center">
                                 <th>Role Name</th>
                                 <th>Status</th>
                                 <th>Actions</th>
@@ -137,49 +160,53 @@
                         </thead>
                         <tbody>
                             {% for role in roles %}
-                            <tr>
+                            <tr class="text-center">
                                 <td>{{ role.name }}</td>
-                                <td>{% if role.status == 'archived' %}<span class="badge bg-secondary">Archived</span>{% else %}<span class="badge bg-primary">Active</span>{% endif %}</td>
+                                <td>{% if role.status == 'archived' %}<span class="badge badge-secondary">Archived</span>{% else %}<span class="badge badge-primary">Active</span>{% endif %}</td>
                                 <td>
                                     {% if show_archived %}
                                         <form method="post" action="{% url 'restore_org_role' role.id %}" class="d-inline" onsubmit="return confirm('Restore this archived role?');">
                                             {% csrf_token %}
-                                            <button type="submit" class="btn btn-sm btn-success"><i class="fas fa-undo"></i> Restore</button>
+                                            <button type="submit" class="btn btn-sm btn-success">
+                                                <i class="fas fa-undo"></i> Restore
+                                            </button>
                                         </form>
                                     {% else %}
                                         <form method="post" action="{% url 'delete_org_role' role.id %}" class="d-inline" onsubmit="return confirm('Archive this role?');">
                                             {% csrf_token %}
-                                            <button type="submit" class="btn btn-sm btn-warning"><i class="fas fa-archive"></i> Archive</button>
+                                            <button type="submit" class="btn btn-sm btn-warning">
+                                                <i class="fas fa-archive"></i> Archive
+                                            </button>
                                         </form>
                                     {% endif %}
                                 </td>
                             </tr>
                             {% empty %}
-                            <tr><td colspan="3" class="py-4 text-muted">No {% if show_archived %}archived{% else %}active{% endif %} roles found.</td></tr>
+                            <tr><td colspan="3" class="text-center">No {% if show_archived %}archived{% else %}active{% endif %} roles found.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
 
-                <div class="section-header mt-4 mb-3">
-                    <h6 class="mb-0"><i class="fas fa-users me-2"></i>Current Assignments</h6>
+                <div class="section-header mt-4">
+                    <h5><i class="fas fa-users"></i> Current Assignments</h5>
                 </div>
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle text-center">
-                        <thead class="table-light">
-                            <tr>
+                    <table class="table table-bordered table-striped table-hover">
+                        <thead>
+                            <tr class="text-center">
                                 <th>User</th>
                                 <th>Role</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for ra in role_assignments %}
-                            <tr>
+                            <tr class="text-center">
                                 <td>{{ ra.user.get_full_name|default:ra.user.username }}</td>
                                 <td>{{ ra.role.name }}</td>
                             </tr>
                             {% empty %}
-                            <tr><td colspan="2" class="py-4 text-muted">No assignments found.</td></tr>
+                            <tr><td colspan="2" class="text-center">No assignments found.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -188,41 +215,54 @@
         </div>
 
     {% else %}
+        <!-- Show organization types -->
         {% if org_types %}
-        <div class="org-type-grid">
+        <div class="admin-dashboard-navcards">
             {% for org_type in org_types %}
-            <a href="?org_type_id={{ org_type.id }}" class="org-type-card">
-                <div class="icon-circle"><i class="fas fa-building"></i></div>
-                <div class="card-title">{{ org_type.name }}</div>
-                <div class="card-desc">Manage roles</div>
+            <a href="?org_type_id={{ org_type.id }}" class="admin-navcard">
+                <div class="navcard-icon">
+                    <i class="fas fa-building"></i>
+                </div>
+                <div class="navcard-title">{{ org_type.name }}</div>
+                <div class="navcard-desc">Manage roles</div>
             </a>
             {% endfor %}
         </div>
         {% else %}
-        <div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-1"></i>No organization types found. Please create organization types first in the master data settings.</div>
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i> No organization types found. Please create organization types first in the master data settings.
+        </div>
         {% endif %}
     {% endif %}
 </div>
 
+<!-- Messages Display -->
 {% if messages %}
-<div class="container mt-3 mb-3">
-    {% for message in messages %}
-    <div class="alert alert-{{ message.tags }}"><i class="fas fa-info-circle me-1"></i>{{ message }}</div>
-    {% endfor %}
-</div>
+    <div class="mt-3 mb-3" style="max-width: 600px; margin: 0 auto;">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                <i class="fas fa-info-circle"></i> {{ message }}
+            </div>
+        {% endfor %}
+    </div>
 {% endif %}
 
 <script>
+// Document ready function
 document.addEventListener('DOMContentLoaded', function() {
+    // Smooth scroll to table after form submission
     if (window.location.hash === '#roles-table') {
         setTimeout(() => {
             const tableElement = document.querySelector('.table-responsive');
             if (tableElement) {
-                tableElement.scrollIntoView({ behavior: 'smooth' });
+                tableElement.scrollIntoView({
+                    behavior: 'smooth'
+                });
             }
         }, 100);
     }
 
+    // Add loading state to form submission
     const forms = document.querySelectorAll('form');
     forms.forEach(form => {
         form.addEventListener('submit', function() {
@@ -231,6 +271,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const originalText = submitBtn.innerHTML;
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
                 submitBtn.disabled = true;
+                
+                // Re-enable after 5 seconds as fallback
                 setTimeout(() => {
                     submitBtn.innerHTML = originalText;
                     submitBtn.disabled = false;
@@ -239,18 +281,22 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Enhanced confirm dialogs for archive
     const archiveButtons = document.querySelectorAll('form[action*="delete_org_role"] button[type="submit"]');
     archiveButtons.forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
             const firstCell = this.closest('tr').querySelector('td:first-child');
-            const roleName = firstCell ? firstCell.textContent.trim() : 'this role';
+            const strong = firstCell ? firstCell.querySelector('strong') : null;
+            const roleName = strong ? strong.textContent : (firstCell ? firstCell.textContent.trim() : 'this role');
+
             if (confirm(`Archive the role "${roleName}" across the selected scope?`)) {
                 this.closest('form').submit();
             }
         });
     });
 
+    // Auto-hide alerts after 5 seconds
     const alerts = document.querySelectorAll('.alert');
     alerts.forEach(alert => {
         setTimeout(() => {
@@ -266,4 +312,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-
