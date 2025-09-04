@@ -704,9 +704,7 @@ $(document).ready(function() {
             create: false,
             load: (query, callback) => {
                 if (!query.length) return callback();
-                const orgId = $('#django-basic-info [name="organization"]').val();
-                const exclude = orgId ? `&exclude=${encodeURIComponent(orgId)}` : '';
-                fetch(`${window.API_ORGANIZATIONS}?q=${encodeURIComponent(query)}${exclude}`)
+                fetch(`${window.API_ORGANIZATIONS}?q=${encodeURIComponent(query)}`)
                     .then(r => r.json())
                     .then(data => callback(data))
                     .catch(() => callback());
@@ -747,18 +745,9 @@ $(document).ready(function() {
             tom.setValue(existingIds.length ? existingIds : existingNames);
         }
 
-        const orgSelect = $('#django-basic-info [name="organization"]');
-        orgSelect.on('change.committees', () => {
-            const orgId = orgSelect.val();
-            const orgName = orgSelect.find('option:selected').text().trim();
-            if (!orgId) return;
-            // remove selected organization from committees list
-            const optionId = tom.options[orgId] ? orgId : Object.keys(tom.options).find(id => tom.options[id].text === orgName);
-            if (optionId) {
-                tom.removeItem(optionId);
-                tom.removeOption(optionId);
-            }
-        });
+        // Allow the same organization to be selected both as the main
+        // organization and as part of the committees/collaborations list,
+        // so no filtering or removal is performed here.
     }
 
     function setupStudentCoordinatorSelect() {
