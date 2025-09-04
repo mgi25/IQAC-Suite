@@ -543,9 +543,14 @@ $(document).ready(function() {
             });
             numActivitiesInput.value = rows.length;
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
-                // Persist current values *before* reinitializing to avoid
-                // overwriting renamed activity fields with stale data.
-                if (window.AutosaveManager.autosaveDraft) {
+                // Only autosave existing values if fields were previously bound
+                // to the autosave manager. Freshly rendered rows don't have the
+                // `data-autosave-bound` flag and would otherwise wipe saved data.
+                const alreadyBound = Array.from(rows).some(row => {
+                    const inp = row.querySelector('input');
+                    return inp && inp.dataset.autosaveBound === 'true';
+                });
+                if (alreadyBound && window.AutosaveManager.autosaveDraft) {
                     window.AutosaveManager.autosaveDraft().catch(() => {});
                 }
                 window.AutosaveManager.reinitialize();
