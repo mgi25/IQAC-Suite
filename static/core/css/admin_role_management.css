@@ -2,15 +2,15 @@
    ADMIN ROLE MANAGEMENT - COMMAND CENTER STYLE WITH EDIT FUNCTIONALITY
    ============================================================================= */
 
-/* Main container styling to match command center */
-.container-fluid {
-  max-width: 1200px !important;
-  margin: 0 auto !important;
-  padding: 0 !important;
+/* Main container styling */
+.role-management-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0;
 }
 
 /* Page header styling */
-.role-management-header {
+.page-header {
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -19,14 +19,55 @@
   border-bottom: 2px solid var(--gray-100);
 }
 
-.role-management-header h2 {
+.page-header h1 {
   font-size: 2rem;
   font-weight: 700;
   color: var(--christ-blue-dark);
   margin: 0;
+}
+
+.page-header .header-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--christ-blue);
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  justify-content: center;
+  color: var(--white);
+  font-size: 1.5rem;
+}
+
+/* Status tabs */
+.status-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.status-tabs a {
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius-md);
+  background: var(--gray-100);
+  color: var(--gray-700);
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+.status-tabs a.active,
+.status-tabs a:hover {
+  background: var(--christ-blue);
+  color: var(--white);
+}
+
+/* Action area */
+.actions {
+  text-align: right;
+}
+
+/* Role section wrapper */
+.roles-section {
+  margin-bottom: 2rem;
 }
 
 /* Card styling to match command center */
@@ -612,15 +653,18 @@
 }
 
 @media (max-width: 480px) {
-  .container-fluid {
-    padding: 0 0.5rem !important;
+  .role-management-page {
+    padding: 0 0.5rem;
   }
-  
-  .role-management-header h2 {
-    font-size: 1.5rem;
+
+  .page-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
+  }
+
+  .page-header h1 {
+    font-size: 1.5rem;
   }
   
   .card-header .d-flex {
