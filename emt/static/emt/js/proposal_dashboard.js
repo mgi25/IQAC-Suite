@@ -658,10 +658,20 @@ $(document).ready(function() {
                 fetch(`${window.API_FACULTY}?ids=${missing.join(',')}`)
                     .then(r => r.json())
                     .then(data => {
-                        data.forEach(opt => tomselect.addOption(opt));
-                        tomselect.setValue(initialValues);
+                        data.forEach(opt => {
+                            if (tomselect.options[opt.id]) {
+                                tomselect.updateOption(opt.id, opt);
+                            } else {
+                                tomselect.addOption(opt);
+                            }
+                        });
+                        tomselect.setValue(initialValues, true);
+                        tomselect.refreshItems();
                     })
-                    .catch(() => tomselect.setValue(initialValues));
+                    .catch(() => {
+                        tomselect.setValue(initialValues, true);
+                        tomselect.refreshItems();
+                    });
             } else {
                 tomselect.setValue(initialValues);
             }
