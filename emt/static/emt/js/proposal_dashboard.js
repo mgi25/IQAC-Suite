@@ -596,6 +596,11 @@ $(document).ready(function() {
         if (window.EXISTING_ACTIVITIES && window.EXISTING_ACTIVITIES.length) {
             numActivitiesInput.value = window.EXISTING_ACTIVITIES.length;
             render(window.EXISTING_ACTIVITIES.length);
+        } else {
+            const savedCount = parseInt(numActivitiesInput.value, 10);
+            if (savedCount > 0) {
+                render(savedCount);
+            }
         }
     }
     
@@ -648,7 +653,28 @@ $(document).ready(function() {
 
         const initialValues = djangoFacultySelect.val();
         if (initialValues && initialValues.length) {
-            tomselect.setValue(initialValues);
+            const missing = initialValues.filter(v => !tomselect.options[v] || tomselect.options[v].text === v);
+            if (missing.length) {
+                fetch(`${window.API_FACULTY}?ids=${missing.join(',')}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        data.forEach(opt => {
+                            if (tomselect.options[opt.id]) {
+                                tomselect.updateOption(opt.id, opt);
+                            } else {
+                                tomselect.addOption(opt);
+                            }
+                        });
+                        tomselect.setValue(initialValues, true);
+                        tomselect.refreshItems();
+                    })
+                    .catch(() => {
+                        tomselect.setValue(initialValues, true);
+                        tomselect.refreshItems();
+                    });
+            } else {
+                tomselect.setValue(initialValues);
+            }
         }
     }
 

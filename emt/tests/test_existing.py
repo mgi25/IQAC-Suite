@@ -140,6 +140,14 @@ class FacultyAPITests(TestCase):
         self.assertIn(self.user2.id, ids)
         self.assertNotIn(other_user.id, ids)
 
+    def test_api_faculty_fetches_by_ids(self):
+        url = reverse("emt:api_faculty")
+        resp = self.client.get(url, {"ids": f"{self.user1.id},{self.user2.id}"})
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        ids = {item["id"] for item in data}
+        self.assertEqual(ids, {self.user1.id, self.user2.id})
+
 
 class StudentAPITests(TestCase):
     def setUp(self):
