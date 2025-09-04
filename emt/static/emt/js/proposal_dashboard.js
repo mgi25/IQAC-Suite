@@ -653,7 +653,18 @@ $(document).ready(function() {
 
         const initialValues = djangoFacultySelect.val();
         if (initialValues && initialValues.length) {
-            tomselect.setValue(initialValues);
+            const missing = initialValues.filter(v => !tomselect.options[v] || tomselect.options[v].text === v);
+            if (missing.length) {
+                fetch(`${window.API_FACULTY}?ids=${missing.join(',')}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        data.forEach(opt => tomselect.addOption(opt));
+                        tomselect.setValue(initialValues);
+                    })
+                    .catch(() => tomselect.setValue(initialValues));
+            } else {
+                tomselect.setValue(initialValues);
+            }
         }
     }
 
