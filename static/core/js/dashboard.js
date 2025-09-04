@@ -192,7 +192,7 @@ function renderDayEvents(date) {
     const yyyy = day.getFullYear(), mm = String(day.getMonth()+1).padStart(2,'0'), dd = String(day.getDate()).padStart(2,'0');
     const dateStr = `${yyyy}-${mm}-${dd}`;
     const list = $('#upcomingWrap'); if (!list) return;
-    const items = (window.DASHBOARD_EVENTS||[]).filter(e => e.date === dateStr);
+    const items = (window.DASHBOARD_EVENTS||[]).filter(e => e.date === dateStr && (e.status||'').toLowerCase()==='finalized');
     list.innerHTML = items.length
       ? items.map(e => {
           const viewBtn = e.view_url ? `<a class="chip-btn" href="${e.view_url}"><i class="fa-regular fa-eye"></i> View</a>` : '';
@@ -396,7 +396,7 @@ function renderDayEvents(date) {
     const source = (Array.isArray(DASHBOARD_EVENTS) && DASHBOARD_EVENTS.length)
       ? DASHBOARD_EVENTS
       : (window.DASHBOARD_EVENTS || []);
-    const events = source.filter(e => e.date === dateStr);
+  const events = source.filter(e => e.date === dateStr && (e.status||'').toLowerCase()==='finalized');
 
   // Removed ICS export; keep only Google Calendar
     if (events.length > 0) {
@@ -562,10 +562,12 @@ async function loadCalendarData() {
     const j = await res.json();
     DASHBOARD_EVENTS = j.items || [];
 
-    // Index by date
+    // Index by date (finalized only for markers)
     eventIndexByDate = new Map();
     DASHBOARD_EVENTS.forEach(e => {
       if (!e.date) return;
+      const status = (e.status||'').toLowerCase();
+      if (status !== 'finalized') return;
       const list = eventIndexByDate.get(e.date) || [];
       list.push(e);
       eventIndexByDate.set(e.date, list);
@@ -585,7 +587,7 @@ function renderMonthEvents() {
 
   const events = DASHBOARD_EVENTS.filter(e => {
     const d = new Date(e.date);
-    return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+    return d.getMonth() === thisMonth && d.getFullYear() === thisYear && (e.status||'').toLowerCase()==='finalized';
   });
 
   if (events.length === 0) {
