@@ -261,7 +261,7 @@ async function autosave() {
                 payload[key] = value;
             }
         });
-        const res = await fetch('/suite/autosave-proposal/', {
+        const res = await fetch(window.AUTOSAVE_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
