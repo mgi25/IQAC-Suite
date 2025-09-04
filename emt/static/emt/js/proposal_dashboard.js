@@ -690,12 +690,24 @@ $(document).ready(function() {
         const idsField = $('#django-basic-info [name="committees_collaborations_ids"]');
         if (!select.length || !djangoField.length || select[0].tomselect) return;
 
-        const existingNames = djangoField.val()
+        let existingNames = djangoField.val()
             ? djangoField.val().split(',').map(s => s.trim()).filter(Boolean)
             : [];
-        const existingIds = idsField.length && idsField.val()
+        let existingIds = idsField.length && idsField.val()
             ? idsField.val().split(',').map(s => s.trim()).filter(Boolean)
             : [];
+
+        const initSeen = new Set();
+        const initPairs = [];
+        existingNames.forEach((name, idx) => {
+            const key = name.toLowerCase();
+            if (!initSeen.has(key)) {
+                initSeen.add(key);
+                initPairs.push({ id: existingIds[idx] || name, name });
+            }
+        });
+        existingIds = initPairs.map(p => p.id);
+        existingNames = initPairs.map(p => p.name);
 
         const tom = new TomSelect(select[0], {
             plugins: ['remove_button'],
@@ -712,12 +724,38 @@ $(document).ready(function() {
             }
         });
 
+        tom.on('option_add', (value, data) => {
+            const newText = (data.text || '').toLowerCase();
+            Object.keys(tom.options).forEach(id => {
+                if (id === value) return;
+                const opt = tom.options[id];
+                if ((opt.text || '').toLowerCase() === newText) {
+                    tom.removeOption(value);
+                }
+            });
+        });
+
         tom.on('change', () => {
-            const ids = tom.getValue();
-            const names = ids.map(id => tom.options[id]?.text || id);
-            djangoField.val(names.join(', ')).trigger('change');
+            let ids = tom.getValue();
+            if (!Array.isArray(ids)) ids = [ids];
+            const seen = new Set();
+            const uniqueIds = [];
+            const uniqueNames = [];
+            ids.forEach(id => {
+                const name = tom.options[id]?.text || id;
+                const key = name.toLowerCase();
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    uniqueIds.push(id);
+                    uniqueNames.push(name);
+                }
+            });
+            if (uniqueIds.length !== ids.length) {
+                tom.setValue(uniqueIds, true);
+            }
+            djangoField.val(uniqueNames.join(', ')).trigger('change');
             if (idsField.length) {
-                idsField.val(ids.join(', ')).trigger('change');
+                idsField.val(uniqueIds.join(', ')).trigger('change');
             }
             clearFieldError(select);
         });
