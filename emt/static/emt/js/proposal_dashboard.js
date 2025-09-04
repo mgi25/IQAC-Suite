@@ -3344,6 +3344,9 @@ function getWhyThisEventForm() {
     // Initialize autosave indicators
     initializeAutosaveIndicators();
 
+    // Enhance text inputs with improved interactions
+    enhanceProposalInputs();
+
     console.log('Dashboard initialized successfully.');
     console.log('All original functionality preserved with new UI');
 });
@@ -3579,5 +3582,25 @@ function removeSubmitSection() {
   if (submitSection) {
     submitSection.remove();
   }
+}
+
+// Apply focus styling and auto-resize behavior to text inputs
+function enhanceProposalInputs() {
+  document.querySelectorAll('.proposal-content .input-group .proposal-input').forEach((el) => {
+    const group = el.closest('.input-group');
+    if (!group) return;
+
+    el.addEventListener('focus', () => group.classList.add('focused'));
+    el.addEventListener('blur', () => group.classList.remove('focused'));
+
+    if (el.tagName === 'TEXTAREA') {
+      const resize = () => {
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
+      };
+      el.addEventListener('input', resize);
+      resize();
+    }
+  });
 }
 

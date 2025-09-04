@@ -220,7 +220,14 @@
   
   .proposal-content .input-group { display: flex; flex-direction: column; }
   .proposal-content .input-group label {
-    font-weight: 600; color: var(--text-dark); margin-bottom: .5rem; font-size: .875rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: .5rem;
+    font-size: .875rem;
+    transition: color .2s ease;
+  }
+  .proposal-content .input-group.focused label {
+    color: var(--primary-blue);
   }
   
   /* Inputs */
@@ -249,19 +256,25 @@
 
   /* Reusable proposal input */
   .proposal-input {
-    background-color: #f8f9fa !important;
-    border: 1px solid #ced4da !important;
-    border-radius: 0.25rem !important;
-    padding: 0.5rem 0.75rem !important;
-    transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+    background-color: #fff !important;
+    border: 1px solid #d0d5dd !important;
+    border-radius: 0.5rem !important;
+    padding: 0.625rem 0.75rem !important;
+    transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
   }
   .proposal-input:hover {
-    border-color: #adb5bd !important;
+    border-color: #b6bbc2 !important;
+    background-color: #f9fafb !important;
   }
   .proposal-input:focus {
     outline: none !important;
-    border-color: #0d6efd !important;
-    box-shadow: 0 0 0 0.25rem rgba(13,110,253,.25) !important;
+    background-color: #fff !important;
+    border-color: var(--primary-blue) !important;
+    box-shadow: 0 0 0 3px rgba(38,68,135,.15) !important;
+  }
+  .proposal-content .input-group.focused .proposal-input {
+    border-color: var(--primary-blue) !important;
+    box-shadow: 0 0 0 3px rgba(38,68,135,.15) !important;
   }
   
   /* Help text */
