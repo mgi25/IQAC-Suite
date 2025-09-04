@@ -378,6 +378,11 @@ $(document).ready(function() {
         $('#form-panel-content').html(formContent);
 
         setTimeout(() => {
+            // Load any saved draft values before initializing widgets
+            if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                window.AutosaveManager.reinitialize();
+            }
+
             if (section === 'basic-info') {
                 setupDjangoFormIntegration();
                 // We call the new function to set up the listener for activities.
