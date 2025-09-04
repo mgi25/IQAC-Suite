@@ -62,43 +62,28 @@
   padding: 2rem !important;
 }
 
-/* Organization type cards styling */
-.org-type-cards {
+/* Organization type selection */
+.org-type-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1.5rem;
   margin-top: 1rem;
 }
 
 .org-type-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
   background: var(--white);
   border: 1px solid var(--gray-200);
   border-radius: var(--border-radius-lg);
-  padding: 2rem;
+  padding: 2rem 1rem;
   text-align: center;
   transition: var(--transition);
   box-shadow: var(--shadow);
-  position: relative;
-  overflow: hidden;
   text-decoration: none;
   color: inherit;
-}
-
-.org-type-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: var(--christ-blue);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.3s ease;
-}
-
-.org-type-card:hover::before {
-  transform: scaleX(1);
 }
 
 .org-type-card:hover {
@@ -109,15 +94,37 @@
   color: inherit;
 }
 
-.org-type-card h5 {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--christ-blue-dark);
-  margin-bottom: 1rem;
+.org-type-card .icon-circle {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--christ-blue);
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--white);
+  font-size: 1.5rem;
+  transition: var(--transition);
+}
+
+.org-type-card h5 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--gray-800);
+  margin: 0;
+}
+
+.org-type-card .manage-link {
+  margin-top: auto;
+  font-weight: 600;
+  color: var(--christ-blue);
+  display: inline-flex;
+  align-items: center;
   gap: 0.5rem;
+}
+
+.org-type-card:hover .icon-circle {
+  background: var(--christ-blue-dark);
 }
 
 /* Add role form styling */
@@ -536,17 +543,6 @@
   padding-left: 0.75rem;
 }
 
-/* Custom grid for organization cards */
-.org-cards-container .row {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
-  gap: 1.5rem !important;
-  margin: 0 !important;
-}
-
-.org-cards-container .col-md-6.col-lg-4 {
-  display: contents !important;
-}
 
 /* Border utilities */
 .border-success {
@@ -630,10 +626,11 @@
     flex: 0 0 100%;
     max-width: 100%;
   }
-  
-  .org-cards-container .row {
-    grid-template-columns: 1fr !important;
+
+  .org-type-grid {
+    grid-template-columns: 1fr;
   }
+
 }
 
 @media (max-width: 480px) {
@@ -657,10 +654,20 @@
   .btn-light {
     align-self: flex-end !important;
   }
-  
+
   .table tbody td .btn {
     display: block;
     margin-bottom: 0.5rem;
     width: 100%;
+  }
+
+  .org-type-card {
+    padding: 1.5rem 1rem;
+  }
+
+  .org-type-card .icon-circle {
+    width: 48px;
+    height: 48px;
+    font-size: 1.25rem;
   }
 }
