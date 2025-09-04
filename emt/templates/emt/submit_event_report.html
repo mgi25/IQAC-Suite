@@ -110,12 +110,12 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="department-modern">Department *</label>
-                                <input type="text" id="department-modern" name="department" value="{{ proposal.organization.name|default:'' }}">
+                                <input type="text" id="department-modern" name="department" class="proposal-input" value="{{ proposal.organization.name|default:'' }}">
                                 <div class="help-text">Department from original proposal (editable)</div>
                             </div>
                             <div class="input-group">
                                 <label for="location-modern">Venue/Location *</label>
-                                <input type="text" id="location-modern" name="venue" value="{{ proposal.venue|default:'' }}">
+                                <input type="text" id="location-modern" name="venue" class="proposal-input" value="{{ proposal.venue|default:'' }}">
                                 <div class="help-text">Venue from original proposal (editable)</div>
                             </div>
                         </div>
@@ -128,7 +128,7 @@
                         <div class="form-row full-width">
                             <div class="input-group">
                                 <label for="event-title-modern">Event Title *</label>
-                                <input type="text" id="event-title-modern" name="event_title" value="{{ proposal.event_title|default:'' }}">
+                                <input type="text" id="event-title-modern" name="event_title" class="proposal-input" value="{{ proposal.event_title|default:'' }}">
                                 <div class="help-text">Event title from proposal (editable)</div>
                             </div>
                         </div>
@@ -136,7 +136,7 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="venue-modern">Venue *</label>
-                                <input type="text" id="venue-modern" name="venue_detail" value="{{ proposal.venue|default:'' }}">
+                                <input type="text" id="venue-modern" name="venue_detail" class="proposal-input" value="{{ proposal.venue|default:'' }}">
                                 <div class="help-text">Venue from proposal (editable)</div>
                             </div>
                         </div>
@@ -149,12 +149,12 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="start-date-modern">Event Start Date *</label>
-                                <input type="date" id="start-date-modern" name="event_start_date" value="{% if proposal.event_start_date %}{{ proposal.event_start_date|date:'Y-m-d' }}{% elif proposal.event_datetime %}{{ proposal.event_datetime|date:'Y-m-d' }}{% endif %}">
+                                <input type="date" id="start-date-modern" name="event_start_date" class="proposal-input" value="{% if proposal.event_start_date %}{{ proposal.event_start_date|date:'Y-m-d' }}{% elif proposal.event_datetime %}{{ proposal.event_datetime|date:'Y-m-d' }}{% endif %}">
                                 <div class="help-text">Start date from original proposal (editable)</div>
                             </div>
                             <div class="input-group">
                                 <label for="end-date-modern">Event End Date *</label>
-                                <input type="date" id="end-date-modern" name="event_end_date" value="{% if proposal.event_end_date %}{{ proposal.event_end_date|date:'Y-m-d' }}{% elif proposal.event_datetime %}{{ proposal.event_datetime|date:'Y-m-d' }}{% endif %}">
+                                <input type="date" id="end-date-modern" name="event_end_date" class="proposal-input" value="{% if proposal.event_end_date %}{{ proposal.event_end_date|date:'Y-m-d' }}{% elif proposal.event_datetime %}{{ proposal.event_datetime|date:'Y-m-d' }}{% endif %}">
                                 <div class="help-text">End date from original proposal (editable)</div>
                             </div>
                         </div>
@@ -162,13 +162,13 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="academic-year-modern">Academic Year *</label>
-                                <input type="text" id="academic-year-modern" value="{{ proposal.academic_year|default:'2024-2025' }}" disabled>
+                                <input type="text" id="academic-year-modern" class="proposal-input" value="{{ proposal.academic_year|default:'2024-2025' }}" disabled>
                                 <input type="hidden" name="academic_year" value="{{ proposal.academic_year|default:'2024-2025' }}">
                                 <div class="help-text">Academic year from proposal (not editable)</div>
                             </div>
                             <div class="input-group">
                                 <label for="event-type-modern">Event Type *</label>
-                                <input type="text" id="event-type-modern" name="actual_event_type" value="{{ form.actual_event_type.value|default:proposal.event_focus_type }}" readonly>
+                                <input type="text" id="event-type-modern" name="actual_event_type" class="proposal-input" value="{{ form.actual_event_type.value|default:proposal.event_focus_type }}" readonly>
                                 {% if form.actual_event_type.errors %}
                                     <div class="field-error">{{ form.actual_event_type.errors.0 }}</div>
                                 {% endif %}
@@ -184,7 +184,7 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="actual-location-modern">Actual Event Location</label>
-                                <input type="text" id="actual-location-modern" name="location" value="{{ form.location.value|default:proposal.venue|default:'' }}" placeholder="Enter the actual venue where event was held">
+                                <input type="text" id="actual-location-modern" name="location" class="proposal-input" value="{{ form.location.value|default:proposal.venue|default:'' }}" placeholder="Enter the actual venue where event was held">
                                 <div class="help-text">Specify the actual venue (if different from proposed venue)</div>
                                 {% if form.location.errors %}
                                     <div class="field-error">{{ form.location.errors.0 }}</div>
@@ -192,7 +192,7 @@
                             </div>
                             <div class="input-group">
                                 <label for="blog-link-modern">Blog Link</label>
-                                <input type="url" id="blog-link-modern" name="blog_link" value="{{ form.blog_link.value|default:'' }}" placeholder="https://example.com/blog-post">
+                                <input type="url" id="blog-link-modern" name="blog_link" class="proposal-input" value="{{ form.blog_link.value|default:'' }}" placeholder="https://example.com/blog-post">
                                 <div class="help-text">Optional: Link to blog post or article about the event</div>
                                 {% if form.blog_link.errors %}
                                     <div class="field-error">{{ form.blog_link.errors.0 }}</div>
@@ -203,7 +203,7 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="attendance-modern">Attendance *</label>
-                                <input type="text" id="attendance-modern" readonly value="Present: {{ attendance_present }}, Absent: {{ attendance_absent }}, Volunteers: {{ attendance_volunteers }}" {% if report %}data-attendance-url="{% url 'emt:attendance_upload' report.id %}"{% endif %}>
+                                <input type="text" id="attendance-modern" class="proposal-input" readonly value="Present: {{ attendance_present }}, Absent: {{ attendance_absent }}, Volunteers: {{ attendance_volunteers }}" {% if report %}data-attendance-url="{% url 'emt:attendance_upload' report.id %}"{% endif %}>
                                 <input type="hidden" id="num-participants-modern" name="num_participants" value="{{ attendance_present }}">
                                 <div class="help-text">Click attendance box to manage via CSV</div>
                                 {% if form.num_participants.errors %}
@@ -212,7 +212,7 @@
                             </div>
                             <div class="input-group">
                                 <label for="num-volunteers-modern">Number of student volunteers</label>
-                                <input type="number" id="num-volunteers-modern" value="{{ form.num_student_volunteers.value|default:'' }}" disabled>
+                                <input type="number" id="num-volunteers-modern" class="proposal-input" value="{{ form.num_student_volunteers.value|default:'' }}" disabled>
                                 <input type="hidden" id="num-volunteers-hidden" name="num_student_volunteers" value="{{ form.num_student_volunteers.value|default:'' }}">
                                 <div class="help-text">Automatically calculated from attendance CSV</div>
                                 {% if form.num_student_volunteers.errors %}
@@ -224,21 +224,21 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="student-participants-modern">Number of student participants</label>
-                                <input type="number" id="student-participants-modern" name="num_student_participants" value="{{ form.num_student_participants.value|default:'' }}">
+                                <input type="number" id="student-participants-modern" name="num_student_participants" class="proposal-input" value="{{ form.num_student_participants.value|default:'' }}">
                                 {% if form.num_student_participants.errors %}
                                     <div class="field-error">{{ form.num_student_participants.errors.0 }}</div>
                                 {% endif %}
                             </div>
                             <div class="input-group">
                                 <label for="faculty-participants-modern">Number of faculty participants</label>
-                                <input type="number" id="faculty-participants-modern" name="num_faculty_participants" value="{{ form.num_faculty_participants.value|default:'' }}">
+                                <input type="number" id="faculty-participants-modern" name="num_faculty_participants" class="proposal-input" value="{{ form.num_faculty_participants.value|default:'' }}">
                                 {% if form.num_faculty_participants.errors %}
                                     <div class="field-error">{{ form.num_faculty_participants.errors.0 }}</div>
                                 {% endif %}
                             </div>
                             <div class="input-group">
                                 <label for="external-participants-modern">Number of external participants</label>
-                                <input type="number" id="external-participants-modern" name="num_external_participants" value="{{ form.num_external_participants.value|default:'' }}">
+                                <input type="number" id="external-participants-modern" name="num_external_participants" class="proposal-input" value="{{ form.num_external_participants.value|default:'' }}">
                                 {% if form.num_external_participants.errors %}
                                     <div class="field-error">{{ form.num_external_participants.errors.0 }}</div>
                                 {% endif %}
@@ -253,7 +253,7 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="num-activities-modern">Number of Activities</label>
-                                <input type="number" id="num-activities-modern" name="num_activities" min="1" max="50" value="{{ proposal_activities|length }}" placeholder="Enter number of activities">
+                                <input type="number" id="num-activities-modern" name="num_activities" class="proposal-input" min="1" max="50" value="{{ proposal_activities|length }}" placeholder="Enter number of activities">
                                 <div class="help-text">How many activities will your event include?</div>
                             </div>
                         </div>
@@ -264,11 +264,11 @@
                             <div class="activity-row">
                                 <div class="input-group">
                                     <label for="activity_name_{{ forloop.counter }}" class="activity-label">{{ forloop.counter }}. Activity Name</label>
-                                    <input type="text" id="activity_name_{{ forloop.counter }}" name="activity_name_{{ forloop.counter }}" value="{{ act.activity_name }}">
+                                    <input type="text" id="activity_name_{{ forloop.counter }}" name="activity_name_{{ forloop.counter }}" class="proposal-input" value="{{ act.activity_name }}">
                                 </div>
                                 <div class="input-group">
                                     <label for="activity_date_{{ forloop.counter }}" class="date-label">{{ forloop.counter }}. Activity Date</label>
-                                    <input type="date" id="activity_date_{{ forloop.counter }}" name="activity_date_{{ forloop.counter }}" value="{{ act.activity_date }}">
+                                    <input type="date" id="activity_date_{{ forloop.counter }}" name="activity_date_{{ forloop.counter }}" class="proposal-input" value="{{ act.activity_date }}">
                                 </div>
                                 <button type="button" class="remove-activity btn btn-sm btn-outline-danger">×</button>
                             </div>

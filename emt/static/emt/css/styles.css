@@ -235,14 +235,21 @@
   .proposal-content .input-group select,
   .proposal-content .input-group textarea,
   .ts-control {
-    padding: .75rem 1rem;
+    padding: 0.625rem 0.75rem;
     border: 1px solid var(--input-border) !important;
-    border-radius: 8px !important;
+    border-radius: 0.5rem !important;
     font-size: .875rem;
     transition: border-color .2s, box-shadow .2s, background .2s;
     width: 100%;
     box-sizing: border-box;
     background: #fff !important;
+  }
+  .proposal-content .input-group input:hover,
+  .proposal-content .input-group select:hover,
+  .proposal-content .input-group textarea:hover,
+  .ts-control:hover {
+    border-color: #b6bbc2 !important;
+    background-color: #f9fafb !important;
   }
   .proposal-content .input-group input:focus,
   .proposal-content .input-group select:focus,
@@ -250,7 +257,8 @@
   .ts-control:focus-within {
     outline: none;
     border-color: var(--primary-blue) !important;
-    box-shadow: 0 0 0 3px rgba(38,68,135,.12) !important;
+    box-shadow: 0 0 0 3px rgba(38,68,135,.15) !important;
+    background-color: #fff !important;
   }
   .proposal-content .input-group textarea { resize: vertical; min-height: 100px; }
 
