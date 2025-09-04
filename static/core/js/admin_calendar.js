@@ -7,7 +7,8 @@ function readEventsFromDOM() {
   }
   
   document.addEventListener('DOMContentLoaded', () => {
-    let CALENDAR_EVENTS = readEventsFromDOM();
+    // Start with server-injected events but keep only finalized
+    let CALENDAR_EVENTS = readEventsFromDOM().filter(e => (e.status||'').toLowerCase() === 'finalized');
   
     const els = {
       title: document.getElementById('calTitle'),
@@ -65,7 +66,8 @@ function readEventsFromDOM() {
         if (date.getTime() === today.getTime()) btn.classList.add('today');
         if (selectedDate && date.getTime() === selectedDate.getTime()) btn.classList.add('selected');
   
-        const dayEvents = CALENDAR_EVENTS.filter(e => e.date === dateStr);
+  // finalized-only already ensured in CALENDAR_EVENTS
+  const dayEvents = CALENDAR_EVENTS.filter(e => e.date === dateStr);
         if (dayEvents.length) btn.classList.add('has-event');
   
         btn.addEventListener('click', () => {
@@ -153,7 +155,10 @@ function readEventsFromDOM() {
       try{
         const res = await fetch('/api/calendar/?category=all', { headers:{'X-Requested-With':'XMLHttpRequest'} });
         const j = await res.json();
-        if (Array.isArray(j.items)) CALENDAR_EVENTS = j.items;
+        if (Array.isArray(j.items)) {
+          // keep only finalized events for admin calendar
+          CALENDAR_EVENTS = j.items.filter(e => (e.status||'').toLowerCase() === 'finalized');
+        }
       }catch(_e){ /* keep server-injected fallback */ }
       renderCalendar();
     }
