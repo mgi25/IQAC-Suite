@@ -9,35 +9,6 @@
   padding: 0;
 }
 
-/* Page header styling */
-.page-header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid var(--gray-100);
-}
-
-.page-header h1 {
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--christ-blue-dark);
-  margin: 0;
-}
-
-.page-header .header-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: var(--christ-blue);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--white);
-  font-size: 1.5rem;
-}
-
 /* Status tabs */
 .status-tabs {
   display: flex;
