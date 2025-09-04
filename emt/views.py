@@ -1605,21 +1605,26 @@ def api_organizations(request):
 def api_faculty(request):
     q = request.GET.get("q", "").strip()
     org_id = request.GET.get("org_id")
+    ids_param = request.GET.get("ids")
 
     users = User.objects.filter(role_assignments__role__name__icontains="faculty")
     if org_id:
         users = users.filter(role_assignments__organization_id=org_id)
 
-    users = (
-        users.prefetch_related("role_assignments__organization")
-        .filter(
-            Q(first_name__icontains=q)
-            | Q(last_name__icontains=q)
-            | Q(email__icontains=q)
+    if ids_param:
+        ids = [i for i in ids_param.split(",") if i.isdigit()]
+        users = users.filter(id__in=ids)
+    else:
+        users = (
+            users.prefetch_related("role_assignments__organization")
+            .filter(
+                Q(first_name__icontains=q)
+                | Q(last_name__icontains=q)
+                | Q(email__icontains=q)
+            )
+            .distinct()
+            .order_by("role_assignments__organization__name", "first_name")[:20]
         )
-        .distinct()
-        .order_by("role_assignments__organization__name", "first_name")[:20]
-    )
 
     data = []
     for u in users:

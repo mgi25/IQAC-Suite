@@ -200,9 +200,17 @@ window.AutosaveManager = (function() {
                     f.checked = val === f.value;
                 } else if (f.multiple) {
                     const values = Array.isArray(val) ? val : [val];
-                    Array.from(f.options).forEach(o => {
-                        o.selected = values.includes(o.value);
-                    });
+                    if (f.options.length === 0) {
+                        values.forEach(v => {
+                            // create option placeholders so value persists even without preset options
+                            const opt = new Option(v, v, true, true);
+                            f.add(opt);
+                        });
+                    } else {
+                        Array.from(f.options).forEach(o => {
+                            o.selected = values.includes(o.value);
+                        });
+                    }
                 } else if (!f.value) {
                     f.value = val;
                 }
