@@ -29,29 +29,21 @@
             </div>
             <div class="card-body">
                 <!-- Active/Archived toggle -->
-                <div class="mb-3 text-center">
-                    <div class="btn-group" role="group" aria-label="Status toggle">
-                        <a href="?org_type_id={{ selected_org_type.id }}" class="btn btn-sm {% if not show_archived %}btn-primary{% else %}btn-outline-primary{% endif %}">Active</a>
-                        <a href="?org_type_id={{ selected_org_type.id }}&archived=1" class="btn btn-sm {% if show_archived %}btn-primary{% else %}btn-outline-primary{% endif %}">Archived</a>
-                    </div>
+                <div class="mb-3">
+                    <ul class="nav nav-pills role-status-nav justify-content-center" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <a href="?org_type_id={{ selected_org_type.id }}" class="nav-link {% if not show_archived %}active{% endif %}">Active</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a href="?org_type_id={{ selected_org_type.id }}&archived=1" class="nav-link {% if show_archived %}active{% endif %}">Archived</a>
+                        </li>
+                    </ul>
                 </div>
                 {% if organizations and organizations.0 %}
-                <!-- Add New Role Form -->
-                <div class="add-role-section">
-                    <h5><i class="fas fa-plus"></i> Add New Role</h5>
-                    <form method="post" action="{% url 'add_org_role' organizations.0.id %}">
-                        {% csrf_token %}
-                        <div class="row">
-                            <div class="col-md-6 mb-2">
-                                <input type="text" name="name" class="form-control" placeholder="Role Name" required>
-                            </div>
-                        </div>
-                        <div class="text-center mt-2">
-                            <button type="submit" class="btn btn-primary px-4">
-                                <i class="fas fa-plus"></i> Add Role
-                            </button>
-                        </div>
-                    </form>
+                <div class="d-flex justify-content-end mb-3">
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRoleModal">
+                        <i class="fas fa-plus"></i> Add Role
+                    </button>
                 </div>
                 {% else %}
                 <div class="alert alert-warning text-center" style="max-width: 600px; margin: 0 auto;">
@@ -65,7 +57,7 @@
                 </div>
                 
                 <div class="table-responsive">
-                    <table class="table table-bordered table-striped" style="max-width: 900px; margin: 0 auto;">
+                    <table class="table table-bordered table-striped table-hover" style="max-width: 900px; margin: 0 auto;">
                         <thead>
                             <tr class="text-center">
                                 <th>Role Name</th>
@@ -121,6 +113,32 @@
             </div>
         </div>
 
+        {% if organizations and organizations.0 %}
+        <div class="modal fade" id="addRoleModal" tabindex="-1" aria-labelledby="addRoleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addRoleModalLabel">Add New Role</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form method="post" action="{% url 'add_org_role' organizations.0.id %}">
+                        {% csrf_token %}
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="roleName" class="form-label">Role Name</label>
+                                <input type="text" name="name" id="roleName" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Add Role</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
     {% elif step == 'single_org_roles' %}
         <!-- Roles and assignments for a single organization -->
         <div class="card">
@@ -136,17 +154,21 @@
             </div>
             <div class="card-body">
                 <!-- Active/Archived toggle -->
-                <div class="mb-3 text-center">
-                    <div class="btn-group" role="group" aria-label="Status toggle">
-                        <a href="{% url 'admin_role_management_org' selected_organization.id %}" class="btn btn-sm {% if not show_archived %}btn-primary{% else %}btn-outline-primary{% endif %}">Active</a>
-                        <a href="{% url 'admin_role_management_org' selected_organization.id %}?archived=1" class="btn btn-sm {% if show_archived %}btn-primary{% else %}btn-outline-primary{% endif %}">Archived</a>
-                    </div>
+                <div class="mb-3">
+                    <ul class="nav nav-pills role-status-nav justify-content-center" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <a href="{% url 'admin_role_management_org' selected_organization.id %}" class="nav-link {% if not show_archived %}active{% endif %}">Active</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a href="{% url 'admin_role_management_org' selected_organization.id %}?archived=1" class="nav-link {% if show_archived %}active{% endif %}">Archived</a>
+                        </li>
+                    </ul>
                 </div>
                 <div class="section-header">
                     <h5><i class="fas fa-list"></i> Defined Roles</h5>
                 </div>
                 <div class="table-responsive">
-                    <table class="table table-bordered table-striped" style="max-width: 900px; margin: 0 auto;">
+                    <table class="table table-bordered table-striped table-hover" style="max-width: 900px; margin: 0 auto;">
                         <thead>
                             <tr class="text-center">
                                 <th>Role Name</th>
@@ -188,7 +210,7 @@
                     <h5><i class="fas fa-users"></i> Current Assignments</h5>
                 </div>
                 <div class="table-responsive">
-                    <table class="table table-bordered table-striped" style="max-width: 900px; margin: 0 auto;">
+                    <table class="table table-bordered table-striped table-hover" style="max-width: 900px; margin: 0 auto;">
                         <thead>
                             <tr class="text-center">
                                 <th>User</th>
@@ -246,21 +268,6 @@
 <script>
 // Document ready function
 document.addEventListener('DOMContentLoaded', function() {
-    // Handle add role form submission
-    const addRoleForm = document.getElementById('addRoleForm');
-    if (addRoleForm) {
-        addRoleForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const orgId = this.querySelector('select[name="organization_id"]').value;
-            if (orgId) {
-                this.action = '{% url "add_org_role" 0 %}'.replace('0', orgId);
-                this.submit();
-            } else {
-                alert('Please select an organization first.');
-            }
-        });
-    }
-
     // Smooth scroll to table after form submission
     if (window.location.hash === '#roles-table') {
         setTimeout(() => {

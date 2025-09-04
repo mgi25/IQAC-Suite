@@ -123,27 +123,15 @@
   color: var(--gray-600);
 }
 
-/* Add role form styling */
-.add-role-section {
-  background: linear-gradient(135deg, var(--christ-blue-light) 0%, rgba(44, 90, 160, 0.05) 100%);
-  border: 2px dashed var(--christ-blue);
-  border-radius: var(--border-radius-lg);
-  padding: 2rem;
-  margin-bottom: 2rem;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
+
+/* Status nav styling */
+.role-status-nav .nav-link {
+  color: var(--christ-blue);
 }
 
-.add-role-section h5 {
-  color: var(--christ-blue-dark);
-  font-weight: 700;
-  text-align: center;
-  margin-bottom: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
+.role-status-nav .nav-link.active {
+  background-color: var(--christ-blue);
+  color: var(--white);
 }
 
 /* Form styling */
@@ -579,12 +567,6 @@
 @media (max-width: 768px) {
   .card-body {
     padding: 1rem !important;
-  }
-  
-  .add-role-section {
-    margin-left: 1rem;
-    margin-right: 1rem;
-    padding: 1.5rem;
   }
   
   .table-responsive {
