@@ -112,6 +112,49 @@
             <textarea id="id_objectives" name="objectives" class="proposal-input" hidden>{{ objectives.content|default_if_none:'' }}</textarea>
             <textarea id="id_learning_outcomes" name="outcomes" class="proposal-input" hidden>{{ outcomes.content|default_if_none:'' }}</textarea>
             <textarea name="flow" class="proposal-input" hidden>{{ flow.content|default_if_none:'' }}</textarea>
+            <div class="ai-actions space-y-2">
+              <button type="button" id="btnNeed" class="btn btn-outline-primary">AI: Need Analysis</button>
+              <button type="button" id="btnObj" class="btn btn-outline-primary">AI: Objectives</button>
+              <button type="button" id="btnOut" class="btn btn-outline-primary">AI: Outcomes + Mapping</button>
+              <button type="button" id="btnRpt" class="btn btn-outline-primary">AI: Full Report Draft</button>
+            </div>
+
+            <script>
+async function postForm(url){
+  const form = document.querySelector('form');
+  const fd = new FormData(form);
+  const resp = await fetch(url, {method:'POST', body: fd});
+  if(!resp.ok) throw new Error('AI error');
+  return await resp.json();
+}
+
+document.getElementById('btnNeed').addEventListener('click', async () => {
+  const data = await postForm('{% url "emt:ai_need_analysis" %}');
+  document.getElementById('id_need_analysis').value = data.need_analysis || '';
+});
+
+document.getElementById('btnObj').addEventListener('click', async () => {
+  const data = await postForm('{% url "emt:ai_objectives" %}');
+  const area = document.getElementById('id_objectives');
+  if(Array.isArray(data.objectives)){
+    area.value = data.objectives.map(o => `• ${o.title}: ${o.detail} (Metric: ${o.measurable_metric})`).join('\n');
+  }
+});
+
+document.getElementById('btnOut').addEventListener('click', async () => {
+  const data = await postForm('{% url "emt:ai_outcomes" %}');
+  const area = document.getElementById('id_learning_outcomes');
+  if(Array.isArray(data.outcomes)){
+    area.value = data.outcomes.map(x => `• ${x.statement} | Measure: ${x.measurement} | PSO:${(x.mapped?.PSO||[]).join(',')} PO:${(x.mapped?.PO||[]).join(',')} SDG:${(x.mapped?.SDG||[]).join(',')}`).join('\n');
+  }
+});
+
+document.getElementById('btnRpt').addEventListener('click', async () => {
+  const data = await postForm('{% url "emt:ai_report" %}');
+  const preview = document.getElementById('report_preview');
+  if(preview){ preview.textContent = data.report_markdown || ''; }
+});
+            </script>
 
             <div class="form-panel" id="form-panel">
                 <div class="form-panel-content" id="form-panel-content">

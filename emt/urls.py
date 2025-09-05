@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from . import views, views_ai
 from suite import views as suite_views
 from ai import enhance_summary as ai_views
 
@@ -81,4 +81,8 @@ urlpatterns = [
     path('api/organization-types/', views.api_organization_types, name='api_organization_types'),
     path('api/outcomes/<int:org_id>/', views.api_outcomes, name='api_outcomes'),
 
+    path('ai/need-analysis', views_ai.ai_need_analysis, name='ai_need_analysis'),
+    path('ai/objectives', views_ai.ai_objectives, name='ai_objectives'),
+    path('ai/outcomes', views_ai.ai_outcomes, name='ai_outcomes'),
+    path('ai/report', views_ai.ai_report, name='ai_report'),
 ]

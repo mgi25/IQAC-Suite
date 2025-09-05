@@ -42,6 +42,7 @@ try:
     AI_HTTP_TIMEOUT = int(AI_HTTP_TIMEOUT)
 except Exception:
     AI_HTTP_TIMEOUT = 120
+IQAC_AI_URL = _env("IQAC_AI_URL", default="http://127.0.0.1:8699")
 
 # Optional: generator/critic models if used elsewhere in code
 OLLAMA_GEN_MODEL    = _env("OLLAMA_GEN_MODEL", default=OLLAMA_MODEL)
