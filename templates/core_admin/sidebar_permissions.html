@@ -13,65 +13,500 @@
 
   /* Single-row toolbar */
   .permissions-page .toolbar-row{display:flex;align-items:center;gap:14px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}
+    .permissions-page .controls-container{
+      position:sticky;
+      top:0;
+      z-index:50;
+      background:#fff;
+      border-bottom:1px solid var(--border);
+      box-shadow:0 2px 8px rgba(0,0,0,0.06);
+      margin-bottom:16px;
+    }
+
+    /* Professional toolbar-style filter design */
+    .permissions-page .toolbar-filter{
+      background:linear-gradient(135deg, #f8f9fb 0%, #ffffff 100%);
+      border:1px solid #e1e8ed;
+      border-radius:12px;
+      padding:20px 24px;
+      margin:12px 0;
+      display:grid;
+      grid-template-columns:1fr 1.2fr 1.2fr 2fr auto;
+      gap:16px 24px;
+      align-items:end;
+      min-height:44px;
+      position:relative;
+      box-shadow:0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .permissions-page .toolbar-filter::after{
+      content:'';
+      position:absolute;
+      bottom:0;
+      left:24px;
+      right:24px;
+      height:1px;
+      background:linear-gradient(90deg, transparent 0%, #e1e8ed 20%, #e1e8ed 80%, transparent 100%);
+    }
+    
+    /* Field containers with improved spacing */
+    .permissions-page .toolbar-field{
+      position:relative;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      min-width:180px;
+    }
+    
+    .permissions-page .toolbar-field label{
+      font-size:12px;
+      font-weight:600;
+      color:#6b7280;
+      text-transform:uppercase;
+      letter-spacing:0.5px;
+      margin-bottom:4px;
+    }
+    
+    /* Enhanced input styling */
+    .permissions-page .toolbar-input-container{
+      position:relative;
+      display:flex;
+      align-items:center;
+    }
+    
+    .permissions-page .toolbar-input-container .input-icon{
+      position:absolute;
+      left:14px;
+      top:50%;
+      transform:translateY(-50%);
+      color:#9ca3af;
+      font-size:14px;
+      z-index:1;
+      transition:color 0.2s ease;
+    }
+    
+    .permissions-page .toolbar-field select,
+    .permissions-page .toolbar-field input{
+      width:100%;
+      height:44px;
+      border:1px solid #d1d5db;
+      border-radius:8px;
+      background:#ffffff;
+      padding:0 16px 0 40px;
+      font-size:14px;
+      color:#374151;
+      transition:all 0.2s ease;
+      outline:none;
+      box-shadow:0 1px 2px rgba(0,0,0,0.05);
+      min-width:180px;
+    }
+    
+    .permissions-page .toolbar-field select::placeholder,
+    .permissions-page .toolbar-field input::placeholder{
+      color:#9ca3af;
+      font-weight:400;
+    }
+    
+    .permissions-page .toolbar-field select:focus,
+    .permissions-page .toolbar-field input:focus{
+      border-color:#3b82f6;
+      background:#ffffff;
+      box-shadow:0 0 0 3px rgba(59, 130, 246, 0.1), 0 1px 2px rgba(0,0,0,0.05);
+    }
+    
+    .permissions-page .toolbar-field select:focus + .input-icon,
+    .permissions-page .toolbar-field input:focus + .input-icon{
+      color:#3b82f6;
+    }
+    
+    .permissions-page .toolbar-field select:hover,
+    .permissions-page .toolbar-field input:hover{
+      border-color:#9ca3af;
+      box-shadow:0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    /* Organization Type field - w-1/5 equivalent */
+    .permissions-page .org-type-field{
+      flex:0 0 auto;
+      min-width:180px;
+      max-width:220px;
+    }
+    
+    /* Organization Role field - w-1/4 equivalent */
+    .permissions-page .org-role-field{
+      flex:0 0 auto;
+      min-width:200px;
+      max-width:250px;
+    }
+    
+    /* User field special styling - w-1/4 equivalent */
+    .permissions-page .user-toolbar-field{
+      flex:0 0 auto;
+      min-width:200px;
+      max-width:280px;
+    }
+    
+    .permissions-page .user-toolbar-field .user-filter-input{
+      margin-bottom:6px;
+      height:38px;
+    }
+    
+    .permissions-page .user-toolbar-field .user-select{
+      height:38px;
+      font-size:13px;
+    }
+    
+    .permissions-page .user-toolbar-field .user-actions{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin-top:4px;
+    }
+    
+    .permissions-page .user-toolbar-field .btn-micro{
+      padding:4px 8px;
+      font-size:11px;
+      border-radius:6px;
+      height:24px;
+      line-height:1;
+      background:#f3f4f6;
+      border:1px solid #d1d5db;
+      color:#374151;
+      transition:all 0.2s ease;
+    }
+    
+    .permissions-page .user-toolbar-field .btn-micro:hover{
+      background:#e5e7eb;
+      border-color:#9ca3af;
+    }
+    
+    .permissions-page .user-toolbar-field .hint{
+      font-size:10px;
+      color:#9ca3af;
+      line-height:1.2;
+    }
+    
+    /* Search field styling - flex-grow to take remaining space */
+    .permissions-page .search-toolbar-field{
+      flex:1 1 auto;
+      min-width:240px;
+    }
+    
+    .permissions-page .search-toolbar-field .search-container{
+      position:relative;
+    }
+    
+    .permissions-page .search-toolbar-field input{
+      padding-right:44px;
+    }
+    
+    .permissions-page .search-clear{
+      position:absolute;
+      right:12px;
+      top:50%;
+      transform:translateY(-50%);
+      background:none;
+      border:none;
+      color:#9ca3af;
+      cursor:pointer;
+      font-size:18px;
+      padding:6px;
+      border-radius:4px;
+      transition:all 0.2s ease;
+    }
+    
+    .permissions-page .search-clear:hover{
+      color:#3b82f6;
+      background:rgba(59, 130, 246, 0.1);
+    }
+    
+    /* Save button styling - primary blue, bold, slightly larger */
+    .permissions-page .toolbar-save-btn{
+      height:44px;
+      padding:0 24px;
+      border-radius:8px;
+      font-size:14px;
+      font-weight:700;
+      background:linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color:#ffffff;
+      border:none;
+      cursor:pointer;
+      transition:all 0.2s ease;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      white-space:nowrap;
+      box-shadow:0 1px 3px rgba(0,0,0,0.1);
+      min-width:140px;
+      justify-content:center;
+    }
+    
+    .permissions-page .toolbar-save-btn:hover{
+      background:linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      transform:translateY(-1px);
+      box-shadow:0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+    
+    .permissions-page .toolbar-save-btn:active{
+      transform:translateY(0);
+    }
+    
+    .permissions-page .toolbar-save-btn i{
+      font-size:14px;
+    }
+    
+    /* Responsive design for better spacing */
+    @media (max-width: 1400px){
+      .permissions-page .toolbar-filter{
+        grid-template-columns:180px 200px 220px 1fr auto;
+        gap:12px 20px;
+        padding:18px 20px;
+      }
+    }
+    
+    @media (max-width: 1200px){
+      .permissions-page .toolbar-filter{
+        grid-template-columns:160px 180px 200px 1fr auto;
+        gap:12px 16px;
+        padding:16px 18px;
+      }
+      
+      .permissions-page .toolbar-field{
+        min-width:160px;
+      }
+      
+      .permissions-page .toolbar-field select,
+      .permissions-page .toolbar-field input{
+        min-width:160px;
+      }
+    }
+    
+    @media (max-width: 980px){
+      .permissions-page .toolbar-filter{
+        grid-template-columns:1fr 1fr 1fr;
+        grid-template-rows:auto auto;
+        gap:16px 20px;
+        align-items:start;
+      }
+      
+      .permissions-page .search-toolbar-field{
+        grid-column:1 / -1;
+        order:1;
+      }
+      
+      .permissions-page .toolbar-save-btn{
+        grid-column:1 / -1;
+        order:2;
+        justify-self:center;
+        min-width:200px;
+        margin-top:8px;
+      }
+      
+      .permissions-page .org-type-field{
+        order:3;
+      }
+      
+      .permissions-page .org-role-field{
+        order:4;
+      }
+      
+      .permissions-page .user-toolbar-field{
+        order:5;
+      }
+    }
+    
+    @media (max-width: 640px){
+      .permissions-page .toolbar-filter{
+        grid-template-columns:1fr;
+        gap:12px;
+        padding:16px;
+      }
+      
+      .permissions-page .toolbar-field{
+        min-width:auto;
+      }
+      
+      .permissions-page .toolbar-field select,
+      .permissions-page .toolbar-field input{
+        min-width:auto;
+      }
+      
+      .permissions-page .toolbar-save-btn{
+        min-width:100%;
+      }
+    }
 
     /* Wrap the two lists + action column */
     .permissions-page .panel-grid{
-      display:grid;grid-template-columns:1fr auto 1fr;gap:16px;margin:8px 0
+      display:grid;grid-template-columns:1fr auto 1fr;gap:20px;margin:10px 0;
+      min-height:500px;
     }
-    @media (max-width: 980px){ .permissions-page .panel-grid{grid-template-columns:1fr} }
+    @media (max-width: 980px){ 
+      .permissions-page .panel-grid{grid-template-columns:1fr;gap:15px} 
+      .permissions-page .actions-col{flex-direction:row;justify-content:center;flex-wrap:wrap}
+    }
 
     /* Panels look/feel like cards in master page */
     .permissions-page .panel{
-      background:var(--surf);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);
-      display:flex;flex-direction:column;min-height:320px
+      background:var(--surf);border:1px solid var(--border);border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,0.1);
+      display:flex;flex-direction:column;height:500px;
     }
     .permissions-page .panel .panel-head{
-      background:linear-gradient(90deg,var(--primary),var(--primary-dark));color:#fff;
-      padding:10px 12px;border-top-left-radius:16px;border-top-right-radius:16px;
-      display:flex;justify-content:space-between;align-items:center;font-weight:800;text-transform:uppercase;font-size:12px;letter-spacing:.5px
+      background:linear-gradient(135deg,var(--primary) 0%, var(--primary-dark) 100%);color:#fff;
+      padding:12px 16px;border-top-left-radius:16px;border-top-right-radius:16px;
+      display:flex;justify-content:space-between;align-items:center;font-weight:800;text-transform:uppercase;font-size:13px;letter-spacing:.6px;
+      box-shadow:0 2px 4px rgba(0,0,0,0.1);
     }
-    .permissions-page .panel .panel-head .count{background:rgba(255,255,255,.25);padding:2px 8px;border-radius:999px;font-weight:800}
+    .permissions-page .panel .panel-head .count{background:rgba(255,255,255,.3);padding:4px 10px;border-radius:20px;font-weight:800;font-size:12px}
 
     /* Lists: only these scroll, nothing else */
     .permissions-page .list{
-      overflow:auto; padding:6px 8px;
-      max-height:calc(100vh - 300px);   /* fills viewport; keeps header/toolbar visible */
+      overflow-y:auto; 
+      padding:8px 12px;
+      flex:1;
+      background:#fafbfc;
     }
-    @media (max-width: 980px){ .permissions-page .list{max-height:calc(100vh - 360px)} }
 
     .permissions-page .item{
-      display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--border);
-      border-radius:12px;background:#fff;margin:6px 0;cursor:pointer;transition:.15s
+      display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid #e1e8ed;
+      border-radius:10px;background:#fff;margin:6px 0;cursor:pointer;transition:all .2s ease;
+      position:relative;
     }
-    .permissions-page .item:hover{box-shadow:var(--shadow)}
-    .permissions-page .item.selected{background:#eef4fd;border-color:var(--primary)}
-    .permissions-page .item .chk{width:16px;height:16px;margin-top:2px;accent-color:var(--primary)}
-    .permissions-page .item .name{font-weight:800;color:var(--ink);font-size:14px}
-    .permissions-page .item .desc{font-size:12px;color:var(--muted);margin-top:2px}
+    .permissions-page .item:hover{
+      box-shadow:0 2px 8px rgba(20, 76, 141, 0.15);
+      border-color:var(--primary);
+      transform:translateY(-1px);
+    }
+    .permissions-page .item.selected{
+      background:linear-gradient(135deg, #e3f2fd 0%, #f1f8ff 100%);
+      border-color:var(--primary);
+      box-shadow:0 2px 8px rgba(20, 76, 141, 0.2);
+    }
+    .permissions-page .item .chk{width:18px;height:18px;margin-top:2px;accent-color:var(--primary);cursor:pointer}
+    .permissions-page .item .name{font-weight:700;color:var(--ink);font-size:14px;line-height:1.3}
+    .permissions-page .item .desc{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.2}
+
+    /* Folder/Parent items styling */
+    .permissions-page .item.folder{
+      background:linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
+      border-left:4px solid var(--primary);
+    }
+    .permissions-page .item.folder:hover{
+      background:linear-gradient(135deg, #f0f4ff 0%, #fafbff 100%);
+    }
+    .permissions-page .item.folder.partial{
+      border-left-color:#f59e0b;
+      background:linear-gradient(135deg, #fffbf0 0%, #ffffff 100%);
+    }
+    .permissions-page .item.folder.partial:hover{
+      background:linear-gradient(135deg, #fef3e2 0%, #fffbf0 100%);
+    }
+    .permissions-page .item.folder .folder-icon{
+      color:var(--primary);
+      font-size:16px;
+      margin-right:4px;
+    }
+    .permissions-page .item.folder.partial .folder-icon{
+      color:#f59e0b;
+    }
+
+    /* Children indentation */
+    .permissions-page .children{
+      margin-left:30px;
+      margin-top:8px;
+      border-left:2px solid #e1e8ed;
+      padding-left:12px;
+    }
+    .permissions-page .children .item{
+      margin-left:0;
+      position:relative;
+    }
+    .permissions-page .children .item::before{
+      content:'';
+      position:absolute;
+      left:-12px;
+      top:50%;
+      width:10px;
+      height:1px;
+      background:#e1e8ed;
+    }
 
     /* Middle column actions styled like master buttons */
     .permissions-page .actions-col{
-      display:flex;flex-direction:column;gap:8px;align-items:stretch;justify-content:center
+      display:flex;flex-direction:column;gap:10px;align-items:stretch;justify-content:center;
+      min-width:140px;
+      padding:0 5px;
     }
-    .permissions-page .actions-col .btn{border-radius:10px}
-    .permissions-page .actions-col .btn-secondary{background:var(--muted);border-color:var(--muted);color:#fff}
+    .permissions-page .actions-col .btn{
+      border-radius:10px;
+      padding:10px 16px;
+      font-weight:600;
+      font-size:13px;
+      transition:all .2s ease;
+      border:2px solid transparent;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+    }
+    .permissions-page .actions-col .btn:hover{
+      transform:translateY(-1px);
+      box-shadow:0 4px 12px rgba(0,0,0,0.15);
+    }
+    .permissions-page .actions-col .btn-primary{
+      background:linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      border-color:var(--primary);
+    }
+    .permissions-page .actions-col .btn-primary:hover{
+      background:linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+    }
+    .permissions-page .actions-col .btn-secondary{
+      background:linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+      border-color:#6c757d;
+      color:#fff;
+    }
+    .permissions-page .actions-col .btn-secondary:hover{
+      background:linear-gradient(135deg, #5a6268 0%, #495057 100%);
+    }
+    .permissions-page .actions-col .btn:disabled{
+      opacity:0.5;
+      cursor:not-allowed;
+      transform:none;
+    }
+    .permissions-page .actions-col .btn:disabled:hover{
+      transform:none;
+      box-shadow:none;
+    }
 
     /* Stats strip compact */
     .permissions-page .stats{
-      display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin:8px 0
+      display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:12px 0;
     }
     .permissions-page .stat{
-      background:var(--surf);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);
-      padding:10px;text-align:center
+      background:linear-gradient(135deg, var(--surf) 0%, #ffffff 100%);
+      border:1px solid var(--border);
+      border-radius:12px;
+      box-shadow:0 2px 6px rgba(0,0,0,0.08);
+      padding:14px;
+      text-align:center;
+      transition:all .2s ease;
     }
-    .permissions-page .stat .num{font-weight:900;color:var(--primary);font-size:18px}
-    .permissions-page .stat .lbl{color:var(--muted);font-size:12px}
+    .permissions-page .stat:hover{
+      transform:translateY(-1px);
+      box-shadow:0 4px 12px rgba(0,0,0,0.12);
+    }
+    .permissions-page .stat .num{font-weight:900;color:var(--primary);font-size:20px;line-height:1}
+    .permissions-page .stat .lbl{color:var(--muted);font-size:12px;margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
 
     /* Save bar */
     .permissions-page .savebar{
-      display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:10px;border-top:1px solid var(--border)
+      display:flex;justify-content:space-between;align-items:center;margin-top:15px;padding-top:15px;border-top:2px solid var(--border);
+      background:var(--surf);
+      padding:15px;
+      border-radius:12px;
+      box-shadow:0 2px 6px rgba(0,0,0,0.08);
     }
-    .permissions-page .savebar .save-btn{border-radius:10px}
+    .permissions-page .savebar .save-btn{border-radius:10px;padding:12px 24px;font-weight:600}
 
     /* Tiny helpers */
   .permissions-page .search-bar{display:flex;align-items:center;gap:8px;background:#f1f5f9;border:1px solid var(--border);border-radius:9999px;padding:6px 10px}
@@ -93,6 +528,15 @@
     .permissions-page .controls-center .filter select:focus{outline:none;border-color:var(--primary)}
     .permissions-page .filters-left .filter{display:flex;flex-direction:column;gap:6px;margin-right:12px}
   .permissions-page .main-actions .btn{border-radius:9999px;padding:8px 14px}
+    .permissions-page .empty{
+      padding:40px 24px;
+      color:var(--muted);
+      text-align:center;
+      background:linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+      border-radius:12px;
+      margin:20px 0;
+      border:2px dashed #dee2e6;
+    }
   </style>
 {% endblock %}
 
@@ -103,58 +547,74 @@
     <div><h1>Sidebar Permissions Management</h1></div>
   </header>
 
-  <!-- Sticky controls bar (uses master-data filters & btns) -->
+  <!-- Professional toolbar-style filter -->
   <div class="controls-container">
-    <div class="toolbar-row">
-      <div class="filters-left" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
-  <label class="filter" style="flex:0 0 auto">
-          <span>Organization Type</span>
+    <div class="toolbar-filter">
+      <!-- Organization Type - w-1/5 equivalent -->
+      <div class="toolbar-field org-type-field">
+        <label>Organization Type</label>
+        <div class="toolbar-input-container">
+          <i class="fas fa-building input-icon"></i>
           <select id="orgTypeSelect" aria-label="Organization Type">
             <option value="">All Types</option>
             {% for t in organization_types %}
               <option value="{{ t.id }}" {% if selected_org_type == t.id|stringformat:'s' %}selected{% endif %}>{{ t.name }}</option>
             {% endfor %}
           </select>
-        </label>
+        </div>
+      </div>
 
-  <label class="filter" style="flex:0 0 auto">
-          <span>Organization</span>
-          <select id="orgSelect" aria-label="Organization">
-            <option value="">All Organizations</option>
-          </select>
-        </label>
-
-  <label class="filter" style="flex:0 0 auto">
-          <span>Organization Role</span>
+      <!-- Organization Role - w-1/4 equivalent -->
+      <div class="toolbar-field org-role-field">
+        <label>Organization Role</label>
+        <div class="toolbar-input-container">
+          <i class="fas fa-user-tag input-icon"></i>
           <select id="orgRoleSelect" aria-label="Organization Role">
             <option value="">All Roles</option>
             {% for r in org_roles %}
               <option value="{{ r.id }}" {% if selected_org_role == r.id|stringformat:'s' %}selected{% endif %}>{{ r.name }}</option>
             {% endfor %}
           </select>
-        </label>
+        </div>
+      </div>
 
-        <label class="filter" style="flex:0 0 auto">
-          <span>User(s)</span>
-          <select id="userSelect" name="users" multiple aria-label="Users" style="min-width:220px">
+      <!-- Users - w-1/4 equivalent -->
+      <div class="toolbar-field user-toolbar-field">
+        <label>Users</label>
+        <div class="toolbar-input-container">
+          <i class="fas fa-users input-icon"></i>
+          <input type="text" id="userFilter" class="user-filter-input" placeholder="Search users…">
+        </div>
+        <div class="toolbar-input-container">
+          <i class="fas fa-user-check input-icon"></i>
+          <select id="userSelect" name="users" multiple aria-label="Users" class="user-select">
             {% for u in users %}
               <option value="{{ u.id }}" {% if selected_user == u.id|stringformat:'s' %}selected{% endif %}>{{ u.name }}</option>
             {% endfor %}
           </select>
-        </label>
+        </div>
+        <div class="user-actions">
+          <button type="button" id="selectAllUsersBtn" class="btn btn-secondary btn-micro">Select All</button>
+          <small class="hint">Ctrl/Cmd for multiple</small>
+        </div>
       </div>
 
-  <div class="main-actions" style="display:flex;gap:12px;align-items:center;justify-content:flex-end;flex:0 0 auto">
-        <div class="search-bar">
-          <i class="fas fa-search"></i>
-          <input id="globalSearch" type="text" placeholder="Search modules…" autocomplete="off" aria-label="Search modules">
-          <button class="search-clear" type="button" id="clearSearchBtn" title="Clear">×</button>
+      <!-- Search Modules - flex-grow to take remaining space -->
+      <div class="toolbar-field search-toolbar-field">
+        <label>Search Modules</label>
+        <div class="search-container">
+          <i class="fas fa-search input-icon"></i>
+          <input id="globalSearch" type="text" placeholder="Search modules and permissions…" autocomplete="off" aria-label="Search modules">
+          <button class="search-clear" type="button" id="clearSearchBtn" title="Clear search">×</button>
         </div>
-        <button type="submit" form="permissionsForm" id="saveBtn" class="btn btn-primary save-btn">
-          <i class="fas fa-save"></i><span id="saveText">Save Changes</span>
-          <i id="saveSpinner" class="fas fa-spinner fa-spin" style="display:none"></i>
-        </button>
       </div>
+
+      <!-- Save Button - aligned right, primary blue, bold -->
+      <button type="submit" form="permissionsForm" id="saveBtn" class="toolbar-save-btn">
+        <i class="fas fa-save"></i>
+        <span id="saveText">Save Changes</span>
+        <i id="saveSpinner" class="fas fa-spinner fa-spin" style="display:none"></i>
+      </button>
     </div>
   </div>
 
@@ -220,12 +680,15 @@
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     const $ = (sel) => document.querySelector(sel);
+    
     // --- User filter ---
     const userFilter = $('#userFilter');
     if(userFilter){
+      // userSelect is declared later in the main variables section
+      const userSelectEl = $('#userSelect');
       userFilter.addEventListener('input', ()=>{
         const term = userFilter.value.trim().toLowerCase();
-        Array.from(userSelect.options).forEach(opt=>{
+        Array.from(userSelectEl.options).forEach(opt=>{
           const txt = (opt.textContent||'').toLowerCase();
           opt.style.display = (!term || txt.includes(term)) ? '' : 'none';
         });
@@ -243,24 +706,51 @@
     const availableData = JSON.parse('{{ available_permissions|safe|escapejs }}'.replace(/&quot;/g,'"') || '[]');
 const assignedData  = JSON.parse('{{ assigned_permissions|safe|escapejs }}'.replace(/&quot;/g,'"') || '[]');
 
-// 🔹 Helper: remove assigned items from available list
-function removeAssignedFromAvailable(avail, assigned) {
-  const assignedIds = new Set(assigned.map(p => p.id));
-  return avail.filter(item => {
-    if (assignedIds.has(item.id)) {
-      return false; // hide if already assigned
-    }
+// 🔹 Helper: build available list preserving hierarchy, hiding only assigned items
+function buildAvailableList(originalData, assigned) {
+  // Get all assigned IDs (both standalone and children)
+  const assignedIds = new Set();
+  assigned.forEach(item => {
+    assignedIds.add(item.id);
     if (item.children) {
-      item.children = removeAssignedFromAvailable(item.children, assigned);
-      if (item.children.length === 0) {
-        return false;
-      }
+      item.children.forEach(child => assignedIds.add(child.id));
     }
-    return true;
   });
+
+  function processItem(item) {
+    // Create a copy to avoid modifying original data
+    const result = { ...item };
+    
+    // If this item itself is assigned (standalone), don't include it
+    if (assignedIds.has(item.id) && (!item.children || item.children.length === 0)) {
+      return null;
+    }
+    
+    // If it has children, process them recursively
+    if (item.children && item.children.length > 0) {
+      result.children = item.children
+        .map(child => processItem(child))
+        .filter(child => child !== null);
+      
+      // Mark as partial if some but not all children are assigned
+      const totalChildren = item.children.length;
+      const availableChildren = result.children.length;
+      result.isPartial = (availableChildren > 0 && availableChildren < totalChildren);
+      
+      // Always keep parent if it has any available children or is partial
+      return result;
+    }
+    
+    // Leaf item - only include if not assigned
+    return assignedIds.has(item.id) ? null : result;
+  }
+
+  return originalData
+    .map(item => processItem(item))
+    .filter(item => item !== null);
 }
 
-let available = removeAssignedFromAvailable(availableData, assignedData);
+let available = buildAvailableList(availableData, assignedData);
 let assigned  = assignedData;
 
 let selectedAvailable = new Set(); 
@@ -285,6 +775,19 @@ let selectedAssigned  = new Set();
     const addBtn=$('#addBtn'), removeBtn=$('#removeBtn'),
           moveUpBtn=$('#moveUpBtn'), moveDownBtn=$('#moveDownBtn'),
           selectAllBtn=$('#selectAllBtn'), clearBtn=$('#clearBtn');
+
+    // Helper function to flatten nested permission structure
+    function flatten(list) {
+      let result = [];
+      for (const item of list) {
+        if (item.children && item.children.length > 0) {
+          result = result.concat(flatten(item.children));
+        } else {
+          result.push(item);
+        }
+      }
+      return result;
+    }
 
     function reloadWithFilters(extraParams={}) {
       const params=new URLSearchParams(window.location.search);
@@ -372,29 +875,62 @@ let selectedAssigned  = new Set();
     }
 
     function getPermissionIcon(p){
-      const map={dashboard:'fas fa-tachometer-alt',event:'fas fa-calendar',user:'fas fa-users',
-        report:'fas fa-chart-bar',setting:'fas fa-cog',management:'fas fa-tools',cdl:'fas fa-paint-brush',
-        po:'fas fa-graduation-cap',transcript:'fas fa-file-alt'};
-      const key=Object.keys(map).find(k=>p.label.toLowerCase().includes(k)||p.id.toLowerCase().includes(k));
-      return map[key]||'fas fa-cube';
+      const map={
+        dashboard:'fas fa-tachometer-alt',
+        event:'fas fa-calendar-alt',
+        user:'fas fa-users',
+        report:'fas fa-chart-bar',
+        setting:'fas fa-cog',
+        management:'fas fa-tools',
+        cdl:'fas fa-paint-brush',
+        po:'fas fa-graduation-cap',
+        transcript:'fas fa-file-alt',
+        graduate:'fas fa-user-graduate',
+        certificate:'fas fa-certificate',
+        academic:'fas fa-book',
+        student:'fas fa-user-friends',
+        faculty:'fas fa-chalkboard-teacher',
+        admin:'fas fa-user-shield',
+        course:'fas fa-book-open',
+        exam:'fas fa-clipboard-list',
+        grade:'fas fa-star',
+        attendance:'fas fa-calendar-check',
+        fee:'fas fa-dollar-sign',
+        library:'fas fa-books',
+        hostel:'fas fa-bed',
+        transport:'fas fa-bus'
+      };
+      const label = (p.label || '').toLowerCase();
+      const id = (p.id || '').toLowerCase();
+      const key = Object.keys(map).find(k => label.includes(k) || id.includes(k));
+      return map[key] || 'fas fa-cube';
     }
 
-    // 🔹 Render an item (parent or child)
-   // 🔹 Render item (parent = folder, leaf = checkbox)
+    // 🔹 Render item (parent = folder, leaf = checkbox)
 function renderPermissionItem(p, isAssigned) {
   const div = document.createElement('div'); 
   div.className = 'item'; 
   div.dataset.id = p.id;
 
   if (p.children && p.children.length > 0) {
-    // ----- Parent (folder only, no checkbox) -----
+    // ----- Parent (folder with expand/collapse) -----
+    div.classList.add('folder');
+    if (p.isPartial) {
+      div.classList.add('partial');
+    }
+    
     div.innerHTML = `
-      <i class="fas fa-folder" style="color:var(--primary);margin-right:6px"></i>
-      <span class="name">${p.label}</span>
-      <div class="children" style="display:none;margin-left:20px"></div>
+      <i class="fas fa-folder folder-icon"></i>
+      <div style="flex:1">
+        <div class="name">${p.label}${p.isPartial ? ' <i class="fas fa-circle-half-stroke" style="color:#f59e0b;margin-left:8px;" title="Partially assigned - some child permissions are selected"></i>' : ''}</div>
+      </div>
+      <i class="fas fa-chevron-down toggle-icon" style="color:var(--muted);font-size:12px;margin-left:auto"></i>
+      <div class="children" style="display:block"></div>
     `;
 
     const childrenContainer = div.querySelector('.children');
+    const toggleIcon = div.querySelector('.toggle-icon');
+    
     p.children.forEach(child => {
       const childDiv = renderPermissionItem(child, isAssigned);
       childrenContainer.appendChild(childDiv);
@@ -403,8 +939,9 @@ function renderPermissionItem(p, isAssigned) {
     // expand/collapse toggle
     div.addEventListener('click', e => {
       if (e.target.closest('.children')) return;
-      childrenContainer.style.display = 
-        childrenContainer.style.display === 'none' ? 'block' : 'none';
+      const isVisible = childrenContainer.style.display !== 'none';
+      childrenContainer.style.display = isVisible ? 'none' : 'block';
+      toggleIcon.className = isVisible ? 'fas fa-chevron-right toggle-icon' : 'fas fa-chevron-down toggle-icon';
     });
 
   } else {
@@ -414,14 +951,32 @@ function renderPermissionItem(p, isAssigned) {
 
     div.innerHTML = `
       <input type="checkbox" class="chk" ${isSel ? 'checked' : ''}>
-      <i class="${getPermissionIcon(p)}" style="color:var(--primary);min-width:18px"></i>
+      <i class="${getPermissionIcon(p)}" style="color:var(--primary);min-width:20px;font-size:16px"></i>
       <div style="flex:1">
         <div class="name">${p.label}</div>
+        ${p.description ? `<div class="desc">${p.description}</div>` : ''}
       </div>
     `;
 
+    // Click anywhere on item to toggle checkbox
+    div.addEventListener('click', e => {
+      const checkbox = div.querySelector('.chk');
+      if (e.target !== checkbox) {
+        checkbox.checked = !checkbox.checked;
+        checkbox.dispatchEvent(new Event('change'));
+      }
+    });
+
     div.querySelector('.chk').addEventListener('change', e => {
-      (isAssigned ? selectedAssigned : selectedAvailable)[e.target.checked ? 'add' : 'delete'](p.id);
+      e.stopPropagation();
+      const selected = isAssigned ? selectedAssigned : selectedAvailable;
+      if (e.target.checked) {
+        selected.add(p.id);
+        div.classList.add('selected');
+      } else {
+        selected.delete(p.id);
+        div.classList.remove('selected');
+      }
       updateUI();
     });
   }
@@ -463,8 +1018,37 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
   if (sp) sp.style.display = 'inline-block';
 });
     function applyFilters(list){
-      const q=globalSearch.value.trim().toLowerCase();
-      return list.filter(p=>!q||p.label.toLowerCase().includes(q));
+      const q = globalSearch.value.trim().toLowerCase();
+      if (!q) return list;
+      
+      function filterItem(item) {
+        // Check if item name matches
+        const nameMatches = item.label.toLowerCase().includes(q);
+        
+        if (item.children && item.children.length > 0) {
+          // For parent items, check children recursively
+          const filteredChildren = item.children
+            .map(child => filterItem(child))
+            .filter(child => child !== null);
+          
+          if (nameMatches || filteredChildren.length > 0) {
+            // Return parent with filtered children, preserving partial state
+            return {
+              ...item,
+              children: filteredChildren.length > 0 ? filteredChildren : item.children
+            };
+          }
+        } else {
+          // For leaf items, return if name matches
+          if (nameMatches) return item;
+        }
+        
+        return null;
+      }
+      
+      return list
+        .map(item => filterItem(item))
+        .filter(item => item !== null);
     }
 
     function render(){
@@ -480,56 +1064,137 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
     }
 
     function updateUI(){
-      availableCount.textContent=available.length;
-      assignedCount.textContent=assigned.length;
-      selectedCount.textContent=selectedAvailable.size+selectedAssigned.size;
-      addBtn.disabled=selectedAvailable.size===0;
-      removeBtn.disabled=selectedAssigned.size===0;
-      moveUpBtn.disabled=selectedAssigned.size===0;
-      moveDownBtn.disabled=selectedAssigned.size===0;
+      // Count items properly (including children)
+      const availableTotal = countItems(available);
+      const assignedTotal = countItems(assigned);
+      
+      availableCount.textContent = availableTotal;
+      assignedCount.textContent = assignedTotal;
+      selectedCount.textContent = selectedAvailable.size + selectedAssigned.size;
+      
+      addBtn.disabled = selectedAvailable.size === 0;
+      removeBtn.disabled = selectedAssigned.size === 0;
+      moveUpBtn.disabled = selectedAssigned.size === 0;
+      moveDownBtn.disabled = selectedAssigned.size === 0;
 
-      const original=assignedData.map(p=>p.id).join(',');
-      const current =assigned.map(p=>p.id).join(',');
-      const changed =original!==current;
-      changeIndicator.textContent = changed?'Changes pending…':'No changes made';
-      changeIndicator.style.color = changed?'#b45309':'var(--muted)';
+      const original = assignedData.map(p => p.id).join(',');
+      const current = assigned.map(p => p.id).join(',');
+      const changed = original !== current;
+      changeIndicator.textContent = changed ? 'Changes pending…' : 'No changes made';
+      changeIndicator.style.color = changed ? '#b45309' : 'var(--muted)';
 
-      const ab=$('#availableBadge'), bb=$('#assignedBadge');
-      if(ab) ab.textContent=available.length; 
-      if(bb) bb.textContent=assigned.length;
+      const ab = $('#availableBadge'), bb = $('#assignedBadge');
+      if (ab) ab.textContent = availableTotal;
+      if (bb) bb.textContent = assignedTotal;
     }
 
-    // 🔹 Assign / Remove
-    addBtn.addEventListener('click',()=>{
-      selectedAvailable.forEach(id=>{
-        const p=findAndRemove(available,id); 
-        if(p){assigned.push(p);}
-      });
-      selectedAvailable.clear(); render();
-    });
-
-    removeBtn.addEventListener('click',()=>{
-      selectedAssigned.forEach(id=>{
-        const p=findAndRemove(assigned,id); 
-        if(p){available.push(p);}
-      });
-      selectedAssigned.clear(); render();
-    });
-
-    function findAndRemove(list,id){
-      let idx=list.findIndex(x=>x.id===id);
-      if(idx>-1){return list.splice(idx,1)[0];}
-      for(const item of list){
-        if(item.children){
-          const c=findAndRemove(item.children,id);
-          if(c) return c;
+    // Helper function to count total items including children
+    function countItems(list) {
+      let count = 0;
+      list.forEach(item => {
+        if (item.children && item.children.length > 0) {
+          count += countItems(item.children);
+        } else {
+          count += 1;
         }
-      }
-      return null;
+      });
+      return count;
     }
 
-    selectAllBtn.addEventListener('click',()=>{ flatten(available).forEach(p=>selectedAvailable.add(p.id)); render(); });
-    clearBtn.addEventListener('click',()=>{ selectedAvailable.clear(); selectedAssigned.clear(); render(); });
+    // 🔹 Enhanced Add logic - properly sync between panels
+    addBtn.addEventListener('click', () => {
+      selectedAvailable.forEach(id => {
+        // Find the item in available (could be child or standalone)
+        let itemToMove = null;
+        let parentContext = null;
+        
+        // First, check if it's a standalone item
+        const standaloneIndex = available.findIndex(item => item.id === id && (!item.children || item.children.length === 0));
+        if (standaloneIndex > -1) {
+          itemToMove = available.splice(standaloneIndex, 1)[0];
+          assigned.push(itemToMove);
+        } else {
+          // Look for it as a child item
+          for (let parent of available) {
+            if (parent.children) {
+              const childIndex = parent.children.findIndex(c => c.id === id);
+              if (childIndex > -1) {
+                itemToMove = parent.children.splice(childIndex, 1)[0];
+                parentContext = parent;
+                
+                // Find or create parent in assigned
+                let assignedParent = assigned.find(a => a.id === parent.id);
+                if (!assignedParent) {
+                  assignedParent = { 
+                    id: parent.id, 
+                    label: parent.label, 
+                    children: [] 
+                  };
+                  assigned.push(assignedParent);
+                }
+                assignedParent.children.push(itemToMove);
+                break;
+              }
+            }
+          }
+        }
+      });
+      
+      selectedAvailable.clear();
+      
+      // Rebuild available list to reflect changes and update partial states
+      available = buildAvailableList(availableData, assigned);
+      render();
+    });
+
+    // 🔹 Enhanced Remove logic - properly sync between panels
+    removeBtn.addEventListener('click', () => {
+      selectedAssigned.forEach(id => {
+        // Find the item in assigned (could be child or standalone)
+        let itemToMove = null;
+        let wasChild = false;
+        
+        // First, check if it's a standalone item
+        const standaloneIndex = assigned.findIndex(item => item.id === id && (!item.children || item.children.length === 0));
+        if (standaloneIndex > -1) {
+          itemToMove = assigned.splice(standaloneIndex, 1)[0];
+        } else {
+          // Look for it as a child item
+          for (let i = 0; i < assigned.length; i++) {
+            const parent = assigned[i];
+            if (parent.children) {
+              const childIndex = parent.children.findIndex(c => c.id === id);
+              if (childIndex > -1) {
+                itemToMove = parent.children.splice(childIndex, 1)[0];
+                wasChild = true;
+                
+                // Remove parent from assigned if no children left
+                if (parent.children.length === 0) {
+                  assigned.splice(i, 1);
+                }
+                break;
+              }
+            }
+          }
+        }
+      });
+      
+      selectedAssigned.clear();
+      
+      // Rebuild available list to reflect changes and update partial states
+      available = buildAvailableList(availableData, assigned);
+      render();
+    });
+
+    selectAllBtn.addEventListener('click', () => { 
+      flatten(available).forEach(p => selectedAvailable.add(p.id)); 
+      render(); 
+    });
+    clearBtn.addEventListener('click', () => { 
+      selectedAvailable.clear(); 
+      selectedAssigned.clear(); 
+      render(); 
+    });
 
     globalSearch.addEventListener('input',()=> setTimeout(render,120));
     $('#clearSearchBtn')?.addEventListener('click',()=>{ globalSearch.value=''; render(); });
@@ -610,17 +1275,43 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
     }
 
 
-    function move(sel,dir){
-      const ids=Array.from(sel); 
-      const idxs=ids.map(id=>assigned.findIndex(p=>p.id===id)).sort((a,b)=>dir>0?b-a:a-b);
-      idxs.forEach(i=>{
-        const j=i+dir; 
-        if(j>=0 && j<assigned.length){ [assigned[i],assigned[j]]=[assigned[j],assigned[i]]; }
+    function moveItems(sel, dir) {
+      const ids = Array.from(sel);
+      
+      // Handle standalone items
+      const standaloneIds = ids.filter(id => assigned.some(item => item.id === id && (!item.children || item.children.length === 0)));
+      
+      if (standaloneIds.length > 0) {
+        const indices = standaloneIds.map(id => assigned.findIndex(p => p.id === id)).sort((a, b) => dir > 0 ? b - a : a - b);
+        indices.forEach(i => {
+          const j = i + dir;
+          if (j >= 0 && j < assigned.length) {
+            [assigned[i], assigned[j]] = [assigned[j], assigned[i]];
+          }
+        });
+      }
+      
+      // Handle child items within their parent groups
+      ids.forEach(id => {
+        for (let parent of assigned) {
+          if (parent.children) {
+            const childIdx = parent.children.findIndex(c => c.id === id);
+            if (childIdx > -1) {
+              const newIdx = childIdx + dir;
+              if (newIdx >= 0 && newIdx < parent.children.length) {
+                [parent.children[childIdx], parent.children[newIdx]] = [parent.children[newIdx], parent.children[childIdx]];
+              }
+              break;
+            }
+          }
+        }
       });
+      
       render();
     }
-    document.getElementById('moveUpBtn').addEventListener('click',()=>move(selectedAssigned,-1));
-    document.getElementById('moveDownBtn').addEventListener('click',()=>move(selectedAssigned, 1));
+
+    moveUpBtn.addEventListener('click', () => moveItems(selectedAssigned, -1));
+    moveDownBtn.addEventListener('click', () => moveItems(selectedAssigned, 1));
 
     function flatten(list){
       let result=[];
