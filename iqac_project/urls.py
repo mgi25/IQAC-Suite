@@ -9,6 +9,8 @@ urlpatterns = [
     path('', include('core.urls')),  # core: dashboard, login, etc.
     path('accounts/', include('allauth.urls')),  # login/logout
     path('suite/', include(('emt.urls', 'emt'), namespace='emt')),  # emt app
+    # Legacy prefix to support older links that still reference '/emt/'
+    path('emt/', include(('emt.urls', 'emt'), namespace='emt_legacy')),  # backward compatibility
     path('transcript/', include('transcript.urls')),  # transcript module
 ]
 
