@@ -1,3 +1,4 @@
+
 # core/urls.py
 
 from django.urls import path
@@ -25,18 +26,19 @@ urlpatterns = [
     # ────────────────────────────────────────────────
     # CDL (Creative & Design Lab) Dashboards & Workflows
     # ────────────────────────────────────────────────
-    path("cdl/", views.cdl_dashboard, name="cdl_dashboard"),
+    path("cdl/", views.cdl_event_user_view, name="cdl_dashboard"),
+    path("cdl/user-view/", views.cdl_event_user_view, name="cdl_event_user_view"),
     path("cdl/head/", views.cdl_head_dashboard, name="cdl_head_dashboard"),
     path("cdl/work/", views.cdl_work_dashboard, name="cdl_work_dashboard"),
     path("cdl/member/", views.cdl_member_dashboard, name="cdl_member_dashboard"),
     path("cdl/support/", views.cdl_support_detail_page, name="cdl_support_detail_page"),
+    path("cdl/support/<int:proposal_id>/assign/", views.cdl_assign_tasks_page, name="cdl_assign_tasks_page"),
     path("cdl/availability/new/", views.cdl_create_availability, name="create_availability"),
     path("cdl/resources/brand-kit/", views.cdl_brand_kit, name="brand_kit"),
     path("cdl/resources/templates/posters/", views.cdl_templates_posters, name="templates_posters"),
     path("cdl/resources/templates/certificates/", views.cdl_templates_certificates, name="templates_certificates"),
     path("cdl/resources/media-guide/", views.cdl_media_guide, name="media_guide"),
     path("proposal/<int:proposal_id>/cdl/", views.submit_proposal_cdl, name="submit_proposal_cdl"),
-    path("proposal/<int:proposal_id>/cdl/certificates/", views.post_event_certificates_tab, name="post_event_certificates"),
     path("proposal/<int:proposal_id>/cdl/thread/", views.cdl_thread, name="cdl_thread"),
 
     # ────────────────────────────────────────────────
@@ -169,8 +171,20 @@ urlpatterns = [
     path('api/cdl/members/', views.api_cdl_members, name='api_cdl_members'),
     path('api/cdl/users/', views.api_cdl_users, name='api_cdl_users'),
     path('api/cdl/member/data/', views.api_cdl_member_data, name='api_cdl_member_data'),
+    path('api/cdl/member/accept/', views.api_cdl_member_accept, name='api_cdl_member_accept'),
+    # Unified CDL Event APIs for user view
+    path('api/cdl/event/<int:proposal_id>/details/', views.api_cdl_event_details, name='api_cdl_event_details'),
+    path('api/cdl/event/<int:proposal_id>/content/', views.api_cdl_event_content, name='api_cdl_event_content'),
+    path('api/cdl/event/<int:proposal_id>/assignments/', views.api_cdl_event_assignments, name='api_cdl_event_assignments'),
+    path('api/cdl/event/<int:proposal_id>/process/', views.api_cdl_event_process, name='api_cdl_event_process'),
+    path('api/cdl/event/<int:proposal_id>/documents/', views.api_cdl_event_documents, name='api_cdl_event_documents'),
+    path('api/cdl/events/my-support/', views.api_cdl_events_my_support, name='api_cdl_events_my_support'),
     path('api/cdl/support/<int:proposal_id>/', views.api_cdl_support_detail, name='api_cdl_support_detail'),
     path('api/cdl/support/<int:proposal_id>/assign/', views.api_cdl_support_assign, name='api_cdl_support_assign'),
+    # Per-resource assignment APIs
+    path('api/cdl/support/<int:proposal_id>/resources/', views.api_cdl_support_resources, name='api_cdl_support_resources'),
+    path('api/cdl/support/<int:proposal_id>/task-assignments/', views.api_cdl_save_task_assignments, name='api_cdl_save_task_assignments'),
+    path('api/cdl/support/<int:proposal_id>/tasks/', views.api_cdl_tasks_crud, name='api_cdl_tasks_crud'),
 
     # --- Calendar (Unified) ---
     path('api/calendar/', views.api_calendar_events, name='api_calendar_events'),

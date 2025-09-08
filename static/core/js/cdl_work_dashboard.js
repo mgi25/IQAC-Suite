@@ -29,8 +29,7 @@
             <p>Priority: ${esc(n.priority||'Normal')} · Due: ${fmt(n.due_date)}</p>
           </div>
           <div class="btn-group">
-            <button class="chip-btn success" data-act="accept"><i class="fa-solid fa-check"></i> Accept</button>
-            <button class="chip-btn warn" data-act="decline"><i class="fa-solid fa-xmark"></i> Decline</button>
+            ${n.accepted ? `<a class="chip-btn" data-act="view" href="/cdl/support/?eventId=${n.id}"><i class="fa-regular fa-eye"></i> View Details</a>` : '<button class="chip-btn success" data-act="accept"><i class="fa-solid fa-check"></i> Accept</button>'}
           </div>
         </article>`).join('');
       list.innerHTML = rows;
@@ -38,14 +37,21 @@
       list.querySelectorAll('[data-act]').forEach(b=>{
         b.addEventListener('click', e=>{
           const id = +e.currentTarget.closest('.list-item').dataset.id;
-          if(e.currentTarget.dataset.act==='accept'){
-            const s = INBOX.find(x=>x.id===id);
-            if(s && !WORK.some(w=>w.id===s.id)){
-              WORK.unshift({id:s.id,event:s.event||s.title||'Untitled',type:s.type,priority:s.priority||'Medium',due_date:s.due_date,status:'pending',rev:0});
-            }
+          const act = e.currentTarget.dataset.act;
+          if(act==='accept'){
+            acceptAssignment(id).then(res=>{
+              if(res && res.success){
+                const s = INBOX.find(x=>x.id===id);
+                if(s && !WORK.some(w=>w.id===s.id)){
+                  WORK.unshift({id:s.id,event:s.event||s.title||'Untitled',type:s.type,priority:s.priority||'Medium',due_date:s.due_date,status:'pending',rev:0});
+                }
+                if(s){ s.accepted = true; }
+                renderInbox(currentFilter); renderWork(); computeKPIs();
+              }else{
+                alert((res && res.error) ? res.error : 'Could not accept this assignment.');
+              }
+            });
           }
-          const i = INBOX.findIndex(x=>x.id===id); if(i>-1) INBOX.splice(i,1);
-          renderInbox(currentFilter); renderWork(); computeKPIs();
         });
       });
     }
@@ -172,8 +178,10 @@
       const toggle=r.status==='in_progress'
         ? `<button class="btn xs" data-act="pause"><i class="fa-regular fa-circle-pause"></i> Pause</button>`
         : `<button class="btn xs" data-act="start"><i class="fa-regular fa-circle-play"></i> Start</button>`;
+      const view=`<a class="btn xs" href="/cdl/support/?eventId=${r.id}"><i class="fa-regular fa-eye"></i> View</a>`;
       return `${toggle}
         <button class="btn xs success" data-act="submit"><i class="fa-solid fa-paper-plane"></i> Submit</button>
+        ${view}
         <button class="btn xs warn" data-act="help"><i class="fa-regular fa-circle-question"></i> Help</button>`;
     }
   
@@ -193,6 +201,10 @@
     function last7(arr){ const a=arr.slice(-7); while(a.length<7)a.unshift(null); return a; }
     function last7Labels(){ return ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']; }
     function inWeek(d){ const now=new Date(); const s=new Date(now); s.setDate(now.getDate()-((now.getDay()+6)%7)); s.setHours(0,0,0,0); const e=new Date(s); e.setDate(s.getDate()+7); return d>=s && d<e; }
+    function getCookie(name){
+      const m=document.cookie.match(new RegExp('(^|; )'+name.replace(/([.$?*|{}()\[\]\\\/\+^])/g,'\\$1')+'=([^;]*)'));
+      return m? decodeURIComponent(m[2]): null;
+    }
   
     async function bootstrap(){
       try{
@@ -204,7 +216,7 @@
           EVENTS_ALL = data.events_all||[];
           EVENTS_ASSIGNED = data.events_assigned||[];
         }}
-      }catch{}
+  }catch{}
       computeKPIs(); renderInbox('all'); renderChart('workload'); buildCalendar(); openDay(new Date().toISOString().slice(0,10)); renderWork();
     }
     // Calendar scope selector
@@ -214,5 +226,18 @@
 
     // Boot
     bootstrap();
+
+    async function acceptAssignment(proposalId){
+      try{
+        const res = await fetch('/api/cdl/member/accept/', {
+          method:'POST',
+          headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRFToken': getCookie('csrftoken')||''},
+          body: JSON.stringify({proposal_id: proposalId})
+        });
+        const j = await res.json().catch(()=>({success:false,error:'Server error'}));
+        if(!res.ok) return j;
+        return j;
+      }catch(e){ return {success:false,error:'Network error'}; }
+    }
   })();
   

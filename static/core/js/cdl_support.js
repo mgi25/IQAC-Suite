@@ -68,8 +68,8 @@
       $('#speakerCard').innerHTML = '<div class="empty">No speaker details provided</div>';
     }
 
-    // Hook Assign button
-    $('#btnAssign')?.addEventListener('click', openAssign);
+  // Hook Assign button (only rendered for CDL Head)
+  $('#btnAssign')?.addEventListener('click', openAssign);
   }
 
   function renderError(msg){
@@ -78,42 +78,67 @@
     });
   }
 
-  // Assign flow
-  function openAssign(){ $('#assignModal').style.display='flex'; fetchUsersByRole(); }
+  // Assign flow — dynamic resource grid
+  function openAssign(){ $('#assignModal').style.display='flex'; buildAssignGrid(); }
   $('#assignClose')?.addEventListener('click', ()=> $('#assignModal').style.display='none');
   $('#assignCancel')?.addEventListener('click', ()=> $('#assignModal').style.display='none');
 
-  async function loadMembers(){
-    try{ await fetchUsersByRole(); }catch{}
+  async function loadMembers(){ /* kept for backwards compatibility; no-op */ }
+
+  async function fetchResourcesAndMembers(){
+    const res = await fetch(`/api/cdl/support/${encodeURIComponent(eventId)}/resources/`);
+    if(!res.ok) throw new Error('Failed to load resources');
+    return res.json();
   }
 
-  async function fetchUsersByRole(){
+  async function buildAssignGrid(){
     try{
-      const res = await fetch('/api/cdl/users/');
-      if(!res.ok) return;
-      const data = await res.json();
-      const roleSel = $('#assignRole');
-      const memSel = $('#assignMember');
-      const role = roleSel.value;
-      const users = data.users||{};
-      const group = role.includes('Head') ? users.head : users.employee;
-      memSel.innerHTML = '<option value="">Select member…</option>' + (group||[]).map(u=>`<option value="${u.id}">${esc(u.name)}${u.role? ' — '+esc(u.role): ''}</option>`).join('');
+      const data = await fetchResourcesAndMembers();
+      const wrap = $('#assignGrid');
+      const members = data.members||[];
+      const existing = data.assignments||{};
+      if(!(data.resources||[]).length){ wrap.innerHTML = '<div class="empty" style="grid-column:1/-1">No assignable resources for this event</div>'; return; }
+      wrap.innerHTML = '';
+      for(const r of data.resources){
+        const row = document.createElement('div'); row.className='row'; row.style.display='contents';
+        const label = document.createElement('div'); label.textContent = r.label || r.key; label.style.display='flex'; label.style.alignItems='center';
+        const selectWrap = document.createElement('div');
+        const sel = document.createElement('select'); sel.className='select'; sel.dataset.resource = r.key;
+        sel.innerHTML = '<option value="">Unassigned</option>' + members.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
+        const pre = existing[r.key]; if(pre){ sel.value = String(pre.user_id); }
+        selectWrap.appendChild(sel);
+        wrap.appendChild(label); wrap.appendChild(selectWrap);
+      }
+      // Save handler
+      $('#assignSave').onclick = async ()=>{
+        const picks = Array.from(document.querySelectorAll('#assignGrid select')).map(sel=>({resource: sel.dataset.resource, user_id: sel.value? Number(sel.value): null})).filter(x=>x.user_id);
+        try{
+          const r2 = await fetch(`/api/cdl/support/${encodeURIComponent(eventId)}/task-assignments/`, { method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCSRF()}, body: JSON.stringify({ assignments: picks }) });
+          const out = await r2.json();
+          if(!r2.ok || !out.success) throw new Error(out.error||('HTTP '+r2.status));
+          toast('Assignments saved');
+          $('#assignModal').style.display='none';
+          await refreshAssignmentsUI();
+        }catch(e){ toast('Save failed: '+(e.message||'Error')); }
+      };
+    }catch(e){
+      $('#assignGrid').innerHTML = `<div class="error">${esc(e.message||'Failed to load')}</div>`;
+    }
+  }
+
+  async function refreshAssignmentsUI(){
+    try{
+      const data = await fetchResourcesAndMembers();
+      const list = $('#assignmentList');
+      const existing = data.assignments||{};
+      const out = [];
+      for(const r of (data.resources||[])){
+        const assg = existing[r.key];
+        out.push(`<div class="kv"><strong>${esc(r.label||r.key)}</strong><span>${assg? esc(assg.name): 'Unassigned'}</span></div>`);
+      }
+      list.innerHTML = out.join('') || '';
     }catch{}
   }
-  document.addEventListener('change', e=>{ if(e.target && e.target.id==='assignRole'){ fetchUsersByRole(); }});
-
-  $('#assignSave')?.addEventListener('click', async ()=>{
-    const memberId = $('#assignMember')?.value;
-    const role = $('#assignRole')?.value || '';
-    if(!memberId){ toast('Select a member'); return; }
-    try{
-      const res = await fetch(`/api/cdl/support/${encodeURIComponent(eventId)}/assign/`, {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCSRF()}, body:JSON.stringify({member_id: memberId, role})});
-      const out = await res.json();
-      if(!res.ok || !out.success) throw new Error(out.error||('HTTP '+res.status));
-      toast('Assigned successfully');
-      setTimeout(()=>location.reload(), 600);
-    }catch(e){ toast('Assignment failed: '+(e.message||'Error')); }
-  });
 
   function getCSRF(){
     const name='csrftoken';

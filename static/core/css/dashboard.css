@@ -340,6 +340,21 @@
 .status-rejected { background: #fee2e2; color: #dc2626; }
 
 /* ===== CDL Head page specific compaction and layout ===== */
+.ems-dashboard.cdl-head{
+  /* Visual scaling to maintain density when users zoom to 125–150%. */
+  --cdl-scale: 1;
+  transform: scale(var(--cdl-scale));
+  transform-origin: top left;
+  /* Compensate width so scaled content still fills parent. */
+  width: calc(100% / var(--cdl-scale));
+}
+
+/* progressively compact as viewport width reduces (covers zoom-in as well) */
+@media (max-width: 1600px){ .ems-dashboard.cdl-head{ --cdl-scale: 0.96; } }
+@media (max-width: 1440px){ .ems-dashboard.cdl-head{ --cdl-scale: 0.92; } }
+@media (max-width: 1320px){ .ems-dashboard.cdl-head{ --cdl-scale: 0.88; } }
+/* Below 1200px, layout stacks; keep scale at 1 to avoid over-shrinking */
+
 .ems-dashboard.cdl-head .kpi-row{
   /* exactly 4 compact KPI cards on top row */
   grid-template-columns: repeat(4, 1fr);
@@ -362,6 +377,18 @@
   align-items:start;
 }
 
+/* fixed card height for consistent layout */
+.ems-dashboard.cdl-head{ --cdl-card-h: 300px; }
+.ems-dashboard.cdl-head .cdl-grid .card.eq{
+  height: var(--cdl-card-h);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure Calendar and Event Details match exactly in height on CDL Head */
+.ems-dashboard.cdl-head #cardCalendar,
+.ems-dashboard.cdl-head #cardEventDetails{ height: var(--cdl-card-h); }
+
 @media (max-width: 1200px){
   .ems-dashboard.cdl-head .cdl-grid{ grid-template-columns: 1fr; }
 }
@@ -371,9 +398,14 @@
 .ems-dashboard.cdl-head #cardCalendar .mini-cal,
 .ems-dashboard.cdl-head #cardTeam .chart-wrap,
 .ems-dashboard.cdl-head #cardEventDetails .event-details-content{
-  max-height: 260px;
+  flex: 1 1 auto;
+  max-height: none;
   overflow: auto;
 }
+
+/* help chart fill remaining space */
+.ems-dashboard.cdl-head #cardTeam .chart-wrap{ position: relative; }
+.ems-dashboard.cdl-head #cardTeam .chart-wrap canvas{ height: 100% !important; width: 100% !important; }
 
 /* place cards explicitly to left/right stacks on wide screens */
 @media (min-width: 1201px){
@@ -419,8 +451,13 @@
 .ems-dashboard.cdl-head .chip-btn{ font-size:10px; padding:5px 8px; }
 .ems-dashboard.cdl-head .select{ font-size:11px; padding:5px 8px; }
 
-/* Chart area slightly shorter */
-.ems-dashboard.cdl-head #cardTeam .chart-wrap{ padding:10px; max-height:220px; }
+/* Chart area padding only; let it flex to full card height */
+.ems-dashboard.cdl-head #cardTeam .chart-wrap{ padding:10px; max-height:none; }
+
+/* On small screens, allow auto height to avoid overflow */
+@media (max-width: 992px){
+  .ems-dashboard.cdl-head .cdl-grid .card.eq{ height:auto; }
+}
 
 /* Assignment Manager typography compaction */
 .ems-dashboard.cdl-head .table.compact th,
