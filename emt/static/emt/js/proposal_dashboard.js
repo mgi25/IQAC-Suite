@@ -540,17 +540,10 @@ $(document).ready(function() {
             });
             numActivitiesInput.value = rows.length;
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
-                // Only autosave existing values if fields were previously bound
-                // to the autosave manager. Freshly rendered rows don't have the
-                // `data-autosave-bound` flag and would otherwise wipe saved data.
-                const alreadyBound = Array.from(rows).some(row => {
-                    const inp = row.querySelector('input');
-                    return inp && inp.dataset.autosaveBound === 'true';
-                });
-                // Reinitialize first so new rows get included in the autosave field list
+                // Reinitialize so new rows are tracked by the autosave manager
                 window.AutosaveManager.reinitialize();
-                // Then persist existing values if autosave was already bound
-                if (alreadyBound && window.AutosaveManager.autosaveDraft) {
+                // Persist current values immediately so activity fields are saved
+                if (window.AutosaveManager.autosaveDraft) {
                     window.AutosaveManager.autosaveDraft().catch(() => {});
                 }
             }
