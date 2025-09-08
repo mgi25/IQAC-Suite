@@ -178,6 +178,9 @@ $(document).ready(function() {
     initializeDashboard();
 
     function initializeDashboard() {
+        // Initialize navigation state first
+        initializeNavigationState();
+        
         setupFormHandling();
         updateProgressBar();
         loadExistingData();
@@ -237,50 +240,44 @@ $(document).ready(function() {
     $('.proposal-nav .nav-link').on('click', function(e) {
             e.preventDefault();
             const section = $(this).data('section');
+            const $this = $(this);
+
+            // Prevent navigation to disabled sections
+            if ($this.hasClass('disabled')) {
+                const order = parseInt($this.data('order'));
+                if (order === 2) {
+                    showNotification('Please complete and save the Basic Info section first.', 'info');
+                } else {
+                    showNotification('Please complete the previous sections first.', 'info');
+                }
+                return;
+            }
 
             const currentOrder = parseInt($(`.proposal-nav .nav-link[data-section="${currentExpandedCard}"]`).data('order')) || 0;
-            const targetOrder = parseInt($(this).data('order')) || 0;
+            const targetOrder = parseInt($this.data('order')) || 0;
             
             // Always allow navigation to basic-info
             if (section === 'basic-info') {
-                $(this).removeClass('disabled');
                 activateSection(section);
                 return;
             }
             
-            // Check section status
-            const sectionStatus = sectionProgress[section];
-            
-            // Allow navigation if:
-            // 1. Going backwards to a previously completed/started section
-            // 2. Section has been completed or is in progress
-            // 3. Moving to the immediate next section if current section is valid
-            const canNavigate = 
-                targetOrder < currentOrder || // Going backwards
-                sectionStatus === true || // Section completed
-                sectionStatus === 'in-progress' || // Section in progress
-                (targetOrder === currentOrder + 1 && validateCurrentSection()); // Next section + current valid
-            
-            if (canNavigate) {
-                // If moving forward to a new section, validate current section first
-                if (targetOrder > currentOrder && currentExpandedCard) {
+            // Check if target section is enabled (not disabled)
+            if (!$this.hasClass('disabled')) {
+                // If moving forward to a new section and current section exists, validate it first
+                if (targetOrder > currentOrder && currentExpandedCard && 
+                    !sectionProgress[currentExpandedCard] && currentExpandedCard !== 'basic-info') {
                     if (!validateCurrentSection()) {
                         showNotification('Please complete all required fields in the current section first.', 'error');
                         return;
                     }
-                    // Mark current section as complete when moving to the next
-                    markSectionComplete(currentExpandedCard);
+                    // Mark current section as in-progress if not completed yet
+                    if (sectionProgress[currentExpandedCard] !== true) {
+                        markSectionInProgress(currentExpandedCard);
+                    }
                 }
 
-                $(this).removeClass('disabled');
                 activateSection(section);
-            } else {
-                // Show helpful message based on the situation
-                if (targetOrder > currentOrder + 1) {
-                    showNotification('Please complete the previous sections first.', 'info');
-                } else {
-                    showNotification('Please complete all required fields in the current section first.', 'error');
-                }
             }
         });
         
@@ -2411,52 +2408,60 @@ function getWhyThisEventForm() {
             serializeSchedule();
         }
 
-        if (validateCurrentSection()) {
-            showLoadingOverlay();
-            if (window.AutosaveManager && window.AutosaveManager.manualSave) {
-                window.AutosaveManager.manualSave()
-                    .then((data) => {
-                        hideLoadingOverlay();
-                        if (data && data.errors) {
-                            handleAutosaveErrors(data);
-                        }
-                        markSectionComplete(currentExpandedCard);
-                        showNotification('Section saved successfully!', 'success');
+        // Always validate before saving
+        if (!validateCurrentSection()) {
+            showNotification('Please complete all required fields before saving.', 'error');
+            return;
+        }
 
-                        const nextSection = getNextSection(currentExpandedCard);
-                        if (nextSection) {
-                            const nextLink = $(`.proposal-nav .nav-link[data-section="${nextSection}"]`);
-                            nextLink.removeClass('disabled');
-                            const nextUrl = nextLink.data('url');
-                            setTimeout(() => {
-                                if (nextUrl && nextSection !== 'cdl-support') {
-                                    window.location.href = nextUrl;
-                                } else {
-                                    openFormPanel(nextSection);
-                                }
-                            }, 1000);
-                        }
-                    })
-                    .catch(err => {
-                        hideLoadingOverlay();
-                        console.error('Autosave failed:', err);
-                        if (err && err.errors) {
-                            handleAutosaveErrors(err);
-                            if (firstErrorField && firstErrorField.length) {
-                                $('html, body').animate({
-                                    scrollTop: firstErrorField.offset().top - 100
-                                }, 500);
-                                firstErrorField.focus();
+        showLoadingOverlay();
+        if (window.AutosaveManager && window.AutosaveManager.manualSave) {
+            window.AutosaveManager.manualSave()
+                .then((data) => {
+                    hideLoadingOverlay();
+                    if (data && data.errors) {
+                        handleAutosaveErrors(data);
+                        showNotification('Please fix the errors before continuing.', 'error');
+                        return;
+                    }
+                    
+                    // Only mark as complete if validation passed and save succeeded
+                    markSectionComplete(currentExpandedCard);
+                    showNotification('Section saved successfully!', 'success');
+
+                    const nextSection = getNextSection(currentExpandedCard);
+                    if (nextSection) {
+                        const nextLink = $(`.proposal-nav .nav-link[data-section="${nextSection}"]`);
+                        nextLink.removeClass('disabled');
+                        const nextUrl = nextLink.data('url');
+                        setTimeout(() => {
+                            if (nextUrl && nextSection !== 'cdl-support') {
+                                window.location.href = nextUrl;
+                            } else {
+                                openFormPanel(nextSection);
                             }
+                        }, 1000);
+                    }
+                })
+                .catch(err => {
+                    hideLoadingOverlay();
+                    console.error('Autosave failed:', err);
+                    if (err && err.errors) {
+                        handleAutosaveErrors(err);
+                        if (firstErrorField && firstErrorField.length) {
+                            $('html, body').animate({
+                                scrollTop: firstErrorField.offset().top - 100
+                            }, 500);
+                            firstErrorField.focus();
                         }
-                        showNotification('Autosave failed. Please check for missing fields.', 'error');
-                    });
-            } else {
-                hideLoadingOverlay();
-                markSectionComplete(currentExpandedCard);
-            }
+                    }
+                    showNotification('Save failed. Please check for missing or invalid fields.', 'error');
+                });
         } else {
-            showNotification('Please complete all required fields.', 'error');
+            hideLoadingOverlay();
+            // For cases without AutosaveManager, still mark complete only after validation
+            markSectionComplete(currentExpandedCard);
+            showNotification('Section saved successfully!', 'success');
         }
     }
 
@@ -2727,10 +2732,14 @@ function getWhyThisEventForm() {
         if (nextNavLink.length) {
             if (nextNavLink.hasClass('disabled')) {
                 nextNavLink.removeClass('disabled');
-                // Optionally, add a visual cue
+                // Add visual feedback for newly unlocked section
                 nextNavLink.addClass('animate-bounce');
                 setTimeout(() => nextNavLink.removeClass('animate-bounce'), 1000);
                 console.log('unlockNextSection: nextNavLink unlocked', nextNavLink[0]);
+                
+                // Show notification about unlocked section
+                const nextSectionTitle = nextNavLink.find('.nav-item-title').text();
+                showNotification(`${nextSectionTitle} section is now available!`, 'success');
             } else {
                 console.log('unlockNextSection: nextNavLink already enabled', nextNavLink[0]);
             }
@@ -3020,26 +3029,36 @@ function getWhyThisEventForm() {
 
     // ===== LOAD EXISTING DATA - PRESERVED =====
     function loadExistingData() {
-        let hasBasicData = false;
-        $('#django-forms input, #django-forms textarea, #django-forms select').each(function() {
-            let val = $(this).val();
-            if (Array.isArray(val)) {
-                val = val.length ? val[0] : '';
-            }
-            if (typeof val === 'string' && val.trim() !== '') {
-                // A more robust check might be needed, but this is a simple start
-                if ($(this).attr('name') === 'event_title') {
-                    hasBasicData = true;
-                    return false;
-                }
-            }
-        });
+        // Don't auto-mark sections as complete during initial load
+        // Let user manually validate and save each section
         
-        if (hasBasicData) {
-            markSectionComplete('basic-info');
+        // Check if we have a saved proposal ID - if so, load the saved state from server
+        if (window.PROPOSAL_ID) {
+            // Load actual completion state from server if available
+            loadSavedProgressState();
+        } else {
+            // For new proposals, ensure only basic-info is unlocked initially
+            initializeNavigationState();
         }
 
         updateProgressBar();
+    }
+    
+    function initializeNavigationState() {
+        // Reset all sections to disabled state except basic-info
+        $('.proposal-nav .nav-link').addClass('disabled').removeClass('completed in-progress');
+        $('.proposal-nav .nav-link[data-section="basic-info"]').removeClass('disabled');
+        
+        // Reset section progress
+        Object.keys(sectionProgress).forEach(section => {
+            sectionProgress[section] = false;
+        });
+    }
+    
+    function loadSavedProgressState() {
+        // This would ideally load the actual completion state from the server
+        // For now, we'll be conservative and require re-validation
+        initializeNavigationState();
     }
 
     // ===== KEYBOARD SHORTCUTS - PRESERVED =====

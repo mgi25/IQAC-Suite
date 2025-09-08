@@ -242,7 +242,7 @@
                 <input type="hidden" name="needs_grad_attr_mapping" id="ga-hidden" value="{{ report.needs_grad_attr_mapping|default:'' }}">
                 
                 <div class="ga-form-footer">
-                    <a class="btn btn-secondary btn-back-report" href="{% url 'emt:submit_event_report' report.proposal.id %}?section=event-relevance">← Back to Report</a>
+                    <a class="btn btn-secondary btn-back-report" href="{% url 'emt:submit_event_report' report.proposal.id %}?section=event-relevance&from=ga">← Back to Report</a>
                     <button class="btn btn-primary" type="submit">Save & Return →</button>
                 </div>
             </div>
