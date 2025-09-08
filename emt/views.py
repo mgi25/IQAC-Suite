@@ -274,6 +274,54 @@ def _save_speakers(proposal, data, files):
             )
 
 
+def _parse_sdg_text(text: str):
+    """Extract SDGGoal IDs from free text like 'SDG3: Good Health, SDG4: Education' or names.
+    Returns a queryset of matching SDGGoal objects.
+    """
+    from core.models import SDGGoal
+    if not text:
+        return SDGGoal.objects.none()
+    ids = set()
+    names = []
+    for token in re.split(r"[,\n]", text):
+        t = token.strip()
+        if not t:
+            continue
+        m = re.search(r"SDG\s*(\d+)", t, re.IGNORECASE)
+        if m:
+            try:
+                ids.add(int(m.group(1)))
+                continue
+            except Exception:
+                pass
+        names.append(t)
+    qs = SDGGoal.objects.none()
+    if ids:
+        qs = SDGGoal.objects.filter(id__in=list(ids))
+    if names:
+        by_name = SDGGoal.objects.filter(name__in=names)
+        qs = qs.union(by_name)
+    return qs
+
+
+def _sync_proposal_from_report(proposal, report, payload: dict):
+    """Synchronize proposal snapshot fields during report saves.
+    - POS/PSO: copy from report.pos_pso_mapping if provided
+    - SDGs: parse report.sdg_value_systems_mapping into proposal.sdg_goals
+    Only update when corresponding values are present in the payload.
+    """
+    # POS/PSO
+    if "pos_pso_mapping" in payload:
+        proposal.pos_pso = payload.get("pos_pso_mapping", "")
+        proposal.save(update_fields=["pos_pso"])
+
+    # SDGs from free text mapping
+    if "sdg_value_systems_mapping" in payload:
+        goals = _parse_sdg_text(payload.get("sdg_value_systems_mapping", ""))
+        proposal.sdg_goals.set(list(goals))
+        proposal.save()
+
+
 def _save_expenses(proposal, data):
     pattern = re.compile(r"^expense_(?:sl_no|particulars|amount)_(\d+)$")
     indices = sorted(
@@ -1518,7 +1566,7 @@ def autosave_event_report(request):
             data[key] = ", ".join(value)
 
     form = EventReportForm(data, instance=report)
-    # For autosave, allow partial payloads by disabling field-level required flags
+    # For autosave, allow partial payloads and do NOT overwrite unspecified fields
     for f in form.fields.values():
         f.required = False
     form.fields.get("report_signed_date").required = False
@@ -1526,7 +1574,13 @@ def autosave_event_report(request):
         logger.debug("autosave_event_report form errors: %s", form.errors)
         return JsonResponse({"success": False, "errors": form.errors})
 
-    report = form.save(commit=False)
+    # Apply only the submitted fields to the existing instance
+    for name in form.fields.keys():
+        if name in data:
+            try:
+                setattr(report, name, form.cleaned_data.get(name))
+            except Exception:
+                pass
     if summary_content is not None:
         report.summary = summary_content
     if outcomes_content is not None:
@@ -1991,6 +2045,9 @@ def submit_event_report(request, proposal_id):
             report.save()
             form.save_m2m()
 
+            # Sync proposal snapshot fields based on final report edits
+            _sync_proposal_from_report(proposal, report, post_data)
+
             instances = formset.save(commit=False)
             for obj in instances:
                 obj.report = report
@@ -2145,7 +2202,20 @@ def preview_event_report(request, proposal_id):
     # Prepare proposal fields for display in preview
     proposal_form = EventProposalForm(instance=proposal)
     proposal_fields = []
+    # Exclude finance-only fields that are not part of the current submit_proposal UI
+    excluded_proposal_fields = {
+        "fest_fee_participants",
+        "fest_fee_rate",
+        "fest_fee_amount",
+        "fest_sponsorship_amount",
+        "conf_fee_participants",
+        "conf_fee_rate",
+        "conf_fee_amount",
+        "conf_sponsorship_amount",
+    }
     for name, field in proposal_form.fields.items():
+        if name in excluded_proposal_fields:
+            continue
         bound_field = proposal_form[name]
         raw_value = bound_field.value()
         field_def = bound_field.field
@@ -2208,6 +2278,12 @@ def preview_event_report(request, proposal_id):
             proposal_fields.append((f"Schedule Item {idx} – Date & Time", dt_str.strip()))
             proposal_fields.append((f"Schedule Item {idx} – Activity", activity.strip()))
 
+    # Include planned activities captured as structured rows on the proposal
+    planned_activities = list(proposal.activities.all().order_by("date", "id"))
+    for idx, act in enumerate(planned_activities, 1):
+        proposal_fields.append((f"Planned Activity {idx} – Name", act.name or "—"))
+        proposal_fields.append((f"Planned Activity {idx} – Date", getattr(act, "date", "") or "—"))
+
     for idx, speaker in enumerate(proposal.speakers.all(), 1):
         proposal_fields.extend(
             [
@@ -2225,25 +2301,14 @@ def preview_event_report(request, proposal_id):
                     speaker.photo.url if speaker.photo else "—",
                 ),
                 (f"Speaker {idx}: Bio", speaker.detailed_profile or "—"),
-                (
-                    f"Speaker {idx}: Topic",
-                    getattr(speaker, "topic", "") or "—",
-                ),
             ]
         )
 
     for idx, expense in enumerate(proposal.expense_details.all(), 1):
         proposal_fields.extend(
             [
+                (f"Expense Item {idx}: SL No", getattr(expense, "sl_no", "") or "—"),
                 (f"Expense Item {idx}: Particulars", expense.particulars or "—"),
-                (
-                    f"Expense Item {idx}: No. of Participants",
-                    getattr(expense, "participants", "") or "—",
-                ),
-                (
-                    f"Expense Item {idx}: Rate",
-                    getattr(expense, "rate", "") or "—",
-                ),
                 (f"Expense Item {idx}: Amount", expense.amount or "—"),
             ]
         )
@@ -2268,6 +2333,17 @@ def preview_event_report(request, proposal_id):
         values = post_data.getlist(name)
         display = ", ".join(values) if values else "—"
         report_fields.append((field.label, display))
+
+    # Include dynamic activities submitted with the report
+    import re as _re
+    idx_pattern = _re.compile(r"^activity_(?:name|date)_(\d+)$")
+    indices = sorted({int(m.group(1)) for key in post_data.keys() if (m := idx_pattern.match(key))})
+    for idx in indices:
+        a_name = post_data.get(f"activity_name_{idx}")
+        a_date = post_data.get(f"activity_date_{idx}")
+        if a_name or a_date:
+            report_fields.append((f"Activity {idx} – Name", a_name or "—"))
+            report_fields.append((f"Activity {idx} – Date", a_date or "—"))
 
     num_activities = post_data.get("num_activities")
     if num_activities:
@@ -2451,11 +2527,12 @@ def graduate_attributes_save(request, report_id):
         EventReport, id=report_id, proposal__submitted_by=request.user
     )
     # Accept either a combined string or a list of categories
-    mapping_text = request.POST.get("needs_grad_attr_mapping", "")
-    if not mapping_text:
-        items = request.POST.getlist("needs_grad_attr_mapping[]") or request.POST.getlist("needs_grad_attr_mapping")
-        if items:
-            mapping_text = ", ".join(items)
+    # The GA editor posts multiple checkboxes named exactly 'needs_grad_attr_mapping'
+    items = request.POST.getlist("needs_grad_attr_mapping")
+    if items:
+        mapping_text = ", ".join(items)
+    else:
+        mapping_text = request.POST.get("needs_grad_attr_mapping", "")
 
     report.needs_grad_attr_mapping = mapping_text
     # Optional: contemporary requirements and sdg text from editor page
@@ -2468,7 +2545,8 @@ def graduate_attributes_save(request, report_id):
     messages.success(request, "Graduate Attributes updated.")
     # Preserve return to Event Relevance section
     response = redirect("emt:submit_event_report", proposal_id=report.proposal.id)
-    response['Location'] += "?section=event-relevance"
+    # Return to section 6 (event-relevance) and mark source as GA editor
+    response['Location'] += "?section=event-relevance&from=ga"
     return response
 
 

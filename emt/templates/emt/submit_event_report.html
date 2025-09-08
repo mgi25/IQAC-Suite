@@ -318,7 +318,8 @@
         </div>
         <div class="modal-actions" style="margin-top: 20px; text-align: center;">
             <button type="button" id="sdgCancel" class="btn-draft-section" style="margin-right: 10px;">Cancel</button>
-            <button type="button" id="sdgSave" class="btn-save-section">Save Selection</button>
+            <!-- Removed 'btn-save-section' to prevent triggering the global Save & Continue handler -->
+            <button type="button" id="sdgSave" class="btn-sdg-save" style="min-width:140px;">Save Selection</button>
         </div>
     </div>
 </div>
@@ -327,12 +328,13 @@
 <div id="outcomeModal" class="sdg-modal" data-url="">
     <div class="sdg-modal-content">
         <h3>Select Program Outcomes (PO) and Program Specific Outcomes (PSO)</h3>
-        <div id="outcomeOptions" class="sdg-options" style="max-height: 360px; overflow: auto;">
-            <!-- Options populated by JS from outcomes API -->
+        <p>Select all that apply to this event. Your current selections will be preserved on reopen.</p>
+        <div id="outcomeOptions" class="sdg-options outcome-options" data-empty-text="No outcomes available.">
+            <!-- Outcome options populated via JS -->
         </div>
         <div class="modal-actions" style="margin-top: 20px; text-align: center;">
             <button type="button" id="outcomeCancel" class="btn-draft-section" style="margin-right: 10px;">Cancel</button>
-            <button type="button" id="outcomeSave" class="btn-save-section">Save Selection</button>
+            <button type="button" id="outcomeSave" class="btn-outcome-save" style="min-width:140px;">Save Selection</button>
         </div>
     </div>
     <style>
@@ -362,18 +364,18 @@
     <script type="application/json" id="proposal-speakers-json">{{ speakers_json|default:'[]'|safe }}</script>
     <script>
         // Global variables for the Event Report Form
-        window.REPORT_ID = "{{ report.id|default:'' }}";
-        window.PROPOSAL_ID = "{{ proposal.id|default:'' }}";
-        window.REPORT_STATUS = "{{ report.status|default:'draft' }}";
+        window.REPORT_ID = "{{ report.id|default:''|escapejs }}";
+        window.PROPOSAL_ID = "{{ proposal.id|default:''|escapejs }}";
+        window.REPORT_STATUS = "{{ report.status|default:'draft'|escapejs }}";
         window.CAN_AUTOSAVE = {{ can_autosave|yesno:"true,false" }};
-        window.REPORT_ACTUAL_EVENT_TYPE = "{{ form.actual_event_type.value|default:'' }}";
+        window.REPORT_ACTUAL_EVENT_TYPE = "{{ form.actual_event_type.value|default:''|escapejs }}";
         window.AUTOSAVE_URL = "{% url 'emt:autosave_event_report' %}";
         window.AUTOSAVE_CSRF = "{{ csrf_token }}";
     window.API_ORGANIZATIONS = "#"; // TODO: Add API URLs (not used on this page)
         window.API_CLASSES_BASE = "{% url 'emt:api_classes' 0 %}".split('0/')[0];
         window.API_FACULTY = "{% url 'emt:api_faculty' %}";
-        window.PROPOSAL_ORG_ID = "{{ proposal.organization.id|default:'' }}";
-        window.PROPOSAL_ORG_NAME = "{{ proposal.organization.name|default:'' }}";
+        window.PROPOSAL_ORG_ID = "{{ proposal.organization.id|default:''|escapejs }}";
+        window.PROPOSAL_ORG_NAME = "{{ proposal.organization.name|default:''|escapejs }}";
     window.API_OUTCOMES_BASE = "{% url 'emt:api_outcomes' 0 %}".split('0/')[0];
     window.GA_EDIT_BASE = "{% url 'emt:graduate_attributes_edit' 0 %}".split('0/')[0];
         window.SDG_GOALS = {{ sdg_goals_list|default:'[]'|safe }};
@@ -382,24 +384,26 @@
         window.ATTENDANCE_PRESENT = {{ attendance_present|default:0 }};
         window.ATTENDANCE_ABSENT = {{ attendance_absent|default:0 }};
         window.ATTENDANCE_VOLUNTEERS = {{ attendance_volunteers|default:0 }};
+    // Current saved Graduate Attributes mapping (for reliable summary hydration)
+    window.REPORT_GA_MAPPING = "{{ report.needs_grad_attr_mapping|default:''|escapejs }}";
         window.PROPOSAL_DATA = {
-            department: "{{ proposal.organization.name|default:'' }}",
-            venue: "{{ proposal.venue|default:'' }}",
-            title: "{{ proposal.event_title|default:'' }}",
-            target_audience: "{{ proposal.target_audience|default:'' }}",
-            event_focus_type: "{{ proposal.event_focus_type|default:'' }}",
-            student_coordinators: "{{ proposal.student_coordinators|default:'' }}",
-            proposer: "{{ proposal.submitted_by.get_full_name|default:'' }}",
+            department: "{{ proposal.organization.name|default:''|escapejs }}",
+            venue: "{{ proposal.venue|default:''|escapejs }}",
+            title: "{{ proposal.event_title|default:''|escapejs }}",
+            target_audience: "{{ proposal.target_audience|default:''|escapejs }}",
+            event_focus_type: "{{ proposal.event_focus_type|default:''|escapejs }}",
+            student_coordinators: "{{ proposal.student_coordinators|default:''|escapejs }}",
+            proposer: "{{ proposal.submitted_by.get_full_name|default:''|escapejs }}",
             faculty_incharges: {{ faculty_names_json|default:'[]'|safe }},
             volunteers: {{ volunteer_names_json|default:'[]'|safe }},
-            academic_year: "{{ proposal.academic_year|default:'2024-2025' }}",
-            num_activities: "{{ proposal_activities|length }}",
-            event_start_date: "{% if proposal.event_start_date %}{{ proposal.event_start_date|date:'Y-m-d' }}{% elif proposal.event_datetime %}{{ proposal.event_datetime|date:'Y-m-d' }}{% endif %}",
-            event_end_date: "{% if proposal.event_end_date %}{{ proposal.event_end_date|date:'Y-m-d' }}{% elif proposal.event_datetime %}{{ proposal.event_datetime|date:'Y-m-d' }}{% endif %}",
+            academic_year: "{{ proposal.academic_year|default:'2024-2025'|escapejs }}",
+            num_activities: "{{ proposal_activities|length|escapejs }}",
+            event_start_date: "{% if proposal.event_start_date %}{{ proposal.event_start_date|date:'Y-m-d'|escapejs }}{% elif proposal.event_datetime %}{{ proposal.event_datetime|date:'Y-m-d'|escapejs }}{% endif %}",
+            event_end_date: "{% if proposal.event_end_date %}{{ proposal.event_end_date|date:'Y-m-d'|escapejs }}{% elif proposal.event_datetime %}{{ proposal.event_datetime|date:'Y-m-d'|escapejs }}{% endif %}",
             activities: {{ proposal_activities_json|default:'[]'|safe }},
             speakers: {{ speakers_json|default:'[]'|safe }},
-            pos_pso: "{{ proposal.pos_pso|default:'' }}",
-            sdg_goals: "{{ proposal_sdg_goals|default:'' }}"
+            pos_pso: "{{ proposal.pos_pso|default:''|escapejs }}",
+            sdg_goals: "{{ proposal_sdg_goals|default:''|escapejs }}"
         };
     </script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -424,7 +428,12 @@
                 document.addEventListener('click', function(e){
                     if (e.target && e.target.id === 'ga-open-editor-btn') {
                         var rid = window.REPORT_ID;
-                        var go = function(id){ if (!window.GA_EDIT_BASE) return; window.location.href = window.GA_EDIT_BASE + id + '/'; };
+                        // Build correct GA editor URL: /reports/<id>/graduate-attributes/edit/
+                        var go = function(id){
+                            if (!window.GA_EDIT_BASE) return;
+                            // Append ?from=ga to prevent progress reset and refresh GA summary on return
+                            window.location.href = window.GA_EDIT_BASE + id + '/graduate-attributes/edit/?from=ga';
+                        };
                         if (!rid) {
                             if (window.ReportAutosaveManager && window.ReportAutosaveManager.manualSave) {
                                 window.ReportAutosaveManager.manualSave().then(function(){
