@@ -2999,9 +2999,10 @@ function getWhyThisEventForm() {
     function validateWhyThisEvent() {
         let isValid = true;
         const requiredTextareas = ['#need-analysis-modern', '#objectives-modern', '#outcomes-modern'];
-        
+
         requiredTextareas.forEach(selector => {
             const field = $(selector);
+            if (!field.length) return; // Skip validation if field is not present
             if (!field.val() || field.val().trim() === '') {
                 showFieldError(field, 'This field is required');
                 field.addClass('animate-shake');
