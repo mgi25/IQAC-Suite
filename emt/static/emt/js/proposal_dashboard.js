@@ -3349,7 +3349,7 @@ function getWhyThisEventForm() {
                 .animate-bounce { animation: bounce 0.6s ease-in-out; }
                 .animate-shake { animation: shake 0.5s ease-in-out; }
                 
-                .notification { position: fixed; top: 20px; right: 20px; background: white; padding: 1rem 1.5rem; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.15); z-index: 1001; opacity: 0; transform: translateX(100%); transition: all 0.3s ease; max-width: 320px; }
+                .notification { position: fixed; bottom: 20px; right: 20px; background: white; padding: 1rem 1.5rem; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.15); z-index: 1001; opacity: 0; transform: translateX(100%); transition: all 0.3s ease; max-width: 320px; }
                 .notification.notification-success { border-left: 4px solid #22c55e; }
                 .notification.notification-error { border-left: 4px solid #ef4444; }
                 .notification.notification-info { border-left: 4px solid #264487; }
