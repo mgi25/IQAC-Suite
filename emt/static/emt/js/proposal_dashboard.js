@@ -1397,6 +1397,13 @@ $(document).ready(function() {
                 }
                 clearFieldError($(this));
             });
+            // Sync changes from the hidden Django field back to the visible modern field
+            djangoField.on('input change', function() {
+                const value = $(this).val();
+                if (modernField.val() !== value) {
+                    modernField.val(value);
+                }
+            });
         }
     }
 
