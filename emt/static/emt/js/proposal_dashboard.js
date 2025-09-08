@@ -2493,7 +2493,7 @@ function getWhyThisEventForm() {
             window.AutosaveManager.manualSave()
                 .then((data) => {
                     hideLoadingOverlay();
-                    if (data && data.errors) {
+                    if (data && data.errors && Object.keys(data.errors).length) {
                         handleAutosaveErrors(data);
                         showNotification('Please fix the errors before continuing.', 'error');
                         return;
@@ -3266,6 +3266,9 @@ function getWhyThisEventForm() {
         const errors = (errorData && typeof errorData === 'object') ? (errorData.errors || errorData) : null;
         if (!errors || typeof errors !== 'object') {
             showNotification('Autosave failed. Please try again.', 'error');
+            return;
+        }
+        if (!Object.keys(errors).length) {
             return;
         }
 
