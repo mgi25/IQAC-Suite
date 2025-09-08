@@ -3274,7 +3274,11 @@ function getWhyThisEventForm() {
         const nonFieldMessages = [];
 
         const mark = (name, message) => {
-            let field = $(`#${name.replace(/_/g, '-')}-modern`);
+            const fieldMap = {
+                'organization_type': '#org-type-modern-input',
+                'organization': '#org-modern-select'
+            };
+            let field = $(fieldMap[name] || `#${name.replace(/_/g, '-')}-modern`);
             if (!field.length) {
                 field = $(`[name="${name}"]`);
                 if (field.length && field.attr('type') === 'hidden') {
