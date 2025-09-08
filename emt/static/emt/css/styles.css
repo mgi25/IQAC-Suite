@@ -410,7 +410,7 @@
   }
   
   /* ---- Notifications ---- */
-  .notification { position: fixed; top: 20px; right: 20px; background: var(--white);
+  .notification { position: fixed; bottom: 20px; right: 20px; background: var(--white);
     padding: 1rem 1.25rem; border-radius: 12px; box-shadow: var(--shadow-2); z-index: 1001;
     opacity: 0; transform: translateX(100%); transition: all .25s ease; max-width: 320px; }
   .notification.show { opacity: 1; transform: translateX(0); }

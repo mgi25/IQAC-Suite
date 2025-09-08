@@ -140,7 +140,7 @@
 
   function toast(message, type='info'){
     const el = document.createElement('div');
-    el.style.cssText = `position:fixed;top:20px;right:20px;background:${type==='success'?'#10b981':type==='warning'?'#f59e0b':'#3b82f6'};color:#fff;padding:12px 16px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:1000;max-width:300px;font-size:.9rem;`;
+    el.style.cssText = `position:fixed;bottom:20px;right:20px;background:${type==='success'?'#10b981':type==='warning'?'#f59e0b':'#3b82f6'};color:#fff;padding:12px 16px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:1000;max-width:300px;font-size:.9rem;`;
     el.textContent = message;
     document.body.appendChild(el);
     setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(100%)'; setTimeout(() => el.remove(), 300); }, 2200);
