@@ -110,3 +110,25 @@ class AutosaveDraftPersistenceTests(TestCase):
         html = resp3.content.decode()
         self.assertIn(f'<option value="{ot2.id}" selected', html)
         self.assertIn(f'<option value="{org2.id}" selected', html)
+
+    def test_autosave_saves_complete_activities_ignoring_incomplete(self):
+        payload = self._payload()
+        payload.update(
+            {
+                "num_activities": "2",
+                "activity_name_1": "Orientation",
+                "activity_date_1": "2024-01-01",
+                "activity_name_2": "Workshop",
+            }
+        )
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        pid = resp.json()["proposal_id"]
+        proposal = EventProposal.objects.get(id=pid)
+        activities = list(proposal.activities.all())
+        self.assertEqual(len(activities), 1)
+        self.assertEqual(activities[0].name, "Orientation")

@@ -228,8 +228,10 @@ def _save_activities(proposal, data, form=None):
     )
     if not indices:
         return True
-    success = True
+
     new_activities = []
+    has_incomplete = False
+
     for index in indices:
         name = data.get(f"activity_name_{index}")
         date = data.get(f"activity_date_{index}")
@@ -238,15 +240,25 @@ def _save_activities(proposal, data, form=None):
                 EventActivity(proposal=proposal, name=name, date=date)
             )
         elif name or date:
+            has_incomplete = True
             msg = f"Activity {index} requires both name and date."
             logger.warning(msg)
             if form is not None:
                 form.add_error(None, msg)
-            success = False
-    if success:
-        proposal.activities.all().delete()
-        EventActivity.objects.bulk_create(new_activities)
-    return success
+
+    if form is None:
+        # Autosave: ignore incomplete rows but persist any complete ones
+        if new_activities:
+            proposal.activities.all().delete()
+            EventActivity.objects.bulk_create(new_activities)
+        return True
+
+    if has_incomplete:
+        return False
+
+    proposal.activities.all().delete()
+    EventActivity.objects.bulk_create(new_activities)
+    return True
 
 
 def _save_speakers(proposal, data, files):
