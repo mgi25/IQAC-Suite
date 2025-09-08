@@ -27,6 +27,9 @@ function fetchWithOverlay(url, options = {}, text = 'Loading...') {
 document.addEventListener('DOMContentLoaded', function(){
         // Central init (single DOMContentLoaded listener)
         const sectionState = {}; // fieldName -> value snapshot
+    const urlParams = new URLSearchParams(window.location.search || '');
+    const FROM_GA_EDITOR = (urlParams.get('from') === 'ga');
+    const RESET_PROGRESS_ON_LOAD = !FROM_GA_EDITOR;
 
     document.querySelectorAll('.form-group input:not([type=checkbox]):not([type=radio]), .form-group textarea, .form-group select').forEach(function(el){
     if(!el.placeholder) el.placeholder = ' ';
@@ -97,33 +100,51 @@ document.addEventListener('DOMContentLoaded', function(){
 
   const previewUrl = $('#report-form').data('preview-url');
 
-    // Rehydrate progress from server-rendered classes (if editing existing draft)
-  document.querySelectorAll('.nav-link').forEach(link => {
-      if(link.classList.contains('completed')){
-          const s = link.getAttribute('data-section');
-          if(sectionProgress.hasOwnProperty(s)) sectionProgress[s] = true;
+      // Reset progress and always start from the first section on load
+      if (RESET_PROGRESS_ON_LOAD) {
+          try {
+              const LS_PROGRESS_KEY = `event_report_progress_${window.PROPOSAL_ID || ''}`;
+              localStorage.removeItem(LS_PROGRESS_KEY);
+          } catch (e) {}
+          // Clear any UI state
+          document.querySelectorAll('.nav-link').forEach(link => {
+              link.classList.remove('completed', 'active');
+              if (link.dataset.section !== 'event-information') {
+                  link.classList.add('disabled');
+              }
+          });
+          // Ensure first section is active and content is loaded
+          activateSection('event-information');
+          // Hide final submit
+          const submitSection = document.querySelector('.submit-section');
+          if (submitSection) submitSection.classList.add('hidden');
+          const submitBtn = document.getElementById('submit-report-btn');
+          if (submitBtn) submitBtn.disabled = true;
+      } else {
+          // Rehydrate progress from server-rendered classes (if editing existing draft)
+          document.querySelectorAll('.nav-link').forEach(link => {
+              if(link.classList.contains('completed')){
+                  const s = link.getAttribute('data-section');
+                  if(sectionProgress.hasOwnProperty(s)) sectionProgress[s] = true;
+              }
+          });
+          // Also restore from localStorage so progress persists across full reloads and GA editor hops
+          loadProgress();
+          if(allSectionsCompleted()) enableFinalSubmission();
+          // If a target section is specified in the URL (?section=...), activate it
+          try {
+              const params = new URLSearchParams(window.location.search);
+              const fromSection = params.get('section');
+              if (fromSection) {
+                  enableSection(fromSection);
+                  setTimeout(() => {
+                      const link = document.querySelector(`.nav-link[data-section="${fromSection}"]`);
+                      if (link) link.classList.remove('disabled');
+                      activateSection(fromSection);
+                  }, 50);
+              }
+            } catch (e) {}
       }
-  });
-
-    // Also restore from localStorage so progress persists across full reloads and GA editor hops
-    loadProgress();
-  if(allSectionsCompleted()) enableFinalSubmission();
-
-  // If a target section is specified in the URL (?section=...), activate it
-  try {
-      const params = new URLSearchParams(window.location.search);
-      const fromSection = params.get('section');
-      if (fromSection) {
-          // Enable it first if needed, then activate
-          enableSection(fromSection);
-          // Defer activation until after initial layout is ready
-          setTimeout(() => {
-              const link = document.querySelector(`.nav-link[data-section="${fromSection}"]`);
-              if (link) link.classList.remove('disabled');
-              activateSection(fromSection);
-          }, 50);
-      }
-    } catch (e) {}
   
   // Auto-resize textarea functionality
   function autoResizeTextarea(textarea) {
@@ -364,6 +385,39 @@ $(document).on('click', '#ai-sdg-implementation', function(){
       console.log('Initializing dynamic activities...');
       setupDynamicActivities();
   }, 100);
+
+  // Lightweight field-level autosave for immediate DB sync of a single field
+  async function postFieldAutosave(fieldName, value) {
+      try {
+          if (!window.AUTOSAVE_URL) return Promise.reject('No autosave URL');
+          const payload = {
+              proposal_id: window.PROPOSAL_ID || '',
+              report_id: window.REPORT_ID || '',
+          };
+          payload[fieldName] = value;
+          const res = await fetch(window.AUTOSAVE_URL, {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+                  'X-CSRFToken': window.AUTOSAVE_CSRF
+              },
+              credentials: 'same-origin',
+              body: JSON.stringify(payload)
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.success) {
+              throw new Error((data && data.error) || 'Autosave failed');
+          }
+          if (data.report_id && data.report_id !== window.REPORT_ID) {
+              window.REPORT_ID = data.report_id;
+          }
+          document.dispatchEvent(new CustomEvent('autosave:success', {detail: {reportId: window.REPORT_ID}}));
+          return data;
+      } catch (err) {
+          document.dispatchEvent(new CustomEvent('autosave:error', {detail: err}));
+          throw err;
+      }
+  }
   
   // Navigation handling
   $('.nav-link').on('click', function(e) {
@@ -378,16 +432,17 @@ $(document).on('click', '#ai-sdg-implementation', function(){
       activateSection(targetSection);
   });
   
-  // Save & Continue button handling
-  $(document).on('click', '.btn-save-section', function(e) {
+    // Save & Continue button handling (exclude GA editor & SDG select action buttons)
+    // Global Save & Continue: explicitly exclude GA editor, SDG select, SDG save, and Outcome save buttons
+    $(document).on('click', '.btn-save-section:not(.btn-ga-editor):not(.btn-sdg-select):not(.btn-sdg-save):not(.btn-outcome-save)', function(e) {
       e.preventDefault();
       if (!validateCurrentSection()) {
           showNotification('Please fill in all required fields', 'error');
           return;
       }
 
-      let submitted = false;
-      const proceed = () => {
+    let submitted = false;
+    const proceed = () => {
           markSectionComplete(currentSection);
           const nextSection = getNextSection(currentSection);
 
@@ -411,7 +466,6 @@ $(document).on('click', '#ai-sdg-implementation', function(){
                   }
                   fieldsByName[name].push(this);
               });
-
               const appendHidden = (frm, name, value) => {
                   frm.append($('<input>', {
                       type: 'hidden',
@@ -936,8 +990,7 @@ $(document).on('click', '#ai-sdg-implementation', function(){
           </div>
 
           <!-- Dynamic activities section -->
-          <div id="report-activities" class="full-width"></div>
-          <button type="button" id="add-activity-btn" class="btn-add-item" style="display: none;">Add Activity</button>
+          <div id="dynamic-activities-section" class="full-width"></div>
 
           <!-- Additional Information Section -->
           <div class="form-section-header">
@@ -1290,10 +1343,10 @@ $(document).on('click', '#ai-sdg-implementation', function(){
                   <label for="graduate-attributes-modern" style="display:flex;align-items:center;gap:8px;width:100%;">
                       <span>Graduate Attributes *</span>
                       <span style="flex:1 1 auto"></span>
-                      <button type="button" id="ga-open-editor-btn" class="btn-select-sdg" title="Open dedicated GA editor">Open GA Editor</button>
+                      <button type="button" id="ga-open-editor-btn" class="btn-ga-editor ga-editor-btn" title="Open dedicated GA editor" style="margin-left:auto;width:auto;">Open GA Editor</button>
                   </label>
                   <div id="graduate-attributes-modern" class="graduate-attributes-groups" style="min-height: 48px;">
-                      <div id="ga-summary" class="help-text">Open the Graduate Attributes editor to select attributes. Your selections will be saved back to this report.</div>
+                      <div id="ga-summary" class="help-text" data-empty-text="Open the Graduate Attributes editor to select attributes. Your selections will be saved back to this report.">Open the Graduate Attributes editor to select attributes. Your selections will be saved back to this report.</div>
                   </div>
               </div>
           </div>
@@ -1312,7 +1365,7 @@ $(document).on('click', '#ai-sdg-implementation', function(){
                   <textarea id="sdg-implementation-modern" name="sdg_value_systems_mapping" rows="10" required
                       placeholder="Click 'Select SDG Goals' to choose from the 17 Sustainable Development Goals&#10;&#10;Selected goals will appear here and can be edited:&#10;&#10;You can modify the SDG selection or add additional context about how your event addresses these goals."></textarea>
                   <button type="button" id="ai-sdg-implementation" class="ai-fill-btn" title="Fill with AI">AI</button>
-                  <button type="button" id="sdg-select-btn" class="btn-select-sdg">Select SDG Goals</button>
+                  <button type="button" id="sdg-select-btn" class="btn-sdg-select sdg-select-btn" style="background:var(--primary-blue);">Select SDG Goals</button>
                   <div class="help-text">Sustainable Development Goals addressed by this event (editable)</div>
               </div>
           </div>
@@ -1413,33 +1466,101 @@ function showNotification(message, type = 'info') {
 
 // Populate fields with proposal data
 function fillEventRelevance() {
-    if ($('#pos-pso-modern').length && window.PROPOSAL_DATA && typeof window.PROPOSAL_DATA.pos_pso !== 'undefined') {
-        const value = String(window.PROPOSAL_DATA.pos_pso || '');
+    // POS/PSO: prefer current report value (hidden field), then keep existing, then fall back to proposal snapshot
+    (function syncPosPso(){
         const $modern = $('#pos-pso-modern');
-        if ($modern.val() !== value) {
-            $modern.val(value).trigger('input').trigger('change');
-            const hidden = document.getElementById('id_pos_pso_mapping');
-            if (hidden && hidden.value !== value) {
-                hidden.value = value;
-            }
-            if (window.ReportAutosaveManager) {
-                // Rebind and let autosave pick up the change
-                ReportAutosaveManager.reinitialize();
-            }
+        if (!$modern.length) return;
+        const hiddenEl = document.getElementById('id_pos_pso_mapping');
+        const hiddenVal = (hiddenEl && hiddenEl.value ? String(hiddenEl.value) : '').trim();
+        const modernVal = String($modern.val() || '').trim();
+        const proposalVal = (window.PROPOSAL_DATA && typeof window.PROPOSAL_DATA.pos_pso !== 'undefined')
+            ? String(window.PROPOSAL_DATA.pos_pso || '').trim()
+            : '';
+
+        // Decide the desired value without clobbering user edits
+        let desired = '';
+        if (hiddenVal) desired = hiddenVal; else if (modernVal) desired = modernVal; else desired = proposalVal;
+
+        // Only write if the field is empty; don't overwrite non-empty user input
+        if (!modernVal && desired) {
+            $modern.val(desired); // no trigger to avoid unintended autosave churn
         }
-    }
-    if ($('#sdg-implementation-modern').length && window.PROPOSAL_DATA && window.PROPOSAL_DATA.sdg_goals) {
-        $('#sdg-implementation-modern').val(window.PROPOSAL_DATA.sdg_goals);
-    }
-    // Update GA summary from hidden field if present
+        // Keep hidden in sync if it's empty but visible has content
+        if (hiddenEl && !hiddenVal && modernVal) {
+            hiddenEl.value = modernVal;
+        }
+    })();
+
+    // SDG text: same preference order; avoid overwriting if user already has content
+    (function syncSdg(){
+        const $modern = $('#sdg-implementation-modern');
+        if (!$modern.length) return;
+        const hiddenEl = document.getElementById('id_sdg_value_systems_mapping');
+        const hiddenVal = (hiddenEl && hiddenEl.value ? String(hiddenEl.value) : '').trim();
+        const modernVal = String($modern.val() || '').trim();
+        const proposalVal = (window.PROPOSAL_DATA && window.PROPOSAL_DATA.sdg_goals)
+            ? String(window.PROPOSAL_DATA.sdg_goals || '').trim()
+            : '';
+
+        let desired = '';
+        if (hiddenVal) desired = hiddenVal; else if (modernVal) desired = modernVal; else desired = proposalVal;
+
+        if (!modernVal && desired) {
+            $modern.val(desired); // avoid firing change to prevent autosave overrides
+        }
+        if (hiddenEl && !hiddenVal && modernVal) {
+            hiddenEl.value = modernVal;
+        }
+    })();
+    // Rebuild GA summary container each time to avoid stale DOM
+    updateGASummary();
+}
+
+// Helper to (re)construct GA summary pills smartly
+function updateGASummary() {
     try {
-        const hidden = document.getElementById('id_needs_grad_attr_mapping');
-        const summary = document.getElementById('ga-summary');
-        if (hidden && summary) {
-            const val = (hidden.value || '').trim();
-            summary.textContent = val ? val : 'Open the Graduate Attributes editor to select attributes. Your selections will be saved back to this report.';
+        const container = document.getElementById('graduate-attributes-modern');
+        if (!container) {
+            // Not yet rendered; retry shortly
+            return setTimeout(updateGASummary, 200);
         }
-    } catch (e) {}
+        // Remove any previous summary / text nodes to ensure clean slate
+        const existing = container.querySelectorAll('#ga-summary, .ga-pill-container');
+        existing.forEach(el => el.remove());
+
+        // Determine value source
+        const hidden = document.getElementById('id_needs_grad_attr_mapping');
+        let raw = '';
+        if (hidden) raw = (hidden.value || '').trim();
+        if (!raw && window.REPORT_GA_MAPPING) raw = String(window.REPORT_GA_MAPPING).trim();
+
+        // Build new summary element
+        const summaryDiv = document.createElement('div');
+        summaryDiv.id = 'ga-summary';
+        summaryDiv.className = 'ga-pill-container';
+        const emptyText = 'Open the Graduate Attributes editor to select attributes. Your selections will be saved back to this report.';
+        summaryDiv.setAttribute('data-empty-text', emptyText);
+
+        if (!raw) {
+            summaryDiv.classList.add('empty');
+            summaryDiv.textContent = emptyText;
+        } else {
+            // Split on commas, trim, dedupe
+            const items = Array.from(new Set(raw.split(/[,\n]/).map(s => s.trim()).filter(Boolean)));
+            if (items.length === 0) {
+                summaryDiv.classList.add('empty');
+                summaryDiv.textContent = emptyText;
+            } else {
+                items.forEach(txt => {
+                    const span = document.createElement('span');
+                    span.className = 'ga-pill';
+                    span.textContent = txt;
+                    summaryDiv.appendChild(span);
+                });
+            }
+        }
+        container.appendChild(summaryDiv);
+    } catch (e) { /* silent */ }
 }
 
 function fillOrganizingCommittee() {
@@ -1728,7 +1849,10 @@ function initializeSDGModal() {
     });
     
     // Save SDG selection
-    $(document).on('click', '#sdgSave', function() {
+    $(document).on('click', '#sdgSave, .btn-sdg-save', function(e) {
+        // Avoid triggering any outer Save & Continue handlers
+        e.preventDefault();
+        e.stopPropagation();
         const selectedSDGs = [];
         const selectedTitles = [];
         $('.sdg-option input[type="checkbox"]:checked').each(function() {
@@ -1745,8 +1869,19 @@ function initializeSDGModal() {
             ? selectedTitles.join('\n') + '\n\n(You can edit this text and add additional context about how your event addresses these SDG goals)'
             : '';
         
-        $('#sdg-implementation-modern').val(formattedSDGs);
+        $('#sdg-implementation-modern').val(formattedSDGs).trigger('input').trigger('change');
+        // Keep hidden Django field in sync so autosave payload is correct
+        const sdgHidden = document.getElementById('id_sdg_value_systems_mapping');
+        if (sdgHidden) sdgHidden.value = formattedSDGs;
         $('#sdgModal').hide();
+        // Persist immediately
+        if (window.ReportAutosaveManager && ReportAutosaveManager.manualSave) {
+            ReportAutosaveManager.manualSave().then(() => {
+                try { showNotification('SDG selection saved', 'success'); } catch(_){}
+            }).catch(() => {
+                try { showNotification('Failed to save SDG selection', 'error'); } catch(_){}
+            });
+        }
     });
     
     // Cancel SDG selection
@@ -1801,17 +1936,30 @@ function openOutcomeModal(){
 }
 
 function addOption(container, labelText, checkedSet){
-  const lbl = document.createElement('label');
-  const cb = document.createElement('input');
-  cb.type = 'checkbox';
-  cb.value = labelText;
-  if(checkedSet && checkedSet.has(labelText)){
-    cb.checked = true;
-  }
-  lbl.appendChild(cb);
-  lbl.appendChild(document.createTextNode(' ' + labelText));
-  container.appendChild(lbl);
-  container.appendChild(document.createElement('br'));
+    // Outcome option styled similarly to SDG goal tile
+    const wrapper = document.createElement('div');
+    wrapper.className = 'outcome-option';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = labelText;
+    if(checkedSet && checkedSet.has(labelText)){
+        cb.checked = true;
+        wrapper.classList.add('selected');
+    }
+    const text = document.createElement('div');
+    text.style.flex = '1';
+    text.style.fontSize = '0.8rem';
+    text.style.lineHeight = '1.2rem';
+    text.textContent = labelText;
+    wrapper.appendChild(cb);
+    wrapper.appendChild(text);
+    wrapper.addEventListener('click', function(e){
+        if(e.target.tagName !== 'INPUT'){
+            cb.checked = !cb.checked;
+        }
+        wrapper.classList.toggle('selected', cb.checked);
+    });
+    container.appendChild(wrapper);
 }
 
 // Legacy outcome modal handlers (only bind if elements exist)
@@ -1824,22 +1972,28 @@ if(_outcomeCancelBtn && document.getElementById('outcomeModal')){
     };
 }
 if(_outcomeSaveBtn && document.getElementById('outcomeModal')){
+    // Outcome Save isolated (no 'btn-save-section' class) to avoid triggering global handler
+    _outcomeSaveBtn.classList.add('btn-outcome-save');
     _outcomeSaveBtn.onclick = function(e){
         e?.preventDefault?.();
         e?.stopPropagation?.();
         const modal = document.getElementById('outcomeModal');
         if(!modal) return;
-        const selected = Array.from(modal.querySelectorAll('input[type=checkbox]:checked')).map(c => c.value);
+    const selected = Array.from(modal.querySelectorAll('.outcome-option input[type=checkbox]:checked')).map(c => c.value);
         const field = document.getElementById('id_pos_pso_mapping');
         if(!field) return;
         field.value = selected.join('\n');
         // Also reflect back to visible textarea if present
         const modern = document.getElementById('pos-pso-modern');
-        if (modern) { modern.value = field.value; }
+        if (modern) { modern.value = field.value; $(modern).trigger('input').trigger('change'); }
         modal.classList.remove('show');
-        // Trigger autosave after selection
-        if (window.ReportAutosaveManager) {
-            ReportAutosaveManager.reinitialize();
+        // Persist immediately
+        if (window.ReportAutosaveManager && ReportAutosaveManager.manualSave) {
+            ReportAutosaveManager.manualSave().then(() => {
+                try { showNotification('PO/PSO selection saved', 'success'); } catch(_){}
+            }).catch(() => {
+                try { showNotification('Failed to save PO/PSO', 'error'); } catch(_){}
+            });
         }
     };
 }
@@ -2267,7 +2421,7 @@ function setupGAEditorLink() {
             let prefix = '';
             if (path.startsWith('/suite/')) prefix = '/suite';
             else if (path.startsWith('/emt/')) prefix = '/emt';
-            const url = `${prefix}/reports/${reportId}/graduate-attributes/edit/`;
+            const url = `${prefix}/reports/${reportId}/graduate-attributes/edit/?from=ga`;
             window.location.href = url;
         } catch (e) {
             console.error('Failed to prepare GA editor:', e);
@@ -2330,6 +2484,18 @@ $(document).ready(function() {
         ReportAutosaveManager.reinitialize();
     }
     initializeAutosaveIndicators();
+
+    // Sync GA summary when returning from GA editor (?from=ga)
+    (function syncGASummaryOnReturn(){
+        try {
+            const params = new URLSearchParams(window.location.search || '');
+            if(params.get('from') !== 'ga') return;
+            const apply = () => updateGASummary();
+            apply();
+            setTimeout(apply, 600); // retry after potential autosave refresh
+            setTimeout(apply, 1500); // final ensure
+        } catch (e) { /* ignore */ }
+    })();
 
     $('#report-form').on('submit', function() {
         if (loadingCount === 0) {
