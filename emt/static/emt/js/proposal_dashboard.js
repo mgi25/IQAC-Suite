@@ -1739,8 +1739,8 @@ function getWhyThisEventForm() {
             <div class="form-grid">
                 <div class="form-row full-width">
                     <div class="input-group">
-                        <label for="need-analysis-modern">Describe the need for this event *</label>
-                        <textarea id="need-analysis-modern" rows="6" required placeholder="Explain why this event is necessary, what gap it fills, and its relevance to the target audience..."></textarea>
+                        <label for="need-analysis-single">Describe the need for this event *</label>
+                        <textarea id="need-analysis-single" rows="6" required placeholder="Explain why this event is necessary, what gap it fills, and its relevance to the target audience..."></textarea>
                         <div class="help-text">Provide a detailed explanation of why this event is important.</div>
                     </div>
                 </div>
@@ -1758,8 +1758,8 @@ function getWhyThisEventForm() {
             <div class="form-grid">
                 <div class="form-row full-width">
                     <div class="input-group">
-                        <label for="objectives-modern">List the main objectives *</label>
-                        <textarea id="objectives-modern" rows="6" required placeholder="• Objective 1: ...&#10;• Objective 2: ...&#10;• Objective 3: ..."></textarea>
+                        <label for="objectives-single">List the main objectives *</label>
+                        <textarea id="objectives-single" rows="6" required placeholder="• Objective 1: ...&#10;• Objective 2: ...&#10;• Objective 3: ..."></textarea>
                         <div class="help-text">List 3-5 clear, measurable objectives.</div>
                     </div>
                 </div>
@@ -1777,8 +1777,8 @@ function getWhyThisEventForm() {
             <div class="form-grid">
                 <div class="form-row full-width">
                     <div class="input-group">
-                        <label for="outcomes-modern">Describe expected outcomes *</label>
-                        <textarea id="outcomes-modern" rows="6" required placeholder="What specific results, skills, or benefits will participants gain?"></textarea>
+                        <label for="outcomes-single">Describe expected outcomes *</label>
+                        <textarea id="outcomes-single" rows="6" required placeholder="What specific results, skills, or benefits will participants gain?"></textarea>
                         <div class="help-text">Describe the tangible benefits for participants.</div>
                     </div>
                 </div>
@@ -2998,10 +2998,10 @@ function getWhyThisEventForm() {
         const requiredTextareas = ['#need-analysis-modern', '#objectives-modern', '#outcomes-modern'];
 
         requiredTextareas.forEach(selector => {
-            const field = $(selector);
-            if (!field.length || !field.is(':visible')) return; // Skip validation if field is not present or not visible
-            field.trigger('change'); // Ensure rich-text/autosave editors sync their content
-            if (!field.val() || field.val().trim() === '') {
+            const field = $(selector).filter(':visible').first();
+            if (!field.length) return;
+            field.trigger('change');
+            if (!field.val().trim()) {
                 showFieldError(field, 'This field is required');
                 field.addClass('animate-shake');
                 setTimeout(() => field.removeClass('animate-shake'), 600);
