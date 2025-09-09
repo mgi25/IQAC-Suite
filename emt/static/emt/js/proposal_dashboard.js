@@ -2999,7 +2999,8 @@ function getWhyThisEventForm() {
 
         requiredTextareas.forEach(selector => {
             const field = $(selector);
-            if (!field.length) return; // Skip validation if field is not present
+            if (!field.length || !field.is(':visible')) return; // Skip validation if field is not present or not visible
+            field.trigger('change'); // Ensure rich-text/autosave editors sync their content
             if (!field.val() || field.val().trim() === '') {
                 showFieldError(field, 'This field is required');
                 field.addClass('animate-shake');
