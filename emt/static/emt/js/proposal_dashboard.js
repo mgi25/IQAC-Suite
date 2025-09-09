@@ -3016,6 +3016,8 @@ function getWhyThisEventForm() {
                     field.val(window._quills[id].root.innerHTML);
                     field.trigger('input').trigger('change');
                 }
+                const baseName = selector.replace('#', '').replace('-modern', '').replace(/-/g, '_');
+                $(`textarea[name="${baseName}"]`).val(field.val());
             }
             if (!field.val().trim()) {
                 showFieldError(field, 'This field is required');
