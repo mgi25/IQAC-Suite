@@ -3005,16 +3005,18 @@ function getWhyThisEventForm() {
             if (id) {
                 if (window.CKEDITOR && CKEDITOR.instances && CKEDITOR.instances[id]) {
                     CKEDITOR.instances[id].updateElement();
+                    field.trigger('input').trigger('change');
                 } else if (window.ClassicEditor && window._editors && window._editors[id]) {
                     field.val(window._editors[id].getData());
+                    field.trigger('input').trigger('change');
                 } else if (window.tinymce && tinymce.get(id)) {
                     field.val(tinymce.get(id).getContent());
+                    field.trigger('input').trigger('change');
                 } else if (window.Quill && window._quills && window._quills[id]) {
                     field.val(window._quills[id].root.innerHTML);
+                    field.trigger('input').trigger('change');
                 }
             }
-            field.trigger('input');
-            field.trigger('change');
             if (!field.val().trim()) {
                 showFieldError(field, 'This field is required');
                 field.addClass('animate-shake');
