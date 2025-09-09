@@ -2885,6 +2885,10 @@ function getWhyThisEventForm() {
             const time = timeInput.val().trim();
             const activity = activityInput.val().trim();
 
+            if (!time && !activity) {
+                return; // Skip completely empty rows
+            }
+
             if (!time) {
                 showScheduleError(timeInput, 'Date & time required');
                 isValid = false;
