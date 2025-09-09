@@ -3013,7 +3013,7 @@ function getWhyThisEventForm() {
                     field.val(window._quills[id].root.innerHTML);
                 }
             }
-
+            field.trigger('input');
             field.trigger('change');
             if (!field.val().trim()) {
                 showFieldError(field, 'This field is required');
