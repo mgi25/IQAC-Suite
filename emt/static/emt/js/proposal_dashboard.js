@@ -3000,6 +3000,20 @@ function getWhyThisEventForm() {
         requiredTextareas.forEach(selector => {
             const field = $(selector).filter(':visible').first();
             if (!field.length) return;
+            const id = field.attr('id');
+
+            if (id) {
+                if (window.CKEDITOR && CKEDITOR.instances && CKEDITOR.instances[id]) {
+                    CKEDITOR.instances[id].updateElement();
+                } else if (window.ClassicEditor && window._editors && window._editors[id]) {
+                    field.val(window._editors[id].getData());
+                } else if (window.tinymce && tinymce.get(id)) {
+                    field.val(tinymce.get(id).getContent());
+                } else if (window.Quill && window._quills && window._quills[id]) {
+                    field.val(window._quills[id].root.innerHTML);
+                }
+            }
+
             field.trigger('change');
             if (!field.val().trim()) {
                 showFieldError(field, 'This field is required');
