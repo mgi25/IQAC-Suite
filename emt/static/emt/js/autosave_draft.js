@@ -43,15 +43,21 @@ window.AutosaveManager = (function() {
                 return; // handled separately when sending FormData
             } else if (field.type === 'checkbox') {
                 if (inputs.length > 1) {
-                    data[name] = inputs.filter(i => i.checked).map(i => i.value);
-                } else {
-                    data[name] = field.checked;
+                    const values = inputs.filter(i => i.checked).map(i => i.value);
+                    if (values.length) {
+                        data[name] = values;
+                    }
+                } else if (field.checked) {
+                    data[name] = true;
                 }
             } else if (field.type === 'radio') {
                 const checked = inputs.find(i => i.checked);
                 if (checked) data[name] = checked.value;
             } else if (field.multiple) {
-                data[name] = Array.from(field.selectedOptions).map(o => o.value);
+                const selected = Array.from(field.selectedOptions).map(o => o.value).filter(v => v !== '');
+                if (selected.length) {
+                    data[name] = selected;
+                }
             } else {
                 // When multiple inputs share the same name (e.g. hidden Django field
                 // and visible modern field), prefer a visible, non-empty value.
@@ -59,8 +65,18 @@ window.AutosaveManager = (function() {
                     || inputs.find(i => i.type !== 'hidden')
                     || inputs.find(i => i.value.trim() !== '')
                     || field;
-                let value = preferred.value;
-                data[name] = value;
+                const value = preferred.value;
+                if (String(value).trim() !== '') {
+                    data[name] = value;
+                }
+            }
+        });
+
+        // Merge any previously saved values for fields not currently present
+        const saved = getSavedData();
+        Object.entries(saved).forEach(([key, val]) => {
+            if (key !== '_proposal_id' && data[key] === undefined) {
+                data[key] = val;
             }
         });
 

@@ -2493,12 +2493,29 @@ function getWhyThisEventForm() {
             window.AutosaveManager.manualSave()
                 .then((data) => {
                     hideLoadingOverlay();
-                    if (data && data.errors && Object.keys(data.errors).length) {
-                        handleAutosaveErrors(data);
+                    const futureErrorKeysMap = {
+                        'basic-info': ['activities', 'speakers', 'expenses', 'income'],
+                        'why-this-event': ['activities', 'speakers', 'expenses', 'income'],
+                        'schedule': ['speakers', 'expenses', 'income'],
+                        'speakers': ['expenses', 'income'],
+                        'expenses': ['income'],
+                        'income': []
+                    };
+                    const ignoreKeys = futureErrorKeysMap[currentExpandedCard] || [];
+                    const relevantErrors = {};
+                    if (data && data.errors) {
+                        Object.entries(data.errors).forEach(([key, val]) => {
+                            if (!ignoreKeys.includes(key)) {
+                                relevantErrors[key] = val;
+                            }
+                        });
+                    }
+                    if (Object.keys(relevantErrors).length) {
+                        handleAutosaveErrors({errors: relevantErrors});
                         showNotification('Please fix the errors before continuing.', 'error');
                         return;
                     }
-                    
+
                     // Only mark as complete if validation passed and save succeeded
                     markSectionComplete(currentExpandedCard);
                     showNotification('Section saved successfully!', 'success');
