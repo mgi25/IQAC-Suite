@@ -31,9 +31,11 @@ window.AutosaveManager = (function() {
     }
 
     function collectFieldData() {
+        const saved = getSavedData();
         const grouped = {};
         fields.forEach(f => {
             if (f.disabled || !f.name) return;
+            if (f.closest('.speaker-item')) return; // handled separately
             (grouped[f.name] ||= []).push(f);
         });
         const data = {};
@@ -72,10 +74,25 @@ window.AutosaveManager = (function() {
             }
         });
 
+        // Serialize speaker groups
+        const speakerEls = document.querySelectorAll('.speaker-item');
+        if (speakerEls.length) {
+            const speakers = Array.from(speakerEls).map(sp => ({
+                name: sp.querySelector("input[name*='full_name']")?.value.trim() || '',
+                designation: sp.querySelector("input[name*='designation']")?.value.trim() || '',
+                bio: sp.querySelector("textarea[name*='detailed_profile']")?.value.trim() || '',
+                linkedin: sp.querySelector("input[name*='linkedin_url']")?.value.trim() || '',
+            })).filter(sp => Object.values(sp).some(v => v !== ''));
+            if (speakers.length) {
+                data.speakers = speakers;
+            }
+        } else if (Array.isArray(saved.speakers) && saved.speakers.length) {
+            data.speakers = saved.speakers;
+        }
+
         // Merge any previously saved values for fields not currently present
-        const saved = getSavedData();
         Object.entries(saved).forEach(([key, val]) => {
-            if (key !== '_proposal_id' && data[key] === undefined) {
+            if (!['_proposal_id', 'speakers'].includes(key) && data[key] === undefined) {
                 data[key] = val;
             }
         });
@@ -202,6 +219,10 @@ window.AutosaveManager = (function() {
         const saved = getSavedData();
 
         fields.forEach(f => {
+            if (f.closest('.speaker-item')) {
+                bindField(f);
+                return; // speaker fields handled separately
+            }
             if (saved.hasOwnProperty(f.name)) {
                 const val = saved[f.name];
                 if (f.name === 'flow' && (val === '' || val === '[]')) {
@@ -234,6 +255,31 @@ window.AutosaveManager = (function() {
             }
             bindField(f);
         });
+
+        if (Array.isArray(saved.speakers) && saved.speakers.length) {
+            const addSpeaker = window.addSpeaker;
+            let speakerEls = document.querySelectorAll('.speaker-item');
+            for (let i = speakerEls.length; i < saved.speakers.length; i++) {
+                if (typeof addSpeaker === 'function') addSpeaker();
+            }
+            speakerEls = document.querySelectorAll('.speaker-item');
+            speakerEls.forEach((el, idx) => {
+                const sp = saved.speakers[idx];
+                if (!sp) return;
+                const setVal = (selector, val) => {
+                    const field = el.querySelector(selector);
+                    if (field) {
+                        field.value = val || '';
+                        field.dispatchEvent(new Event('change', { bubbles: true }));
+                        bindField(field);
+                    }
+                };
+                setVal("input[name*='full_name']", sp.name);
+                setVal("input[name*='designation']", sp.designation);
+                setVal("textarea[name*='detailed_profile']", sp.bio);
+                setVal("input[name*='linkedin_url']", sp.linkedin);
+            });
+        }
 
         if (saved._proposal_id && !proposalId) {
             proposalId = saved._proposal_id;
