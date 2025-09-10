@@ -2557,7 +2557,8 @@ function getWhyThisEventForm() {
                     const relevantErrors = {};
                     if (data && data.errors) {
                         Object.entries(data.errors).forEach(([key, val]) => {
-                            if (!ignoreKeys.includes(key)) {
+                            const isIgnored = ignoreKeys.some(k => key === k || key.startsWith(k + '.'));
+                            if (!isIgnored) {
                                 relevantErrors[key] = val;
                             }
                         });
