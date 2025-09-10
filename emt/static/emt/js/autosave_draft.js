@@ -93,6 +93,10 @@ window.AutosaveManager = (function() {
         // Merge any previously saved values for fields not currently present
         Object.entries(saved).forEach(([key, val]) => {
             if (!['_proposal_id', 'speakers'].includes(key) && data[key] === undefined) {
+                const prefixes = ['speaker_', 'activity_', 'expense_', 'income_'];
+                if (prefixes.some(p => key.startsWith(p)) && !document.querySelector(`[name="${key}"]`)) {
+                    return; // ignore stale dynamic field data
+                }
                 data[key] = val;
             }
         });

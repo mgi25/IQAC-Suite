@@ -2062,9 +2062,34 @@ function getWhyThisEventForm() {
         });
 
         container.on('click', '.remove-speaker-btn', function() {
+            const idx = $(this).data('index');
             $(this).closest('.speaker-form-container').remove();
             updateSpeakerHeaders();
             showEmptyState();
+
+            const pageKey = `proposal_draft_${window.USER_ID}_${window.location.pathname}_new`;
+            try {
+                const saved = JSON.parse(localStorage.getItem(pageKey) || '{}');
+                const fields = [
+                    'full_name',
+                    'designation',
+                    'affiliation',
+                    'contact_email',
+                    'detailed_profile',
+                    'contact_number',
+                    'linkedin_url',
+                    'photo',
+                ];
+                fields.forEach(f => delete saved[`speaker_${f}_${idx}`]);
+                if (Array.isArray(saved.speakers)) {
+                    saved.speakers.splice(idx, 1);
+                }
+                localStorage.setItem(pageKey, JSON.stringify(saved));
+            } catch (e) { /* ignore */ }
+
+            if (window.autosaveDraft) {
+                window.autosaveDraft().catch(() => {});
+            }
         });
 
         container.on('change', "input[id^='speaker_linkedin_url_']", async function() {
@@ -2590,16 +2615,12 @@ function getWhyThisEventForm() {
                 .catch(err => {
                     hideLoadingOverlay();
                     console.error('Autosave failed:', err);
-                    if (err && err.errors) {
+                    const hasFieldErrors = err && err.errors && Object.keys(err.errors).length;
+                    if (hasFieldErrors) {
                         handleAutosaveErrors(err);
-                        if (firstErrorField && firstErrorField.length) {
-                            $('html, body').animate({
-                                scrollTop: firstErrorField.offset().top - 100
-                            }, 500);
-                            firstErrorField.focus();
-                        }
+                    } else {
+                        showNotification('Save failed. Please check for missing or invalid fields.', 'error');
                     }
-                    showNotification('Save failed. Please check for missing or invalid fields.', 'error');
                 });
         } else {
             hideLoadingOverlay();
@@ -3429,10 +3450,19 @@ function getWhyThisEventForm() {
             }
         });
 
-        if (firstErrorField && firstErrorField.length) {
+        const firstSpeakerField = $('.speaker-form-container .has-error').filter('input, textarea, select').first();
+        if (firstSpeakerField.length) {
+            firstSpeakerField.closest('.speaker-form-container').addClass('has-error');
+        }
+        const focusField = firstSpeakerField.length ? firstSpeakerField : firstErrorField;
+        if (focusField && focusField.length) {
             showNotification('Draft saved with validation warnings. Please review highlighted fields.', 'info');
-            $('html, body').animate({scrollTop: firstErrorField.offset().top - 100}, 500);
-            firstErrorField.focus();
+            $('html, body').animate({scrollTop: focusField.offset().top - 100}, 500);
+            if (focusField[0]?.tomselect) {
+                focusField[0].tomselect.focus();
+            } else {
+                focusField.focus();
+            }
         } else if (nonFieldMessages.length) {
             showNotification(nonFieldMessages.join(' '), 'error');
         } else {
