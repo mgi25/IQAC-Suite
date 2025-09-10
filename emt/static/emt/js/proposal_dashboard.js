@@ -375,6 +375,11 @@ $(document).ready(function() {
         $('#form-panel-content').html(formContent);
 
         setTimeout(() => {
+            // Load any saved draft values before initializing widgets
+            if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                window.AutosaveManager.reinitialize();
+            }
+
             if (section === 'basic-info') {
                 setupDjangoFormIntegration();
                 // We call the new function to set up the listener for activities.
@@ -535,11 +540,12 @@ $(document).ready(function() {
             });
             numActivitiesInput.value = rows.length;
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                // Reinitialize so new rows are tracked by the autosave manager
                 window.AutosaveManager.reinitialize();
-                // Immediately persist the updated activity structure so that
-                // newly added/removed rows and their values are saved without
-                // requiring further user interaction.
-                window.AutosaveManager.autosaveDraft().catch(() => {});
+                // Persist current values immediately so activity fields are saved
+                if (window.AutosaveManager.autosaveDraft) {
+                    window.AutosaveManager.autosaveDraft().catch(() => {});
+                }
             }
         }
 
@@ -679,14 +685,27 @@ $(document).ready(function() {
         const select = $('#committees-collaborations-modern');
         const djangoField = $('#django-basic-info [name="committees_collaborations"]');
         const idsField = $('#django-basic-info [name="committees_collaborations_ids"]');
+        const orgSelect = $('#django-basic-info [name="organization"]');
         if (!select.length || !djangoField.length || select[0].tomselect) return;
 
-        const existingNames = djangoField.val()
+        let existingNames = djangoField.val()
             ? djangoField.val().split(',').map(s => s.trim()).filter(Boolean)
             : [];
-        const existingIds = idsField.length && idsField.val()
+        let existingIds = idsField.length && idsField.val()
             ? idsField.val().split(',').map(s => s.trim()).filter(Boolean)
             : [];
+
+        const initSeen = new Set();
+        const initPairs = [];
+        existingNames.forEach((name, idx) => {
+            const key = name.toLowerCase();
+            if (!initSeen.has(key)) {
+                initSeen.add(key);
+                initPairs.push({ id: existingIds[idx] || name, name });
+            }
+        });
+        existingIds = initPairs.map(p => p.id);
+        existingNames = initPairs.map(p => p.name);
 
         const tom = new TomSelect(select[0], {
             plugins: ['remove_button'],
@@ -696,61 +715,109 @@ $(document).ready(function() {
             create: false,
             load: (query, callback) => {
                 if (!query.length) return callback();
-                const orgId = $('#django-basic-info [name="organization"]').val();
-                const exclude = orgId ? `&exclude=${encodeURIComponent(orgId)}` : '';
-                fetch(`${window.API_ORGANIZATIONS}?q=${encodeURIComponent(query)}${exclude}`)
+                const mainOrg = orgSelect.val();
+                fetch(`${window.API_ORGANIZATIONS}?q=${encodeURIComponent(query)}`)
                     .then(r => r.json())
-                    .then(data => callback(data))
+                    .then(data => {
+                        if (mainOrg) {
+                            data = data.filter(opt => String(opt.id) !== String(mainOrg));
+                        }
+                        callback(data);
+                    })
                     .catch(() => callback());
             }
         });
 
+        tom.on('option_add', (value, data) => {
+            const newText = (data.text || '').toLowerCase();
+            if (orgSelect.val() && String(orgSelect.val()) === String(value)) {
+                tom.removeOption(value);
+                return;
+            }
+            Object.keys(tom.options).forEach(id => {
+                if (id === value) return;
+                const opt = tom.options[id];
+                if ((opt.text || '').toLowerCase() === newText) {
+                    tom.removeOption(value);
+                }
+            });
+        });
+
+        const filterMainOrg = () => {
+            const main = orgSelect.val();
+            if (!main) return;
+            let ids = tom.getValue();
+            if (!Array.isArray(ids)) ids = [ids].filter(Boolean);
+            const filtered = ids.filter(id => String(id) !== String(main));
+            if (filtered.length !== ids.length) {
+                tom.setValue(filtered, true);
+            }
+            tom.removeOption(main);
+        };
+
+        orgSelect.off('change.committees').on('change.committees', filterMainOrg);
+
         tom.on('change', () => {
-            const ids = tom.getValue();
-            const names = ids.map(id => tom.options[id]?.text || id);
-            djangoField.val(names.join(', ')).trigger('change');
+            filterMainOrg();
+            let ids = tom.getValue();
+            if (!Array.isArray(ids)) ids = [ids];
+            const seen = new Set();
+            const uniqueIds = [];
+            const uniqueNames = [];
+            ids.forEach(id => {
+                const name = tom.options[id]?.text || id;
+                const key = name.toLowerCase();
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    uniqueIds.push(id);
+                    uniqueNames.push(name);
+                }
+            });
+            if (uniqueIds.length !== ids.length) {
+                tom.setValue(uniqueIds, true);
+            }
+            djangoField.val(uniqueNames.join(', ')).trigger('change');
             if (idsField.length) {
-                idsField.val(ids.join(', ')).trigger('change');
+                idsField.val(uniqueIds.join(', ')).trigger('change');
             }
             clearFieldError(select);
         });
 
         if (existingIds.length) {
-            fetch(`${window.API_ORGANIZATIONS}?ids=${existingIds.join(',')}`)
-                .then(r => r.json())
-                .then(data => {
-                    data.forEach(opt => tom.addOption(opt));
-                    tom.setValue(existingIds);
-                })
-                .catch(() => {
-                    if (existingNames.length) {
-                        existingNames.forEach((name, idx) => {
-                            const id = existingIds[idx] || name;
-                            tom.addOption({ id, text: name });
-                        });
-                        tom.setValue(existingIds.length ? existingIds : existingNames);
-                    }
-                });
+            const main = orgSelect.val();
+            const filteredIds = main ? existingIds.filter(id => String(id) !== String(main)) : existingIds;
+            if (filteredIds.length) {
+                fetch(`${window.API_ORGANIZATIONS}?ids=${filteredIds.join(',')}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        data.forEach(opt => tom.addOption(opt));
+                        tom.setValue(filteredIds);
+                    })
+                    .catch(() => {
+                        if (existingNames.length) {
+                            existingNames.forEach((name, idx) => {
+                                const id = filteredIds[idx] || name;
+                                tom.addOption({ id, text: name });
+                            });
+                            tom.setValue(filteredIds.length ? filteredIds : existingNames);
+                        }
+                    });
+            }
         } else if (existingNames.length) {
-            existingNames.forEach((name, idx) => {
-                const id = existingIds[idx] || name;
-                tom.addOption({ id, text: name });
-            });
-            tom.setValue(existingIds.length ? existingIds : existingNames);
+            const main = orgSelect.val();
+            const filteredPairs = existingNames.map((name, idx) => ({ name, id: existingIds[idx] || name }))
+                .filter(p => !main || String(p.id) !== String(main));
+            filteredPairs.forEach(p => tom.addOption({ id: p.id, text: p.name }));
+            const filteredIds = filteredPairs.map(p => p.id);
+            const filteredNames = filteredPairs.map(p => p.name);
+            if (filteredIds.length) {
+                tom.setValue(filteredIds);
+            } else if (filteredNames.length) {
+                tom.setValue(filteredNames);
+            }
         }
 
-        const orgSelect = $('#django-basic-info [name="organization"]');
-        orgSelect.on('change.committees', () => {
-            const orgId = orgSelect.val();
-            const orgName = orgSelect.find('option:selected').text().trim();
-            if (!orgId) return;
-            // remove selected organization from committees list
-            const optionId = tom.options[orgId] ? orgId : Object.keys(tom.options).find(id => tom.options[id].text === orgName);
-            if (optionId) {
-                tom.removeItem(optionId);
-                tom.removeOption(optionId);
-            }
-        });
+        filterMainOrg();
     }
 
     function setupStudentCoordinatorSelect() {
@@ -1323,6 +1390,13 @@ $(document).ready(function() {
                 }
                 clearFieldError($(this));
             });
+            // Sync changes from the hidden Django field back to the visible modern field
+            djangoField.on('input change', function() {
+                const value = $(this).val();
+                if (modernField.val() !== value) {
+                    modernField.val(value);
+                }
+            });
         }
     }
 
@@ -1665,8 +1739,8 @@ function getWhyThisEventForm() {
             <div class="form-grid">
                 <div class="form-row full-width">
                     <div class="input-group">
-                        <label for="need-analysis-modern">Describe the need for this event *</label>
-                        <textarea id="need-analysis-modern" rows="6" required placeholder="Explain why this event is necessary, what gap it fills, and its relevance to the target audience..."></textarea>
+                        <label for="need-analysis-single">Describe the need for this event *</label>
+                        <textarea id="need-analysis-single" rows="6" required placeholder="Explain why this event is necessary, what gap it fills, and its relevance to the target audience..."></textarea>
                         <div class="help-text">Provide a detailed explanation of why this event is important.</div>
                     </div>
                 </div>
@@ -1684,8 +1758,8 @@ function getWhyThisEventForm() {
             <div class="form-grid">
                 <div class="form-row full-width">
                     <div class="input-group">
-                        <label for="objectives-modern">List the main objectives *</label>
-                        <textarea id="objectives-modern" rows="6" required placeholder="• Objective 1: ...&#10;• Objective 2: ...&#10;• Objective 3: ..."></textarea>
+                        <label for="objectives-single">List the main objectives *</label>
+                        <textarea id="objectives-single" rows="6" required placeholder="• Objective 1: ...&#10;• Objective 2: ...&#10;• Objective 3: ..."></textarea>
                         <div class="help-text">List 3-5 clear, measurable objectives.</div>
                     </div>
                 </div>
@@ -1703,8 +1777,8 @@ function getWhyThisEventForm() {
             <div class="form-grid">
                 <div class="form-row full-width">
                     <div class="input-group">
-                        <label for="outcomes-modern">Describe expected outcomes *</label>
-                        <textarea id="outcomes-modern" rows="6" required placeholder="What specific results, skills, or benefits will participants gain?"></textarea>
+                        <label for="outcomes-single">Describe expected outcomes *</label>
+                        <textarea id="outcomes-single" rows="6" required placeholder="What specific results, skills, or benefits will participants gain?"></textarea>
                         <div class="help-text">Describe the tangible benefits for participants.</div>
                     </div>
                 </div>
@@ -2419,12 +2493,29 @@ function getWhyThisEventForm() {
             window.AutosaveManager.manualSave()
                 .then((data) => {
                     hideLoadingOverlay();
+                    const futureErrorKeysMap = {
+                        'basic-info': ['activities', 'speakers', 'expenses', 'income'],
+                        'why-this-event': ['activities', 'speakers', 'expenses', 'income'],
+                        'schedule': ['speakers', 'expenses', 'income'],
+                        'speakers': ['expenses', 'income'],
+                        'expenses': ['income'],
+                        'income': []
+                    };
+                    const ignoreKeys = futureErrorKeysMap[currentExpandedCard] || [];
+                    const relevantErrors = {};
                     if (data && data.errors) {
-                        handleAutosaveErrors(data);
+                        Object.entries(data.errors).forEach(([key, val]) => {
+                            if (!ignoreKeys.includes(key)) {
+                                relevantErrors[key] = val;
+                            }
+                        });
+                    }
+                    if (Object.keys(relevantErrors).length) {
+                        handleAutosaveErrors({errors: relevantErrors});
                         showNotification('Please fix the errors before continuing.', 'error');
                         return;
                     }
-                    
+
                     // Only mark as complete if validation passed and save succeeded
                     markSectionComplete(currentExpandedCard);
                     showNotification('Section saved successfully!', 'success');
@@ -2811,6 +2902,10 @@ function getWhyThisEventForm() {
             const time = timeInput.val().trim();
             const activity = activityInput.val().trim();
 
+            if (!time && !activity) {
+                return; // Skip completely empty rows
+            }
+
             if (!time) {
                 showScheduleError(timeInput, 'Date & time required');
                 isValid = false;
@@ -2918,10 +3013,30 @@ function getWhyThisEventForm() {
     function validateWhyThisEvent() {
         let isValid = true;
         const requiredTextareas = ['#need-analysis-modern', '#objectives-modern', '#outcomes-modern'];
-        
+
         requiredTextareas.forEach(selector => {
-            const field = $(selector);
-            if (!field.val() || field.val().trim() === '') {
+            const field = $(selector).filter(':visible').first();
+            if (!field.length) return;
+            const id = field.attr('id');
+
+            if (id) {
+                if (window.CKEDITOR && CKEDITOR.instances && CKEDITOR.instances[id]) {
+                    CKEDITOR.instances[id].updateElement();
+                    field.trigger('input').trigger('change');
+                } else if (window.ClassicEditor && window._editors && window._editors[id]) {
+                    field.val(window._editors[id].getData());
+                    field.trigger('input').trigger('change');
+                } else if (window.tinymce && tinymce.get(id)) {
+                    field.val(tinymce.get(id).getContent());
+                    field.trigger('input').trigger('change');
+                } else if (window.Quill && window._quills && window._quills[id]) {
+                    field.val(window._quills[id].root.innerHTML);
+                    field.trigger('input').trigger('change');
+                }
+                const baseName = selector.replace('#', '').replace('-modern', '').replace(/-/g, '_');
+                $(`textarea[name="${baseName}"]`).val(field.val());
+            }
+            if (!field.val().trim()) {
                 showFieldError(field, 'This field is required');
                 field.addClass('animate-shake');
                 setTimeout(() => field.removeClass('animate-shake'), 600);
@@ -3193,13 +3308,20 @@ function getWhyThisEventForm() {
             showNotification('Autosave failed. Please try again.', 'error');
             return;
         }
+        if (!Object.keys(errors).length) {
+            return;
+        }
 
         clearValidationErrors();
         firstErrorField = null;
         const nonFieldMessages = [];
 
         const mark = (name, message) => {
-            let field = $(`#${name.replace(/_/g, '-')}-modern`);
+            const fieldMap = {
+                'organization_type': '#org-type-modern-input',
+                'organization': '#org-modern-select'
+            };
+            let field = $(fieldMap[name] || `#${name.replace(/_/g, '-')}-modern`);
             if (!field.length) {
                 field = $(`[name="${name}"]`);
                 if (field.length && field.attr('type') === 'hidden') {
@@ -3274,7 +3396,7 @@ function getWhyThisEventForm() {
                 .animate-bounce { animation: bounce 0.6s ease-in-out; }
                 .animate-shake { animation: shake 0.5s ease-in-out; }
                 
-                .notification { position: fixed; top: 20px; right: 20px; background: white; padding: 1rem 1.5rem; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.15); z-index: 1001; opacity: 0; transform: translateX(100%); transition: all 0.3s ease; max-width: 320px; }
+                .notification { position: fixed; bottom: 20px; right: 20px; background: white; padding: 1rem 1.5rem; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.15); z-index: 1001; opacity: 0; transform: translateX(100%); transition: all 0.3s ease; max-width: 320px; }
                 .notification.notification-success { border-left: 4px solid #22c55e; }
                 .notification.notification-error { border-left: 4px solid #ef4444; }
                 .notification.notification-info { border-left: 4px solid #264487; }
