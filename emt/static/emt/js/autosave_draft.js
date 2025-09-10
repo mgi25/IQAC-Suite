@@ -72,6 +72,14 @@ window.AutosaveManager = (function() {
             }
         });
 
+        // Merge any previously saved values for fields not currently present
+        const saved = getSavedData();
+        Object.entries(saved).forEach(([key, val]) => {
+            if (key !== '_proposal_id' && data[key] === undefined) {
+                data[key] = val;
+            }
+        });
+
         // Map generic 'content' field to a specific section if configured.
         if (data.content !== undefined && window.AUTOSAVE_SECTION) {
             data[window.AUTOSAVE_SECTION] = data.content;
