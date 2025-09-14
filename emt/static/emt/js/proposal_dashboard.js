@@ -2010,10 +2010,36 @@ function getWhyThisEventForm() {
 
         function updateSpeakerHeaders() {
             container.children('.speaker-form-container').each(function(i) {
-                $(this).find('.speaker-title').text(`Speaker ${i + 1}`);
-                $(this).attr('data-index', i);
-                $(this).find('.remove-speaker-btn').attr('data-index', i);
+                const form = $(this);
+                form.find('.speaker-title').text(`Speaker ${i + 1}`);
+                form.attr('data-index', i);
+                form.find('.remove-speaker-btn').attr('data-index', i);
+
+                form.find('[id^="speaker_"]').each(function() {
+                    const field = $(this);
+                    const id = field.attr('id');
+                    if (!id) return;
+                    const newId = id.replace(/_(\d+)$/, `_${i}`);
+                    field.attr('id', newId);
+                    const name = field.attr('name');
+                    if (name) {
+                        const newName = name.replace(/_(\d+)$/, `_${i}`);
+                        field.attr('name', newName);
+                    }
+                });
+
+                form.find('label[for^="speaker_"]').each(function() {
+                    const label = $(this);
+                    const f = label.attr('for');
+                    if (f) {
+                        label.attr('for', f.replace(/_(\d+)$/, `_${i}`));
+                    }
+                });
             });
+
+            if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
+                window.AutosaveManager.reinitialize();
+            }
         }
 
         function showEmptyState() {
@@ -2036,11 +2062,33 @@ function getWhyThisEventForm() {
         });
 
         container.on('click', '.remove-speaker-btn', function() {
+            const idx = $(this).data('index');
             $(this).closest('.speaker-form-container').remove();
             updateSpeakerHeaders();
             showEmptyState();
-            if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
-                window.AutosaveManager.reinitialize();
+
+            const pageKey = `proposal_draft_${window.USER_ID}_${window.location.pathname}_new`;
+            try {
+                const saved = JSON.parse(localStorage.getItem(pageKey) || '{}');
+                const fields = [
+                    'full_name',
+                    'designation',
+                    'affiliation',
+                    'contact_email',
+                    'detailed_profile',
+                    'contact_number',
+                    'linkedin_url',
+                    'photo',
+                ];
+                fields.forEach(f => delete saved[`speaker_${f}_${idx}`]);
+                if (Array.isArray(saved.speakers)) {
+                    saved.speakers.splice(idx, 1);
+                }
+                localStorage.setItem(pageKey, JSON.stringify(saved));
+            } catch (e) { /* ignore */ }
+
+            if (window.autosaveDraft) {
+                window.autosaveDraft().catch(() => {});
             }
         });
 
@@ -2106,6 +2154,35 @@ function getWhyThisEventForm() {
             });
             showEmptyState();
         } else {
+            // attempt to restore speakers from autosaved draft
+            try {
+                const key = `proposal_draft_${window.USER_ID}_${window.location.pathname}_new`;
+                const saved = JSON.parse(localStorage.getItem(key) || '{}');
+                const grouped = {};
+                Object.entries(saved).forEach(([k, v]) => {
+                    const m = k.match(/^speaker_(.+)_(\d+)$/);
+                    if (!m) return;
+                    const field = m[1];
+                    const idx = parseInt(m[2], 10);
+                    (grouped[idx] ||= {})[field] = v;
+                });
+                const indices = Object.keys(grouped).map(n => parseInt(n, 10)).sort((a, b) => a - b);
+                if (indices.length) {
+                    container.empty();
+                    indices.forEach((savedIdx, pos) => {
+                        addSpeakerForm();
+                        const data = grouped[savedIdx];
+                        Object.entries(data).forEach(([field, val]) => {
+                            const el = $(`#speaker_${field}_${pos}`);
+                            if (el.length) {
+                                el.val(val);
+                            }
+                        });
+                    });
+                }
+            } catch (e) {
+                console.warn('Failed to restore speaker autosave', e);
+            }
             showEmptyState();
         }
     }
@@ -2505,7 +2582,8 @@ function getWhyThisEventForm() {
                     const relevantErrors = {};
                     if (data && data.errors) {
                         Object.entries(data.errors).forEach(([key, val]) => {
-                            if (!ignoreKeys.includes(key)) {
+                            const isIgnored = ignoreKeys.some(k => key === k || key.startsWith(k + '.'));
+                            if (!isIgnored) {
                                 relevantErrors[key] = val;
                             }
                         });
@@ -2537,16 +2615,12 @@ function getWhyThisEventForm() {
                 .catch(err => {
                     hideLoadingOverlay();
                     console.error('Autosave failed:', err);
-                    if (err && err.errors) {
+                    const hasFieldErrors = err && err.errors && Object.keys(err.errors).length;
+                    if (hasFieldErrors) {
                         handleAutosaveErrors(err);
-                        if (firstErrorField && firstErrorField.length) {
-                            $('html, body').animate({
-                                scrollTop: firstErrorField.offset().top - 100
-                            }, 500);
-                            firstErrorField.focus();
-                        }
+                    } else {
+                        showNotification('Save failed. Please check for missing or invalid fields.', 'error');
                     }
-                    showNotification('Save failed. Please check for missing or invalid fields.', 'error');
                 });
         } else {
             hideLoadingOverlay();
@@ -3376,10 +3450,19 @@ function getWhyThisEventForm() {
             }
         });
 
-        if (firstErrorField && firstErrorField.length) {
+        const firstSpeakerField = $('.speaker-form-container .has-error').filter('input, textarea, select').first();
+        if (firstSpeakerField.length) {
+            firstSpeakerField.closest('.speaker-form-container').addClass('has-error');
+        }
+        const focusField = firstSpeakerField.length ? firstSpeakerField : firstErrorField;
+        if (focusField && focusField.length) {
             showNotification('Draft saved with validation warnings. Please review highlighted fields.', 'info');
-            $('html, body').animate({scrollTop: firstErrorField.offset().top - 100}, 500);
-            firstErrorField.focus();
+            $('html, body').animate({scrollTop: focusField.offset().top - 100}, 500);
+            if (focusField[0]?.tomselect) {
+                focusField[0].tomselect.focus();
+            } else {
+                focusField.focus();
+            }
         } else if (nonFieldMessages.length) {
             showNotification(nonFieldMessages.join(' '), 'error');
         } else {

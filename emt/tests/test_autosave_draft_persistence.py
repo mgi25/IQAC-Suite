@@ -132,3 +132,52 @@ class AutosaveDraftPersistenceTests(TestCase):
         activities = list(proposal.activities.all())
         self.assertEqual(len(activities), 1)
         self.assertEqual(activities[0].name, "Orientation")
+
+    def test_save_continue_speakers_ignores_future_section_errors(self):
+        # Initial autosave to obtain proposal ID
+        base = self._payload()
+        base["event_title"] = "My Event"
+        resp1 = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(base),
+            content_type="application/json",
+        )
+        self.assertEqual(resp1.status_code, 200)
+        pid = resp1.json()["proposal_id"]
+
+        payload = {
+            "proposal_id": pid,
+            "speaker_full_name_0": "Dr. Jane",
+            "speaker_designation_0": "Prof",
+            "speaker_affiliation_0": "Uni",
+            "speaker_contact_email_0": "a@b.com",
+            "speaker_detailed_profile_0": "Profile",
+            "speaker_linkedin_url_0": "https://linkedin.com/in/jane",
+            # Incomplete expense to trigger future-section error
+            "expense_particulars_0": "Venue",
+        }
+        resp2 = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp2.status_code, 200)
+        data = resp2.json()
+        self.assertIn("errors", data)
+        # Speakers saved without errors
+        self.assertNotIn("speakers", data["errors"])
+        self.assertIn("expenses", data["errors"])  # future section error
+
+        future_error_keys_map = {"speakers": ["expenses", "income"]}
+        ignore = future_error_keys_map["speakers"]
+        relevant = {
+            k: v for k, v in data["errors"].items()
+            if not any(k == key or k.startswith(f"{key}.") for key in ignore)
+        }
+        self.assertEqual(relevant, {})
+
+        proposal = EventProposal.objects.get(id=pid)
+        sp = proposal.speakers.first()
+        self.assertIsNotNone(sp)
+        self.assertEqual(sp.full_name, "Dr. Jane")
+        self.assertEqual(sp.linkedin_url, "https://linkedin.com/in/jane")
