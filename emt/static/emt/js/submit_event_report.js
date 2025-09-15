@@ -610,6 +610,7 @@ $(document).on('click', '#ai-sdg-implementation', function(){
               fillOrganizingCommittee();
               fillActualSpeakers();
               fillAttendanceCounts();
+              if (typeof setupAttendanceLink === 'function') setupAttendanceLink();
           };
           setTimeout(() => initParticipantsSection(0), 50);
       }
@@ -1630,6 +1631,7 @@ function fillAttendanceCounts() {
     if (numField.length && numField.val().trim() === '') {
         numField.val(window.ATTENDANCE_PRESENT);
     }
+    if (typeof setupAttendanceLink === 'function') setupAttendanceLink();
 }
 
 function populateProposalData() {
@@ -2347,12 +2349,18 @@ function setupDynamicActivities() {
 function setupAttendanceLink() {
     const attendanceField = $('#attendance-modern');
     const participantFields = $('#num-participants-modern, #total-participants-modern');
-    const fields = [];
-    if (attendanceField && attendanceField.length) fields.push(attendanceField);
-    if (participantFields && participantFields.length) fields.push(participantFields);
+    const fields = attendanceField.add(participantFields);
     if (!fields.length) return;
 
-    fields.forEach((field) => {
+    const attendanceUrl = attendanceField.data('attendance-url');
+    if (attendanceUrl) {
+        fields
+            .attr('data-attendance-url', attendanceUrl)
+            .data('attendance-url', attendanceUrl);
+    }
+
+    fields.each(function () {
+        const field = $(this);
         const url = field.data('attendance-url');
         field
             .prop('readonly', true)
@@ -2362,7 +2370,8 @@ function setupAttendanceLink() {
 
     $(document)
         .off('click', '#attendance-modern, #num-participants-modern, #total-participants-modern')
-        .on('click', '#attendance-modern, #num-participants-modern, #total-participants-modern', async function () {
+        .on('click', '#attendance-modern, #num-participants-modern, #total-participants-modern', async function (e) {
+            e.preventDefault();
             const field = $(this);
             const href = field.data('attendance-url');
             if (href) {
@@ -2393,8 +2402,9 @@ function setupAttendanceLink() {
                     if (path.startsWith('/suite/')) prefix = '/suite';
                     else if (path.startsWith('/emt/')) prefix = '/emt';
                     const attendanceUrl = `${prefix}/reports/${reportId}/attendance/upload/`;
-                    fields.forEach((f) => {
-                        f
+                    fields.each((_, f) => {
+                        const jq = $(f);
+                        jq
                             .attr('data-attendance-url', attendanceUrl)
                             .data('attendance-url', attendanceUrl)
                             .attr('href', attendanceUrl);
