@@ -304,11 +304,20 @@
     border: 1px solid var(--input-border) !important;
     border-radius: 0.5rem !important;
     font-size: .875rem;
+    color: var(--text-dark);
+        caret-color: var(--text-dark);
     transition: border-color .2s, box-shadow .2s, background .2s;
     width: 100%;
     box-sizing: border-box;
     background: #fff !important;
   }
+
+    /* Guarantee number input visibility across browsers (Edge/Chromium autofill quirks) */
+    .proposal-content .input-group input[type="number"] {
+        -webkit-text-fill-color: var(--text-dark);
+        color: var(--text-dark);
+        background-color: #fff;
+    }
   .proposal-content .input-group input:hover,
   .proposal-content .input-group select:hover,
   .proposal-content .input-group textarea:hover,
@@ -504,6 +513,12 @@
   .activity-row {
     display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: center; margin-bottom: .5rem;
   }
+
+    /* ---- Clean schedule rows (replaces table) ---- */
+    .schedule-rows { grid-column: 1 / -1; display: flex; flex-direction: column; gap: .75rem; margin: .5rem 0 1rem; }
+    .schedule-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: end; background: #f9fafb; border: 1px solid #e5e7eb; padding: 1rem; border-radius: 8px; }
+    .schedule-row .btn-remove-row { background: #e5e7eb; color: #111827; border: none; padding: .5rem .75rem; border-radius: 6px; cursor: pointer; height: 40px; }
+    #add-row-btn.btn-block { width: 100%; margin-top: .75rem; background: var(--primary-blue); color: #fff; border: none; padding: .65rem 1rem; border-radius: 8px; cursor: pointer; }
   
   /* ---- Speakers / Expenses / Income / CDL cards (flat) ---- */
   .speakers-section, .expenses-section, .income-section, .cdl-section {
@@ -950,7 +965,8 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    margin: 0 auto;
+    /* align left like Speakers */
+    margin: 0;
     box-shadow: 0 4px 20px rgba(38, 68, 135, 0.2);
 }
 
@@ -995,7 +1011,7 @@
 .income-empty-state {
     text-align: center;
     padding: 4rem 2rem;
-    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    background: #ffffff; /* make background white */
     border: 2px dashed #cbd5e1;
     border-radius: 16px;
     margin: 2rem 0;
@@ -1007,11 +1023,7 @@
     flex-grow: 1;
 }
 
-.income-empty-state .empty-state-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    display: block;
-}
+.income-empty-state .empty-state-icon { display: none; }
 
 .income-empty-state h4 {
     color: #475569;
@@ -1026,13 +1038,19 @@
 
 /* Add Income Section */
 .add-income-section {
-    text-align: center;
+    /* align button to left for consistency with Speakers */
+    text-align: left;
     margin: 2rem 0;
     padding: 2rem;
     background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
     border-radius: 16px;
     border: 1px solid #e2e8f0;
     width: 100%;
+}
+
+/* Ensure Expenses add section also aligns left like Speakers */
+.add-expense-section {
+    text-align: left;
 }
 
 /* Income Form Container */
@@ -1120,12 +1138,12 @@
 /* Income Form Content */
 .income-form-content {
     padding: 2rem;
-    background: linear-gradient(135deg, #fafbff 0%, #f8fafc 100%);
+    background: linear-gradient(135deg, #fafbff 0%, #f8fafc 100%); /* keep consistent with expenses */
 }
 
 .income-form-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* match expenses */
     gap: 1.5rem;
     margin-bottom: 0;
 }
@@ -1205,7 +1223,8 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    margin: 0 auto;
+    /* align left like Speakers */
+    margin: 0;
     box-shadow: 0 4px 20px rgba(38, 68, 135, 0.2);
 }
 

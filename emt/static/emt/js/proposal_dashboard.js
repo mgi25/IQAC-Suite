@@ -216,14 +216,16 @@ $(document).ready(function() {
             }
         });
         
-        // Enable the next section if the previous section is completed
-        // or if the previous section is optional
+        // Enable the next section ONLY if the previous section is completed.
+        // Do NOT auto-unlock based on "optional" status. Optional sections can be skipped,
+        // but navigation must remain strictly sequential: a section becomes available
+        // only when the immediate previous section was completed.
         const sectionOrder = ['basic-info', 'why-this-event', 'schedule', 'speakers', 'expenses', 'income', 'cdl-support'];
         for (let i = 0; i < sectionOrder.length - 1; i++) {
             const currentSection = sectionOrder[i];
             const nextSection = sectionOrder[i + 1];
 
-            if (sectionProgress[currentSection] === true || optionalSections.includes(currentSection)) {
+            if (sectionProgress[currentSection] === true) {
                 $(`.proposal-nav .nav-link[data-section="${nextSection}"]`).removeClass('disabled');
             }
         }
@@ -237,9 +239,10 @@ $(document).ready(function() {
 
     function setupFormHandling() {
         // Allow navigation with proper validation
-    $('.proposal-nav .nav-link').on('click', function(e) {
+        $('.proposal-nav .nav-link').on('click', function(e) {
             e.preventDefault();
             const section = $(this).data('section');
+
             const $this = $(this);
 
             // Prevent navigation to disabled sections
@@ -272,9 +275,7 @@ $(document).ready(function() {
                         return;
                     }
                     // Mark current section as in-progress if not completed yet
-                    if (sectionProgress[currentExpandedCard] !== true) {
-                        markSectionInProgress(currentExpandedCard);
-                    }
+                    markSectionInProgress(currentExpandedCard);
                 }
 
                 activateSection(section);
@@ -538,7 +539,12 @@ $(document).ready(function() {
                     dateLabel.textContent = `${num}. Activity Date`;
                 }
             });
+            // Update the visible count and dispatch events so hidden Django field syncs and autosave can trigger
             numActivitiesInput.value = rows.length;
+            try {
+                numActivitiesInput.dispatchEvent(new Event('input', { bubbles: true }));
+                numActivitiesInput.dispatchEvent(new Event('change', { bubbles: true }));
+            } catch (e) { /* noop */ }
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 // Reinitialize so new rows are tracked by the autosave manager
                 window.AutosaveManager.reinitialize();
@@ -591,7 +597,7 @@ $(document).ready(function() {
             }
         });
 
-        numActivitiesInput.addEventListener('input', () => {
+    numActivitiesInput.addEventListener('input', () => {
             const count = parseInt(numActivitiesInput.value, 10);
             render(count);
         });
@@ -1654,7 +1660,7 @@ $(document).ready(function() {
                 <div class="form-row">
                     <div class="input-group">
                         <label for="num-activities-modern">Number of Activities</label>
-                        <input type="number" id="num-activities-modern" min="1" max="50" placeholder="Enter number of activities">
+                        <input type="number" id="num-activities-modern" class="proposal-input" min="1" max="50" placeholder="Enter number of activities">
                         <div class="help-text">How many activities will your event include?</div>
                     </div>
                     <div class="input-group">
@@ -1798,17 +1804,9 @@ function getWhyThisEventForm() {
                     <div class="input-group">
                         <label for="schedule-modern">Event timeline and schedule *</label>
                         <textarea id="schedule-modern" name="flow" hidden></textarea>
-                        <table id="flow-table" class="schedule-table">
-                            <thead>
-                                <tr>
-                                    <th>Date & Time</th>
-                                    <th>Activity</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                        <button type="button" id="add-row-btn">Add Row</button>
+
+                        <div id="schedule-rows" class="schedule-rows"></div>
+                        <button type="button" id="add-row-btn" class="btn btn-primary btn-block">Add Row</button>
                         <div class="help-text">Provide a detailed timeline for each activity.</div>
                     </div>
                 </div>
@@ -1825,11 +1823,18 @@ function getWhyThisEventForm() {
 
     function addRow(time = '', activity = '') {
         if (!scheduleTableBody) return;
-        const row = document.createElement('tr');
+        const row = document.createElement('div');
+        row.className = 'schedule-row';
         row.innerHTML = `
-            <td><input type="datetime-local" class="time-input" value="${time}"></td>
-            <td><input type="text" class="activity-input" value="${activity}"></td>
-            <td><button type="button" class="btn-remove-row">Remove</button></td>
+            <div class="input-group">
+                <label>Date & Time *</label>
+                <input type="datetime-local" class="time-input proposal-input" value="${time}">
+            </div>
+            <div class="input-group">
+                <label>Activity *</label>
+                <input type="text" class="activity-input proposal-input" value="${activity}">
+            </div>
+            <button type="button" class="btn-remove-row">Remove</button>
         `;
         row.querySelector('.btn-remove-row').addEventListener('click', () => removeRow(row));
         row.querySelectorAll('input').forEach(input => {
@@ -1867,9 +1872,9 @@ function getWhyThisEventForm() {
     function serializeSchedule() {
         if (!scheduleTableBody || !scheduleHiddenField) return;
         const lines = [];
-        scheduleTableBody.querySelectorAll('tr').forEach(tr => {
-            const time = tr.querySelector('.time-input').value.trim();
-            const activity = tr.querySelector('.activity-input').value.trim();
+        scheduleTableBody.querySelectorAll('.schedule-row').forEach(row => {
+            const time = row.querySelector('.time-input')?.value.trim() || '';
+            const activity = row.querySelector('.activity-input')?.value.trim() || '';
             if (time || activity) {
                 lines.push(`${time}||${activity}`);
             }
@@ -1879,7 +1884,7 @@ function getWhyThisEventForm() {
     }
 
     function setupScheduleSection() {
-        scheduleTableBody = document.querySelector('#flow-table tbody');
+        scheduleTableBody = document.getElementById('schedule-rows');
         scheduleHiddenField = document.getElementById('schedule-modern');
         const addRowBtn = document.getElementById('add-row-btn');
         if (!scheduleTableBody || !scheduleHiddenField || !addRowBtn) return;
@@ -1896,7 +1901,7 @@ function getWhyThisEventForm() {
 
                 <div class="add-speaker-section">
                     <button type="button" id="add-speaker-btn" class="btn-add-speaker">
-                        Add Another Speaker
+                        Add Speaker
                     </button>
                     <div class="help-text" style="text-align: center; margin-top: 0.5rem;">
                         Add all speakers who will be presenting at your event
@@ -1920,7 +1925,7 @@ function getWhyThisEventForm() {
 
                 <div class="add-expense-section">
                     <button type="button" id="add-expense-btn" class="btn-add-expense">
-                        Add Another Expense
+                        Add Expense
                     </button>
                     <div class="help-text" style="text-align: center; margin-top: 0.5rem;">
                         Add all expense items for your event
@@ -2290,10 +2295,10 @@ function getWhyThisEventForm() {
 
                 <div class="add-income-section">
                     <button type="button" id="add-income-btn" class="btn-add-income">
-                        Add Income Item
+                        Add Income
                     </button>
                     <div class="help-text" style="text-align: center; margin-top: 0.5rem;">
-                        Add all income sources for your event
+                        Add all income items for your event
                     </div>
                 </div>
 
@@ -2316,7 +2321,7 @@ function getWhyThisEventForm() {
                 <div class="income-form-container" data-index="${index}">
                     <div class="income-form-card">
                         <div class="income-form-header">
-                            <h3 class="income-title">Income Item ${index + 1}</h3>
+                            <h3 class="income-title">Income ${index + 1}</h3>
                             <button type="button" class="btn-remove-income remove-income-btn" data-index="${index}" title="Remove Income Item">
                                 <i class="fas fa-times"></i>
                             </button>
@@ -2335,7 +2340,7 @@ function getWhyThisEventForm() {
                                     <div class="help-text">Income source description</div>
                                 </div>
                                 <div class="input-group">
-                                    <label for="income_participants_${index}">No of Participants</label>
+                                    <label for="income_participants_${index}">No. of Participants</label>
                                     <input type="number" id="income_participants_${index}" name="income_participants_${index}" />
                                     <div class="help-text">Number of participants</div>
                                 </div>
@@ -2381,7 +2386,7 @@ function getWhyThisEventForm() {
 
         function updateIncomeHeaders() {
             container.children('.income-form-container').each(function(i) {
-                $(this).find('.income-title').text(`Income Item ${i + 1}`);
+                $(this).find('.income-title').text(`Income ${i + 1}`);
                 $(this).attr('data-index', i);
                 $(this).find('.remove-income-btn').attr('data-index', i);
             });
@@ -2391,9 +2396,8 @@ function getWhyThisEventForm() {
             if (container.children('.income-form-container').length === 0) {
                 container.html(`
                     <div class="income-empty-state">
-                        <div class="empty-state-icon"><i class="fa-solid fa-microphone"></i></div>
-                        <h4>No income sources added yet</h4>
-                        <p>Add income items for your event budget</p>
+                        <h4>No income added yet</h4>
+                        <p>Add all income items for your event budget</p>
                     </div>
                 `);
             } else {
@@ -3353,7 +3357,9 @@ function getWhyThisEventForm() {
                     : targetField.val(),
             } : {};
 
-            console.warn(message, fieldData);
+            if (window.DEBUG) {
+                console.warn(message, fieldData);
+            }
             if (!firstErrorField) {
                 firstErrorField = field;
             }
@@ -3412,6 +3418,10 @@ function getWhyThisEventForm() {
         };
 
         Object.entries(errors).forEach(([key, val]) => {
+            // During autosave, ignore activities errors to avoid warning spam while user types
+            if (key === 'activities' && errorData && errorData.context === 'autosave') {
+                return;
+            }
             if (key === '__all__' || key === 'non_field_errors') {
                 if (Array.isArray(val)) {
                     nonFieldMessages.push(...val);
@@ -3569,7 +3579,12 @@ function getWhyThisEventForm() {
                 $('#reset-draft-btn').prop('disabled', false).removeAttr('disabled');
             }
             if (detail && detail.errors) {
-                handleAutosaveErrors({errors: detail.errors});
+                // Suppress dynamic activities warnings during autosave to prevent spam while typing
+                const filtered = { ...detail.errors };
+                if (filtered.activities) {
+                    delete filtered.activities;
+                }
+                handleAutosaveErrors({ errors: filtered, context: 'autosave' });
             }
             const indicator = $('#autosave-indicator');
             indicator.removeClass('saving error').addClass('saved');
@@ -3584,7 +3599,7 @@ function getWhyThisEventForm() {
             indicator.removeClass('saving saved').addClass('error show');
             indicator.find('.indicator-text').text('Save Failed');
             if (e.originalEvent && e.originalEvent.detail) {
-                handleAutosaveErrors(e.originalEvent.detail);
+                handleAutosaveErrors({ ...e.originalEvent.detail, context: 'autosave' });
             }
             setTimeout(() => {
                 indicator.removeClass('show');
