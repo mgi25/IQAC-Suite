@@ -15,6 +15,8 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from django.db.models import Q
 from django.utils.dateparse import parse_date
+from django.core.validators import EmailValidator, URLValidator
+from django.core.exceptions import ValidationError
 from .models import (
     EventProposal,
     EventNeedAnalysis,
@@ -778,6 +780,8 @@ def autosave_proposal(request):
         "contact_email",
         "detailed_profile",
     ]
+    email_validator = EmailValidator()
+    url_validator = URLValidator()
     while any(
         f"speaker_{field}_{sp_idx}" in data
         for field in sp_fields + ["contact_number", "linkedin_url", "photo"]
@@ -790,8 +794,21 @@ def autosave_proposal(request):
                 has_any = True
                 if field == "full_name" and not NAME_RE.fullmatch(value):
                     missing[field] = "Enter a valid name (letters, spaces, .'- only)."
+                elif field == "contact_email":
+                    try:
+                        email_validator(value)
+                    except ValidationError:
+                        missing[field] = "Enter a valid email address."
             else:
                 missing[field] = "This field is required."
+
+        linkedin = data.get(f"speaker_linkedin_url_{sp_idx}")
+        if linkedin:
+            try:
+                url_validator(linkedin)
+            except ValidationError:
+                missing["linkedin_url"] = "Enter a valid URL."
+
         if has_any and missing:
             sp_errors[sp_idx] = missing
         sp_idx += 1
