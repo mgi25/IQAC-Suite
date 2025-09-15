@@ -1621,12 +1621,14 @@ function fillActualSpeakers() {
 
 function fillAttendanceCounts() {
     const totalField = $('#total-participants-modern');
-    if (
-        totalField.length &&
-        totalField.val().trim() === '' &&
-        typeof window.ATTENDANCE_PRESENT !== 'undefined'
-    ) {
+    const numField = $('#num-participants-modern');
+    if (typeof window.ATTENDANCE_PRESENT === 'undefined') return;
+
+    if (totalField.length && totalField.val().trim() === '') {
         totalField.val(window.ATTENDANCE_PRESENT);
+    }
+    if (numField.length && numField.val().trim() === '') {
+        numField.val(window.ATTENDANCE_PRESENT);
     }
 }
 
@@ -2344,18 +2346,25 @@ function setupDynamicActivities() {
 
 function setupAttendanceLink() {
     const attendanceField = $('#attendance-modern');
-    if (!attendanceField.length) return;
+    const participantFields = $('#num-participants-modern, #total-participants-modern');
+    const fields = [];
+    if (attendanceField && attendanceField.length) fields.push(attendanceField);
+    if (participantFields && participantFields.length) fields.push(participantFields);
+    if (!fields.length) return;
 
-    const url = attendanceField.data('attendance-url');
-    attendanceField
-        .prop('readonly', true)
-        .css('cursor', 'pointer')
-        .attr('href', url || '#');
+    fields.forEach((field) => {
+        const url = field.data('attendance-url');
+        field
+            .prop('readonly', true)
+            .css('cursor', 'pointer')
+            .attr('href', url || '#');
+    });
 
     $(document)
-        .off('click', '#attendance-modern')
-        .on('click', '#attendance-modern', async () => {
-            const href = attendanceField.data('attendance-url');
+        .off('click', '#attendance-modern, #num-participants-modern, #total-participants-modern')
+        .on('click', '#attendance-modern, #num-participants-modern, #total-participants-modern', async function () {
+            const field = $(this);
+            const href = field.data('attendance-url');
             if (href) {
                 window.location.href = href;
                 return;
@@ -2384,10 +2393,12 @@ function setupAttendanceLink() {
                     if (path.startsWith('/suite/')) prefix = '/suite';
                     else if (path.startsWith('/emt/')) prefix = '/emt';
                     const attendanceUrl = `${prefix}/reports/${reportId}/attendance/upload/`;
-                    attendanceField
-                        .attr('data-attendance-url', attendanceUrl)
-                        .data('attendance-url', attendanceUrl)
-                        .attr('href', attendanceUrl);
+                    fields.forEach((f) => {
+                        f
+                            .attr('data-attendance-url', attendanceUrl)
+                            .data('attendance-url', attendanceUrl)
+                            .attr('href', attendanceUrl);
+                    });
                     window.location.href = attendanceUrl;
                 } else {
                     alert('Unable to prepare attendance. Please try saving once.');
@@ -2455,9 +2466,8 @@ function initializeAutosaveIndicators() {
             if (path.startsWith('/suite/')) prefix = '/suite';
             else if (path.startsWith('/emt/')) prefix = '/emt';
             const attendanceUrl = `${prefix}/reports/${reportId}/attendance/upload/`;
-            $('#attendance-modern')
+            $('#attendance-modern, #num-participants-modern, #total-participants-modern')
                 .attr('data-attendance-url', attendanceUrl)
-                .data('data-attendance-url', attendanceUrl)
                 .data('attendance-url', attendanceUrl);
             setupAttendanceLink();
         }
