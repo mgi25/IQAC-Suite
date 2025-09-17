@@ -99,7 +99,7 @@
                 <td>
                     {% if report.proposal %}
                         <a href="{% url 'emt:view_report' report.id %}" class="report-action-btn">View</a>
-                        <a href="{% url 'emt:download_pdf' report.id %}" class="report-action-btn">PDF</a>
+                        <a href="{% url 'emt:download_pdf' report.proposal.id %}" class="report-action-btn">PDF</a>
                     {% else %}
                         {% if report.file %}
                             <a href="{{ report.file.url }}" class="report-action-btn" download>Download</a>

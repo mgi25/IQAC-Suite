@@ -46,11 +46,12 @@
                   </td>
                   <td class="iqac-td-title">
                     <div class="iqac-event-info">
-                      <div class="iqac-event-title">{{ report.event_title|default:"(Untitled Event)" }}</div>
+                      <div class="iqac-event-title">{{ report.proposal.event_title|default:"(Untitled Event)" }}</div>
+                      <div class="iqac-event-meta">{{ report.proposal.organization|default:"N/A" }}</div>
                     </div>
                   </td>
                   <td class="iqac-td-status">
-                    <span class="iqac-status-badge">{{ report.generated_at|date:"M d, Y" }}</span>
+                    <span class="iqac-status-badge">{{ report.created_at|date:"M d, Y" }}</span>
                   </td>
                   <td class="iqac-td-actions">
                     <div class="iqac-action-buttons">
@@ -58,8 +59,8 @@
                       <div class="iqac-download-dropdown">
                         <button class="iqac-action-btn download-btn">Download</button>
                         <div class="iqac-download-options">
-                          <a href="{% url 'emt:download_pdf' report.id %}">PDF</a>
-                          <a href="{% url 'emt:download_word' report.id %}">Word</a>
+                          <a href="{% url 'emt:download_pdf' report.proposal.id %}">PDF</a>
+                          <a href="{% url 'emt:download_word' report.proposal.id %}">Word</a>
                         </div>
                       </div>
                     </div>

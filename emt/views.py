@@ -1,5 +1,10 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import JsonResponse, HttpResponse, StreamingHttpResponse
+from django.http import (
+    JsonResponse,
+    HttpResponse,
+    StreamingHttpResponse,
+    HttpResponseNotAllowed,
+)
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_POST
 from django.conf import settings
@@ -156,17 +161,19 @@ import pdfkit
 
 
 def report_form(request):
-    return render(request, "report_generation.html")
+    return render(request, "emt/report_generation.html")
 
 
 @csrf_exempt
 def generate_report_pdf(request):
-    if request.method == "POST":
-        html = render_to_string("pdf_template.html", {"data": request.POST})
-        pdf = pdfkit.from_string(html, False)
-        response = HttpResponse(pdf, content_type="application/pdf")
-        response["Content-Disposition"] = 'attachment; filename="Event_Report.pdf"'
-        return response
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    html = render_to_string("emt/pdf_template.html", {"data": request.POST})
+    pdf = pdfkit.from_string(html, False)
+    response = HttpResponse(pdf, content_type="application/pdf")
+    response["Content-Disposition"] = 'attachment; filename="Event_Report.pdf"'
+    return response
 
 
 # Helper to validate and persist text-based sections for proposals
@@ -1477,8 +1484,9 @@ def generate_report(request, proposal_id):
     generated_content = f"Report for {proposal.event_title}\n\nGenerated on {timezone.now().strftime('%Y-%m-%d')}"
 
     # Save to database
-    report.content = generated_content
-    report.generated_at = timezone.now()
+    report.ai_generated_report = generated_content
+    if not report.summary:
+        report.summary = generated_content
     report.save()
 
     # Add logging
@@ -1500,10 +1508,16 @@ def report_success(request, proposal_id):
 
 @login_required
 def generated_reports(request):
-    reports = EventProposal.objects.filter(
-        report_generated=True, submitted_by=request.user
-    ).order_by("-id")
-    return render(request, "emt/generated_reports.html", {"reports": reports})
+    reports = (
+        EventReport.objects.select_related("proposal", "proposal__organization")
+        .filter(proposal__submitted_by=request.user)
+        .order_by("-created_at")
+    )
+    return render(
+        request,
+        "emt/generated_reports.html",
+        {"reports": reports},
+    )
 
 
 @login_required
@@ -1558,10 +1572,18 @@ def download_pdf(request, proposal_id):
 
     # Add content to PDF
     p.drawString(100, 800, f"Event Report: {proposal.event_title}")
-    p.drawString(100, 780, f"Date: {proposal.event_datetime.strftime('%Y-%m-%d')}")
+    if proposal.event_datetime:
+        event_date = proposal.event_datetime.strftime("%Y-%m-%d")
+    elif proposal.event_start_date:
+        event_date = proposal.event_start_date.strftime("%Y-%m-%d")
+    else:
+        event_date = "N/A"
+    p.drawString(100, 780, f"Date: {event_date}")
     p.drawString(100, 760, f"Generated on: {timezone.now().strftime('%Y-%m-%d')}")
     p.drawString(100, 740, "Report Content:")
-    p.drawString(100, 720, report.content[:500] + "...")  # Show first 500 chars
+    report_text = report.ai_generated_report or report.summary or ""
+    preview = report_text[:500] + ("..." if len(report_text) > 500 else "")
+    p.drawString(100, 720, preview or "No content available.")
 
     p.showPage()
     p.save()
@@ -2179,24 +2201,21 @@ def submit_event_report(request, proposal_id):
     ]
 
     # Get or create content sections for the report
-    try:
-        event_summary = report.event_summary
-    except Exception:
-        event_summary = None
+    event_summary = None
+    if report and report.summary:
+        event_summary = SimpleNamespace(content=report.summary)
     if draft.get("event_summary"):
         event_summary = SimpleNamespace(content=draft.get("event_summary"))
 
-    try:
-        event_outcomes = report.event_outcomes
-    except Exception:
-        event_outcomes = None
+    event_outcomes = None
+    if report and report.outcomes:
+        event_outcomes = SimpleNamespace(content=report.outcomes)
     if draft.get("event_outcomes"):
         event_outcomes = SimpleNamespace(content=draft.get("event_outcomes"))
 
-    try:
-        analysis = report.analysis
-    except Exception:
-        analysis = None
+    analysis = None
+    if report and report.analysis:
+        analysis = SimpleNamespace(content=report.analysis)
     if draft.get("analysis"):
         analysis = SimpleNamespace(content=draft.get("analysis"))
 
@@ -3138,7 +3157,7 @@ Repeat: Output each field as FIELD: VALUE (colon required), one per line, nothin
             yield chunk
             time.sleep(0.5)  # Simulate delay
 
-    report.content = "".join(chunks)
+    report.ai_generated_report = "".join(chunks)
     report.save()
 
     return StreamingHttpResponse(generate(), content_type="text/plain")
@@ -3226,29 +3245,28 @@ def api_organization_types(request):
 @login_required
 def admin_reports_view(request):
     try:
-        submitted_reports = Report.objects.all()
-        generated_reports = EventReport.objects.select_related("proposal").all()
+        submitted_reports = list(
+            Report.objects.select_related("organization", "submitted_by")
+        )
+        generated_reports = list(
+            EventReport.objects.select_related(
+                "proposal",
+                "proposal__organization",
+                "proposal__submitted_by",
+            )
+        )
 
-        # Create a combined list with a consistent sorting attribute
-        all_reports_list = []
-
-        # Assuming core.Report has 'created_at'
         for report in submitted_reports:
             report.sort_date = report.created_at
-            all_reports_list.append(report)
 
-        # EventReport has 'generated_at', so we use that
         for report in generated_reports:
-            # Use generated_at if it exists, otherwise use a fallback like the proposal creation date
-            report.sort_date = (
-                report.generated_at
-                if report.generated_at
-                else report.proposal.created_at
-            )
-            all_reports_list.append(report)
+            report.sort_date = report.created_at or report.proposal.created_at
 
-        # Now sort by the common attribute 'sort_date'
-        all_reports_list.sort(key=attrgetter("sort_date"), reverse=True)
+        all_reports_list = sorted(
+            submitted_reports + generated_reports,
+            key=attrgetter("sort_date"),
+            reverse=True,
+        )
 
         context = {"reports": all_reports_list}
 
