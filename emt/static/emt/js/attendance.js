@@ -7,8 +7,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const actionsEl = document.getElementById('actions');
     const studentSection = document.getElementById('student-table-section');
     const facultySection = document.getElementById('faculty-table-section');
+    const guestSection = document.getElementById('guest-table-section');
     const studentTableBody = document.querySelector('#student-attendance-table tbody');
     const facultyTableBody = document.querySelector('#faculty-attendance-table tbody');
+    const guestTableBody = document.querySelector('#guest-attendance-table tbody');
     const totalEl = document.getElementById('total-count');
     const presentEl = document.getElementById('present-count');
     const absentEl = document.getElementById('absent-count');
@@ -98,44 +100,56 @@ document.addEventListener('DOMContentLoaded', function () {
         pagination.classList.toggle('d-none', rows.length <= perPage);
     }
 
+    function appendRow(tableBody, row, affiliationText) {
+        if (!tableBody) {
+            return;
+        }
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${row.registration_no || ''}</td>
+            <td>${row.full_name || ''}</td>
+            <td>${affiliationText || ''}</td>
+            <td><input type="checkbox" data-index="${row._index}" class="absent" ${row.absent ? 'checked' : ''}></td>
+            <td><input type="checkbox" data-index="${row._index}" class="volunteer" ${row.volunteer ? 'checked' : ''}></td>
+        `;
+        tableBody.appendChild(tr);
+    }
+
     function renderTables() {
         normaliseRows();
         studentTableBody.innerHTML = '';
         facultyTableBody.innerHTML = '';
+        if (guestTableBody) {
+            guestTableBody.innerHTML = '';
+        }
 
         const slice = getPageSlice();
         const studentSlice = slice.filter(row => (row.category || 'student') === 'student');
-        const nonStudentSlice = slice.filter(row => (row.category || 'student') !== 'student');
+        const facultySlice = slice.filter(row => (row.category || 'student') === 'faculty');
+        const guestSlice = guestTableBody
+            ? slice.filter(row => (row.category || 'student') === 'external')
+            : [];
 
         studentSlice.forEach(row => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${row.registration_no || ''}</td>
-                <td>${row.full_name || ''}</td>
-                <td>${row.affiliation || ''}</td>
-                <td><input type="checkbox" data-index="${row._index}" class="absent" ${row.absent ? 'checked' : ''}></td>
-                <td><input type="checkbox" data-index="${row._index}" class="volunteer" ${row.volunteer ? 'checked' : ''}></td>
-            `;
-            studentTableBody.appendChild(tr);
+            appendRow(studentTableBody, row, row.affiliation || '');
         });
 
-        nonStudentSlice.forEach(row => {
-            const affiliationText = row.category === 'external'
-                ? `${row.affiliation || 'Guests'} (Guest)`
-                : (row.affiliation || 'Unknown');
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${row.registration_no || ''}</td>
-                <td>${row.full_name || ''}</td>
-                <td>${affiliationText}</td>
-                <td><input type="checkbox" data-index="${row._index}" class="absent" ${row.absent ? 'checked' : ''}></td>
-                <td><input type="checkbox" data-index="${row._index}" class="volunteer" ${row.volunteer ? 'checked' : ''}></td>
-            `;
-            facultyTableBody.appendChild(tr);
+        facultySlice.forEach(row => {
+            appendRow(facultyTableBody, row, row.affiliation || '');
         });
+
+        if (guestTableBody) {
+            guestSlice.forEach(row => {
+                const affiliationText = `${row.affiliation || 'Guests'} (Guest)`;
+                appendRow(guestTableBody, row, affiliationText);
+            });
+        }
 
         studentSection.classList.toggle('d-none', studentSlice.length === 0);
-        facultySection.classList.toggle('d-none', nonStudentSlice.length === 0);
+        facultySection.classList.toggle('d-none', facultySlice.length === 0);
+        if (guestSection) {
+            guestSection.classList.toggle('d-none', guestSlice.length === 0);
+        }
 
         updateSummaryVisibility();
         updateCounts();
@@ -158,6 +172,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     studentTableBody.addEventListener('change', handleTableChange);
     facultyTableBody.addEventListener('change', handleTableChange);
+    if (guestTableBody) {
+        guestTableBody.addEventListener('change', handleTableChange);
+    }
 
     document.getElementById('save-event-report').addEventListener('click', function () {
         fetch(saveUrl, {
