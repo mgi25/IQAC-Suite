@@ -2632,7 +2632,11 @@ def upload_attendance_csv(request, report_id):
 
     context = {
         "report": report,
-        "rows_json": json.dumps(rows_page),
+        # When a CSV is uploaded we want to preview the entire dataset so that
+        # faculty rows are not hidden behind the initial 100 row slice.
+        # The frontend already paginates the full list on the client side, so
+        # pass the complete set of rows instead of just the first page.
+        "rows_json": json.dumps(rows if rows else rows_page),
         "students_group_json": json.dumps(student_groups),
         "faculty_group_json": json.dumps(faculty_groups),
         "error": error,
