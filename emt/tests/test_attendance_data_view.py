@@ -91,10 +91,20 @@ class AttendanceDataViewTests(TestCase):
             academic_year="2024-2025",
             role="faculty",
         )
+        faculty_user.profile.register_no = "FAC-001"
+        faculty_user.profile.save()
         AttendanceRow.objects.create(
             event_report=self.report,
             registration_no="facuser",
             full_name="Fac Ulty",
+            student_class="",
+            absent=False,
+            volunteer=False,
+        )
+        AttendanceRow.objects.create(
+            event_report=self.report,
+            registration_no="FAC-001",
+            full_name="Fac Profile",
             student_class="",
             absent=False,
             volunteer=False,
@@ -107,6 +117,9 @@ class AttendanceDataViewTests(TestCase):
         rows_by_reg = {r["registration_no"]: r for r in data["rows"]}
         self.assertEqual(rows_by_reg["facuser"]["category"], "faculty")
         self.assertEqual(rows_by_reg["facuser"]["affiliation"], "Engineering")
+        self.assertEqual(rows_by_reg["FAC-001"]["category"], "faculty")
+        self.assertEqual(rows_by_reg["FAC-001"]["affiliation"], "Engineering")
         self.assertIn("Engineering", data["faculty"])
         self.assertIn("Fac Ulty", data["faculty"]["Engineering"])
+        self.assertIn("Fac Profile", data["faculty"]["Engineering"])
 

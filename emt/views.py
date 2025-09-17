@@ -2524,12 +2524,28 @@ def _group_attendance_rows(rows):
         for s in Student.objects.filter(registration_number__in=reg_nos)
     }
 
-    faculty_memberships = {
-        m.user.username: m.organization.name
-        for m in OrganizationMembership.objects.filter(
-            user__username__in=reg_nos, role="faculty"
-        ).select_related("organization")
-    }
+    faculty_memberships: dict[str, str] = {}
+    memberships = (
+        OrganizationMembership.objects.filter(
+            Q(user__username__in=reg_nos)
+            | Q(user__profile__register_no__in=reg_nos),
+            role="faculty",
+        )
+        .select_related("organization", "user__profile")
+    )
+    for membership in memberships:
+        organization_name = (
+            membership.organization.name if membership.organization else ""
+        )
+        username = (membership.user.username or "").strip()
+        if username:
+            faculty_memberships[username] = organization_name
+        profile_reg_no = getattr(
+            getattr(membership.user, "profile", None), "register_no", ""
+        )
+        profile_reg_no = (profile_reg_no or "").strip()
+        if profile_reg_no:
+            faculty_memberships[profile_reg_no] = organization_name
 
     students_by_class: dict[str, list[str]] = {}
     faculty_by_org: dict[str, list[str]] = {}
