@@ -2495,28 +2495,50 @@ def download_audience_csv(request, proposal_id):
 
 
 def _group_attendance_rows(rows):
-    """Separate rows into students by class and faculty by organization."""
-    reg_nos = [r.get("registration_no") for r in rows if r.get("registration_no")]
+    """Categorise rows for students, faculty and guests while grouping them."""
+    reg_nos = [
+        (r.get("registration_no") or "").strip() for r in rows if r.get("registration_no")
+    ]
+
     student_map = {
         s.registration_number: s
         for s in Student.objects.filter(registration_number__in=reg_nos)
     }
+
     faculty_memberships = {
         m.user.username: m.organization.name
         for m in OrganizationMembership.objects.filter(
             user__username__in=reg_nos, role="faculty"
         ).select_related("organization")
     }
-    students_by_class = {}
-    faculty_by_org = {}
+
+    students_by_class: dict[str, list[str]] = {}
+    faculty_by_org: dict[str, list[str]] = {}
+
     for row in rows:
-        reg_no = row.get("registration_no")
-        if reg_no in student_map:
-            cls = row.get("student_class") or "Unknown"
-            students_by_class.setdefault(cls, []).append(row["full_name"])
+        reg_no = (row.get("registration_no") or "").strip()
+        full_name = row.get("full_name") or ""
+        cls = (row.get("student_class") or "").strip()
+
+        if cls or reg_no in student_map:
+            category = "student"
+            label = cls or "Unknown"
+            students_by_class.setdefault(label, []).append(full_name)
+        elif reg_no and reg_no in faculty_memberships:
+            category = "faculty"
+            label = faculty_memberships.get(reg_no) or "Unknown"
+            faculty_by_org.setdefault(label, []).append(full_name)
         else:
-            org = faculty_memberships.get(reg_no, "Unknown")
-            faculty_by_org.setdefault(org, []).append(row["full_name"])
+            category = "external"
+            label = row.get("affiliation") or row.get("student_class") or "Guests"
+
+        row["category"] = category
+        row["affiliation"] = label
+
+        # Ensure faculty rows capture their organisation even if student_class is blank
+        if category == "faculty" and not cls:
+            row.setdefault("student_class", label)
+
     return students_by_class, faculty_by_org
 
 

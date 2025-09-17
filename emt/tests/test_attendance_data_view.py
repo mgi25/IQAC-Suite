@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
-from core.models import Class
+from core.models import Class, Organization, OrganizationMembership, OrganizationType
 from emt.models import EventProposal, EventReport, AttendanceRow, Student
 
 
@@ -46,6 +46,9 @@ class AttendanceDataViewTests(TestCase):
         self.assertIn("CSE", data["students"])
         self.assertListEqual(sorted(data["students"]["CSE"]), ["Bob", "Eve"])
         self.assertEqual(data["faculty"], {})
+        rows_by_reg = {r["registration_no"]: r for r in data["rows"]}
+        self.assertEqual(rows_by_reg["R1"]["category"], "student")
+        self.assertEqual(rows_by_reg["R1"]["affiliation"], "CSE")
 
     def test_returns_target_audience_when_no_rows(self):
         proposal = EventProposal.objects.create(
@@ -77,4 +80,33 @@ class AttendanceDataViewTests(TestCase):
         self.assertEqual(data["counts"]["present"], 2)
         self.assertIn("CSE", data["students"])
         self.assertListEqual(sorted(data["students"]["CSE"]), ["Bob", "Carol"])
+
+    def test_marks_faculty_rows_with_category(self):
+        org_type = OrganizationType.objects.create(name="Dept")
+        org = Organization.objects.create(name="Engineering", org_type=org_type)
+        faculty_user = User.objects.create_user("facuser", password="pass", first_name="Fac")
+        OrganizationMembership.objects.create(
+            user=faculty_user,
+            organization=org,
+            academic_year="2024-2025",
+            role="faculty",
+        )
+        AttendanceRow.objects.create(
+            event_report=self.report,
+            registration_no="facuser",
+            full_name="Fac Ulty",
+            student_class="",
+            absent=False,
+            volunteer=False,
+        )
+
+        url = reverse("emt:attendance_data", args=[self.report.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        rows_by_reg = {r["registration_no"]: r for r in data["rows"]}
+        self.assertEqual(rows_by_reg["facuser"]["category"], "faculty")
+        self.assertEqual(rows_by_reg["facuser"]["affiliation"], "Engineering")
+        self.assertIn("Engineering", data["faculty"])
+        self.assertIn("Fac Ulty", data["faculty"]["Engineering"])
 
