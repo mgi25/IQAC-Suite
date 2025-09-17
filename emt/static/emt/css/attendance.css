@@ -49,6 +49,15 @@
   cursor: pointer;
 }
 
+.attendance-category-nav .nav-link.no-data {
+  opacity: 0.65;
+}
+
+.attendance-category-nav .nav-link.no-data:hover,
+.attendance-category-nav .nav-link.no-data:focus {
+  opacity: 0.85;
+}
+
 #attendance-table {
   margin-top: 1rem;
 }

@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const perPage = 100;
     let currentPage = 1;
     let activeCategory = 'student';
+    let hasInitialRender = false;
 
     const summaryEl = document.getElementById('summary');
     const actionsEl = document.getElementById('actions');
@@ -151,23 +152,12 @@ document.addEventListener('DOMContentLoaded', function () {
         tableBody.appendChild(tr);
     }
 
-    function updateActiveCategoryButtons(visibleButtons) {
+    function updateActiveCategoryButtons() {
         if (!categoryButtons || categoryButtons.length === 0) {
             return;
         }
-        const candidates = visibleButtons && visibleButtons.length > 0
-            ? visibleButtons
-            : categoryButtons.filter(button => {
-                const navItem = button.closest('.nav-item') || button.parentElement;
-                return !navItem || !navItem.classList.contains('d-none');
-            });
-        if (candidates.length > 0 && !candidates.some(button => button.dataset.category === activeCategory)) {
-            activeCategory = candidates[0].dataset.category;
-        }
         categoryButtons.forEach(button => {
-            const navItem = button.closest('.nav-item') || button.parentElement;
-            const isHidden = navItem ? navItem.classList.contains('d-none') : false;
-            const isActive = !isHidden && button.dataset.category === activeCategory;
+            const isActive = rows.length > 0 && button.dataset.category === activeCategory;
             button.classList.toggle('active', isActive);
             if (isActive) {
                 button.setAttribute('aria-current', 'page');
@@ -192,7 +182,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 categoryNav.classList.add('d-none');
             }
             tableSection.classList.add('d-none');
-            updateActiveCategoryButtons([]);
+            updateActiveCategoryButtons();
             updateSummaryVisibility();
             updateCounts();
             updatePaginationControls();
@@ -207,17 +197,21 @@ document.addEventListener('DOMContentLoaded', function () {
                 const category = button.dataset.category;
                 const hasData = rows.some(row => (row.category || 'student') === category);
                 categoryAvailability[category] = hasData;
-                const navItem = button.closest('.nav-item') || button.parentElement;
-                if (navItem) {
-                    navItem.classList.toggle('d-none', !hasData);
-                }
                 if (hasData) {
                     availableButtons.push(button);
+                    button.removeAttribute('title');
+                    button.classList.remove('no-data');
+                } else {
+                    button.classList.add('no-data');
+                    button.setAttribute('title', 'No attendance records yet for this category');
                 }
             });
-            updateActiveCategoryButtons(availableButtons);
+            if (!hasInitialRender && availableButtons.length > 0 && !availableButtons.some(button => button.dataset.category === activeCategory)) {
+                activeCategory = availableButtons[0].dataset.category;
+            }
+            updateActiveCategoryButtons();
             if (categoryNav) {
-                categoryNav.classList.toggle('d-none', availableButtons.length === 0);
+                categoryNav.classList.remove('d-none');
             }
         }
 
@@ -263,6 +257,7 @@ document.addEventListener('DOMContentLoaded', function () {
         updateSummaryVisibility();
         updateCounts();
         updatePaginationControls(paginationMessages);
+        hasInitialRender = true;
     }
 
     function handleTableChange(e) {
@@ -384,6 +379,7 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(data => {
                 rows = Array.isArray(data.rows) ? data.rows : [];
                 currentPage = 1;
+                hasInitialRender = false;
                 renderTables();
             })
             .finally(() => {
