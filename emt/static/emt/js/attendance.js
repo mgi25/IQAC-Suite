@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return rows.slice(start, start + perPage);
     }
 
-    function updatePaginationControls() {
+    function updatePaginationControls(messages = []) {
         if (rows.length === 0) {
             pageLabel.textContent = 'No records';
             prevBtn.disabled = true;
@@ -97,7 +97,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (currentPage > totalPages) {
             currentPage = totalPages;
         }
-        pageLabel.textContent = `Page ${currentPage} of ${totalPages}`;
+        let label = `Page ${currentPage} of ${totalPages}`;
+        if (messages && messages.length > 0) {
+            label += ` – ${messages.join(' ')}`;
+        }
+        pageLabel.textContent = label;
         prevBtn.disabled = currentPage === 1;
         nextBtn.disabled = currentPage >= totalPages;
         pagination.classList.toggle('d-none', rows.length <= perPage);
@@ -118,6 +122,21 @@ document.addEventListener('DOMContentLoaded', function () {
         tableBody.appendChild(tr);
     }
 
+    function renderPlaceholderRow(tableBody, message) {
+        if (!tableBody) {
+            return;
+        }
+        const table = tableBody.closest('table');
+        const columnCount = table ? table.querySelectorAll('thead th').length || 5 : 5;
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = columnCount;
+        td.className = 'text-muted text-center';
+        td.textContent = message;
+        tr.appendChild(td);
+        tableBody.appendChild(tr);
+    }
+
     function renderTables() {
         normaliseRows();
         studentTableBody.innerHTML = '';
@@ -133,30 +152,53 @@ document.addEventListener('DOMContentLoaded', function () {
             ? slice.filter(row => (row.category || 'student') === 'external')
             : [];
 
-        studentSlice.forEach(row => {
-            appendRow(studentTableBody, row, row.affiliation || '');
-        });
+        const hasStudents = rows.some(row => (row.category || 'student') === 'student');
+        const hasFaculty = rows.some(row => (row.category || 'student') === 'faculty');
+        const hasGuests = guestTableBody
+            ? rows.some(row => (row.category || 'student') === 'external')
+            : false;
 
-        facultySlice.forEach(row => {
-            appendRow(facultyTableBody, row, row.affiliation || '');
-        });
+        const paginationMessages = [];
 
-        if (guestTableBody) {
-            guestSlice.forEach(row => {
-                const affiliationText = `${row.affiliation || 'Guests'} (Guest)`;
-                appendRow(guestTableBody, row, affiliationText);
+        if (studentSlice.length > 0) {
+            studentSlice.forEach(row => {
+                appendRow(studentTableBody, row, row.affiliation || '');
             });
+        } else if (hasStudents) {
+            renderPlaceholderRow(studentTableBody, 'No students on this page. Use pagination controls to view student attendees.');
+            paginationMessages.push('Students appear on other pages.');
         }
 
-        studentSection.classList.toggle('d-none', studentSlice.length === 0);
-        facultySection.classList.toggle('d-none', facultySlice.length === 0);
+        if (facultySlice.length > 0) {
+            facultySlice.forEach(row => {
+                appendRow(facultyTableBody, row, row.affiliation || '');
+            });
+        } else if (hasFaculty) {
+            renderPlaceholderRow(facultyTableBody, 'No faculty on this page. Use pagination controls to view faculty attendees.');
+            paginationMessages.push('Faculty appear on other pages.');
+        }
+
+        if (guestTableBody) {
+            if (guestSlice.length > 0) {
+                guestSlice.forEach(row => {
+                    const affiliationText = `${row.affiliation || 'Guests'} (Guest)`;
+                    appendRow(guestTableBody, row, affiliationText);
+                });
+            } else if (hasGuests) {
+                renderPlaceholderRow(guestTableBody, 'No guests on this page. Use pagination controls to view guest attendees.');
+                paginationMessages.push('Guests appear on other pages.');
+            }
+        }
+
+        studentSection.classList.toggle('d-none', !hasStudents);
+        facultySection.classList.toggle('d-none', !hasFaculty);
         if (guestSection) {
-            guestSection.classList.toggle('d-none', guestSlice.length === 0);
+            guestSection.classList.toggle('d-none', !hasGuests);
         }
 
         updateSummaryVisibility();
         updateCounts();
-        updatePaginationControls();
+        updatePaginationControls(paginationMessages);
     }
 
     function handleTableChange(e) {
