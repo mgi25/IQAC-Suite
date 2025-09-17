@@ -2,57 +2,65 @@ document.addEventListener('DOMContentLoaded', function () {
     let rows = initialRows || [];
     const perPage = 100;
     let currentPage = 1;
-    let studentsGrouped = initialStudents || {};
-    let facultyGrouped = initialFaculty || {};
 
-    const tableBody = document.querySelector('#attendance-table tbody');
     const summaryEl = document.getElementById('summary');
-    const tableEl = document.getElementById('attendance-table');
-    const groupedSectionsEl = document.getElementById('grouped-sections');
     const actionsEl = document.getElementById('actions');
-    const studentsSectionTitle = document.getElementById('students-section-title');
-    const facultySectionTitle = document.getElementById('faculty-section-title');
+    const studentSection = document.getElementById('student-table-section');
+    const facultySection = document.getElementById('faculty-table-section');
+    const studentTableBody = document.querySelector('#student-attendance-table tbody');
+    const facultyTableBody = document.querySelector('#faculty-attendance-table tbody');
     const totalEl = document.getElementById('total-count');
     const presentEl = document.getElementById('present-count');
     const absentEl = document.getElementById('absent-count');
     const volunteerEl = document.getElementById('volunteer-count');
     const loadingEl = document.getElementById('loading');
-    const studentsGroupEl = document.getElementById('students-group');
-    const facultyGroupEl = document.getElementById('faculty-group');
 
-    function updateVisibility() {
-        const hasRows = rows.length > 0;
-        summaryEl.classList.toggle('d-none', !hasRows);
-        tableEl.classList.toggle('d-none', !hasRows);
-        actionsEl.classList.toggle('d-none', !hasRows);
+    const pagination = document.createElement('div');
+    pagination.className = 'attendance-pagination d-none';
+    const prevBtn = document.createElement('button');
+    prevBtn.type = 'button';
+    prevBtn.className = 'btn btn-outline-secondary btn-sm';
+    prevBtn.textContent = 'Prev';
+    const nextBtn = document.createElement('button');
+    nextBtn.type = 'button';
+    nextBtn.className = 'btn btn-outline-secondary btn-sm';
+    nextBtn.textContent = 'Next';
+    const pageLabel = document.createElement('span');
+    pageLabel.className = 'text-muted align-self-center';
 
-        const studentKeys = Object.keys(studentsGrouped || {});
-        const facultyKeys = Object.keys(facultyGrouped || {});
-        const hasStudentGroups = studentKeys.length > 0;
-        const hasFacultyGroups = facultyKeys.length > 0;
-
-        studentsSectionTitle.style.display = hasStudentGroups ? '' : 'none';
-        facultySectionTitle.style.display = hasFacultyGroups ? '' : 'none';
-        groupedSectionsEl.classList.toggle('d-none', !hasStudentGroups && !hasFacultyGroups);
+    pagination.appendChild(prevBtn);
+    pagination.appendChild(pageLabel);
+    pagination.appendChild(nextBtn);
+    if (actionsEl && actionsEl.parentNode) {
+        actionsEl.parentNode.insertBefore(pagination, actionsEl);
     }
 
-    function renderTable() {
-        tableBody.innerHTML = '';
-        const start = (currentPage - 1) * perPage;
-        const slice = rows.slice(start, start + perPage);
-        slice.forEach((row, idx) => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${row.registration_no}</td>
-                <td>${row.full_name}</td>
-                <td>${row.student_class}</td>
-                <td><input type="checkbox" data-index="${start + idx}" class="absent" ${row.absent ? 'checked' : ''}></td>
-                <td><input type="checkbox" data-index="${start + idx}" class="volunteer" ${row.volunteer ? 'checked' : ''}></td>
-            `;
-            tableBody.appendChild(tr);
+    function normaliseRows() {
+        rows.forEach((row, index) => {
+            row._index = index;
+            if (!row.category) {
+                const hasClass = row.student_class && row.student_class.trim();
+                row.category = hasClass ? 'student' : 'external';
+            }
+            if (!row.affiliation) {
+                if (row.category === 'student') {
+                    row.affiliation = row.student_class || 'Unknown';
+                } else if (row.category === 'faculty') {
+                    row.affiliation = row.student_class || 'Unknown';
+                } else {
+                    row.affiliation = row.student_class || 'Guests';
+                }
+            }
+            if (row.category === 'faculty' && (!row.student_class || !row.student_class.trim())) {
+                row.student_class = row.affiliation;
+            }
         });
-        updateCounts();
-        updateVisibility();
+    }
+
+    function updateSummaryVisibility() {
+        const hasRows = rows.length > 0;
+        summaryEl.classList.toggle('d-none', !hasRows);
+        actionsEl.classList.toggle('d-none', !hasRows);
     }
 
     function updateCounts() {
@@ -66,44 +74,79 @@ document.addEventListener('DOMContentLoaded', function () {
         volunteerEl.textContent = volunteers;
     }
 
-    function renderGroups() {
-        studentsGroupEl.innerHTML = '';
-        Object.keys(studentsGrouped).forEach(cls => {
-            const div = document.createElement('div');
-            const h = document.createElement('h4');
-            h.textContent = cls;
-            div.appendChild(h);
-            const ul = document.createElement('ul');
-            studentsGrouped[cls].forEach(name => {
-                const li = document.createElement('li');
-                li.textContent = name;
-                ul.appendChild(li);
-            });
-            div.appendChild(ul);
-            studentsGroupEl.appendChild(div);
-        });
-
-        facultyGroupEl.innerHTML = '';
-        Object.keys(facultyGrouped).forEach(org => {
-            const div = document.createElement('div');
-            const h = document.createElement('h4');
-            h.textContent = org;
-            div.appendChild(h);
-            const ul = document.createElement('ul');
-            facultyGrouped[org].forEach(name => {
-                const li = document.createElement('li');
-                li.textContent = name;
-                ul.appendChild(li);
-            });
-            div.appendChild(ul);
-            facultyGroupEl.appendChild(div);
-        });
-        updateVisibility();
+    function getPageSlice() {
+        const start = (currentPage - 1) * perPage;
+        return rows.slice(start, start + perPage);
     }
 
-    tableBody.addEventListener('change', function (e) {
-        const idx = parseInt(e.target.getAttribute('data-index'));
-        if (isNaN(idx)) return;
+    function updatePaginationControls() {
+        if (rows.length === 0) {
+            pageLabel.textContent = 'No records';
+            prevBtn.disabled = true;
+            nextBtn.disabled = true;
+            pagination.classList.add('d-none');
+            return;
+        }
+
+        const totalPages = Math.ceil(rows.length / perPage);
+        if (currentPage > totalPages) {
+            currentPage = totalPages;
+        }
+        pageLabel.textContent = `Page ${currentPage} of ${totalPages}`;
+        prevBtn.disabled = currentPage === 1;
+        nextBtn.disabled = currentPage >= totalPages;
+        pagination.classList.toggle('d-none', rows.length <= perPage);
+    }
+
+    function renderTables() {
+        normaliseRows();
+        studentTableBody.innerHTML = '';
+        facultyTableBody.innerHTML = '';
+
+        const slice = getPageSlice();
+        const studentSlice = slice.filter(row => (row.category || 'student') === 'student');
+        const nonStudentSlice = slice.filter(row => (row.category || 'student') !== 'student');
+
+        studentSlice.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row.registration_no || ''}</td>
+                <td>${row.full_name || ''}</td>
+                <td>${row.affiliation || ''}</td>
+                <td><input type="checkbox" data-index="${row._index}" class="absent" ${row.absent ? 'checked' : ''}></td>
+                <td><input type="checkbox" data-index="${row._index}" class="volunteer" ${row.volunteer ? 'checked' : ''}></td>
+            `;
+            studentTableBody.appendChild(tr);
+        });
+
+        nonStudentSlice.forEach(row => {
+            const affiliationText = row.category === 'external'
+                ? `${row.affiliation || 'Guests'} (Guest)`
+                : (row.affiliation || 'Unknown');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row.registration_no || ''}</td>
+                <td>${row.full_name || ''}</td>
+                <td>${affiliationText}</td>
+                <td><input type="checkbox" data-index="${row._index}" class="absent" ${row.absent ? 'checked' : ''}></td>
+                <td><input type="checkbox" data-index="${row._index}" class="volunteer" ${row.volunteer ? 'checked' : ''}></td>
+            `;
+            facultyTableBody.appendChild(tr);
+        });
+
+        studentSection.classList.toggle('d-none', studentSlice.length === 0);
+        facultySection.classList.toggle('d-none', nonStudentSlice.length === 0);
+
+        updateSummaryVisibility();
+        updateCounts();
+        updatePaginationControls();
+    }
+
+    function handleTableChange(e) {
+        const idx = parseInt(e.target.getAttribute('data-index'), 10);
+        if (Number.isNaN(idx) || !rows[idx]) {
+            return;
+        }
         if (e.target.classList.contains('absent')) {
             rows[idx].absent = e.target.checked;
         }
@@ -111,7 +154,10 @@ document.addEventListener('DOMContentLoaded', function () {
             rows[idx].volunteer = e.target.checked;
         }
         updateCounts();
-    });
+    }
+
+    studentTableBody.addEventListener('change', handleTableChange);
+    facultyTableBody.addEventListener('change', handleTableChange);
 
     document.getElementById('save-event-report').addEventListener('click', function () {
         fetch(saveUrl, {
@@ -171,33 +217,23 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function setupPagination() {
-        const pagination = document.createElement('div');
-        pagination.className = 'pagination';
-        const prev = document.createElement('button');
-        prev.textContent = 'Prev';
-        const next = document.createElement('button');
-        next.textContent = 'Next';
-        pagination.appendChild(prev);
-        pagination.appendChild(next);
-        document.body.appendChild(pagination);
-
-        prev.addEventListener('click', function () {
+        prevBtn.addEventListener('click', function () {
             if (currentPage > 1) {
                 currentPage -= 1;
-                renderTable();
+                renderTables();
             }
         });
-        next.addEventListener('click', function () {
+        nextBtn.addEventListener('click', function () {
             if (currentPage * perPage < rows.length) {
                 currentPage += 1;
-                renderTable();
+                renderTables();
             }
         });
     }
 
     function fetchRows() {
         if (!dataUrl) {
-            renderTable();
+            renderTables();
             return;
         }
         loadingEl.style.display = 'block';
@@ -205,10 +241,8 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(r => r.json())
             .then(data => {
                 rows = data.rows || [];
-                studentsGrouped = data.students || {};
-                facultyGrouped = data.faculty || {};
-                renderTable();
-                renderGroups();
+                currentPage = 1;
+                renderTables();
             })
             .finally(() => {
                 loadingEl.style.display = 'none';
@@ -219,7 +253,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (rows.length === 0) {
         fetchRows();
     } else {
-        renderTable();
-        renderGroups();
+        renderTables();
     }
 });

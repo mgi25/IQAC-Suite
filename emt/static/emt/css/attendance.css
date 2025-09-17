@@ -1,6 +1,17 @@
 .attendance-container {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
+}
+
+.attendance-container .table-section {
+  background: var(--surface-color, #fff);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.attendance-container .table-section + .table-section {
+  margin-top: 1.5rem;
 }
 
 .stats-grid {
@@ -34,10 +45,21 @@
 }
 
 .actions {
-  margin-top: 1rem;
+  margin-top: 1.5rem;
   display: flex;
   gap: 1rem;
   justify-content: flex-end;
+}
+
+.attendance-pagination {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.attendance-pagination button {
+  min-width: 5rem;
 }
 
 .loading {
