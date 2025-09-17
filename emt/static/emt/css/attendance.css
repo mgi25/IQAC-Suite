@@ -40,6 +40,15 @@
   font-weight: 600;
 }
 
+.attendance-category-nav {
+  margin-top: 1.5rem;
+  gap: 0.5rem;
+}
+
+.attendance-category-nav .nav-link {
+  cursor: pointer;
+}
+
 #attendance-table {
   margin-top: 1rem;
 }

@@ -2,20 +2,32 @@ document.addEventListener('DOMContentLoaded', function () {
     let rows = initialRows || [];
     const perPage = 100;
     let currentPage = 1;
+    let activeCategory = 'student';
 
     const summaryEl = document.getElementById('summary');
     const actionsEl = document.getElementById('actions');
-    const studentSection = document.getElementById('student-table-section');
-    const facultySection = document.getElementById('faculty-table-section');
-    const guestSection = document.getElementById('guest-table-section');
-    const studentTableBody = document.querySelector('#student-attendance-table tbody');
-    const facultyTableBody = document.querySelector('#faculty-attendance-table tbody');
-    const guestTableBody = document.querySelector('#guest-attendance-table tbody');
+    const categoryNav = document.getElementById('attendance-category-nav');
+    const categoryButtons = categoryNav ? Array.from(categoryNav.querySelectorAll('[data-category]')) : [];
+    const tableSection = document.getElementById('attendance-table-section');
+    const tableBody = tableSection ? tableSection.querySelector('tbody') : null;
+    const volunteerHeader = document.getElementById('attendance-volunteer-header');
     const totalEl = document.getElementById('total-count');
     const presentEl = document.getElementById('present-count');
     const absentEl = document.getElementById('absent-count');
     const volunteerEl = document.getElementById('volunteer-count');
     const loadingEl = document.getElementById('loading');
+
+    const categoryDisplayLabels = {
+        student: 'Students',
+        faculty: 'Faculty',
+        external: 'Guests'
+    };
+
+    const categoryVolunteerLabels = {
+        student: 'Student Volunteer',
+        faculty: 'Volunteer',
+        external: 'Volunteer'
+    };
 
     const pagination = document.createElement('div');
     pagination.className = 'attendance-pagination d-none';
@@ -43,6 +55,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const rawCategory = row.category ? String(row.category).toLowerCase() : '';
             if (['student', 'faculty', 'external'].includes(rawCategory)) {
                 row.category = rawCategory;
+            } else if (['guest', 'guests'].includes(rawCategory)) {
+                row.category = 'external';
             } else {
                 const hasClass = row.student_class && row.student_class.trim();
                 row.category = hasClass ? 'student' : 'external';
@@ -137,64 +151,114 @@ document.addEventListener('DOMContentLoaded', function () {
         tableBody.appendChild(tr);
     }
 
+    function updateActiveCategoryButtons(visibleButtons) {
+        if (!categoryButtons || categoryButtons.length === 0) {
+            return;
+        }
+        const candidates = visibleButtons && visibleButtons.length > 0
+            ? visibleButtons
+            : categoryButtons.filter(button => {
+                const navItem = button.closest('.nav-item') || button.parentElement;
+                return !navItem || !navItem.classList.contains('d-none');
+            });
+        if (candidates.length > 0 && !candidates.some(button => button.dataset.category === activeCategory)) {
+            activeCategory = candidates[0].dataset.category;
+        }
+        categoryButtons.forEach(button => {
+            const navItem = button.closest('.nav-item') || button.parentElement;
+            const isHidden = navItem ? navItem.classList.contains('d-none') : false;
+            const isActive = !isHidden && button.dataset.category === activeCategory;
+            button.classList.toggle('active', isActive);
+            if (isActive) {
+                button.setAttribute('aria-current', 'page');
+                button.setAttribute('aria-selected', 'true');
+            } else {
+                button.removeAttribute('aria-current');
+                button.setAttribute('aria-selected', 'false');
+            }
+        });
+    }
+
     function renderTables() {
+        if (!tableBody || !tableSection) {
+            return;
+        }
+
         normaliseRows();
-        studentTableBody.innerHTML = '';
-        facultyTableBody.innerHTML = '';
-        if (guestTableBody) {
-            guestTableBody.innerHTML = '';
+        tableBody.innerHTML = '';
+
+        if (rows.length === 0) {
+            if (categoryNav) {
+                categoryNav.classList.add('d-none');
+            }
+            tableSection.classList.add('d-none');
+            updateActiveCategoryButtons([]);
+            updateSummaryVisibility();
+            updateCounts();
+            updatePaginationControls();
+            return;
         }
 
-        const slice = getPageSlice();
-        const studentSlice = slice.filter(row => (row.category || 'student') === 'student');
-        const facultySlice = slice.filter(row => (row.category || 'student') === 'faculty');
-        const guestSlice = guestTableBody
-            ? slice.filter(row => (row.category || 'student') === 'external')
-            : [];
+        const categoryAvailability = {};
+        const availableButtons = [];
 
-        const hasStudents = rows.some(row => (row.category || 'student') === 'student');
-        const hasFaculty = rows.some(row => (row.category || 'student') === 'faculty');
-        const hasGuests = guestTableBody
-            ? rows.some(row => (row.category || 'student') === 'external')
-            : false;
-
-        const paginationMessages = [];
-
-        if (studentSlice.length > 0) {
-            studentSlice.forEach(row => {
-                appendRow(studentTableBody, row, row.affiliation || '');
+        if (categoryButtons.length > 0) {
+            categoryButtons.forEach(button => {
+                const category = button.dataset.category;
+                const hasData = rows.some(row => (row.category || 'student') === category);
+                categoryAvailability[category] = hasData;
+                const navItem = button.closest('.nav-item') || button.parentElement;
+                if (navItem) {
+                    navItem.classList.toggle('d-none', !hasData);
+                }
+                if (hasData) {
+                    availableButtons.push(button);
+                }
             });
-        } else if (hasStudents) {
-            renderPlaceholderRow(studentTableBody, 'No students on this page. Use pagination controls to view student attendees.');
-            paginationMessages.push('Students appear on other pages.');
-        }
-
-        if (facultySlice.length > 0) {
-            facultySlice.forEach(row => {
-                appendRow(facultyTableBody, row, row.affiliation || '');
-            });
-        } else if (hasFaculty) {
-            renderPlaceholderRow(facultyTableBody, 'No faculty on this page. Use pagination controls to view faculty attendees.');
-            paginationMessages.push('Faculty appear on other pages.');
-        }
-
-        if (guestTableBody) {
-            if (guestSlice.length > 0) {
-                guestSlice.forEach(row => {
-                    const affiliationText = `${row.affiliation || 'Guests'} (Guest)`;
-                    appendRow(guestTableBody, row, affiliationText);
-                });
-            } else if (hasGuests) {
-                renderPlaceholderRow(guestTableBody, 'No guests on this page. Use pagination controls to view guest attendees.');
-                paginationMessages.push('Guests appear on other pages.');
+            updateActiveCategoryButtons(availableButtons);
+            if (categoryNav) {
+                categoryNav.classList.toggle('d-none', availableButtons.length === 0);
             }
         }
 
-        studentSection.classList.toggle('d-none', !hasStudents);
-        facultySection.classList.toggle('d-none', !hasFaculty);
-        if (guestSection) {
-            guestSection.classList.toggle('d-none', !hasGuests);
+        const activeButton = categoryButtons.find(button => button.classList.contains('active')) || null;
+        const currentCategory = activeButton ? activeButton.dataset.category : activeCategory;
+        activeCategory = currentCategory;
+
+        const displayLabel = activeButton
+            ? (activeButton.dataset.label || activeButton.textContent.trim())
+            : (categoryDisplayLabels[currentCategory] || 'Attendees');
+        const lowerLabel = displayLabel.toLowerCase();
+        const volunteerLabel = activeButton
+            ? (activeButton.dataset.volunteerLabel || categoryVolunteerLabels[currentCategory] || 'Volunteer')
+            : (categoryVolunteerLabels[currentCategory] || 'Volunteer');
+        if (volunteerHeader) {
+            volunteerHeader.textContent = volunteerLabel;
         }
+
+        const slice = getPageSlice();
+        const activeSlice = slice.filter(row => (row.category || 'student') === currentCategory);
+        const hasCategory = Object.prototype.hasOwnProperty.call(categoryAvailability, currentCategory)
+            ? categoryAvailability[currentCategory]
+            : rows.some(row => (row.category || 'student') === currentCategory);
+
+        const paginationMessages = [];
+
+        if (activeSlice.length > 0) {
+            activeSlice.forEach(row => {
+                const affiliationText = currentCategory === 'external'
+                    ? `${row.affiliation || 'Guests'} (Guest)`
+                    : row.affiliation || '';
+                appendRow(tableBody, row, affiliationText);
+            });
+        } else if (hasCategory) {
+            renderPlaceholderRow(tableBody, `No ${lowerLabel} on this page. Use pagination controls to view additional ${lowerLabel}.`);
+            paginationMessages.push(`${displayLabel} appear on other pages.`);
+        } else {
+            renderPlaceholderRow(tableBody, `No attendance records found for ${lowerLabel}.`);
+        }
+
+        tableSection.classList.remove('d-none');
 
         updateSummaryVisibility();
         updateCounts();
@@ -215,10 +279,26 @@ document.addEventListener('DOMContentLoaded', function () {
         updateCounts();
     }
 
-    studentTableBody.addEventListener('change', handleTableChange);
-    facultyTableBody.addEventListener('change', handleTableChange);
-    if (guestTableBody) {
-        guestTableBody.addEventListener('change', handleTableChange);
+    if (tableBody) {
+        tableBody.addEventListener('change', handleTableChange);
+    }
+
+    if (categoryButtons.length > 0) {
+        categoryButtons.forEach(button => {
+            button.addEventListener('click', function (event) {
+                event.preventDefault();
+                const navItem = button.closest('.nav-item');
+                if (navItem && navItem.classList.contains('d-none')) {
+                    return;
+                }
+                const category = button.dataset.category;
+                if (!category || category === activeCategory) {
+                    return;
+                }
+                activeCategory = category;
+                renderTables();
+            });
+        });
     }
 
     document.getElementById('save-event-report').addEventListener('click', function () {
