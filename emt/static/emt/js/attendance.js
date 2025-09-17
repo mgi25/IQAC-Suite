@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function () {
-    let rows = initialRows || [];
+    let rows = Array.isArray(initialRows) ? initialRows : [];
     const perPage = 100;
     let currentPage = 1;
     let activeCategory = 'student';
@@ -382,7 +382,7 @@ document.addEventListener('DOMContentLoaded', function () {
         fetch(dataUrl)
             .then(r => r.json())
             .then(data => {
-                rows = data.rows || [];
+                rows = Array.isArray(data.rows) ? data.rows : [];
                 currentPage = 1;
                 renderTables();
             })

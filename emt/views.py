@@ -2596,10 +2596,13 @@ def upload_attendance_csv(request, report_id):
         except ValueError as exc:
             error = str(exc)
 
-    page = int(request.GET.get("page", 1))
+    try:
+        page = int(request.GET.get("page", 1))
+    except (TypeError, ValueError):
+        page = 1
+    if page < 1:
+        page = 1
     per_page = 100
-    start = (page - 1) * per_page
-    rows_page = rows[start : start + per_page]
 
     if rows:
         counts = {
@@ -2609,6 +2612,7 @@ def upload_attendance_csv(request, report_id):
             "volunteers": len([r for r in rows if r.get("volunteer")]),
         }
         student_groups, faculty_groups = _group_attendance_rows(rows)
+        full_rows = rows
     else:
         saved_rows = [
             {
@@ -2629,6 +2633,16 @@ def upload_attendance_csv(request, report_id):
             "volunteers": report.attendance_rows.filter(volunteer=True).count(),
         }
         student_groups, faculty_groups = _group_attendance_rows(saved_rows)
+        full_rows = saved_rows
+
+    total_rows = len(full_rows)
+    if total_rows:
+        total_pages = (total_rows + per_page - 1) // per_page
+        if page > total_pages:
+            page = total_pages
+    else:
+        page = 1
+        total_pages = 1
 
     context = {
         "report": report,
@@ -2636,13 +2650,13 @@ def upload_attendance_csv(request, report_id):
         # faculty rows are not hidden behind the initial 100 row slice.
         # The frontend already paginates the full list on the client side, so
         # pass the complete set of rows instead of just the first page.
-        "rows_json": json.dumps(rows if rows else rows_page),
+        "rows_json": json.dumps(full_rows),
         "students_group_json": json.dumps(student_groups),
         "faculty_group_json": json.dumps(faculty_groups),
         "error": error,
         "page": page,
-        "has_prev": page > 1,
-        "has_next": start + per_page < len(rows),
+        "has_prev": total_rows > 0 and page > 1,
+        "has_next": total_rows > 0 and page < total_pages,
         "counts": counts,
     }
     return render(request, "emt/attendance_upload.html", context)
