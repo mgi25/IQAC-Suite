@@ -2538,24 +2538,44 @@ def _group_attendance_rows(rows):
         reg_no = (row.get("registration_no") or "").strip()
         full_name = row.get("full_name") or ""
         cls = (row.get("student_class") or "").strip()
+        explicit_category = (row.get("category") or "").strip().lower()
 
-        if cls or reg_no in student_map:
-            category = "student"
+        if explicit_category in AttendanceRow.Category.values:
+            category = explicit_category
+            label = (
+                row.get("affiliation")
+                or cls
+                or (faculty_memberships.get(reg_no) if category == "faculty" else "")
+                or "Guests"
+            )
+            if (
+                category == AttendanceRow.Category.STUDENT
+                and reg_no
+                and reg_no in faculty_memberships
+                and reg_no not in student_map
+            ):
+                category = AttendanceRow.Category.FACULTY
+                label = faculty_memberships.get(reg_no) or label or "Unknown"
+        elif cls or reg_no in student_map:
+            category = AttendanceRow.Category.STUDENT
             label = cls or "Unknown"
-            students_by_class.setdefault(label, []).append(full_name)
         elif reg_no and reg_no in faculty_memberships:
-            category = "faculty"
+            category = AttendanceRow.Category.FACULTY
             label = faculty_memberships.get(reg_no) or "Unknown"
-            faculty_by_org.setdefault(label, []).append(full_name)
         else:
-            category = "external"
-            label = row.get("affiliation") or row.get("student_class") or "Guests"
+            category = AttendanceRow.Category.EXTERNAL
+            label = row.get("affiliation") or cls or "Guests"
+
+        if category == AttendanceRow.Category.STUDENT:
+            students_by_class.setdefault(label or "Unknown", []).append(full_name)
+        elif category == AttendanceRow.Category.FACULTY:
+            faculty_by_org.setdefault(label or "Unknown", []).append(full_name)
 
         row["category"] = category
-        row["affiliation"] = label
+        row["affiliation"] = label or ""
 
         # Ensure faculty rows capture their organisation even if student_class is blank
-        if category == "faculty" and not cls:
+        if category == AttendanceRow.Category.FACULTY and not cls:
             row.setdefault("student_class", label)
 
     return students_by_class, faculty_by_org
@@ -2597,6 +2617,8 @@ def upload_attendance_csv(request, report_id):
                 "student_class": r.student_class,
                 "absent": r.absent,
                 "volunteer": r.volunteer,
+                "category": r.category,
+                "affiliation": r.student_class,
             }
             for r in report.attendance_rows.all()
         ]
@@ -2679,6 +2701,8 @@ def attendance_data(request, report_id):
             "student_class": r.student_class,
             "absent": r.absent,
             "volunteer": r.volunteer,
+            "category": r.category,
+            "affiliation": r.student_class,
         }
         for r in report.attendance_rows.all()
     ]
@@ -2714,6 +2738,8 @@ def attendance_data(request, report_id):
                             "student_class": cls_obj.code or cls_obj.name,
                             "absent": False,
                             "volunteer": False,
+                            "category": AttendanceRow.Category.STUDENT,
+                            "affiliation": cls_obj.code or cls_obj.name,
                         }
                     )
 
@@ -2732,6 +2758,8 @@ def attendance_data(request, report_id):
                             "student_class": (cls.code if cls and cls.code else (cls.name if cls else "")),
                             "absent": False,
                             "volunteer": False,
+                            "category": AttendanceRow.Category.STUDENT,
+                            "affiliation": (cls.code if cls and cls.code else (cls.name if cls else "")),
                         }
                     )
                     continue
@@ -2767,6 +2795,8 @@ def attendance_data(request, report_id):
                             "student_class": "",
                             "absent": False,
                             "volunteer": False,
+                            "category": AttendanceRow.Category.EXTERNAL,
+                            "affiliation": "",
                         }
                     )
 
@@ -2799,6 +2829,7 @@ def save_attendance_rows(request, report_id):
         return JsonResponse({"error": "Invalid JSON"}, status=400)
 
     rows = payload.get("rows", [])
+    _group_attendance_rows(rows)
     AttendanceRow.objects.filter(event_report=report).delete()
     objs = [
         AttendanceRow(
@@ -2808,6 +2839,11 @@ def save_attendance_rows(request, report_id):
             student_class=r.get("student_class", ""),
             absent=bool(r.get("absent")),
             volunteer=bool(r.get("volunteer")),
+            category=(
+                (r.get("category") or AttendanceRow.Category.STUDENT)
+                if (r.get("category") in AttendanceRow.Category.values)
+                else AttendanceRow.Category.STUDENT
+            ),
         )
         for r in rows
     ]
@@ -2819,27 +2855,16 @@ def save_attendance_rows(request, report_id):
     present_rows = [r for r in rows if not r.get("absent")]
     present = len(present_rows)
 
-    # Determine participant types for present attendees
-    reg_nos = [r.get("registration_no") for r in present_rows if r.get("registration_no")]
-    users = {
-        u.username: u
-        for u in User.objects.filter(username__in=reg_nos).select_related("student_profile")
-    }
-    student_usernames = {u for u, obj in users.items() if hasattr(obj, "student_profile")}
-    faculty_usernames = set(
-        OrganizationMembership.objects.filter(
-            user__username__in=reg_nos, role="faculty"
-        ).values_list("user__username", flat=True)
-    )
-
     student_count = sum(
-        1 for r in present_rows if r.get("registration_no") in student_usernames
+        1
+        for r in present_rows
+        if (r.get("category") or AttendanceRow.Category.STUDENT)
+        == AttendanceRow.Category.STUDENT
     )
     faculty_count = sum(
         1
         for r in present_rows
-        if r.get("registration_no") in faculty_usernames
-        and r.get("registration_no") not in student_usernames
+        if (r.get("category") or "").lower() == AttendanceRow.Category.FACULTY
     )
     external_count = present - student_count - faculty_count
 
@@ -2908,12 +2933,13 @@ def download_attendance_csv(request, report_id):
                 "student_class": r.student_class,
                 "absent": r.absent,
                 "volunteer": r.volunteer,
+                "category": r.category,
             }
             for r in report.attendance_rows.all()
         ]
 
     response = HttpResponse(content_type="text/csv")
-    filename = f"student_audience_{report_id}.csv"
+    filename = f"attendance_{report_id}.csv"
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
 
     writer = csv.writer(response, quoting=csv.QUOTE_MINIMAL)
@@ -2921,6 +2947,7 @@ def download_attendance_csv(request, report_id):
     for r in rows:
         writer.writerow(
             [
+                (r.get("category") or AttendanceRow.Category.STUDENT),
                 r.get("registration_no", ""),
                 r.get("full_name", ""),
                 r.get("student_class", ""),

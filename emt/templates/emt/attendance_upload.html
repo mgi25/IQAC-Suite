@@ -120,7 +120,7 @@
     const downloadUrl = "{% url 'emt:attendance_download' report.id %}";
     const dataUrl = "{% url 'emt:attendance_data' report.id %}";
     const reportUrl = "{% url 'emt:submit_event_report' report.proposal.id %}";
-    const downloadFilename = "student_audience_{{ report.id }}.csv";
+    const downloadFilename = "attendance_{{ report.id }}.csv";
     const csrftoken = '{{ csrf_token }}';
 </script>
 <script src="{% static 'emt/js/attendance.js' %}"></script>

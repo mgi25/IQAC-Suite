@@ -40,7 +40,10 @@ document.addEventListener('DOMContentLoaded', function () {
     function normaliseRows() {
         rows.forEach((row, index) => {
             row._index = index;
-            if (!row.category) {
+            const rawCategory = row.category ? String(row.category).toLowerCase() : '';
+            if (['student', 'faculty', 'external'].includes(rawCategory)) {
+                row.category = rawCategory;
+            } else {
                 const hasClass = row.student_class && row.student_class.trim();
                 row.category = hasClass ? 'student' : 'external';
             }
