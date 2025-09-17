@@ -11,7 +11,7 @@ from django.urls import reverse
 
 from core.models import Organization, OrganizationType
 from core.signals import create_or_update_user_profile, assign_role_on_login
-from emt.models import EventProposal, EventReport
+from emt.models import AttendanceRow, EventProposal, EventReport
 
 
 class UploadAttendanceCsvViewTests(TestCase):
@@ -95,3 +95,42 @@ class UploadAttendanceCsvViewTests(TestCase):
         self.assertEqual(len(rows), 101)
         self.assertEqual(rows[-1]["category"], "faculty")
         self.assertEqual(response.context["counts"]["total"], 101)
+
+    def test_saved_rows_json_includes_faculty_category_after_reload(self):
+        AttendanceRow.objects.bulk_create(
+            [
+                AttendanceRow(
+                    event_report=self.report,
+                    registration_no=f"STU{idx}",
+                    full_name=f"Student {idx}",
+                    student_class="Class",
+                    absent=False,
+                    volunteer=False,
+                    category=AttendanceRow.Category.STUDENT,
+                )
+                for idx in range(105)
+            ]
+            + [
+                AttendanceRow(
+                    event_report=self.report,
+                    registration_no=f"FAC{idx}",
+                    full_name=f"Faculty {idx}",
+                    student_class="Dept",
+                    absent=False,
+                    volunteer=False,
+                    category=AttendanceRow.Category.FACULTY,
+                )
+                for idx in range(5)
+            ]
+        )
+
+        url = reverse("emt:attendance_upload", args=[self.report.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        rows = json.loads(response.context["rows_json"])
+        self.assertEqual(len(rows), 110)
+        self.assertTrue(any(row["category"] == "faculty" for row in rows))
+        self.assertEqual(response.context["counts"]["total"], 110)
+        self.assertTrue(response.context["has_next"])
+        self.assertFalse(response.context["has_prev"])
