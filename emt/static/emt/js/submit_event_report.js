@@ -1750,7 +1750,7 @@ function populateSpeakersFromProposal() {
     if (!speakers.length) {
         container.innerHTML = `
             <div class="no-speakers-message">
-                <div class="no-speakers-icon">👤</div>
+                <div class="no-speakers-icon"><i class="fas fa-user" aria-hidden="true"></i></div>
                 <div class="no-speakers-text">No speakers were defined in the original proposal</div>
                 <div class="no-speakers-help">You can add actual speakers in the field below</div>
             </div>
