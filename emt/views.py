@@ -2515,6 +2515,10 @@ def download_audience_csv(request, proposal_id):
 
 def _group_attendance_rows(rows):
     """Categorise rows for students, faculty and guests while grouping them."""
+
+    def _normalise_identifier(value: str) -> str:
+        return re.sub(r"\s+", "", (value or "").strip()).lower()
+
     reg_nos = [
         (r.get("registration_no") or "").strip() for r in rows if r.get("registration_no")
     ]
@@ -2561,13 +2565,13 @@ def _group_attendance_rows(rows):
 
     for row in rows:
         reg_no = (row.get("registration_no") or "").strip()
-        full_name = row.get("full_name") or ""
+        full_name = (row.get("full_name") or "").strip()
         cls = (row.get("student_class") or "").strip()
         explicit_category = (row.get("category") or "").strip().lower()
 
         membership_info = faculty_memberships.get(reg_no)
         membership_org = (membership_info or {}).get("organization", "")
-        membership_name = (membership_info or {}).get("display_name", "")
+        membership_name = ((membership_info or {}).get("display_name") or "").strip()
 
         if explicit_category in AttendanceRow.Category.values:
             category = explicit_category
@@ -2609,9 +2613,15 @@ def _group_attendance_rows(rows):
         if category == AttendanceRow.Category.STUDENT:
             students_by_class.setdefault(label or "Unknown", []).append(full_name)
         elif category == AttendanceRow.Category.FACULTY:
-            if not full_name and membership_name:
-                full_name = membership_name
-                row["full_name"] = full_name
+            if membership_name:
+                name_matches_reg_no = False
+                if reg_no and full_name:
+                    name_matches_reg_no = (
+                        _normalise_identifier(full_name) == _normalise_identifier(reg_no)
+                    )
+                if not full_name or name_matches_reg_no:
+                    full_name = membership_name
+            row["full_name"] = full_name
             faculty_by_org.setdefault(label or "Unknown", []).append(full_name)
 
         row["category"] = category
