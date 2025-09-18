@@ -160,3 +160,40 @@ class AttendanceDataViewTests(TestCase):
         self.assertIn("Science", data["faculty"])
         self.assertIn("Fiona Faculty", data["faculty"]["Science"])
 
+    def test_faculty_row_name_matching_registration_uses_membership_display(self):
+        org_type = OrganizationType.objects.create(name="Dept Math")
+        org = Organization.objects.create(name="Mathematics", org_type=org_type)
+        faculty_user = User.objects.create_user(
+            "facmatch",
+            password="pass",
+            first_name="Casey",
+            last_name="Faculty",
+        )
+        faculty_user.profile.register_no = "FAC200"
+        faculty_user.profile.save()
+        OrganizationMembership.objects.create(
+            user=faculty_user,
+            organization=org,
+            academic_year="2024-2025",
+            role="faculty",
+        )
+        AttendanceRow.objects.create(
+            event_report=self.report,
+            registration_no="FAC200",
+            full_name=" fac 200 ",
+            student_class="",
+            absent=False,
+            volunteer=False,
+            category=AttendanceRow.Category.FACULTY,
+        )
+
+        url = reverse("emt:attendance_data", args=[self.report.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        rows_by_reg = {r["registration_no"]: r for r in data["rows"]}
+        self.assertEqual(rows_by_reg["FAC200"]["full_name"], "Casey Faculty")
+        faculty_group = data["faculty"].get("Mathematics", [])
+        self.assertListEqual(faculty_group, ["Casey Faculty"])
+
