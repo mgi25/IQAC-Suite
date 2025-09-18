@@ -2524,7 +2524,7 @@ def _group_attendance_rows(rows):
         for s in Student.objects.filter(registration_number__in=reg_nos)
     }
 
-    faculty_memberships: dict[str, str] = {}
+    faculty_memberships: dict[str, dict[str, str]] = {}
     memberships = (
         OrganizationMembership.objects.filter(
             Q(user__username__in=reg_nos)
@@ -2537,15 +2537,24 @@ def _group_attendance_rows(rows):
         organization_name = (
             membership.organization.name if membership.organization else ""
         )
+        organization_name = (organization_name or "").strip()
+        display_name = (
+            membership.user.get_full_name() or membership.user.username or ""
+        )
+        display_name = display_name.strip()
+        membership_data = {
+            "organization": organization_name,
+            "display_name": display_name,
+        }
         username = (membership.user.username or "").strip()
         if username:
-            faculty_memberships[username] = organization_name
+            faculty_memberships[username] = membership_data
         profile_reg_no = getattr(
             getattr(membership.user, "profile", None), "register_no", ""
         )
         profile_reg_no = (profile_reg_no or "").strip()
         if profile_reg_no:
-            faculty_memberships[profile_reg_no] = organization_name
+            faculty_memberships[profile_reg_no] = membership_data
 
     students_by_class: dict[str, list[str]] = {}
     faculty_by_org: dict[str, list[str]] = {}
@@ -2556,39 +2565,58 @@ def _group_attendance_rows(rows):
         cls = (row.get("student_class") or "").strip()
         explicit_category = (row.get("category") or "").strip().lower()
 
+        membership_info = faculty_memberships.get(reg_no)
+        membership_org = (membership_info or {}).get("organization", "")
+        membership_name = (membership_info or {}).get("display_name", "")
+
         if explicit_category in AttendanceRow.Category.values:
             category = explicit_category
             label = (
                 row.get("affiliation")
                 or cls
-                or (faculty_memberships.get(reg_no) if category == "faculty" else "")
+                or (
+                    membership_org
+                    if category == AttendanceRow.Category.FACULTY
+                    else ""
+                )
                 or "Guests"
             )
             if (
                 category == AttendanceRow.Category.STUDENT
                 and reg_no
-                and reg_no in faculty_memberships
+                and membership_info
                 and reg_no not in student_map
             ):
                 category = AttendanceRow.Category.FACULTY
-                label = faculty_memberships.get(reg_no) or label or "Unknown"
+                label = membership_org or label or "Unknown"
         elif cls or reg_no in student_map:
             category = AttendanceRow.Category.STUDENT
             label = cls or "Unknown"
-        elif reg_no and reg_no in faculty_memberships:
+        elif membership_info:
             category = AttendanceRow.Category.FACULTY
-            label = faculty_memberships.get(reg_no) or "Unknown"
+            label = membership_org or "Unknown"
         else:
             category = AttendanceRow.Category.EXTERNAL
             label = row.get("affiliation") or cls or "Guests"
 
+        if category == AttendanceRow.Category.FACULTY:
+            label = label or membership_org or "Unknown"
+        elif category == AttendanceRow.Category.STUDENT:
+            label = label or "Unknown"
+        else:
+            label = label or "Guests"
+
         if category == AttendanceRow.Category.STUDENT:
             students_by_class.setdefault(label or "Unknown", []).append(full_name)
         elif category == AttendanceRow.Category.FACULTY:
+            if not full_name and membership_name:
+                full_name = membership_name
+                row["full_name"] = full_name
             faculty_by_org.setdefault(label or "Unknown", []).append(full_name)
 
         row["category"] = category
         row["affiliation"] = label or ""
+        row["full_name"] = full_name
 
         # Ensure faculty rows capture their organisation even if student_class is blank
         if category == AttendanceRow.Category.FACULTY and not cls:
