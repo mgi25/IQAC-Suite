@@ -9,6 +9,9 @@ except Exception:
 import logging
 import dj_database_url
 
+
+logger = logging.getLogger(__name__)
+
 # ---- .env loader (django-environ if available, else os.getenv) ----
 
 try:
@@ -153,8 +156,14 @@ DATABASES = {
         ssl_require=False,
     )
 }
-if "railway.internal" in DATABASES["default"].get("HOST", ""):
-    raise RuntimeError("Invalid DB host — still pointing to Railway.")
+db_host = DATABASES["default"].get("HOST", "")
+if db_host and "railway.internal" in db_host:
+    logger.warning(
+        "Detected Railway internal database host (%s). Replace DATABASE_URL in your "
+        ".env with the External Connection string from Railway to avoid private network"
+        " URLs.",
+        db_host,
+    )
 
 
 # ──────────────────────────────────────────────────────────────────────────────
