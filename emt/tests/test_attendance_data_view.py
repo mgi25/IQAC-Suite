@@ -81,6 +81,48 @@ class AttendanceDataViewTests(TestCase):
         self.assertIn("CSE", data["students"])
         self.assertListEqual(sorted(data["students"]["CSE"]), ["Bob", "Carol"])
 
+    def test_includes_faculty_incharges_when_no_rows(self):
+        org_type = OrganizationType.objects.create(name="Dept of Arts")
+        org = Organization.objects.create(name="Fine Arts", org_type=org_type)
+        faculty_user = User.objects.create_user(
+            "faclead",
+            password="pass",
+            first_name="Fiona",
+            last_name="Lead",
+        )
+        faculty_user.profile.register_no = "FAC-900"
+        faculty_user.profile.save()
+        OrganizationMembership.objects.create(
+            user=faculty_user,
+            organization=org,
+            academic_year="2024-2025",
+            role="faculty",
+        )
+
+        proposal = EventProposal.objects.create(
+            submitted_by=self.user,
+            event_title="Faculty Seed",
+        )
+        proposal.faculty_incharges.add(faculty_user)
+        report = EventReport.objects.create(proposal=proposal)
+
+        url = reverse("emt:attendance_data", args=[report.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        self.assertEqual(len(data["rows"]), 1)
+        row = data["rows"][0]
+        self.assertEqual(row["registration_no"], "FAC-900")
+        self.assertEqual(row["category"], "faculty")
+        self.assertEqual(row["affiliation"], "Fine Arts")
+        self.assertEqual(row["full_name"], "Fiona Lead")
+        self.assertIn("Fine Arts", data["faculty"])
+        self.assertIn("Fiona Lead", data["faculty"]["Fine Arts"])
+        self.assertEqual(data["counts"]["total"], 1)
+        self.assertEqual(data["counts"]["present"], 1)
+        self.assertEqual(data["students"], {})
+
     def test_marks_faculty_rows_with_category(self):
         org_type = OrganizationType.objects.create(name="Dept")
         org = Organization.objects.create(name="Engineering", org_type=org_type)
