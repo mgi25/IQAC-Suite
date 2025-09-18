@@ -2832,6 +2832,7 @@ def attendance_data(request, report_id):
     report = get_object_or_404(
         EventReport, id=report_id, proposal__submitted_by=request.user
     )
+    proposal = report.proposal
     rows = [
         {
             "registration_no": r.registration_no,
@@ -2846,9 +2847,10 @@ def attendance_data(request, report_id):
     ]
 
     if not rows:
+        rows = []
         names = [
             n.strip()
-            for n in (report.proposal.target_audience or "").split(",")
+            for n in (proposal.target_audience or "").split(",")
             if n.strip()
         ]
         if names:
@@ -2857,8 +2859,6 @@ def attendance_data(request, report_id):
                 (s.user.get_full_name() or s.user.username).strip().lower(): s
                 for s in Student.objects.select_related("user")
             }
-
-            rows = []
 
             # Helper: expand a Class into attendance rows for all its students
             from core.models import Class  # local import to avoid circulars at module import time
@@ -2937,6 +2937,40 @@ def attendance_data(request, report_id):
                             "affiliation": "",
                         }
                     )
+
+        faculty_users = list(
+            proposal.faculty_incharges.all().select_related("profile")
+        )
+        if faculty_users:
+            existing_registrations = {
+                (r.get("registration_no") or "").strip().lower()
+                for r in rows
+                if (r.get("registration_no") or "").strip()
+            }
+            for user in faculty_users:
+                profile = getattr(user, "profile", None)
+                reg_no = (
+                    (getattr(profile, "register_no", "") or user.username or "").strip()
+                )
+                full_name = (user.get_full_name() or user.username or "").strip()
+                if not full_name and not reg_no:
+                    continue
+                normalized_reg = reg_no.lower() if reg_no else ""
+                if normalized_reg and normalized_reg in existing_registrations:
+                    continue
+                rows.append(
+                    {
+                        "registration_no": reg_no,
+                        "full_name": full_name,
+                        "student_class": "",
+                        "absent": False,
+                        "volunteer": False,
+                        "category": AttendanceRow.Category.FACULTY,
+                        "affiliation": "",
+                    }
+                )
+                if normalized_reg:
+                    existing_registrations.add(normalized_reg)
 
     counts = {
         "total": len(rows),
