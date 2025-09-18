@@ -2529,7 +2529,34 @@ def _group_attendance_rows(rows):
     }
 
     faculty_memberships: dict[str, dict[str, str]] = {}
-    memberships = (
+
+    def _register_membership(member: OrganizationMembership) -> dict[str, str]:
+        organization_name = (
+            member.organization.name if member.organization else ""
+        )
+        organization_name = (organization_name or "").strip()
+        display_name = (member.user.get_full_name() or member.user.username or "")
+        display_name = display_name.strip()
+        normalized_display = _normalise_identifier(display_name)
+        membership_data = {
+            "organization": organization_name,
+            "display_name": display_name,
+            "normalized_display": normalized_display,
+        }
+        username = (member.user.username or "").strip()
+        if username:
+            faculty_memberships[username] = membership_data
+        profile_reg_no = getattr(
+            getattr(member.user, "profile", None), "register_no", ""
+        )
+        profile_reg_no = (profile_reg_no or "").strip()
+        if profile_reg_no:
+            faculty_memberships[profile_reg_no] = membership_data
+        if normalized_display:
+            faculty_memberships.setdefault(normalized_display, membership_data)
+        return membership_data
+
+    memberships = list(
         OrganizationMembership.objects.filter(
             Q(user__username__in=reg_nos)
             | Q(user__profile__register_no__in=reg_nos),
@@ -2537,28 +2564,43 @@ def _group_attendance_rows(rows):
         )
         .select_related("organization", "user__profile")
     )
+
+    processed_membership_ids: set[int] = set()
     for membership in memberships:
-        organization_name = (
-            membership.organization.name if membership.organization else ""
+        processed_membership_ids.add(membership.pk)
+        _register_membership(membership)
+
+    missing_name_identifiers = {
+        _normalise_identifier((row.get("full_name") or ""))
+        for row in rows
+        if not (row.get("registration_no") or "").strip()
+        and (row.get("full_name") or "").strip()
+    }
+    missing_name_identifiers.discard("")
+    existing_normalized_keys = {
+        data.get("normalized_display")
+        for data in faculty_memberships.values()
+        if data.get("normalized_display")
+    }
+    missing_name_identifiers -= existing_normalized_keys
+
+    if missing_name_identifiers:
+        extra_memberships = (
+            OrganizationMembership.objects.filter(role="faculty")
+            .exclude(id__in=processed_membership_ids)
+            .select_related("organization", "user__profile")
         )
-        organization_name = (organization_name or "").strip()
-        display_name = (
-            membership.user.get_full_name() or membership.user.username or ""
-        )
-        display_name = display_name.strip()
-        membership_data = {
-            "organization": organization_name,
-            "display_name": display_name,
-        }
-        username = (membership.user.username or "").strip()
-        if username:
-            faculty_memberships[username] = membership_data
-        profile_reg_no = getattr(
-            getattr(membership.user, "profile", None), "register_no", ""
-        )
-        profile_reg_no = (profile_reg_no or "").strip()
-        if profile_reg_no:
-            faculty_memberships[profile_reg_no] = membership_data
+        for membership in extra_memberships:
+            normalized_display = _normalise_identifier(
+                membership.user.get_full_name() or membership.user.username or ""
+            )
+            if not normalized_display or normalized_display not in missing_name_identifiers:
+                continue
+            processed_membership_ids.add(membership.pk)
+            _register_membership(membership)
+            missing_name_identifiers.discard(normalized_display)
+            if not missing_name_identifiers:
+                break
 
     students_by_class: dict[str, list[str]] = {}
     faculty_by_org: dict[str, list[str]] = {}
@@ -2569,9 +2611,28 @@ def _group_attendance_rows(rows):
         cls = (row.get("student_class") or "").strip()
         explicit_category = (row.get("category") or "").strip().lower()
 
+        normalized_full_name = _normalise_identifier(full_name)
+
         membership_info = faculty_memberships.get(reg_no)
+        matched_by_name = False
+        if not membership_info and normalized_full_name:
+            membership_info = faculty_memberships.get(normalized_full_name)
+            if (
+                membership_info
+                and not reg_no
+                and membership_info.get("normalized_display")
+                and membership_info["normalized_display"] == normalized_full_name
+            ):
+                matched_by_name = True
+
         membership_org = (membership_info or {}).get("organization", "")
         membership_name = ((membership_info or {}).get("display_name") or "").strip()
+        if matched_by_name:
+            explicit_category = AttendanceRow.Category.FACULTY
+            if membership_org:
+                cls = membership_org
+                row["student_class"] = cls
+            row["affiliation"] = membership_org or row.get("affiliation") or ""
 
         if explicit_category in AttendanceRow.Category.values:
             category = explicit_category
@@ -2604,7 +2665,10 @@ def _group_attendance_rows(rows):
             label = row.get("affiliation") or cls or "Guests"
 
         if category == AttendanceRow.Category.FACULTY:
-            label = label or membership_org or "Unknown"
+            if matched_by_name and membership_org:
+                label = membership_org
+            else:
+                label = label or membership_org or "Unknown"
         elif category == AttendanceRow.Category.STUDENT:
             label = label or "Unknown"
         else:
@@ -2619,8 +2683,10 @@ def _group_attendance_rows(rows):
                     name_matches_reg_no = (
                         _normalise_identifier(full_name) == _normalise_identifier(reg_no)
                     )
-                if not full_name or name_matches_reg_no:
+                if matched_by_name or not full_name or name_matches_reg_no:
                     full_name = membership_name
+            if matched_by_name and label:
+                row["student_class"] = label
             row["full_name"] = full_name
             faculty_by_org.setdefault(label or "Unknown", []).append(full_name)
 

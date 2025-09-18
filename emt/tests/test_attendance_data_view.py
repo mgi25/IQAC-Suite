@@ -197,3 +197,40 @@ class AttendanceDataViewTests(TestCase):
         faculty_group = data["faculty"].get("Mathematics", [])
         self.assertListEqual(faculty_group, ["Casey Faculty"])
 
+    def test_target_audience_faculty_name_uses_membership_details(self):
+        org_type = OrganizationType.objects.create(name="Dept Humanities")
+        org = Organization.objects.create(name="Humanities", org_type=org_type)
+        faculty_user = User.objects.create_user(
+            "henryfaculty",
+            password="pass",
+            first_name="Henry",
+            last_name="Faculty",
+        )
+        OrganizationMembership.objects.create(
+            user=faculty_user,
+            organization=org,
+            academic_year="2024-2025",
+            role="faculty",
+        )
+
+        proposal = EventProposal.objects.create(
+            submitted_by=self.user,
+            event_title="Faculty Audience",
+            target_audience="HenryFaculty",
+        )
+        report = EventReport.objects.create(proposal=proposal)
+
+        url = reverse("emt:attendance_data", args=[report.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        self.assertEqual(len(data["rows"]), 1)
+        row = data["rows"][0]
+        self.assertEqual(row["category"], "faculty")
+        self.assertEqual(row["affiliation"], "Humanities")
+        self.assertEqual(row["student_class"], "Humanities")
+        self.assertEqual(row["full_name"], "Henry Faculty")
+        self.assertIn("Humanities", data["faculty"])
+        self.assertIn("Henry Faculty", data["faculty"]["Humanities"])
+
