@@ -23,7 +23,10 @@
       </section>
       <section class="section">
         <h3>Communication</h3>
-        <div class="card placeholder">Chat/messages/comments coming soon.</div>
+        <div class="card" id="commSection" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div id="commInfo" class="text-muted" style="font-size:13px">Select an event to open communication.</div>
+          <a id="btnCommOpen" class="chip-btn disabled" style="pointer-events:none;opacity:.5" href="#"><i class="fa-regular fa-comments"></i> Open</a>
+        </div>
       </section>
     </div>
   </div>
@@ -87,6 +90,19 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('workProcess').innerHTML = (p.success && Array.isArray(p.items) && p.items.length) ? p.items.map(item=>`
       <div class="row"><div class="col">${item.label}</div><div class="col text-end"><span class="badge bg-light text-dark">${item.status}</span></div></div>
     `).join('') : '<div class="text-muted">No status yet.</div>';
+
+    // Enable communication button
+    const commBtn = document.getElementById('btnCommOpen');
+    const commInfo = document.getElementById('commInfo');
+    if(commBtn){
+      const url = new URL(window.location.origin + '{% url "cdl_communication_page" %}');
+      url.searchParams.set('eventId', eventId);
+      commBtn.href = url.toString();
+      commBtn.classList.remove('disabled');
+      commBtn.style.pointerEvents='auto';
+      commBtn.style.opacity='1';
+      if(commInfo) commInfo.textContent = 'Open communication log for this event.';
+    }
   }
 
   listEl.addEventListener('click', (e)=>{
@@ -103,6 +119,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     if(card){ card.classList.add('active'); }
     loadEvent(first);
   }
+
+  // If no event selected keep button disabled (already default state)
 });
 </script>
 {% endblock %}

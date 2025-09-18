@@ -6283,6 +6283,35 @@ def cdl_communication_page(request):
                     is_allowed = True; break
         except Exception:
             pass
+
+    # Additional conditional: allow event proposer or faculty-incharge for a specific event
+    # if the event has any CDL related support requirements (poster/certificates) so they can coordinate.
+    if not is_allowed:
+        event_id = request.GET.get('eventId') or request.GET.get('proposal_id')
+        if event_id and event_id.isdigit():
+            from emt.models import EventProposal  # local import to avoid circulars when app not loaded
+            try:
+                ep = (EventProposal.objects
+                      .select_related('organization')
+                      .prefetch_related('faculty_incharges')
+                      .get(id=int(event_id)))
+                # Determine if CDL support flags exist via related cdl_support (if present) or fallbacks used earlier in APIs
+                cdl_flags = False
+                try:
+                    cs = getattr(ep, 'cdl_support', None)
+                    if cs and (getattr(cs, 'poster_required', False) or getattr(cs, 'certificates_required', False)):
+                        cdl_flags = True
+                except Exception:
+                    pass
+                # If we cannot find cdl_support, still allow if proposal status is finalized (assuming potential design assets)
+                if not cdl_flags and ep.status in ('finalized','approved'):
+                    cdl_flags = True
+                if cdl_flags:
+                    # Is the user proposer or faculty incharge?
+                    if ep.submitted_by_id == request.user.id or ep.faculty_incharges.filter(id=request.user.id).exists():
+                        is_allowed = True
+            except EventProposal.DoesNotExist:
+                pass
     if not is_allowed:
         return HttpResponseForbidden()
     return render(request, 'core/cdl_communication.html')
