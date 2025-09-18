@@ -32,6 +32,7 @@ urlpatterns = [
     path("cdl/work/", views.cdl_work_dashboard, name="cdl_work_dashboard"),
     path("cdl/member/", views.cdl_member_dashboard, name="cdl_member_dashboard"),
     path("cdl/support/", views.cdl_support_detail_page, name="cdl_support_detail_page"),
+    path("cdl/communication/", views.cdl_communication_page, name="cdl_communication_page"),
     path("cdl/support/<int:proposal_id>/assign/", views.cdl_assign_tasks_page, name="cdl_assign_tasks_page"),
     path("cdl/availability/new/", views.cdl_create_availability, name="create_availability"),
     path("cdl/resources/brand-kit/", views.cdl_brand_kit, name="brand_kit"),
@@ -180,6 +181,7 @@ urlpatterns = [
     path('api/cdl/event/<int:proposal_id>/documents/', views.api_cdl_event_documents, name='api_cdl_event_documents'),
     path('api/cdl/events/my-support/', views.api_cdl_events_my_support, name='api_cdl_events_my_support'),
     path('api/cdl/support/<int:proposal_id>/', views.api_cdl_support_detail, name='api_cdl_support_detail'),
+    path('api/cdl/communication/', views.api_cdl_communication, name='api_cdl_communication'),
     path('api/cdl/support/<int:proposal_id>/assign/', views.api_cdl_support_assign, name='api_cdl_support_assign'),
     # Per-resource assignment APIs
     path('api/cdl/support/<int:proposal_id>/resources/', views.api_cdl_support_resources, name='api_cdl_support_resources'),

@@ -226,14 +226,14 @@
 .seg-btn.active{background:var(--primary);color:#fff}
 
 /* -------- Calendar -------- */
-.mini-cal{padding:16px}
-.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-#calTitle{font-weight:600;font-size:15px}
+.mini-cal{padding:12px}
+.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+#calTitle{font-weight:600;font-size:14px}
 .cal-nav{width:28px;height:28px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s,border-color .2s}
 .cal-nav:hover{background:var(--subtle);border-color:var(--primary)}
-.cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:11px;color:var(--muted);text-align:center;margin-bottom:6px}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.day{padding:6px 2px;text-align:center;border-radius:6px;font-size:13px;cursor:pointer;transition:all .2s;position:relative; height:42px}
+.cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;font-size:10px;color:var(--muted);text-align:center;margin-bottom:4px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.day{padding:4px 0;text-align:center;border-radius:6px;font-size:12px;cursor:pointer;transition:all .2s;position:relative;height:36px}
 .day.has-event::after{content:"";position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:6px;height:6px;border-radius:50%;background:#e74c3c}
 .day.has-meeting::after{content:"";position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:6px;height:6px;border-radius:50%;background:#0ea5e9}
 .day:hover{background:var(--subtle)}

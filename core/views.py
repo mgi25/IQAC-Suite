@@ -6265,6 +6265,75 @@ def cdl_assign_tasks_page(request, proposal_id:int):
         pass
     return render(request, "core/cdl_assign_tasks.html", { 'proposal_id': proposal_id })
 
+# ────────────────────────────────────────────────────────────────
+#  CDL Communication Page & APIs
+# ────────────────────────────────────────────────────────────────
+@login_required
+def cdl_communication_page(request):
+    """Render the communication log page. Accessible to CDL head and employees/members."""
+    # Basic role check similar to work dashboard
+    is_allowed = request.user.is_superuser or request.user.groups.filter(name="CDL_MEMBER").exists()
+    if not is_allowed:
+        try:
+            from .models import RoleAssignment
+            for ra in RoleAssignment.objects.filter(user=request.user).select_related('role','organization','organization__org_type'):
+                role_name = (ra.role.name if ra.role else '').lower()
+                org_type = (ra.organization.org_type.name if ra.organization and ra.organization.org_type else '').lower()
+                if org_type == 'cdl' and any(k in role_name for k in ['head','employee','member','team']):
+                    is_allowed = True; break
+        except Exception:
+            pass
+    if not is_allowed:
+        return HttpResponseForbidden()
+    return render(request, 'core/cdl_communication.html')
+
+from django.views.decorators.http import require_http_methods
+from django.core.paginator import Paginator
+from django.forms.models import model_to_dict
+from .models import CDLCommunicationMessage
+
+@login_required
+@require_http_methods(["GET","POST"])
+def api_cdl_communication(request):
+    """List or create communication messages.
+    GET params: page (optional), page_size (default 100 to return most recent quickly)
+    POST expects: comment (text) and optional attachment file
+    Returns JSON suitable for frontend consumption.
+    """
+    if request.method == 'POST':
+        comment = (request.POST.get('comment') or '').strip()
+        if not comment and 'attachment' not in request.FILES:
+            return JsonResponse({'success': False, 'error': 'Empty message'}, status=400)
+        msg = CDLCommunicationMessage.objects.create(
+            user=request.user,
+            comment=comment or '(attachment)',
+            attachment=request.FILES.get('attachment')
+        )
+        return JsonResponse(_comm_dict(msg), status=201)
+    # GET
+    qs = CDLCommunicationMessage.objects.all().order_by('-created_at')
+    page = int(request.GET.get('page',1))
+    page_size = min(int(request.GET.get('page_size',100)), 500)
+    paginator = Paginator(qs, page_size)
+    page_obj = paginator.get_page(page)
+    return JsonResponse({
+        'success': True,
+        'messages': [_comm_dict(m) for m in page_obj.object_list],
+        'page': page_obj.number,
+        'num_pages': paginator.num_pages,
+        'has_next': page_obj.has_next(),
+    })
+
+def _comm_dict(m:CDLCommunicationMessage):
+    return {
+        'id': m.id,
+        'user_id': m.user_id,
+        'user_username': m.user.username,
+        'comment': m.comment,
+        'created_at': m.created_at.isoformat(),
+        'attachment_url': m.attachment.url if m.attachment else None,
+    }
+
 @login_required
 @require_http_methods(["GET"])  # /api/cdl/support/<proposal_id>/
 def api_cdl_support_detail(request, proposal_id:int):

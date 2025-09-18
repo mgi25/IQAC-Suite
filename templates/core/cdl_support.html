@@ -33,10 +33,20 @@
       <div class="list" id="organizerCard"><div class="empty">Loading…</div></div>
     </section>
 
+    {% if request.user.is_superuser or request.session.role == 'cdl_head' %}
     <section class="card eq" id="cardStatus">
       <div class="card-header"><h3><i class="fa-solid fa-circle-check"></i> Status</h3></div>
       <div class="list" id="statusCard"><div class="empty">Loading…</div></div>
     </section>
+    {% else %}
+    <section class="card eq" id="cardCommunicationLink">
+      <div class="card-header" style="justify-content:space-between;align-items:center">
+        <h3><i class="fa-regular fa-comments"></i> Communication</h3>
+        <a class="chip-btn" href="{% url 'cdl_communication_page' %}?{{ request.GET.urlencode }}"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open</a>
+      </div>
+      <div class="list"><div class="empty" style="padding:24px 0">Open communication log to view & post updates.</div></div>
+    </section>
+    {% endif %}
 
     <section class="card eq" id="cardSpeaker">
       <div class="card-header"><h3><i class="fa-solid fa-microphone"></i> Speaker</h3></div>
