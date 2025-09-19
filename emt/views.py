@@ -275,24 +275,71 @@ def _save_speakers(proposal, data, files):
         r"^speaker_(?:full_name|designation|affiliation|contact_email|contact_number|linkedin_url|photo|detailed_profile)_(\d+)$"
     )
     all_keys = list(data.keys()) + list(files.keys())
+    if str(data.get("speaker_clear_all", "")).lower() in {"1", "true", "yes", "on"}:
+        proposal.speakers.all().delete()
+        return
+
     indices = sorted({int(m.group(1)) for key in all_keys if (m := pattern.match(key))})
     if not indices:
         return
-    proposal.speakers.all().delete()
+
+    existing = {sp.id: sp for sp in proposal.speakers.all()}
+    has_ids = any(data.get(f"speaker_id_{index}") for index in indices)
+    seen_ids = set()
+
+    if not has_ids:
+        proposal.speakers.all().delete()
+
     for index in indices:
-        full_name = data.get(f"speaker_full_name_{index}")
-        if full_name:
-            SpeakerProfile.objects.create(
-                proposal=proposal,
-                full_name=full_name,
-                designation=data.get(f"speaker_designation_{index}", ""),
-                affiliation=data.get(f"speaker_affiliation_{index}", ""),
-                contact_email=data.get(f"speaker_contact_email_{index}", ""),
-                contact_number=data.get(f"speaker_contact_number_{index}", ""),
-                linkedin_url=data.get(f"speaker_linkedin_url_{index}", ""),
-                photo=files.get(f"speaker_photo_{index}"),
-                detailed_profile=data.get(f"speaker_detailed_profile_{index}", ""),
-            )
+        speaker_id = data.get(f"speaker_id_{index}")
+        try:
+            speaker_obj = existing.get(int(speaker_id)) if speaker_id else None
+        except (TypeError, ValueError):
+            speaker_obj = None
+
+        full_name = (data.get(f"speaker_full_name_{index}") or "").strip()
+        designation = (data.get(f"speaker_designation_{index}") or "").strip()
+        affiliation = (data.get(f"speaker_affiliation_{index}") or "").strip()
+        contact_email = (data.get(f"speaker_contact_email_{index}") or "").strip()
+        contact_number = (data.get(f"speaker_contact_number_{index}") or "").strip()
+        linkedin_url = (data.get(f"speaker_linkedin_url_{index}") or "").strip()
+        detailed_profile = data.get(f"speaker_detailed_profile_{index}") or ""
+        photo_file = files.get(f"speaker_photo_{index}")
+
+        if not full_name:
+            if speaker_obj:
+                speaker_obj.delete()
+            continue
+
+        if has_ids and speaker_obj:
+            speaker_obj.full_name = full_name
+            speaker_obj.designation = designation
+            speaker_obj.affiliation = affiliation
+            speaker_obj.contact_email = contact_email
+            speaker_obj.contact_number = contact_number
+            speaker_obj.linkedin_url = linkedin_url
+            speaker_obj.detailed_profile = detailed_profile
+            if photo_file:
+                speaker_obj.photo = photo_file
+            speaker_obj.save()
+            seen_ids.add(speaker_obj.id)
+            continue
+
+        new_obj = SpeakerProfile.objects.create(
+            proposal=proposal,
+            full_name=full_name,
+            designation=designation,
+            affiliation=affiliation,
+            contact_email=contact_email,
+            contact_number=contact_number,
+            linkedin_url=linkedin_url,
+            photo=photo_file,
+            detailed_profile=detailed_profile,
+        )
+        seen_ids.add(new_obj.id)
+
+    if has_ids:
+        proposal.speakers.exclude(id__in=seen_ids).delete()
 
 
 def _parse_sdg_text(text: str):
@@ -1641,6 +1688,7 @@ def autosave_event_report(request):
     report.save()
 
     _save_activities(proposal, data)
+    _save_speakers(proposal, data, request.FILES)
 
     return JsonResponse({"success": True, "report_id": report.id})
 
@@ -2099,6 +2147,8 @@ def submit_event_report(request, proposal_id):
             # Sync proposal snapshot fields based on final report edits
             _sync_proposal_from_report(proposal, report, post_data)
 
+            _save_speakers(proposal, request.POST, request.FILES)
+
             instances = formset.save(commit=False)
             for obj in instances:
                 obj.report = report
@@ -2154,6 +2204,7 @@ def submit_event_report(request, proposal_id):
 
         speakers_json.append(
             {
+                "id": speaker.id,
                 "full_name": speaker.full_name,
                 "name": speaker.full_name,  # Backward compatibility
                 "designation": speaker.designation,

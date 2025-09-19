@@ -1895,6 +1895,229 @@ textarea {
     margin-top: 0.125rem;
 }
 
+/* Speaker editor (proposal updates) */
+.speakers-edit-input-group {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.speakers-edit-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.speakers-edit-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.speakers-edit-title {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #0f172a;
+}
+
+.btn-add-speaker-edit {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 0.375rem;
+    padding: 0.45rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: background 0.2s ease, transform 0.2s ease;
+    box-shadow: 0 1px 2px rgba(37, 99, 235, 0.18);
+}
+
+.btn-add-speaker-edit:hover {
+    background: #1d4ed8;
+}
+
+.btn-add-speaker-edit:focus {
+    outline: 2px solid rgba(37, 99, 235, 0.35);
+    outline-offset: 2px;
+}
+
+.btn-add-speaker-edit:active {
+    transform: translateY(1px);
+}
+
+.speakers-edit-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.speaker-edit-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+
+.speaker-edit-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #e2e8f0;
+    gap: 1rem;
+}
+
+.speaker-edit-card-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.speaker-edit-heading {
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 1rem;
+}
+
+.speaker-edit-subheading {
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.speaker-edit-remove {
+    background: none;
+    border: none;
+    color: #dc2626;
+    font-weight: 500;
+    font-size: 0.85rem;
+    border-radius: 0.375rem;
+    padding: 0.25rem 0.65rem;
+    cursor: pointer;
+    transition: color 0.2s ease, background 0.2s ease;
+}
+
+.speaker-edit-remove:hover {
+    background: rgba(220, 38, 38, 0.08);
+    color: #b91c1c;
+}
+
+.speaker-edit-card-body {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.speaker-edit-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+}
+
+.speaker-edit-grid-photo {
+    grid-template-columns: minmax(280px, 1fr) minmax(200px, 1fr);
+}
+
+@media (max-width: 768px) {
+    .speaker-edit-grid-photo {
+        grid-template-columns: 1fr;
+    }
+}
+
+.speaker-edit-field label {
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 0.35rem;
+    display: block;
+    font-size: 0.9rem;
+}
+
+.speaker-edit-field input,
+.speaker-edit-field textarea {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.45rem;
+    padding: 0.6rem 0.75rem;
+    font-size: 0.9rem;
+    color: #0f172a;
+    background: #fff;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.speaker-edit-field input:focus,
+.speaker-edit-field textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.speaker-edit-field textarea {
+    min-height: 110px;
+    resize: vertical;
+}
+
+.speaker-photo-input-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.speaker-photo-preview-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.speaker-photo-preview {
+    width: 64px;
+    height: 64px;
+    border-radius: 9999px;
+    object-fit: cover;
+    border: 2px solid #bfdbfe;
+    display: none;
+}
+
+.speaker-photo-preview.show {
+    display: block;
+}
+
+.speaker-photo-help {
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.speakers-edit-empty {
+    border: 1px dashed #cbd5e1;
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    text-align: center;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.9rem;
+}
+
+.speakers-edit-empty-title {
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 0.35rem;
+}
+
+.speakers-edit-empty-subtitle {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
 .no-speakers-message {
     text-align: center;
     padding: 2rem;
