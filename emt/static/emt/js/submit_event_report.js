@@ -1792,11 +1792,7 @@ function renderEditableSpeakerCard(speaker, index) {
                         <textarea class="speaker-field-textarea" data-field="detailed_profile" rows="4" placeholder="Brief profile of the speaker" ${id ? '' : 'disabled'}>${escapeHtml(bio)}</textarea>
                     </div>
                 </div>
-                <div class="speaker-actions">
-                    <button type="button" class="speaker-save-btn" ${id ? '' : 'disabled'}>Save Changes</button>
-                    <button type="button" class="speaker-reset-btn" ${id ? '' : 'disabled'}>Reset</button>
-                    <span class="speaker-status" role="status" aria-live="polite"></span>
-                </div>
+                <div class="speaker-status" role="status" aria-live="polite"></div>
             </div>
         </div>
     `;
@@ -1847,51 +1843,19 @@ function updateSpeakerCache(updated) {
     }
 }
 
-function resetSpeakerCard(card, original) {
-    if (!original) return;
-    const statusEl = card.querySelector('.speaker-status');
-    const fileInput = card.querySelector('.speaker-photo-input');
-    card.dataset.removePhoto = 'false';
-    card.dataset.dirty = 'false';
-    card.classList.remove('speaker-card-dirty');
-
-    card.querySelectorAll('[data-field]').forEach(input => {
-        const key = input.dataset.field;
-        if (!key) return;
-        let value = original[key];
-        if (value === undefined) {
-            if (key === 'full_name') value = original.name;
-            else if (key === 'affiliation') value = original.organization;
-            else if (key === 'contact_email') value = original.contact;
-        }
-        value = value === null || value === undefined ? '' : String(value);
-        if (input.tagName === 'TEXTAREA') {
-            input.value = value;
-        } else {
-            input.value = value;
-        }
-    });
-
-    if (fileInput) {
-        if (card.dataset.photoObjectUrl) {
-            try { URL.revokeObjectURL(card.dataset.photoObjectUrl); } catch (e) {}
-            card.dataset.photoObjectUrl = '';
-        }
-        fileInput.value = '';
-    }
-    const originalPhoto = original.photo_url || original.photo || '';
-    updateSpeakerPhotoPreview(card, originalPhoto || '');
-    if (statusEl) statusEl.textContent = 'Changes reset';
-}
-
 function handleSpeakerSave(card) {
     const id = card.dataset.speakerId;
     const updateBase = window.SPEAKER_UPDATE_BASE || '';
-    if (!id || !updateBase) return;
-    const saveBtn = card.querySelector('.speaker-save-btn');
-    const resetBtn = card.querySelector('.speaker-reset-btn');
+    if (!id || !updateBase) return Promise.resolve();
+
+    if (card.__autoSaveTimer) {
+        try { clearTimeout(card.__autoSaveTimer); } catch (e) {}
+        card.__autoSaveTimer = null;
+    }
+
     const statusEl = card.querySelector('.speaker-status');
     const fileInput = card.querySelector('.speaker-photo-input');
+    const scheduleFn = typeof card.__scheduleAutoSave === 'function' ? card.__scheduleAutoSave : null;
 
     const formData = new FormData();
     card.querySelectorAll('[data-field]').forEach(input => {
@@ -1909,12 +1873,13 @@ function handleSpeakerSave(card) {
     }
 
     const url = `${updateBase}${id}/`;
-    if (statusEl) statusEl.textContent = 'Saving...';
+    if (statusEl) {
+        statusEl.textContent = 'Saving...';
+        statusEl.dataset.state = 'pending';
+    }
     card.dataset.saving = 'true';
-    if (saveBtn) saveBtn.disabled = true;
-    if (resetBtn) resetBtn.disabled = true;
 
-    fetch(url, {
+    return fetch(url, {
         method: 'POST',
         headers: {
             'X-CSRFToken': getCsrfToken(),
@@ -1936,19 +1901,33 @@ function handleSpeakerSave(card) {
         .then(data => {
             const updated = data.speaker || {};
             updateSpeakerCache(updated);
-            card.dataset.dirty = 'false';
-            card.dataset.removePhoto = 'false';
-            card.classList.remove('speaker-card-dirty');
-            if (fileInput) {
+
+            const hasQueuedChanges = card.dataset.pendingSave === 'true';
+            if (!hasQueuedChanges) {
+                card.dataset.dirty = 'false';
+                card.dataset.pendingSave = 'false';
+                card.dataset.removePhoto = 'false';
+                card.classList.remove('speaker-card-dirty');
+            }
+
+            const updatedPhoto = updated.photo_url || updated.photo || '';
+            if (!hasQueuedChanges && fileInput) {
                 if (card.dataset.photoObjectUrl) {
                     try { URL.revokeObjectURL(card.dataset.photoObjectUrl); } catch (e) {}
                     card.dataset.photoObjectUrl = '';
                 }
                 fileInput.value = '';
+                if (updatedPhoto) {
+                    updateSpeakerPhotoPreview(card, updatedPhoto);
+                }
             }
-            if (statusEl) statusEl.textContent = 'Saved';
-            try { showNotification('Speaker details updated successfully.', 'success'); } catch (e) {}
-            setTimeout(() => populateSpeakersFromProposal(), 100);
+
+            if (statusEl) {
+                statusEl.textContent = hasQueuedChanges
+                    ? 'Saving latest changes...'
+                    : 'All changes saved';
+                statusEl.dataset.state = hasQueuedChanges ? 'pending' : 'success';
+            }
         })
         .catch(err => {
             let message = 'Failed to save speaker';
@@ -1962,15 +1941,21 @@ function handleSpeakerSave(card) {
                     else message = String(val);
                 }
             }
-            if (statusEl) statusEl.textContent = message;
+            if (statusEl) {
+                statusEl.textContent = message;
+                statusEl.dataset.state = 'error';
+            }
             try { showNotification(message, 'error'); } catch (e) {}
         })
         .finally(() => {
             card.dataset.saving = 'false';
-            if (saveBtn) saveBtn.disabled = false;
-            if (resetBtn) resetBtn.disabled = false;
+            if (card.dataset.pendingSave === 'true' && typeof scheduleFn === 'function') {
+                scheduleFn();
+            }
         });
 }
+
+const SPEAKER_AUTO_SAVE_DELAY = 1200;
 
 function setupSpeakerCardEditors(container) {
     const updateBase = window.SPEAKER_UPDATE_BASE || '';
@@ -1980,8 +1965,6 @@ function setupSpeakerCardEditors(container) {
         const statusEl = card.querySelector('.speaker-status');
         const fileInput = card.querySelector('.speaker-photo-input');
         const removeBtn = card.querySelector('.speaker-photo-remove');
-        const saveBtn = card.querySelector('.speaker-save-btn');
-        const resetBtn = card.querySelector('.speaker-reset-btn');
         const inputs = card.querySelectorAll('.speaker-field-input, .speaker-field-textarea');
         const canEdit = Boolean(id && updateBase);
 
@@ -1993,21 +1976,54 @@ function setupSpeakerCardEditors(container) {
             }
             if (removeBtn) removeBtn.disabled = true;
             if (fileInput) fileInput.disabled = true;
-            if (saveBtn) saveBtn.disabled = true;
-            if (resetBtn) resetBtn.disabled = true;
             inputs.forEach(input => input.disabled = true);
             return;
         }
 
-        const cache = window.SPEAKER_CACHE || {};
-        const original = cache[String(id)] ? JSON.parse(JSON.stringify(cache[String(id)])) : null;
-        card.__originalSpeaker = original;
         card.dataset.removePhoto = 'false';
+        card.dataset.dirty = card.dataset.dirty === 'true' ? 'true' : 'false';
+        card.dataset.pendingSave = 'false';
+        card.dataset.saving = 'false';
+        card.__autoSaveTimer = null;
+        card.classList.remove('speaker-card-dirty');
+        if (statusEl) {
+            statusEl.textContent = 'All changes saved';
+            statusEl.dataset.state = 'success';
+        }
+
+        const scheduleAutoSave = () => {
+            if (card.__autoSaveTimer) {
+                try { clearTimeout(card.__autoSaveTimer); } catch (e) {}
+            }
+
+            if (card.dataset.saving === 'true') {
+                card.dataset.pendingSave = 'true';
+                card.__autoSaveTimer = null;
+                return;
+            }
+
+            card.__autoSaveTimer = window.setTimeout(() => {
+                card.__autoSaveTimer = null;
+                if (card.dataset.dirty === 'true') {
+                    card.dataset.pendingSave = 'false';
+                    handleSpeakerSave(card);
+                } else {
+                    card.dataset.pendingSave = 'false';
+                }
+            }, SPEAKER_AUTO_SAVE_DELAY);
+        };
+
+        card.__scheduleAutoSave = scheduleAutoSave;
 
         const markDirty = () => {
             card.dataset.dirty = 'true';
+            card.dataset.pendingSave = 'true';
             card.classList.add('speaker-card-dirty');
-            if (statusEl) statusEl.textContent = 'Unsaved changes';
+            if (statusEl) {
+                statusEl.textContent = 'Saving pending changes...';
+                statusEl.dataset.state = 'pending';
+            }
+            scheduleAutoSave();
         };
 
         inputs.forEach(input => {
@@ -2021,6 +2037,21 @@ function setupSpeakerCardEditors(container) {
                     }
                 }
                 markDirty();
+            });
+
+            input.addEventListener('blur', () => {
+                if (card.dataset.dirty === 'true') {
+                    if (card.dataset.saving === 'true') {
+                        card.dataset.pendingSave = 'true';
+                        return;
+                    }
+                    if (card.__autoSaveTimer) {
+                        try { clearTimeout(card.__autoSaveTimer); } catch (e) {}
+                        card.__autoSaveTimer = null;
+                    }
+                    card.dataset.pendingSave = 'false';
+                    handleSpeakerSave(card);
+                }
             });
         });
 
@@ -2057,22 +2088,6 @@ function setupSpeakerCardEditors(container) {
                 }
                 updateSpeakerPhotoPreview(card, '');
                 markDirty();
-            });
-        }
-
-        if (saveBtn) {
-            saveBtn.addEventListener('click', event => {
-                event.preventDefault();
-                if (card.dataset.saving === 'true') return;
-                handleSpeakerSave(card);
-            });
-        }
-
-        if (resetBtn) {
-            resetBtn.addEventListener('click', event => {
-                event.preventDefault();
-                if (card.dataset.saving === 'true') return;
-                resetSpeakerCard(card, original);
             });
         }
     });

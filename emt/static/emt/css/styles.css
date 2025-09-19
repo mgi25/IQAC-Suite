@@ -1854,8 +1854,8 @@ textarea {
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     border: 1px solid #e2e8f0;
     border-radius: 0.5rem;
-    padding: 1.5rem;
-    margin: 0.5rem 0;
+    padding: 1.25rem;
+    margin: 0.35rem 0;
 }
 
 .speaker-reference-item {
@@ -1924,25 +1924,25 @@ textarea {
 .speakers-list {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.6rem;
 }
 
-.speaker-card { 
-    display: flex; 
-    gap: 1rem; 
-    align-items: stretch; 
+.speaker-card {
+    display: flex;
+    gap: 0.75rem;
+    align-items: stretch;
 }
 
 .speakers-editable {
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 0.85rem;
 }
 
 .speaker-card-editable {
     border: 1px solid #e2e8f0;
     border-radius: 0.75rem;
-    padding: 1rem;
+    padding: 0.875rem;
     background: #ffffff;
     align-items: flex-start;
 }
@@ -2103,55 +2103,23 @@ textarea {
     grid-column: 1 / -1;
 }
 
-.speaker-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    margin-top: 0.5rem;
-}
-
-.speaker-save-btn,
-.speaker-reset-btn {
-    border-radius: 0.5rem;
-    padding: 0.45rem 1.1rem;
-    font-weight: 600;
-    cursor: pointer;
-    border: none;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.speaker-save-btn {
-    background: #2563eb;
-    color: #ffffff;
-    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
-}
-
-.speaker-save-btn:disabled {
-    background: #93c5fd;
-    box-shadow: none;
-    cursor: not-allowed;
-}
-
-.speaker-reset-btn {
-    background: #f1f5f9;
-    color: #1e293b;
-    border: 1px solid #e2e8f0;
-}
-
-.speaker-reset-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
 .speaker-status {
     font-size: 0.85rem;
     color: #475569;
-    min-width: 140px;
+    margin-top: 0.35rem;
 }
 
-.speaker-card-dirty .speaker-status {
+.speaker-status[data-state="pending"],
+.speaker-status[data-state="saving"] {
     color: #b45309;
+}
+
+.speaker-status[data-state="success"] {
+    color: #15803d;
+}
+
+.speaker-status[data-state="error"] {
+    color: #b91c1c;
 }
 
 .speaker-card-readonly .speaker-photo-remove {
