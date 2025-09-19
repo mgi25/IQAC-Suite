@@ -295,6 +295,33 @@ def _save_speakers(proposal, data, files):
             )
 
 
+def _serialize_speaker(speaker: SpeakerProfile) -> dict:
+    photo_url = ""
+    if speaker.photo:
+        try:
+            photo_url = speaker.photo.url
+        except ValueError:
+            photo_url = ""
+    return {
+        "id": speaker.id,
+        "full_name": speaker.full_name,
+        "name": speaker.full_name,
+        "designation": speaker.designation,
+        "affiliation": speaker.affiliation,
+        "organization": speaker.affiliation,
+        "contact": speaker.contact_email,
+        "contact_email": speaker.contact_email,
+        "contact_number": speaker.contact_number,
+        "linkedin_url": speaker.linkedin_url,
+        "linkedin": speaker.linkedin_url,
+        "detailed_profile": speaker.detailed_profile,
+        "profile": speaker.detailed_profile,
+        "bio": speaker.detailed_profile,
+        "photo": photo_url,
+        "photo_url": photo_url,
+    }
+
+
 def _parse_sdg_text(text: str):
     """Extract SDGGoal IDs from free text like 'SDG3: Good Health, SDG4: Education' or names.
     Returns a queryset of matching SDGGoal objects.
@@ -486,17 +513,7 @@ def submit_proposal(request, pk=None):
             act["date"] = act["date"].isoformat()
 
     speakers = (
-        list(
-            proposal.speakers.values(
-                "full_name",
-                "designation",
-                "affiliation",
-                "contact_email",
-                "contact_number",
-                "linkedin_url",
-                "detailed_profile",
-            )
-        )
+        [_serialize_speaker(sp) for sp in proposal.speakers.all()]
         if proposal
         else []
     )
@@ -1646,6 +1663,60 @@ def autosave_event_report(request):
 
 
 @login_required
+@require_http_methods(["POST"])
+def api_update_speaker(request, proposal_id, speaker_id):
+    proposal = get_object_or_404(EventProposal, id=proposal_id)
+    if not (
+        proposal.submitted_by == request.user
+        or request.user.has_perm("emt.change_eventreport")
+        or request.user.has_perm("emt.change_speakerprofile")
+    ):
+        return JsonResponse({"success": False, "error": "Forbidden"}, status=403)
+
+    speaker = get_object_or_404(SpeakerProfile, id=speaker_id, proposal=proposal)
+
+    content_type = request.content_type or ""
+    if content_type.startswith("multipart/form-data") or content_type.startswith(
+        "application/x-www-form-urlencoded"
+    ):
+        data = request.POST.copy()
+        files = request.FILES
+    else:
+        try:
+            raw = request.body.decode("utf-8")
+            data = json.loads(raw) if raw else {}
+        except json.JSONDecodeError:
+            logger.debug("api_update_speaker invalid json: %s", raw)
+            return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
+        files = None
+
+    if hasattr(data, "copy"):
+        data = data.copy()
+
+    remove_flag = str(data.pop("remove_photo", "")).lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+    has_new_photo = bool(files and files.get("photo"))
+
+    form = SpeakerProfileForm(data or None, files, instance=speaker)
+    if not form.is_valid():
+        return JsonResponse({"success": False, "errors": form.errors}, status=400)
+
+    updated = form.save(commit=False)
+    if remove_flag and not has_new_photo:
+        if updated.photo:
+            updated.photo.delete(save=False)
+        updated.photo = None
+    updated.save()
+
+    return JsonResponse({"success": True, "speaker": _serialize_speaker(updated)})
+
+
+@login_required
 def api_organizations(request):
     q = request.GET.get("q", "").strip()
     org_type = request.GET.get(
@@ -2143,31 +2214,7 @@ def submit_event_report(request, proposal_id):
 
     # Fetch speakers data for editing
     speakers_qs = SpeakerProfile.objects.filter(proposal=proposal)
-    speakers_json = []
-    for speaker in speakers_qs:
-        photo_url = ""
-        if speaker.photo:
-            try:
-                photo_url = speaker.photo.url
-            except ValueError:
-                photo_url = ""
-
-        speakers_json.append(
-            {
-                "full_name": speaker.full_name,
-                "name": speaker.full_name,  # Backward compatibility
-                "designation": speaker.designation,
-                "affiliation": speaker.affiliation,
-                "organization": speaker.affiliation,  # Backward compatibility
-                "contact": speaker.contact_email,
-                "contact_email": speaker.contact_email,
-                "contact_number": speaker.contact_number,
-                "linkedin_url": speaker.linkedin_url,
-                "detailed_profile": speaker.detailed_profile,
-                "photo": photo_url,
-                "photo_url": photo_url,
-            }
-        )
+    speakers_json = [_serialize_speaker(speaker) for speaker in speakers_qs]
 
     # Get or create content sections for the report
     event_summary = None

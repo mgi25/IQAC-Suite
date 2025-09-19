@@ -381,6 +381,7 @@
         window.SDG_GOALS = {{ sdg_goals_list|default:'[]'|safe }};
         window.PROPOSAL_ACTIVITIES = {{ proposal_activities_json|safe }};
         window.EXISTING_SPEAKERS = {{ speakers_json|default:'[]'|safe }};
+        window.SPEAKER_UPDATE_BASE = "{% url 'emt:api_update_speaker' proposal.id 0 %}".split('0/')[0];
         window.ATTENDANCE_PRESENT = {{ attendance_present|default:0 }};
         window.ATTENDANCE_ABSENT = {{ attendance_absent|default:0 }};
         window.ATTENDANCE_VOLUNTEERS = {{ attendance_volunteers|default:0 }};
