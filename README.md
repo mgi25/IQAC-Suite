@@ -383,18 +383,7 @@ Replace `2025-2026` with the year you want to delete.
 
 ## Railway PostgreSQL Migration
 
-When you rotate to a fresh Railway PostgreSQL instance, update the Django app first:
-
-1. Copy `.env.example` if you have not already and set `DATABASE_URL` to the new Railway **External Connection** string.
-2. Apply migrations against the empty database:
-
-   ```bash
-   python manage.py migrate
-   ```
-
-3. Restart your deployment so the new connection string is picked up.
-
-If you also need to transfer the previous data set, use the provided `migrate_railway_pg.sh` script to copy records between two Railway-managed PostgreSQL databases.
+Use the provided `migrate_railway_pg.sh` script to migrate data between two Railway-managed PostgreSQL databases.
 
 1. Copy the example environment file and fill in values from Railway's `DATABASE_URL` for both old and new databases:
 
