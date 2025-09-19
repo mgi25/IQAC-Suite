@@ -2143,17 +2143,31 @@ def submit_event_report(request, proposal_id):
 
     # Fetch speakers data for editing
     speakers_qs = SpeakerProfile.objects.filter(proposal=proposal)
-    speakers_json = [
-        {
-            "full_name": s.full_name,
-            "name": s.full_name,  # Backward compatibility
-            "designation": s.designation,
-            "affiliation": s.affiliation,
-            "organization": s.affiliation,  # Backward compatibility
-            "contact": s.contact_email,
-        }
-        for s in speakers_qs
-    ]
+    speakers_json = []
+    for speaker in speakers_qs:
+        photo_url = ""
+        if speaker.photo:
+            try:
+                photo_url = speaker.photo.url
+            except ValueError:
+                photo_url = ""
+
+        speakers_json.append(
+            {
+                "full_name": speaker.full_name,
+                "name": speaker.full_name,  # Backward compatibility
+                "designation": speaker.designation,
+                "affiliation": speaker.affiliation,
+                "organization": speaker.affiliation,  # Backward compatibility
+                "contact": speaker.contact_email,
+                "contact_email": speaker.contact_email,
+                "contact_number": speaker.contact_number,
+                "linkedin_url": speaker.linkedin_url,
+                "detailed_profile": speaker.detailed_profile,
+                "photo": photo_url,
+                "photo_url": photo_url,
+            }
+        )
 
     # Get or create content sections for the report
     event_summary = None
