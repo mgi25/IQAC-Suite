@@ -1,3 +1,5 @@
+
+
 import os
 import shutil
 from datetime import timedelta, datetime
@@ -90,6 +92,169 @@ def safe_next(request, fallback="/"):
     if nxt and url_has_allowed_host_and_scheme(nxt, allowed_hosts={request.get_host()}):
         return nxt
     return resolve_url(fallback)
+@login_required
+def cdl_event_user_view(request):
+    """Unified CDL user page (UI only). Expects ?eventId=<id>."""
+    return render(request, "core/cdl_event_user_view.html")
+
+
+# ────────────────────────────────────────────────
+# Unified CDL Event APIs (UI support for cdl_event_user_view)
+# ────────────────────────────────────────────────
+@login_required
+@require_http_methods(["GET"])  # /api/cdl/event/<proposal_id>/details/
+def api_cdl_event_details(request, proposal_id:int):
+    try:
+        p = EventProposal.objects.select_related('organization').get(id=proposal_id)
+    except EventProposal.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Event not found"}, status=404)
+    date = None
+    if p.event_start_date:
+        date = p.event_start_date.isoformat()
+    elif p.event_datetime:
+        try:
+            date = p.event_datetime.date().isoformat()
+        except Exception:
+            date = None
+    return JsonResponse({
+        "success": True,
+        "id": p.id,
+        "title": p.event_title,
+        "date": date,
+        "location": p.venue,
+        "organization": getattr(p.organization, 'name', None),
+        "description": (getattr(getattr(p, 'objectives', None), 'content', '') or '').strip(),
+    })
+
+
+@login_required
+@require_http_methods(["GET"])  # /api/cdl/event/<proposal_id>/content/
+def api_cdl_event_content(request, proposal_id:int):
+    try:
+        p = EventProposal.objects.get(id=proposal_id)
+    except EventProposal.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Event not found"}, status=404)
+    # Compose simple HTML using available related content models
+    parts = []
+    need = getattr(p, 'need_analysis', None)
+    if need and getattr(need, 'content', '').strip():
+        parts.append(f"<h3>Need Analysis</h3><div>{need.content}</div>")
+    obj = getattr(p, 'objectives', None)
+    if obj and getattr(obj, 'content', '').strip():
+        parts.append(f"<h3>Objectives</h3><div>{obj.content}</div>")
+    out = getattr(p, 'expected_outcomes', None)
+    if out and getattr(out, 'content', '').strip():
+        parts.append(f"<h3>Expected Outcomes</h3><div>{out.content}</div>")
+    html = "\n".join(parts) or "<div>No additional content.</div>"
+    return JsonResponse({"success": True, "html": html})
+
+
+@login_required
+@require_http_methods(["GET"])  # /api/cdl/event/<proposal_id>/assignments/
+def api_cdl_event_assignments(request, proposal_id:int):
+    try:
+        p = EventProposal.objects.get(id=proposal_id)
+    except EventProposal.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Event not found"}, status=404)
+    from emt.models import CDLTaskAssignment as _Task
+    tasks = (
+        _Task.objects.filter(proposal=p)
+        .select_related('assignee')
+        .order_by('resource_key')
+    )
+    items = []
+    for t in tasks:
+        items.append({
+            'resource': t.resource_key,
+            'label': (t.label or t.resource_key.replace('_',' ').title()),
+            'assignee_id': t.assignee_id,
+            'assignee_name': ((t.assignee.get_full_name() or t.assignee.username) if t.assignee_id else None),
+        })
+    return JsonResponse({"success": True, "items": items})
+
+
+@login_required
+@require_http_methods(["GET"])  # /api/cdl/event/<proposal_id>/process/
+def api_cdl_event_process(request, proposal_id:int):
+    try:
+        p = EventProposal.objects.get(id=proposal_id)
+    except EventProposal.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Event not found"}, status=404)
+    from emt.models import CDLTaskAssignment as _Task
+    tasks = _Task.objects.filter(proposal=p).order_by('resource_key')
+    items = [{ 'label': (t.label or t.resource_key.replace('_',' ').title()), 'status': t.status } for t in tasks]
+    return JsonResponse({"success": True, "items": items})
+
+
+@login_required
+@require_http_methods(["GET"])  # /api/cdl/events/my-support/
+def api_cdl_events_my_support(request):
+    me = request.user
+    qs = (
+        EventProposal.objects
+        .filter(submitted_by=me, cdl_support__needs_support=True)
+        .select_related('organization')
+        .order_by('-created_at')
+    )
+    items = []
+    for p in qs[:200]:
+        # Pick a date sensibly
+        date = None
+        if p.event_start_date:
+            date = p.event_start_date.isoformat()
+        elif p.event_datetime:
+            try:
+                date = p.event_datetime.date().isoformat()
+            except Exception:
+                date = None
+        # Description preview from objectives or pos_pso
+        desc = (getattr(getattr(p,'objectives',None),'content','') or p.pos_pso or '')
+        if desc:
+            desc = (desc[:180] + '…') if len(desc) > 180 else desc
+        items.append({
+            'id': p.id,
+            'title': p.event_title,
+            'date': date,
+            'status': p.status,
+            'description': desc,
+            'organization': getattr(p.organization, 'name', None),
+        })
+    return JsonResponse({'success': True, 'items': items})
+
+
+@login_required
+@require_http_methods(["GET"])  # /api/cdl/event/<proposal_id>/documents/
+def api_cdl_event_documents(request, proposal_id:int):
+    try:
+        p = EventProposal.objects.get(id=proposal_id)
+    except EventProposal.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Event not found"}, status=404)
+    s = getattr(p, 'cdl_support', None)
+    if not s or not s.needs_support:
+        return JsonResponse({'success': True, 'documents': {}})
+    docs = {
+        'poster_required': bool(s.poster_required),
+        'poster': {
+            'choice': s.poster_choice,
+            'date': s.poster_date.isoformat() if s.poster_date else None,
+            'time': s.poster_time,
+            'venue': s.poster_venue,
+            'design_link': s.poster_design_link,
+            'title': s.poster_event_title,
+            'summary': s.poster_summary,
+            'resource_person': s.resource_person_name,
+            'resource_person_designation': s.resource_person_designation,
+        },
+        'certificates_required': bool(s.certificates_required),
+        'certificates': {
+            'help': bool(s.certificate_help),
+            'choice': s.certificate_choice,
+            'design_link': s.certificate_design_link,
+        },
+        'other_services': s.other_services or [],
+    }
+    return JsonResponse({'success': True, 'documents': docs})
+
 
 
 # Reuse the ModelForm defined in core.forms so it can be imported from here for tests
@@ -6072,8 +6237,146 @@ from django.views.decorators.http import require_http_methods
 
 @login_required
 def cdl_support_detail_page(request):
-    """Render support details shell; data loaded via AJAX using query param eventId."""
+    """Render support details shell; data loaded via AJAX using query param eventId.
+    Also mark a session hint if user is CDL Head to control Assign button visibility.
+    """
+    try:
+        from .models import OrganizationType, RoleAssignment
+        heads = RoleAssignment.objects.filter(organization__org_type__name__iexact='CDL', role__name__icontains='head', user=request.user)
+        if heads.exists():
+            request.session['role'] = 'cdl_head'
+    except Exception:
+        pass
     return render(request, "core/cdl_support.html")
+
+@login_required
+def cdl_assign_tasks_page(request, proposal_id:int):
+    """Assign Tasks page.
+    - Heads/Admins: full board to assign members and create/edit tasks.
+    - Employees/Members: restricted "employee mode" to update ONLY their task status.
+
+    Accepts query param eventId (redundant with proposal_id) and optional mode=employee to force employee POV.
+    """
+    # Figure out if current user is CDL Head/Admin
+    is_cdl_head = False
+    try:
+        from .models import OrganizationType, RoleAssignment
+        heads = RoleAssignment.objects.filter(
+            organization__org_type__name__iexact='CDL',
+            role__name__icontains='head',
+            user=request.user,
+        )
+        is_cdl_head = heads.exists() or request.user.is_superuser
+        if is_cdl_head:
+            request.session['role'] = 'cdl_head'
+            request.session['cdl_assign_board'] = True
+    except Exception:
+        is_cdl_head = request.user.is_superuser
+
+    # Employee POV either when explicitly requested or when user isn't a head
+    employee_mode = (request.GET.get('mode') == 'employee') or (not is_cdl_head)
+    return render(request, "core/cdl_assign_tasks.html", {
+        'proposal_id': proposal_id,
+        'employee_mode': employee_mode,
+    })
+
+# ────────────────────────────────────────────────────────────────
+#  CDL Communication Page & APIs
+# ────────────────────────────────────────────────────────────────
+@login_required
+def cdl_communication_page(request):
+    """Render the communication log page. Accessible to CDL head and employees/members."""
+    # Basic role check similar to work dashboard
+    is_allowed = request.user.is_superuser or request.user.groups.filter(name="CDL_MEMBER").exists()
+    if not is_allowed:
+        try:
+            from .models import RoleAssignment
+            for ra in RoleAssignment.objects.filter(user=request.user).select_related('role','organization','organization__org_type'):
+                role_name = (ra.role.name if ra.role else '').lower()
+                org_type = (ra.organization.org_type.name if ra.organization and ra.organization.org_type else '').lower()
+                if org_type == 'cdl' and any(k in role_name for k in ['head','employee','member','team']):
+                    is_allowed = True; break
+        except Exception:
+            pass
+
+    # Additional conditional: allow event proposer or faculty-incharge for a specific event
+    # if the event has any CDL related support requirements (poster/certificates) so they can coordinate.
+    if not is_allowed:
+        event_id = request.GET.get('eventId') or request.GET.get('proposal_id')
+        if event_id and event_id.isdigit():
+            from emt.models import EventProposal  # local import to avoid circulars when app not loaded
+            try:
+                ep = (EventProposal.objects
+                      .select_related('organization')
+                      .prefetch_related('faculty_incharges')
+                      .get(id=int(event_id)))
+                # Determine if CDL support flags exist via related cdl_support (if present) or fallbacks used earlier in APIs
+                cdl_flags = False
+                try:
+                    cs = getattr(ep, 'cdl_support', None)
+                    if cs and (getattr(cs, 'poster_required', False) or getattr(cs, 'certificates_required', False)):
+                        cdl_flags = True
+                except Exception:
+                    pass
+                # If we cannot find cdl_support, still allow if proposal status is finalized (assuming potential design assets)
+                if not cdl_flags and ep.status in ('finalized','approved'):
+                    cdl_flags = True
+                if cdl_flags:
+                    # Is the user proposer or faculty incharge?
+                    if ep.submitted_by_id == request.user.id or ep.faculty_incharges.filter(id=request.user.id).exists():
+                        is_allowed = True
+            except EventProposal.DoesNotExist:
+                pass
+    if not is_allowed:
+        return HttpResponseForbidden()
+    return render(request, 'core/cdl_communication.html')
+
+from django.views.decorators.http import require_http_methods
+from django.core.paginator import Paginator
+from django.forms.models import model_to_dict
+from .models import CDLCommunicationMessage
+
+@login_required
+@require_http_methods(["GET","POST"])
+def api_cdl_communication(request):
+    """List or create communication messages.
+    GET params: page (optional), page_size (default 100 to return most recent quickly)
+    POST expects: comment (text) and optional attachment file
+    Returns JSON suitable for frontend consumption.
+    """
+    if request.method == 'POST':
+        comment = (request.POST.get('comment') or '').strip()
+        if not comment and 'attachment' not in request.FILES:
+            return JsonResponse({'success': False, 'error': 'Empty message'}, status=400)
+        msg = CDLCommunicationMessage.objects.create(
+            user=request.user,
+            comment=comment or '(attachment)',
+            attachment=request.FILES.get('attachment')
+        )
+        return JsonResponse(_comm_dict(msg), status=201)
+    # GET
+    qs = CDLCommunicationMessage.objects.all().order_by('-created_at')
+    page = int(request.GET.get('page',1))
+    page_size = min(int(request.GET.get('page_size',100)), 500)
+    paginator = Paginator(qs, page_size)
+    page_obj = paginator.get_page(page)
+    return JsonResponse({
+        'success': True,
+        'messages': [_comm_dict(m) for m in page_obj.object_list],
+        'page': page_obj.number,
+        'num_pages': paginator.num_pages,
+        'has_next': page_obj.has_next(),
+    })
+
+def _comm_dict(m:CDLCommunicationMessage):
+    return {
+        'id': m.id,
+        'user_id': m.user_id,
+        'user_username': m.user.username,
+        'comment': m.comment,
+        'created_at': m.created_at.isoformat(),
+        'attachment_url': m.attachment.url if m.attachment else None,
+    }
 
 @login_required
 @require_http_methods(["GET"])  # /api/cdl/support/<proposal_id>/
@@ -6187,6 +6490,229 @@ def api_cdl_support_assign(request, proposal_id:int):
     return JsonResponse({"success": True})
 
 @login_required
+@require_http_methods(["GET"])  # /api/cdl/support/<proposal_id>/resources/
+def api_cdl_support_resources(request, proposal_id:int):
+    """Return dynamic resource list for an event, CDL members, and existing assignments.
+    Sources:
+      - CDLSupport.poster_required/certificates_required/other_services
+      - Members: RoleAssignment where organization.org_type.name == 'CDL' and role like employee/member
+      - Existing per-resource assignments (emt.CDLTaskAssignment)
+    """
+    try:
+        p = EMTEventProposal.objects.select_related('cdl_support').get(id=proposal_id)
+    except EMTEventProposal.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Event not found"}, status=404)
+
+    s = getattr(p, 'cdl_support', None)
+    resources = []
+    if getattr(s, 'poster_required', False):
+        resources.append({ 'key':'poster', 'label':'Poster' })
+    if getattr(s, 'certificates_required', False):
+        resources.append({ 'key':'certificates', 'label':'Certificates' })
+    try:
+        for item in (getattr(s, 'other_services', []) or []):
+            key = str(item).strip().lower().replace(' ', '_')
+            label = str(item).strip()
+            if key:
+                resources.append({ 'key': key, 'label': label })
+    except Exception:
+        pass
+
+    # CDL members via RoleAssignment
+    from .models import OrganizationType, RoleAssignment
+    org_types = OrganizationType.objects.filter(name__iexact="CDL")
+    role_asg = RoleAssignment.objects.filter(organization__org_type__in=org_types).select_related('user','role')
+    members = []
+    seen = set()
+    for ra in role_asg:
+        rn = (ra.role.name or '').lower()
+        if ('employee' in rn) or ('member' in rn):
+            uid = ra.user.id
+            if uid in seen:
+                continue
+            seen.add(uid)
+            members.append({ 'id': uid, 'name': ra.user.get_full_name() or ra.user.username })
+
+    # Existing assignments
+    from emt.models import CDLTaskAssignment as _Task
+    existing = {}
+    task_objs = []
+    qs_tasks = _Task.objects.filter(proposal=p).select_related('assignee')
+    # Optional filter: employee POV should see only their tasks
+    mode = (request.GET.get('mode') or '').lower()
+    assignee = (request.GET.get('assignee') or '').lower()
+    if mode == 'employee' or assignee in ('me', 'self'):
+        qs_tasks = qs_tasks.filter(assignee=request.user)
+
+    for t in qs_tasks:
+        existing[t.resource_key] = { 'user_id': t.assignee_id, 'name': (t.assignee.get_full_name() or t.assignee.username) if t.assignee_id else None }
+        task_objs.append({
+            'id': t.id,
+            'resource': t.resource_key,
+            'label': t.label or t.resource_key.replace('_',' ').title(),
+            'status': t.status,
+            'assignee_id': t.assignee_id,
+            'assignee_name': ((t.assignee.get_full_name() or t.assignee.username) if t.assignee_id else None),
+        })
+    # Merge any custom task keys into resources list (non-destructive for clients already merging)
+    for key in list(existing.keys()):
+        if not any(r['key']==key for r in resources):
+            resources.append({ 'key': key, 'label': key.replace('_',' ').title(), 'custom': True })
+
+    # If employee POV, restrict members to self only (UI safety; server also enforces in CRUD)
+    if mode == 'employee' or assignee in ('me', 'self'):
+        members = [{ 'id': request.user.id, 'name': request.user.get_full_name() or request.user.username }]
+
+    return JsonResponse({ 'success': True, 'resources': resources, 'members': members, 'assignments': existing, 'tasks': task_objs })
+
+@login_required
+@require_http_methods(["POST"])  # /api/cdl/support/<proposal_id>/task-assignments/
+def api_cdl_save_task_assignments(request, proposal_id:int):
+    """Save per-resource assignments. Payload:
+      { assignments: [ { resource: 'poster', user_id: 123 }, ... ] }
+    Upsert by (proposal, resource).
+    """
+    try:
+        p = EMTEventProposal.objects.get(id=proposal_id)
+    except EMTEventProposal.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Event not found"}, status=404)
+
+    try:
+        payload = json.loads(request.body or '{}')
+    except Exception:
+        payload = {}
+    items = payload.get('assignments') or []
+    to_unassign = payload.get('unassign') or []  # list of resource keys to remove
+
+    # Permission: CDL Head / Admin only
+    is_cdl_head = False
+    try:
+        from .models import OrganizationType, RoleAssignment
+        heads = RoleAssignment.objects.filter(organization__org_type__name__iexact='CDL', role__name__icontains='head', user=request.user)
+        is_cdl_head = heads.exists() or request.user.is_superuser
+    except Exception:
+        is_cdl_head = request.user.is_superuser
+    if not is_cdl_head:
+        return JsonResponse({"success": False, "error": "Not allowed"}, status=403)
+
+    from django.contrib.auth.models import User
+    from emt.models import CDLTaskAssignment as _Task
+    saved = []
+    for it in items:
+        res_key = (it.get('resource') or '').strip()
+        uid = it.get('user_id')
+        if not res_key or not uid:
+            continue
+        try:
+            user = User.objects.get(id=int(uid))
+        except Exception:
+            continue
+        obj, _ = _Task.objects.update_or_create(
+            proposal=p,
+            resource_key=res_key,
+            defaults={ 'assignee': user, 'assigned_by': request.user },
+        )
+        saved.append({ 'resource': res_key, 'user_id': user.id })
+
+    # Handle unassign deletions
+    removed = []
+    if isinstance(to_unassign, list) and to_unassign:
+        qs = _Task.objects.filter(proposal=p, resource_key__in=[(str(k) or '').strip() for k in to_unassign])
+        removed = list(qs.values_list('resource_key', flat=True))
+        qs.delete()
+
+    return JsonResponse({ 'success': True, 'saved': saved, 'removed': removed })
+
+@login_required
+@require_http_methods(["POST","PUT","DELETE"])  # /api/cdl/support/<proposal_id>/tasks/
+def api_cdl_tasks_crud(request, proposal_id:int):
+    """CRUD for CDL per-resource tasks.
+    POST {resource, label?, assignee_id?, status?} -> create/update (by resource key)
+    PUT  {id, label?, assignee_id?, status?} -> update
+    DELETE {id} or {resource} -> delete
+    """
+    try:
+        p = EMTEventProposal.objects.get(id=proposal_id)
+    except EMTEventProposal.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Event not found"}, status=404)
+
+    from emt.models import CDLTaskAssignment as _Task
+    from django.contrib.auth.models import User
+    payload = {}
+    try:
+        payload = json.loads(request.body or '{}')
+    except Exception:
+        payload = {}
+
+    # Permission model: Heads/Admins can create/update/delete; Employees can only update STATUS of their own tasks
+    is_cdl_head = False
+    try:
+        from .models import OrganizationType, RoleAssignment
+        heads = RoleAssignment.objects.filter(organization__org_type__name__iexact='CDL', role__name__icontains='head', user=request.user)
+        is_cdl_head = heads.exists() or request.user.is_superuser
+    except Exception:
+        is_cdl_head = request.user.is_superuser
+
+    if request.method == 'POST':
+        if not is_cdl_head:
+            return JsonResponse({'success': False, 'error': 'Not allowed'}, status=403)
+        res_key = (payload.get('resource') or '').strip()
+        if not res_key:
+            return JsonResponse({'success': False, 'error': 'resource is required'}, status=400)
+        label = (payload.get('label') or '').strip()
+        assignee_id = payload.get('assignee_id')
+        status = (payload.get('status') or _Task.Status.ASSIGNED)
+        assignee = None
+        if assignee_id:
+            try: assignee = User.objects.get(id=int(assignee_id))
+            except Exception: assignee = None
+        obj, _ = _Task.objects.update_or_create(
+            proposal=p, resource_key=res_key,
+            defaults={'label': label, 'assignee': assignee, 'status': status, 'assigned_by': request.user}
+        )
+        return JsonResponse({'success': True, 'task': {
+            'id': obj.id, 'resource': obj.resource_key, 'label': obj.label or obj.resource_key, 'status': obj.status,
+            'assignee_id': obj.assignee_id, 'assignee_name': (obj.assignee.get_full_name() or obj.assignee.username) if obj.assignee_id else None
+        }})
+
+    if request.method == 'PUT':
+        tid = payload.get('id')
+        try:
+            obj = _Task.objects.get(id=int(tid), proposal=p)
+        except Exception:
+            return JsonResponse({'success': False, 'error': 'Task not found'}, status=404)
+        if not is_cdl_head:
+            # Employees can only update their own task status
+            if obj.assignee_id != request.user.id:
+                return JsonResponse({'success': False, 'error': 'Not allowed'}, status=403)
+            if 'status' in payload and payload['status'] is not None:
+                obj.status = payload['status']
+        else:
+            for fld in ('label','status'):
+                if fld in payload and payload[fld] is not None:
+                    setattr(obj, fld, payload[fld])
+            if 'assignee_id' in payload:
+                aid = payload.get('assignee_id')
+                if aid:
+                    try: obj.assignee = User.objects.get(id=int(aid))
+                    except Exception: obj.assignee = None
+                else:
+                    obj.assignee = None
+        obj.save()
+        return JsonResponse({'success': True})
+
+    if request.method == 'DELETE':
+        if not is_cdl_head:
+            return JsonResponse({'success': False, 'error': 'Not allowed'}, status=403)
+        tid = payload.get('id'); res_key = payload.get('resource')
+        qs = _Task.objects.filter(proposal=p)
+        if tid: qs = qs.filter(id=int(tid))
+        elif res_key: qs = qs.filter(resource_key=str(res_key))
+        else: return JsonResponse({'success': False, 'error': 'id or resource required'}, status=400)
+        deleted = list(qs.values_list('id', flat=True)); qs.delete()
+        return JsonResponse({'success': True, 'deleted': deleted})
+
+@login_required
 @require_http_methods(["GET"])  # /api/cdl/member/work/
 def api_cdl_member_work(request):
     """Return proposals assigned to the logged-in member via report_assigned_to.
@@ -6285,6 +6811,29 @@ def api_cdl_member_data(request):
     due_today = 0
     from datetime import date as _date
     today = _date.today()
+    # Also include per-resource assignments (fine-grained tasks)
+    from emt.models import CDLTaskAssignment as _Task
+    task_qs = _Task.objects.filter(assignee=user).select_related('proposal')
+    task_by_proposal = {}
+    for t in task_qs:
+        d = best_date(t.proposal)
+        due_iso = d.isoformat() if d else None
+        label = (t.resource_key or '').replace('_',' ').title()
+        work.append({
+            'id': t.proposal_id,
+            'event': t.proposal.event_title,
+            'type': t.resource_key or 'task',
+            'priority': 'Medium',
+            'due_date': due_iso,
+            'status': (t.status or 'assigned'),
+            'rev': 0,
+            'created_at': t.proposal.created_at.isoformat(),
+            'assigned_at': t.assigned_at.isoformat() if t.assigned_at else None,
+            'assigned_role': label,
+            'assigned_by': (t.assigned_by.get_full_name() or t.assigned_by.username) if t.assigned_by else None,
+        })
+        task_by_proposal.setdefault(t.proposal_id, set()).add(t.resource_key)
+
     for p in work_qs:
         d = best_date(p)
         due_iso = d.isoformat() if d else None
@@ -6292,6 +6841,9 @@ def api_cdl_member_data(request):
             due_today += 1
         # Pull assignment info if present
         _asg = getattr(p, 'cdl_assignment', None)
+        # If detailed resource tasks exist for this proposal, skip generic item to avoid duplicates
+        if p.id in task_by_proposal:
+            continue
         work.append({
             'id': p.id,
             'event': p.event_title,
@@ -6306,17 +6858,19 @@ def api_cdl_member_data(request):
             'assigned_by': ((_asg.assigned_by.get_full_name() or _asg.assigned_by.username) if (_asg and _asg.assigned_by) else None),
         })
 
-    # Inbox (simple: those not yet accepted -> same as work for now)
+    # Inbox: show only items not yet accepted (status == 'assigned')
     inbox = []
     for w in work:
-        inbox.append({
-            'id': w['id'],
-            'title': w['event'],
-            'event': w['event'],
-            'type': w['type'],
-            'priority': w['priority'],
-            'due_date': w['due_date'],
-        })
+        if (w.get('status') or '').lower() == 'assigned':
+            inbox.append({
+                'id': w['id'],
+                'title': w['event'],
+                'event': w['event'],
+                'type': w['type'],
+                'priority': w['priority'],
+                'due_date': w['due_date'],
+                'status': 'assigned',
+            })
 
     # Calendar datasets
     events_all_qs = (
@@ -6363,6 +6917,67 @@ def api_cdl_member_data(request):
         'events_assigned': events_assigned,
     }
     return JsonResponse(data)
+
+
+@login_required
+@require_http_methods(["POST"])  # /api/cdl/member/accept/
+def api_cdl_member_accept(request):
+    """Mark a CDL assignment as accepted by the logged-in member.
+
+    Body JSON: { "proposal_id": <int> }
+    Transitions CDLAssignment.status from 'assigned' -> 'pending'.
+    If no CDLAssignment exists but legacy report_assigned_to matches the user,
+    create one for consistency and set to 'pending'.
+    """
+    import json
+    try:
+        payload = json.loads(request.body or '{}')
+        pid = int(payload.get('proposal_id'))
+    except Exception:
+        return JsonResponse({'success': False, 'error': 'Invalid payload'}, status=400)
+
+    from emt.models import EMTEventProposal as _Proposal, CDLAssignment as _CDLAssignment
+    try:
+        prop = _Proposal.objects.get(id=pid)
+    except _Proposal.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Proposal not found'}, status=404)
+
+    # The acting user must be the assignee (via CDLAssignment or legacy field)
+    me = request.user
+    asg = _CDLAssignment.objects.filter(proposal=prop, assignee=me).first()
+    if not asg:
+        # Allow legacy fallback if proposal.report_assigned_to == me
+        if getattr(prop, 'report_assigned_to_id', None) == me.id:
+            asg = _CDLAssignment.objects.create(
+                proposal=prop,
+                assignee=me,
+                assigned_by=None,
+                role=None,
+                status=_CDLAssignment.Status.ASSIGNED,
+            )
+        else:
+            # NEW: Allow accept if user has any per-resource task for this proposal
+            try:
+                from emt.models import CDLTaskAssignment as _Task
+                has_task = _Task.objects.filter(proposal=prop, assignee=me).exists()
+            except Exception:
+                has_task = False
+            if has_task:
+                asg = _CDLAssignment.objects.create(
+                    proposal=prop,
+                    assignee=me,
+                    assigned_by=None,
+                    role=None,
+                    status=_CDLAssignment.Status.ASSIGNED,
+                )
+            else:
+                return JsonResponse({'success': False, 'error': 'Not assigned to you'}, status=403)
+
+    # Transition to 'pending' when accepted
+    asg.status = _CDLAssignment.Status.PENDING
+    asg.save(update_fields=['status'])
+
+    return JsonResponse({'success': True, 'status': asg.status})
 
 
 # ────────────────────────────────────────────────────────────────
@@ -6421,50 +7036,6 @@ def run_ai_validation(batch):
 
 
 @login_required
-def post_event_certificates_tab(request, proposal_id):
-    proposal = get_object_or_404(EventProposal, pk=proposal_id)
-    if not user_can_access_proposal(request, proposal):
-        return HttpResponseForbidden()
-
-    if request.method == "POST" and "csv_file" in request.FILES:
-        form = CertificateBatchUploadForm(request.POST, request.FILES)
-        if form.is_valid():
-            batch = form.save(commit=False)
-            batch.proposal = proposal
-            batch.save()
-
-            import csv, io
-
-            file_data = io.StringIO(request.FILES["csv_file"].read().decode("utf-8"))
-            reader = csv.DictReader(file_data)
-            for row in reader:
-                CertificateEntry.objects.create(
-                    batch=batch,
-                    name=row.get("name", "").strip(),
-                    role=row.get("role", "OTHER").strip() or "OTHER",
-                    custom_role_text=row.get("custom", "").strip(),
-                )
-            run_ai_validation(batch)
-            messages.success(request, "Batch uploaded")
-            return redirect("post_event_certificates", proposal_id=proposal.id)
-    elif request.method == "POST" and request.POST.get("confirm_batch"):
-        batch = get_object_or_404(
-            CertificateBatch, pk=request.POST["confirm_batch"], proposal=proposal
-        )
-        for entry in batch.entries.filter(ai_valid=True):
-            entry.ready_for_cdl = True
-            entry.save()
-        messages.success(request, "Entries marked ready for CDL")
-        return redirect("post_event_certificates", proposal_id=proposal.id)
-    else:
-        form = CertificateBatchUploadForm()
-
-    batches = proposal.certificate_batches.all()
-    return render(
-        request,
-        "cdl/post_event_certificates.html",
-        {"proposal": proposal, "form": form, "batches": batches},
-    )
 
 
 @login_required

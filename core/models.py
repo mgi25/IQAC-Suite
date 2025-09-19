@@ -230,6 +230,26 @@ class Profile(models.Model):
         return f"{self.user.username} ({self.role})"
 
 # ───────────────────────────────
+#  CDL Communication Messages (top-level model)
+# ───────────────────────────────
+class CDLCommunicationMessage(models.Model):
+    """Simple communication log entry for CDL Communication page.
+
+    Optional link to a proposal/event (by external EMS/EMT id) can be added later.
+    For now it is a global CDL channel, grouped by date on UI.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='cdl_messages')
+    comment = models.TextField()
+    attachment = models.FileField(upload_to='cdl/comm_attachments/', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username}: {self.comment[:40]}"
+
+# ───────────────────────────────
 #  Reports
 # ───────────────────────────────
 
