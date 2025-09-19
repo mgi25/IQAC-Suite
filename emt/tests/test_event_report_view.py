@@ -381,28 +381,45 @@ const fillAttendanceCounts = extract('fillAttendanceCounts');
 
 let domReady = false;
 const speakersDisplay = {innerHTML: ''};
-const orgEl = {value:'', length:1, val:function(v){ if(v===undefined) return this.value; this.value=v; return this; }};
-const actualEl = {value:'', length:1, val:function(v){ if(v===undefined) return this.value; this.value=v; return this; }};
-const totalEl = {value:'', length:1, val:function(v){ if(v===undefined) return this.value; this.value=v; return this; }};
+const orgEl = {value:'', length:1, val:function(v){ if(v===undefined) return this.value; this.value=v; return this; }, text:function(v){ if(v===undefined) return this.value; this.value=v; return this; }};
+const actualEl = {value:'', length:1, val:function(v){ if(v===undefined) return this.value; this.value=v; return this; }, text:function(v){ if(v===undefined) return this.value; this.value=v; return this; }};
+const makeField = () => ({value:'', length:1, val:function(v){ if(v===undefined) return this.value; this.value=v; return this; }, text:function(v){ if(v===undefined) return this.value; this.value=v; return this; }});
+
+const elements = {
+  'speakers-display': speakersDisplay,
+  'attendance-modern': makeField(),
+  'num-participants-modern': makeField(),
+  'total-participants-modern': makeField(),
+  'num-volunteers-modern': makeField(),
+  'num-volunteers-hidden': makeField(),
+  'student-participants-modern': makeField(),
+  'faculty-participants-modern': makeField(),
+  'external-participants-modern': makeField(),
+};
 
 function $(sel){
   if(sel === '.form-grid') return {html:function(content){ setTimeout(()=>{domReady=true;},0); return this; }};
   if(!domReady) return {length:0, val:function(){}};
   if(sel === '#organizing-committee-modern') return orgEl;
   if(sel === '#actual-speakers-modern') return actualEl;
-  if(sel === '#total-participants-modern') return totalEl;
   return {length:0, val:function(){}};
 }
 
 global.$ = $;
 global.document = {
   readyState: 'complete',
-  getElementById: id => (domReady && id === 'speakers-display') ? speakersDisplay : null
+  getElementById: id => {
+    if(id === 'speakers-display') return domReady ? elements[id] : null;
+    return elements[id] || null;
+  }
 };
 global.window = {
   PROPOSAL_DATA: __PROPOSAL_DATA__,
   EXISTING_SPEAKERS: __EXISTING_SPEAKERS__,
-  ATTENDANCE_PRESENT: 10
+  ATTENDANCE_PRESENT: 10,
+  ATTENDANCE_ABSENT: 2,
+  ATTENDANCE_VOLUNTEERS: 3,
+  ATTENDANCE_COUNTS: { present: 10, absent: 2, volunteers: 3, total: 10, students: 6, faculty: 3, external: 1 }
 };
 
 eval(populateSpeakersFromProposal);
@@ -418,7 +435,13 @@ setTimeout(()=>{
     display: speakersDisplay.innerHTML,
     organizing: orgEl.value,
     actual: actualEl.value,
-    total: totalEl.value
+    total: elements['num-participants-modern'].value,
+    volunteers: elements['num-volunteers-modern'].value,
+    hiddenVolunteers: elements['num-volunteers-hidden'].value,
+    students: elements['student-participants-modern'].value,
+    faculty: elements['faculty-participants-modern'].value,
+    external: elements['external-participants-modern'].value,
+    summary: elements['attendance-modern'].value
   }));
 }, 20);
 """
@@ -436,4 +459,12 @@ setTimeout(()=>{
         self.assertIn("Proposer: Alice", data["organizing"])
         self.assertIn("Dr. Xavier", data["actual"])
         self.assertEqual("10", str(data["total"]))
+        self.assertEqual("3", str(data["volunteers"]))
+        self.assertEqual("3", str(data["hiddenVolunteers"]))
+        self.assertEqual("6", str(data["students"]))
+        self.assertEqual("3", str(data["faculty"]))
+        self.assertEqual("1", str(data["external"]))
+        self.assertIn("Present: 10", data["summary"])
+        self.assertIn("Absent: 2", data["summary"])
+        self.assertIn("Volunteers: 3", data["summary"])
 
