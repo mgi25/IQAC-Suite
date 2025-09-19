@@ -1621,16 +1621,48 @@ function fillActualSpeakers() {
 }
 
 function fillAttendanceCounts() {
-    const totalField = $('#total-participants-modern');
-    const numField = $('#num-participants-modern');
-    if (typeof window.ATTENDANCE_PRESENT === 'undefined') return;
+    const counts = window.ATTENDANCE_COUNTS || {};
+    const present = (counts.present !== undefined && counts.present !== null)
+        ? counts.present
+        : window.ATTENDANCE_PRESENT;
+    const absent = (counts.absent !== undefined && counts.absent !== null)
+        ? counts.absent
+        : window.ATTENDANCE_ABSENT;
+    const volunteers = (counts.volunteers !== undefined && counts.volunteers !== null)
+        ? counts.volunteers
+        : window.ATTENDANCE_VOLUNTEERS;
+    const total = (counts.total !== undefined && counts.total !== null)
+        ? counts.total
+        : present;
 
-    if (totalField.length && totalField.val().trim() === '') {
-        totalField.val(window.ATTENDANCE_PRESENT);
+    const updateField = (id, value) => {
+        if (value === undefined || value === null) return;
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (Object.prototype.hasOwnProperty.call(el, 'value')) {
+            el.value = value;
+        } else {
+            el.textContent = value;
+        }
+    };
+
+    const summaryField = document.getElementById('attendance-modern');
+    if (summaryField) {
+        const parts = [];
+        if (present !== undefined && present !== null) parts.push(`Present: ${present}`);
+        if (absent !== undefined && absent !== null) parts.push(`Absent: ${absent}`);
+        if (volunteers !== undefined && volunteers !== null) parts.push(`Volunteers: ${volunteers}`);
+        if (parts.length) summaryField.value = parts.join(', ');
     }
-    if (numField.length && numField.val().trim() === '') {
-        numField.val(window.ATTENDANCE_PRESENT);
-    }
+
+    updateField('num-participants-modern', total);
+    updateField('total-participants-modern', total);
+    updateField('num-volunteers-modern', volunteers);
+    updateField('num-volunteers-hidden', volunteers);
+    updateField('student-participants-modern', counts.students);
+    updateField('faculty-participants-modern', counts.faculty);
+    updateField('external-participants-modern', counts.external);
+
     if (typeof setupAttendanceLink === 'function') setupAttendanceLink();
 }
 
