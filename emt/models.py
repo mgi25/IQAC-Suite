@@ -477,6 +477,12 @@ class EventReportAttachment(models.Model):
 
 class AttendanceRow(models.Model):
     """Single attendance record linked to an event report."""
+
+    class Category(models.TextChoices):
+        STUDENT = "student", "Student"
+        FACULTY = "faculty", "Faculty"
+        EXTERNAL = "external", "External"
+
     event_report = models.ForeignKey(
         'emt.EventReport',
         on_delete=models.CASCADE,
@@ -487,6 +493,11 @@ class AttendanceRow(models.Model):
     student_class = models.CharField(max_length=128)
     absent = models.BooleanField(default=False)
     volunteer = models.BooleanField(default=False)
+    category = models.CharField(
+        max_length=16,
+        choices=Category.choices,
+        default=Category.STUDENT,
+    )
 
     def __str__(self):
         return f"{self.full_name} ({self.registration_no})"

@@ -224,3 +224,27 @@ class BulkFacultyUploadTests(TestCase):
         self.assertEqual(mems.count(), 1)
         ra = RoleAssignment.objects.get(user=existing, organization=self.org)
         self.assertEqual(ra.role, self.faculty_role)
+
+    def test_upload_faculty_without_faculty_in_referer(self):
+        self.client.force_login(self.admin)
+
+        csv_content = (
+            "emp_id,name,email,role\n"
+            "EMP2,Prof Two,prof2@example.com,faculty\n"
+        )
+        file = SimpleUploadedFile('faculty2.csv', csv_content.encode('utf-8'), content_type='text/csv')
+        url = reverse('admin_org_users_upload_csv', args=[self.org.id])
+        data = {
+            'academic_year': '2024-2025',
+            'csv_file': file,
+            'upload_type': 'faculty',
+        }
+        referer = f'http://testserver/core-admin/org-users/{self.org.id}/'
+        response = self.client.post(url, data, follow=True, HTTP_REFERER=referer)
+
+        errors = [m.message for m in get_messages(response.wsgi_request) if m.level_tag == 'error']
+        self.assertFalse(errors)
+
+        user = User.objects.get(username='prof2@example.com')
+        membership = OrganizationMembership.objects.get(user=user, organization=self.org)
+        self.assertEqual(membership.role, 'faculty')

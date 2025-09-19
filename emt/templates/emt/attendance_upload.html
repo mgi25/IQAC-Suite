@@ -46,32 +46,40 @@
                 </div>
             </div>
 
+            <ul class="nav nav-pills attendance-category-nav d-none" id="attendance-category-nav" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" type="button" role="tab" data-category="student" data-label="Students" data-volunteer-label="Student Volunteer">
+                        Students
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" type="button" role="tab" data-category="faculty" data-label="Faculty" data-volunteer-label="Volunteer">
+                        Faculty
+                    </button>
+                </li>
+            </ul>
+
             <div id="loading" class="loading text-center my-3">
                 <div class="spinner-border" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
             </div>
 
-            <div class="table-responsive mt-4">
-                <table id="attendance-table" class="table table-sm table-striped table-hover align-middle d-none">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Registration No</th>
-                            <th>Full Name</th>
-                            <th>Class</th>
-                            <th>Absent</th>
-                            <th>Student Volunteer</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-
-            <div id="grouped-sections" class="mt-4 d-none">
-                <h2 id="students-section-title" class="h5 mb-3">Students (Class-wise)</h2>
-                <div id="students-group" class="mb-4"></div>
-                <h2 id="faculty-section-title" class="h5 mb-3">Faculty (Organization-wise)</h2>
-                <div id="faculty-group"></div>
+            <div id="attendance-table-section" class="table-section mt-4 d-none">
+                <div class="table-responsive">
+                    <table id="attendance-table" class="table table-striped table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Registration No</th>
+                                <th>Full Name</th>
+                                <th>Affiliation</th>
+                                <th>Absent</th>
+                                <th id="attendance-volunteer-header">Volunteer</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
 
             <div id="actions" class="actions d-none">
@@ -88,10 +96,8 @@
     const downloadUrl = "{% url 'emt:attendance_download' report.id %}";
     const dataUrl = "{% url 'emt:attendance_data' report.id %}";
     const reportUrl = "{% url 'emt:submit_event_report' report.proposal.id %}";
-    const downloadFilename = "student_audience_{{ report.id }}.csv";
+    const downloadFilename = "attendance_{{ report.id }}.csv";
     const csrftoken = '{{ csrf_token }}';
-    const initialStudents = {{ students_group_json|default:'{}'|safe }};
-    const initialFaculty = {{ faculty_group_json|default:'{}'|safe }};
 </script>
 <script src="{% static 'emt/js/attendance.js' %}"></script>
 {% endblock %}
