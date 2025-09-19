@@ -167,9 +167,9 @@
       const tb=$('#workTable');
       tb.innerHTML = rows.map(r=>{
         const pr=(r.priority||'Medium')==='High'?'danger':((r.priority||'Medium')==='Low'?'success':'amber');
-        const stc=r.status==='waiting'?'info':(r.status==='in_progress'?'warn':(r.status==='returned'?'danger':'gray'));
+        // Include 'done' status for resource tasks so it renders consistently
+        const stc=r.status==='waiting'?'info':(r.status==='in_progress'?'warn':(r.status==='returned'?'danger':(r.status==='done'?'success':'gray')));
         return `<tr data-id="${r.id}">
-          <td><input type="checkbox" class="wbRow"></td>
           <td>${esc(r.event)}</td>
           <td>${cap(r.type||'')}</td>
           <td><span class="chip ${pr}">${esc(r.priority||'Medium')}</span></td>
@@ -178,35 +178,24 @@
           <td>${r.rev ?? 0}</td>
           <td class="ta-right">${rowActions(r)}</td>
         </tr>`;
-      }).join('') || `<tr><td colspan="8">No items</td></tr>`;
+      }).join('') || `<tr><td colspan="7">No items</td></tr>`;
       tb.querySelectorAll('[data-act]').forEach(b=>{
         b.addEventListener('click', e=>{
-          const tr=e.currentTarget.closest('tr'); const id=+tr.dataset.id; const row=WORK.find(x=>x.id===id); if(!row) return;
+          const tr=e.currentTarget.closest('tr'); const id=+tr.dataset.id; if(!id) return;
           const act=e.currentTarget.dataset.act;
-          if(act==='start') row.status='in_progress';
-          if(act==='pause') row.status='pending';
-          if(act==='submit') row.status='waiting';
-          if(act==='help') {/* hook help endpoint */}
-          renderWork(); computeKPIs();
+          if(act==='chat'){ window.location.href = `/cdl/communication/?eventId=${id}`; }
+          // 'update' is now a direct link (anchor), no JS action needed
         });
       });
     }
     function rowActions(r){
-      const toggle=r.status==='in_progress'
-        ? `<button class="btn xs" data-act="pause"><i class="fa-regular fa-circle-pause"></i> Pause</button>`
-        : `<button class="btn xs" data-act="start"><i class="fa-regular fa-circle-play"></i> Start</button>`;
       const view=`<a class="btn xs" href="/cdl/support/?eventId=${r.id}"><i class="fa-regular fa-eye"></i> View</a>`;
-      return `${toggle}
-        <button class="btn xs success" data-act="submit"><i class="fa-solid fa-paper-plane"></i> Submit</button>
-        ${view}
-        <button class="btn xs warn" data-act="help"><i class="fa-regular fa-circle-question"></i> Help</button>`;
+      const chat=`<button class="btn xs" data-act="chat"><i class="fa-regular fa-comments"></i> Chat</button>`;
+      const update=`<a class="btn xs success" href="/cdl/support/${r.id}/assign/?eventId=${r.id}&mode=employee" data-act="update"><i class="fa-solid fa-pen-to-square"></i> Update Task</a>`;
+      return `${view} ${chat} ${update}`;
     }
   
-    // Bulk
-    $('#wbAll')?.addEventListener('change', e=> $$('#workTable .wbRow').forEach(cb=> cb.checked=e.target.checked));
-    $('#bulkSubmit')?.addEventListener('click', ()=>{ $$('#workTable .wbRow:checked').forEach(cb=>{ const id=+cb.closest('tr').dataset.id; const r=WORK.find(x=>x.id===id); if(r) r.status='waiting';}); renderWork(); computeKPIs(); });
-    $('#bulkUpload')?.addEventListener('click', ()=> alert('Open bulk uploader'));
-    $('#bulkHelp')?.addEventListener('click', ()=> alert('Help requested'));
+  // Bulk actions removed
   
     // Utilities
     function getJSON(id, fb){ try{ return JSON.parse(document.getElementById(id).textContent)||fb; }catch{ return fb; } }
@@ -245,6 +234,12 @@
 
     // Boot
     bootstrap();
+    // Lightweight realtime: listen for updates signaled from Assign Tasks
+    window.addEventListener('storage', (e)=>{
+      if(e && e.key==='cdl_tasks_ping'){
+        bootstrap();
+      }
+    });
 
     async function acceptAssignment(proposalId){
       try{
@@ -255,8 +250,16 @@
         });
         const j = await res.json().catch(()=>({success:false,error:'Server error'}));
         if(!res.ok) return j;
+        try{ localStorage.setItem('cdl_tasks_ping', String(Date.now())); }catch{}
         return j;
       }catch(e){ return {success:false,error:'Network error'}; }
     }
+
+    // Instant cross-tab sync: refresh when Assign Tasks broadcasts a change
+    window.addEventListener('storage', (e)=>{
+      if(e && e.key==='cdl_tasks_ping'){
+        bootstrap();
+      }
+    });
   })();
   

@@ -6251,19 +6251,34 @@ def cdl_support_detail_page(request):
 
 @login_required
 def cdl_assign_tasks_page(request, proposal_id:int):
-    """Dedicated page for CDL Head to assign tasks/resources, including custom tasks.
-    Expects query param eventId for consistency with other pages (redundant with proposal_id but convenient for JS).
+    """Assign Tasks page.
+    - Heads/Admins: full board to assign members and create/edit tasks.
+    - Employees/Members: restricted "employee mode" to update ONLY their task status.
+
+    Accepts query param eventId (redundant with proposal_id) and optional mode=employee to force employee POV.
     """
-    # Preserve the same head-session hint used in the detail page
+    # Figure out if current user is CDL Head/Admin
+    is_cdl_head = False
     try:
         from .models import OrganizationType, RoleAssignment
-        heads = RoleAssignment.objects.filter(organization__org_type__name__iexact='CDL', role__name__icontains='head', user=request.user)
-        if heads.exists():
+        heads = RoleAssignment.objects.filter(
+            organization__org_type__name__iexact='CDL',
+            role__name__icontains='head',
+            user=request.user,
+        )
+        is_cdl_head = heads.exists() or request.user.is_superuser
+        if is_cdl_head:
             request.session['role'] = 'cdl_head'
             request.session['cdl_assign_board'] = True
     except Exception:
-        pass
-    return render(request, "core/cdl_assign_tasks.html", { 'proposal_id': proposal_id })
+        is_cdl_head = request.user.is_superuser
+
+    # Employee POV either when explicitly requested or when user isn't a head
+    employee_mode = (request.GET.get('mode') == 'employee') or (not is_cdl_head)
+    return render(request, "core/cdl_assign_tasks.html", {
+        'proposal_id': proposal_id,
+        'employee_mode': employee_mode,
+    })
 
 # ────────────────────────────────────────────────────────────────
 #  CDL Communication Page & APIs
@@ -6522,7 +6537,14 @@ def api_cdl_support_resources(request, proposal_id:int):
     from emt.models import CDLTaskAssignment as _Task
     existing = {}
     task_objs = []
-    for t in _Task.objects.filter(proposal=p).select_related('assignee'):
+    qs_tasks = _Task.objects.filter(proposal=p).select_related('assignee')
+    # Optional filter: employee POV should see only their tasks
+    mode = (request.GET.get('mode') or '').lower()
+    assignee = (request.GET.get('assignee') or '').lower()
+    if mode == 'employee' or assignee in ('me', 'self'):
+        qs_tasks = qs_tasks.filter(assignee=request.user)
+
+    for t in qs_tasks:
         existing[t.resource_key] = { 'user_id': t.assignee_id, 'name': (t.assignee.get_full_name() or t.assignee.username) if t.assignee_id else None }
         task_objs.append({
             'id': t.id,
@@ -6536,6 +6558,10 @@ def api_cdl_support_resources(request, proposal_id:int):
     for key in list(existing.keys()):
         if not any(r['key']==key for r in resources):
             resources.append({ 'key': key, 'label': key.replace('_',' ').title(), 'custom': True })
+
+    # If employee POV, restrict members to self only (UI safety; server also enforces in CRUD)
+    if mode == 'employee' or assignee in ('me', 'self'):
+        members = [{ 'id': request.user.id, 'name': request.user.get_full_name() or request.user.username }]
 
     return JsonResponse({ 'success': True, 'resources': resources, 'members': members, 'assignments': existing, 'tasks': task_objs })
 
@@ -6618,7 +6644,18 @@ def api_cdl_tasks_crud(request, proposal_id:int):
     except Exception:
         payload = {}
 
+    # Permission model: Heads/Admins can create/update/delete; Employees can only update STATUS of their own tasks
+    is_cdl_head = False
+    try:
+        from .models import OrganizationType, RoleAssignment
+        heads = RoleAssignment.objects.filter(organization__org_type__name__iexact='CDL', role__name__icontains='head', user=request.user)
+        is_cdl_head = heads.exists() or request.user.is_superuser
+    except Exception:
+        is_cdl_head = request.user.is_superuser
+
     if request.method == 'POST':
+        if not is_cdl_head:
+            return JsonResponse({'success': False, 'error': 'Not allowed'}, status=403)
         res_key = (payload.get('resource') or '').strip()
         if not res_key:
             return JsonResponse({'success': False, 'error': 'resource is required'}, status=400)
@@ -6644,20 +6681,29 @@ def api_cdl_tasks_crud(request, proposal_id:int):
             obj = _Task.objects.get(id=int(tid), proposal=p)
         except Exception:
             return JsonResponse({'success': False, 'error': 'Task not found'}, status=404)
-        for fld in ('label','status'):
-            if fld in payload and payload[fld] is not None:
-                setattr(obj, fld, payload[fld])
-        if 'assignee_id' in payload:
-            aid = payload.get('assignee_id')
-            if aid:
-                try: obj.assignee = User.objects.get(id=int(aid))
-                except Exception: obj.assignee = None
-            else:
-                obj.assignee = None
+        if not is_cdl_head:
+            # Employees can only update their own task status
+            if obj.assignee_id != request.user.id:
+                return JsonResponse({'success': False, 'error': 'Not allowed'}, status=403)
+            if 'status' in payload and payload['status'] is not None:
+                obj.status = payload['status']
+        else:
+            for fld in ('label','status'):
+                if fld in payload and payload[fld] is not None:
+                    setattr(obj, fld, payload[fld])
+            if 'assignee_id' in payload:
+                aid = payload.get('assignee_id')
+                if aid:
+                    try: obj.assignee = User.objects.get(id=int(aid))
+                    except Exception: obj.assignee = None
+                else:
+                    obj.assignee = None
         obj.save()
         return JsonResponse({'success': True})
 
     if request.method == 'DELETE':
+        if not is_cdl_head:
+            return JsonResponse({'success': False, 'error': 'Not allowed'}, status=403)
         tid = payload.get('id'); res_key = payload.get('resource')
         qs = _Task.objects.filter(proposal=p)
         if tid: qs = qs.filter(id=int(tid))
@@ -6779,7 +6825,7 @@ def api_cdl_member_data(request):
             'type': t.resource_key or 'task',
             'priority': 'Medium',
             'due_date': due_iso,
-            'status': 'assigned',
+            'status': (t.status or 'assigned'),
             'rev': 0,
             'created_at': t.proposal.created_at.isoformat(),
             'assigned_at': t.assigned_at.isoformat() if t.assigned_at else None,

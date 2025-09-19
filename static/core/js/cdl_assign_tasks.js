@@ -5,6 +5,8 @@
   const params=new URLSearchParams(location.search);
   const eventId=params.get('eventId')||params.get('id');
   if(!eventId){ alert('Missing eventId'); return; }
+    const root=document.getElementById('cdl-assign-page');
+    const EMPLOYEE_MODE = (params.get('mode')==='employee') || ((root&&root.dataset?root.dataset.employeeMode:'')==='1');
 
   const state={ members:[], rows:[], filter:'', baselineAssigned:new Set() };
 
@@ -12,7 +14,7 @@
   function getCSRF(){ const m=document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)'); return m?m.pop():''; }
 
   async function load(){
-    const res=await fetch(`/api/cdl/support/${encodeURIComponent(eventId)}/resources/`);
+     const res=await fetch(`/api/cdl/support/${encodeURIComponent(eventId)}/resources/` + (EMPLOYEE_MODE? '?mode=employee' : ''));
     if(!res.ok) throw new Error('Failed to load');
     const d=await res.json(); if(!d.success) throw new Error(d.error||'Failed');
     state.members=d.members||[];
@@ -25,9 +27,11 @@
     // Load server-side tasks with status/labels
     const serverTasks = (d.tasks||[]).map(t=>({ kind:(t.label && !base.some(b=>b.key===t.resource))?'custom':'resource', key:t.resource, label:t.label, user_id:t.assignee_id||'', isCustom: !!(t.label && !base.some(b=>b.key===t.resource)), status: t.status||'backlog', id: t.id }));
     // Merge: prefer serverTasks entries over base/extra for the same key
-    const merged = new Map();
-    [...base, ...extra, ...serverTasks].forEach(it=>{ merged.set(it.key, {...(merged.get(it.key)||{}), ...it}); });
-    state.rows=Array.from(merged.values());
+  const merged = new Map();
+  [...base, ...extra, ...serverTasks].forEach(it=>{ merged.set(it.key, {...(merged.get(it.key)||{}), ...it}); });
+  const allRows = Array.from(merged.values());
+  // In employee mode, only show tasks that are truly assigned to the current user (i.e., persisted tasks)
+  state.rows = EMPLOYEE_MODE ? allRows.filter(r => r.id || (r.user_id && String(r.user_id).length>0)) : allRows;
   state.baselineAssigned = new Set(Object.keys(existing).filter(k=>!!existing[k]?.user_id));
     renderBoard();
   }
@@ -37,11 +41,15 @@
   let draggingKey=null, draggingEl=null;
 
   async function updateTask(row){
+    // Employees cannot create tasks; only update status of existing tasks (must have id)
+    if(EMPLOYEE_MODE && !row.id){ toast('This task is not assigned to you'); return; }
     try{
-      await fetch(`/api/cdl/support/${encodeURIComponent(eventId)}/tasks/`, {
+        const r = await fetch(`/api/cdl/support/${encodeURIComponent(eventId)}/tasks/`, {
         method:'PUT', headers:{'Content-Type':'application/json','X-CSRFToken':getCSRF()},
-        body: JSON.stringify({ resource: row.key, label: row.label||'', status: row.status||'backlog', assignee_id: row.user_id || null })
+          body: JSON.stringify({ id: row.id, resource: row.key, label: row.label||'', status: row.status||'backlog', assignee_id: row.user_id || null })
       });
+      if(r && r.ok){ toast('Status updated'); }
+      try{ localStorage.setItem('cdl_tasks_ping', String(Date.now())); }catch{}
     }catch(e){ /* non-blocking */ }
   }
   async function deleteTask(resourceKey){
@@ -51,6 +59,7 @@
         body: JSON.stringify({ resource: resourceKey })
       });
       toast('Task removed');
+      try{ localStorage.setItem('cdl_tasks_ping', String(Date.now())); }catch{}
     }catch(e){ toast('Failed to remove'); }
   }
 
@@ -86,21 +95,20 @@
     // Distribute cards
     for(const it of items){
       const card = document.createElement('div'); card.className='card-item'; card.draggable=true; card.dataset.key=it.key; card.dataset.custom=it.isCustom?'1':'0'; card.dataset.id=it.id||'';
-      const memberSelect = `<select class="mini-select"><option value="">Unassigned</option>${state.members.map(m=>`<option value="${m.id}" ${String(it.user_id||'')===String(m.id)?'selected':''}>${esc(m.name)}</option>`).join('')}</select>`;
-      const title = it.isCustom
+      const memberSelect = EMPLOYEE_MODE ? '' : `<select class="mini-select"><option value="">Unassigned</option>${state.members.map(m=>`<option value="${m.id}" ${String(it.user_id||'')===String(m.id)?'selected':''}>${esc(m.name)}</option>`).join('')}</select>`;
+      const title = (it.isCustom && !EMPLOYEE_MODE)
         ? `<input class="title-input" value="${esc(it.label||'')}">`
         : `<div class="card-title-text">${esc(it.label)}</div>`;
-      card.innerHTML = `<div class="card-title">${title}</div><div class="card-meta">${it.isCustom? 'Custom':'Resource'} • ${memberSelect}</div>`;
+      const metaParts = [ (it.isCustom? 'Custom':'Resource') ];
+      if(!EMPLOYEE_MODE) metaParts.push(memberSelect);
+      card.innerHTML = `<div class="card-title">${title}</div><div class="card-meta">${metaParts.join(' • ')}</div>`;
       addDnD(card);
       const col = $(`.col[data-status="${it.status||'backlog'}"] .col-body`);
       (col||$(`.col[data-status="backlog"] .col-body`)).appendChild(card);
 
       // Inline handlers
       const sel = card.querySelector('.mini-select');
-      sel.addEventListener('change', ()=>{
-        const row = state.rows.find(r=>r.key===it.key); if(!row) return; row.user_id = sel.value || '';
-        updateTask(row);
-      });
+        if(sel){ sel.addEventListener('change', ()=>{ const row = state.rows.find(r=>r.key===it.key); if(!row) return; row.user_id = sel.value || ''; updateTask(row); }); }
       const ti = card.querySelector('.title-input');
       if(ti){ ti.addEventListener('blur', ()=>{ const row=state.rows.find(r=>r.key===it.key); if(row){ row.label = ti.value || row.label; updateTask(row); }}); }
     }
@@ -124,7 +132,7 @@
   board.addEventListener('contextmenu', e=>{
       const card=e.target.closest('.card-item'); if(!card) return;
       e.preventDefault();
-      if(card.dataset.custom==='1'){
+      if(card.dataset.custom==='1' && !EMPLOYEE_MODE){
     const key=card.dataset.key; state.rows = state.rows.filter(r=>r.key!==key); renderBoard();
     deleteTask(key);
       }
@@ -167,13 +175,14 @@
       // Update baseline after successful save
       state.baselineAssigned = new Set([ ...nowAssignedKeys ]);
       toast('Assignments saved'); if(status){ status.textContent='Saved just now'; setTimeout(()=>status.textContent='',3000); }
+      try{ localStorage.setItem('cdl_tasks_ping', String(Date.now())); }catch{}
     }catch(e){ toast('Save failed: '+(e.message||'Error')); }
     finally{
       const btn=$('#saveAll'); if(btn){ btn.disabled=false; btn.textContent='Save Changes'; }
     }
   }
 
-  $('#addCustom').addEventListener('click', async ()=>{
+  if(!EMPLOYEE_MODE) $('#addCustom').addEventListener('click', async ()=>{
     const key = 'custom_'+Math.random().toString(36).slice(2);
     const label = 'New custom task';
     state.rows.push({ kind:'custom', key, label, user_id:'', isCustom:true, status:'backlog' });
@@ -181,9 +190,21 @@
     // Persist immediately so it appears for collaborators
     try{
       await fetch(`/api/cdl/support/${encodeURIComponent(eventId)}/tasks/`, { method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCSRF()}, body: JSON.stringify({resource:key, label, status:'backlog'}) });
+      try{ localStorage.setItem('cdl_tasks_ping', String(Date.now())); }catch{}
     }catch{}
   });
-  $('#saveAll').addEventListener('click', save);
+  if(!EMPLOYEE_MODE) $('#saveAll').addEventListener('click', save);
+  if(EMPLOYEE_MODE){
+    const btn=$('#saveMyStatus');
+    if(btn){ btn.addEventListener('click', async ()=>{
+      btn.disabled=true; const old=btn.textContent; btn.textContent='Saving…';
+      try{
+        // Save status for all assigned tasks the user sees
+        for(const r of state.rows){ if(!r.id) continue; await updateTask(r); }
+        toast('Status saved');
+      }finally{ btn.disabled=false; btn.textContent=old; }
+    }); }
+  }
   $('#backBtn').addEventListener('click', ()=>{ location.href = `/cdl/support/?eventId=${encodeURIComponent(eventId)}`; });
   $('#searchTasks').addEventListener('input', e=>{ state.filter = e.target.value||''; renderBoard(); });
 
@@ -205,4 +226,15 @@
   document.head.appendChild(style);
 
   load().catch(err=>{ const b=$('#board'); if(b) b.innerHTML = `<div class="error" style="padding:12px">${esc(err.message||'Failed')}</div>`; });
+
+    // Lightweight polling for real-time sync
+    let pollTimer=null; function startPolling(){ if(pollTimer) return; pollTimer=setInterval(()=>{ load().catch(()=>{}); }, 10000); }
+    startPolling();
+
+    // Instant cross-tab sync: refresh when Workboard or other tabs broadcast a change
+    window.addEventListener('storage', (e)=>{
+      if(e && e.key==='cdl_tasks_ping'){
+        load().catch(()=>{});
+      }
+    });
 })();
