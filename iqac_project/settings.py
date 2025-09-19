@@ -62,9 +62,23 @@ ALLOWED_HOSTS = [
     '7c40-103-229-129-85.ngrok-free.app',
 ]
 
-CSRF_TRUSTED_ORIGINS = [
-    "https://7c40-103-229-129-85.ngrok-free.app",
+_LOCAL_CSRF_TRUSTED_ORIGINS = [
+    "http://127.0.0.1:8000",
+    "https://127.0.0.1:8000",
+    "http://localhost:8000",
+    "https://localhost:8000",
 ]
+CSRF_TRUSTED_ORIGINS = list(_LOCAL_CSRF_TRUSTED_ORIGINS)
+
+additional_csrf = os.getenv("ADDITIONAL_CSRF_TRUSTED_ORIGINS", "")
+if additional_csrf:
+    CSRF_TRUSTED_ORIGINS.extend(
+        origin.strip()
+        for origin in additional_csrf.split(",")
+        if origin.strip()
+    )
+
+CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(CSRF_TRUSTED_ORIGINS))
 
 # ──────────────────────────────────────────────────────────────────────────────
 # INSTALLED APPS
@@ -296,7 +310,9 @@ RENDER_EXTERNAL_HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME")
 if RENDER_EXTERNAL_HOSTNAME:
     # e.g. "iqac-suite.onrender.com"
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
-    CSRF_TRUSTED_ORIGINS = ["https://iqac-suite.onrender.com"]
+    render_origin = f"https://{RENDER_EXTERNAL_HOSTNAME}"
+    if render_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(render_origin)
 else:
     # fallback for local/dev or if you want to be permissive temporarily
     # ALLOWED_HOSTS.append("iqac-suite.onrender.com")   # <-- you can hardcode your URL too
