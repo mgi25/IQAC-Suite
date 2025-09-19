@@ -1639,7 +1639,7 @@ function fillAttendanceCounts() {
         if (value === undefined || value === null) return;
         const el = document.getElementById(id);
         if (!el) return;
-        if (Object.prototype.hasOwnProperty.call(el, 'value')) {
+        if ('value' in el && typeof el.value !== 'undefined') {
             el.value = value;
         } else {
             el.textContent = value;
