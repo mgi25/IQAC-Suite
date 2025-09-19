@@ -1692,6 +1692,392 @@ function populateProposalData() {
     });
 }
 
+function getCsrfToken() {
+    if (window.AUTOSAVE_CSRF) return window.AUTOSAVE_CSRF;
+    const match = document.cookie
+        .split(';')
+        .map(part => part.trim())
+        .find(part => part.startsWith('csrftoken='));
+    return match ? decodeURIComponent(match.split('=')[1]) : '';
+}
+
+function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function getInitials(value) {
+    if (!value) return 'SP';
+    return String(value)
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map(part => part.charAt(0).toUpperCase())
+        .join('') || 'SP';
+}
+
+function normalizeSpeakerValue(value) {
+    return value === null || value === undefined ? '' : String(value);
+}
+
+function renderEditableSpeakerCard(speaker, index) {
+    const id = speaker && (speaker.id || speaker.pk);
+    const name = normalizeSpeakerValue(speaker.full_name || speaker.name);
+    const designation = normalizeSpeakerValue(speaker.designation);
+    const affiliation = normalizeSpeakerValue(speaker.affiliation || speaker.organization);
+    const email = normalizeSpeakerValue(speaker.contact_email || speaker.contact);
+    const phone = normalizeSpeakerValue(speaker.contact_number || speaker.phone);
+    const linkedin = normalizeSpeakerValue(speaker.linkedin_url || speaker.linkedin || speaker.linkedinUrl);
+    const bio = normalizeSpeakerValue(speaker.detailed_profile || speaker.profile || speaker.bio);
+    const photoUrl = normalizeSpeakerValue(speaker.photo_url || speaker.photo);
+    const initials = getInitials(name);
+    const cardClasses = ['speaker-reference-item', 'speaker-card'];
+    if (id) {
+        cardClasses.push('speaker-card-editable');
+    } else {
+        cardClasses.push('speaker-card-readonly');
+    }
+
+    return `
+        <div class="${cardClasses.join(' ')}" data-speaker-id="${id ? escapeHtml(id) : ''}">
+            <div class="speaker-card-media">
+                <div class="speaker-photo-container">
+                    <div class="speaker-photo${photoUrl ? '' : ' speaker-photo-placeholder'}" data-initials="${escapeHtml(initials)}">
+                        ${photoUrl ? `<img src="${escapeHtml(photoUrl)}" alt="${escapeHtml(name || 'Speaker photo')}">` : escapeHtml(initials)}
+                    </div>
+                    <button type="button" class="speaker-photo-remove" title="Remove photo" aria-label="Remove photo" ${photoUrl ? '' : 'hidden'}>&times;</button>
+                </div>
+                <label class="speaker-photo-upload">
+                    <input type="file" class="speaker-photo-input" accept="image/*" ${id ? '' : 'disabled'}>
+                    <span>${photoUrl ? 'Change photo' : 'Upload photo'}</span>
+                </label>
+            </div>
+            <div class="speaker-card-content">
+                <div class="speaker-header">
+                    <div class="speaker-header-title">Speaker ${index + 1}</div>
+                    ${id ? '' : '<div class="speaker-readonly-hint">Unable to edit this speaker because the record could not be linked.</div>'}
+                </div>
+                <div class="speaker-fields">
+                    <div class="speaker-field">
+                        <label>Full Name *</label>
+                        <input type="text" class="speaker-field-input" data-field="full_name" value="${escapeHtml(name)}" placeholder="Enter full name" ${id ? '' : 'disabled'}>
+                    </div>
+                    <div class="speaker-field">
+                        <label>Designation *</label>
+                        <input type="text" class="speaker-field-input" data-field="designation" value="${escapeHtml(designation)}" placeholder="Enter designation" ${id ? '' : 'disabled'}>
+                    </div>
+                    <div class="speaker-field">
+                        <label>Affiliation *</label>
+                        <input type="text" class="speaker-field-input" data-field="affiliation" value="${escapeHtml(affiliation)}" placeholder="Enter organization" ${id ? '' : 'disabled'}>
+                    </div>
+                    <div class="speaker-field">
+                        <label>Email *</label>
+                        <input type="email" class="speaker-field-input" data-field="contact_email" value="${escapeHtml(email)}" placeholder="name@example.com" ${id ? '' : 'disabled'}>
+                    </div>
+                    <div class="speaker-field">
+                        <label>Contact Number</label>
+                        <input type="text" class="speaker-field-input" data-field="contact_number" value="${escapeHtml(phone)}" placeholder="Enter contact number" ${id ? '' : 'disabled'}>
+                    </div>
+                    <div class="speaker-field">
+                        <label>LinkedIn URL</label>
+                        <input type="url" class="speaker-field-input" data-field="linkedin_url" value="${escapeHtml(linkedin)}" placeholder="https://linkedin.com/in/username" ${id ? '' : 'disabled'}>
+                    </div>
+                    <div class="speaker-field speaker-field-full">
+                        <label>Profile / Bio *</label>
+                        <textarea class="speaker-field-textarea" data-field="detailed_profile" rows="4" placeholder="Brief profile of the speaker" ${id ? '' : 'disabled'}>${escapeHtml(bio)}</textarea>
+                    </div>
+                </div>
+                <div class="speaker-actions">
+                    <button type="button" class="speaker-save-btn" ${id ? '' : 'disabled'}>Save Changes</button>
+                    <button type="button" class="speaker-reset-btn" ${id ? '' : 'disabled'}>Reset</button>
+                    <span class="speaker-status" role="status" aria-live="polite"></span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function updateSpeakerPhotoPreview(card, photoUrl) {
+    const photoEl = card.querySelector('.speaker-photo');
+    const removeBtn = card.querySelector('.speaker-photo-remove');
+    const uploadLabel = card.querySelector('.speaker-photo-upload span');
+    const nameInput = card.querySelector('[data-field="full_name"]');
+    const displayName = nameInput ? nameInput.value.trim() : '';
+    if (!photoEl) return;
+
+    if (photoUrl) {
+        photoEl.innerHTML = `<img src="${escapeHtml(photoUrl)}" alt="${escapeHtml(displayName || 'Speaker photo')}">`;
+        photoEl.classList.remove('speaker-photo-placeholder');
+        photoEl.setAttribute('data-initials', getInitials(displayName));
+        if (removeBtn) removeBtn.hidden = false;
+        if (uploadLabel) uploadLabel.textContent = 'Change photo';
+    } else {
+        const initials = getInitials(displayName);
+        photoEl.innerHTML = escapeHtml(initials);
+        photoEl.classList.add('speaker-photo-placeholder');
+        photoEl.setAttribute('data-initials', initials);
+        if (removeBtn) removeBtn.hidden = true;
+        if (uploadLabel) uploadLabel.textContent = 'Upload photo';
+    }
+}
+
+function updateSpeakerCache(updated) {
+    if (!updated || !updated.id) return;
+    const id = String(updated.id);
+    window.SPEAKER_CACHE = window.SPEAKER_CACHE || {};
+    window.SPEAKER_CACHE[id] = Object.assign({}, window.SPEAKER_CACHE[id] || {}, updated);
+
+    if (window.PROPOSAL_DATA && Array.isArray(window.PROPOSAL_DATA.speakers)) {
+        const arr = window.PROPOSAL_DATA.speakers;
+        const idx = arr.findIndex(sp => String(sp.id || sp.pk) === id);
+        if (idx !== -1) {
+            arr[idx] = Object.assign({}, arr[idx], updated);
+        }
+    }
+    if (Array.isArray(window.EXISTING_SPEAKERS)) {
+        const idx = window.EXISTING_SPEAKERS.findIndex(sp => String(sp.id || sp.pk) === id);
+        if (idx !== -1) {
+            window.EXISTING_SPEAKERS[idx] = Object.assign({}, window.EXISTING_SPEAKERS[idx], updated);
+        }
+    }
+}
+
+function resetSpeakerCard(card, original) {
+    if (!original) return;
+    const statusEl = card.querySelector('.speaker-status');
+    const fileInput = card.querySelector('.speaker-photo-input');
+    card.dataset.removePhoto = 'false';
+    card.dataset.dirty = 'false';
+    card.classList.remove('speaker-card-dirty');
+
+    card.querySelectorAll('[data-field]').forEach(input => {
+        const key = input.dataset.field;
+        if (!key) return;
+        let value = original[key];
+        if (value === undefined) {
+            if (key === 'full_name') value = original.name;
+            else if (key === 'affiliation') value = original.organization;
+            else if (key === 'contact_email') value = original.contact;
+        }
+        value = value === null || value === undefined ? '' : String(value);
+        if (input.tagName === 'TEXTAREA') {
+            input.value = value;
+        } else {
+            input.value = value;
+        }
+    });
+
+    if (fileInput) {
+        if (card.dataset.photoObjectUrl) {
+            try { URL.revokeObjectURL(card.dataset.photoObjectUrl); } catch (e) {}
+            card.dataset.photoObjectUrl = '';
+        }
+        fileInput.value = '';
+    }
+    const originalPhoto = original.photo_url || original.photo || '';
+    updateSpeakerPhotoPreview(card, originalPhoto || '');
+    if (statusEl) statusEl.textContent = 'Changes reset';
+}
+
+function handleSpeakerSave(card) {
+    const id = card.dataset.speakerId;
+    const updateBase = window.SPEAKER_UPDATE_BASE || '';
+    if (!id || !updateBase) return;
+    const saveBtn = card.querySelector('.speaker-save-btn');
+    const resetBtn = card.querySelector('.speaker-reset-btn');
+    const statusEl = card.querySelector('.speaker-status');
+    const fileInput = card.querySelector('.speaker-photo-input');
+
+    const formData = new FormData();
+    card.querySelectorAll('[data-field]').forEach(input => {
+        const key = input.dataset.field;
+        if (!key) return;
+        formData.append(key, input.value || '');
+    });
+
+    if (card.dataset.removePhoto === 'true') {
+        formData.append('remove_photo', '1');
+    }
+
+    if (fileInput && fileInput.files && fileInput.files[0]) {
+        formData.append('photo', fileInput.files[0]);
+    }
+
+    const url = `${updateBase}${id}/`;
+    if (statusEl) statusEl.textContent = 'Saving...';
+    card.dataset.saving = 'true';
+    if (saveBtn) saveBtn.disabled = true;
+    if (resetBtn) resetBtn.disabled = true;
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+        },
+        credentials: 'same-origin',
+        body: formData,
+    })
+        .then(async resp => {
+            let data = {};
+            try {
+                data = await resp.json();
+            } catch (err) {}
+            if (!resp.ok || !data.success) {
+                const error = data.errors || data.error || 'Unable to update speaker';
+                throw error;
+            }
+            return data;
+        })
+        .then(data => {
+            const updated = data.speaker || {};
+            updateSpeakerCache(updated);
+            card.dataset.dirty = 'false';
+            card.dataset.removePhoto = 'false';
+            card.classList.remove('speaker-card-dirty');
+            if (fileInput) {
+                if (card.dataset.photoObjectUrl) {
+                    try { URL.revokeObjectURL(card.dataset.photoObjectUrl); } catch (e) {}
+                    card.dataset.photoObjectUrl = '';
+                }
+                fileInput.value = '';
+            }
+            if (statusEl) statusEl.textContent = 'Saved';
+            try { showNotification('Speaker details updated successfully.', 'success'); } catch (e) {}
+            setTimeout(() => populateSpeakersFromProposal(), 100);
+        })
+        .catch(err => {
+            let message = 'Failed to save speaker';
+            if (typeof err === 'string') {
+                message = err;
+            } else if (err && typeof err === 'object') {
+                const firstKey = Object.keys(err)[0];
+                if (firstKey) {
+                    const val = err[firstKey];
+                    if (Array.isArray(val)) message = val[0];
+                    else message = String(val);
+                }
+            }
+            if (statusEl) statusEl.textContent = message;
+            try { showNotification(message, 'error'); } catch (e) {}
+        })
+        .finally(() => {
+            card.dataset.saving = 'false';
+            if (saveBtn) saveBtn.disabled = false;
+            if (resetBtn) resetBtn.disabled = false;
+        });
+}
+
+function setupSpeakerCardEditors(container) {
+    const updateBase = window.SPEAKER_UPDATE_BASE || '';
+    const cards = container.querySelectorAll('.speaker-card');
+    cards.forEach(card => {
+        const id = card.dataset.speakerId;
+        const statusEl = card.querySelector('.speaker-status');
+        const fileInput = card.querySelector('.speaker-photo-input');
+        const removeBtn = card.querySelector('.speaker-photo-remove');
+        const saveBtn = card.querySelector('.speaker-save-btn');
+        const resetBtn = card.querySelector('.speaker-reset-btn');
+        const inputs = card.querySelectorAll('.speaker-field-input, .speaker-field-textarea');
+        const canEdit = Boolean(id && updateBase);
+
+        if (!canEdit) {
+            if (statusEl) {
+                statusEl.textContent = id
+                    ? 'You do not have permission to edit this speaker.'
+                    : 'Speaker information is read-only.';
+            }
+            if (removeBtn) removeBtn.disabled = true;
+            if (fileInput) fileInput.disabled = true;
+            if (saveBtn) saveBtn.disabled = true;
+            if (resetBtn) resetBtn.disabled = true;
+            inputs.forEach(input => input.disabled = true);
+            return;
+        }
+
+        const cache = window.SPEAKER_CACHE || {};
+        const original = cache[String(id)] ? JSON.parse(JSON.stringify(cache[String(id)])) : null;
+        card.__originalSpeaker = original;
+        card.dataset.removePhoto = 'false';
+
+        const markDirty = () => {
+            card.dataset.dirty = 'true';
+            card.classList.add('speaker-card-dirty');
+            if (statusEl) statusEl.textContent = 'Unsaved changes';
+        };
+
+        inputs.forEach(input => {
+            input.addEventListener('input', () => {
+                if (input.dataset.field === 'full_name') {
+                    const photoEl = card.querySelector('.speaker-photo');
+                    if (photoEl && photoEl.classList.contains('speaker-photo-placeholder')) {
+                        const initials = getInitials(input.value.trim());
+                        photoEl.innerHTML = escapeHtml(initials);
+                        photoEl.setAttribute('data-initials', initials);
+                    }
+                }
+                markDirty();
+            });
+        });
+
+        if (fileInput) {
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files && fileInput.files[0]) {
+                    if (card.dataset.photoObjectUrl) {
+                        try { URL.revokeObjectURL(card.dataset.photoObjectUrl); } catch (e) {}
+                    }
+                    const objectUrl = URL.createObjectURL(fileInput.files[0]);
+                    card.dataset.photoObjectUrl = objectUrl;
+                    updateSpeakerPhotoPreview(card, objectUrl);
+                    card.dataset.removePhoto = 'false';
+                    markDirty();
+                } else {
+                    if (card.dataset.photoObjectUrl) {
+                        try { URL.revokeObjectURL(card.dataset.photoObjectUrl); } catch (e) {}
+                        card.dataset.photoObjectUrl = '';
+                    }
+                }
+            });
+        }
+
+        if (removeBtn) {
+            removeBtn.addEventListener('click', event => {
+                event.preventDefault();
+                card.dataset.removePhoto = 'true';
+                if (fileInput) {
+                    if (card.dataset.photoObjectUrl) {
+                        try { URL.revokeObjectURL(card.dataset.photoObjectUrl); } catch (e) {}
+                        card.dataset.photoObjectUrl = '';
+                    }
+                    fileInput.value = '';
+                }
+                updateSpeakerPhotoPreview(card, '');
+                markDirty();
+            });
+        }
+
+        if (saveBtn) {
+            saveBtn.addEventListener('click', event => {
+                event.preventDefault();
+                if (card.dataset.saving === 'true') return;
+                handleSpeakerSave(card);
+            });
+        }
+
+        if (resetBtn) {
+            resetBtn.addEventListener('click', event => {
+                event.preventDefault();
+                if (card.dataset.saving === 'true') return;
+                resetSpeakerCard(card, original);
+            });
+        }
+    });
+}
+
 // Populate speaker reference card with speakers from the original proposal
 // Debug function to test speakers - can be called from browser console
 window.debugSpeakers = function() {
@@ -1720,14 +2106,12 @@ window.debugSpeakers = function() {
 };
 
 function populateSpeakersFromProposal() {
-    console.log('Populating speakers from proposal...');
     const container = document.getElementById('speakers-display');
     if (!container) {
         console.warn('Speakers container not found');
         return;
     }
 
-    // Normalize possible sources into a uniform array of speaker objects
     let speakers = [];
     const readFallbackJson = () => {
         try {
@@ -1745,7 +2129,6 @@ function populateSpeakersFromProposal() {
     const normalize = (val) => {
         try {
             if (!val) return [];
-            // If a JSON string accidentally made it through, parse it
             if (typeof val === 'string') {
                 const parsed = JSON.parse(val);
                 return Array.isArray(parsed) ? parsed : [];
@@ -1757,68 +2140,27 @@ function populateSpeakersFromProposal() {
         }
     };
 
-    // Debug logging for troubleshooting
-    console.log('window.PROPOSAL_DATA:', window.PROPOSAL_DATA);
-    console.log('window.EXISTING_SPEAKERS:', window.EXISTING_SPEAKERS);
-
     const proposalSpeakers = normalize(window.PROPOSAL_DATA && window.PROPOSAL_DATA.speakers);
     const existingSpeakers = normalize(window.EXISTING_SPEAKERS);
     if (proposalSpeakers.length) {
         speakers = proposalSpeakers;
-        console.log('Using PROPOSAL_DATA.speakers');
     } else if (existingSpeakers.length) {
         speakers = existingSpeakers;
-        console.log('Using EXISTING_SPEAKERS');
     } else {
         const fallback = readFallbackJson();
         if (fallback.length) {
             speakers = fallback;
-            console.log('Using fallback inline JSON speakers');
         }
     }
-    
-    console.log('Final speakers data:', speakers);
 
-    const escapeHtml = (value) => {
-        if (value === null || value === undefined) return '';
-        return String(value)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-    };
+    if (window.PROPOSAL_DATA && typeof window.PROPOSAL_DATA === 'object') {
+        window.PROPOSAL_DATA.speakers = speakers;
+    }
+    if (Array.isArray(window.EXISTING_SPEAKERS)) {
+        window.EXISTING_SPEAKERS = speakers;
+    }
 
-    const formatMultiline = (value) => escapeHtml(value).replace(/\r?\n/g, '<br>');
-
-    const getInitials = (value) => {
-        if (!value) return 'SP';
-        return value
-            .split(/\s+/)
-            .filter(Boolean)
-            .slice(0, 2)
-            .map((part) => part.charAt(0).toUpperCase())
-            .join('') || 'SP';
-    };
-
-    const sanitizeUrl = (value) => {
-        if (!value) return '';
-        try {
-            const base =
-                typeof window !== 'undefined' && window.location && window.location.origin
-                    ? window.location.origin
-                    : 'https://example.com';
-            const parsed = new URL(String(value).trim(), base);
-            if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
-                return parsed.href;
-            }
-        } catch (err) {
-            console.warn('Invalid speaker URL skipped:', value, err);
-        }
-        return '';
-    };
-
-    if (!speakers.length) {
+    if (!Array.isArray(speakers) || !speakers.length) {
         container.innerHTML = `
             <div class="no-speakers-message">
                 <div class="no-speakers-icon"><i class="fas fa-user" aria-hidden="true"></i></div>
@@ -1829,85 +2171,20 @@ function populateSpeakersFromProposal() {
         return;
     }
 
-    let html = '<div class="speakers-list">';
-    speakers.forEach((sp, index) => {
-        console.log(`Processing speaker ${index}:`, sp);
-        const speakerName = (sp && (sp.full_name || sp.name)) || 'Unnamed Speaker';
-        const speakerAffiliation = (sp && (sp.affiliation || sp.organization)) || '';
-        const speakerDesignation = (sp && sp.designation) || '';
-        const speakerContactEmail = (sp && (sp.contact_email || sp.contact || sp.email)) || '';
-        const speakerContactNumber = (sp && (sp.contact_number || sp.phone || sp.mobile || sp.contact_phone)) || '';
-        const speakerLinkedIn = (sp && (sp.linkedin_url || sp.linkedin || sp.linkedinUrl)) || '';
-        const speakerBio = (sp && (sp.detailed_profile || sp.profile || sp.bio || sp.summary)) || '';
-        const speakerPhoto = (sp && (sp.photo_url || sp.photo || sp.photoUrl || sp.photo_path)) || '';
-
-        const designationHtml = speakerDesignation
-            ? `<div class="speaker-designation">${escapeHtml(speakerDesignation)}</div>`
-            : '';
-        const affiliationHtml = speakerAffiliation
-            ? `<div class="speaker-affiliation">${escapeHtml(speakerAffiliation)}</div>`
-            : '';
-
-        const contactItems = [];
-        if (speakerContactEmail) {
-            const email = String(speakerContactEmail).trim();
-            contactItems.push(
-                `<div class="speaker-contact-item"><span class="speaker-contact-label">Email:</span> <a href="mailto:${encodeURIComponent(
-                    email
-                )}">${escapeHtml(email)}</a></div>`
-            );
+    window.SPEAKER_CACHE = {};
+    let html = '<div class="speakers-list speakers-editable">';
+    speakers.forEach((speaker, index) => {
+        const record = speaker && typeof speaker === 'object' ? speaker : {};
+        const id = record.id || record.pk;
+        if (id) {
+            window.SPEAKER_CACHE[String(id)] = Object.assign({}, record);
         }
-        if (speakerContactNumber) {
-            contactItems.push(
-                `<div class="speaker-contact-item"><span class="speaker-contact-label">Phone:</span> ${escapeHtml(
-                    speakerContactNumber
-                )}</div>`
-            );
-        }
-        const safeLinkedIn = sanitizeUrl(speakerLinkedIn);
-        if (safeLinkedIn) {
-            contactItems.push(
-                `<div class="speaker-contact-item"><span class="speaker-contact-label">LinkedIn:</span> <a href="${escapeHtml(
-                    safeLinkedIn
-                )}" target="_blank" rel="noopener">View Profile</a></div>`
-            );
-        }
-
-        const contactHtml = contactItems.length
-            ? `<div class="speaker-contact-info">${contactItems.join('')}</div>`
-            : '';
-
-        const bioHtml = speakerBio
-            ? `<div class="speaker-bio"><span class="speaker-bio-label">Profile</span><p>${formatMultiline(
-                  speakerBio
-              )}</p></div>`
-            : '';
-
-        const photoHtml = speakerPhoto
-            ? `<div class="speaker-photo"><img src="${escapeHtml(speakerPhoto)}" alt="${escapeHtml(
-                  speakerName
-              )}" loading="lazy"></div>`
-            : `<div class="speaker-photo speaker-photo-placeholder" aria-hidden="true">${escapeHtml(
-                  getInitials(speakerName)
-              )}</div>`;
-
-        html += `
-            <div class="speaker-reference-item speaker-card">
-                <div class="speaker-card-media">
-                    ${photoHtml}
-                </div>
-                <div class="speaker-card-content">
-                    <div class="speaker-name">${escapeHtml(speakerName)}</div>
-                    ${designationHtml || affiliationHtml ? `<div class="speaker-meta">${designationHtml}${affiliationHtml}</div>` : ''}
-                    ${contactHtml}
-                    ${bioHtml}
-                </div>
-            </div>
-        `;
+        html += renderEditableSpeakerCard(record, index);
     });
     html += '</div>';
+
     container.innerHTML = html;
-    console.log('Speakers populated successfully');
+    setupSpeakerCardEditors(container);
 }
 
 // SDG Modal functionality
