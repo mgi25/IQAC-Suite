@@ -68,9 +68,13 @@
 
                 <!-- Report Content Preview -->
                 <div class="report-preview">
-                    {% if report.html_content %}
+                    {% if report.ai_generated_report %}
                         <div class="content-preview">
-                            {{ report.html_content|safe|truncatewords:30 }}
+                            {{ report.ai_generated_report|linebreaks }}
+                        </div>
+                    {% elif report.summary %}
+                        <div class="content-preview">
+                            {{ report.summary|linebreaks }}
                         </div>
                     {% else %}
                         <div class="no-content">
@@ -81,7 +85,7 @@
 
                 <!-- Action Buttons -->
                 <div class="report-actions">
-                    <a href="{% url 'emt:download_pdf' report.id %}" class="action-btn primary">
+                    <a href="{% url 'emt:download_pdf' report.proposal.id %}" class="action-btn primary">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -89,7 +93,7 @@
                         </svg>
                         Download PDF
                     </a>
-                    <a href="#" class="action-btn secondary">
+                    <a href="{% url 'emt:download_word' report.proposal.id %}" class="action-btn secondary">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>

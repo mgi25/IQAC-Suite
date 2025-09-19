@@ -26,6 +26,8 @@ urlpatterns = [
     path('autosave-need-analysis/', views.autosave_need_analysis, name='autosave_need_analysis'),
     path('autosave-event-report/', views.autosave_event_report, name='autosave_event_report'),
     path('pending-reports/', views.pending_reports, name='pending_reports'),
+    path('report-generation/', views.report_form, name='report_form'),
+    path('report-generation/pdf/', views.generate_report_pdf, name='generate_report_pdf'),
     path('generate-report/<int:proposal_id>/', views.generate_report, name='generate_report'),
     path('report-success/<int:proposal_id>/', views.report_success, name='report_success'),
     path('download/pdf/<int:proposal_id>/', views.download_pdf, name='download_pdf'),
@@ -33,6 +35,7 @@ urlpatterns = [
     path('download/audience-csv/<int:proposal_id>/', views.download_audience_csv, name='download_audience_csv'),
     path('generated-reports/', views.generated_reports, name='generated_reports'),
     path('view-report/<int:report_id>/', views.view_report, name='view_report'),
+    path('admin/reports/', views.admin_reports_view, name='admin_reports_view'),
 
     path('reports/<int:report_id>/attendance/upload/', views.upload_attendance_csv, name='attendance_upload'),
     path('reports/<int:report_id>/attendance/save/', views.save_attendance_rows, name='attendance_save'),

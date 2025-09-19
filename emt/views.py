@@ -1,5 +1,10 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import JsonResponse, HttpResponse, StreamingHttpResponse
+from django.http import (
+    JsonResponse,
+    HttpResponse,
+    StreamingHttpResponse,
+    HttpResponseNotAllowed,
+)
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_POST
 from django.conf import settings
@@ -156,17 +161,19 @@ import pdfkit
 
 
 def report_form(request):
-    return render(request, "report_generation.html")
+    return render(request, "emt/report_generation.html")
 
 
 @csrf_exempt
 def generate_report_pdf(request):
-    if request.method == "POST":
-        html = render_to_string("pdf_template.html", {"data": request.POST})
-        pdf = pdfkit.from_string(html, False)
-        response = HttpResponse(pdf, content_type="application/pdf")
-        response["Content-Disposition"] = 'attachment; filename="Event_Report.pdf"'
-        return response
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    html = render_to_string("emt/pdf_template.html", {"data": request.POST})
+    pdf = pdfkit.from_string(html, False)
+    response = HttpResponse(pdf, content_type="application/pdf")
+    response["Content-Disposition"] = 'attachment; filename="Event_Report.pdf"'
+    return response
 
 
 # Helper to validate and persist text-based sections for proposals
@@ -1432,8 +1439,9 @@ def generate_report(request, proposal_id):
     generated_content = f"Report for {proposal.event_title}\n\nGenerated on {timezone.now().strftime('%Y-%m-%d')}"
 
     # Save to database
-    report.content = generated_content
-    report.generated_at = timezone.now()
+    report.ai_generated_report = generated_content
+    if not report.summary:
+        report.summary = generated_content
     report.save()
 
     # Add logging
@@ -1455,10 +1463,16 @@ def report_success(request, proposal_id):
 
 @login_required
 def generated_reports(request):
-    reports = EventProposal.objects.filter(
-        report_generated=True, submitted_by=request.user
-    ).order_by("-id")
-    return render(request, "emt/generated_reports.html", {"reports": reports})
+    reports = (
+        EventReport.objects.select_related("proposal", "proposal__organization")
+        .filter(proposal__submitted_by=request.user)
+        .order_by("-created_at")
+    )
+    return render(
+        request,
+        "emt/generated_reports.html",
+        {"reports": reports},
+    )
 
 
 @login_required
@@ -1513,10 +1527,18 @@ def download_pdf(request, proposal_id):
 
     # Add content to PDF
     p.drawString(100, 800, f"Event Report: {proposal.event_title}")
-    p.drawString(100, 780, f"Date: {proposal.event_datetime.strftime('%Y-%m-%d')}")
+    if proposal.event_datetime:
+        event_date = proposal.event_datetime.strftime("%Y-%m-%d")
+    elif proposal.event_start_date:
+        event_date = proposal.event_start_date.strftime("%Y-%m-%d")
+    else:
+        event_date = "N/A"
+    p.drawString(100, 780, f"Date: {event_date}")
     p.drawString(100, 760, f"Generated on: {timezone.now().strftime('%Y-%m-%d')}")
     p.drawString(100, 740, "Report Content:")
-    p.drawString(100, 720, report.content[:500] + "...")  # Show first 500 chars
+    report_text = report.ai_generated_report or report.summary or ""
+    preview = report_text[:500] + ("..." if len(report_text) > 500 else "")
+    p.drawString(100, 720, preview or "No content available.")
 
     p.showPage()
     p.save()
@@ -2134,24 +2156,21 @@ def submit_event_report(request, proposal_id):
     ]
 
     # Get or create content sections for the report
-    try:
-        event_summary = report.event_summary
-    except Exception:
-        event_summary = None
+    event_summary = None
+    if report and report.summary:
+        event_summary = SimpleNamespace(content=report.summary)
     if draft.get("event_summary"):
         event_summary = SimpleNamespace(content=draft.get("event_summary"))
 
-    try:
-        event_outcomes = report.event_outcomes
-    except Exception:
-        event_outcomes = None
+    event_outcomes = None
+    if report and report.outcomes:
+        event_outcomes = SimpleNamespace(content=report.outcomes)
     if draft.get("event_outcomes"):
         event_outcomes = SimpleNamespace(content=draft.get("event_outcomes"))
 
-    try:
-        analysis = report.analysis
-    except Exception:
-        analysis = None
+    analysis = None
+    if report and report.analysis:
+        analysis = SimpleNamespace(content=report.analysis)
     if draft.get("analysis"):
         analysis = SimpleNamespace(content=draft.get("analysis"))
 
@@ -2450,28 +2469,190 @@ def download_audience_csv(request, proposal_id):
 
 
 def _group_attendance_rows(rows):
-    """Separate rows into students by class and faculty by organization."""
-    reg_nos = [r.get("registration_no") for r in rows if r.get("registration_no")]
+    """Categorise rows for students, faculty and guests while grouping them."""
+
+    def _normalise_identifier(value: str) -> str:
+        return re.sub(r"\s+", "", (value or "").strip()).lower()
+
+    reg_nos = [
+        (r.get("registration_no") or "").strip() for r in rows if r.get("registration_no")
+    ]
+
     student_map = {
         s.registration_number: s
         for s in Student.objects.filter(registration_number__in=reg_nos)
     }
-    faculty_memberships = {
-        m.user.username: m.organization.name
-        for m in OrganizationMembership.objects.filter(
-            user__username__in=reg_nos, role="faculty"
-        ).select_related("organization")
+
+    faculty_memberships: dict[str, dict[str, str]] = {}
+
+    def _register_membership(member: OrganizationMembership) -> dict[str, str]:
+        organization_name = (
+            member.organization.name if member.organization else ""
+        )
+        organization_name = (organization_name or "").strip()
+        display_name = (member.user.get_full_name() or member.user.username or "")
+        display_name = display_name.strip()
+        normalized_display = _normalise_identifier(display_name)
+        membership_data = {
+            "organization": organization_name,
+            "display_name": display_name,
+            "normalized_display": normalized_display,
+        }
+        username = (member.user.username or "").strip()
+        if username:
+            faculty_memberships[username] = membership_data
+        profile_reg_no = getattr(
+            getattr(member.user, "profile", None), "register_no", ""
+        )
+        profile_reg_no = (profile_reg_no or "").strip()
+        if profile_reg_no:
+            faculty_memberships[profile_reg_no] = membership_data
+        if normalized_display:
+            faculty_memberships.setdefault(normalized_display, membership_data)
+        return membership_data
+
+    memberships = list(
+        OrganizationMembership.objects.filter(
+            Q(user__username__in=reg_nos)
+            | Q(user__profile__register_no__in=reg_nos),
+            role="faculty",
+        )
+        .select_related("organization", "user__profile")
+    )
+
+    processed_membership_ids: set[int] = set()
+    for membership in memberships:
+        processed_membership_ids.add(membership.pk)
+        _register_membership(membership)
+
+    missing_name_identifiers = {
+        _normalise_identifier((row.get("full_name") or ""))
+        for row in rows
+        if not (row.get("registration_no") or "").strip()
+        and (row.get("full_name") or "").strip()
     }
-    students_by_class = {}
-    faculty_by_org = {}
+    missing_name_identifiers.discard("")
+    existing_normalized_keys = {
+        data.get("normalized_display")
+        for data in faculty_memberships.values()
+        if data.get("normalized_display")
+    }
+    missing_name_identifiers -= existing_normalized_keys
+
+    if missing_name_identifiers:
+        extra_memberships = (
+            OrganizationMembership.objects.filter(role="faculty")
+            .exclude(id__in=processed_membership_ids)
+            .select_related("organization", "user__profile")
+        )
+        for membership in extra_memberships:
+            normalized_display = _normalise_identifier(
+                membership.user.get_full_name() or membership.user.username or ""
+            )
+            if not normalized_display or normalized_display not in missing_name_identifiers:
+                continue
+            processed_membership_ids.add(membership.pk)
+            _register_membership(membership)
+            missing_name_identifiers.discard(normalized_display)
+            if not missing_name_identifiers:
+                break
+
+    students_by_class: dict[str, list[str]] = {}
+    faculty_by_org: dict[str, list[str]] = {}
+
     for row in rows:
-        reg_no = row.get("registration_no")
-        if reg_no in student_map:
-            cls = row.get("student_class") or "Unknown"
-            students_by_class.setdefault(cls, []).append(row["full_name"])
+        reg_no = (row.get("registration_no") or "").strip()
+        full_name = (row.get("full_name") or "").strip()
+        cls = (row.get("student_class") or "").strip()
+        explicit_category = (row.get("category") or "").strip().lower()
+
+        normalized_full_name = _normalise_identifier(full_name)
+
+        membership_info = faculty_memberships.get(reg_no)
+        matched_by_name = False
+        if not membership_info and normalized_full_name:
+            membership_info = faculty_memberships.get(normalized_full_name)
+            if (
+                membership_info
+                and not reg_no
+                and membership_info.get("normalized_display")
+                and membership_info["normalized_display"] == normalized_full_name
+            ):
+                matched_by_name = True
+
+        membership_org = (membership_info or {}).get("organization", "")
+        membership_name = ((membership_info or {}).get("display_name") or "").strip()
+        if matched_by_name:
+            explicit_category = AttendanceRow.Category.FACULTY
+            if membership_org:
+                cls = membership_org
+                row["student_class"] = cls
+            row["affiliation"] = membership_org or row.get("affiliation") or ""
+
+        if explicit_category in AttendanceRow.Category.values:
+            category = explicit_category
+            label = (
+                row.get("affiliation")
+                or cls
+                or (
+                    membership_org
+                    if category == AttendanceRow.Category.FACULTY
+                    else ""
+                )
+                or "Guests"
+            )
+            if (
+                category == AttendanceRow.Category.STUDENT
+                and reg_no
+                and membership_info
+                and reg_no not in student_map
+            ):
+                category = AttendanceRow.Category.FACULTY
+                label = membership_org or label or "Unknown"
+        elif cls or reg_no in student_map:
+            category = AttendanceRow.Category.STUDENT
+            label = cls or "Unknown"
+        elif membership_info:
+            category = AttendanceRow.Category.FACULTY
+            label = membership_org or "Unknown"
         else:
-            org = faculty_memberships.get(reg_no, "Unknown")
-            faculty_by_org.setdefault(org, []).append(row["full_name"])
+            category = AttendanceRow.Category.EXTERNAL
+            label = row.get("affiliation") or cls or "Guests"
+
+        if category == AttendanceRow.Category.FACULTY:
+            if matched_by_name and membership_org:
+                label = membership_org
+            else:
+                label = label or membership_org or "Unknown"
+        elif category == AttendanceRow.Category.STUDENT:
+            label = label or "Unknown"
+        else:
+            label = label or "Guests"
+
+        if category == AttendanceRow.Category.STUDENT:
+            students_by_class.setdefault(label or "Unknown", []).append(full_name)
+        elif category == AttendanceRow.Category.FACULTY:
+            if membership_name:
+                name_matches_reg_no = False
+                if reg_no and full_name:
+                    name_matches_reg_no = (
+                        _normalise_identifier(full_name) == _normalise_identifier(reg_no)
+                    )
+                if matched_by_name or not full_name or name_matches_reg_no:
+                    full_name = membership_name
+            if matched_by_name and label:
+                row["student_class"] = label
+            row["full_name"] = full_name
+            faculty_by_org.setdefault(label or "Unknown", []).append(full_name)
+
+        row["category"] = category
+        row["affiliation"] = label or ""
+        row["full_name"] = full_name
+
+        # Ensure faculty rows capture their organisation even if student_class is blank
+        if category == AttendanceRow.Category.FACULTY and not cls:
+            row.setdefault("student_class", label)
+
     return students_by_class, faculty_by_org
 
 
@@ -2490,10 +2671,13 @@ def upload_attendance_csv(request, report_id):
         except ValueError as exc:
             error = str(exc)
 
-    page = int(request.GET.get("page", 1))
+    try:
+        page = int(request.GET.get("page", 1))
+    except (TypeError, ValueError):
+        page = 1
+    if page < 1:
+        page = 1
     per_page = 100
-    start = (page - 1) * per_page
-    rows_page = rows[start : start + per_page]
 
     if rows:
         counts = {
@@ -2503,6 +2687,7 @@ def upload_attendance_csv(request, report_id):
             "volunteers": len([r for r in rows if r.get("volunteer")]),
         }
         student_groups, faculty_groups = _group_attendance_rows(rows)
+        full_rows = rows
     else:
         saved_rows = [
             {
@@ -2511,6 +2696,8 @@ def upload_attendance_csv(request, report_id):
                 "student_class": r.student_class,
                 "absent": r.absent,
                 "volunteer": r.volunteer,
+                "category": r.category,
+                "affiliation": r.student_class,
             }
             for r in report.attendance_rows.all()
         ]
@@ -2521,16 +2708,30 @@ def upload_attendance_csv(request, report_id):
             "volunteers": report.attendance_rows.filter(volunteer=True).count(),
         }
         student_groups, faculty_groups = _group_attendance_rows(saved_rows)
+        full_rows = saved_rows
+
+    total_rows = len(full_rows)
+    if total_rows:
+        total_pages = (total_rows + per_page - 1) // per_page
+        if page > total_pages:
+            page = total_pages
+    else:
+        page = 1
+        total_pages = 1
 
     context = {
         "report": report,
-        "rows_json": json.dumps(rows_page),
+        # When a CSV is uploaded we want to preview the entire dataset so that
+        # faculty rows are not hidden behind the initial 100 row slice.
+        # The frontend already paginates the full list on the client side, so
+        # pass the complete set of rows instead of just the first page.
+        "rows_json": json.dumps(full_rows),
         "students_group_json": json.dumps(student_groups),
         "faculty_group_json": json.dumps(faculty_groups),
         "error": error,
         "page": page,
-        "has_prev": page > 1,
-        "has_next": start + per_page < len(rows),
+        "has_prev": total_rows > 0 and page > 1,
+        "has_next": total_rows > 0 and page < total_pages,
         "counts": counts,
     }
     return render(request, "emt/attendance_upload.html", context)
@@ -2586,6 +2787,7 @@ def attendance_data(request, report_id):
     report = get_object_or_404(
         EventReport, id=report_id, proposal__submitted_by=request.user
     )
+    proposal = report.proposal
     rows = [
         {
             "registration_no": r.registration_no,
@@ -2593,14 +2795,17 @@ def attendance_data(request, report_id):
             "student_class": r.student_class,
             "absent": r.absent,
             "volunteer": r.volunteer,
+            "category": r.category,
+            "affiliation": r.student_class,
         }
         for r in report.attendance_rows.all()
     ]
 
     if not rows:
+        rows = []
         names = [
             n.strip()
-            for n in (report.proposal.target_audience or "").split(",")
+            for n in (proposal.target_audience or "").split(",")
             if n.strip()
         ]
         if names:
@@ -2609,8 +2814,6 @@ def attendance_data(request, report_id):
                 (s.user.get_full_name() or s.user.username).strip().lower(): s
                 for s in Student.objects.select_related("user")
             }
-
-            rows = []
 
             # Helper: expand a Class into attendance rows for all its students
             from core.models import Class  # local import to avoid circulars at module import time
@@ -2628,6 +2831,8 @@ def attendance_data(request, report_id):
                             "student_class": cls_obj.code or cls_obj.name,
                             "absent": False,
                             "volunteer": False,
+                            "category": AttendanceRow.Category.STUDENT,
+                            "affiliation": cls_obj.code or cls_obj.name,
                         }
                     )
 
@@ -2646,6 +2851,8 @@ def attendance_data(request, report_id):
                             "student_class": (cls.code if cls and cls.code else (cls.name if cls else "")),
                             "absent": False,
                             "volunteer": False,
+                            "category": AttendanceRow.Category.STUDENT,
+                            "affiliation": (cls.code if cls and cls.code else (cls.name if cls else "")),
                         }
                     )
                     continue
@@ -2681,8 +2888,44 @@ def attendance_data(request, report_id):
                             "student_class": "",
                             "absent": False,
                             "volunteer": False,
+                            "category": AttendanceRow.Category.EXTERNAL,
+                            "affiliation": "",
                         }
                     )
+
+        faculty_users = list(
+            proposal.faculty_incharges.all().select_related("profile")
+        )
+        if faculty_users:
+            existing_registrations = {
+                (r.get("registration_no") or "").strip().lower()
+                for r in rows
+                if (r.get("registration_no") or "").strip()
+            }
+            for user in faculty_users:
+                profile = getattr(user, "profile", None)
+                reg_no = (
+                    (getattr(profile, "register_no", "") or user.username or "").strip()
+                )
+                full_name = (user.get_full_name() or user.username or "").strip()
+                if not full_name and not reg_no:
+                    continue
+                normalized_reg = reg_no.lower() if reg_no else ""
+                if normalized_reg and normalized_reg in existing_registrations:
+                    continue
+                rows.append(
+                    {
+                        "registration_no": reg_no,
+                        "full_name": full_name,
+                        "student_class": "",
+                        "absent": False,
+                        "volunteer": False,
+                        "category": AttendanceRow.Category.FACULTY,
+                        "affiliation": "",
+                    }
+                )
+                if normalized_reg:
+                    existing_registrations.add(normalized_reg)
 
     counts = {
         "total": len(rows),
@@ -2713,6 +2956,7 @@ def save_attendance_rows(request, report_id):
         return JsonResponse({"error": "Invalid JSON"}, status=400)
 
     rows = payload.get("rows", [])
+    _group_attendance_rows(rows)
     AttendanceRow.objects.filter(event_report=report).delete()
     objs = [
         AttendanceRow(
@@ -2722,6 +2966,11 @@ def save_attendance_rows(request, report_id):
             student_class=r.get("student_class", ""),
             absent=bool(r.get("absent")),
             volunteer=bool(r.get("volunteer")),
+            category=(
+                (r.get("category") or AttendanceRow.Category.STUDENT)
+                if (r.get("category") in AttendanceRow.Category.values)
+                else AttendanceRow.Category.STUDENT
+            ),
         )
         for r in rows
     ]
@@ -2733,27 +2982,16 @@ def save_attendance_rows(request, report_id):
     present_rows = [r for r in rows if not r.get("absent")]
     present = len(present_rows)
 
-    # Determine participant types for present attendees
-    reg_nos = [r.get("registration_no") for r in present_rows if r.get("registration_no")]
-    users = {
-        u.username: u
-        for u in User.objects.filter(username__in=reg_nos).select_related("student_profile")
-    }
-    student_usernames = {u for u, obj in users.items() if hasattr(obj, "student_profile")}
-    faculty_usernames = set(
-        OrganizationMembership.objects.filter(
-            user__username__in=reg_nos, role="faculty"
-        ).values_list("user__username", flat=True)
-    )
-
     student_count = sum(
-        1 for r in present_rows if r.get("registration_no") in student_usernames
+        1
+        for r in present_rows
+        if (r.get("category") or AttendanceRow.Category.STUDENT)
+        == AttendanceRow.Category.STUDENT
     )
     faculty_count = sum(
         1
         for r in present_rows
-        if r.get("registration_no") in faculty_usernames
-        and r.get("registration_no") not in student_usernames
+        if (r.get("category") or "").lower() == AttendanceRow.Category.FACULTY
     )
     external_count = present - student_count - faculty_count
 
@@ -2822,12 +3060,13 @@ def download_attendance_csv(request, report_id):
                 "student_class": r.student_class,
                 "absent": r.absent,
                 "volunteer": r.volunteer,
+                "category": r.category,
             }
             for r in report.attendance_rows.all()
         ]
 
     response = HttpResponse(content_type="text/csv")
-    filename = f"student_audience_{report_id}.csv"
+    filename = f"attendance_{report_id}.csv"
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
 
     writer = csv.writer(response, quoting=csv.QUOTE_MINIMAL)
@@ -2835,6 +3074,7 @@ def download_attendance_csv(request, report_id):
     for r in rows:
         writer.writerow(
             [
+                (r.get("category") or AttendanceRow.Category.STUDENT),
                 r.get("registration_no", ""),
                 r.get("full_name", ""),
                 r.get("student_class", ""),
@@ -3071,7 +3311,7 @@ Repeat: Output each field as FIELD: VALUE (colon required), one per line, nothin
             yield chunk
             time.sleep(0.5)  # Simulate delay
 
-    report.content = "".join(chunks)
+    report.ai_generated_report = "".join(chunks)
     report.save()
 
     return StreamingHttpResponse(generate(), content_type="text/plain")
@@ -3159,29 +3399,28 @@ def api_organization_types(request):
 @login_required
 def admin_reports_view(request):
     try:
-        submitted_reports = Report.objects.all()
-        generated_reports = EventReport.objects.select_related("proposal").all()
+        submitted_reports = list(
+            Report.objects.select_related("organization", "submitted_by")
+        )
+        generated_reports = list(
+            EventReport.objects.select_related(
+                "proposal",
+                "proposal__organization",
+                "proposal__submitted_by",
+            )
+        )
 
-        # Create a combined list with a consistent sorting attribute
-        all_reports_list = []
-
-        # Assuming core.Report has 'created_at'
         for report in submitted_reports:
             report.sort_date = report.created_at
-            all_reports_list.append(report)
 
-        # EventReport has 'generated_at', so we use that
         for report in generated_reports:
-            # Use generated_at if it exists, otherwise use a fallback like the proposal creation date
-            report.sort_date = (
-                report.generated_at
-                if report.generated_at
-                else report.proposal.created_at
-            )
-            all_reports_list.append(report)
+            report.sort_date = report.created_at or report.proposal.created_at
 
-        # Now sort by the common attribute 'sort_date'
-        all_reports_list.sort(key=attrgetter("sort_date"), reverse=True)
+        all_reports_list = sorted(
+            submitted_reports + generated_reports,
+            key=attrgetter("sort_date"),
+            reverse=True,
+        )
 
         context = {"reports": all_reports_list}
 
