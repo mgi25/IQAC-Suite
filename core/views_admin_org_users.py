@@ -151,7 +151,11 @@ def upload_csv(request, org_id):
         return HttpResponseBadRequest("POST required")
 
     referer = request.META.get("HTTP_REFERER", "")
-    is_faculty = "faculty" in referer
+    upload_type = (request.POST.get("upload_type") or "").strip().lower()
+    if upload_type:
+        is_faculty = upload_type == "faculty"
+    else:
+        is_faculty = "faculty" in referer
 
     form = OrgUsersCSVUploadForm(request.POST, request.FILES)
     if not form.is_valid():

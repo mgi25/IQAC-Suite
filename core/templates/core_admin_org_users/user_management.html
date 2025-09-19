@@ -50,7 +50,8 @@
         <div class="pane-content">
           <form id="students-upload-form" class="upload-form">
             {% csrf_token %}
-            
+            <input type="hidden" name="upload_type" value="student">
+
             <div class="form-row">
               <div class="form-group">
                 <label for="students-class-name">Class Name</label>
@@ -120,7 +121,8 @@
         <div class="pane-content">
           <form id="faculty-upload-form" class="upload-form">
             {% csrf_token %}
-            
+            <input type="hidden" name="upload_type" value="faculty">
+
             <div class="form-row">
               <div class="form-group">
                 <label for="faculty-start-year">Academic Year</label>
