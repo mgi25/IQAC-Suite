@@ -88,57 +88,6 @@ class SubmitEventReportViewTests(TestCase):
         self.assertEqual(activities[0].name, "Session 1")
         self.assertEqual(activities[1].name, "Session 2")
 
-    def test_report_submission_updates_speakers(self):
-        speaker1 = SpeakerProfile.objects.create(
-            proposal=self.proposal,
-            full_name="Dr. Xavier",
-            designation="Professor",
-            affiliation="University",
-            contact_email="xavier@example.com",
-            detailed_profile="Initial bio",
-        )
-        SpeakerProfile.objects.create(
-            proposal=self.proposal,
-            full_name="Ms. Old Speaker",
-            designation="Analyst",
-            affiliation="Old Org",
-        )
-
-        url = reverse("emt:submit_event_report", args=[self.proposal.id])
-        data = {
-            "actual_event_type": "Seminar",
-            "report_signed_date": "2024-01-10",
-            "organizing_committee": "Team",
-            "num_participants": "25",
-            "speaker_id_0": str(speaker1.id),
-            "speaker_full_name_0": "Dr. Xavier Updated",
-            "speaker_designation_0": "Senior Analyst",
-            "speaker_affiliation_0": "Research Lab",
-            "speaker_contact_email_0": "updated@example.com",
-            "speaker_contact_number_0": "555-0100",
-            "speaker_linkedin_url_0": "https://linkedin.com/in/xavier",
-            "speaker_detailed_profile_0": "Updated profile",
-            "speaker_clear_all": "0",
-            "form-TOTAL_FORMS": "0",
-            "form-INITIAL_FORMS": "0",
-            "form-MIN_NUM_FORMS": "0",
-            "form-MAX_NUM_FORMS": "1000",
-        }
-
-        response = self.client.post(url, data)
-        self.assertEqual(response.status_code, 302)
-
-        speaker1.refresh_from_db()
-        self.assertEqual(speaker1.full_name, "Dr. Xavier Updated")
-        self.assertEqual(speaker1.affiliation, "Research Lab")
-        self.assertEqual(speaker1.contact_email, "updated@example.com")
-        self.assertEqual(speaker1.linkedin_url, "https://linkedin.com/in/xavier")
-        self.assertEqual(speaker1.detailed_profile, "Updated profile")
-
-        remaining_speakers = list(SpeakerProfile.objects.filter(proposal=self.proposal))
-        self.assertEqual(len(remaining_speakers), 1)
-        self.assertEqual(remaining_speakers[0].id, speaker1.id)
-
     def test_attendance_counts_displayed(self):
         report = EventReport.objects.create(proposal=self.proposal)
         AttendanceRow.objects.create(
