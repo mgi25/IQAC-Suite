@@ -2846,131 +2846,147 @@ def attendance_data(request, report_id):
         for r in report.attendance_rows.all()
     ]
 
-    if not rows:
-        rows = []
-        names = [
-            n.strip()
-            for n in (proposal.target_audience or "").split(",")
-            if n.strip()
-        ]
-        if names:
-            # Map of student display name -> Student
-            students = {
-                (s.user.get_full_name() or s.user.username).strip().lower(): s
-                for s in Student.objects.select_related("user")
-            }
+    had_saved_rows = len(rows) > 0
 
-            # Helper: expand a Class into attendance rows for all its students
-            from core.models import Class  # local import to avoid circulars at module import time
+    def _normalise_reg(value: str) -> str:
+        return (value or "").strip().lower()
 
-            def add_rows_for_class(cls_obj):
-                for stu in cls_obj.students.select_related("user").all():
-                    full_name = (stu.user.get_full_name() or stu.user.username).strip()
-                    reg_no = stu.registration_number or getattr(
-                        getattr(stu.user, "profile", None), "register_no", ""
-                    )
-                    rows.append(
-                        {
-                            "registration_no": reg_no,
-                            "full_name": full_name,
-                            "student_class": cls_obj.code or cls_obj.name,
-                            "absent": False,
-                            "volunteer": False,
-                            "category": AttendanceRow.Category.STUDENT,
-                            "affiliation": cls_obj.code or cls_obj.name,
-                        }
-                    )
+    def _normalise_name(value: str) -> str:
+        return re.sub(r"\s+", "", (value or "").strip()).lower()
 
-            for name in names:
-                # First try exact student name match
-                student = students.get(name.lower())
-                if student:
-                    reg_no = student.registration_number or getattr(
-                        getattr(student.user, "profile", None), "register_no", ""
-                    )
-                    cls = student.classes.filter(is_active=True).first()
-                    rows.append(
-                        {
-                            "registration_no": reg_no,
-                            "full_name": (student.user.get_full_name() or student.user.username).strip(),
-                            "student_class": (cls.code if cls and cls.code else (cls.name if cls else "")),
-                            "absent": False,
-                            "volunteer": False,
-                            "category": AttendanceRow.Category.STUDENT,
-                            "affiliation": (cls.code if cls and cls.code else (cls.name if cls else "")),
-                        }
-                    )
-                    continue
+    existing_registrations = {
+        norm
+        for norm in (_normalise_reg(r.get("registration_no")) for r in rows)
+        if norm
+    }
+    existing_names = {
+        norm
+        for norm in (_normalise_name(r.get("full_name")) for r in rows)
+        if norm
+    }
 
-                # Otherwise, interpret it as a Class selection like "CSE (Dept Name)"
-                class_name = name
-                org_name = None
-                if "(" in name and ")" in name:
-                    try:
-                        class_name = name.split("(")[0].strip()
-                        org_name = name[name.index("(") + 1 : name.rindex(")")].strip()
-                    except Exception:
-                        class_name = name.strip()
-                        org_name = None
+    def add_row_if_missing(row: dict) -> None:
+        reg_norm = _normalise_reg(row.get("registration_no"))
+        name_norm = _normalise_name(row.get("full_name"))
+        if reg_norm and reg_norm in existing_registrations:
+            return
+        if not reg_norm and name_norm and name_norm in existing_names:
+            return
+        rows.append(row)
+        if reg_norm:
+            existing_registrations.add(reg_norm)
+        if name_norm:
+            existing_names.add(name_norm)
 
+    names = [
+        n.strip()
+        for n in (proposal.target_audience or "").split(",")
+        if n.strip()
+    ]
+    if names:
+        students = {
+            (s.user.get_full_name() or s.user.username).strip().lower(): s
+            for s in Student.objects.select_related("user")
+        }
+
+        from core.models import Class  # local import to avoid circulars at module import time
+
+        def add_rows_for_class(cls_obj):
+            for stu in cls_obj.students.select_related("user").all():
+                full_name = (stu.user.get_full_name() or stu.user.username).strip()
+                reg_no = stu.registration_number or getattr(
+                    getattr(stu.user, "profile", None), "register_no", ""
+                )
+                add_row_if_missing(
+                    {
+                        "registration_no": reg_no,
+                        "full_name": full_name,
+                        "student_class": cls_obj.code or cls_obj.name,
+                        "absent": False,
+                        "volunteer": False,
+                        "category": AttendanceRow.Category.STUDENT,
+                        "affiliation": cls_obj.code or cls_obj.name,
+                    }
+                )
+
+        for name in names:
+            student = students.get(name.lower())
+            if student:
+                reg_no = student.registration_number or getattr(
+                    getattr(student.user, "profile", None), "register_no", ""
+                )
+                cls = student.classes.filter(is_active=True).first()
+                add_row_if_missing(
+                    {
+                        "registration_no": reg_no,
+                        "full_name": (student.user.get_full_name() or student.user.username).strip(),
+                        "student_class": (cls.code if cls and cls.code else (cls.name if cls else "")),
+                        "absent": False,
+                        "volunteer": False,
+                        "category": AttendanceRow.Category.STUDENT,
+                        "affiliation": (cls.code if cls and cls.code else (cls.name if cls else "")),
+                    }
+                )
+                continue
+
+            class_name = name
+            org_name = None
+            if "(" in name and ")" in name:
+                try:
+                    class_name = name.split("(")[0].strip()
+                    org_name = name[name.index("(") + 1 : name.rindex(")")].strip()
+                except Exception:
+                    class_name = name.strip()
+                    org_name = None
+
+            cls_obj = None
+            if not had_saved_rows:
                 cls_qs = Class.objects.filter(name__iexact=class_name)
                 if org_name:
                     cls_qs = cls_qs.filter(organization__name__iexact=org_name)
 
                 cls_obj = cls_qs.first()
                 if not cls_obj:
-                    # Try matching by code if not found by name
                     cls_obj = Class.objects.filter(code__iexact=class_name).first()
 
-                if cls_obj:
-                    add_rows_for_class(cls_obj)
-                else:
-                    # Fall back to a generic row using the provided text as a name
-                    rows.append(
-                        {
-                            "registration_no": "",
-                            "full_name": name,
-                            "student_class": "",
-                            "absent": False,
-                            "volunteer": False,
-                            "category": AttendanceRow.Category.EXTERNAL,
-                            "affiliation": "",
-                        }
-                    )
+            if cls_obj:
+                add_rows_for_class(cls_obj)
+                continue
 
-        faculty_users = list(
-            proposal.faculty_incharges.all().select_related("profile")
+            add_row_if_missing(
+                {
+                    "registration_no": "",
+                    "full_name": name,
+                    "student_class": "",
+                    "absent": False,
+                    "volunteer": False,
+                    "category": AttendanceRow.Category.EXTERNAL,
+                    "affiliation": "",
+                }
+            )
+
+    faculty_users = list(
+        proposal.faculty_incharges.all().select_related("profile")
+    )
+    for user in faculty_users:
+        profile = getattr(user, "profile", None)
+        reg_no = (
+            (getattr(profile, "register_no", "") or user.username or "").strip()
         )
-        if faculty_users:
-            existing_registrations = {
-                (r.get("registration_no") or "").strip().lower()
-                for r in rows
-                if (r.get("registration_no") or "").strip()
+        full_name = (user.get_full_name() or user.username or "").strip()
+        if not full_name and not reg_no:
+            continue
+        add_row_if_missing(
+            {
+                "registration_no": reg_no,
+                "full_name": full_name,
+                "student_class": "",
+                "absent": False,
+                "volunteer": False,
+                "category": AttendanceRow.Category.FACULTY,
+                "affiliation": "",
             }
-            for user in faculty_users:
-                profile = getattr(user, "profile", None)
-                reg_no = (
-                    (getattr(profile, "register_no", "") or user.username or "").strip()
-                )
-                full_name = (user.get_full_name() or user.username or "").strip()
-                if not full_name and not reg_no:
-                    continue
-                normalized_reg = reg_no.lower() if reg_no else ""
-                if normalized_reg and normalized_reg in existing_registrations:
-                    continue
-                rows.append(
-                    {
-                        "registration_no": reg_no,
-                        "full_name": full_name,
-                        "student_class": "",
-                        "absent": False,
-                        "volunteer": False,
-                        "category": AttendanceRow.Category.FACULTY,
-                        "affiliation": "",
-                    }
-                )
-                if normalized_reg:
-                    existing_registrations.add(normalized_reg)
+        )
 
     counts = {
         "total": len(rows),
