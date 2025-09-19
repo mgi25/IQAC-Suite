@@ -12,6 +12,7 @@
     </p>
     <form method="post" enctype="multipart/form-data" action="{% url 'admin_org_users_upload_csv' org.id %}">
       {% csrf_token %}
+      <input type="hidden" name="upload_type" value="student">
       <div class="row g-3">
         <div class="col-sm-4">
           <label class="form-label">Class</label>
