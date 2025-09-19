@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}CDL — Communication{% endblock %}
+{% block head_extra %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
+<style>
+  #commLog{display:flex;flex-direction:column;gap:0;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:#fff}
+  .comm-group-date{background:#f1f5f9;font-size:11px;font-weight:600;letter-spacing:.5px;padding:6px 12px;color:#475569;display:flex;align-items:center;gap:6px;position:sticky;top:0;z-index:2}
+  .comm-item{display:grid;grid-template-columns:120px 1fr;gap:16px;padding:10px 14px;border-top:1px solid #e5e7eb;font-size:13px}
+  .comm-item:first-of-type{border-top:none}
+  .comm-user{font-weight:600;color:#1e3a8a;font-size:12px;margin-bottom:4px}
+  .comm-comment{white-space:pre-wrap;word-break:break-word}
+  .comm-attachment a{font-size:11px;color:#475569;text-decoration:none;border:1px solid #cbd5e1;padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;gap:4px}
+  .comm-attachment a:hover{background:#f1f5f9}
+  #commScroller{max-height:520px;overflow:auto;scroll-behavior:smooth}
+  #commForm{display:flex;flex-direction:column;gap:8px;margin-top:18px}
+  #commForm textarea{resize:vertical;min-height:70px;font-size:14px;padding:10px 12px;border:1px solid var(--border);border-radius:10px}
+  #commForm .row{display:flex;gap:10px;flex-wrap:wrap}
+  #commForm input[type=file]{font-size:12px}
+  #commForm button{background:#264487;color:#fff;border:none;padding:10px 16px;border-radius:10px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  #commForm button:hover{background:#1e3a73}
+  .empty-log{padding:40px 0;text-align:center;color:#64748b;font-size:14px}
+</style>
+{% endblock %}
+{% block content %}
+<div class="ems-dashboard" id="cdl-communication">
+  <header class="topbar">
+    <div>
+      <h1>CDL — Communication</h1>
+      <span class="topbar-date">{% now 'F j, Y · l' %}</span>
+    </div>
+    <div class="header-actions">
+      <a class="chip-btn" href="{% url 'cdl_support_detail_page' %}?{{ request.GET.urlencode }}"><i class="fa-solid fa-arrow-left"></i> Back</a>
+    </div>
+  </header>
+  <section class="card" style="padding:18px 20px">
+    <h3 style="margin:0 0 14px;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px"><i class="fa-regular fa-comments"></i> Communication Log</h3>
+    <div id="commLog" style="padding:0">
+      <div id="commScroller" style="overflow:auto;max-height:420px">
+        <table id="commTable" style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead style="position:sticky;top:0;background:#f1f5f9;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#475569">
+            <tr>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #e2e8f0;width:120px">Date</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #e2e8f0;width:160px">Reviewer</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #e2e8f0">Comment</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #e2e8f0;width:110px">Attachment</th>
+            </tr>
+          </thead>
+          <tbody id="commTBody"></tbody>
+        </table>
+        <div id="commEmpty" class="empty-log" style="margin:0">No messages yet.</div>
+      </div>
+    </div>
+    <form id="commForm" enctype="multipart/form-data">
+      <textarea id="commText" placeholder="Write a comment..." maxlength="4000"></textarea>
+      <div class="row" style="align-items:center">
+        <input type="file" id="commFile" name="attachment" />
+        <button type="submit" style="padding:6px 14px;font-size:13px;border-radius:8px"><i class="fa-solid fa-paper-plane"></i></button>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}
+{% block scripts_extra %}
+<script src="{% static 'core/js/cdl_communication.js' %}"></script>
+{% endblock %}

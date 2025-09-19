@@ -1,25 +1,147 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}CDL Member Dashboard{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
+<style>
+  .cdl-member-grid{display:grid;gap:1.25rem;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));align-items:start;margin-top:1rem}
+  .board-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:1.25rem}
+  .mini-cal{font-size:.85rem}
+  .mini-cal .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:.5rem}
+  .mini-cal .day{padding:.35rem .15rem;text-align:center;cursor:pointer;border-radius:4px;font-weight:500}
+  .mini-cal .day.today{outline:2px solid #2f6feb}
+  .mini-cal .day.has-event{background:#eef4ff;color:#0a2e6d}
+  .mini-cal .day.selected{background:#2f6feb;color:#fff}
+  .mini-cal .day.muted{opacity:.35;cursor:default}
+  .event-details-content .empty{padding:.5rem;color:#666;font-size:.85rem}
+  .event-detail-item{border:1px solid #e5e7eb;border-radius:6px;padding:.5rem .625rem;margin-bottom:.5rem;background:#fff}
+  .event-detail-title{font-weight:600;font-size:.9rem;margin-bottom:.25rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+  .event-detail-meta{font-size:.7rem;letter-spacing:.5px;text-transform:uppercase;color:#555}
+  .workboard-table{width:100%;border-collapse:collapse;font-size:.8rem}
+  .workboard-table th,.workboard-table td{padding:.4rem .5rem;border-bottom:1px solid #eee}
+  .workboard-table thead th{background:#f8fafc;font-weight:600;font-size:.7rem;text-transform:uppercase;letter-spacing:.5px}
+  .inbox-list{max-height:300px;overflow:auto;margin:0;padding:0;list-style:none}
+  .inbox-item{padding:.55rem .65rem;border-bottom:1px solid #f0f2f4;font-size:.75rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+  .inbox-item:last-child{border-bottom:none}
+  .pill{background:#eef2ff;color:#1d3f91;font-size:.55rem;padding:.2rem .45rem;border-radius:20px;letter-spacing:.5px;font-weight:600;text-transform:uppercase}
+  @media (min-width:1100px){
+    .layout-flex{display:grid;grid-template-columns:380px 1fr 360px;gap:1.25rem;align-items:start}
+    .stack{display:flex;flex-direction:column;gap:1.25rem}
+  }
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);display:flex;flex-direction:column;min-height:0}
+  .card-header{padding:.75rem .9rem;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;gap:.75rem}
+  .card-header h3{font-size:.85rem;margin:0;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:#243b53}
+  .card-body{padding:.75rem .9rem}
+  .chip-btn{background:#eef2ff;border:1px solid #d0d7ed;padding:.25rem .6rem;border-radius:30px;font-size:.65rem;font-weight:600;display:inline-flex;align-items:center;gap:.35rem;text-decoration:none;color:#1d3f91}
+  .chip-btn:hover{background:#dfe7fb}
+  .section-title{font-size:.75rem;font-weight:600;text-transform:uppercase;color:#4b5563;letter-spacing:.5px;margin:0 0 .5rem}
+  .progress-bar-wrap{display:flex;gap:.5rem;flex-wrap:wrap}
+  .metric-chip{background:#f1f5f9;border:1px solid #e2e8f0;padding:.4rem .6rem;border-radius:8px;font-size:.7rem;flex:1 0 130px;display:flex;flex-direction:column;gap:.15rem}
+  .metric-chip span.value{font-size:1.1rem;font-weight:600;color:#1e293b}
+</style>
+{% endblock %}
+
 {% block content %}
-<h1>CDL Member Dashboard</h1>
-<div class="row text-center my-4">
-  <div class="col"><div class="card"><div class="card-body"><h5>Assigned to Me</h5><p>{{ metrics.assigned|default:0 }}</p></div></div></div>
-  <div class="col"><div class="card"><div class="card-body"><h5>Due Today</h5><p>{{ metrics.due_today|default:0 }}</p></div></div></div>
-  <div class="col"><div class="card"><div class="card-body"><h5>Waiting on Reviewer</h5><p>{{ metrics.waiting|default:0 }}</p></div></div></div>
-  <div class="col"><div class="card"><div class="card-body"><h5>Rework Required</h5><p>{{ metrics.rework|default:0 }}</p></div></div></div>
-</div>
-<div class="card mb-4">
-  <div class="card-header">My Inbox</div>
-  <div class="card-body">
-    <ul class="list-group">
-      {% for n in inbox %}
-        <li class="list-group-item">{{ n }}</li>
-      {% empty %}<li class="list-group-item text-muted">Empty</li>{% endfor %}
-    </ul>
+<div class="layout-flex">
+  <!-- Left Column: Inbox + Progress -->
+  <div class="stack">
+    <section class="card" id="cardInbox">
+      <div class="card-header"><h3>Inbox</h3></div>
+      <div class="card-body" id="inboxWrap">
+        <ul class="inbox-list" id="inboxList">
+          <li class="inbox-item text-muted" data-empty="true">No messages</li>
+        </ul>
+      </div>
+    </section>
+    <section class="card" id="cardProgress">
+      <div class="card-header"><h3>My Progress (30d)</h3></div>
+      <div class="card-body">
+        <div class="progress-bar-wrap" id="progressStats">
+          <div class="metric-chip"><span class="label">On-time %</span><span class="value" id="statOnTime">—</span></div>
+          <div class="metric-chip"><span class="label">First-pass %</span><span class="value" id="statFirstPass">—</span></div>
+          <div class="metric-chip"><span class="label">Availability</span><span class="value" id="statAvail">—</span></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Center Column: Workboard -->
+  <section class="card" id="cardWorkboard">
+    <div class="card-header"><h3>My Workboard</h3></div>
+    <div class="card-body">
+      <div class="table-wrap" style="overflow:auto;max-height:430px">
+        <table class="workboard-table" id="workTable">
+          <thead>
+            <tr>
+              <th>Event</th>
+              <th>Type</th>
+              <th>Priority</th>
+              <th>Due</th>
+              <th>Status</th>
+              <th>Rev</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="workRows"><tr><td colspan="7" class="text-muted">No tasks</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Right Column: Calendar + Event Details -->
+  <div class="stack">
+    <section class="card" id="cardCalendar">
+      <div class="card-header"><h3>Calendar</h3></div>
+      <div class="card-body">
+        <div class="mini-cal" id="miniCalendar">
+          <div class="cal-head" style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.25rem;">
+            <button class="chip-btn" id="calPrev" aria-label="Prev">◀</button>
+            <div id="calTitle" style="font-weight:600;font-size:.7rem;letter-spacing:.5px"></div>
+            <button class="chip-btn" id="calNext" aria-label="Next">▶</button>
+          </div>
+          <div class="cal-weekdays" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;font-size:.55rem;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:#555">
+            <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+          </div>
+          <div class="cal-grid" id="calGrid"></div>
+        </div>
+      </div>
+    </section>
+    <section class="card" id="cardEventDetails">
+      <div class="card-header"><h3>Event Details</h3><button class="chip-btn" id="clearEventDetails" style="display:none">Clear</button></div>
+      <div class="card-body"><div id="eventDetailsContent" class="event-details-content"><div class="empty">Select a date in the calendar</div></div></div>
+    </section>
   </div>
 </div>
-<div class="card">
-  <div class="card-header">Workboard</div>
-  <div class="card-body">Workboard placeholder</div>
-</div>
+
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+(function(){
+  const $=s=>document.querySelector(s);const $$=s=>Array.from(document.querySelectorAll(s));
+  // Expect server to pass JSON-ready structures; fall back to empty arrays/objects
+  let DATA={
+    inbox: JSON.parse('{{ member_inbox|default:"[]"|escapejs }}'),
+    tasks: JSON.parse('{{ member_work|default:"[]"|escapejs }}'),
+    events: JSON.parse('{{ member_events|default:"[]"|escapejs }}'),
+    stats: JSON.parse('{{ member_stats_30d|default:"{}"|escapejs }}')
+  };
+  let calRef=new Date();
+  function init(){ renderInbox(); renderStats(); renderTasks(); buildCalendar(); autoOpenToday(); bind(); }
+  function bind(){ $('#calPrev')?.addEventListener('click',()=>{calRef=new Date(calRef.getFullYear(),calRef.getMonth()-1,1);buildCalendar();}); $('#calNext')?.addEventListener('click',()=>{calRef=new Date(calRef.getFullYear(),calRef.getMonth()+1,1);buildCalendar();}); $('#clearEventDetails')?.addEventListener('click',clearEventDetails); }
+  function renderInbox(){ const list=$('#inboxList'); const items=DATA.inbox||[]; if(!items.length){ list.innerHTML='<li class="inbox-item text-muted">No messages</li>'; return;} list.innerHTML=items.map(i=>`<li class="inbox-item"><span>${esc(i.subject||i.title||'Item')}</span><span class="pill">${esc(i.type||'')}</span></li>`).join(''); }
+  function renderStats(){ const s=DATA.stats||{}; setText('#statOnTime', fmtPct(s.ontime)); setText('#statFirstPass', fmtPct(s.firstpass)); setText('#statAvail', fmtPct(s.availability)); }
+  function fmtPct(v){ if(v==null) return '—'; return (Math.round(v*10)/10)+'%'; }
+  function renderTasks(){ const rows=$('#workRows'); const t=DATA.tasks||[]; if(!t.length){ rows.innerHTML='<tr><td colspan="7" class="text-muted">No tasks</td></tr>'; return;} rows.innerHTML=t.map(x=>{ const due=x.due? new Date(x.due).toLocaleDateString(undefined,{month:'short',day:'2-digit'}):'—'; return `<tr><td>${esc(x.event||x.title||'')}</td><td>${esc(x.type||'')}</td><td>${esc(x.priority||'')}</td><td>${due}</td><td>${esc(x.status||'')}</td><td>${x.rev??0}</td><td><a class="chip-btn" href="/cdl/support/?eventId=${x.event_id||x.id||''}">View</a></td></tr>`; }).join(''); }
+  function buildCalendar(){ $('#calTitle').textContent=calRef.toLocaleString(undefined,{month:'long',year:'numeric'}); const first=new Date(calRef.getFullYear(),calRef.getMonth(),1); const last=new Date(calRef.getFullYear(),calRef.getMonth()+1,0); const startIdx=first.getDay(); const prevLast=new Date(calRef.getFullYear(),calRef.getMonth(),0).getDate(); const cells=[]; for(let i=startIdx-1;i>=0;i--) cells.push({t:prevLast-i,iso:null,muted:true}); for(let d=1;d<=last.getDate();d++) cells.push({t:d,iso:iso(calRef,d),muted:false}); while(cells.length%7!==0) cells.push({t:'',iso:null,muted:true}); const todayISO=new Date().toISOString().slice(0,10); $('#calGrid').innerHTML=cells.map(c=>{ if(!c.iso) return `<div class="day muted">${c.t}</div>`; const has=(DATA.events||[]).some(e=>e.date===c.iso); const isToday=c.iso===todayISO; return `<div class="day${has?' has-event':''}${isToday?' today':''}" data-date="${c.iso}">${c.t}</div>`; }).join(''); $$('#calGrid .day[data-date]').forEach(d=>d.addEventListener('click',()=>{ $$('#calGrid .day.selected').forEach(x=>x.classList.remove('selected')); d.classList.add('selected'); openDate(d.dataset.date);})); }
+  function iso(base,d){ return `${base.getFullYear()}-${String(base.getMonth()+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+  function openDate(iso){ const items=(DATA.events||[]).filter(e=>e.date===iso); const wrap=$('#eventDetailsContent'); if(!items.length){ wrap.innerHTML='<div class="empty">No events on this date</div>'; $('#clearEventDetails').style.display='inline-flex'; return;} wrap.innerHTML=items.map(e=>{ const dateStr=new Date(e.date).toLocaleDateString(undefined,{day:'2-digit',month:'2-digit',year:'numeric'}); return `<div class="event-detail-item"><div class="event-detail-title"><span class="title-text">${esc(e.title||'Event')}</span><a class="chip-btn" href="/cdl/support/?eventId=${e.id}">View</a></div><div class="event-detail-meta">${dateStr}${e.status?` • ${esc(e.status)}`:''}${e.organization?` • ${esc(e.organization)}`:''}</div></div>`; }).join(''); $('#clearEventDetails').style.display='inline-flex'; }
+  function clearEventDetails(){ $('#eventDetailsContent').innerHTML='<div class="empty">Select a date in the calendar</div>'; $('#clearEventDetails').style.display='none'; $$('#calGrid .day.selected').forEach(x=>x.classList.remove('selected')); }
+  function autoOpenToday(){ const todayISO=new Date().toISOString().slice(0,10); if((DATA.events||[]).some(e=>e.date===todayISO)) { const el=$(`#calGrid .day[data-date='${todayISO}']`); if(el){ el.classList.add('selected'); openDate(todayISO); } } }
+  function setText(sel,v){ const el=$(sel); if(el) el.textContent=v; }
+  function esc(s){ return (s??'').toString().replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[m])); }
+  init();
+})();
+</script>
 {% endblock %}

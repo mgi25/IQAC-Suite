@@ -12,6 +12,19 @@
 <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
 {% now "U" as ts %}
 <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}?v={{ ts }}">
+<style>
+  @media (min-width:1201px){
+    #cardInbox.eq-height, #cardProgress.eq-height, #cardCalendar.eq-height{height:var(--calH);}
+    #cardInbox.eq-height{display:flex;flex-direction:column;}
+    #cardInbox.eq-height .list{flex:1;max-height:none;overflow:auto;}
+    #cardProgress.eq-height{display:flex;flex-direction:column;}
+    #cardProgress.eq-height .chart-wrap{flex:1;min-height:0;}
+    #cardCalendar.eq-height{display:flex;flex-direction:column;}
+  }
+  /* ensure smooth scrollbars without shifting layout */
+  #cardInbox .list::-webkit-scrollbar{width:8px}
+  #cardInbox .list::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -94,7 +107,7 @@
 
   <!-- Row 2 (same grid & card shells) -->
   <main class="grid-3 grid-assign" style="gap:16px; grid-auto-rows:minmax(300px,auto)">
-    <section class="card eq" id="cardInbox">
+  <section class="card eq" id="cardInbox">
       <div class="card-header">
         <h3><i class="fa-regular fa-bell"></i> My Inbox</h3>
         <div class="header-actions">
@@ -111,7 +124,7 @@
       <div class="empty muted" id="inboxEmpty" style="display:none;padding:12px;">No items</div>
     </section>
 
-    <section class="card eq" id="cardProgress">
+  <section class="card eq" id="cardProgress">
       <div class="card-header">
         <h3><i class="fa-solid fa-chart-line"></i> My Progress</h3>
         <div class="header-actions">
@@ -127,7 +140,7 @@
       </div>
     </section>
 
-  <section class="card eq" id="cardCalendar">
+    <section class="card eq" id="cardCalendar">
       <div class="card-header">
         <h3><i class="fa-regular fa-calendar"></i> My Calendar</h3>
         <div class="header-actions">
@@ -148,15 +161,10 @@
         <div class="cal-weekdays"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
         <div class="cal-grid" id="calGrid"></div>
       </div>
-      <div class="cal-legend">
-        <span class="dot blue"></span> Coverage
-        <span class="dot green"></span> Task/Approval
-      </div>
-      <div id="upcomingWrap" class="upcoming"></div>
     </section>
 
-    <!-- Workboard inside grid and spanning full width to reduce whitespace -->
-    <section class="card" id="cardWorkboard" style="grid-column:1 / -1">
+    <!-- Bottom Row: Workboard (left, span 2) and Event Details (right) -->
+    <section class="card" id="cardWorkboard" style="grid-column:1 / span 2">
       <div class="card-header">
         <h3><i class="fa-solid fa-table-list"></i> My Workboard</h3>
         <div class="header-actions">
@@ -180,10 +188,9 @@
       </div>
 
       <div class="table-wrap">
-        <table class="table compact">
+        <table class="table compact" id="workboardTable">
           <thead>
             <tr>
-              <th><input type="checkbox" id="wbAll"></th>
               <th>Event</th>
               <th>Type</th>
               <th>Priority</th>
@@ -196,11 +203,16 @@
           <tbody id="workTable"></tbody>
         </table>
       </div>
+      <!-- Bulk actions removed -->
+    </section>
 
-      <div class="table-actions">
-        <button class="btn xs" id="bulkUpload"><i class="fa-solid fa-upload"></i> Bulk Upload</button>
-        <button class="btn xs success" id="bulkSubmit"><i class="fa-solid fa-paper-plane"></i> Bulk Submit</button>
-        <button class="btn xs warn" id="bulkHelp"><i class="fa-regular fa-circle-question"></i> Bulk Help</button>
+    <section class="card" id="cardEventDetails" style="grid-column:3">
+      <div class="card-header">
+        <h3><i class="fa-regular fa-calendar-days"></i> Event Details</h3>
+        <button class="chip-btn" id="clearEventDetails" style="display:none"><i class="fa-solid fa-times"></i> Clear</button>
+      </div>
+      <div id="eventDetailsContent" class="event-details-content" style="padding:12px;overflow:auto;max-height:100%">
+        <div class="empty">Select a date in the calendar to view events</div>
       </div>
     </section>
   </main>
