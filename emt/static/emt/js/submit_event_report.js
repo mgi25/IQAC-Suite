@@ -1779,6 +1779,45 @@ function populateSpeakersFromProposal() {
     
     console.log('Final speakers data:', speakers);
 
+    const escapeHtml = (value) => {
+        if (value === null || value === undefined) return '';
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    };
+
+    const formatMultiline = (value) => escapeHtml(value).replace(/\r?\n/g, '<br>');
+
+    const getInitials = (value) => {
+        if (!value) return 'SP';
+        return value
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((part) => part.charAt(0).toUpperCase())
+            .join('') || 'SP';
+    };
+
+    const sanitizeUrl = (value) => {
+        if (!value) return '';
+        try {
+            const base =
+                typeof window !== 'undefined' && window.location && window.location.origin
+                    ? window.location.origin
+                    : 'https://example.com';
+            const parsed = new URL(String(value).trim(), base);
+            if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+                return parsed.href;
+            }
+        } catch (err) {
+            console.warn('Invalid speaker URL skipped:', value, err);
+        }
+        return '';
+    };
+
     if (!speakers.length) {
         container.innerHTML = `
             <div class="no-speakers-message">
@@ -1794,17 +1833,74 @@ function populateSpeakersFromProposal() {
     speakers.forEach((sp, index) => {
         console.log(`Processing speaker ${index}:`, sp);
         const speakerName = (sp && (sp.full_name || sp.name)) || 'Unnamed Speaker';
-        const speakerAffiliation = (sp && (sp.affiliation || sp.organization)) || 'No affiliation provided';
+        const speakerAffiliation = (sp && (sp.affiliation || sp.organization)) || '';
         const speakerDesignation = (sp && sp.designation) || '';
-        const speakerContact = (sp && (sp.contact || sp.contact_email || sp.email)) || '';
-        
+        const speakerContactEmail = (sp && (sp.contact_email || sp.contact || sp.email)) || '';
+        const speakerContactNumber = (sp && (sp.contact_number || sp.phone || sp.mobile || sp.contact_phone)) || '';
+        const speakerLinkedIn = (sp && (sp.linkedin_url || sp.linkedin || sp.linkedinUrl)) || '';
+        const speakerBio = (sp && (sp.detailed_profile || sp.profile || sp.bio || sp.summary)) || '';
+        const speakerPhoto = (sp && (sp.photo_url || sp.photo || sp.photoUrl || sp.photo_path)) || '';
+
+        const designationHtml = speakerDesignation
+            ? `<div class="speaker-designation">${escapeHtml(speakerDesignation)}</div>`
+            : '';
+        const affiliationHtml = speakerAffiliation
+            ? `<div class="speaker-affiliation">${escapeHtml(speakerAffiliation)}</div>`
+            : '';
+
+        const contactItems = [];
+        if (speakerContactEmail) {
+            const email = String(speakerContactEmail).trim();
+            contactItems.push(
+                `<div class="speaker-contact-item"><span class="speaker-contact-label">Email:</span> <a href="mailto:${encodeURIComponent(
+                    email
+                )}">${escapeHtml(email)}</a></div>`
+            );
+        }
+        if (speakerContactNumber) {
+            contactItems.push(
+                `<div class="speaker-contact-item"><span class="speaker-contact-label">Phone:</span> ${escapeHtml(
+                    speakerContactNumber
+                )}</div>`
+            );
+        }
+        const safeLinkedIn = sanitizeUrl(speakerLinkedIn);
+        if (safeLinkedIn) {
+            contactItems.push(
+                `<div class="speaker-contact-item"><span class="speaker-contact-label">LinkedIn:</span> <a href="${escapeHtml(
+                    safeLinkedIn
+                )}" target="_blank" rel="noopener">View Profile</a></div>`
+            );
+        }
+
+        const contactHtml = contactItems.length
+            ? `<div class="speaker-contact-info">${contactItems.join('')}</div>`
+            : '';
+
+        const bioHtml = speakerBio
+            ? `<div class="speaker-bio"><span class="speaker-bio-label">Profile</span><p>${formatMultiline(
+                  speakerBio
+              )}</p></div>`
+            : '';
+
+        const photoHtml = speakerPhoto
+            ? `<div class="speaker-photo"><img src="${escapeHtml(speakerPhoto)}" alt="${escapeHtml(
+                  speakerName
+              )}" loading="lazy"></div>`
+            : `<div class="speaker-photo speaker-photo-placeholder" aria-hidden="true">${escapeHtml(
+                  getInitials(speakerName)
+              )}</div>`;
+
         html += `
-            <div class="speaker-reference-item">
-                <div class="speaker-name">${speakerName}</div>
-                <div class="speaker-details">
-                    ${speakerDesignation ? `<div class="speaker-designation">${speakerDesignation}</div>` : ''}
-                    <div class="speaker-affiliation">${speakerAffiliation}</div>
-                    ${speakerContact ? `<div class="speaker-contact">${speakerContact}</div>` : ''}
+            <div class="speaker-reference-item speaker-card">
+                <div class="speaker-card-media">
+                    ${photoHtml}
+                </div>
+                <div class="speaker-card-content">
+                    <div class="speaker-name">${escapeHtml(speakerName)}</div>
+                    ${designationHtml || affiliationHtml ? `<div class="speaker-meta">${designationHtml}${affiliationHtml}</div>` : ''}
+                    ${contactHtml}
+                    ${bioHtml}
                 </div>
             </div>
         `;
