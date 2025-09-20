@@ -1,169 +1,170 @@
 /* Admin mini calendar + responsive drawer sync (no backend changes) */
 
-function readEventsFromDOM() {
-    try {
-      return JSON.parse(document.getElementById('events-data').textContent) || [];
-    } catch { return []; }
+
+// Admin Calendar Logic (CDL-style, but keep admin UI)
+(function () {
+  const $ = (s, r = document) => r.querySelector(s);
+  // State
+  let EVENTS = [];
+  let calRef = new Date();
+  let selectedDate = null;
+
+  // Elements
+  const els = {
+    title: $('#calTitle'),
+    grid: $('#calGrid'),
+    prev: $('#calPrev'),
+    next: $('#calNext'),
+    details: $('#eventDetailsContent'),
+    clearDetails: $('#clearEventDetails'),
+    drawer: $('#eventSidebar'),
+    drawerOverlay: $('#sidebarOverlay'),
+    drawerDate: $('#sidebarDate'),
+    drawerContent: $('#sidebarContent'),
+    drawerClose: $('#sidebarClose'),
+  };
+
+  const fmt2 = v => String(v).padStart(2, '0');
+  function ymdLocal(d) {
+    const y = d.getFullYear();
+    const m = fmt2(d.getMonth() + 1);
+    const da = fmt2(d.getDate());
+    return `${y}-${m}-${da}`;
   }
-  
-  document.addEventListener('DOMContentLoaded', () => {
-    // Start with server-injected events but keep only finalized
-    let CALENDAR_EVENTS = readEventsFromDOM().filter(e => (e.status||'').toLowerCase() === 'finalized');
-  
-    const els = {
-      title: document.getElementById('calTitle'),
-      grid: document.getElementById('calGrid'),
-      prev: document.getElementById('calPrev'),
-      next: document.getElementById('calNext'),
-      details: document.getElementById('eventDetailsContent'),
-      clearDetails: document.getElementById('clearEventDetails'),
-      drawer: document.getElementById('eventSidebar'),
-      drawerOverlay: document.getElementById('sidebarOverlay'),
-      drawerDate: document.getElementById('sidebarDate'),
-      drawerContent: document.getElementById('sidebarContent'),
-      drawerClose: document.getElementById('sidebarClose'),
-    };
-  
-    let currentDate = new Date();
-    let selectedDate = null;
-  
-    const isMobile = () => window.matchMedia('(max-width: 992px)').matches;
-  
-    function ymdLocal(d){
-      const y=d.getFullYear();
-      const m=String(d.getMonth()+1).padStart(2,'0');
-      const da=String(d.getDate()).padStart(2,'0');
-      return `${y}-${m}-${da}`;
+
+  function buildCalendar() {
+    if (!els.grid || !els.title) return;
+    const year = calRef.getFullYear();
+    const month = calRef.getMonth();
+    els.title.textContent = calRef.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+    const first = new Date(year, month, 1);
+    const last = new Date(year, month + 1, 0);
+    const startIdx = first.getDay();
+    const prevLast = new Date(year, month, 0).getDate();
+    const cells = [];
+    for (let i = startIdx - 1; i >= 0; i--) cells.push({ t: prevLast - i, iso: null, muted: true });
+    for (let d = 1; d <= last.getDate(); d++) {
+      const iso = `${year}-${fmt2(month + 1)}-${fmt2(d)}`;
+      cells.push({ t: d, iso, muted: false });
     }
-  
-    function renderCalendar(){
-      const year=currentDate.getFullYear();
-      const month=currentDate.getMonth();
-  
-      els.title.textContent = currentDate.toLocaleString('default',{month:'long', year:'numeric'});
-  
-      const firstDay = new Date(year, month, 1).getDay();
-      const daysInMonth = new Date(year, month+1, 0).getDate();
-  
-      els.grid.innerHTML = '';
-  
-      for(let i=0;i<firstDay;i++){
-        const empty = document.createElement('div');
-        empty.className = 'day muted';
-        els.grid.appendChild(empty);
+    while (cells.length % 7 !== 0) cells.push({ t: '', iso: null, muted: true });
+    els.grid.innerHTML = cells.map(c => {
+      if (!c.iso) {
+        return `<div class="day muted" data-date="">${c.t}</div>`;
       }
-  
-      const today = new Date(); today.setHours(0,0,0,0);
-  
-      for(let day=1; day<=daysInMonth; day++){
-        const date = new Date(year, month, day);
-        const dateStr = ymdLocal(date);
-  
-        const btn = document.createElement('button');
-        btn.className = 'day';
-        btn.textContent = day;
-  
-        if (date.getTime() === today.getTime()) btn.classList.add('today');
-        if (selectedDate && date.getTime() === selectedDate.getTime()) btn.classList.add('selected');
-  
-  // finalized-only already ensured in CALENDAR_EVENTS
-  const dayEvents = CALENDAR_EVENTS.filter(e => e.date === dateStr);
-        if (dayEvents.length) btn.classList.add('has-event');
-  
-        btn.addEventListener('click', () => {
-          if (isMobile()) {
-            openDrawerWithDate(date, dayEvents);
-          } else {
-            showEventDetailsInPanel(date, dayEvents);
-          }
-        });
-  
-        els.grid.appendChild(btn);
-      }
+      const isToday = c.iso === new Date().toISOString().slice(0, 10);
+      // Show dot for both approved and finalized events
+      let dayEvents = EVENTS.filter(e => e.date === c.iso && ['approved', 'finalized'].includes((e.status || '').toLowerCase()));
+      const hasEvents = dayEvents.length > 0;
+      return `<div class="day${hasEvents ? ' has-event' : ''}${isToday ? ' today' : ''}" data-date="${c.iso}">${c.t}</div>`;
+    }).join('');
+    $$('.day[data-date]', els.grid).forEach(d => d.addEventListener('click', () => {
+      $$('.day.selected', els.grid).forEach(x => x.classList.remove('selected'));
+      d.classList.add('selected');
+      openDay(d.dataset.date);
+    }));
+  }
+
+  function openDay(iso) {
+    // Only approved/finalized events on day open
+    let items = EVENTS.filter(e => e.date === iso && ['approved', 'finalized'].includes((e.status || '').toLowerCase()));
+    const box = els.details;
+    const clearBtn = els.clearDetails;
+    if (!box) return;
+    const dateStr = new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' });
+    if (!items.length) {
+      box.innerHTML = `<div class="empty">No events for ${dateStr}</div>`;
+      clearBtn && (clearBtn.style.display = 'none');
+      return;
     }
-  
-    function formatLongDate(date){
-      return date.toLocaleDateString('default', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+    box.innerHTML = items.map(e => `
+      <div class="event-detail-item">
+        <div class="event-detail-title with-actions">
+          <span class="title-text">${e.title}</span>
+          <div class="title-actions">
+            <a class="chip-btn" href="${e.view_url || '#'}">View</a>
+          </div>
+        </div>
+        <div class="event-detail-meta">${dateStr} • Org: ${e.organization || 'N/A'} • Status: ${e.status}</div>
+      </div>
+    `).join('');
+    if (clearBtn) {
+      clearBtn.style.display = 'inline-flex';
+      clearBtn.onclick = () => {
+        box.innerHTML = '<div class="empty">Click an event in the calendar to view details</div>';
+        clearBtn.style.display = 'none';
+        $$('.day.selected', els.grid).forEach(x => x.classList.remove('selected'));
+      };
     }
-  
-    function actionsHTML(event){
-      const view = event.view_url ? `<a href="${event.view_url}" class="chip-btn">View Details</a>` : '';
-      const gcal = (!event.past && event.gcal_url) ? `<a class="chip-btn" target="_blank" rel="noopener" href="${event.gcal_url}">Google</a>` : '';
-      return [view, gcal].filter(Boolean).join('');
-    }
-  
-    function showEventDetailsInPanel(date, dayEvents){
-      selectedDate = new Date(date);
-      els.details.innerHTML = `
-        <div class="event-date">${formatLongDate(date)}</div>
-        ${dayEvents.length
-          ? dayEvents.map(ev => `
-            <div class="event-detail-item">
-              <div class="row">
-                <h4 title="${ev.title}">${ev.title}</h4>
-                <div class="actions">${actionsHTML(ev)}</div>
-              </div>
-              ${ev.time ? `<p class="event-time">${ev.time}</p>` : ''}
-              ${ev.location ? `<p>${ev.location}</p>` : ''}
-            </div>
-          `).join('')
-          : `<div class="empty">No events scheduled for this date</div>`
-        }
-      `;
-      els.clearDetails.style.display = 'block';
-      renderCalendar();
-    }
-  
-    function openDrawerWithDate(date, dayEvents){
-      els.drawerDate.textContent = formatLongDate(date);
-      els.drawerContent.innerHTML = dayEvents.length
-        ? dayEvents.map(ev => `
-            <div class="event-item">
-              <div class="event-title" title="${ev.title}">${ev.title}</div>
-              <div class="event-acts">${actionsHTML(ev)}</div>
-            </div>
-          `).join('')
-        : `<p class="empty">No events for this day.</p>`;
-  
-      els.drawer.classList.add('active');
-      els.drawer.setAttribute('aria-hidden','false');
-      els.drawerOverlay.classList.remove('hidden');
-      els.drawerOverlay.focus();
-    }
-  
-    function closeDrawer(){
-      els.drawer.classList.remove('active');
-      els.drawer.setAttribute('aria-hidden','true');
-      els.drawerOverlay.classList.add('hidden');
-    }
-  
-    els.prev.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth()-1); renderCalendar(); });
-    els.next.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth()+1); renderCalendar(); });
-  
-    els.clearDetails.addEventListener('click', () => {
-      selectedDate = null;
-      els.details.innerHTML = '<div class="empty">Click an event in the calendar to view details</div>';
-      els.clearDetails.style.display = 'none';
-      renderCalendar();
-    });
-  
-    els.drawerClose?.addEventListener('click', closeDrawer);
-    els.drawerOverlay?.addEventListener('click', closeDrawer);
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });
-  
-    async function loadCalendarFromAPI(){
-      try{
-        const res = await fetch('/api/calendar/?category=all', { headers:{'X-Requested-With':'XMLHttpRequest'} });
-        const j = await res.json();
-        if (Array.isArray(j.items)) {
-          // keep only finalized events for admin calendar
-          CALENDAR_EVENTS = j.items.filter(e => (e.status||'').toLowerCase() === 'finalized');
-        }
-      }catch(_e){ /* keep server-injected fallback */ }
-      renderCalendar();
-    }
-  
-    loadCalendarFromAPI();
-    window.addEventListener('resize', () => renderCalendar());
+  }
+
+  // Mobile drawer
+  function openDrawerWithDate(iso) {
+    const items = EVENTS.filter(e => e.date === iso && ['approved', 'finalized'].includes((e.status || '').toLowerCase()));
+    els.drawerDate.textContent = new Date(iso).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    els.drawerContent.innerHTML = items.length
+      ? items.map(e => `
+        <div class="event-item">
+          <div class="event-title" title="${e.title}">${e.title}</div>
+          <div class="event-acts"><a class="chip-btn" href="${e.view_url || '#'}">View</a></div>
+        </div>
+      `).join('')
+      : `<p class="empty">No events for this day.</p>`;
+    els.drawer.classList.add('active');
+    els.drawer.setAttribute('aria-hidden', 'false');
+    els.drawerOverlay.classList.remove('hidden');
+    els.drawerOverlay.focus();
+  }
+  function closeDrawer() {
+    els.drawer.classList.remove('active');
+    els.drawer.setAttribute('aria-hidden', 'true');
+    els.drawerOverlay.classList.add('hidden');
+  }
+  els.prev?.addEventListener('click', () => { calRef = new Date(calRef.getFullYear(), calRef.getMonth() - 1, 1); buildCalendar(); });
+  els.next?.addEventListener('click', () => { calRef = new Date(calRef.getFullYear(), calRef.getMonth() + 1, 1); buildCalendar(); });
+  els.clearDetails?.addEventListener('click', () => {
+    els.details.innerHTML = '<div class="empty">Click an event in the calendar to view details</div>';
+    els.clearDetails.style.display = 'none';
+    $$('.day.selected', els.grid).forEach(x => x.classList.remove('selected'));
   });
+  els.drawerClose?.addEventListener('click', closeDrawer);
+  els.drawerOverlay?.addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });
+
+  // Helper for querySelectorAll
+  function $$(s, r = document) { return Array.from((r || document).querySelectorAll(s)); }
+
+  // Load events from API
+  async function loadCalendarFromAPI() {
+    try {
+      const res = await fetch('/api/calendar/?category=all', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const j = await res.json();
+      // Accept both array and {items:[]} for compatibility
+      if (Array.isArray(j)) {
+        EVENTS = j;
+      } else if (Array.isArray(j.items)) {
+        EVENTS = j.items;
+      } else {
+        EVENTS = [];
+      }
+    } catch (_e) { EVENTS = []; }
+    buildCalendar();
+  }
+
+  // Responsive: open drawer on mobile, panel on desktop
+  els.grid?.addEventListener('click', e => {
+    const day = e.target.closest('.day[data-date]');
+    if (!day || !day.dataset.date) return;
+    if (window.matchMedia('(max-width: 992px)').matches) {
+      openDrawerWithDate(day.dataset.date);
+    } else {
+      openDay(day.dataset.date);
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadCalendarFromAPI();
+    window.addEventListener('resize', buildCalendar);
+  });
+})();
   
