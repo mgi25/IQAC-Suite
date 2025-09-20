@@ -1023,13 +1023,6 @@ $(document).on('click', '#ai-sdg-implementation', function(){
               </div>
           </div>
 
-          <!-- Save Section -->
-          <div class="form-row full-width">
-              <div class="save-section-container">
-                  <button type="button" class="btn-save-section">Save & Continue</button>
-                  <div class="save-help-text">Complete this section to unlock the next one</div>
-              </div>
-          </div>
       `;
   }
   
@@ -2267,14 +2260,18 @@ function populateSpeakersFromProposal() {
     const listHtml = cardsHtml || getNoSpeakersMessageHtml();
 
     container.innerHTML = `
-        <div class="speakers-list speakers-editable">
-            ${listHtml}
-        </div>
-        <div class="speakers-actions">
-            <button type="button" class="speaker-card-add">
-                <span class="speaker-card-add-icon" aria-hidden="true">+</span>
-                <span>Add Speaker</span>
-            </button>
+        <div class="speaker-form">
+            <div class="speakers-list speakers-editable">
+                ${listHtml}
+            </div>
+            <p class="save-help-text actions-bar-help">Complete this section to unlock the next one</p>
+            <div class="actions-bar" role="group" aria-label="Speaker actions">
+                <button type="button" class="speaker-card-add">
+                    <span class="speaker-card-add-icon" aria-hidden="true">+</span>
+                    <span>Add Speaker</span>
+                </button>
+                <button type="button" class="btn-save-section">Save & Continue</button>
+            </div>
         </div>
     `;
     setupSpeakerCardEditors(container);
