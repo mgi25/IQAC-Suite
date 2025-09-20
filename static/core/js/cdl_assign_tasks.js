@@ -3,10 +3,12 @@
   const $=(s,r=document)=>r.querySelector(s);
   const esc=s=>(s??'').toString().replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[m]));
   const params=new URLSearchParams(location.search);
-  const eventId=params.get('eventId')||params.get('id');
+  const root=document.getElementById('cdl-assign-page');
+  // Support multiple entry styles: ?eventId=ID, data-event-id, or path /cdl/support/<id>/assign/
+  const pathMatch = location.pathname.match(/\/cdl\/support\/(\d+)\/assign\/?/);
+  const eventId = params.get('eventId') || params.get('id') || (root&&root.dataset?root.dataset.eventId:'') || (pathMatch? pathMatch[1] : '');
   if(!eventId){ alert('Missing eventId'); return; }
-    const root=document.getElementById('cdl-assign-page');
-    const EMPLOYEE_MODE = (params.get('mode')==='employee') || ((root&&root.dataset?root.dataset.employeeMode:'')==='1');
+  const EMPLOYEE_MODE = (params.get('mode')==='employee') || ((root&&root.dataset?root.dataset.employeeMode:'')==='1');
 
   const state={ members:[], rows:[], filter:'', baselineAssigned:new Set() };
 

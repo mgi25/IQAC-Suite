@@ -93,8 +93,12 @@
               {% endif %}
             </div>
             {% if notifications and notifications|length > 0 %}
+            <div class="notification-footer">
+              <a href="/notifications/" class="view-all-link">View all notifications</a>
+
             <div class="notification-footer" style="padding:.7rem 1.25rem;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:right;">
               <a href="/core-admin/notifications/" class="view-all-link" style="color:#2c5aa0;font-weight:600;font-size:.95rem;text-decoration:underline;">View all notifications</a>
+
             </div>
             {% endif %}
           </div>
@@ -197,6 +201,12 @@
         <a href="/cdl/user-view/" class="nav-link {% if request.resolver_match and request.resolver_match.url_name == 'cdl_event_user_view' %}active{% endif %}">
           <i class="fas fa-photo-video nav-icon"></i>
           <span class="nav-text">CDL Support</span>
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="/cdl/analysis/" class="nav-link {% if request.resolver_match and request.resolver_match.url_name == 'cdl_analysis_page' %}active{% endif %}">
+          <i class="fas fa-chart-line nav-icon"></i>
+          <span class="nav-text">Analysis</span>
         </a>
       </div>
   {% endif %}

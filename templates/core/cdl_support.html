@@ -18,11 +18,14 @@
       <span class="topbar-date">{% now "F j, Y · l" %}</span>
     </div>
     <div class="header-actions">
+      {% if request.user.is_superuser or request.session.role == 'cdl_head' %}
+      <button id="btnToggleComplete" class="chip-btn"><i class="fa-solid fa-check"></i> Move to Analysis</button>
+      {% endif %}
       <a class="chip-btn" href="{% url 'cdl_head_dashboard' %}"><i class="fa-solid fa-arrow-left"></i> Back</a>
     </div>
   </header>
 
-  <main class="grid-3" style="grid-template-columns:2fr 1.2fr 1fr; grid-auto-rows:minmax(280px,auto)">
+  <main class="grid-3" style="grid-template-columns:2fr 1.2fr 1fr; grid-auto-rows:minmax(220px,auto)">
     <section class="card eq" id="cardEvent">
       <div class="card-header"><h3><i class="fa-regular fa-calendar"></i> Event</h3></div>
       <div class="list" id="eventCard"><div class="empty">Loading…</div></div>
@@ -96,6 +99,26 @@
       e.preventDefault();
       if(!eventId){ return; }
       location.href = `/cdl/support/${encodeURIComponent(eventId)}/assign/?eventId=${encodeURIComponent(eventId)}`;
+    });
+  })();
+  // Toggle completion button
+  (function(){
+    const b=document.getElementById('btnToggleComplete'); if(!b) return;
+    const params=new URLSearchParams(location.search); const eventId=params.get('eventId')||params.get('id');
+    async function setCompleted(val){
+      if(!eventId) return;
+      try{
+        const r = await fetch(`/api/cdl/support/${encodeURIComponent(eventId)}/complete/`, {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':(document.querySelector('meta[name="csrf-token"]')||{}).content}, body: JSON.stringify({completed: !!val})});
+        const d = await r.json();
+        if(!r.ok || !d.success) throw new Error(d.error||('HTTP '+r.status));
+        // Update label immediately
+        b.classList.toggle('primary', !!d.completed);
+        b.innerHTML = d.completed ? '<i class="fa-solid fa-rotate-left"></i> Reopen' : '<i class="fa-solid fa-check"></i> Move to Analysis';
+      }catch(e){ alert('Failed: '+(e.message||'Error')); }
+    }
+    b.addEventListener('click', function(){
+      const nowReopen = b.textContent.toLowerCase().includes('reopen');
+      setCompleted(!nowReopen);
     });
   })();
 </script>

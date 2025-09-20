@@ -82,6 +82,18 @@
 
   // Hook Assign button (only rendered for CDL Head)
   $('#btnAssign')?.addEventListener('click', openAssign);
+
+    // Initialize completion toggle label if present
+    const btnT = document.getElementById('btnToggleComplete');
+    if(btnT){
+      if(d.cdl_completed){
+        btnT.classList.add('primary');
+        btnT.innerHTML = '<i class="fa-solid fa-rotate-left"></i> Reopen';
+      }else{
+        btnT.classList.remove('primary');
+        btnT.innerHTML = '<i class="fa-solid fa-check"></i> Move to Analysis';
+      }
+    }
   }
 
   function renderError(msg){
