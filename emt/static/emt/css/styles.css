@@ -1902,8 +1902,8 @@ textarea {
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     border: 1px solid #e2e8f0;
     border-radius: 0.5rem;
-    padding: 1.25rem;
-    margin: 0.35rem 0;
+    padding: 1rem 1.25rem;
+    margin: 0.25rem 0 0.75rem;
 }
 
 .speaker-reference-item {
