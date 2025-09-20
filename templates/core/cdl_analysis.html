@@ -1,0 +1,445 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}CDL — Analytics Dashboard{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'core/css/cdl_analysis.css' %}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="ems-dashboard" id="cdl-analysis">
+  <header class="topbar">
+    <div>
+      <h1>CDL — Analytics Dashboard</h1>
+      <span class="topbar-date">{% now "F j, Y · l" %}</span>
+    </div>
+    <div class="header-actions">
+      <button class="chip-btn primary" id="exportBtn"><i class="fa-solid fa-download"></i> Export Report</button>
+      <a class="chip-btn" href="{% url 'cdl_head_dashboard' %}"><i class="fa-solid fa-arrow-left"></i> Back</a>
+    </div>
+  </header>
+
+  <!-- Filters Panel (CDL-focused) -->
+  <section class="filters-panel">
+    <div class="filter-group">
+      <div class="filter-item">
+        <label>Date Range</label>
+        <div class="date-range">
+          <input type="date" id="filter-start-date" name="start_date" class="form-control" value="{{ filters.start_date|default:'' }}">
+          <span>to</span>
+          <input type="date" id="filter-end-date" name="end_date" class="form-control" value="{{ filters.end_date|default:'' }}">
+        </div>
+      </div>
+      <div class="filter-item">
+        <label>Quick Range</label>
+        <select id="filter-date-preset" class="form-control">
+          <option value="custom" {% if filters.range == 'custom' %}selected{% endif %}>Custom</option>
+          <option value="this_week" {% if filters.range == 'this_week' %}selected{% endif %}>This Week</option>
+          <option value="last_7" {% if filters.range == 'last_7' %}selected{% endif %}>Last 7 Days</option>
+          <option value="this_month" {% if filters.range == 'this_month' %}selected{% endif %}>This Month</option>
+          <option value="last_30" {% if filters.range == 'last_30' %}selected{% endif %}>Last 30 Days</option>
+          <option value="all" {% if filters.range == 'all' %}selected{% endif %}>All Time</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <label>Academic Year</label>
+        <select id="filter-academic-year" name="academic_year" class="form-control">
+          <option value="">All Years</option>
+          {% for yr in academic_years %}
+            <option value="{{ yr }}" {% if filters.academic_year == yr %}selected{% endif %}>{{ yr }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-item">
+        <label>Department / Organization</label>
+        <select id="filter-organizations" name="organizations" class="form-control">
+          <option value="">All Departments</option>
+          {% for type_name, orgs in organizations_by_type.items %}
+            <optgroup label="{{ type_name }}">
+              {% for org in orgs %}
+                <option value="{{ org.id }}" {% if filters.organizations and org.id in filters.organizations %}selected{% endif %}>{{ org.name }}</option>
+              {% endfor %}
+            </optgroup>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-item">
+        <label>Event Type (Planned)</label>
+        <select id="filter-type-planned" name="event_type_planned" class="form-control">
+          <option value="">All Planned Types</option>
+          {% for t in planned_event_types %}
+            <option value="{{ t }}" {% if filters.event_type_planned == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-item">
+        <label>Event Type (Actual)</label>
+        <select id="filter-type-actual" name="event_type_actual" class="form-control">
+          <option value="">All Actual Types</option>
+          {% for t in actual_event_types %}
+            <option value="{{ t }}" {% if filters.event_type_actual == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-item">
+        <label>Service Type</label>
+        <select id="filter-service-types" name="service_types" class="form-control">
+          <option value="">All Services</option>
+          {% for s in service_types %}
+            <option value="{{ s.key }}" {% if filters.service_types and s.key in filters.service_types %}selected{% endif %}>{{ s.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-item">
+        <button class="chip-btn primary" id="applyFilters"><i class="fa-solid fa-filter"></i> Apply</button>
+        <button class="chip-btn" id="resetFilters"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- KPI Cards (CDL metrics) -->
+  <section class="kpi-section">
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-icon"><i class="fa-solid fa-archive"></i></div>
+        <div class="kpi-content">
+          <div class="kpi-number">{{ kpis.total_archived_events|default:0 }}</div>
+          <div class="kpi-label">Total Archived Events</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon"><i class="fa-solid fa-users"></i></div>
+        <div class="kpi-content">
+          <div class="kpi-number">{{ kpis.total_participants|default:0 }}</div>
+          <div class="kpi-label">Total Participants</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon"><i class="fa-solid fa-certificate"></i></div>
+        <div class="kpi-content">
+          <div class="kpi-number">{{ kpis.certificates_issued|default:0 }}</div>
+          <div class="kpi-label">Certificates Issued</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon"><i class="fa-solid fa-hourglass-half"></i></div>
+        <div class="kpi-content">
+          <div class="kpi-number">{{ kpis.avg_completion_time|default:"0 days" }}</div>
+          <div class="kpi-label">Avg. Completion Time</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon"><i class="fa-solid fa-clipboard-list"></i></div>
+        <div class="kpi-content">
+          <div class="kpi-number">{{ kpis.active_assignments|default:0 }}</div>
+          <div class="kpi-label">Active Assignments</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <main class="analytics-main">
+    <section class="charts-section">
+      <div class="row" style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <!-- Left column: event/participants/certificates/services -->
+        <div class="col-left" style="display:flex; flex-direction:column; gap:16px;">
+          <div class="chart-card">
+            <div class="card-header"><h3><i class="fa-solid fa-chart-line"></i> Events Over Time</h3></div>
+            <div class="chart-container"><canvas id="chart-events-over-time"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="card-header"><h3><i class="fa-solid fa-chart-pie"></i> Participants Breakdown</h3></div>
+            <div class="chart-container"><canvas id="chart-participants-breakdown"></canvas></div>
+            <div class="card-subtext" style="padding:8px 16px; color:#6b7280;">Student vs Faculty vs External · includes volunteers</div>
+          </div>
+          <div class="chart-card">
+            <div class="card-header"><h3><i class="fa-solid fa-chart-bar"></i> Certificates by Type</h3></div>
+            <div class="chart-container"><canvas id="chart-certificates-type"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="card-header"><h3><i class="fa-solid fa-chart-column"></i> Service Usage</h3></div>
+            <div class="chart-container"><canvas id="chart-service-usage"></canvas></div>
+            {% if not chart_service_usage.labels %}
+              <div class="card-subtext" style="padding:8px 16px; color:#6b7280;">No service usage found for the selected range.</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Right column: workload/communication/content -->
+        <div class="col-right" style="display:flex; flex-direction:column; gap:16px;">
+          <div class="card">
+            <div class="card-header"><h3><i class="fa-solid fa-users-gear"></i> Assignments & Workload</h3></div>
+            <div class="table-wrap">
+              <table class="table compact">
+                <thead>
+                  <tr>
+                    <th>Assignee</th>
+                    <th>Assigned</th>
+                    <th>In Progress</th>
+                    <th>Completed</th>
+                    <th>Avg. Cycle Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in workload_rows %}
+                    <tr>
+                      <td>{{ row.assignee }}</td>
+                      <td>{{ row.assigned }}</td>
+                      <td>{{ row.in_progress }}</td>
+                      <td>{{ row.completed }}</td>
+                      <td>{{ row.avg_cycle_time }}</td>
+                    </tr>
+                  {% empty %}
+                    <tr><td colspan="5" class="text-muted">No assignment data</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="card-header"><h3><i class="fa-solid fa-layer-group"></i> Task Throughput</h3></div>
+            <div class="chart-container"><canvas id="chart-task-throughput"></canvas></div>
+            {% if not chart_task_throughput.labels %}
+              <div class="card-subtext" style="padding:8px 16px; color:#6b7280;">No tasks in this selection.</div>
+            {% endif %}
+          </div>
+          <div class="chart-card">
+            <div class="card-header"><h3><i class="fa-solid fa-envelope-open-text"></i> Communication Intensity</h3></div>
+            <div class="chart-container"><canvas id="chart-comm-intensity"></canvas></div>
+            {% if not chart_comm_intensity.labels %}
+              <div class="card-subtext" style="padding:8px 16px; color:#6b7280;">No messages recorded for this selection.</div>
+            {% endif %}
+          </div>
+          <div class="card">
+            <div class="card-header"><h3><i class="fa-solid fa-file-circle-check"></i> Content / Reports Tracker</h3></div>
+            <div class="card-body" style="padding:16px;">
+              <div class="tracker-item" style="margin-bottom:8px;">
+                <div class="label">% Events with EventReport signed</div>
+                <div class="progress" style="background:#eef2ff; height:8px; border-radius:8px; overflow:hidden;">
+                  <div class="progress-bar" data-pct="{{ tracker.reports_signed_pct|default:0 }}" style="background:#1e60b1; height:8px;"></div>
+                </div>
+              </div>
+              <div class="tracker-item" style="margin-bottom:8px;">
+                <div class="label">% Reports with Blog Link</div>
+                <div class="progress" style="background:#eef2ff; height:8px; border-radius:8px; overflow:hidden;">
+                  <div class="progress-bar" data-pct="{{ tracker.blog_link_pct|default:0 }}" style="background:#1e60b1; height:8px;"></div>
+                </div>
+              </div>
+              <div class="tracker-item" style="margin-bottom:8px;">
+                <div class="label">% Reports with Outcomes</div>
+                <div class="progress" style="background:#eef2ff; height:8px; border-radius:8px; overflow:hidden;">
+                  <div class="progress-bar" data-pct="{{ tracker.outcomes_pct|default:0 }}" style="background:#1e60b1; height:8px;"></div>
+                </div>
+              </div>
+              <div class="tracker-item">
+                <div class="label">% Reports with Analysis</div>
+                <div class="progress" style="background:#eef2ff; height:8px; border-radius:8px; overflow:hidden;">
+                  <div class="progress-bar" data-pct="{{ tracker.analysis_pct|default:0 }}" style="background:#1e60b1; height:8px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bottom Drilldown Table -->
+    <section class="events-section">
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fa-solid fa-list"></i> Finalized & Archived Events</h3>
+        </div>
+        <div class="table-wrap">
+          <table class="table compact">
+            <thead>
+              <tr>
+                <th>Event Title</th>
+                <th>Department</th>
+                <th>Academic Year</th>
+                <th>Event Type</th>
+                <th>Participants</th>
+                <th>Certificates Issued</th>
+                <th>Completion Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for e in events %}
+                <tr>
+                  <td>{{ e.event_title }}</td>
+                  <td>{{ e.department }}</td>
+                  <td>{{ e.academic_year }}</td>
+                  <td>{{ e.event_type }}</td>
+                  <td>{{ e.participants }}</td>
+                  <td>{{ e.certificates_issued }}</td>
+                  <td>{{ e.completion_time }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="7" class="text-muted">No archived events found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Notes modal removed in redesigned view -->
+
+{% endblock %}
+
+{% block scripts_extra %}
+{% load static %}
+{{ chart_events_over_time|json_script:"chart-events-over-time-data" }}
+{{ chart_participants_breakdown|json_script:"chart-participants-breakdown-data" }}
+{{ chart_certificates_by_type|json_script:"chart-certificates-type-data" }}
+{{ chart_service_usage|json_script:"chart-service-usage-data" }}
+{{ chart_task_throughput|json_script:"chart-task-throughput-data" }}
+{{ chart_comm_intensity|json_script:"chart-comm-intensity-data" }}
+<script>
+function mkChart(id, cfg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const ctx = el.getContext('2d');
+  return new Chart(ctx, cfg);
+}
+
+const ev = JSON.parse(document.getElementById('chart-events-over-time-data').textContent || '{}');
+mkChart('chart-events-over-time', {
+  type: 'line',
+  data: { labels: ev.labels || [], datasets: [{ label: 'Events', data: ev.data || [], borderColor: '#1e60b1', backgroundColor: 'rgba(30,96,177,0.1)', tension: 0.3, fill: true }]},
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+});
+
+const pb = JSON.parse(document.getElementById('chart-participants-breakdown-data').textContent || '{}');
+mkChart('chart-participants-breakdown', {
+  type: 'doughnut',
+  data: { labels: pb.labels || [], datasets: [{ data: pb.data || [], backgroundColor: ['#1e60b1','#3b82f6','#6366f1','#8b5cf6'], borderWidth: 2, borderColor: '#fff' }]},
+  options: { responsive: true, maintainAspectRatio: false }
+});
+
+const ct = JSON.parse(document.getElementById('chart-certificates-type-data').textContent || '{}');
+mkChart('chart-certificates-type', {
+  type: 'bar',
+  data: { labels: ct.labels || [], datasets: [{ label: 'Certificates', data: ct.data || [], backgroundColor: '#1e60b1' }]},
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+});
+
+const su = JSON.parse(document.getElementById('chart-service-usage-data').textContent || '{}');
+mkChart('chart-service-usage', {
+  type: 'bar',
+  data: { labels: su.labels || [], datasets: [{ label: 'Count', data: su.data || [], backgroundColor: '#3b82f6' }]},
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+});
+
+const tt = JSON.parse(document.getElementById('chart-task-throughput-data').textContent || '{}');
+mkChart('chart-task-throughput', {
+  type: 'bar',
+  data: { labels: tt.labels || [], datasets: [
+    { label: 'Backlog', data: (tt.datasets && tt.datasets.backlog) || [], backgroundColor: '#e5e7eb' },
+    { label: 'Assigned', data: (tt.datasets && tt.datasets.assigned) || [], backgroundColor: '#93c5fd' },
+    { label: 'In Progress', data: (tt.datasets && tt.datasets.in_progress) || [], backgroundColor: '#fbbf24' },
+    { label: 'Done', data: (tt.datasets && tt.datasets.done) || [], backgroundColor: '#10b981' }
+  ]},
+  options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } }
+});
+
+const ci = JSON.parse(document.getElementById('chart-comm-intensity-data').textContent || '{}');
+mkChart('chart-comm-intensity', {
+  type: 'bar',
+  data: { labels: ci.labels || [], datasets: [
+    { label: 'In-app', data: ci.in_app || [], backgroundColor: '#1e60b1' },
+    { label: 'Email', data: ci.email || [], backgroundColor: '#60a5fa' }
+  ]},
+  options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+});
+
+// Initialize progress bars from data-pct attributes
+document.querySelectorAll('.progress-bar[data-pct]').forEach(el => {
+  const pct = parseFloat(el.getAttribute('data-pct') || '0');
+  el.style.width = Math.max(0, Math.min(100, pct)) + '%';
+});
+
+// Date preset handling
+function toISO(d){
+  const m = (d.getMonth()+1).toString().padStart(2,'0');
+  const day = d.getDate().toString().padStart(2,'0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+document.getElementById('filter-date-preset')?.addEventListener('change', (e) => {
+  const v = e.target.value;
+  const sd = document.getElementById('filter-start-date');
+  const ed = document.getElementById('filter-end-date');
+  const today = new Date();
+  let start=null, end=null;
+  if (v === 'this_week') {
+    const dow = today.getDay(); // 0=Sun
+    const monday = new Date(today); monday.setDate(today.getDate() - ((dow+6)%7));
+    const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
+    start = monday; end = sunday;
+  } else if (v === 'last_7') {
+    end = today; start = new Date(today); start.setDate(today.getDate()-6);
+  } else if (v === 'this_month') {
+    start = new Date(today.getFullYear(), today.getMonth(), 1);
+    end = new Date(today.getFullYear(), today.getMonth()+1, 0);
+  } else if (v === 'last_30') {
+    end = today; start = new Date(today); start.setDate(today.getDate()-29);
+  } else if (v === 'all') {
+    sd.value = ''; ed.value = ''; return; // handled via range=all in apply
+  } else {
+    return; // custom
+  }
+  sd.value = toISO(start);
+  ed.value = toISO(end);
+});
+
+// Filters: build query string and reload
+document.getElementById('applyFilters')?.addEventListener('click', () => {
+  const params = new URLSearchParams();
+  const sd = document.getElementById('filter-start-date')?.value;
+  const ed = document.getElementById('filter-end-date')?.value;
+  const ay = document.getElementById('filter-academic-year')?.value;
+  const etp = document.getElementById('filter-type-planned')?.value;
+  const eta = document.getElementById('filter-type-actual')?.value;
+  const preset = document.getElementById('filter-date-preset')?.value;
+  if (sd) params.set('start_date', sd);
+  if (ed) params.set('end_date', ed);
+  if (ay) params.set('academic_year', ay);
+  if (etp) params.set('event_type_planned', etp);
+  if (eta) params.set('event_type_actual', eta);
+  if (preset === 'all') params.set('range', 'all');
+  // single-select dropdowns
+  const orgSel = document.getElementById('filter-organizations');
+  if (orgSel && orgSel.value) params.append('organizations', orgSel.value);
+  const svcSel = document.getElementById('filter-service-types');
+  if (svcSel && svcSel.value) params.append('service_types', svcSel.value);
+  const url = location.pathname + (params.toString() ? ('?' + params.toString()) : '');
+  location.assign(url);
+});
+
+document.getElementById('resetFilters')?.addEventListener('click', () => {
+  location.assign(location.pathname);
+});
+
+// Export events table to CSV
+document.getElementById('exportBtn')?.addEventListener('click', () => {
+  const rows = Array.from(document.querySelectorAll('.events-section table tbody tr'));
+  const header = ['Event Title','Department','Academic Year','Event Type','Participants','Certificates Issued','Completion Time'];
+  const data = [header];
+  rows.forEach(tr => {
+    const cells = Array.from(tr.querySelectorAll('td')).map(td => td.innerText.replace(/\n/g,' ').trim());
+    if (cells.length === header.length) data.push(cells);
+  });
+  const csv = data.map(r => r.map(x => '"' + (x || '').replace(/"/g,'""') + '"').join(',')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'cdl_analysis_export.csv';
+  a.click();
+});
+</script>
+{% endblock %}

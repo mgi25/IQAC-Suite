@@ -608,7 +608,6 @@ $(document).on('click', '#ai-sdg-implementation', function(){
               }
               populateSpeakersFromProposal();
               fillOrganizingCommittee();
-              fillActualSpeakers();
               fillAttendanceCounts();
               if (typeof setupAttendanceLink === 'function') setupAttendanceLink();
           };
@@ -1098,15 +1097,6 @@ $(document).on('click', '#ai-sdg-implementation', function(){
               </div>
           </div>
 
-          <div class="form-row full-width">
-              <div class="input-group">
-                  <label for="actual-speakers-modern">Actual Speakers</label>
-                  <textarea id="actual-speakers-modern" name="actual_speakers" rows="8" 
-                      placeholder="List the actual speakers who participated:&#10;&#10;• Speaker 1: Dr. [Name] - [Designation] - [Institution/Company]&#10;  Topic: [Session topic]&#10;  Duration: [Time duration]&#10;&#10;• Speaker 2: Prof. [Name] - [Designation] - [Institution/Company]&#10;  Topic: [Session topic]&#10;  Duration: [Time duration]&#10;&#10;Include any changes from the original proposal and reasons for changes."></textarea>
-                  <div class="help-text">List actual speakers and any changes from the original proposal</div>
-              </div>
-          </div>
-
           <!-- Save Section -->
           <div class="form-row full-width">
               <div class="save-section-container">
@@ -1584,53 +1574,49 @@ function fillOrganizingCommittee() {
     }
 }
 
-function fillActualSpeakers() {
-    const field = $('#actual-speakers-modern');
-    if (field.length && field.val().trim() === '') {
-        let arr = [];
-        try {
-            const raw = window.PROPOSAL_DATA && window.PROPOSAL_DATA.speakers;
-            if (typeof raw === 'string') {
-                const parsed = JSON.parse(raw);
-                if (Array.isArray(parsed)) arr = parsed;
-            } else if (Array.isArray(raw)) {
-                arr = raw;
-            } else if (Array.isArray(window.EXISTING_SPEAKERS)) {
-                arr = window.EXISTING_SPEAKERS;
-            } else {
-                const tag = document.getElementById('proposal-speakers-json');
-                if (tag) {
-                    const txt = (tag.textContent || tag.innerText || '').trim();
-                    try {
-                        const parsed2 = JSON.parse(txt);
-                        if (Array.isArray(parsed2)) arr = parsed2;
-                    } catch (e) {}
-                }
-            }
-        } catch (e) {}
-        if (arr.length) {
-            const lines = arr.map((sp, idx) => {
-            const name = sp.full_name || sp.name || '';
-            const designation = sp.designation ? ` - ${sp.designation}` : '';
-            const org = sp.organization || sp.affiliation ? ` - ${(sp.organization || sp.affiliation)}` : '';
-            return `• ${name}${designation}${org}`;
-        });
-            field.val(lines.join('\n'));
-        }
-    }
-}
-
 function fillAttendanceCounts() {
-    const totalField = $('#total-participants-modern');
-    const numField = $('#num-participants-modern');
-    if (typeof window.ATTENDANCE_PRESENT === 'undefined') return;
+    const counts = window.ATTENDANCE_COUNTS || {};
+    const present = (counts.present !== undefined && counts.present !== null)
+        ? counts.present
+        : window.ATTENDANCE_PRESENT;
+    const absent = (counts.absent !== undefined && counts.absent !== null)
+        ? counts.absent
+        : window.ATTENDANCE_ABSENT;
+    const volunteers = (counts.volunteers !== undefined && counts.volunteers !== null)
+        ? counts.volunteers
+        : window.ATTENDANCE_VOLUNTEERS;
+    const total = (counts.total !== undefined && counts.total !== null)
+        ? counts.total
+        : present;
 
-    if (totalField.length && totalField.val().trim() === '') {
-        totalField.val(window.ATTENDANCE_PRESENT);
+    const updateField = (id, value) => {
+        if (value === undefined || value === null) return;
+        const el = document.getElementById(id);
+        if (!el) return;
+        if ('value' in el && typeof el.value !== 'undefined') {
+            el.value = value;
+        } else {
+            el.textContent = value;
+        }
+    };
+
+    const summaryField = document.getElementById('attendance-modern');
+    if (summaryField) {
+        const parts = [];
+        if (present !== undefined && present !== null) parts.push(`Present: ${present}`);
+        if (absent !== undefined && absent !== null) parts.push(`Absent: ${absent}`);
+        if (volunteers !== undefined && volunteers !== null) parts.push(`Volunteers: ${volunteers}`);
+        if (parts.length) summaryField.value = parts.join(', ');
     }
-    if (numField.length && numField.val().trim() === '') {
-        numField.val(window.ATTENDANCE_PRESENT);
-    }
+
+    updateField('num-participants-modern', total);
+    updateField('total-participants-modern', total);
+    updateField('num-volunteers-modern', volunteers);
+    updateField('num-volunteers-hidden', volunteers);
+    updateField('student-participants-modern', counts.students);
+    updateField('faculty-participants-modern', counts.faculty);
+    updateField('external-participants-modern', counts.external);
+
     if (typeof setupAttendanceLink === 'function') setupAttendanceLink();
 }
 
@@ -1639,7 +1625,6 @@ function populateProposalData() {
     setTimeout(function() {
         fillEventRelevance();
         fillOrganizingCommittee();
-        fillActualSpeakers();
         fillAttendanceCounts();
     }, 100);
 
@@ -1653,10 +1638,534 @@ function populateProposalData() {
             if (!container && attempt < 10) return setTimeout(() => init(attempt+1), 100);
             populateSpeakersFromProposal();
             fillOrganizingCommittee();
-            fillActualSpeakers();
             fillAttendanceCounts();
         };
         setTimeout(() => init(0), 50);
+    });
+}
+
+function getCsrfToken() {
+    if (window.AUTOSAVE_CSRF) return window.AUTOSAVE_CSRF;
+    const match = document.cookie
+        .split(';')
+        .map(part => part.trim())
+        .find(part => part.startsWith('csrftoken='));
+    return match ? decodeURIComponent(match.split('=')[1]) : '';
+}
+
+function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function getInitials(value) {
+    if (!value) return 'SP';
+    return String(value)
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map(part => part.charAt(0).toUpperCase())
+        .join('') || 'SP';
+}
+
+function normalizeSpeakerValue(value) {
+    return value === null || value === undefined ? '' : String(value);
+}
+
+function renderEditableSpeakerCard(speaker, index) {
+    const id = speaker && (speaker.id || speaker.pk);
+    const isNew = Boolean(speaker && (speaker.__isNew || speaker.is_new));
+    const name = normalizeSpeakerValue(speaker.full_name || speaker.name);
+    const designation = normalizeSpeakerValue(speaker.designation);
+    const affiliation = normalizeSpeakerValue(speaker.affiliation || speaker.organization);
+    const email = normalizeSpeakerValue(speaker.contact_email || speaker.contact);
+    const phone = normalizeSpeakerValue(speaker.contact_number || speaker.phone);
+    const linkedin = normalizeSpeakerValue(speaker.linkedin_url || speaker.linkedin || speaker.linkedinUrl);
+    const bio = normalizeSpeakerValue(speaker.detailed_profile || speaker.profile || speaker.bio);
+    const photoUrl = normalizeSpeakerValue(speaker.photo_url || speaker.photo);
+    const initials = getInitials(name);
+    const cardClasses = ['speaker-reference-item', 'speaker-card'];
+    const isEditable = Boolean(id) || isNew;
+
+    if (isEditable) {
+        cardClasses.push('speaker-card-editable');
+    } else {
+        cardClasses.push('speaker-card-readonly');
+    }
+
+    if (isNew) {
+        cardClasses.push('speaker-card-new');
+    }
+
+    const attributes = [`data-speaker-id="${id ? escapeHtml(id) : ''}"`, `data-speaker-index="${Number.isFinite(index) ? index : 0}"`];
+    if (isNew) {
+        attributes.push('data-speaker-new="true"');
+    }
+
+    return `
+        <div class="${cardClasses.join(' ')}" ${attributes.join(' ')}>
+            <div class="speaker-card-media">
+                <div class="speaker-photo-container">
+                    <div class="speaker-photo${photoUrl ? '' : ' speaker-photo-placeholder'}" data-initials="${escapeHtml(initials)}">
+                        ${photoUrl ? `<img src="${escapeHtml(photoUrl)}" alt="${escapeHtml(name || 'Speaker photo')}">` : escapeHtml(initials)}
+                    </div>
+                    <button type="button" class="speaker-photo-remove" title="Remove photo" aria-label="Remove photo" ${photoUrl ? '' : 'hidden'}>&times;</button>
+                </div>
+                <label class="speaker-photo-upload">
+                    <input type="file" class="speaker-photo-input" accept="image/*" ${id ? '' : 'disabled'}>
+                    <span>${photoUrl ? 'Change photo' : 'Upload photo'}</span>
+                </label>
+            </div>
+            <div class="speaker-card-content">
+                <div class="speaker-header">
+                    <div class="speaker-header-body">
+                        <div class="speaker-header-title">Speaker ${index + 1}</div>
+                        ${isEditable ? '' : '<div class="speaker-readonly-hint">Unable to edit this speaker because the record could not be linked.</div>'}
+                    </div>
+                    <button type="button" class="speaker-card-remove" title="Remove speaker">
+                        <span aria-hidden="true">&times;</span>
+                        <span class="sr-only">Remove speaker</span>
+                    </button>
+                </div>
+                <div class="speaker-fields">
+                    <div class="speaker-field">
+                        <label>Full Name *</label>
+                        <input type="text" class="speaker-field-input" data-field="full_name" value="${escapeHtml(name)}" placeholder="Enter full name" ${isEditable ? '' : 'disabled'}>
+                    </div>
+                    <div class="speaker-field">
+                        <label>Designation *</label>
+                        <input type="text" class="speaker-field-input" data-field="designation" value="${escapeHtml(designation)}" placeholder="Enter designation" ${isEditable ? '' : 'disabled'}>
+                    </div>
+                    <div class="speaker-field">
+                        <label>Affiliation *</label>
+                        <input type="text" class="speaker-field-input" data-field="affiliation" value="${escapeHtml(affiliation)}" placeholder="Enter organization" ${isEditable ? '' : 'disabled'}>
+                    </div>
+                    <div class="speaker-field">
+                        <label>Email *</label>
+                        <input type="email" class="speaker-field-input" data-field="contact_email" value="${escapeHtml(email)}" placeholder="name@example.com" ${isEditable ? '' : 'disabled'}>
+                    </div>
+                    <div class="speaker-field">
+                        <label>Contact Number</label>
+                        <input type="text" class="speaker-field-input" data-field="contact_number" value="${escapeHtml(phone)}" placeholder="Enter contact number" ${isEditable ? '' : 'disabled'}>
+                    </div>
+                    <div class="speaker-field">
+                        <label>LinkedIn URL</label>
+                        <input type="url" class="speaker-field-input" data-field="linkedin_url" value="${escapeHtml(linkedin)}" placeholder="https://linkedin.com/in/username" ${isEditable ? '' : 'disabled'}>
+                    </div>
+                    <div class="speaker-field speaker-field-full">
+                        <label>Profile / Bio *</label>
+                        <textarea class="speaker-field-textarea" data-field="detailed_profile" rows="4" placeholder="Brief profile of the speaker" ${isEditable ? '' : 'disabled'}>${escapeHtml(bio)}</textarea>
+                    </div>
+                </div>
+                <div class="speaker-status" role="status" aria-live="polite"></div>
+            </div>
+        </div>
+    `;
+}
+
+function getNoSpeakersMessageHtml() {
+    return `
+        <div class="no-speakers-message">
+            <div class="no-speakers-icon"><i class="fas fa-user" aria-hidden="true"></i></div>
+            <div class="no-speakers-text">No speakers were defined in the original proposal</div>
+            <div class="no-speakers-help">You can add actual speakers in the field below</div>
+        </div>
+    `;
+}
+
+function reindexSpeakerCards(listEl) {
+    if (!listEl) return;
+    const cards = listEl.querySelectorAll('.speaker-card');
+    cards.forEach((card, idx) => {
+        card.dataset.speakerIndex = String(idx);
+        const title = card.querySelector('.speaker-header-title');
+        if (title) {
+            title.textContent = `Speaker ${idx + 1}`;
+        }
+    });
+}
+
+function updateSpeakerPhotoPreview(card, photoUrl) {
+    const photoEl = card.querySelector('.speaker-photo');
+    const removeBtn = card.querySelector('.speaker-photo-remove');
+    const uploadLabel = card.querySelector('.speaker-photo-upload span');
+    const nameInput = card.querySelector('[data-field="full_name"]');
+    const displayName = nameInput ? nameInput.value.trim() : '';
+    if (!photoEl) return;
+
+    if (photoUrl) {
+        photoEl.innerHTML = `<img src="${escapeHtml(photoUrl)}" alt="${escapeHtml(displayName || 'Speaker photo')}">`;
+        photoEl.classList.remove('speaker-photo-placeholder');
+        photoEl.setAttribute('data-initials', getInitials(displayName));
+        if (removeBtn) removeBtn.hidden = false;
+        if (uploadLabel) uploadLabel.textContent = 'Change photo';
+    } else {
+        const initials = getInitials(displayName);
+        photoEl.innerHTML = escapeHtml(initials);
+        photoEl.classList.add('speaker-photo-placeholder');
+        photoEl.setAttribute('data-initials', initials);
+        if (removeBtn) removeBtn.hidden = true;
+        if (uploadLabel) uploadLabel.textContent = 'Upload photo';
+    }
+}
+
+function updateSpeakerCache(updated) {
+    if (!updated || !updated.id) return;
+    const id = String(updated.id);
+    window.SPEAKER_CACHE = window.SPEAKER_CACHE || {};
+    window.SPEAKER_CACHE[id] = Object.assign({}, window.SPEAKER_CACHE[id] || {}, updated);
+
+    if (window.PROPOSAL_DATA && Array.isArray(window.PROPOSAL_DATA.speakers)) {
+        const arr = window.PROPOSAL_DATA.speakers;
+        const idx = arr.findIndex(sp => String(sp.id || sp.pk) === id);
+        if (idx !== -1) {
+            arr[idx] = Object.assign({}, arr[idx], updated);
+        }
+    }
+    if (Array.isArray(window.EXISTING_SPEAKERS)) {
+        const idx = window.EXISTING_SPEAKERS.findIndex(sp => String(sp.id || sp.pk) === id);
+        if (idx !== -1) {
+            window.EXISTING_SPEAKERS[idx] = Object.assign({}, window.EXISTING_SPEAKERS[idx], updated);
+        }
+    }
+}
+
+function handleSpeakerSave(card) {
+    const id = card.dataset.speakerId;
+    const updateBase = window.SPEAKER_UPDATE_BASE || '';
+    if (!id || !updateBase) return Promise.resolve();
+
+    if (card.__autoSaveTimer) {
+        try { clearTimeout(card.__autoSaveTimer); } catch (e) {}
+        card.__autoSaveTimer = null;
+    }
+
+    const statusEl = card.querySelector('.speaker-status');
+    const fileInput = card.querySelector('.speaker-photo-input');
+    const scheduleFn = typeof card.__scheduleAutoSave === 'function' ? card.__scheduleAutoSave : null;
+
+    const formData = new FormData();
+    card.querySelectorAll('[data-field]').forEach(input => {
+        const key = input.dataset.field;
+        if (!key) return;
+        formData.append(key, input.value || '');
+    });
+
+    if (card.dataset.removePhoto === 'true') {
+        formData.append('remove_photo', '1');
+    }
+
+    if (fileInput && fileInput.files && fileInput.files[0]) {
+        formData.append('photo', fileInput.files[0]);
+    }
+
+    const url = `${updateBase}${id}/`;
+    if (statusEl) {
+        statusEl.textContent = 'Saving...';
+        statusEl.dataset.state = 'pending';
+    }
+    card.dataset.saving = 'true';
+
+    return fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+        },
+        credentials: 'same-origin',
+        body: formData,
+    })
+        .then(async resp => {
+            let data = {};
+            try {
+                data = await resp.json();
+            } catch (err) {}
+            if (!resp.ok || !data.success) {
+                const error = data.errors || data.error || 'Unable to update speaker';
+                throw error;
+            }
+            return data;
+        })
+        .then(data => {
+            const updated = data.speaker || {};
+            updateSpeakerCache(updated);
+
+            const hasQueuedChanges = card.dataset.pendingSave === 'true';
+            if (!hasQueuedChanges) {
+                card.dataset.dirty = 'false';
+                card.dataset.pendingSave = 'false';
+                card.dataset.removePhoto = 'false';
+                card.classList.remove('speaker-card-dirty');
+            }
+
+            const updatedPhoto = updated.photo_url || updated.photo || '';
+            if (!hasQueuedChanges && fileInput) {
+                if (card.dataset.photoObjectUrl) {
+                    try { URL.revokeObjectURL(card.dataset.photoObjectUrl); } catch (e) {}
+                    card.dataset.photoObjectUrl = '';
+                }
+                fileInput.value = '';
+                if (updatedPhoto) {
+                    updateSpeakerPhotoPreview(card, updatedPhoto);
+                }
+            }
+
+            if (statusEl) {
+                statusEl.textContent = hasQueuedChanges
+                    ? 'Saving latest changes...'
+                    : 'All changes saved';
+                statusEl.dataset.state = hasQueuedChanges ? 'pending' : 'success';
+            }
+        })
+        .catch(err => {
+            let message = 'Failed to save speaker';
+            if (typeof err === 'string') {
+                message = err;
+            } else if (err && typeof err === 'object') {
+                const firstKey = Object.keys(err)[0];
+                if (firstKey) {
+                    const val = err[firstKey];
+                    if (Array.isArray(val)) message = val[0];
+                    else message = String(val);
+                }
+            }
+            if (statusEl) {
+                statusEl.textContent = message;
+                statusEl.dataset.state = 'error';
+            }
+            try { showNotification(message, 'error'); } catch (e) {}
+        })
+        .finally(() => {
+            card.dataset.saving = 'false';
+            if (card.dataset.pendingSave === 'true' && typeof scheduleFn === 'function') {
+                scheduleFn();
+            }
+        });
+}
+
+const SPEAKER_AUTO_SAVE_DELAY = 1200;
+
+function setupSpeakerCardEditors(container) {
+    if (!container) return;
+
+    const updateBase = window.SPEAKER_UPDATE_BASE || '';
+
+    if (!container.__speakerCardDelegated) {
+        container.addEventListener('click', event => {
+            const removeControl = event.target.closest('.speaker-card-remove');
+            if (removeControl) {
+                event.preventDefault();
+                const card = removeControl.closest('.speaker-card');
+                if (!card) return;
+                const list = container.querySelector('.speakers-list');
+                if (!list) return;
+
+                const speakerId = card.dataset.speakerId;
+                if (speakerId) {
+                    const cacheId = String(speakerId);
+                    if (window.SPEAKER_CACHE && Object.prototype.hasOwnProperty.call(window.SPEAKER_CACHE, cacheId)) {
+                        delete window.SPEAKER_CACHE[cacheId];
+                    }
+                    if (window.PROPOSAL_DATA && Array.isArray(window.PROPOSAL_DATA.speakers)) {
+                        window.PROPOSAL_DATA.speakers = window.PROPOSAL_DATA.speakers.filter(sp => String(sp.id || sp.pk) !== cacheId);
+                    }
+                    if (Array.isArray(window.EXISTING_SPEAKERS)) {
+                        window.EXISTING_SPEAKERS = window.EXISTING_SPEAKERS.filter(sp => String(sp.id || sp.pk) !== cacheId);
+                    }
+                }
+
+                card.remove();
+
+                if (!list.querySelector('.speaker-card')) {
+                    list.innerHTML = getNoSpeakersMessageHtml();
+                } else {
+                    reindexSpeakerCards(list);
+                }
+                return;
+            }
+
+            const addControl = event.target.closest('.speaker-card-add');
+            if (addControl) {
+                event.preventDefault();
+                const list = container.querySelector('.speakers-list');
+                if (!list) return;
+
+                const placeholder = list.querySelector('.no-speakers-message');
+                if (placeholder) placeholder.remove();
+
+                const newIndex = list.querySelectorAll('.speaker-card').length;
+                const newCardHtml = renderEditableSpeakerCard({ __isNew: true }, newIndex);
+                list.insertAdjacentHTML('beforeend', newCardHtml);
+                setupSpeakerCardEditors(container);
+                reindexSpeakerCards(list);
+                return;
+            }
+        });
+        container.__speakerCardDelegated = true;
+    }
+
+    const cards = container.querySelectorAll('.speaker-card');
+    cards.forEach(card => {
+        if (card.dataset.initialized === 'true') return;
+        card.dataset.initialized = 'true';
+
+        const id = card.dataset.speakerId;
+        const isNewCard = card.dataset.speakerNew === 'true';
+        const statusEl = card.querySelector('.speaker-status');
+        const fileInput = card.querySelector('.speaker-photo-input');
+        const removeBtn = card.querySelector('.speaker-photo-remove');
+        const inputs = card.querySelectorAll('.speaker-field-input, .speaker-field-textarea');
+        const canEditRemote = Boolean(id && updateBase);
+        const canEdit = isNewCard || canEditRemote;
+
+        if (!canEdit) {
+            if (statusEl) {
+                statusEl.textContent = id
+                    ? 'You do not have permission to edit this speaker.'
+                    : 'Speaker information is read-only.';
+            }
+            if (removeBtn) removeBtn.disabled = true;
+            if (fileInput) fileInput.disabled = true;
+            inputs.forEach(input => input.disabled = true);
+            return;
+        }
+
+        if (!canEditRemote) {
+            if (removeBtn) removeBtn.disabled = true;
+            if (fileInput) fileInput.disabled = true;
+        }
+
+        const handleNameInput = value => {
+            const photoEl = card.querySelector('.speaker-photo');
+            if (photoEl && photoEl.classList.contains('speaker-photo-placeholder')) {
+                const initials = getInitials(value);
+                photoEl.innerHTML = escapeHtml(initials);
+                photoEl.setAttribute('data-initials', initials);
+            }
+        };
+
+        if (isNewCard) {
+            if (statusEl) {
+                statusEl.textContent = 'New speaker entry (not linked to a record).';
+                delete statusEl.dataset.state;
+            }
+            inputs.forEach(input => {
+                if (input.dataset.field === 'full_name') {
+                    input.addEventListener('input', () => handleNameInput(input.value.trim()));
+                }
+            });
+            return;
+        }
+
+        card.dataset.removePhoto = 'false';
+        card.dataset.dirty = card.dataset.dirty === 'true' ? 'true' : 'false';
+        card.dataset.pendingSave = 'false';
+        card.dataset.saving = 'false';
+        card.__autoSaveTimer = null;
+        card.classList.remove('speaker-card-dirty');
+        if (statusEl) {
+            statusEl.textContent = 'All changes saved';
+            statusEl.dataset.state = 'success';
+        }
+
+        const scheduleAutoSave = () => {
+            if (card.__autoSaveTimer) {
+                try { clearTimeout(card.__autoSaveTimer); } catch (e) {}
+            }
+
+            if (card.dataset.saving === 'true') {
+                card.dataset.pendingSave = 'true';
+                card.__autoSaveTimer = null;
+                return;
+            }
+
+            card.__autoSaveTimer = window.setTimeout(() => {
+                card.__autoSaveTimer = null;
+                if (card.dataset.dirty === 'true') {
+                    card.dataset.pendingSave = 'false';
+                    handleSpeakerSave(card);
+                } else {
+                    card.dataset.pendingSave = 'false';
+                }
+            }, SPEAKER_AUTO_SAVE_DELAY);
+        };
+
+        card.__scheduleAutoSave = scheduleAutoSave;
+
+        const markDirty = () => {
+            card.dataset.dirty = 'true';
+            card.dataset.pendingSave = 'true';
+            card.classList.add('speaker-card-dirty');
+            if (statusEl) {
+                statusEl.textContent = 'Saving pending changes...';
+                statusEl.dataset.state = 'pending';
+            }
+            scheduleAutoSave();
+        };
+
+        inputs.forEach(input => {
+            input.addEventListener('input', () => {
+                if (input.dataset.field === 'full_name') {
+                    handleNameInput(input.value.trim());
+                }
+                markDirty();
+            });
+
+            input.addEventListener('blur', () => {
+                if (card.dataset.dirty === 'true') {
+                    if (card.dataset.saving === 'true') {
+                        card.dataset.pendingSave = 'true';
+                        return;
+                    }
+                    if (card.__autoSaveTimer) {
+                        try { clearTimeout(card.__autoSaveTimer); } catch (e) {}
+                        card.__autoSaveTimer = null;
+                    }
+                    card.dataset.pendingSave = 'false';
+                    handleSpeakerSave(card);
+                }
+            });
+        });
+
+        if (fileInput) {
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files && fileInput.files[0]) {
+                    if (card.dataset.photoObjectUrl) {
+                        try { URL.revokeObjectURL(card.dataset.photoObjectUrl); } catch (e) {}
+                    }
+                    const objectUrl = URL.createObjectURL(fileInput.files[0]);
+                    card.dataset.photoObjectUrl = objectUrl;
+                    updateSpeakerPhotoPreview(card, objectUrl);
+                    card.dataset.removePhoto = 'false';
+                    markDirty();
+                } else {
+                    if (card.dataset.photoObjectUrl) {
+                        try { URL.revokeObjectURL(card.dataset.photoObjectUrl); } catch (e) {}
+                        card.dataset.photoObjectUrl = '';
+                    }
+                }
+            });
+        }
+
+        if (removeBtn) {
+            removeBtn.addEventListener('click', event => {
+                event.preventDefault();
+                card.dataset.removePhoto = 'true';
+                if (fileInput) {
+                    if (card.dataset.photoObjectUrl) {
+                        try { URL.revokeObjectURL(card.dataset.photoObjectUrl); } catch (e) {}
+                        card.dataset.photoObjectUrl = '';
+                    }
+                    fileInput.value = '';
+                }
+                updateSpeakerPhotoPreview(card, '');
+                markDirty();
+            });
+        }
     });
 }
 
@@ -1688,14 +2197,12 @@ window.debugSpeakers = function() {
 };
 
 function populateSpeakersFromProposal() {
-    console.log('Populating speakers from proposal...');
     const container = document.getElementById('speakers-display');
     if (!container) {
         console.warn('Speakers container not found');
         return;
     }
 
-    // Normalize possible sources into a uniform array of speaker objects
     let speakers = [];
     const readFallbackJson = () => {
         try {
@@ -1713,7 +2220,6 @@ function populateSpeakersFromProposal() {
     const normalize = (val) => {
         try {
             if (!val) return [];
-            // If a JSON string accidentally made it through, parse it
             if (typeof val === 'string') {
                 const parsed = JSON.parse(val);
                 return Array.isArray(parsed) ? parsed : [];
@@ -1725,61 +2231,53 @@ function populateSpeakersFromProposal() {
         }
     };
 
-    // Debug logging for troubleshooting
-    console.log('window.PROPOSAL_DATA:', window.PROPOSAL_DATA);
-    console.log('window.EXISTING_SPEAKERS:', window.EXISTING_SPEAKERS);
-
     const proposalSpeakers = normalize(window.PROPOSAL_DATA && window.PROPOSAL_DATA.speakers);
     const existingSpeakers = normalize(window.EXISTING_SPEAKERS);
     if (proposalSpeakers.length) {
         speakers = proposalSpeakers;
-        console.log('Using PROPOSAL_DATA.speakers');
     } else if (existingSpeakers.length) {
         speakers = existingSpeakers;
-        console.log('Using EXISTING_SPEAKERS');
     } else {
         const fallback = readFallbackJson();
         if (fallback.length) {
             speakers = fallback;
-            console.log('Using fallback inline JSON speakers');
         }
     }
-    
-    console.log('Final speakers data:', speakers);
 
-    if (!speakers.length) {
-        container.innerHTML = `
-            <div class="no-speakers-message">
-                <div class="no-speakers-icon"><i class="fas fa-user" aria-hidden="true"></i></div>
-                <div class="no-speakers-text">No speakers were defined in the original proposal</div>
-                <div class="no-speakers-help">You can add actual speakers in the field below</div>
-            </div>
-        `;
-        return;
+    if (window.PROPOSAL_DATA && typeof window.PROPOSAL_DATA === 'object') {
+        window.PROPOSAL_DATA.speakers = speakers;
+    }
+    if (Array.isArray(window.EXISTING_SPEAKERS)) {
+        window.EXISTING_SPEAKERS = speakers;
     }
 
-    let html = '<div class="speakers-list">';
-    speakers.forEach((sp, index) => {
-        console.log(`Processing speaker ${index}:`, sp);
-        const speakerName = (sp && (sp.full_name || sp.name)) || 'Unnamed Speaker';
-        const speakerAffiliation = (sp && (sp.affiliation || sp.organization)) || 'No affiliation provided';
-        const speakerDesignation = (sp && sp.designation) || '';
-        const speakerContact = (sp && (sp.contact || sp.contact_email || sp.email)) || '';
-        
-        html += `
-            <div class="speaker-reference-item">
-                <div class="speaker-name">${speakerName}</div>
-                <div class="speaker-details">
-                    ${speakerDesignation ? `<div class="speaker-designation">${speakerDesignation}</div>` : ''}
-                    <div class="speaker-affiliation">${speakerAffiliation}</div>
-                    ${speakerContact ? `<div class="speaker-contact">${speakerContact}</div>` : ''}
-                </div>
-            </div>
-        `;
-    });
-    html += '</div>';
-    container.innerHTML = html;
-    console.log('Speakers populated successfully');
+    window.SPEAKER_CACHE = {};
+    let cardsHtml = '';
+    if (Array.isArray(speakers) && speakers.length) {
+        speakers.forEach((speaker, index) => {
+            const record = speaker && typeof speaker === 'object' ? speaker : {};
+            const id = record.id || record.pk;
+            if (id) {
+                window.SPEAKER_CACHE[String(id)] = Object.assign({}, record);
+            }
+            cardsHtml += renderEditableSpeakerCard(record, index);
+        });
+    }
+
+    const listHtml = cardsHtml || getNoSpeakersMessageHtml();
+
+    container.innerHTML = `
+        <div class="speakers-list speakers-editable">
+            ${listHtml}
+        </div>
+        <div class="speakers-actions">
+            <button type="button" class="speaker-card-add">
+                <span class="speaker-card-add-icon" aria-hidden="true">+</span>
+                <span>Add Speaker</span>
+            </button>
+        </div>
+    `;
+    setupSpeakerCardEditors(container);
 }
 
 // SDG Modal functionality

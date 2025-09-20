@@ -309,6 +309,17 @@ class CDLSupport(models.Model):
     # General toggle for CDL support
     needs_support = models.BooleanField(default=False)
 
+    # Manual completion flag to move items to Analysis page
+    completed = models.BooleanField(default=False, help_text="When true, this event's CDL work is considered completed and shown under Analysis")
+    completed_at = models.DateTimeField(null=True, blank=True)
+    completed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="cdl_completed_events",
+    )
+
     # ─── Poster Details ─────────────────────────────────────────────
     poster_required = models.BooleanField(default=False)
     poster_choice = models.CharField(
