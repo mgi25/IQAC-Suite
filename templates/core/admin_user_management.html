@@ -316,7 +316,24 @@
                 $('#organization').on('change', () => {
                     $('#role').val(null).trigger('change');
                 });
+                // Trigger Apply Filters on Enter key in any filter input
+                const filterInputs = [
+                    '#q',
+                    '#status',
+                    '#org_type',
+                    '#organization',
+                    '#role'
+                ];
+                filterInputs.forEach(selector => {
+                    $(selector).on('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            this.applyFilters(true);
+                        }
+                    });
+                });
             }
+            
 
             collectFilters() {
                 const params = new URLSearchParams(window.location.search);

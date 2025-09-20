@@ -4036,50 +4036,49 @@ def api_calendar_events(request):
         events = EventProposal.objects.filter(visibility_q).distinct()
 
         for e in events:
+            # Unify event data structure for dashboard and CDL
+            base_data = {
+                "id": e.id,
+                "title": e.event_title,
+                "status": e.status,
+                "status_display": getattr(e, 'get_status_display', lambda: e.status)(),
+                "description": getattr(e, 'description', ''),
+                "organization": e.organization.name if getattr(e, 'organization', None) else None,
+                "submitted_by": e.submitted_by.get_full_name() if getattr(e, 'submitted_by', None) else None,
+                "venue": e.venue or "",
+                "type": "public",
+                "view_url": build_view_url(e.id),
+                "gcal_url": build_gcal_link(e),
+                "event_start_date": e.event_start_date.isoformat() if e.event_start_date else None,
+                "event_end_date": e.event_end_date.isoformat() if e.event_end_date else None,
+            }
             # Single-date event with datetime
             if e.event_datetime:
                 dt = e.event_datetime
                 if timezone.is_naive(dt):
                     dt = timezone.make_aware(dt, timezone.get_current_timezone())
                 dt_local = timezone.localtime(dt)
-                items.append({
-                    "id": e.id,
-                    "title": e.event_title,
+                event = base_data.copy()
+                event.update({
                     "date": dt_local.date().isoformat(),
                     "datetime": dt_local.isoformat(),
-                    "venue": e.venue or "",
-                    "type": "public",
                     "past": dt_local < now,
-                    "view_url": build_view_url(e.id),
-                    "gcal_url": build_gcal_link(e),
                 })
+                items.append(event)
                 continue
 
-            # All-day or multi-day range using start/end dates
+            # All-day or multi-day range: only put dot on start date
             start_date = e.event_start_date or e.event_end_date
-            end_date = e.event_end_date or e.event_start_date
             if not start_date:
                 continue
-            if not end_date:
-                end_date = start_date
-
-            # Iterate each day in range inclusive
-            cur = start_date
-            while cur <= end_date:
-                # local midnight for the day
-                dt_local = timezone.make_aware(datetime.combine(cur, datetime.min.time()), timezone.get_current_timezone())
-                items.append({
-                    "id": e.id,
-                    "title": e.event_title,
-                    "date": cur.isoformat(),
-                    "datetime": dt_local.isoformat(),
-                    "venue": e.venue or "",
-                    "type": "public",
-                    "past": dt_local < now,
-                    "view_url": build_view_url(e.id),
-                    "gcal_url": build_gcal_link(e),
-                })
-                cur += timedelta(days=1)
+            dt_local = timezone.make_aware(datetime.combine(start_date, datetime.min.time()), timezone.get_current_timezone())
+            event = base_data.copy()
+            event.update({
+                "date": start_date.isoformat(),
+                "datetime": dt_local.isoformat(),
+                "past": dt_local < now,
+            })
+            items.append(event)
 
     # CDL Support only
     if category == "cdl":
