@@ -376,13 +376,11 @@ function extract(name){
 const loadSectionContent = extract('loadSectionContent');
 const populateSpeakersFromProposal = extract('populateSpeakersFromProposal');
 const fillOrganizingCommittee = extract('fillOrganizingCommittee');
-const fillActualSpeakers = extract('fillActualSpeakers');
 const fillAttendanceCounts = extract('fillAttendanceCounts');
 
 let domReady = false;
 const speakersDisplay = {innerHTML: ''};
 const orgEl = {value:'', length:1, val:function(v){ if(v===undefined) return this.value; this.value=v; return this; }, text:function(v){ if(v===undefined) return this.value; this.value=v; return this; }};
-const actualEl = {value:'', length:1, val:function(v){ if(v===undefined) return this.value; this.value=v; return this; }, text:function(v){ if(v===undefined) return this.value; this.value=v; return this; }};
 const makeField = () => ({value:'', length:1, val:function(v){ if(v===undefined) return this.value; this.value=v; return this; }, text:function(v){ if(v===undefined) return this.value; this.value=v; return this; }});
 
 const elements = {
@@ -401,7 +399,6 @@ function $(sel){
   if(sel === '.form-grid') return {html:function(content){ setTimeout(()=>{domReady=true;},0); return this; }};
   if(!domReady) return {length:0, val:function(){}};
   if(sel === '#organizing-committee-modern') return orgEl;
-  if(sel === '#actual-speakers-modern') return actualEl;
   return {length:0, val:function(){}};
 }
 
@@ -424,7 +421,6 @@ global.window = {
 
 eval(populateSpeakersFromProposal);
 eval(fillOrganizingCommittee);
-eval(fillActualSpeakers);
 eval(fillAttendanceCounts);
 eval(loadSectionContent);
 
@@ -434,7 +430,6 @@ setTimeout(()=>{
   console.log(JSON.stringify({
     display: speakersDisplay.innerHTML,
     organizing: orgEl.value,
-    actual: actualEl.value,
     total: elements['num-participants-modern'].value,
     volunteers: elements['num-volunteers-modern'].value,
     hiddenVolunteers: elements['num-volunteers-hidden'].value,
@@ -457,7 +452,6 @@ setTimeout(()=>{
         data = json.loads(result.stdout.strip())
         self.assertIn("Dr. Xavier", data["display"])
         self.assertIn("Proposer: Alice", data["organizing"])
-        self.assertIn("Dr. Xavier", data["actual"])
         self.assertEqual("10", str(data["total"]))
         self.assertEqual("3", str(data["volunteers"]))
         self.assertEqual("3", str(data["hiddenVolunteers"]))

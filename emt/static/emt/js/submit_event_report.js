@@ -608,7 +608,6 @@ $(document).on('click', '#ai-sdg-implementation', function(){
               }
               populateSpeakersFromProposal();
               fillOrganizingCommittee();
-              fillActualSpeakers();
               fillAttendanceCounts();
               if (typeof setupAttendanceLink === 'function') setupAttendanceLink();
           };
@@ -1098,15 +1097,6 @@ $(document).on('click', '#ai-sdg-implementation', function(){
               </div>
           </div>
 
-          <div class="form-row full-width">
-              <div class="input-group">
-                  <label for="actual-speakers-modern">Actual Speakers</label>
-                  <textarea id="actual-speakers-modern" name="actual_speakers" rows="8" 
-                      placeholder="List the actual speakers who participated:&#10;&#10;• Speaker 1: Dr. [Name] - [Designation] - [Institution/Company]&#10;  Topic: [Session topic]&#10;  Duration: [Time duration]&#10;&#10;• Speaker 2: Prof. [Name] - [Designation] - [Institution/Company]&#10;  Topic: [Session topic]&#10;  Duration: [Time duration]&#10;&#10;Include any changes from the original proposal and reasons for changes."></textarea>
-                  <div class="help-text">List actual speakers and any changes from the original proposal</div>
-              </div>
-          </div>
-
           <!-- Save Section -->
           <div class="form-row full-width">
               <div class="save-section-container">
@@ -1584,42 +1574,6 @@ function fillOrganizingCommittee() {
     }
 }
 
-function fillActualSpeakers() {
-    const field = $('#actual-speakers-modern');
-    if (field.length && field.val().trim() === '') {
-        let arr = [];
-        try {
-            const raw = window.PROPOSAL_DATA && window.PROPOSAL_DATA.speakers;
-            if (typeof raw === 'string') {
-                const parsed = JSON.parse(raw);
-                if (Array.isArray(parsed)) arr = parsed;
-            } else if (Array.isArray(raw)) {
-                arr = raw;
-            } else if (Array.isArray(window.EXISTING_SPEAKERS)) {
-                arr = window.EXISTING_SPEAKERS;
-            } else {
-                const tag = document.getElementById('proposal-speakers-json');
-                if (tag) {
-                    const txt = (tag.textContent || tag.innerText || '').trim();
-                    try {
-                        const parsed2 = JSON.parse(txt);
-                        if (Array.isArray(parsed2)) arr = parsed2;
-                    } catch (e) {}
-                }
-            }
-        } catch (e) {}
-        if (arr.length) {
-            const lines = arr.map((sp, idx) => {
-            const name = sp.full_name || sp.name || '';
-            const designation = sp.designation ? ` - ${sp.designation}` : '';
-            const org = sp.organization || sp.affiliation ? ` - ${(sp.organization || sp.affiliation)}` : '';
-            return `• ${name}${designation}${org}`;
-        });
-            field.val(lines.join('\n'));
-        }
-    }
-}
-
 function fillAttendanceCounts() {
     const counts = window.ATTENDANCE_COUNTS || {};
     const present = (counts.present !== undefined && counts.present !== null)
@@ -1671,7 +1625,6 @@ function populateProposalData() {
     setTimeout(function() {
         fillEventRelevance();
         fillOrganizingCommittee();
-        fillActualSpeakers();
         fillAttendanceCounts();
     }, 100);
 
@@ -1685,7 +1638,6 @@ function populateProposalData() {
             if (!container && attempt < 10) return setTimeout(() => init(attempt+1), 100);
             populateSpeakersFromProposal();
             fillOrganizingCommittee();
-            fillActualSpeakers();
             fillAttendanceCounts();
         };
         setTimeout(() => init(0), 50);
