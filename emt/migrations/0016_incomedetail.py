@@ -7,25 +7,40 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('emt', '0015_remove_eventproposal_aligned_sdg_goals'),
+        ("emt", "0015_remove_eventproposal_aligned_sdg_goals"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='IncomeDetail',
+            name="IncomeDetail",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('sl_no', models.PositiveIntegerField()),
-                ('particulars', models.CharField(max_length=200)),
-                ('participants', models.PositiveIntegerField()),
-                ('rate', models.DecimalField(decimal_places=2, max_digits=10)),
-                ('amount', models.DecimalField(decimal_places=2, max_digits=12)),
-                ('proposal', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='income_details', to='emt.eventproposal')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("sl_no", models.PositiveIntegerField()),
+                ("particulars", models.CharField(max_length=200)),
+                ("participants", models.PositiveIntegerField()),
+                ("rate", models.DecimalField(decimal_places=2, max_digits=10)),
+                ("amount", models.DecimalField(decimal_places=2, max_digits=12)),
+                (
+                    "proposal",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="income_details",
+                        to="emt.eventproposal",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Income Detail',
-                'verbose_name_plural': 'Income Details',
-                'ordering': ['sl_no'],
+                "verbose_name": "Income Detail",
+                "verbose_name_plural": "Income Details",
+                "ordering": ["sl_no"],
             },
         ),
     ]

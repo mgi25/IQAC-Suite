@@ -1,8 +1,10 @@
-from django.db import models
-from django.contrib.auth.models import User
 from django.conf import settings
+from django.contrib.auth.models import User
+from django.db import models
 from django.utils import timezone
+
 from core.models import Organization, SDGGoal
+
 
 # ────────────────────────────────────────────────────────────────
 #  MAIN PROPOSAL
@@ -14,21 +16,26 @@ class EventProposal(models.Model):
     def title(self):
         """Convenience property to return the proposal's event title."""
         return self.event_title or "Untitled Event"
+
     class Status(models.TextChoices):
-        DRAFT = 'draft', 'Draft'
-        SUBMITTED = 'submitted', 'Submitted'
-        UNDER_REVIEW = 'under_review', 'Under Review'
-        WAITING = 'waiting', 'Waiting for Action'
-        APPROVED = 'approved', 'Approved'
-        REJECTED = 'rejected', 'Rejected'
-        RETURNED = 'returned', 'Returned for Revision'
-        FINALIZED = 'finalized', 'Finalized'
+        DRAFT = "draft", "Draft"
+        SUBMITTED = "submitted", "Submitted"
+        UNDER_REVIEW = "under_review", "Under Review"
+        WAITING = "waiting", "Waiting for Action"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+        RETURNED = "returned", "Returned for Revision"
+        FINALIZED = "finalized", "Finalized"
 
     submitted_by = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="emt_eventproposals"
     )
     organization = models.ForeignKey(
-        Organization, on_delete=models.SET_NULL, null=True, blank=True, related_name="emt_proposals"
+        Organization,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="emt_proposals",
     )
 
     # Approval flags
@@ -40,8 +47,12 @@ class EventProposal(models.Model):
     )
 
     committees = models.TextField(blank=True, help_text="List of committees involved.")
-    sdg_goals = models.ManyToManyField(SDGGoal, blank=True, related_name="event_proposals")
-    committees_collaborations = models.TextField(blank=True, help_text="Committees and collaborations involved.")
+    sdg_goals = models.ManyToManyField(
+        SDGGoal, blank=True, related_name="event_proposals"
+    )
+    committees_collaborations = models.TextField(
+        blank=True, help_text="Committees and collaborations involved."
+    )
     event_title = models.CharField(max_length=200, blank=False)
     num_activities = models.PositiveIntegerField(null=True, blank=True)
     event_datetime = models.DateTimeField(null=True, blank=True)
@@ -56,39 +67,58 @@ class EventProposal(models.Model):
         User, blank=True, related_name="faculty_incharge_proposals"
     )
     # UPDATED: Changed from TextField to ManyToManyField for better data integrity
-    student_coordinators = models.TextField(blank=True, help_text="Comma-separated student coordinator names (temporary).")
+    student_coordinators = models.TextField(
+        blank=True, help_text="Comma-separated student coordinator names (temporary)."
+    )
 
     event_focus_type = models.CharField(max_length=200, blank=True)
     report_generated = models.BooleanField(default=False)
 
     # Report assignment field
     report_assigned_to = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=True, 
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="assigned_report_tasks",
-        help_text="User assigned to generate the report for this event"
+        help_text="User assigned to generate the report for this event",
     )
     report_assigned_at = models.DateTimeField(null=True, blank=True)
-    
+
     # Income fields
     fest_fee_participants = models.PositiveIntegerField(null=True, blank=True)
-    fest_fee_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    fest_fee_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-    fest_sponsorship_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    fest_fee_rate = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True
+    )
+    fest_fee_amount = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
+    fest_sponsorship_amount = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
 
     conf_fee_participants = models.PositiveIntegerField(null=True, blank=True)
-    conf_fee_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    conf_fee_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-    conf_sponsorship_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    conf_fee_rate = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True
+    )
+    conf_fee_amount = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
+    conf_sponsorship_amount = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.DRAFT
+    )
 
     class Meta:
         verbose_name = "Event Proposal"
         verbose_name_plural = "Event Proposals"
-        ordering = ['-created_at']
+        ordering = ["-created_at"]
 
     def __str__(self):
         return self.event_title or f"Proposal #{self.id}"
@@ -103,73 +133,107 @@ class EventProposal(models.Model):
         )
         return getattr(step, "comment", "")
 
+
 # ────────────────────────────────────────────────────────────────
 #  One-to-one / related tables
 # ────────────────────────────────────────────────────────────────
 
+
 class EventNeedAnalysis(models.Model):
     """Stores the need analysis content for an event proposal."""
-    proposal = models.OneToOneField(EventProposal, on_delete=models.CASCADE, related_name='need_analysis')
+
+    proposal = models.OneToOneField(
+        EventProposal, on_delete=models.CASCADE, related_name="need_analysis"
+    )
     content = models.TextField()
+
 
 class EventObjectives(models.Model):
     """Stores the objectives for an event proposal."""
-    proposal = models.OneToOneField(EventProposal, on_delete=models.CASCADE, related_name='objectives')
+
+    proposal = models.OneToOneField(
+        EventProposal, on_delete=models.CASCADE, related_name="objectives"
+    )
     content = models.TextField()
+
 
 class EventExpectedOutcomes(models.Model):
     """Stores the expected outcomes for an event proposal."""
-    proposal = models.OneToOneField(EventProposal, on_delete=models.CASCADE, related_name='expected_outcomes')
+
+    proposal = models.OneToOneField(
+        EventProposal, on_delete=models.CASCADE, related_name="expected_outcomes"
+    )
     content = models.TextField()
+
 
 class TentativeFlow(models.Model):
     """Stores the tentative flow of events for a proposal."""
-    proposal = models.OneToOneField(EventProposal, on_delete=models.CASCADE, related_name='tentative_flow')
+
+    proposal = models.OneToOneField(
+        EventProposal, on_delete=models.CASCADE, related_name="tentative_flow"
+    )
     content = models.TextField()
+
 
 class EventActivity(models.Model):
     """Represents a planned activity within an event proposal."""
-    proposal = models.ForeignKey(EventProposal, on_delete=models.CASCADE, related_name='activities')
+
+    proposal = models.ForeignKey(
+        EventProposal, on_delete=models.CASCADE, related_name="activities"
+    )
     name = models.CharField(max_length=255)
     date = models.DateField()
 
     class Meta:
-        ordering = ['date', 'id']
+        ordering = ["date", "id"]
+
 
 # ────────────────────────────────────────────────────────────────
 #  Speaker & Expense
 # ────────────────────────────────────────────────────────────────
 class SpeakerProfile(models.Model):
     """Stores the profile of a speaker for an event."""
-    proposal = models.ForeignKey(EventProposal, on_delete=models.CASCADE, related_name='speakers')
+
+    proposal = models.ForeignKey(
+        EventProposal, on_delete=models.CASCADE, related_name="speakers"
+    )
     full_name = models.CharField(max_length=100)
     designation = models.CharField(max_length=100)
     affiliation = models.CharField(max_length=100)
     contact_email = models.EmailField()
     contact_number = models.CharField(max_length=15)
-    linkedin_url = models.URLField(blank=True, null=True, help_text="LinkedIn profile URL")
-    photo = models.ImageField(upload_to='speakers/', blank=True, null=True)
+    linkedin_url = models.URLField(
+        blank=True, null=True, help_text="LinkedIn profile URL"
+    )
+    photo = models.ImageField(upload_to="speakers/", blank=True, null=True)
     detailed_profile = models.TextField()
 
     def __str__(self):
         return f"{self.full_name} for {self.proposal.event_title}"
 
+
 class ExpenseDetail(models.Model):
     """Stores a single line item of an expense for a proposal."""
-    proposal = models.ForeignKey(EventProposal, on_delete=models.CASCADE, related_name='expense_details')
+
+    proposal = models.ForeignKey(
+        EventProposal, on_delete=models.CASCADE, related_name="expense_details"
+    )
     sl_no = models.PositiveIntegerField()
     particulars = models.CharField(max_length=200)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
 
     class Meta:
-        ordering = ['sl_no']
+        ordering = ["sl_no"]
         verbose_name = "Expense Detail"
         verbose_name_plural = "Expense Details"
 
 
 class IncomeDetail(models.Model):
     """Stores a single line item of income for a proposal."""
-    proposal = models.ForeignKey(EventProposal, on_delete=models.CASCADE, related_name='income_details')
+
+    proposal = models.ForeignKey(
+        EventProposal, on_delete=models.CASCADE, related_name="income_details"
+    )
     sl_no = models.PositiveIntegerField()
     particulars = models.CharField(max_length=200)
     participants = models.PositiveIntegerField()
@@ -177,7 +241,7 @@ class IncomeDetail(models.Model):
     amount = models.DecimalField(max_digits=12, decimal_places=2)
 
     class Meta:
-        ordering = ['sl_no']
+        ordering = ["sl_no"]
         verbose_name = "Income Detail"
         verbose_name_plural = "Income Details"
 
@@ -188,51 +252,64 @@ class IncomeDetail(models.Model):
 class ApprovalStepQuerySet(models.QuerySet):
     def visible_for_ui(self):
         """Hide optional steps that were never forwarded for display."""
-        return (
-            self.exclude(
-                is_optional=True,
-                optional_unlocked=False,
-            )
-            .exclude(
-                is_optional=True,
-                status=ApprovalStep.Status.SKIPPED,
-            )
+        return self.exclude(
+            is_optional=True,
+            optional_unlocked=False,
+        ).exclude(
+            is_optional=True,
+            status=ApprovalStep.Status.SKIPPED,
         )
 
     # Backwards compatibility with previous helper name
     visible_for_status = visible_for_ui
 
+
 class ApprovalStep(models.Model):
     """Represents a single step in the approval workflow for a proposal."""
+
     class Status(models.TextChoices):
-        PENDING = 'pending', 'Pending'
-        APPROVED = 'approved', 'Approved'
-        REJECTED = 'rejected', 'Rejected'
-        SKIPPED = 'skipped', 'Skipped'
+        PENDING = "pending", "Pending"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+        SKIPPED = "skipped", "Skipped"
 
     class Role(models.TextChoices):
-        FACULTY = 'faculty', 'Faculty'
-        FACULTY_INCHARGE = 'faculty_incharge', 'Faculty In-Charge'
-        DEPT_IQAC = 'dept_iqac', 'Department IQAC'
-        HOD = 'hod', 'Head of Department'
-        DIRECTOR = 'director', 'Director'
-        DEAN = 'dean', 'Dean'
-        FINANCE = 'finance', 'Finance Officer'
+        FACULTY = "faculty", "Faculty"
+        FACULTY_INCHARGE = "faculty_incharge", "Faculty In-Charge"
+        DEPT_IQAC = "dept_iqac", "Department IQAC"
+        HOD = "hod", "Head of Department"
+        DIRECTOR = "director", "Director"
+        DEAN = "dean", "Dean"
+        FINANCE = "finance", "Finance Officer"
 
-    proposal = models.ForeignKey(EventProposal, on_delete=models.CASCADE, related_name="approval_steps")
+    proposal = models.ForeignKey(
+        EventProposal, on_delete=models.CASCADE, related_name="approval_steps"
+    )
     step_order = models.PositiveIntegerField(null=True, blank=True)
     order_index = models.PositiveIntegerField(default=0)
-    role_required = models.CharField(max_length=50, choices=Role.choices, null=True, blank=True)
+    role_required = models.CharField(
+        max_length=50, choices=Role.choices, null=True, blank=True
+    )
     assigned_to = models.ForeignKey(
-        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="assigned_approvals"
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="assigned_approvals",
     )
     approved_by = models.ForeignKey(
-        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="completed_approvals"
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="completed_approvals",
     )
     approved_at = models.DateTimeField(null=True, blank=True)
     is_optional = models.BooleanField(default=False)
     optional_unlocked = models.BooleanField(default=False)
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.PENDING
+    )
     decided_by = models.ForeignKey(
         User,
         null=True,
@@ -247,34 +324,41 @@ class ApprovalStep(models.Model):
     objects = ApprovalStepQuerySet.as_manager()
 
     class Meta:
-        ordering = ['order_index']
+        ordering = ["order_index"]
         verbose_name = "Approval Step"
         verbose_name_plural = "Approval Steps"
 
     def __str__(self):
-        return f"{self.proposal.event_title} • Step {self.step_order} [{self.get_role_required_display()}] {self.get_status_display()}"
+        return (
+            f"{self.proposal.event_title} • Step {self.step_order} "
+            f"[{self.get_role_required_display()}] {self.get_status_display()}"
+        )
+
 
 # ────────────────────────────────────────────────────────────────
 #  Media Request
 # ────────────────────────────────────────────────────────────────
 class MediaRequest(models.Model):
     """A model to track requests for media creation (e.g., posters)."""
+
     class MediaType(models.TextChoices):
-        POSTER = 'Poster', 'Poster'
-        VIDEO = 'Video', 'Video'
+        POSTER = "Poster", "Poster"
+        VIDEO = "Video", "Video"
 
     class Status(models.TextChoices):
-        PENDING = 'Pending', 'Pending'
-        COMPLETED = 'Completed', 'Completed'
-        REJECTED = 'Rejected', 'Rejected'
+        PENDING = "Pending", "Pending"
+        COMPLETED = "Completed", "Completed"
+        REJECTED = "Rejected", "Rejected"
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     media_type = models.CharField(max_length=20, choices=MediaType.choices)
     title = models.CharField(max_length=200)
     description = models.TextField()
     event_date = models.DateField()
-    media_file = models.FileField(upload_to='media_requests/', null=True, blank=True)
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    media_file = models.FileField(upload_to="media_requests/", null=True, blank=True)
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.PENDING
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -357,9 +441,7 @@ class CDLCertificateRecipient(models.Model):
     )
     name = models.CharField(max_length=255)
     role = models.CharField(max_length=255, blank=True)
-    certificate_type = models.CharField(
-        max_length=30, choices=CertificateType.choices
-    )
+    certificate_type = models.CharField(max_length=30, choices=CertificateType.choices)
     ai_approved = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -386,29 +468,51 @@ class CDLMessage(models.Model):
     def __str__(self):
         return f"Message by {self.sender} on {self.created_at:%Y-%m-%d}"
 
+
 # ────────────────────────────────────────────────────────────────
 #  CDL ASSIGNMENT (WORK TRACKING)
 # ────────────────────────────────────────────────────────────────
 class CDLAssignment(models.Model):
     class Status(models.TextChoices):
-        ASSIGNED = 'assigned', 'Assigned'
-        PENDING = 'pending', 'Pending'
-        IN_PROGRESS = 'in_progress', 'In Progress'
-        COMPLETED = 'completed', 'Completed'
+        ASSIGNED = "assigned", "Assigned"
+        PENDING = "pending", "Pending"
+        IN_PROGRESS = "in_progress", "In Progress"
+        COMPLETED = "completed", "Completed"
 
-    proposal = models.OneToOneField('EventProposal', on_delete=models.CASCADE, related_name='cdl_assignment')
-    assignee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='cdl_assignments')
-    assigned_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='cdl_assigned_events')
-    role = models.CharField(max_length=100, blank=True, help_text="Role context, e.g., 'CDL Head' or 'CDL Employee'")
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.ASSIGNED)
+    proposal = models.OneToOneField(
+        "EventProposal", on_delete=models.CASCADE, related_name="cdl_assignment"
+    )
+    assignee = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="cdl_assignments"
+    )
+    assigned_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cdl_assigned_events",
+    )
+    role = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Role context, e.g., 'CDL Head' or 'CDL Employee'",
+    )
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.ASSIGNED
+    )
     assigned_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-assigned_at']
+        ordering = ["-assigned_at"]
 
     def __str__(self):
-        return f"{self.proposal.event_title} → {self.assignee.get_full_name() or self.assignee.username} ({self.get_status_display()})"
+        return (
+            f"{self.proposal.event_title} → "
+            f"{self.assignee.get_full_name() or self.assignee.username} "
+            f"({self.get_status_display()})"
+        )
+
 
 # ────────────────────────────────────────────────────────────────
 #  CDL TASK ASSIGNMENTS (per resource for an event)
@@ -419,37 +523,60 @@ class CDLTaskAssignment(models.Model):
     Example resource_key values: 'poster', 'certificates', 'photography', 'videography', etc.
     Values come dynamically from CDLSupport fields (poster_required, certificates_required, other_services list).
     """
-    class Status(models.TextChoices):
-        BACKLOG = 'backlog', 'Backlog'
-        ASSIGNED = 'assigned', 'Assigned'
-        IN_PROGRESS = 'in_progress', 'In Progress'
-        DONE = 'done', 'Done'
 
-    proposal = models.ForeignKey(EventProposal, on_delete=models.CASCADE, related_name='cdl_task_assignments')
+    class Status(models.TextChoices):
+        BACKLOG = "backlog", "Backlog"
+        ASSIGNED = "assigned", "Assigned"
+        IN_PROGRESS = "in_progress", "In Progress"
+        DONE = "done", "Done"
+
+    proposal = models.ForeignKey(
+        EventProposal, on_delete=models.CASCADE, related_name="cdl_task_assignments"
+    )
     resource_key = models.CharField(max_length=100)
-    label = models.CharField(max_length=200, blank=True, help_text="Display label for custom tasks")
-    assignee = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='cdl_resource_tasks')
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.ASSIGNED)
-    assigned_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='cdl_resource_tasks_assigned')
+    label = models.CharField(
+        max_length=200, blank=True, help_text="Display label for custom tasks"
+    )
+    assignee = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="cdl_resource_tasks",
+    )
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.ASSIGNED
+    )
+    assigned_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cdl_resource_tasks_assigned",
+    )
     assigned_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('proposal', 'resource_key')
+        unique_together = ("proposal", "resource_key")
         indexes = [
-            models.Index(fields=['assignee']),
-            models.Index(fields=['proposal','resource_key']),
+            models.Index(fields=["assignee"]),
+            models.Index(fields=["proposal", "resource_key"]),
         ]
 
     def __str__(self):
         return f"{self.proposal_id}:{self.resource_key} → {self.assignee_id or 'unassigned'} ({self.status})"
+
 
 # ────────────────────────────────────────────────────────────────
 #  EVENT REPORT
 # ────────────────────────────────────────────────────────────────
 class EventReport(models.Model):
     """Stores the post-event report, linked to the original proposal."""
-    proposal = models.OneToOneField(EventProposal, on_delete=models.CASCADE, related_name='event_report')
+
+    proposal = models.OneToOneField(
+        EventProposal, on_delete=models.CASCADE, related_name="event_report"
+    )
     location = models.CharField(max_length=200, blank=True)
     blog_link = models.URLField(blank=True)
     actual_event_type = models.CharField(max_length=200, blank=True)
@@ -487,7 +614,9 @@ class EventReport(models.Model):
     # Optional notes about attendance to avoid integrity errors if left empty
     attendance_notes = models.TextField(blank=True, default="")
     ai_generated_report = models.TextField(
-        blank=True, null=True, help_text="This field will store the report generated by AI."
+        blank=True,
+        null=True,
+        help_text="This field will store the report generated by AI.",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -499,10 +628,14 @@ class EventReport(models.Model):
     def __str__(self):
         return f"Report for {self.proposal.event_title}"
 
+
 class EventReportAttachment(models.Model):
     """An attachment (e.g., image, PDF) for an event report."""
-    report = models.ForeignKey(EventReport, on_delete=models.CASCADE, related_name='attachments')
-    file = models.FileField(upload_to='report_attachments/')
+
+    report = models.ForeignKey(
+        EventReport, on_delete=models.CASCADE, related_name="attachments"
+    )
+    file = models.FileField(upload_to="report_attachments/")
     caption = models.CharField(max_length=255, blank=True)
 
     def __str__(self):
@@ -518,9 +651,9 @@ class AttendanceRow(models.Model):
         EXTERNAL = "external", "External"
 
     event_report = models.ForeignKey(
-        'emt.EventReport',
+        "emt.EventReport",
         on_delete=models.CASCADE,
-        related_name='attendance_rows',
+        related_name="attendance_rows",
     )
     registration_no = models.CharField(max_length=32)
     full_name = models.CharField(max_length=128)
@@ -536,17 +669,26 @@ class AttendanceRow(models.Model):
     def __str__(self):
         return f"{self.full_name} ({self.registration_no})"
 
+
 # ────────────────────────────────────────────────────────────────
 #  STUDENT PROFILE
 # ────────────────────────────────────────────────────────────────
 class Student(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student_profile')
-    mentor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='mentees')
-    events = models.ManyToManyField('EventProposal', blank=True, related_name='participants')
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="student_profile"
+    )
+    mentor = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="mentees"
+    )
+    events = models.ManyToManyField(
+        "EventProposal", blank=True, related_name="participants"
+    )
     # Add any other fields you need, for example:
     registration_number = models.CharField(max_length=50, blank=True)
     gpa = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
-    attendance = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    attendance = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True
+    )
 
     def __str__(self):
         return self.user.get_full_name() or self.user.username

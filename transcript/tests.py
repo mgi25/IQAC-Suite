@@ -1,18 +1,10 @@
-from django.test import TestCase
 from datetime import date
 
-from .models import (
-    GraduateAttribute,
-    CharacterStrength,
-    AttributeStrengthMap,
-    AcademicYear,
-    School,
-    Course,
-    Student,
-    Event,
-    Role,
-    Participation,
-)
+from django.test import TestCase
+
+from .models import (AcademicYear, AttributeStrengthMap, CharacterStrength,
+                     Course, Event, GraduateAttribute, Participation, Role,
+                     School, Student)
 from .views import calculate_strength_data
 
 

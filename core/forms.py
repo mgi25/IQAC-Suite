@@ -1,16 +1,11 @@
-from django import forms
-from django.db.models import Q
 import json
 
-from .models import (
-    RoleAssignment,
-    OrganizationRole,
-    Organization,
-    OrganizationType,
-    CDLRequest,
-    CertificateBatch,
-    CDLMessage,
-)
+from django import forms
+from django.db.models import Q
+
+from .models import (CDLMessage, CDLRequest, CertificateBatch, Organization,
+                     OrganizationRole, OrganizationType, RoleAssignment)
+
 
 class RoleAssignmentForm(forms.ModelForm):
     class Meta:
@@ -24,9 +19,9 @@ class RoleAssignmentForm(forms.ModelForm):
         org_filter = Q(is_active=True)
         if self.instance.pk and self.instance.organization_id:
             org_filter |= Q(pk=self.instance.organization_id)
-        self.fields["organization"].queryset = (
-            Organization.objects.filter(org_filter).order_by("name")
-        )
+        self.fields["organization"].queryset = Organization.objects.filter(
+            org_filter
+        ).order_by("name")
         # Replace Django's default blank label ("---------") with a clearer prompt
         self.fields["organization"].empty_label = "Select Organization"
 
@@ -82,7 +77,9 @@ class RegistrationForm(forms.Form):
 
 class OrgSelectForm(forms.Form):
     org_type = forms.ModelChoiceField(
-        queryset=OrganizationType.objects.all(), required=True, label="Organization Type"
+        queryset=OrganizationType.objects.all(),
+        required=True,
+        label="Organization Type",
     )
     organization = forms.ModelChoiceField(
         queryset=Organization.objects.none(), required=True, label="Organization"
@@ -125,7 +122,7 @@ class OrgUsersCSVUploadForm(forms.Form):
     academic_year = forms.CharField(
         max_length=9,
         label="Academic Year (e.g., 2025-2026)",
-        widget=forms.TextInput(attrs={"placeholder": "2025-2026"})
+        widget=forms.TextInput(attrs={"placeholder": "2025-2026"}),
     )
     csv_file = forms.FileField(label="CSV File")
 
@@ -171,9 +168,7 @@ class CDLRequestForm(forms.ModelForm):
             if poster_summary:
                 words = poster_summary.split()
                 if len(words) < 120 or len(words) > 180:
-                    self.add_error(
-                        "poster_summary", "Summary must be around 150 words"
-                    )
+                    self.add_error("poster_summary", "Summary must be around 150 words")
 
             if not poster_mode:
                 self.add_error("poster_mode", "Select a poster option")
@@ -181,8 +176,10 @@ class CDLRequestForm(forms.ModelForm):
         if need_certificate_any:
             if need_certificate_cdl and not certificate_mode:
                 self.add_error("certificate_mode", "Select certificate option")
-            if need_certificate_cdl and certificate_mode == CDLRequest.CertificateMode.CORRECT_EXISTING and not cleaned.get(
-                "certificate_design_link"
+            if (
+                need_certificate_cdl
+                and certificate_mode == CDLRequest.CertificateMode.CORRECT_EXISTING
+                and not cleaned.get("certificate_design_link")
             ):
                 self.add_error("certificate_design_link", "Provide design link")
 

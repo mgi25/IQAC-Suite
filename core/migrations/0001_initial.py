@@ -15,107 +15,356 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Cell',
+            name="Cell",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100, unique=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100, unique=True)),
             ],
             options={
-                'ordering': ['name'],
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='Center',
+            name="Center",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100, unique=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100, unique=True)),
             ],
             options={
-                'ordering': ['name'],
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='Club',
+            name="Club",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100, unique=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100, unique=True)),
             ],
             options={
-                'ordering': ['name'],
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='Department',
+            name="Department",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100, unique=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100, unique=True)),
             ],
             options={
-                'ordering': ['name'],
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='Association',
+            name="Association",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100, unique=True)),
-                ('department', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='associations', to='core.department')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100, unique=True)),
+                (
+                    "department",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="associations",
+                        to="core.department",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['name'],
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='EventProposal',
+            name="EventProposal",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('user_type', models.CharField(max_length=30)),
-                ('title', models.CharField(max_length=200)),
-                ('description', models.TextField()),
-                ('date_submitted', models.DateTimeField(auto_now_add=True)),
-                ('status', models.CharField(choices=[('draft', 'Draft'), ('submitted', 'Submitted'), ('under_review', 'Under Review'), ('approved', 'Approved'), ('rejected', 'Rejected'), ('returned', 'Returned for Revision')], default='draft', max_length=20)),
-                ('return_comment', models.TextField(blank=True, null=True)),
-                ('department', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='core.department')),
-                ('submitted_by', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='event_proposals', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("user_type", models.CharField(max_length=30)),
+                ("title", models.CharField(max_length=200)),
+                ("description", models.TextField()),
+                ("date_submitted", models.DateTimeField(auto_now_add=True)),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("draft", "Draft"),
+                            ("submitted", "Submitted"),
+                            ("under_review", "Under Review"),
+                            ("approved", "Approved"),
+                            ("rejected", "Rejected"),
+                            ("returned", "Returned for Revision"),
+                        ],
+                        default="draft",
+                        max_length=20,
+                    ),
+                ),
+                ("return_comment", models.TextField(blank=True, null=True)),
+                (
+                    "department",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="core.department",
+                    ),
+                ),
+                (
+                    "submitted_by",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="event_proposals",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Profile',
+            name="Profile",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('role', models.CharField(choices=[('student', 'Student'), ('faculty', 'Faculty'), ('hod', 'HOD'), ('admin', 'Admin'), ('club_convenor', 'Club Convenor'), ('event_coordinator', 'Event Coordinator'), ('committee_member', 'Committee Member'), ('iqac_member', 'IQAC Member')], default='student', max_length=32)),
-                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "role",
+                    models.CharField(
+                        choices=[
+                            ("student", "Student"),
+                            ("faculty", "Faculty"),
+                            ("hod", "HOD"),
+                            ("admin", "Admin"),
+                            ("club_convenor", "Club Convenor"),
+                            ("event_coordinator", "Event Coordinator"),
+                            ("committee_member", "Committee Member"),
+                            ("iqac_member", "IQAC Member"),
+                        ],
+                        default="student",
+                        max_length=32,
+                    ),
+                ),
+                (
+                    "user",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Report',
+            name="Report",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('title', models.CharField(max_length=200)),
-                ('description', models.TextField(blank=True)),
-                ('date_submitted', models.DateTimeField(auto_now_add=True)),
-                ('report_type', models.CharField(choices=[('annual', 'Annual'), ('event', 'Event'), ('iqac', 'IQAC'), ('custom', 'Custom')], max_length=30)),
-                ('file', models.FileField(blank=True, null=True, upload_to='reports/')),
-                ('status', models.CharField(choices=[('draft', 'Draft'), ('submitted', 'Submitted'), ('approved', 'Approved'), ('rejected', 'Rejected')], default='draft', max_length=20)),
-                ('feedback', models.TextField(blank=True, null=True)),
-                ('department', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='core.department')),
-                ('submitted_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='submitted_reports', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("title", models.CharField(max_length=200)),
+                ("description", models.TextField(blank=True)),
+                ("date_submitted", models.DateTimeField(auto_now_add=True)),
+                (
+                    "report_type",
+                    models.CharField(
+                        choices=[
+                            ("annual", "Annual"),
+                            ("event", "Event"),
+                            ("iqac", "IQAC"),
+                            ("custom", "Custom"),
+                        ],
+                        max_length=30,
+                    ),
+                ),
+                ("file", models.FileField(blank=True, null=True, upload_to="reports/")),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("draft", "Draft"),
+                            ("submitted", "Submitted"),
+                            ("approved", "Approved"),
+                            ("rejected", "Rejected"),
+                        ],
+                        default="draft",
+                        max_length=20,
+                    ),
+                ),
+                ("feedback", models.TextField(blank=True, null=True)),
+                (
+                    "department",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="core.department",
+                    ),
+                ),
+                (
+                    "submitted_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="submitted_reports",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='RoleAssignment',
+            name="RoleAssignment",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('role', models.CharField(choices=[('student', 'Student'), ('faculty', 'Faculty'), ('hod', 'HOD'), ('dept_iqac', 'Department IQAC Coordinator'), ('club_head', 'Club Head'), ('center_head', 'Center Head'), ('cell_head', 'Cell Head'), ('association_head', 'Association Head'), ('dean', 'Dean'), ('cdl', 'CDL'), ('uni_iqac', 'University IQAC Coordinator'), ('admin', 'Admin'), ('academic_coordinator', 'Academic Coordinator')], max_length=30)),
-                ('association', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='core.association')),
-                ('cell', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='core.cell')),
-                ('center', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='core.center')),
-                ('club', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='core.club')),
-                ('department', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='core.department')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='role_assignments', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "role",
+                    models.CharField(
+                        choices=[
+                            ("student", "Student"),
+                            ("faculty", "Faculty"),
+                            ("hod", "HOD"),
+                            ("dept_iqac", "Department IQAC Coordinator"),
+                            ("club_head", "Club Head"),
+                            ("center_head", "Center Head"),
+                            ("cell_head", "Cell Head"),
+                            ("association_head", "Association Head"),
+                            ("dean", "Dean"),
+                            ("cdl", "CDL"),
+                            ("uni_iqac", "University IQAC Coordinator"),
+                            ("admin", "Admin"),
+                            ("academic_coordinator", "Academic Coordinator"),
+                        ],
+                        max_length=30,
+                    ),
+                ),
+                (
+                    "association",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="core.association",
+                    ),
+                ),
+                (
+                    "cell",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="core.cell",
+                    ),
+                ),
+                (
+                    "center",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="core.center",
+                    ),
+                ),
+                (
+                    "club",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="core.club",
+                    ),
+                ),
+                (
+                    "department",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="core.department",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="role_assignments",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'unique_together': {('user', 'role', 'department', 'club', 'center', 'cell', 'association')},
+                "unique_together": {
+                    (
+                        "user",
+                        "role",
+                        "department",
+                        "club",
+                        "center",
+                        "cell",
+                        "association",
+                    )
+                },
             },
         ),
     ]

@@ -50,4 +50,5 @@ def _flatten(items):
         ids.extend(_flatten(children))
     return ids
 
+
 SIDEBAR_ITEM_IDS = set(_flatten(NAV_ITEMS))

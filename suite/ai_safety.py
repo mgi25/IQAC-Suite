@@ -1,4 +1,6 @@
-import re, json, logging
+import json
+import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -9,11 +11,13 @@ BAD_PHRASES = [
     r"\breports?\s+indicate\b",
 ]
 
+
 def strip_unverifiable_phrases(text: str) -> str:
     out = text
     for p in BAD_PHRASES:
         out = re.sub(p, "[TBD source]", out, flags=re.I)
     return out
+
 
 def allowed_numbers_from_facts(facts: dict) -> set[str]:
     joined = " ".join(
@@ -23,15 +27,17 @@ def allowed_numbers_from_facts(facts: dict) -> set[str]:
     # capture bare numbers and percents present in facts
     return set(re.findall(r"\d+%?", joined))
 
+
 def enforce_no_unverified_numbers(text: str, allowed: set[str]) -> str:
     # allow 4-digit years if present in text AND in allowed numbers (facts)
-    tokens = re.findall(r'(?<!\w)(\d+%?)(?!\w)', text)
+    tokens = re.findall(r"(?<!\w)(\d+%?)(?!\w)", text)
     bad = [t for t in tokens if t not in allowed]
     if bad:
         for t in set(bad):
-            text = re.sub(rf'(?<!\w){re.escape(t)}(?!\w)', '[TBD]', text)
+            text = re.sub(rf"(?<!\w){re.escape(t)}(?!\w)", "[TBD]", text)
         text += "\n\n[Note: Removed unverified numbers; please replace with confirmed values.]"
     return text
+
 
 def parse_model_json(s: str) -> dict:
     """Parse a JSON object from a model string output.

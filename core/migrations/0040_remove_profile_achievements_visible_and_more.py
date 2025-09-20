@@ -6,40 +6,40 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0039_sidebarpermission'),
+        ("core", "0039_sidebarpermission"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='profile',
-            name='achievements_visible',
+            model_name="profile",
+            name="achievements_visible",
         ),
         migrations.RemoveField(
-            model_name='profile',
-            name='bio',
+            model_name="profile",
+            name="bio",
         ),
         migrations.RemoveField(
-            model_name='profile',
-            name='bio_visible',
+            model_name="profile",
+            name="bio_visible",
         ),
         migrations.RemoveField(
-            model_name='profile',
-            name='designation',
+            model_name="profile",
+            name="designation",
         ),
         migrations.RemoveField(
-            model_name='profile',
-            name='memberships_visible',
+            model_name="profile",
+            name="memberships_visible",
         ),
         migrations.RemoveField(
-            model_name='profile',
-            name='phone',
+            model_name="profile",
+            name="phone",
         ),
         migrations.RemoveField(
-            model_name='profile',
-            name='phone_visible',
+            model_name="profile",
+            name="phone_visible",
         ),
         migrations.RemoveField(
-            model_name='profile',
-            name='profile_picture',
+            model_name="profile",
+            name="profile_picture",
         ),
     ]

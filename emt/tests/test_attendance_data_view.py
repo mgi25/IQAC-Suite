@@ -2,8 +2,9 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
-from core.models import Class, Organization, OrganizationMembership, OrganizationType
-from emt.models import EventProposal, EventReport, AttendanceRow, Student
+from core.models import (Class, Organization, OrganizationMembership,
+                         OrganizationType)
+from emt.models import AttendanceRow, EventProposal, EventReport, Student
 
 
 class AttendanceDataViewTests(TestCase):
@@ -14,8 +15,12 @@ class AttendanceDataViewTests(TestCase):
             submitted_by=self.user, event_title="Sample"
         )
         self.report = EventReport.objects.create(proposal=proposal)
-        bob_user = User.objects.create_user("bobuser", password="pass", first_name="Bob")
-        eve_user = User.objects.create_user("eveuser", password="pass", first_name="Eve")
+        bob_user = User.objects.create_user(
+            "bobuser", password="pass", first_name="Bob"
+        )
+        eve_user = User.objects.create_user(
+            "eveuser", password="pass", first_name="Eve"
+        )
         Student.objects.create(user=bob_user, registration_number="R1")
         Student.objects.create(user=eve_user, registration_number="R2")
         AttendanceRow.objects.create(
@@ -58,7 +63,9 @@ class AttendanceDataViewTests(TestCase):
         )
         report = EventReport.objects.create(proposal=proposal)
         cls = Class.objects.create(name="CSE", code="CSE")
-        bob_user = User.objects.create_user("bobuser", password="pass", first_name="Bob")
+        bob_user = User.objects.create_user(
+            "bobuser", password="pass", first_name="Bob"
+        )
         bob = Student.objects.create(user=bob_user, registration_number="R1")
         cls.students.add(bob)
         carol_user = User.objects.create_user(
@@ -149,7 +156,9 @@ class AttendanceDataViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
 
-        rows_by_reg = {r["registration_no"]: r for r in data["rows"] if r.get("registration_no")}
+        rows_by_reg = {
+            r["registration_no"]: r for r in data["rows"] if r.get("registration_no")
+        }
         self.assertIn("FAC-321", rows_by_reg)
         row = rows_by_reg["FAC-321"]
         self.assertEqual(row["category"], "faculty")
@@ -161,7 +170,9 @@ class AttendanceDataViewTests(TestCase):
     def test_marks_faculty_rows_with_category(self):
         org_type = OrganizationType.objects.create(name="Dept")
         org = Organization.objects.create(name="Engineering", org_type=org_type)
-        faculty_user = User.objects.create_user("facuser", password="pass", first_name="Fac")
+        faculty_user = User.objects.create_user(
+            "facuser", password="pass", first_name="Fac"
+        )
         OrganizationMembership.objects.create(
             user=faculty_user,
             organization=org,
@@ -343,4 +354,3 @@ class AttendanceDataViewTests(TestCase):
         self.assertEqual(row["affiliation"], "Social Sciences")
         self.assertIn("Social Sciences", data["faculty"])
         self.assertIn("Henry Faculty", data["faculty"]["Social Sciences"])
-

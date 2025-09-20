@@ -1,14 +1,14 @@
 import logging
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.shortcuts import redirect
 from django.urls import reverse
-from django.contrib.auth import get_user_model
 
 from core.models import ActivityLog, RoleAssignment
 from emt.models import Student
-from .utils import get_or_create_current_site
 
+from .utils import get_or_create_current_site
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +62,7 @@ class ImpersonationMiddleware:
         response = self.get_response(request)
         return response
 
+
 class RegistrationRequiredMiddleware:
     """Redirect authenticated users to the registration form until they register."""
 
@@ -70,26 +71,30 @@ class RegistrationRequiredMiddleware:
 
     def __call__(self, request):
         user = request.user
-        if user.is_authenticated and not user.is_superuser and not self._is_exempt_path(request.path):
+        if (
+            user.is_authenticated
+            and not user.is_superuser
+            and not self._is_exempt_path(request.path)
+        ):
             if not self._user_is_registered(user):
-                return redirect('registration_form')
+                return redirect("registration_form")
         return self.get_response(request)
 
     def _is_exempt_path(self, path):
         """Return True if the path should bypass registration enforcement."""
         exempt_paths = {
-            reverse('registration_form'),
-            reverse('logout'),
-            reverse('login'),
-            reverse('api_organizations'),
-            reverse('api_roles'),
+            reverse("registration_form"),
+            reverse("logout"),
+            reverse("login"),
+            reverse("api_organizations"),
+            reverse("api_roles"),
         }
         if path in exempt_paths:
             return True
         exempt_prefixes = (
-            '/accounts/',
-            '/admin/',
-            '/core-admin/',
+            "/accounts/",
+            "/admin/",
+            "/core-admin/",
             settings.STATIC_URL,
             settings.MEDIA_URL,
         )
@@ -97,8 +102,8 @@ class RegistrationRequiredMiddleware:
 
     def _user_is_registered(self, user):
         """Check whether the user has completed registration."""
-        domain = user.email.split('@')[-1].lower() if user.email else ''
-        is_student = domain.endswith('christuniversity.in')
+        domain = user.email.split("@")[-1].lower() if user.email else ""
+        is_student = domain.endswith("christuniversity.in")
         if is_student:
             try:
                 student = user.student_profile
@@ -136,7 +141,9 @@ class ActivityLogMiddleware:
             ):
                 params = request.GET if request.method == "GET" else request.POST
                 params = {
-                    k: v for k, v in params.items() if k.lower() != "csrfmiddlewaretoken"
+                    k: v
+                    for k, v in params.items()
+                    if k.lower() != "csrfmiddlewaretoken"
                 }
                 ip = request.META.get("REMOTE_ADDR", "unknown")
 

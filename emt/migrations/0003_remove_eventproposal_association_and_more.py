@@ -7,34 +7,40 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0004_remove_association_department_and_more'),
-        ('emt', '0002_eventreport_ai_generated_report'),
+        ("core", "0004_remove_association_department_and_more"),
+        ("emt", "0002_eventreport_ai_generated_report"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='eventproposal',
-            name='association',
+            model_name="eventproposal",
+            name="association",
         ),
         migrations.RemoveField(
-            model_name='eventproposal',
-            name='cell',
+            model_name="eventproposal",
+            name="cell",
         ),
         migrations.RemoveField(
-            model_name='eventproposal',
-            name='center',
+            model_name="eventproposal",
+            name="center",
         ),
         migrations.RemoveField(
-            model_name='eventproposal',
-            name='club',
+            model_name="eventproposal",
+            name="club",
         ),
         migrations.RemoveField(
-            model_name='eventproposal',
-            name='department',
+            model_name="eventproposal",
+            name="department",
         ),
         migrations.AddField(
-            model_name='eventproposal',
-            name='organization',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='emt_proposals', to='core.organization'),
+            model_name="eventproposal",
+            name="organization",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="emt_proposals",
+                to="core.organization",
+            ),
         ),
     ]

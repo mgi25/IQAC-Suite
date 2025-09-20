@@ -1,9 +1,11 @@
-from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from allauth.account.adapter import DefaultAccountAdapter
+from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
+from django.contrib.auth.models import User
 from django.urls import reverse
 from django.utils.text import slugify
-from django.contrib.auth.models import User
+
 from core.models import Profile
+
 
 class SchoolSocialAccountAdapter(DefaultSocialAccountAdapter):
     def pre_social_login(self, request, sociallogin):
@@ -24,7 +26,7 @@ class SchoolSocialAccountAdapter(DefaultSocialAccountAdapter):
 
     def populate_user(self, request, sociallogin, data):
         user = super().populate_user(request, sociallogin, data)
-        base_username = slugify(user.email.split('@')[0])
+        base_username = slugify(user.email.split("@")[0])
         username = base_username
         count = 0
         # Ensure the username is unique
@@ -73,9 +75,8 @@ class RoleBasedAccountAdapter(DefaultAccountAdapter):
             if not (profile and getattr(profile, "activated_at", None) is None):
                 return self.respond_user_inactive(request, user)
 
-
     def get_login_redirect_url(self, request):
         user = request.user
         if user.is_superuser:
-            return reverse('admin_dashboard')
-        return reverse('dashboard')
+            return reverse("admin_dashboard")
+        return reverse("dashboard")

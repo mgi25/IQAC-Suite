@@ -1,13 +1,13 @@
-from django.contrib.auth.models import User
+import json
+
+from django.contrib.auth.models import Permission, User
+from django.contrib.auth.signals import user_logged_in
+from django.db.models.signals import post_save
 from django.test import TestCase
 from django.urls import reverse
-from django.db.models.signals import post_save
-from django.contrib.auth.signals import user_logged_in
-import json
-from django.contrib.auth.models import Permission
 
-from core.signals import create_or_update_user_profile, assign_role_on_login
-from emt.models import EventProposal, EventReport, EventActivity
+from core.signals import assign_role_on_login, create_or_update_user_profile
+from emt.models import EventActivity, EventProposal, EventReport
 
 
 class AutosaveEventReportTests(TestCase):
@@ -42,7 +42,9 @@ class AutosaveEventReportTests(TestCase):
             "activity_name_1": "Intro",
             "activity_date_1": "2024-01-01",
         }
-        resp = self.client.post(url, data=json.dumps(payload), content_type="application/json")
+        resp = self.client.post(
+            url, data=json.dumps(payload), content_type="application/json"
+        )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertTrue(data.get("success"))
@@ -67,7 +69,9 @@ class AutosaveEventReportTests(TestCase):
             "organizing_committee": "Alice, Bob",
             "attendance_notes": json.dumps([{"name": "Alice"}]),
         }
-        resp = self.client.post(url, data=json.dumps(payload), content_type="application/json")
+        resp = self.client.post(
+            url, data=json.dumps(payload), content_type="application/json"
+        )
         self.assertEqual(resp.status_code, 200)
         self.assertIn("report_id", resp.json())
         report = EventReport.objects.get(proposal=self.proposal)
@@ -80,11 +84,19 @@ class AutosaveEventReportTests(TestCase):
         self.assertEqual(report.attendance_notes, json.dumps([{"name": "Alice"}]))
 
         # Reload the form and confirm values are pre-filled
-        response = self.client.get(reverse("emt:submit_event_report", args=[self.proposal.id]))
+        response = self.client.get(
+            reverse("emt:submit_event_report", args=[self.proposal.id])
+        )
         self.assertContains(response, 'name="num_participants" value="25"', html=False)
-        self.assertContains(response, 'name="num_student_participants" value="15"', html=False)
-        self.assertContains(response, 'name="num_faculty_participants" value="5"', html=False)
-        self.assertContains(response, 'name="num_external_participants" value="5"', html=False)
+        self.assertContains(
+            response, 'name="num_student_participants" value="15"', html=False
+        )
+        self.assertContains(
+            response, 'name="num_faculty_participants" value="5"', html=False
+        )
+        self.assertContains(
+            response, 'name="num_external_participants" value="5"', html=False
+        )
 
     def test_autosave_saves_analysis_section(self):
         url = reverse("emt:autosave_event_report")
@@ -92,7 +104,9 @@ class AutosaveEventReportTests(TestCase):
             "proposal_id": self.proposal.id,
             "analysis": "Detailed analysis text",
         }
-        resp = self.client.post(url, data=json.dumps(payload), content_type="application/json")
+        resp = self.client.post(
+            url, data=json.dumps(payload), content_type="application/json"
+        )
         self.assertEqual(resp.status_code, 200)
         self.assertIn("report_id", resp.json())
         report = EventReport.objects.get(proposal=self.proposal)
@@ -101,11 +115,19 @@ class AutosaveEventReportTests(TestCase):
     def test_autosave_with_report_id_updates(self):
         url = reverse("emt:autosave_event_report")
         payload = {"proposal_id": self.proposal.id, "location": "Room 1"}
-        resp = self.client.post(url, data=json.dumps(payload), content_type="application/json")
+        resp = self.client.post(
+            url, data=json.dumps(payload), content_type="application/json"
+        )
         report_id = resp.json()["report_id"]
 
-        payload2 = {"proposal_id": self.proposal.id, "report_id": report_id, "location": "Room 2"}
-        self.client.post(url, data=json.dumps(payload2), content_type="application/json")
+        payload2 = {
+            "proposal_id": self.proposal.id,
+            "report_id": report_id,
+            "location": "Room 2",
+        }
+        self.client.post(
+            url, data=json.dumps(payload2), content_type="application/json"
+        )
         report = EventReport.objects.get(id=report_id)
         self.assertEqual(report.location, "Room 2")
 
@@ -125,6 +147,8 @@ class AutosaveEventReportTests(TestCase):
         self.proposal.save()
         url = reverse("emt:autosave_event_report")
         payload = {"proposal_id": self.proposal.id, "location": "Staff Hall"}
-        resp = self.client.post(url, data=json.dumps(payload), content_type="application/json")
+        resp = self.client.post(
+            url, data=json.dumps(payload), content_type="application/json"
+        )
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(resp.json().get("success"))

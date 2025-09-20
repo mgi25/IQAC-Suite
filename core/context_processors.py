@@ -1,9 +1,16 @@
-from django.utils import timezone
-from django.db.models import Q
+import logging
 from datetime import timedelta
+
+from django.db.models import Q
+from django.utils import timezone
+
 from emt.models import EventProposal
 from transcript.models import get_active_academic_year
-from .models import SidebarPermission
+
+from .models import RoleAssignment, SidebarPermission
+
+logger = logging.getLogger(__name__)
+
 
 def notifications(request):
     """Return proposal-related notifications for the logged-in user."""
@@ -12,47 +19,46 @@ def notifications(request):
 
     two_days_ago = timezone.now() - timedelta(days=2)
     proposals = (
-        EventProposal.objects
-        .filter(submitted_by=request.user)
+        EventProposal.objects.filter(submitted_by=request.user)
         .filter(
-            ~Q(status=EventProposal.Status.FINALIZED) |
-            Q(updated_at__gte=two_days_ago)
+            ~Q(status=EventProposal.Status.FINALIZED) | Q(updated_at__gte=two_days_ago)
         )
-        .order_by('-updated_at')[:10]
+        .order_by("-updated_at")[:10]
     )
 
     notif_list = []
     for p in proposals:
         """Build notification payloads compatible with the header dropdown."""
         if p.status == EventProposal.Status.REJECTED:
-            n_type = 'alert'
-            icon = 'triangle-exclamation'
-        elif p.status in [EventProposal.Status.SUBMITTED, EventProposal.Status.UNDER_REVIEW]:
-            n_type = 'reminder'
-            icon = 'clock'
+            n_type = "alert"
+            icon = "triangle-exclamation"
+        elif p.status in [
+            EventProposal.Status.SUBMITTED,
+            EventProposal.Status.UNDER_REVIEW,
+        ]:
+            n_type = "reminder"
+            icon = "clock"
         else:
-            n_type = 'info'
-            icon = 'circle-info'
+            n_type = "info"
+            icon = "circle-info"
 
-        notif_list.append({
-            'title': p.event_title or 'Event Proposal',
-            'message': p.get_status_display(),
-            'created_at': p.updated_at,
-            'icon': icon,
-            'type': n_type,
-            'is_read': False,
-        })
+        notif_list.append(
+            {
+                "title": p.event_title or "Event Proposal",
+                "message": p.get_status_display(),
+                "created_at": p.updated_at,
+                "icon": icon,
+                "type": n_type,
+                "is_read": False,
+            }
+        )
 
-    return {'notifications': notif_list}
+    return {"notifications": notif_list}
 
 
 def active_academic_year(request):
     """Provide the active academic year to all templates."""
     return {"active_academic_year": get_active_academic_year()}
-
-from .models import SidebarPermission, RoleAssignment
-import logging
-logger = logging.getLogger(__name__)
 
 
 def sidebar_permissions(request):
@@ -95,7 +101,8 @@ def sidebar_permissions(request):
         try:
             logger.debug(
                 "sidebar_permissions CP: user=%s override items=%s",
-                request.user.id, user_perm.items,
+                request.user.id,
+                user_perm.items,
             )
         except Exception:
             pass
@@ -118,7 +125,10 @@ def sidebar_permissions(request):
     try:
         logger.debug(
             "sidebar_permissions CP: user=%s role_ids=%s merged_items=%s session_role=%s",
-            request.user.id, list(role_ids), sorted(role_items), request.session.get("role"),
+            request.user.id,
+            list(role_ids),
+            sorted(role_items),
+            request.session.get("role"),
         )
     except Exception:
         pass
@@ -146,7 +156,8 @@ def sidebar_permissions(request):
         try:
             logger.debug(
                 "sidebar_permissions CP: user=%s final allowed=%s",
-                request.user.id, sorted(role_items),
+                request.user.id,
+                sorted(role_items),
             )
         except Exception:
             pass
@@ -163,4 +174,3 @@ def sidebar_permissions(request):
     except Exception:
         pass
     return {"allowed_nav_items": [], "unrestricted_nav": False}
-

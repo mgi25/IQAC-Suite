@@ -8,31 +8,31 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0003_program_programoutcome_programspecificoutcome'),
+        ("core", "0003_program_programoutcome_programspecificoutcome"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='association',
-            name='department',
+            model_name="association",
+            name="department",
         ),
         migrations.RemoveField(
-            model_name='report',
-            name='department',
+            model_name="report",
+            name="department",
         ),
         migrations.RemoveField(
-            model_name='eventproposal',
-            name='department',
+            model_name="eventproposal",
+            name="department",
         ),
         migrations.RemoveField(
-            model_name='program',
-            name='department',
+            model_name="program",
+            name="department",
         ),
         # STEP 1: RENAME Center TO OrganizationType
         migrations.RenameModel(
-            old_name='Center',
-            new_name='OrganizationType',
+            old_name="Center",
+            new_name="OrganizationType",
         ),
         # (optional: set model options if needed)
         # migrations.AlterModelOptions(
@@ -41,64 +41,99 @@ class Migration(migrations.Migration):
         # ),
         # STEP 2: NOW SAFE TO CREATE Organization
         migrations.CreateModel(
-            name='Organization',
+            name="Organization",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100)),
-                ('is_active', models.BooleanField(default=True)),
-                ('org_type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='organizations', to='core.organizationtype')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100)),
+                ("is_active", models.BooleanField(default=True)),
+                (
+                    "org_type",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="organizations",
+                        to="core.organizationtype",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['org_type__name', 'name'],
-                'unique_together': {('name', 'org_type')},
+                "ordering": ["org_type__name", "name"],
+                "unique_together": {("name", "org_type")},
             },
         ),
         migrations.AlterUniqueTogether(
-            name='roleassignment',
+            name="roleassignment",
             unique_together=set(),
         ),
         migrations.AddField(
-            model_name='eventproposal',
-            name='organization',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='core.organization'),
+            model_name="eventproposal",
+            name="organization",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="core.organization",
+            ),
         ),
         migrations.AddField(
-            model_name='program',
-            name='organization',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='core.organization'),
+            model_name="program",
+            name="organization",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="core.organization",
+            ),
         ),
         migrations.AddField(
-            model_name='report',
-            name='organization',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='core.organization'),
+            model_name="report",
+            name="organization",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="core.organization",
+            ),
         ),
         migrations.AddField(
-            model_name='roleassignment',
-            name='organization',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='core.organization'),
+            model_name="roleassignment",
+            name="organization",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="core.organization",
+            ),
         ),
         migrations.AlterUniqueTogether(
-            name='roleassignment',
-            unique_together={('user', 'role', 'organization')},
+            name="roleassignment",
+            unique_together={("user", "role", "organization")},
         ),
         migrations.RemoveField(
-            model_name='roleassignment',
-            name='association',
+            model_name="roleassignment",
+            name="association",
         ),
         migrations.RemoveField(
-            model_name='roleassignment',
-            name='cell',
+            model_name="roleassignment",
+            name="cell",
         ),
         migrations.RemoveField(
-            model_name='roleassignment',
-            name='center',
+            model_name="roleassignment",
+            name="center",
         ),
         migrations.RemoveField(
-            model_name='roleassignment',
-            name='club',
+            model_name="roleassignment",
+            name="club",
         ),
         migrations.RemoveField(
-            model_name='roleassignment',
-            name='department',
+            model_name="roleassignment",
+            name="department",
         ),
     ]

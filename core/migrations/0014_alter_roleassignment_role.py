@@ -7,13 +7,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0013_add_is_active_to_role'),
+        ("core", "0013_add_is_active_to_role"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='roleassignment',
-            name='role',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='core.organizationrole'),
+            model_name="roleassignment",
+            name="role",
+            field=models.ForeignKey(
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to="core.organizationrole",
+            ),
         ),
     ]

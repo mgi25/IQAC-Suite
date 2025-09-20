@@ -8,25 +8,62 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0040_remove_profile_achievements_visible_and_more'),
+        ("core", "0040_remove_profile_achievements_visible_and_more"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='DashboardAssignment',
+            name="DashboardAssignment",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('role', models.CharField(blank=True, max_length=50)),
-                ('dashboard', models.CharField(choices=[('admin', 'Admin Dashboard'), ('faculty', 'Faculty Dashboard'), ('student', 'Student Dashboard'), ('cdl_head', 'CDL Head Dashboard'), ('cdl_work', 'CDL Work Dashboard')], max_length=20)),
-                ('is_active', models.BooleanField(default=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('organization_type', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='core.organizationtype')),
-                ('user', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='dashboard_assignments', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("role", models.CharField(blank=True, max_length=50)),
+                (
+                    "dashboard",
+                    models.CharField(
+                        choices=[
+                            ("admin", "Admin Dashboard"),
+                            ("faculty", "Faculty Dashboard"),
+                            ("student", "Student Dashboard"),
+                            ("cdl_head", "CDL Head Dashboard"),
+                            ("cdl_work", "CDL Work Dashboard"),
+                        ],
+                        max_length=20,
+                    ),
+                ),
+                ("is_active", models.BooleanField(default=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "organization_type",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="core.organizationtype",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="dashboard_assignments",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'ordering': ['dashboard'],
-                'unique_together': {('user', 'role', 'dashboard')},
+                "ordering": ["dashboard"],
+                "unique_together": {("user", "role", "dashboard")},
             },
         ),
     ]

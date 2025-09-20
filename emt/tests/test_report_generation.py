@@ -9,7 +9,6 @@ from django.utils import timezone
 
 from core.models import Report
 from core.signals import assign_role_on_login, create_or_update_user_profile
-
 from emt.models import EventProposal, EventReport
 
 
@@ -59,14 +58,16 @@ class EventReportWorkflowTests(TestCase):
         )
 
     def test_generate_report_populates_ai_fields(self):
-        response = self.client.get(reverse("emt:generate_report", args=[self.proposal.id]))
+        response = self.client.get(
+            reverse("emt:generate_report", args=[self.proposal.id])
+        )
         self.assertEqual(response.status_code, 302)
         report = EventReport.objects.get(proposal=self.proposal)
         self.assertTrue(report.ai_generated_report)
         self.assertTrue(report.summary)
 
     def test_download_pdf_uses_event_report_fields(self):
-        report = EventReport.objects.create(
+        EventReport.objects.create(
             proposal=self.proposal,
             ai_generated_report="Comprehensive AI content",
             summary="Fallback summary",
@@ -76,7 +77,9 @@ class EventReportWorkflowTests(TestCase):
             canvas_instance.drawString.return_value = None
             canvas_instance.showPage.return_value = None
             canvas_instance.save.return_value = None
-            response = self.client.get(reverse("emt:download_pdf", args=[self.proposal.id]))
+            response = self.client.get(
+                reverse("emt:download_pdf", args=[self.proposal.id])
+            )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "application/pdf")
         self.assertIn(self.proposal.event_title, response["Content-Disposition"])
@@ -122,7 +125,9 @@ class EventReportWorkflowTests(TestCase):
             summary="Stored summary text",
             outcomes="Documented outcomes",
         )
-        response = self.client.get(reverse("emt:submit_event_report", args=[self.proposal.id]))
+        response = self.client.get(
+            reverse("emt:submit_event_report", args=[self.proposal.id])
+        )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Stored summary text")
         self.assertContains(response, "Documented outcomes")

@@ -1,21 +1,16 @@
-from datetime import date
 import json
+from datetime import date
+
 from django.contrib.auth.models import User
+from django.contrib.auth.signals import user_logged_in
+from django.db.models.signals import post_save
 from django.test import TestCase
 from django.urls import reverse
-from django.db.models.signals import post_save
-from django.contrib.auth.signals import user_logged_in
 
-from core.signals import create_or_update_user_profile, assign_role_on_login
-
-from emt.models import (
-    EventProposal,
-    EventActivity,
-    EventReport,
-    AttendanceRow,
-    SpeakerProfile,
-)
+from core.signals import assign_role_on_login, create_or_update_user_profile
 from emt.forms import EventReportForm
+from emt.models import (AttendanceRow, EventActivity, EventProposal,
+                        EventReport, SpeakerProfile)
 
 
 class SubmitEventReportViewTests(TestCase):
@@ -83,7 +78,9 @@ class SubmitEventReportViewTests(TestCase):
         }
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 302)
-        activities = list(EventActivity.objects.filter(proposal=self.proposal).order_by("date"))
+        activities = list(
+            EventActivity.objects.filter(proposal=self.proposal).order_by("date")
+        )
         self.assertEqual(len(activities), 2)
         self.assertEqual(activities[0].name, "Session 1")
         self.assertEqual(activities[1].name, "Session 2")
@@ -112,7 +109,7 @@ class SubmitEventReportViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(
             response,
-            'Present: 1, Absent: 1, Volunteers: 1',
+            "Present: 1, Absent: 1, Volunteers: 1",
             html=False,
         )
 
@@ -157,12 +154,18 @@ class SubmitEventReportViewTests(TestCase):
 
         # Run a tiny Node script that loads initializeAutosaveIndicators, dispatches
         # autosave:success via $(document).trigger and prints the updated link.
-        import tempfile
         import subprocess
+        import tempfile
         from pathlib import Path
 
-        submit_js = Path(__file__).resolve().parents[1] / "static" / "emt" / "js" / "submit_event_report.js"
-        node_script = '''
+        submit_js = (
+            Path(__file__).resolve().parents[1]
+            / "static"
+            / "emt"
+            / "js"
+            / "submit_event_report.js"
+        )
+        node_script = """
 const fs = require('fs');
 const src = fs.readFileSync('__SUBMIT_JS__', 'utf8');
 function extract(name){
@@ -199,19 +202,31 @@ const participantsEl={attrs:{},dataStore:{},length:1,
   prop:function(){return this;},
   css:function(){return this;}
 };
-const indicatorEl={removeClass:function(){return this;},addClass:function(){return this;},find:function(){return {text:function(){}};},length:1};
+const indicatorEl={
+  removeClass:function(){return this;},
+  addClass:function(){return this;},
+  find:function(){return {text:function(){}};},
+  length:1
+};
 const window={location:{}};
 eval(setupCode);
 eval(initCode);
 initializeAutosaveIndicators();
-$(document).trigger('autosave:success', {reportId:__REPORT_ID__});
-console.log(JSON.stringify({att: attendanceEl.attrs['href'], part: participantsEl.attrs['href']}));
-'''
-        node_script = node_script.replace('__SUBMIT_JS__', str(submit_js)).replace('__REPORT_ID__', str(report_id))
+$(document).trigger('autosave:success', {reportId: __REPORT_ID__});
+console.log(JSON.stringify({
+  att: attendanceEl.attrs['href'],
+  part: participantsEl.attrs['href'],
+}));
+"""
+        node_script = node_script.replace("__SUBMIT_JS__", str(submit_js)).replace(
+            "__REPORT_ID__", str(report_id)
+        )
         with tempfile.TemporaryDirectory() as tmp:
             script_path = Path(tmp) / "run.js"
             script_path.write_text(node_script)
-            result = subprocess.run(["node", str(script_path)], capture_output=True, text=True)
+            result = subprocess.run(
+                ["node", str(script_path)], capture_output=True, text=True
+            )
         out = json.loads(result.stdout.strip())
         self.assertEqual(out["att"], attendance_url)
         self.assertEqual(out["part"], attendance_url)
@@ -283,7 +298,7 @@ console.log(JSON.stringify({att: attendanceEl.attrs['href'], part: participantsE
             "actual_event_type": "Seminar",
             "report_signed_date": "2024-01-10",
             "needs_projector": "yes",  # Simulate checked checkbox
-            "needs_permission": "",    # Simulate unchecked checkbox
+            "needs_permission": "",  # Simulate unchecked checkbox
             "form-TOTAL_FORMS": "0",
             "form-INITIAL_FORMS": "0",
             "form-MIN_NUM_FORMS": "0",
@@ -346,11 +361,17 @@ console.log(JSON.stringify({att: attendanceEl.attrs['href'], part: participantsE
         self.assertIn("Dr. Xavier", response.content.decode())
 
         # Node script to verify client-side population after section load
-        import tempfile
         import subprocess
+        import tempfile
         from pathlib import Path
 
-        submit_js = Path(__file__).resolve().parents[1] / "static" / "emt" / "js" / "submit_event_report.js"
+        submit_js = (
+            Path(__file__).resolve().parents[1]
+            / "static"
+            / "emt"
+            / "js"
+            / "submit_event_report.js"
+        )
         proposal_data = {
             "proposer": "Alice",
             "faculty_incharges": ["Prof. B"],
@@ -380,8 +401,34 @@ const fillAttendanceCounts = extract('fillAttendanceCounts');
 
 let domReady = false;
 const speakersDisplay = {innerHTML: ''};
-const orgEl = {value:'', length:1, val:function(v){ if(v===undefined) return this.value; this.value=v; return this; }, text:function(v){ if(v===undefined) return this.value; this.value=v; return this; }};
-const makeField = () => ({value:'', length:1, val:function(v){ if(v===undefined) return this.value; this.value=v; return this; }, text:function(v){ if(v===undefined) return this.value; this.value=v; return this; }});
+const orgEl = {
+  value: '',
+  length: 1,
+  val: function(v) {
+    if (v === undefined) return this.value;
+    this.value = v;
+    return this;
+  },
+  text: function(v) {
+    if (v === undefined) return this.value;
+    this.value = v;
+    return this;
+  },
+};
+const makeField = () => ({
+  value: '',
+  length: 1,
+  val: function(v) {
+    if (v === undefined) return this.value;
+    this.value = v;
+    return this;
+  },
+  text: function(v) {
+    if (v === undefined) return this.value;
+    this.value = v;
+    return this;
+  },
+});
 
 const elements = {
   'speakers-display': speakersDisplay,
@@ -448,7 +495,9 @@ setTimeout(()=>{
         with tempfile.TemporaryDirectory() as tmp:
             script_path = Path(tmp) / "run.js"
             script_path.write_text(node_script)
-            result = subprocess.run(["node", str(script_path)], capture_output=True, text=True)
+            result = subprocess.run(
+                ["node", str(script_path)], capture_output=True, text=True
+            )
         data = json.loads(result.stdout.strip())
         self.assertIn("Dr. Xavier", data["display"])
         self.assertIn("Proposer: Alice", data["organizing"])
@@ -461,4 +510,3 @@ setTimeout(()=>{
         self.assertIn("Present: 10", data["summary"])
         self.assertIn("Absent: 2", data["summary"])
         self.assertIn("Volunteers: 3", data["summary"])
-

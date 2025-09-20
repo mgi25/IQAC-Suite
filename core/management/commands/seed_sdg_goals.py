@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from core.models import SDGGoal, SDG_GOALS
+from core.models import SDG_GOALS, SDGGoal
 
 
 class Command(BaseCommand):

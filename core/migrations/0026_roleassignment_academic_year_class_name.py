@@ -20,6 +20,9 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="roleassignment",
-            index=models.Index(fields=["organization", "academic_year", "class_name"], name="core_ra_org_year_class_idx"),
+            index=models.Index(
+                fields=["organization", "academic_year", "class_name"],
+                name="core_ra_org_year_class_idx",
+            ),
         ),
     ]

@@ -8,24 +8,41 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('emt', '0027_cdltaskassignment'),
+        ("emt", "0027_cdltaskassignment"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='cdltaskassignment',
-            name='label',
-            field=models.CharField(blank=True, help_text='Display label for custom tasks', max_length=200),
+            model_name="cdltaskassignment",
+            name="label",
+            field=models.CharField(
+                blank=True, help_text="Display label for custom tasks", max_length=200
+            ),
         ),
         migrations.AddField(
-            model_name='cdltaskassignment',
-            name='status',
-            field=models.CharField(choices=[('backlog', 'Backlog'), ('assigned', 'Assigned'), ('in_progress', 'In Progress'), ('done', 'Done')], default='assigned', max_length=20),
+            model_name="cdltaskassignment",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("backlog", "Backlog"),
+                    ("assigned", "Assigned"),
+                    ("in_progress", "In Progress"),
+                    ("done", "Done"),
+                ],
+                default="assigned",
+                max_length=20,
+            ),
         ),
         migrations.AlterField(
-            model_name='cdltaskassignment',
-            name='assignee',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='cdl_resource_tasks', to=settings.AUTH_USER_MODEL),
+            model_name="cdltaskassignment",
+            name="assignee",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="cdl_resource_tasks",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
     ]

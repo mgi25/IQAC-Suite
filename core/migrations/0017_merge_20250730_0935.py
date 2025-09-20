@@ -6,9 +6,8 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0016_approvalflowconfig'),
-        ('core', '0016_roleeventapprovalvisibility_and_more'),
+        ("core", "0016_approvalflowconfig"),
+        ("core", "0016_roleeventapprovalvisibility_and_more"),
     ]
 
-    operations = [
-    ]
+    operations = []

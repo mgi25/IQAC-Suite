@@ -1,17 +1,14 @@
+import csv
 import os
+from io import TextIOBase, TextIOWrapper
+
 import requests
 from django.contrib.auth.models import User
 from django.utils import timezone
-from .models import ApprovalStep
-from core.models import (
-    Organization,
-    OrganizationType,
-    ApprovalFlowTemplate,
-    ApprovalFlowConfig,
-)
 
-import csv
-from io import TextIOWrapper, TextIOBase
+from core.models import ApprovalFlowConfig, ApprovalFlowTemplate
+
+from .models import ApprovalStep
 
 STUDENT_ATTENDANCE_HEADERS = [
     "Registration No",
@@ -96,13 +93,13 @@ def parse_attendance_csv(file_obj):
                 "full_name": raw.get("Full Name", "").strip(),
                 "student_class": raw.get(config["affiliation"], "").strip(),
                 "absent": raw.get("Absent", "").strip().upper() == "TRUE",
-                "volunteer": raw.get("Student Volunteer", "").strip().upper()
-                == "TRUE",
+                "volunteer": raw.get("Student Volunteer", "").strip().upper() == "TRUE",
                 "category": category,
                 "affiliation": raw.get(config["affiliation"], "").strip(),
             }
         )
     return rows
+
 
 def build_approval_chain(proposal):
     """Create approval steps for a proposal based on org config and templates."""
@@ -139,10 +136,13 @@ def build_approval_chain(proposal):
         if fic_first and tmpl.role_required == ApprovalStep.Role.FACULTY_INCHARGE:
             continue
 
-        assigned_to = tmpl.user or User.objects.filter(
-            role_assignments__role__name=tmpl.role_required,
-            role_assignments__organization=proposal.organization,
-        ).first()
+        assigned_to = (
+            tmpl.user
+            or User.objects.filter(
+                role_assignments__role__name=tmpl.role_required,
+                role_assignments__organization=proposal.organization,
+            ).first()
+        )
 
         steps.append(
             ApprovalStep(
@@ -188,10 +188,16 @@ def unlock_optionals_after(step, selected_ids):
         optional_unlocked=False,
         order_index__gt=step.order_index,
         id__in=selected_ids,
-    ).update(optional_unlocked=True, status=ApprovalStep.Status.PENDING, note="Unlocked by previous approver.")
+    ).update(
+        optional_unlocked=True,
+        status=ApprovalStep.Status.PENDING,
+        note="Unlocked by previous approver.",
+    )
 
 
-def skip_all_downstream_optionals(step, skip_note="Automatically skipped (not forwarded to optional approver)."):
+def skip_all_downstream_optionals(
+    step, skip_note="Automatically skipped (not forwarded to optional approver)."
+):
     """Skip all optional steps downstream of the given step."""
     ApprovalStep.objects.filter(
         proposal=step.proposal,
@@ -209,6 +215,7 @@ def get_downstream_optional_candidates(step):
         status__in=[ApprovalStep.Status.PENDING, "waiting"],
         order_index__gt=step.order_index,
     ).order_by("order_index")
+
 
 # ---------------------------------------------
 # generate_report_with_ai remains unchanged!
@@ -235,7 +242,7 @@ def generate_report_with_ai(event_report):
 
     event_date_str = "Not specified"
     if proposal.event_datetime:
-        event_date_str = proposal.event_datetime.strftime('%B %d, %Y')
+        event_date_str = proposal.event_datetime.strftime("%B %d, %Y")
 
     prompt = f"""
     Generate a formal event report using Markdown formatting based on the following details.
@@ -273,19 +280,22 @@ def generate_report_with_ai(event_report):
     - **Conclusion and Recommendations:** Conclude the report and suggest improvements.
     """
 
-    payload = {
-        "contents": [{"role": "user", "parts": [{"text": prompt}]}]
-    }
+    payload = {"contents": [{"role": "user", "parts": [{"text": prompt}]}]}
 
     try:
-        response = requests.post(api_url, json=payload, headers={'Content-Type': 'application/json'})
+        response = requests.post(
+            api_url, json=payload, headers={"Content-Type": "application/json"}
+        )
         response.raise_for_status()
         result = response.json()
 
-        if 'candidates' in result and result['candidates'][0]['content']['parts'][0]['text']:
-            return result['candidates'][0]['content']['parts'][0]['text'].strip()
+        if (
+            "candidates" in result
+            and result["candidates"][0]["content"]["parts"][0]["text"]
+        ):
+            return result["candidates"][0]["content"]["parts"][0]["text"].strip()
         else:
-            error_detail = result.get('error', {}).get('message', 'No content found.')
+            error_detail = result.get("error", {}).get("message", "No content found.")
             return f"Error: AI response was malformed. Details: {error_detail}"
 
     except requests.exceptions.RequestException as e:

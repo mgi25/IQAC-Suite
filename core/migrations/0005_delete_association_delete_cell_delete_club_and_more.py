@@ -6,21 +6,21 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0004_remove_association_department_and_more'),
-        ('emt', '0003_remove_eventproposal_association_and_more'),
+        ("core", "0004_remove_association_department_and_more"),
+        ("emt", "0003_remove_eventproposal_association_and_more"),
     ]
 
     operations = [
         migrations.DeleteModel(
-            name='Association',
+            name="Association",
         ),
         migrations.DeleteModel(
-            name='Cell',
+            name="Cell",
         ),
         migrations.DeleteModel(
-            name='Club',
+            name="Club",
         ),
         migrations.DeleteModel(
-            name='Department',
+            name="Department",
         ),
     ]

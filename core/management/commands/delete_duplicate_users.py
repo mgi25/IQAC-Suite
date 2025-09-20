@@ -1,11 +1,12 @@
-from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand
 from django.db.models import Count
 from django.db.models.functions import Lower
 
 
 class Command(BaseCommand):
     """Remove duplicate user accounts based on email."""
+
     help = (
         "Remove duplicate user accounts based on email (case-insensitive). "
         "Keeps the oldest account and deletes the rest."
@@ -30,7 +31,9 @@ class Command(BaseCommand):
             to_delete = users[1:]
             count = to_delete.count()
             if count:
-                User.objects.filter(id__in=list(to_delete.values_list("id", flat=True))).delete()
+                User.objects.filter(
+                    id__in=list(to_delete.values_list("id", flat=True))
+                ).delete()
                 total_deleted += count
                 self.stdout.write(
                     self.style.WARNING(

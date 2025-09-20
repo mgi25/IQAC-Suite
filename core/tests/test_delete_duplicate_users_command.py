@@ -1,6 +1,6 @@
-from django.test import TestCase
-from django.core.management import call_command
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
+from django.test import TestCase
 
 
 class DeleteDuplicateUsersCommandTests(TestCase):
@@ -12,5 +12,7 @@ class DeleteDuplicateUsersCommandTests(TestCase):
 
         call_command("delete_duplicate_users")
 
-        self.assertEqual(User.objects.filter(email__iexact="dup@example.com").count(), 1)
+        self.assertEqual(
+            User.objects.filter(email__iexact="dup@example.com").count(), 1
+        )
         self.assertEqual(User.objects.count(), 2)

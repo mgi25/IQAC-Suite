@@ -6,13 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('emt', '0009_eventproposal_event_end_date_and_more'),
+        ("emt", "0009_eventproposal_event_end_date_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='speakerprofile',
-            name='linkedin_url',
-            field=models.URLField(blank=True, help_text='LinkedIn profile URL', null=True),
+            model_name="speakerprofile",
+            name="linkedin_url",
+            field=models.URLField(
+                blank=True, help_text="LinkedIn profile URL", null=True
+            ),
         ),
     ]

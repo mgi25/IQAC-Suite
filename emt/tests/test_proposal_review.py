@@ -1,25 +1,14 @@
-from django.test import TestCase
-from django.urls import reverse
-from django.contrib.auth.models import User
 import json
 
-from emt.models import (
-    EventProposal,
-    CDLSupport,
-    EventNeedAnalysis,
-    EventObjectives,
-    EventExpectedOutcomes,
-    TentativeFlow,
-    SpeakerProfile,
-    ExpenseDetail,
-    IncomeDetail,
-)
-from core.models import (
-    OrganizationType,
-    Organization,
-    OrganizationRole,
-    RoleAssignment,
-)
+from django.contrib.auth.models import User
+from django.test import TestCase
+from django.urls import reverse
+
+from core.models import (Organization, OrganizationRole, OrganizationType,
+                         RoleAssignment)
+from emt.models import (CDLSupport, EventExpectedOutcomes, EventNeedAnalysis,
+                        EventObjectives, EventProposal, ExpenseDetail,
+                        IncomeDetail, SpeakerProfile, TentativeFlow)
 
 
 class ProposalReviewFlowTests(TestCase):
@@ -303,9 +292,7 @@ class ProposalReviewFlowTests(TestCase):
         )
         pid = resp.json()["proposal_id"]
         next_url = reverse("emt:review_proposal", args=[pid])
-        edit_url = (
-            reverse("emt:submit_need_analysis", args=[pid]) + f"?next={next_url}"
-        )
+        edit_url = reverse("emt:submit_need_analysis", args=[pid]) + f"?next={next_url}"
         resp2 = self.client.post(edit_url, {"content": "updated"})
         self.assertEqual(resp2.status_code, 302)
         self.assertEqual(resp2.headers["Location"], next_url)
