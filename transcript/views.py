@@ -13,6 +13,7 @@ import zipfile
 from datetime import date
 from urllib.parse import unquote
 from django.db.models import Prefetch, Prefetch, Q, F
+from weasyprint import HTML
 
 # ─────────────────────────────────────────────
 # HOME
@@ -198,7 +199,7 @@ def transcript_pdf(request, roll_no):
         'qr_code': qr_b64
     })
 
-    pdf_file = weasyprint.HTML(string=html).write_pdf()
+    pdf_file = HTML(string=html).write_pdf()
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="transcript_{student.roll_no}.pdf"'
     return response
@@ -287,7 +288,7 @@ def bulk_download_handler(request):
                 })
 
                 pdf_buffer = io.BytesIO()
-                weasyprint.HTML(string=html).write_pdf(target=pdf_buffer)
+                HTML(string=html).write_pdf(target=pdf_buffer)
                 zip_file.writestr(f"{student.roll_no}_{student.name}.pdf", pdf_buffer.getvalue())
 
         buffer.seek(0)
