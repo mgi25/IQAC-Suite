@@ -13,13 +13,57 @@ from core.models import (
 import csv
 from io import TextIOWrapper, TextIOBase
 
-ATTENDANCE_HEADERS = [
+STUDENT_ATTENDANCE_HEADERS = [
     "Registration No",
     "Full Name",
     "Class",
     "Absent",
     "Student Volunteer",
 ]
+
+FACULTY_ATTENDANCE_HEADERS = [
+    "Employee No",
+    "Full Name",
+    "Department",
+    "Absent",
+    "Student Volunteer",
+]
+
+COMBINED_ATTENDANCE_HEADERS = [
+    "Category",
+    "Identifier",
+    "Full Name",
+    "Affiliation",
+    "Absent",
+    "Student Volunteer",
+]
+
+# Backwards-compatible alias used by existing imports/tests.
+ATTENDANCE_HEADERS = COMBINED_ATTENDANCE_HEADERS
+
+_HEADER_CONFIGS = (
+    {
+        "headers": STUDENT_ATTENDANCE_HEADERS,
+        "category": "student",
+        "identifier": "Registration No",
+        "affiliation": "Class",
+    },
+    {
+        "headers": FACULTY_ATTENDANCE_HEADERS,
+        "category": "faculty",
+        "identifier": "Employee No",
+        "affiliation": "Department",
+    },
+    {
+        "headers": COMBINED_ATTENDANCE_HEADERS,
+        "category": None,
+        "identifier": "Identifier",
+        "affiliation": "Affiliation",
+        "category_header": "Category",
+    },
+)
+
+_VALID_CATEGORIES = {"student", "faculty", "external"}
 
 
 def parse_attendance_csv(file_obj):
@@ -29,19 +73,33 @@ def parse_attendance_csv(file_obj):
     else:
         wrapper = TextIOWrapper(file_obj, encoding="utf-8")
         reader = csv.DictReader(wrapper)
-    if reader.fieldnames != ATTENDANCE_HEADERS:
+    fieldnames = [fn.strip() for fn in (reader.fieldnames or [])]
+    config = None
+    for candidate in _HEADER_CONFIGS:
+        if fieldnames == candidate["headers"]:
+            config = candidate
+            break
+
+    if config is None:
         raise ValueError("CSV headers do not match required format")
 
     rows = []
     for raw in reader:
+        category = config.get("category")
+        if category is None:
+            raw_category = raw.get(config["category_header"], "").strip().lower()
+            category = raw_category if raw_category in _VALID_CATEGORIES else "student"
+
         rows.append(
             {
-                "registration_no": raw["Registration No"].strip(),
-                "full_name": raw["Full Name"].strip(),
-                "student_class": raw["Class"].strip(),
+                "registration_no": raw.get(config["identifier"], "").strip(),
+                "full_name": raw.get("Full Name", "").strip(),
+                "student_class": raw.get(config["affiliation"], "").strip(),
                 "absent": raw.get("Absent", "").strip().upper() == "TRUE",
                 "volunteer": raw.get("Student Volunteer", "").strip().upper()
                 == "TRUE",
+                "category": category,
+                "affiliation": raw.get(config["affiliation"], "").strip(),
             }
         )
     return rows

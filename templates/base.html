@@ -191,24 +191,15 @@
       </div>
       {% endif %}
 
-      <!-- CDL - Expandable (Admin-controlled) -->
+      <!-- CDL Support - Single link (no submenu) -->
   {% if unrestricted_nav or 'cdl' in allowed_nav_items %}
-      <div class="nav-section {% if 'cdl' in request.resolver_match.url_name or '/cdl/' in request.path %}expanded{% endif %}">
-        <div class="nav-section-header">
+      <div class="nav-item">
+        <a href="/cdl/user-view/" class="nav-link {% if request.resolver_match and request.resolver_match.url_name == 'cdl_event_user_view' %}active{% endif %}">
           <i class="fas fa-photo-video nav-icon"></i>
-          <span class="nav-text">CDL</span>
-          <i class="fas fa-chevron-right expand-icon {% if 'cdl' in request.resolver_match.url_name or '/cdl/' in request.path %}rotated{% endif %}"></i>
-        </div>
-        <div class="nav-submenu {% if 'cdl' in request.resolver_match.url_name or '/cdl/' in request.path %}open{% endif %}">
-          <a href="/cdl/" class="nav-sublink {% if request.resolver_match.url_name == 'cdl_dashboard' %}active{% endif %}">
-            <i class="fas fa-clock"></i> Pre-Event
-          </a>
-          <a href="/cdl/" class="nav-sublink">
-            <i class="fas fa-check-circle"></i> Post-Event
-          </a>
-        </div>
+          <span class="nav-text">CDL Support</span>
+        </a>
       </div>
-      {% endif %}
+  {% endif %}
 
       <!-- User Management - Expandable (Admin Only) -->
   {% if unrestricted_nav or 'user_management' in allowed_nav_items %}

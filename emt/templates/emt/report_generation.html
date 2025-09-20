@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'emt/css/iqac_generated_reports.css' %}">
+<div class="iqac-dashboard-bg">
+  <div class="iqac-dashboard-container">
+    <div class="iqac-page-header">
+      <div class="iqac-header-content">
+        <div class="iqac-header-icon">
+          <span class="iqac-section-emoji"><i class="fa-solid fa-file-lines"></i></span>
+        </div>
+        <div class="iqac-header-text">
+          <h1 class="iqac-page-title">Generate Event Report</h1>
+          <p class="iqac-page-subtitle">Provide the event details to create a downloadable PDF.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="iqac-card">
+      <form method="post" action="{% url 'emt:generate_report_pdf' %}" class="iqac-form">
+        {% csrf_token %}
+        <div class="iqac-form-grid">
+          <div class="iqac-form-group">
+            <label for="event-title">Event Title</label>
+            <input id="event-title" name="event_title" type="text" class="iqac-input" placeholder="e.g., Research Symposium 2024" required>
+          </div>
+          <div class="iqac-form-group">
+            <label for="event-date">Event Date</label>
+            <input id="event-date" name="event_date" type="date" class="iqac-input">
+          </div>
+          <div class="iqac-form-group">
+            <label for="venue">Venue</label>
+            <input id="venue" name="venue" type="text" class="iqac-input" placeholder="e.g., Main Auditorium">
+          </div>
+        </div>
+
+        <div class="iqac-form-group">
+          <label for="event-summary">Event Summary</label>
+          <textarea id="event-summary" name="event_summary" class="iqac-textarea" rows="4" placeholder="Summarize the proceedings and highlights."></textarea>
+        </div>
+        <div class="iqac-form-group">
+          <label for="key-outcomes">Key Outcomes</label>
+          <textarea id="key-outcomes" name="key_outcomes" class="iqac-textarea" rows="4" placeholder="List the primary outcomes or achievements."></textarea>
+        </div>
+        <div class="iqac-form-group">
+          <label for="additional-notes">Additional Notes</label>
+          <textarea id="additional-notes" name="additional_notes" class="iqac-textarea" rows="3" placeholder="Include acknowledgements or follow-up actions."></textarea>
+        </div>
+
+        <div class="iqac-form-actions">
+          <button type="submit" class="iqac-action-btn primary">Download PDF</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

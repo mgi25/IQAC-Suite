@@ -33,10 +33,25 @@
       <div class="list" id="organizerCard"><div class="empty">Loading…</div></div>
     </section>
 
+    {% if request.user.is_superuser or request.session.role == 'cdl_head' %}
     <section class="card eq" id="cardStatus">
-      <div class="card-header"><h3><i class="fa-solid fa-circle-check"></i> Status</h3></div>
+      <div class="card-header" style="justify-content:space-between;align-items:center">
+        <h3><i class="fa-solid fa-circle-check"></i> Status</h3>
+        <a class="chip-btn" href="{% url 'cdl_communication_page' %}?{{ request.GET.urlencode }}">
+          <i class="fa-regular fa-comments"></i> Communication
+        </a>
+      </div>
       <div class="list" id="statusCard"><div class="empty">Loading…</div></div>
     </section>
+    {% else %}
+    <section class="card eq" id="cardCommunicationLink">
+      <div class="card-header" style="justify-content:space-between;align-items:center">
+        <h3><i class="fa-regular fa-comments"></i> Communication</h3>
+        <a class="chip-btn" href="{% url 'cdl_communication_page' %}?{{ request.GET.urlencode }}"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open</a>
+      </div>
+      <div class="list"><div class="empty" style="padding:24px 0">Open communication log to view & post updates.</div></div>
+    </section>
+    {% endif %}
 
     <section class="card eq" id="cardSpeaker">
       <div class="card-header"><h3><i class="fa-solid fa-microphone"></i> Speaker</h3></div>
@@ -48,53 +63,20 @@
       <div class="list" id="resourcesCard"><div class="empty">Loading…</div></div>
     </section>
 
-    <section class="card eq" id="cardSupport">
-      <div class="card-header"><h3><i class="fa-solid fa-handshake-angle"></i> CDL Support Required</h3></div>
-      <div class="list" id="supportCard"><div class="empty">Loading…</div></div>
-    </section>
-
-    <section class="card eq" id="cardAssign">
+  <section class="card eq" id="cardSupport">
       <div class="card-header">
-        <h3><i class="fa-solid fa-user-plus"></i> Assign</h3>
+        <h3><i class="fa-solid fa-handshake-angle"></i> CDL Support Required</h3>
         <div class="header-actions">
-          <button class="btn-primary" id="btnAssign"><i class="fa-solid fa-user-check"></i> Assign</button>
+          {% if request.user.is_superuser or request.session.role == 'cdl_head' %}
+      <a class="btn-primary" id="btnAssignLink"><i class="fa-solid fa-user-check"></i> Assign Tasks</a>
+          {% endif %}
         </div>
       </div>
-      <div class="list"><div class="empty">Choose Assign to allocate this event to a CDL member.</div></div>
-    </section>
-
-    <section class="card eq col-span-2" id="cardComm">
-      <div class="card-header"><h3><i class="fa-regular fa-comments"></i> Communication</h3></div>
-      <div class="list"><div class="empty">Coming soon</div></div>
+      <div class="list" id="supportCard"><div class="empty">Loading…</div></div>
+      <div class="list" id="assignmentList" style="margin-top:8px"></div>
     </section>
   </main>
 </div>
-
-<!-- Assign Modal -->
-<div class="modal-overlay" id="assignModal" style="display:none">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3>Assign to CDL Member</h3>
-      <button class="modal-close" id="assignClose">×</button>
-    </div>
-    <div class="form-group">
-      <label for="assignRole">Role</label>
-      <select id="assignRole" class="select">
-        <option value="">Select role…</option>
-        <option value="CDL Head">CDL Head</option>
-        <option value="CDL Employee">CDL Employee</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label for="assignMember">Member</label>
-      <select id="assignMember" class="select"></select>
-    </div>
-    <div class="modal-actions">
-      <button class="btn-secondary" id="assignCancel">Cancel</button>
-      <button class="btn-primary" id="assignSave">Assign</button>
-    </div>
-  </div>
-  </div>
 
 <!-- Toast -->
 <div id="toast" style="position:fixed;right:16px;bottom:16px;z-index:1000;display:none;background:#164c8d;color:#fff;padding:10px 12px;border-radius:10px;box-shadow:0 12px 40px rgba(2,6,23,.2);font-weight:700"></div>
@@ -103,4 +85,18 @@
 
 {% block scripts_extra %}
 <script src="{% static 'core/js/cdl_support.js' %}"></script>
+<script>
+  // Navigate to the dedicated Assign page when button is clicked
+  (function(){
+    const btn=document.getElementById('btnAssignLink');
+    if(!btn) return;
+    const params=new URLSearchParams(location.search);
+    const eventId=params.get('eventId')||params.get('id');
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+      if(!eventId){ return; }
+      location.href = `/cdl/support/${encodeURIComponent(eventId)}/assign/?eventId=${encodeURIComponent(eventId)}`;
+    });
+  })();
+</script>
 {% endblock %}

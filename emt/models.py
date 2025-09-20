@@ -411,6 +411,40 @@ class CDLAssignment(models.Model):
         return f"{self.proposal.event_title} → {self.assignee.get_full_name() or self.assignee.username} ({self.get_status_display()})"
 
 # ────────────────────────────────────────────────────────────────
+#  CDL TASK ASSIGNMENTS (per resource for an event)
+# ────────────────────────────────────────────────────────────────
+class CDLTaskAssignment(models.Model):
+    """Assign a specific CDL resource/task of an event to a member.
+
+    Example resource_key values: 'poster', 'certificates', 'photography', 'videography', etc.
+    Values come dynamically from CDLSupport fields (poster_required, certificates_required, other_services list).
+    """
+    class Status(models.TextChoices):
+        BACKLOG = 'backlog', 'Backlog'
+        ASSIGNED = 'assigned', 'Assigned'
+        IN_PROGRESS = 'in_progress', 'In Progress'
+        DONE = 'done', 'Done'
+
+    proposal = models.ForeignKey(EventProposal, on_delete=models.CASCADE, related_name='cdl_task_assignments')
+    resource_key = models.CharField(max_length=100)
+    label = models.CharField(max_length=200, blank=True, help_text="Display label for custom tasks")
+    assignee = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='cdl_resource_tasks')
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.ASSIGNED)
+    assigned_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='cdl_resource_tasks_assigned')
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('proposal', 'resource_key')
+        indexes = [
+            models.Index(fields=['assignee']),
+            models.Index(fields=['proposal','resource_key']),
+        ]
+
+    def __str__(self):
+        return f"{self.proposal_id}:{self.resource_key} → {self.assignee_id or 'unassigned'} ({self.status})"
+
+# ────────────────────────────────────────────────────────────────
 #  EVENT REPORT
 # ────────────────────────────────────────────────────────────────
 class EventReport(models.Model):
@@ -477,6 +511,12 @@ class EventReportAttachment(models.Model):
 
 class AttendanceRow(models.Model):
     """Single attendance record linked to an event report."""
+
+    class Category(models.TextChoices):
+        STUDENT = "student", "Student"
+        FACULTY = "faculty", "Faculty"
+        EXTERNAL = "external", "External"
+
     event_report = models.ForeignKey(
         'emt.EventReport',
         on_delete=models.CASCADE,
@@ -487,6 +527,11 @@ class AttendanceRow(models.Model):
     student_class = models.CharField(max_length=128)
     absent = models.BooleanField(default=False)
     volunteer = models.BooleanField(default=False)
+    category = models.CharField(
+        max_length=16,
+        choices=Category.choices,
+        default=Category.STUDENT,
+    )
 
     def __str__(self):
         return f"{self.full_name} ({self.registration_no})"

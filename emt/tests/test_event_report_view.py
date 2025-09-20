@@ -184,9 +184,16 @@ const docObj={
 function $(sel){
  if(sel===document) return docObj;
  if(sel==='#attendance-modern') return attendanceEl;
+ if(sel==='#num-participants-modern' || sel==='#total-participants-modern') return participantsEl;
  if(sel==='#autosave-indicator') return indicatorEl;
 }
 const attendanceEl={attrs:{},dataStore:{},length:1,
+  attr:function(n,v){if(v===undefined)return this.attrs[n];this.attrs[n]=v;return this;},
+  data:function(n,v){if(v===undefined)return this.dataStore[n];this.dataStore[n]=v;return this;},
+  prop:function(){return this;},
+  css:function(){return this;}
+};
+const participantsEl={attrs:{},dataStore:{},length:1,
   attr:function(n,v){if(v===undefined)return this.attrs[n];this.attrs[n]=v;return this;},
   data:function(n,v){if(v===undefined)return this.dataStore[n];this.dataStore[n]=v;return this;},
   prop:function(){return this;},
@@ -198,14 +205,16 @@ eval(setupCode);
 eval(initCode);
 initializeAutosaveIndicators();
 $(document).trigger('autosave:success', {reportId:__REPORT_ID__});
-console.log(attendanceEl.attrs['href']);
+console.log(JSON.stringify({att: attendanceEl.attrs['href'], part: participantsEl.attrs['href']}));
 '''
         node_script = node_script.replace('__SUBMIT_JS__', str(submit_js)).replace('__REPORT_ID__', str(report_id))
         with tempfile.TemporaryDirectory() as tmp:
             script_path = Path(tmp) / "run.js"
             script_path.write_text(node_script)
             result = subprocess.run(["node", str(script_path)], capture_output=True, text=True)
-        self.assertEqual(result.stdout.strip(), attendance_url)
+        out = json.loads(result.stdout.strip())
+        self.assertEqual(out["att"], attendance_url)
+        self.assertEqual(out["part"], attendance_url)
 
     def test_autosave_indicator_present(self):
         response = self.client.get(

@@ -610,6 +610,7 @@ $(document).on('click', '#ai-sdg-implementation', function(){
               fillOrganizingCommittee();
               fillActualSpeakers();
               fillAttendanceCounts();
+              if (typeof setupAttendanceLink === 'function') setupAttendanceLink();
           };
           setTimeout(() => initParticipantsSection(0), 50);
       }
@@ -1621,13 +1622,16 @@ function fillActualSpeakers() {
 
 function fillAttendanceCounts() {
     const totalField = $('#total-participants-modern');
-    if (
-        totalField.length &&
-        totalField.val().trim() === '' &&
-        typeof window.ATTENDANCE_PRESENT !== 'undefined'
-    ) {
+    const numField = $('#num-participants-modern');
+    if (typeof window.ATTENDANCE_PRESENT === 'undefined') return;
+
+    if (totalField.length && totalField.val().trim() === '') {
         totalField.val(window.ATTENDANCE_PRESENT);
     }
+    if (numField.length && numField.val().trim() === '') {
+        numField.val(window.ATTENDANCE_PRESENT);
+    }
+    if (typeof setupAttendanceLink === 'function') setupAttendanceLink();
 }
 
 function populateProposalData() {
@@ -1746,7 +1750,7 @@ function populateSpeakersFromProposal() {
     if (!speakers.length) {
         container.innerHTML = `
             <div class="no-speakers-message">
-                <div class="no-speakers-icon">👤</div>
+                <div class="no-speakers-icon"><i class="fas fa-user" aria-hidden="true"></i></div>
                 <div class="no-speakers-text">No speakers were defined in the original proposal</div>
                 <div class="no-speakers-help">You can add actual speakers in the field below</div>
             </div>
@@ -2344,18 +2348,32 @@ function setupDynamicActivities() {
 
 function setupAttendanceLink() {
     const attendanceField = $('#attendance-modern');
-    if (!attendanceField.length) return;
+    const participantFields = $('#num-participants-modern, #total-participants-modern');
+    const fields = attendanceField.add(participantFields);
+    if (!fields.length) return;
 
-    const url = attendanceField.data('attendance-url');
-    attendanceField
-        .prop('readonly', true)
-        .css('cursor', 'pointer')
-        .attr('href', url || '#');
+    const attendanceUrl = attendanceField.data('attendance-url');
+    if (attendanceUrl) {
+        fields
+            .attr('data-attendance-url', attendanceUrl)
+            .data('attendance-url', attendanceUrl);
+    }
+
+    fields.each(function () {
+        const field = $(this);
+        const url = field.data('attendance-url');
+        field
+            .prop('readonly', true)
+            .css('cursor', 'pointer')
+            .attr('href', url || '#');
+    });
 
     $(document)
-        .off('click', '#attendance-modern')
-        .on('click', '#attendance-modern', async () => {
-            const href = attendanceField.data('attendance-url');
+        .off('click', '#attendance-modern, #num-participants-modern, #total-participants-modern')
+        .on('click', '#attendance-modern, #num-participants-modern, #total-participants-modern', async function (e) {
+            e.preventDefault();
+            const field = $(this);
+            const href = field.data('attendance-url');
             if (href) {
                 window.location.href = href;
                 return;
@@ -2384,10 +2402,13 @@ function setupAttendanceLink() {
                     if (path.startsWith('/suite/')) prefix = '/suite';
                     else if (path.startsWith('/emt/')) prefix = '/emt';
                     const attendanceUrl = `${prefix}/reports/${reportId}/attendance/upload/`;
-                    attendanceField
-                        .attr('data-attendance-url', attendanceUrl)
-                        .data('attendance-url', attendanceUrl)
-                        .attr('href', attendanceUrl);
+                    fields.each((_, f) => {
+                        const jq = $(f);
+                        jq
+                            .attr('data-attendance-url', attendanceUrl)
+                            .data('attendance-url', attendanceUrl)
+                            .attr('href', attendanceUrl);
+                    });
                     window.location.href = attendanceUrl;
                 } else {
                     alert('Unable to prepare attendance. Please try saving once.');
@@ -2455,9 +2476,8 @@ function initializeAutosaveIndicators() {
             if (path.startsWith('/suite/')) prefix = '/suite';
             else if (path.startsWith('/emt/')) prefix = '/emt';
             const attendanceUrl = `${prefix}/reports/${reportId}/attendance/upload/`;
-            $('#attendance-modern')
+            $('#attendance-modern, #num-participants-modern, #total-participants-modern')
                 .attr('data-attendance-url', attendanceUrl)
-                .data('data-attendance-url', attendanceUrl)
                 .data('attendance-url', attendanceUrl);
             setupAttendanceLink();
         }

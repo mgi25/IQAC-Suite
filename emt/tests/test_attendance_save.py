@@ -56,6 +56,7 @@ class SaveAttendanceRowsTests(TestCase):
                 "student_class": "CSE",
                 "absent": False,
                 "volunteer": True,
+                "category": "student",
             },
             {
                 "registration_no": "F1",
@@ -63,6 +64,7 @@ class SaveAttendanceRowsTests(TestCase):
                 "student_class": "",
                 "absent": False,
                 "volunteer": False,
+                "category": "faculty",
             },
             {
                 "registration_no": "",
@@ -70,6 +72,7 @@ class SaveAttendanceRowsTests(TestCase):
                 "student_class": "",
                 "absent": False,
                 "volunteer": False,
+                "category": "external",
             },
             {
                 "registration_no": "A1",
@@ -77,6 +80,7 @@ class SaveAttendanceRowsTests(TestCase):
                 "student_class": "ECE",
                 "absent": True,
                 "volunteer": False,
+                "category": "student",
             },
         ]
         response = self.client.post(
@@ -95,12 +99,13 @@ class SaveAttendanceRowsTests(TestCase):
         saved = {
             r["registration_no"]: r
             for r in self.report.attendance_rows.values(
-                "registration_no", "absent", "volunteer"
+                "registration_no", "absent", "volunteer", "category"
             )
             if r["registration_no"]
         }
         self.assertTrue(saved["S1"]["volunteer"])
         self.assertTrue(saved["A1"]["absent"])
+        self.assertEqual(saved["F1"]["category"], "faculty")
         self.assertEqual(len(saved), 3)  # empty registration_no excluded from keys
 
     def test_save_attendance_updates_session_draft(self):
@@ -116,6 +121,7 @@ class SaveAttendanceRowsTests(TestCase):
                 "student_class": "CSE",
                 "absent": False,
                 "volunteer": True,
+                "category": "student",
             },
             {
                 "registration_no": "F1",
@@ -123,6 +129,7 @@ class SaveAttendanceRowsTests(TestCase):
                 "student_class": "",
                 "absent": False,
                 "volunteer": False,
+                "category": "faculty",
             },
             {
                 "registration_no": "",
@@ -130,6 +137,7 @@ class SaveAttendanceRowsTests(TestCase):
                 "student_class": "",
                 "absent": False,
                 "volunteer": False,
+                "category": "external",
             },
             {
                 "registration_no": "A1",
@@ -137,6 +145,7 @@ class SaveAttendanceRowsTests(TestCase):
                 "student_class": "ECE",
                 "absent": True,
                 "volunteer": False,
+                "category": "student",
             },
         ]
         self.client.post(
