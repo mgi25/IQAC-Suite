@@ -1727,6 +1727,7 @@ function normalizeSpeakerValue(value) {
 
 function renderEditableSpeakerCard(speaker, index) {
     const id = speaker && (speaker.id || speaker.pk);
+    const isNew = Boolean(speaker && (speaker.__isNew || speaker.is_new));
     const name = normalizeSpeakerValue(speaker.full_name || speaker.name);
     const designation = normalizeSpeakerValue(speaker.designation);
     const affiliation = normalizeSpeakerValue(speaker.affiliation || speaker.organization);
@@ -1737,14 +1738,25 @@ function renderEditableSpeakerCard(speaker, index) {
     const photoUrl = normalizeSpeakerValue(speaker.photo_url || speaker.photo);
     const initials = getInitials(name);
     const cardClasses = ['speaker-reference-item', 'speaker-card'];
-    if (id) {
+    const isEditable = Boolean(id) || isNew;
+
+    if (isEditable) {
         cardClasses.push('speaker-card-editable');
     } else {
         cardClasses.push('speaker-card-readonly');
     }
 
+    if (isNew) {
+        cardClasses.push('speaker-card-new');
+    }
+
+    const attributes = [`data-speaker-id="${id ? escapeHtml(id) : ''}"`, `data-speaker-index="${Number.isFinite(index) ? index : 0}"`];
+    if (isNew) {
+        attributes.push('data-speaker-new="true"');
+    }
+
     return `
-        <div class="${cardClasses.join(' ')}" data-speaker-id="${id ? escapeHtml(id) : ''}">
+        <div class="${cardClasses.join(' ')}" ${attributes.join(' ')}>
             <div class="speaker-card-media">
                 <div class="speaker-photo-container">
                     <div class="speaker-photo${photoUrl ? '' : ' speaker-photo-placeholder'}" data-initials="${escapeHtml(initials)}">
@@ -1759,43 +1771,71 @@ function renderEditableSpeakerCard(speaker, index) {
             </div>
             <div class="speaker-card-content">
                 <div class="speaker-header">
-                    <div class="speaker-header-title">Speaker ${index + 1}</div>
-                    ${id ? '' : '<div class="speaker-readonly-hint">Unable to edit this speaker because the record could not be linked.</div>'}
+                    <div class="speaker-header-body">
+                        <div class="speaker-header-title">Speaker ${index + 1}</div>
+                        ${isEditable ? '' : '<div class="speaker-readonly-hint">Unable to edit this speaker because the record could not be linked.</div>'}
+                    </div>
+                    <button type="button" class="speaker-card-remove" title="Remove speaker">
+                        <span aria-hidden="true">&times;</span>
+                        <span class="sr-only">Remove speaker</span>
+                    </button>
                 </div>
                 <div class="speaker-fields">
                     <div class="speaker-field">
                         <label>Full Name *</label>
-                        <input type="text" class="speaker-field-input" data-field="full_name" value="${escapeHtml(name)}" placeholder="Enter full name" ${id ? '' : 'disabled'}>
+                        <input type="text" class="speaker-field-input" data-field="full_name" value="${escapeHtml(name)}" placeholder="Enter full name" ${isEditable ? '' : 'disabled'}>
                     </div>
                     <div class="speaker-field">
                         <label>Designation *</label>
-                        <input type="text" class="speaker-field-input" data-field="designation" value="${escapeHtml(designation)}" placeholder="Enter designation" ${id ? '' : 'disabled'}>
+                        <input type="text" class="speaker-field-input" data-field="designation" value="${escapeHtml(designation)}" placeholder="Enter designation" ${isEditable ? '' : 'disabled'}>
                     </div>
                     <div class="speaker-field">
                         <label>Affiliation *</label>
-                        <input type="text" class="speaker-field-input" data-field="affiliation" value="${escapeHtml(affiliation)}" placeholder="Enter organization" ${id ? '' : 'disabled'}>
+                        <input type="text" class="speaker-field-input" data-field="affiliation" value="${escapeHtml(affiliation)}" placeholder="Enter organization" ${isEditable ? '' : 'disabled'}>
                     </div>
                     <div class="speaker-field">
                         <label>Email *</label>
-                        <input type="email" class="speaker-field-input" data-field="contact_email" value="${escapeHtml(email)}" placeholder="name@example.com" ${id ? '' : 'disabled'}>
+                        <input type="email" class="speaker-field-input" data-field="contact_email" value="${escapeHtml(email)}" placeholder="name@example.com" ${isEditable ? '' : 'disabled'}>
                     </div>
                     <div class="speaker-field">
                         <label>Contact Number</label>
-                        <input type="text" class="speaker-field-input" data-field="contact_number" value="${escapeHtml(phone)}" placeholder="Enter contact number" ${id ? '' : 'disabled'}>
+                        <input type="text" class="speaker-field-input" data-field="contact_number" value="${escapeHtml(phone)}" placeholder="Enter contact number" ${isEditable ? '' : 'disabled'}>
                     </div>
                     <div class="speaker-field">
                         <label>LinkedIn URL</label>
-                        <input type="url" class="speaker-field-input" data-field="linkedin_url" value="${escapeHtml(linkedin)}" placeholder="https://linkedin.com/in/username" ${id ? '' : 'disabled'}>
+                        <input type="url" class="speaker-field-input" data-field="linkedin_url" value="${escapeHtml(linkedin)}" placeholder="https://linkedin.com/in/username" ${isEditable ? '' : 'disabled'}>
                     </div>
                     <div class="speaker-field speaker-field-full">
                         <label>Profile / Bio *</label>
-                        <textarea class="speaker-field-textarea" data-field="detailed_profile" rows="4" placeholder="Brief profile of the speaker" ${id ? '' : 'disabled'}>${escapeHtml(bio)}</textarea>
+                        <textarea class="speaker-field-textarea" data-field="detailed_profile" rows="4" placeholder="Brief profile of the speaker" ${isEditable ? '' : 'disabled'}>${escapeHtml(bio)}</textarea>
                     </div>
                 </div>
                 <div class="speaker-status" role="status" aria-live="polite"></div>
             </div>
         </div>
     `;
+}
+
+function getNoSpeakersMessageHtml() {
+    return `
+        <div class="no-speakers-message">
+            <div class="no-speakers-icon"><i class="fas fa-user" aria-hidden="true"></i></div>
+            <div class="no-speakers-text">No speakers were defined in the original proposal</div>
+            <div class="no-speakers-help">You can add actual speakers in the field below</div>
+        </div>
+    `;
+}
+
+function reindexSpeakerCards(listEl) {
+    if (!listEl) return;
+    const cards = listEl.querySelectorAll('.speaker-card');
+    cards.forEach((card, idx) => {
+        card.dataset.speakerIndex = String(idx);
+        const title = card.querySelector('.speaker-header-title');
+        if (title) {
+            title.textContent = `Speaker ${idx + 1}`;
+        }
+    });
 }
 
 function updateSpeakerPhotoPreview(card, photoUrl) {
@@ -1958,15 +1998,77 @@ function handleSpeakerSave(card) {
 const SPEAKER_AUTO_SAVE_DELAY = 1200;
 
 function setupSpeakerCardEditors(container) {
+    if (!container) return;
+
     const updateBase = window.SPEAKER_UPDATE_BASE || '';
+
+    if (!container.__speakerCardDelegated) {
+        container.addEventListener('click', event => {
+            const removeControl = event.target.closest('.speaker-card-remove');
+            if (removeControl) {
+                event.preventDefault();
+                const card = removeControl.closest('.speaker-card');
+                if (!card) return;
+                const list = container.querySelector('.speakers-list');
+                if (!list) return;
+
+                const speakerId = card.dataset.speakerId;
+                if (speakerId) {
+                    const cacheId = String(speakerId);
+                    if (window.SPEAKER_CACHE && Object.prototype.hasOwnProperty.call(window.SPEAKER_CACHE, cacheId)) {
+                        delete window.SPEAKER_CACHE[cacheId];
+                    }
+                    if (window.PROPOSAL_DATA && Array.isArray(window.PROPOSAL_DATA.speakers)) {
+                        window.PROPOSAL_DATA.speakers = window.PROPOSAL_DATA.speakers.filter(sp => String(sp.id || sp.pk) !== cacheId);
+                    }
+                    if (Array.isArray(window.EXISTING_SPEAKERS)) {
+                        window.EXISTING_SPEAKERS = window.EXISTING_SPEAKERS.filter(sp => String(sp.id || sp.pk) !== cacheId);
+                    }
+                }
+
+                card.remove();
+
+                if (!list.querySelector('.speaker-card')) {
+                    list.innerHTML = getNoSpeakersMessageHtml();
+                } else {
+                    reindexSpeakerCards(list);
+                }
+                return;
+            }
+
+            const addControl = event.target.closest('.speaker-card-add');
+            if (addControl) {
+                event.preventDefault();
+                const list = container.querySelector('.speakers-list');
+                if (!list) return;
+
+                const placeholder = list.querySelector('.no-speakers-message');
+                if (placeholder) placeholder.remove();
+
+                const newIndex = list.querySelectorAll('.speaker-card').length;
+                const newCardHtml = renderEditableSpeakerCard({ __isNew: true }, newIndex);
+                list.insertAdjacentHTML('beforeend', newCardHtml);
+                setupSpeakerCardEditors(container);
+                reindexSpeakerCards(list);
+                return;
+            }
+        });
+        container.__speakerCardDelegated = true;
+    }
+
     const cards = container.querySelectorAll('.speaker-card');
     cards.forEach(card => {
+        if (card.dataset.initialized === 'true') return;
+        card.dataset.initialized = 'true';
+
         const id = card.dataset.speakerId;
+        const isNewCard = card.dataset.speakerNew === 'true';
         const statusEl = card.querySelector('.speaker-status');
         const fileInput = card.querySelector('.speaker-photo-input');
         const removeBtn = card.querySelector('.speaker-photo-remove');
         const inputs = card.querySelectorAll('.speaker-field-input, .speaker-field-textarea');
-        const canEdit = Boolean(id && updateBase);
+        const canEditRemote = Boolean(id && updateBase);
+        const canEdit = isNewCard || canEditRemote;
 
         if (!canEdit) {
             if (statusEl) {
@@ -1977,6 +2079,33 @@ function setupSpeakerCardEditors(container) {
             if (removeBtn) removeBtn.disabled = true;
             if (fileInput) fileInput.disabled = true;
             inputs.forEach(input => input.disabled = true);
+            return;
+        }
+
+        if (!canEditRemote) {
+            if (removeBtn) removeBtn.disabled = true;
+            if (fileInput) fileInput.disabled = true;
+        }
+
+        const handleNameInput = value => {
+            const photoEl = card.querySelector('.speaker-photo');
+            if (photoEl && photoEl.classList.contains('speaker-photo-placeholder')) {
+                const initials = getInitials(value);
+                photoEl.innerHTML = escapeHtml(initials);
+                photoEl.setAttribute('data-initials', initials);
+            }
+        };
+
+        if (isNewCard) {
+            if (statusEl) {
+                statusEl.textContent = 'New speaker entry (not linked to a record).';
+                delete statusEl.dataset.state;
+            }
+            inputs.forEach(input => {
+                if (input.dataset.field === 'full_name') {
+                    input.addEventListener('input', () => handleNameInput(input.value.trim()));
+                }
+            });
             return;
         }
 
@@ -2029,12 +2158,7 @@ function setupSpeakerCardEditors(container) {
         inputs.forEach(input => {
             input.addEventListener('input', () => {
                 if (input.dataset.field === 'full_name') {
-                    const photoEl = card.querySelector('.speaker-photo');
-                    if (photoEl && photoEl.classList.contains('speaker-photo-placeholder')) {
-                        const initials = getInitials(input.value.trim());
-                        photoEl.innerHTML = escapeHtml(initials);
-                        photoEl.setAttribute('data-initials', initials);
-                    }
+                    handleNameInput(input.value.trim());
                 }
                 markDirty();
             });
@@ -2175,30 +2299,32 @@ function populateSpeakersFromProposal() {
         window.EXISTING_SPEAKERS = speakers;
     }
 
-    if (!Array.isArray(speakers) || !speakers.length) {
-        container.innerHTML = `
-            <div class="no-speakers-message">
-                <div class="no-speakers-icon"><i class="fas fa-user" aria-hidden="true"></i></div>
-                <div class="no-speakers-text">No speakers were defined in the original proposal</div>
-                <div class="no-speakers-help">You can add actual speakers in the field below</div>
-            </div>
-        `;
-        return;
+    window.SPEAKER_CACHE = {};
+    let cardsHtml = '';
+    if (Array.isArray(speakers) && speakers.length) {
+        speakers.forEach((speaker, index) => {
+            const record = speaker && typeof speaker === 'object' ? speaker : {};
+            const id = record.id || record.pk;
+            if (id) {
+                window.SPEAKER_CACHE[String(id)] = Object.assign({}, record);
+            }
+            cardsHtml += renderEditableSpeakerCard(record, index);
+        });
     }
 
-    window.SPEAKER_CACHE = {};
-    let html = '<div class="speakers-list speakers-editable">';
-    speakers.forEach((speaker, index) => {
-        const record = speaker && typeof speaker === 'object' ? speaker : {};
-        const id = record.id || record.pk;
-        if (id) {
-            window.SPEAKER_CACHE[String(id)] = Object.assign({}, record);
-        }
-        html += renderEditableSpeakerCard(record, index);
-    });
-    html += '</div>';
+    const listHtml = cardsHtml || getNoSpeakersMessageHtml();
 
-    container.innerHTML = html;
+    container.innerHTML = `
+        <div class="speakers-list speakers-editable">
+            ${listHtml}
+        </div>
+        <div class="speakers-actions">
+            <button type="button" class="speaker-card-add">
+                <span class="speaker-card-add-icon" aria-hidden="true">+</span>
+                <span>Add Speaker</span>
+            </button>
+        </div>
+    `;
     setupSpeakerCardEditors(container);
 }
 

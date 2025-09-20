@@ -1978,7 +1978,7 @@ textarea {
 .speaker-card {
     display: flex;
     gap: 0.75rem;
-    align-items: stretch;
+    align-items: flex-start;
 }
 
 .speakers-editable {
@@ -2002,11 +2002,11 @@ textarea {
     background: #f8fafc;
 }
 
-.speaker-card-media { 
-    flex-shrink: 0; 
+.speaker-card-media {
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.75rem;
 }
 
@@ -2086,6 +2086,13 @@ textarea {
 
 .speaker-header {
     display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.speaker-header-body {
+    display: flex;
     flex-direction: column;
     gap: 0.25rem;
 }
@@ -2093,6 +2100,34 @@ textarea {
 .speaker-header-title {
     font-weight: 600;
     color: #1e293b;
+}
+
+.speaker-card-remove {
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 0.1rem;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.speaker-card-remove:hover,
+.speaker-card-remove:focus {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.12);
+}
+
+.speaker-card-remove:focus-visible {
+    outline: 2px solid rgba(37, 99, 235, 0.45);
+    outline-offset: 2px;
+}
+
+.speaker-card-remove span[aria-hidden="true"] {
+    display: block;
+    transform: translateY(-1px);
 }
 
 .speaker-readonly-hint {
@@ -2170,6 +2205,52 @@ textarea {
     color: #b91c1c;
 }
 
+.speakers-actions {
+    margin-top: 0.75rem;
+    display: flex;
+    justify-content: flex-start;
+}
+
+.speaker-card-add {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 1px dashed #94a3b8;
+    border-radius: 0.5rem;
+    padding: 0.45rem 0.85rem;
+    background: transparent;
+    color: #1e3a8a;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.speaker-card-add:hover,
+.speaker-card-add:focus {
+    border-color: #2563eb;
+    color: #2563eb;
+    background: rgba(37, 99, 235, 0.08);
+}
+
+.speaker-card-add:focus-visible {
+    outline: 2px solid rgba(37, 99, 235, 0.45);
+    outline-offset: 2px;
+}
+
+.speaker-card-add-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.08);
+    color: inherit;
+    font-weight: 700;
+    font-size: 1rem;
+    line-height: 1;
+}
+
 .speaker-card-readonly .speaker-photo-remove {
     display: none;
 }
@@ -2234,19 +2315,28 @@ textarea {
 }
 
 @media (max-width: 640px) {
-    .speaker-card { 
-        flex-direction: column; 
-    } 
+    .speaker-card {
+        flex-direction: column;
+    }
 
-    .speaker-card-media { 
-        width: 100%; 
-        align-items: flex-start; 
-    } 
+    .speaker-card-media {
+        width: 100%;
+        align-items: flex-start;
+    }
 
-    .speaker-photo { 
-        width: 100%; 
-        max-height: 220px; 
-        font-size: 1.5rem; 
+    .speakers-actions {
+        justify-content: center;
+    }
+
+    .speaker-card-add {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .speaker-photo {
+        width: 100%;
+        max-height: 220px;
+        font-size: 1.5rem;
     } 
 
     .speaker-fields {
