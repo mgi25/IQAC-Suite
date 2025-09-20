@@ -1,7 +1,8 @@
+from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
-from django.contrib.auth.models import User
+
 from emt.models import EventProposal
 
 
@@ -36,7 +37,7 @@ class UserDashboardCalendarTests(TestCase):
         date = timezone.now()
         EventProposal.objects.create(
             submitted_by=other,
-            event_title="Other", 
+            event_title="Other",
             status=EventProposal.Status.APPROVED,
             event_datetime=date,
         )

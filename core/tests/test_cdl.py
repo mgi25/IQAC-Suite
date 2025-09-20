@@ -1,9 +1,10 @@
-from django.test import TestCase
 from django.contrib.auth.models import User
-from emt.models import EventProposal
-from core.models import CDLRequest, CertificateBatch, CertificateEntry
+from django.test import TestCase
+
 from core.forms import CDLRequestForm
+from core.models import CDLRequest, CertificateBatch, CertificateEntry
 from core.views import run_ai_validation
+from emt.models import EventProposal
 
 
 class CDLModelFormTests(TestCase):
@@ -21,7 +22,9 @@ class CDLModelFormTests(TestCase):
         self.assertIn("poster_organization_name", form.errors)
 
     def test_certificate_ai_validation(self):
-        batch = CertificateBatch.objects.create(proposal=self.proposal, csv_file="dummy.csv")
+        batch = CertificateBatch.objects.create(
+            proposal=self.proposal, csv_file="dummy.csv"
+        )
         CertificateEntry.objects.create(batch=batch, name="", role="OTHER")
         run_ai_validation(batch)
         entry = batch.entries.first()

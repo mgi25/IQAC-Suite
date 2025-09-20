@@ -1,20 +1,16 @@
-from django.test import TestCase, RequestFactory
+import json
+from types import SimpleNamespace
+
 from django.contrib.auth.models import User
+from django.contrib.messages.storage.fallback import FallbackStorage
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.forms import inlineformset_factory
-from types import SimpleNamespace
-import json
-from allauth.exceptions import ImmediateHttpResponse
-from django.contrib.messages.storage.fallback import FallbackStorage
-from core.models import (
-    OrganizationType,
-    Organization,
-    ApprovalFlowTemplate,
-    OrganizationRole,
-    RoleAssignment,
-)
-from core.views import RoleAssignmentForm, RoleAssignmentFormSet
+from django.test import RequestFactory, TestCase
+
 from core.adapters import SchoolSocialAccountAdapter
+from core.models import (ApprovalFlowTemplate, Organization, OrganizationRole,
+                         OrganizationType, RoleAssignment)
+from core.views import RoleAssignmentForm, RoleAssignmentFormSet
 
 
 class OrganizationModelTests(TestCase):
@@ -30,12 +26,16 @@ class UserRoleAssignmentTests(TestCase):
     def setUp(self):
         ot = OrganizationType.objects.create(name="Dept")
         self.org = Organization.objects.create(name="Math", org_type=ot)
-        self.student_role = OrganizationRole.objects.create(organization=self.org, name="student")
-        self.faculty_role = OrganizationRole.objects.create(organization=self.org, name="faculty")
+        self.student_role = OrganizationRole.objects.create(
+            organization=self.org, name="student"
+        )
+        self.faculty_role = OrganizationRole.objects.create(
+            organization=self.org, name="faculty"
+        )
 
     def _login(self, username, password):
         session = self.client.session
-        session['org_id'] = self.org.id
+        session["org_id"] = self.org.id
         session.save()
         success = self.client.login(username=username, password=password)
         self.assertTrue(success)
@@ -44,7 +44,9 @@ class UserRoleAssignmentTests(TestCase):
         user = User.objects.create_user(
             "stud", email="stud@example.com", password="pass", is_active=False
         )
-        RoleAssignment.objects.create(user=user, organization=self.org, role=self.student_role)
+        RoleAssignment.objects.create(
+            user=user, organization=self.org, role=self.student_role
+        )
         self._login("stud", "pass")
         user.refresh_from_db()
         self.assertEqual(user.profile.role, "student")
@@ -53,7 +55,9 @@ class UserRoleAssignmentTests(TestCase):
         user = User.objects.create_user(
             "fac", email="fac@example.com", password="pass", is_active=False
         )
-        RoleAssignment.objects.create(user=user, organization=self.org, role=self.faculty_role)
+        RoleAssignment.objects.create(
+            user=user, organization=self.org, role=self.faculty_role
+        )
         self._login("fac", "pass")
         user.refresh_from_db()
         self.assertEqual(user.profile.role, "faculty")
@@ -67,12 +71,15 @@ class UserRoleAssignmentTests(TestCase):
             last_name="Dent",
             is_active=False,
         )
-        RoleAssignment.objects.create(user=user, organization=self.org, role=self.student_role)
+        RoleAssignment.objects.create(
+            user=user, organization=self.org, role=self.student_role
+        )
         self._login("stud2", "pass")
         resp = self.client.get("/core-admin/api/auth/me")
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertEqual(data["role"], "student")
+
 
 class ApprovalFlowViewTests(TestCase):
     def test_delete_approval_flow(self):
@@ -127,7 +134,11 @@ class SaveApprovalFlowTests(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
 
-        templates = list(ApprovalFlowTemplate.objects.filter(organization=self.org).order_by("step_order"))
+        templates = list(
+            ApprovalFlowTemplate.objects.filter(organization=self.org).order_by(
+                "step_order"
+            )
+        )
         self.assertEqual(len(templates), 2)
         self.assertEqual(templates[0].step_order, 1)
         self.assertEqual(templates[0].role_required, "faculty")
@@ -159,29 +170,38 @@ class RoleManagementTests(TestCase):
         admin = User.objects.create_superuser("admin", "a@x.com", "pass")
         self.client.force_login(admin)
 
-        resp = self.client.post("/core-admin/user-roles/add/", {
-            "org_id": org.id,
-            "name": "Coordinator"
-        })
-
-        self.assertEqual(resp.status_code, 302)
-        self.assertEqual(OrganizationRole.objects.filter(organization=org, name="Coordinator").count(), 1)
-
-    def test_add_role_to_org_type(self):
-        ot = OrganizationType.objects.create(name="Club")
-        org1 = Organization.objects.create(name="Art", org_type=ot)
-        org2 = Organization.objects.create(name="Music", org_type=ot)
-        admin = User.objects.create_superuser("admin", "a@x.com", "pass")
-        self.client.force_login(admin)
-
-        resp = self.client.post("/core-admin/user-roles/add/", {
-            "org_type_id": ot.id,
-            "name": "Coordinator",
-        })
+        resp = self.client.post(
+            "/core-admin/user-roles/add/", {"org_id": org.id, "name": "Coordinator"}
+        )
 
         self.assertEqual(resp.status_code, 302)
         self.assertEqual(
-            OrganizationRole.objects.filter(organization__org_type=ot, name="Coordinator").count(),
+            OrganizationRole.objects.filter(
+                organization=org, name="Coordinator"
+            ).count(),
+            1,
+        )
+
+    def test_add_role_to_org_type(self):
+        ot = OrganizationType.objects.create(name="Club")
+        _ = Organization.objects.create(name="Art", org_type=ot)
+        _ = Organization.objects.create(name="Music", org_type=ot)
+        admin = User.objects.create_superuser("admin", "a@x.com", "pass")
+        self.client.force_login(admin)
+
+        resp = self.client.post(
+            "/core-admin/user-roles/add/",
+            {
+                "org_type_id": ot.id,
+                "name": "Coordinator",
+            },
+        )
+
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(
+            OrganizationRole.objects.filter(
+                organization__org_type=ot, name="Coordinator"
+            ).count(),
             2,
         )
 
@@ -222,17 +242,26 @@ class SearchUsersTests(TestCase):
     def setUp(self):
         self.ot = OrganizationType.objects.create(name="Dept")
         self.org = Organization.objects.create(name="Math", org_type=self.ot)
-        self.role_obj = OrganizationRole.objects.create(organization=self.org, name="Faculty")
-        self.user = User.objects.create(username="u1", first_name="Alpha", email="alpha@example.com")
-        RoleAssignment.objects.create(user=self.user, role=self.role_obj, organization=self.org)
+        self.role_obj = OrganizationRole.objects.create(
+            organization=self.org, name="Faculty"
+        )
+        self.user = User.objects.create(
+            username="u1", first_name="Alpha", email="alpha@example.com"
+        )
+        RoleAssignment.objects.create(
+            user=self.user, role=self.role_obj, organization=self.org
+        )
         self.admin = User.objects.create_superuser("admin", "admin@example.com", "pass")
         self.client.force_login(self.admin)
 
     def test_search_users_by_role(self):
-        resp = self.client.get("/core-admin/api/search-users/", {
-            "role": "Faculty",
-            "org_id": self.org.id,
-        })
+        resp = self.client.get(
+            "/core-admin/api/search-users/",
+            {
+                "role": "Faculty",
+                "org_id": self.org.id,
+            },
+        )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertEqual(len(data.get("users", [])), 1)
@@ -289,9 +318,11 @@ class SocialLoginAccessTests(TestCase):
 
     def _sociallogin(self, email):
         username = email.split("@")[0]
+
         class DummySocialLogin(SimpleNamespace):
             def connect(self, request, user):
                 self.user = user
+
         return DummySocialLogin(user=User(username=username, email=email))
 
     def test_unknown_email_allowed(self):
@@ -303,7 +334,9 @@ class SocialLoginAccessTests(TestCase):
         self.assertFalse(User.objects.filter(email=email).exists())
 
     def test_existing_user_allowed(self):
-        user = User.objects.create_user("known", "known@example.com", "pass", is_active=False)
+        _ = User.objects.create_user(
+            "known", "known@example.com", "pass", is_active=False
+        )
         request = self._build_request()
         sociallogin = self._sociallogin("known@example.com")
         self.adapter.pre_social_login(request, sociallogin)

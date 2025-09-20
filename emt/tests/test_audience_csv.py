@@ -1,20 +1,15 @@
+import csv
+import json
+
 from django.contrib.auth.models import User
+from django.contrib.auth.signals import user_logged_in
+from django.db.models.signals import post_save
 from django.test import TestCase
 from django.urls import reverse
-from django.db.models.signals import post_save
-from django.contrib.auth.signals import user_logged_in
-import json
-import csv
 
-from core.signals import create_or_update_user_profile, assign_role_on_login
-from core.models import (
-    OrganizationType,
-    Organization,
-    OrganizationRole,
-    RoleAssignment,
-    Class,
-)
-
+from core.models import (Class, Organization, OrganizationRole,
+                         OrganizationType, RoleAssignment)
+from core.signals import assign_role_on_login, create_or_update_user_profile
 from emt.models import EventProposal, EventReport, Student
 
 
@@ -42,14 +37,21 @@ class AudienceCSVViewTests(TestCase):
 
     def test_download_student_audience_csv(self):
         cls = Class.objects.create(name="CSE", code="CSE")
-        bob_user = User.objects.create_user("bobuser", password="pass", first_name="Bob")
+        bob_user = User.objects.create_user(
+            "bobuser", password="pass", first_name="Bob"
+        )
         bob = Student.objects.create(user=bob_user, registration_number="R1")
         cls.students.add(bob)
-        carol_user = User.objects.create_user("caroluser", password="pass", first_name="Carol")
+        carol_user = User.objects.create_user(
+            "caroluser", password="pass", first_name="Carol"
+        )
         carol = Student.objects.create(user=carol_user, registration_number="R2")
         cls.students.add(carol)
 
-        url = reverse("emt:download_audience_csv", args=[self.proposal.id]) + "?type=students"
+        url = (
+            reverse("emt:download_audience_csv", args=[self.proposal.id])
+            + "?type=students"
+        )
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "text/csv")
@@ -63,7 +65,10 @@ class AudienceCSVViewTests(TestCase):
         self.assertEqual(rows[2], ["R2", "Carol", "CSE", "", ""])
 
     def test_download_faculty_audience_csv(self):
-        url = reverse("emt:download_audience_csv", args=[self.proposal.id]) + "?type=faculty"
+        url = (
+            reverse("emt:download_audience_csv", args=[self.proposal.id])
+            + "?type=faculty"
+        )
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         content = response.content.decode()
@@ -76,7 +81,9 @@ class AudienceCSVViewTests(TestCase):
         dept_type = OrganizationType.objects.create(name="Department")
         dept = Organization.objects.create(name="CSE", org_type=dept_type)
         role = OrganizationRole.objects.create(organization=dept, name="Faculty")
-        faculty = User.objects.create_user(username="fac1", password="pass", first_name="John")
+        faculty = User.objects.create_user(
+            username="fac1", password="pass", first_name="John"
+        )
         RoleAssignment.objects.create(user=faculty, role=role, organization=dept)
         url = reverse("emt:api_faculty") + f"?org_id={dept.id}&q=fac1"
         resp = self.client.get(url)
@@ -123,4 +130,3 @@ class AudienceCSVViewTests(TestCase):
         self.assertTrue(saved[1]["absent"])
         self.assertEqual(report.num_student_volunteers, 1)
         self.assertEqual(report.num_participants, 1)
-

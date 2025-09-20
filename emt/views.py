@@ -1,119 +1,65 @@
-from django.shortcuts import render, get_object_or_404, redirect
-from django.http import (
-    JsonResponse,
-    HttpResponse,
-    StreamingHttpResponse,
-    HttpResponseNotAllowed,
-)
+import csv
+import json
+import logging
+import os
+import re
+from datetime import datetime, timedelta
+from operator import attrgetter
+from types import SimpleNamespace
+from urllib.parse import urlparse
+
+import google.generativeai as genai
+import pdfkit
+import requests
+from bs4 import BeautifulSoup
+from django import forms
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+from django.core.validators import EmailValidator, URLValidator
+from django.db.models import Q, Sum
+from django.forms import modelformset_factory
+from django.http import (HttpResponse, HttpResponseNotAllowed, JsonResponse,
+                         StreamingHttpResponse)
+from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
+from django.utils import timezone
+from django.utils.dateparse import parse_date
+from django.utils.timezone import now
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_POST
-from django.conf import settings
-from django import forms
-import json
-import re
-from urllib.parse import urlparse
-import requests
-import csv
-from suite.ai_client import chat, AIError
-import time
-from bs4 import BeautifulSoup
-from datetime import datetime
-from django.db.models import Q
-from django.utils.dateparse import parse_date
-from django.core.validators import EmailValidator, URLValidator
-from django.core.exceptions import ValidationError
-from .models import (
-    EventProposal,
-    EventNeedAnalysis,
-    EventObjectives,
-    EventExpectedOutcomes,
-    TentativeFlow,
-    EventActivity,
-    ExpenseDetail,
-    IncomeDetail,
-    SpeakerProfile,
-    EventReport,
-    EventReportAttachment,
-    CDLSupport,
-    CDLCertificateRecipient,
-    CDLMessage,
-    Student,
-    AttendanceRow,
-)
-from types import SimpleNamespace
-from .forms import (
-    EventProposalForm,
-    NeedAnalysisForm,
-    ExpectedOutcomesForm,
-    ObjectivesForm,
-    TentativeFlowForm,
-    SpeakerProfileForm,
-    ExpenseDetailForm,
-    EventReportForm,
-    EventReportAttachmentForm,
-    CDLSupportForm,
-    CertificateRecipientForm,
-    CDLMessageForm,
-    NAME_PATTERN,
-)
-from django.forms import modelformset_factory
-from core.models import (
-    Organization,
-    OrganizationType,
-    Report as SubmittedReport,
-    ApprovalFlowTemplate,
-    SDGGoal,
-    Class,
-    SDG_GOALS,
-    OrganizationMembership,
-    Report,
-)
-from django.contrib.auth.models import User
-from emt.utils import (
-    build_approval_chain,
-    auto_approve_non_optional_duplicates,
-    unlock_optionals_after,
-    skip_all_downstream_optionals,
-    get_downstream_optional_candidates,
-    parse_attendance_csv,
-    ATTENDANCE_HEADERS,
-)
-from emt.models import ApprovalStep
 
-from django.contrib import messages
-from django.core.files.base import ContentFile
-import tempfile
-import os
+from core.models import (SDG_GOALS, Class, Organization,
+                         OrganizationMembership, OrganizationType, Report,
+                         SDGGoal)
+from emt.utils import (ATTENDANCE_HEADERS,
+                       auto_approve_non_optional_duplicates,
+                       build_approval_chain,
+                       get_downstream_optional_candidates,
+                       parse_attendance_csv, skip_all_downstream_optionals,
+                       unlock_optionals_after)
+from suite.ai_client import AIError, chat
 
-# ---------------------------------------------------------------------------
-# Role name constants for lookup to avoid hardcoded strings
-# ---------------------------------------------------------------------------
+from .forms import (NAME_PATTERN, CDLSupportForm, EventProposalForm,
+                    EventReportAttachmentForm, EventReportForm,
+                    ExpectedOutcomesForm, ExpenseDetailForm, NeedAnalysisForm,
+                    ObjectivesForm, SpeakerProfileForm, TentativeFlowForm)
+from .models import (ApprovalStep, AttendanceRow, EventActivity,
+                     EventExpectedOutcomes, EventNeedAnalysis, EventObjectives,
+                     EventProposal, EventReport, EventReportAttachment,
+                     ExpenseDetail, IncomeDetail, MediaRequest, SpeakerProfile,
+                     Student, TentativeFlow)
+
 FACULTY_ROLE = ApprovalStep.Role.FACULTY.value
 DEAN_ROLE = ApprovalStep.Role.DEAN.value
 ACADEMIC_COORDINATOR_ROLE = "academic_coordinator"
 
-from django.contrib import messages
-from django.utils import timezone
-from django.db import models
-from .models import MediaRequest
-from datetime import timedelta
-from django.utils.timezone import now
-from django.db.models import Sum
-import google.generativeai as genai
-import os
-from django.contrib.auth.decorators import login_required, user_passes_test
 
-# --- Added for the new function ---
-from itertools import chain
-from operator import attrgetter
-
-# ----------------------------------
-
-import logging
-
-# Get an instance of the logger for the 'emt' app
-logger = logging.getLogger(__name__)  # __name__ will resolve to 'emt.views'
+logger = logging.getLogger(__name__)
 NAME_RE = re.compile(NAME_PATTERN)
+
 # Configure Gemini API key from environment variable(s)
 # Prefer `GEMINI_API_KEY`; fall back to `GOOGLE_API_KEY`
 api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
@@ -153,11 +99,6 @@ def my_requests_view(request):
 # ──────────────────────────────
 # REPORT GENERATION
 # ──────────────────────────────
-from django.views.decorators.csrf import csrf_exempt
-from django.shortcuts import render
-from django.template.loader import render_to_string
-from django.http import HttpResponse
-import pdfkit
 
 
 def report_form(request):
@@ -272,7 +213,8 @@ def _save_activities(proposal, data, form=None):
 
 def _save_speakers(proposal, data, files):
     pattern = re.compile(
-        r"^speaker_(?:full_name|designation|affiliation|contact_email|contact_number|linkedin_url|photo|detailed_profile)_(\d+)$"
+        r"^speaker_(?:full_name|designation|affiliation|contact_email|"
+        r"contact_number|linkedin_url|photo|detailed_profile)_(\d+)$"
     )
     all_keys = list(data.keys()) + list(files.keys())
     indices = sorted({int(m.group(1)) for key in all_keys if (m := pattern.match(key))})
@@ -327,6 +269,7 @@ def _parse_sdg_text(text: str):
     Returns a queryset of matching SDGGoal objects.
     """
     from core.models import SDGGoal
+
     if not text:
         return SDGGoal.objects.none()
     ids = set()
@@ -505,17 +448,13 @@ def submit_proposal(request, pk=None):
         else None
     )
     flow = TentativeFlow.objects.filter(proposal=proposal).first() if proposal else None
-    activities = (
-        list(proposal.activities.values("name", "date")) if proposal else []
-    )
+    activities = list(proposal.activities.values("name", "date")) if proposal else []
     for act in activities:
         if act.get("date"):
             act["date"] = act["date"].isoformat()
 
     speakers = (
-        [_serialize_speaker(sp) for sp in proposal.speakers.all()]
-        if proposal
-        else []
+        [_serialize_speaker(sp) for sp in proposal.speakers.all()] if proposal else []
     )
     expenses = (
         list(proposal.expense_details.values("sl_no", "particulars", "amount"))
@@ -695,6 +634,7 @@ def autosave_proposal(request):
     org_name_val = data.get("organization")
     if org_type_val and org_name_val and not str(org_name_val).isdigit():
         from core.models import Organization, OrganizationType
+
         org_type_obj = OrganizationType.objects.filter(name=org_type_val).first()
         if not org_type_obj:
             errors["organization_type"] = ["Organization type not found"]
@@ -1163,8 +1103,6 @@ def submit_cdl_support(request, proposal_id):
     return render(request, "emt/cdl_support.html", {"form": form, "proposal": proposal})
 
 
-
-
 # ──────────────────────────────
 # Event Management Suite Dashboard
 # ──────────────────────────────
@@ -1536,8 +1474,9 @@ def download_pdf(request, proposal_id):
     )
 
     # Create a simple PDF (using reportlab as example)
-    from reportlab.pdfgen import canvas
     from io import BytesIO
+
+    from reportlab.pdfgen import canvas
 
     buffer = BytesIO()
     p = canvas.Canvas(buffer)
@@ -1910,12 +1849,8 @@ def _parse_public_li(html: str):  # pragma: no cover
 @login_required
 def api_outcomes(request, org_id):
     """Return Program Outcomes and Program Specific Outcomes for an organization."""
-    from core.models import (
-        Program,
-        ProgramOutcome,
-        ProgramSpecificOutcome,
-        Organization,
-    )
+    from core.models import (Organization, Program, ProgramOutcome,
+                             ProgramSpecificOutcome)
 
     try:
         org = Organization.objects.get(id=org_id)
@@ -2154,9 +2089,7 @@ def submit_event_report(request, proposal_id):
         attachments_qs = (
             report.attachments.all() if report else EventReportAttachment.objects.none()
         )
-        formset = AttachmentFormSet(
-            post_data, request.FILES, queryset=attachments_qs
-        )
+        formset = AttachmentFormSet(post_data, request.FILES, queryset=attachments_qs)
         if (
             form.is_valid()
             and formset.is_valid()
@@ -2421,14 +2354,12 @@ def preview_event_report(request, proposal_id):
     need = getattr(proposal, "need_analysis", None)
     proposal_fields.append(
         (
-            "Rationale / \"Why is this event necessary?\"",
+            'Rationale / "Why is this event necessary?"',
             getattr(need, "content", "") or "—",
         )
     )
     objectives = getattr(proposal, "objectives", None)
-    proposal_fields.append(
-        ("Objectives", getattr(objectives, "content", "") or "—")
-    )
+    proposal_fields.append(("Objectives", getattr(objectives, "content", "") or "—"))
     outcomes = getattr(proposal, "expected_outcomes", None)
     proposal_fields.append(
         (
@@ -2439,22 +2370,26 @@ def preview_event_report(request, proposal_id):
 
     flow = getattr(proposal, "tentative_flow", None)
     if flow and flow.content:
-        lines = [
-            line.strip() for line in flow.content.splitlines() if line.strip()
-        ]
+        lines = [line.strip() for line in flow.content.splitlines() if line.strip()]
         for idx, line in enumerate(lines, 1):
             try:
                 dt_str, activity = line.split("||", 1)
             except ValueError:
                 dt_str, activity = line, ""
-            proposal_fields.append((f"Schedule Item {idx} – Date & Time", dt_str.strip()))
-            proposal_fields.append((f"Schedule Item {idx} – Activity", activity.strip()))
+            proposal_fields.append(
+                (f"Schedule Item {idx} - Date & Time", dt_str.strip())
+            )
+            proposal_fields.append(
+                (f"Schedule Item {idx} - Activity", activity.strip())
+            )
 
     # Include planned activities captured as structured rows on the proposal
     planned_activities = list(proposal.activities.all().order_by("date", "id"))
     for idx, act in enumerate(planned_activities, 1):
-        proposal_fields.append((f"Planned Activity {idx} – Name", act.name or "—"))
-        proposal_fields.append((f"Planned Activity {idx} – Date", getattr(act, "date", "") or "—"))
+        proposal_fields.append((f"Planned Activity {idx} - Name", act.name or "—"))
+        proposal_fields.append(
+            (f"Planned Activity {idx} - Date", getattr(act, "date", "") or "—")
+        )
 
     for idx, speaker in enumerate(proposal.speakers.all(), 1):
         proposal_fields.extend(
@@ -2508,14 +2443,17 @@ def preview_event_report(request, proposal_id):
 
     # Include dynamic activities submitted with the report
     import re as _re
+
     idx_pattern = _re.compile(r"^activity_(?:name|date)_(\d+)$")
-    indices = sorted({int(m.group(1)) for key in post_data.keys() if (m := idx_pattern.match(key))})
+    indices = sorted(
+        {int(m.group(1)) for key in post_data.keys() if (m := idx_pattern.match(key))}
+    )
     for idx in indices:
         a_name = post_data.get(f"activity_name_{idx}")
         a_date = post_data.get(f"activity_date_{idx}")
         if a_name or a_date:
-            report_fields.append((f"Activity {idx} – Name", a_name or "—"))
-            report_fields.append((f"Activity {idx} – Date", a_date or "—"))
+            report_fields.append((f"Activity {idx} - Name", a_name or "—"))
+            report_fields.append((f"Activity {idx} - Date", a_date or "—"))
 
     num_activities = post_data.get("num_activities")
     if num_activities:
@@ -2599,7 +2537,9 @@ def _group_attendance_rows(rows):
         return re.sub(r"\s+", "", (value or "").strip()).lower()
 
     reg_nos = [
-        (r.get("registration_no") or "").strip() for r in rows if r.get("registration_no")
+        (r.get("registration_no") or "").strip()
+        for r in rows
+        if r.get("registration_no")
     ]
 
     student_map = {
@@ -2610,11 +2550,9 @@ def _group_attendance_rows(rows):
     faculty_memberships: dict[str, dict[str, str]] = {}
 
     def _register_membership(member: OrganizationMembership) -> dict[str, str]:
-        organization_name = (
-            member.organization.name if member.organization else ""
-        )
+        organization_name = member.organization.name if member.organization else ""
         organization_name = (organization_name or "").strip()
-        display_name = (member.user.get_full_name() or member.user.username or "")
+        display_name = member.user.get_full_name() or member.user.username or ""
         display_name = display_name.strip()
         normalized_display = _normalise_identifier(display_name)
         membership_data = {
@@ -2637,11 +2575,9 @@ def _group_attendance_rows(rows):
 
     memberships = list(
         OrganizationMembership.objects.filter(
-            Q(user__username__in=reg_nos)
-            | Q(user__profile__register_no__in=reg_nos),
+            Q(user__username__in=reg_nos) | Q(user__profile__register_no__in=reg_nos),
             role="faculty",
-        )
-        .select_related("organization", "user__profile")
+        ).select_related("organization", "user__profile")
     )
 
     processed_membership_ids: set[int] = set()
@@ -2673,7 +2609,10 @@ def _group_attendance_rows(rows):
             normalized_display = _normalise_identifier(
                 membership.user.get_full_name() or membership.user.username or ""
             )
-            if not normalized_display or normalized_display not in missing_name_identifiers:
+            if (
+                not normalized_display
+                or normalized_display not in missing_name_identifiers
+            ):
                 continue
             processed_membership_ids.add(membership.pk)
             _register_membership(membership)
@@ -2719,9 +2658,7 @@ def _group_attendance_rows(rows):
                 row.get("affiliation")
                 or cls
                 or (
-                    membership_org
-                    if category == AttendanceRow.Category.FACULTY
-                    else ""
+                    membership_org if category == AttendanceRow.Category.FACULTY else ""
                 )
                 or "Guests"
             )
@@ -2759,9 +2696,9 @@ def _group_attendance_rows(rows):
             if membership_name:
                 name_matches_reg_no = False
                 if reg_no and full_name:
-                    name_matches_reg_no = (
-                        _normalise_identifier(full_name) == _normalise_identifier(reg_no)
-                    )
+                    name_matches_reg_no = _normalise_identifier(
+                        full_name
+                    ) == _normalise_identifier(reg_no)
                 if matched_by_name or not full_name or name_matches_reg_no:
                     full_name = membership_name
             if matched_by_name and label:
@@ -2891,16 +2828,20 @@ def graduate_attributes_save(request, report_id):
     report.needs_grad_attr_mapping = mapping_text
     # Optional: contemporary requirements and sdg text from editor page
     if "contemporary_requirements" in request.POST:
-        report.contemporary_requirements = request.POST.get("contemporary_requirements", "")
+        report.contemporary_requirements = request.POST.get(
+            "contemporary_requirements", ""
+        )
     if "sdg_value_systems_mapping" in request.POST:
-        report.sdg_value_systems_mapping = request.POST.get("sdg_value_systems_mapping", "")
+        report.sdg_value_systems_mapping = request.POST.get(
+            "sdg_value_systems_mapping", ""
+        )
     report.save()
 
     messages.success(request, "Graduate Attributes updated.")
     # Preserve return to Event Relevance section
     response = redirect("emt:submit_event_report", proposal_id=report.proposal.id)
     # Return to section 6 (event-relevance) and mark source as GA editor
-    response['Location'] += "?section=event-relevance&from=ga"
+    response["Location"] += "?section=event-relevance&from=ga"
     return response
 
 
@@ -2939,9 +2880,7 @@ def attendance_data(request, report_id):
         if norm
     }
     existing_names = {
-        norm
-        for norm in (_normalise_name(r.get("full_name")) for r in rows)
-        if norm
+        norm for norm in (_normalise_name(r.get("full_name")) for r in rows) if norm
     }
 
     def add_row_if_missing(row: dict) -> None:
@@ -2958,9 +2897,7 @@ def attendance_data(request, report_id):
             existing_names.add(name_norm)
 
     names = [
-        n.strip()
-        for n in (proposal.target_audience or "").split(",")
-        if n.strip()
+        n.strip() for n in (proposal.target_audience or "").split(",") if n.strip()
     ]
     if names:
         students = {
@@ -2968,7 +2905,8 @@ def attendance_data(request, report_id):
             for s in Student.objects.select_related("user")
         }
 
-        from core.models import Class  # local import to avoid circulars at module import time
+        from core.models import \
+            Class  # local import to avoid circulars at module import time
 
         def add_rows_for_class(cls_obj):
             for stu in cls_obj.students.select_related("user").all():
@@ -2998,12 +2936,18 @@ def attendance_data(request, report_id):
                 add_row_if_missing(
                     {
                         "registration_no": reg_no,
-                        "full_name": (student.user.get_full_name() or student.user.username).strip(),
-                        "student_class": (cls.code if cls and cls.code else (cls.name if cls else "")),
+                        "full_name": (
+                            student.user.get_full_name() or student.user.username
+                        ).strip(),
+                        "student_class": (
+                            cls.code if cls and cls.code else (cls.name if cls else "")
+                        ),
                         "absent": False,
                         "volunteer": False,
                         "category": AttendanceRow.Category.STUDENT,
-                        "affiliation": (cls.code if cls and cls.code else (cls.name if cls else "")),
+                        "affiliation": (
+                            cls.code if cls and cls.code else (cls.name if cls else "")
+                        ),
                     }
                 )
                 continue
@@ -3044,14 +2988,10 @@ def attendance_data(request, report_id):
                 }
             )
 
-    faculty_users = list(
-        proposal.faculty_incharges.all().select_related("profile")
-    )
+    faculty_users = list(proposal.faculty_incharges.all().select_related("profile"))
     for user in faculty_users:
         profile = getattr(user, "profile", None)
-        reg_no = (
-            (getattr(profile, "register_no", "") or user.username or "").strip()
-        )
+        reg_no = (getattr(profile, "register_no", "") or user.username or "").strip()
         full_name = (user.get_full_name() or user.username or "").strip()
         if not full_name and not reg_no:
             continue
@@ -3075,12 +3015,14 @@ def attendance_data(request, report_id):
     }
     student_groups, faculty_groups = _group_attendance_rows(rows)
     logger.info("Fetched attendance data for report %s", report_id)
-    return JsonResponse({
-        "rows": rows,
-        "counts": counts,
-        "students": student_groups,
-        "faculty": faculty_groups,
-    })
+    return JsonResponse(
+        {
+            "rows": rows,
+            "counts": counts,
+            "students": student_groups,
+            "faculty": faculty_groups,
+        }
+    )
 
 
 @login_required
@@ -3297,55 +3239,64 @@ def generate_ai_report(request):
             prompt = f"""
             You are an expert in academic event reporting for university IQAC documentation.
             Generate a detailed, formal, and highly structured IQAC-style event report using the following data.
-            **Follow the given format strictly**. Use professional, concise, academic language. Format all sections as shown, and fill any missing info sensibly if needed.
+            **Follow the given format strictly**. Use professional, concise,
+            academic language. Format all sections as shown, and fill any
+            missing info sensibly if needed.
 
             ---
             # EVENT INFORMATION
             | Field                 | Value                                |
             |----------------------|-------------------------------|
-            | Department           | {data.get('department','')} |
-            | Location             | {data.get('location','')} |
-            | Event Title          | {data.get('event_title','')} |
-            | No of Activities     | {data.get('no_of_activities','1')} |
-            | Date and Time        | {data.get('event_datetime','')} |
-            | Venue                | {data.get('venue','')} |
-            | Academic Year        | {data.get('academic_year','')} |
-            | Event Type (Focus)   | {data.get('event_focus_type','')} |
+            | Department           | {data.get('department', '')} |
+            | Location             | {data.get('location', '')} |
+            | Event Title          | {data.get('event_title', '')} |
+            | No of Activities     | {data.get('no_of_activities', '1')} |
+            | Date and Time        | {data.get('event_datetime', '')} |
+            | Venue                | {data.get('venue', '')} |
+            | Academic Year        | {data.get('academic_year', '')} |
+            | Event Type (Focus)   | {data.get('event_focus_type', '')} |
 
             # PARTICIPANTS INFORMATION
             | Field                   | Value                                |
             |-------------------------|----------------------------|
-            | Target Audience         | {data.get('target_audience','')} |
-            | Organising Committee    | {data.get('organising_committee_details','')} |
-            | No of Student Volunteers| {data.get('no_of_volunteers','')} |
-            | No of Attendees         | {data.get('no_of_attendees','')} |
+            | Target Audience         | {data.get('target_audience', '')} |
+            | Organising Committee    | {data.get('organising_committee_details', '')} |
+            | No of Student Volunteers| {data.get('no_of_volunteers', '')} |
+            | No of Attendees         | {data.get('no_of_attendees', '')} |
 
             # SUMMARY OF THE OVERALL EVENT
-            {data.get('summary','(Please write a 2–3 paragraph formal summary of the event. Cover objectives, flow, engagement, and outcomes.)')}
+            {data.get(
+                'summary',
+                (
+                    'Please write a 2-3 paragraph formal summary of the event. '
+                    'Cover objectives, flow, engagement, and outcomes.'
+                ),
+            )}
 
             # OUTCOMES OF THE EVENT
-            {data.get('outcomes','- List 3–5 major outcomes, in bullets.')}
+            {data.get('outcomes', '- List 3-5 major outcomes, in bullets.')}
 
             # ANALYSIS
-            - Impact on Attendees: {data.get('impact_on_attendees','')}
-            - Impact on Schools: {data.get('impact_on_schools','')}
-            - Impact on Volunteers: {data.get('impact_on_volunteers','')}
+            - Impact on Attendees: {data.get('impact_on_attendees', '')}
+            - Impact on Schools: {data.get('impact_on_schools', '')}
+            - Impact on Volunteers: {data.get('impact_on_volunteers', '')}
 
             # RELEVANCE OF THE EVENT
             | Criteria                | Description                         |
             |-------------------------|-----------------------------|
-            | Graduate Attributes     | {data.get('graduate_attributes','')} |
-            | Support to SDGs/Values  | {data.get('sdg_value_systems_mapping','')} |
+            | Graduate Attributes     | {data.get('graduate_attributes', '')} |
+            | Support to SDGs/Values  | {data.get('sdg_value_systems_mapping', '')} |
 
             # SUGGESTIONS FOR IMPROVEMENT / FEEDBACK FROM IQAC
-            {data.get('iqac_feedback','')}
+            {data.get('iqac_feedback', '')}
 
             # ATTACHMENTS/EVIDENCE
-            {data.get('attachments','- List any evidence (photos, worksheets, etc.) if available.')}
+            {data.get('attachments', '- List any evidence (photos, worksheets, etc.) if available.')}
 
             ---
 
-            ## Ensure the final output is clear, formal, and as per IQAC standards. DO NOT leave sections blank, fill with professional-sounding content if data is missing.
+            ## Ensure the final output is clear, formal, and as per IQAC standards.
+            ## DO NOT leave sections blank; fill with professional-sounding content if data is missing.
             """
 
             model = genai.GenerativeModel("models/gemini-1.5-pro-latest")
@@ -3391,8 +3342,6 @@ def ai_report_progress(request, proposal_id):
 @login_required
 def ai_report_partial(request, proposal_id):
     from .models import EventReport
-    import random
-    import time
 
     report = EventReport.objects.filter(proposal_id=proposal_id).first()
     if not report or not report.summary:
@@ -3409,34 +3358,8 @@ def generate_ai_report_stream(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id)
     report = EventReport.objects.get_or_create(proposal=proposal)[0]
     # Compose strict, flat prompt!
-    prompt = f"""
-You are an academic event reporting assistant. 
-Output an IQAC Event Report using the following fields, one per line, in the exact order, using **plain text** and a colon after each field name. Do NOT use Markdown or bullets, just FIELD: VALUE format. 
-If a value is missing, write "To be filled".
 
-Event Title: {proposal.event_title or "To be filled"}
-Date & Time: {proposal.event_datetime or "To be filled"}
-Venue: {proposal.venue or "To be filled"}
-Academic Year: {proposal.academic_year or "To be filled"}
-Focus / Objective: {getattr(proposal, 'event_focus_type', '') or "To be filled"}
-Target Audience: {getattr(proposal, 'target_audience', '') or "To be filled"}
-Organizing Department: {getattr(proposal, 'department', '') or "To be filled"}
-No. of Participants: To be filled
-
-Event Summary: [Write a concise, formal event summary.]
-Outcomes: [List 2-3 major outcomes.]
-Feedback & Suggestions: [Summarize participant feedback.]
-Recommendations: [Give 1-2 improvements.]
-Attachments: [List any supporting docs, if any.]
-
-Prepared by: AI Assistant
-Date of Submission: To be filled
-Approved by: To be filled
-
-Repeat: Output each field as FIELD: VALUE (colon required), one per line, nothing else. No Markdown, no formatting, no section headings, no empty lines.
-    """
-
-    model = genai.GenerativeModel("models/gemini-1.5-pro-latest")
+    genai.GenerativeModel("models/gemini-1.5-pro-latest")
 
     chunks = [
         f"# Event Report: {proposal.event_title}\n\n",
@@ -3480,7 +3403,8 @@ def ai_report_edit(request, proposal_id):
 
         # Construct a new prompt for the AI
         ai_prompt = f"""
-        Please regenerate the IQAC Event Report as before, but follow these special user instructions: 
+        Please regenerate the IQAC Event Report as before,
+        but follow these special user instructions:
         ---
         {instructions}
         ---
@@ -3592,7 +3516,7 @@ def _basic_info_context(data):
     return "\n".join(parts)[:3000]
 
 
-NEED_PROMPT = "Write a concise, factual Need Analysis (80–140 words) for the event."
+NEED_PROMPT = "Write a concise, factual Need Analysis (80-140 words) for the event."
 OBJ_PROMPT = "Provide 3-5 clear objectives for the event as bullet points."
 OUT_PROMPT = "List 3-5 expected learning outcomes for participants as bullet points."
 

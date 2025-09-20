@@ -1,25 +1,30 @@
 import logging
-from typing import List, Dict, Optional
+import os
+from typing import Dict, List, Optional
 
 import requests
 from django.conf import settings as django_settings
-import os
 
 logger = logging.getLogger(__name__)
 
 
 class AIError(Exception):
     """Raised when the Ollama backend fails."""
-    pass
 
 
-def chat(messages: List[Dict[str, str]], system: Optional[str] = None,
-         model: Optional[str] = None, settings=django_settings) -> str:
+def chat(
+    messages: List[Dict[str, str]],
+    system: Optional[str] = None,
+    model: Optional[str] = None,
+    settings=django_settings,
+) -> str:
     """Send a chat completion request to the configured Ollama backend."""
     base = getattr(settings, "OLLAMA_BASE", os.getenv("OLLAMA_BASE"))
     if not base:
         raise AIError("OLLAMA_BASE not configured")
-    timeout = getattr(settings, "AI_HTTP_TIMEOUT", int(os.getenv("AI_HTTP_TIMEOUT", 120)))
+    timeout = getattr(
+        settings, "AI_HTTP_TIMEOUT", int(os.getenv("AI_HTTP_TIMEOUT", 120))
+    )
     model_name = model or getattr(settings, "OLLAMA_MODEL", os.getenv("OLLAMA_MODEL"))
     if not model_name:
         raise AIError("OLLAMA_MODEL not configured")

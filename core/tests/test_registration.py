@@ -1,7 +1,8 @@
-from django.test import TestCase
 from django.contrib.auth.models import User
+from django.test import TestCase
 from django.urls import reverse
-from core.models import OrganizationType, Organization, OrganizationRole
+
+from core.models import Organization, OrganizationRole, OrganizationType
 
 
 class RegistrationAccessTests(TestCase):
@@ -40,9 +41,7 @@ class RegistrationAPITests(TestCase):
         self.assertEqual(data[0]["text"], self.org.name)
 
     def test_api_roles_accessible(self):
-        response = self.client.get(
-            reverse("api_roles"), {"organization": self.org.id}
-        )
+        response = self.client.get(reverse("api_roles"), {"organization": self.org.id})
         self.assertEqual(response.status_code, 200)
         data = response.json()["roles"]
         self.assertEqual(len(data), 1)

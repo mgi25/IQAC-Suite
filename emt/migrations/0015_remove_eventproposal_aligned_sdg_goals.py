@@ -4,13 +4,13 @@ from django.db import migrations
 
 
 def copy_aligned_sdg_goals(apps, schema_editor):
-    EventProposal = apps.get_model('emt', 'EventProposal')
-    SDGGoal = apps.get_model('core', 'SDGGoal')
+    EventProposal = apps.get_model("emt", "EventProposal")
+    SDGGoal = apps.get_model("core", "SDGGoal")
     for proposal in EventProposal.objects.all():
-        text = getattr(proposal, 'aligned_sdg_goals', '')
+        text = getattr(proposal, "aligned_sdg_goals", "")
         if not text:
             continue
-        names = [name.strip() for name in text.split(',') if name.strip()]
+        names = [name.strip() for name in text.split(",") if name.strip()]
         for name in names:
             goal = SDGGoal.objects.filter(name__iexact=name).first()
             if goal:

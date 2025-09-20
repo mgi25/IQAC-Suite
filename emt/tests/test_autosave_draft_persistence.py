@@ -1,10 +1,12 @@
-from django.test import TestCase
-from django.urls import reverse
-from django.contrib.auth.models import User
 import json
 
+from django.contrib.auth.models import User
+from django.test import TestCase
+from django.urls import reverse
+
+from core.models import (Organization, OrganizationRole, OrganizationType,
+                         RoleAssignment)
 from emt.models import EventProposal
-from core.models import OrganizationType, Organization, OrganizationRole, RoleAssignment
 
 
 class AutosaveDraftPersistenceTests(TestCase):
@@ -171,7 +173,8 @@ class AutosaveDraftPersistenceTests(TestCase):
         future_error_keys_map = {"speakers": ["expenses", "income"]}
         ignore = future_error_keys_map["speakers"]
         relevant = {
-            k: v for k, v in data["errors"].items()
+            k: v
+            for k, v in data["errors"].items()
             if not any(k == key or k.startswith(f"{key}.") for key in ignore)
         }
         self.assertEqual(relevant, {})

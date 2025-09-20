@@ -1,11 +1,9 @@
 import io
+
 from django.test import SimpleTestCase
-from emt.utils import (
-    parse_attendance_csv,
-    STUDENT_ATTENDANCE_HEADERS,
-    FACULTY_ATTENDANCE_HEADERS,
-    COMBINED_ATTENDANCE_HEADERS,
-)
+
+from emt.utils import (COMBINED_ATTENDANCE_HEADERS, FACULTY_ATTENDANCE_HEADERS,
+                       STUDENT_ATTENDANCE_HEADERS, parse_attendance_csv)
 
 
 class AttendanceParserTests(SimpleTestCase):

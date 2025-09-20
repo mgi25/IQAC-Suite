@@ -1,6 +1,5 @@
 import csv
 import io
-import re
 
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
@@ -9,18 +8,13 @@ from django.db import transaction
 from django.db.models import Count
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-
-from core.models import (
-    Organization,
-    OrganizationMembership,
-    Profile,
-    Class,
-    OrganizationRole,
-    RoleAssignment,
-)
-from emt.models import Student as EmtStudent
-from .forms import OrgUsersCSVUploadForm
 from django.urls import reverse
+
+from core.models import (Class, Organization, OrganizationMembership,
+                         OrganizationRole, Profile, RoleAssignment)
+from emt.models import Student as EmtStudent
+
+from .forms import OrgUsersCSVUploadForm
 
 VALID_ROLES = {
     "student": "student",
@@ -44,6 +38,7 @@ def _split_name(fullname: str):
         return parts[0], ""
     return " ".join(parts[:-1]), parts[-1]
 
+
 @user_passes_test(lambda u: u.is_superuser)
 def entrypoint(request):
     return render(request, "core_admin_org_users/entrypoint.html")
@@ -56,7 +51,7 @@ def select_role(request, org_id):
     Replaces the old role selection with a comprehensive management page.
     """
     org = get_object_or_404(Organization, pk=org_id)
-    
+
     # Handle direct POST requests from old form submissions for backward compatibility
     if request.method == "POST":
         role = request.POST.get("role")
@@ -64,7 +59,7 @@ def select_role(request, org_id):
             return redirect("admin_org_users_students", org_id=org.id)
         if role == "faculty":
             return redirect("admin_org_users_faculty", org_id=org.id)
-    
+
     # Return the new unified interface
     return render(request, "core_admin_org_users/user_management.html", {"org": org})
 
@@ -269,9 +264,11 @@ def upload_csv(request, org_id):
                     " Please create it first.",
                 )
                 return redirect(
-                    "admin_org_users_faculty"
-                    if is_faculty
-                    else "admin_org_users_students",
+                    (
+                        "admin_org_users_faculty"
+                        if is_faculty
+                        else "admin_org_users_students"
+                    ),
                     org_id=org.id,
                 )
 
@@ -348,9 +345,9 @@ def upload_csv(request, org_id):
                     mem.save(update_fields=fields_to_update)
                     memberships_updated += 1
 
-            RoleAssignment.objects.filter(
-                user=user, organization=org
-            ).exclude(role=org_role).delete()
+            RoleAssignment.objects.filter(user=user, organization=org).exclude(
+                role=org_role
+            ).delete()
             RoleAssignment.objects.update_or_create(
                 user=user,
                 organization=org,
@@ -372,13 +369,18 @@ def upload_csv(request, org_id):
     if errors:
         messages.warning(
             request,
-            "Some rows were skipped:\n" + "\n".join(errors[:8]) + ("" if len(errors) <= 8 else f"\n(+{len(errors) - 8} more)"),
+            "Some rows were skipped:\n"
+            + "\n".join(errors[:8])
+            + ("" if len(errors) <= 8 else f"\n(+{len(errors) - 8} more)"),
         )
     if is_faculty:
         messages.success(
             request,
-            f"CSV processed for {org.name} ({ay}). Users created: {users_created}, Users updated: {users_updated}, "
-            f"Memberships created: {memberships_created}, Memberships updated: {memberships_updated}, Skipped: {skipped}.",
+            (
+                f"CSV processed for {org.name} ({ay}). Users created: {users_created}, "
+                f"Users updated: {users_updated}, Memberships created: {memberships_created}, "
+                f"Memberships updated: {memberships_updated}, Skipped: {skipped}."
+            ),
         )
         return redirect("admin_org_users_faculty", org_id=org.id)
 
@@ -441,7 +443,9 @@ def csv_template(request, org_id):
     field = "emp_id" if role == "faculty" else "register_no"
 
     response = HttpResponse(content_type="text/csv")
-    response["Content-Disposition"] = f'attachment; filename="org_{org.id}_bulk_upload_template.csv"'
+    response["Content-Disposition"] = (
+        f'attachment; filename="org_{org.id}_bulk_upload_template.csv"'
+    )
     writer = csv.writer(response)
     writer.writerow([field, "name", "email", "role"])
     sample_id = "EMP001" if field == "emp_id" else "24DS001"
@@ -461,4 +465,3 @@ def fetch_by_type(request, type_id):
     orgs = Organization.objects.filter(org_type_id=type_id).order_by("name")
     data = [{"id": o.id, "name": o.name, "code": o.code} for o in orgs]
     return JsonResponse(data, safe=False)
-

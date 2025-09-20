@@ -7,18 +7,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0015_auto_20250725_1530'),
+        ("core", "0015_auto_20250725_1530"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='organizationrole',
-            name='description',
+            model_name="organizationrole",
+            name="description",
             field=models.TextField(blank=True, null=True),
         ),
         migrations.AlterField(
-            model_name='organizationrole',
-            name='organization',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.organization'),
+            model_name="organizationrole",
+            name="organization",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, to="core.organization"
+            ),
         ),
     ]

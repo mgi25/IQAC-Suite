@@ -1,8 +1,9 @@
 from django.db import migrations
 
+
 def migrate_role_strings_to_fk(apps, schema_editor):
-    RoleAssignment = apps.get_model('core', 'RoleAssignment')
-    OrganizationRole = apps.get_model('core', 'OrganizationRole')
+    RoleAssignment = apps.get_model("core", "RoleAssignment")
+    OrganizationRole = apps.get_model("core", "OrganizationRole")
 
     for ra in RoleAssignment.objects.all():
         # If you previously had a string role, try to match it to an OrganizationRole by name/org
@@ -16,10 +17,11 @@ def migrate_role_strings_to_fk(apps, schema_editor):
                 ra.save()
             # Optionally: create missing roles if not found, or log a warning
 
+
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0014_alter_roleassignment_role'),
+        ("core", "0014_alter_roleassignment_role"),
     ]
 
     operations = [

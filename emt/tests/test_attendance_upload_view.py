@@ -10,7 +10,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from core.models import Organization, OrganizationType
-from core.signals import create_or_update_user_profile, assign_role_on_login
+from core.signals import assign_role_on_login, create_or_update_user_profile
 from emt.models import AttendanceRow, EventProposal, EventReport
 
 

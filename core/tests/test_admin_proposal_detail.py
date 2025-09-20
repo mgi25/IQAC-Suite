@@ -1,16 +1,11 @@
 from decimal import Decimal
-from django.test import TestCase
+
 from django.contrib.auth.models import User
+from django.test import TestCase
 from django.urls import reverse
 
-from emt.models import (
-    EventProposal,
-    EventNeedAnalysis,
-    EventObjectives,
-    TentativeFlow,
-    SpeakerProfile,
-    ExpenseDetail,
-)
+from emt.models import (EventNeedAnalysis, EventObjectives, EventProposal,
+                        ExpenseDetail, SpeakerProfile, TentativeFlow)
 
 
 class AdminProposalDetailViewTests(TestCase):
@@ -36,9 +31,7 @@ class AdminProposalDetailViewTests(TestCase):
         EventObjectives.objects.create(
             proposal=self.proposal, content="Objectives content"
         )
-        TentativeFlow.objects.create(
-            proposal=self.proposal, content="Flow content"
-        )
+        TentativeFlow.objects.create(proposal=self.proposal, content="Flow content")
         SpeakerProfile.objects.create(
             proposal=self.proposal,
             full_name="John Speaker",

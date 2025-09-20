@@ -1,44 +1,27 @@
-from django.test import TestCase, Client
-from django.urls import reverse
-from django.contrib.auth.models import User
-from django import forms
-from django.core.files.uploadedfile import SimpleUploadedFile
-
-from emt.models import (
-    ApprovalStep,
-    EventProposal,
-    Student,
-    IncomeDetail,
-    EventNeedAnalysis,
-    EventObjectives,
-    EventExpectedOutcomes,
-    TentativeFlow,
-)
-from emt.utils import (
-    build_approval_chain,
-    auto_approve_non_optional_duplicates,
-    unlock_optionals_after,
-    skip_all_downstream_optionals,
-)
-from emt.forms import EventProposalForm
-from core.models import (
-    OrganizationType,
-    Organization,
-    OrganizationRole,
-    RoleAssignment,
-    Program,
-    ProgramOutcome,
-    ProgramSpecificOutcome,
-    ApprovalFlowTemplate,
-    ApprovalFlowConfig,
-    SDG_GOALS,
-    SDGGoal,
-    OrganizationMembership,
-)
 import json
-from unittest.mock import patch
-from decimal import Decimal
 from datetime import date
+from decimal import Decimal
+from unittest.mock import patch
+
+from django import forms
+from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import Client, TestCase
+from django.urls import reverse
+
+from core.models import (SDG_GOALS, ApprovalFlowConfig, ApprovalFlowTemplate,
+                         Organization, OrganizationMembership,
+                         OrganizationRole, OrganizationType, Program,
+                         ProgramOutcome, ProgramSpecificOutcome,
+                         RoleAssignment, SDGGoal)
+from emt.forms import EventProposalForm
+from emt.models import (ApprovalStep, EventExpectedOutcomes, EventNeedAnalysis,
+                        EventObjectives, EventProposal, IncomeDetail, Student,
+                        TentativeFlow)
+from emt.utils import (auto_approve_non_optional_duplicates,
+                       build_approval_chain, skip_all_downstream_optionals,
+                       unlock_optionals_after)
+
 
 class FacultyAPITests(TestCase):
     def setUp(self):
@@ -62,9 +45,7 @@ class FacultyAPITests(TestCase):
         RoleAssignment.objects.create(
             user=self.user2, role=self.faculty_incharge_role, organization=self.org
         )
-        self.admin = User.objects.create_superuser(
-            "admin", "admin@example.com", "pass"
-        )
+        self.admin = User.objects.create_superuser("admin", "admin@example.com", "pass")
         self.client.force_login(self.admin)
 
     def test_api_faculty_returns_faculty_like_roles(self):
@@ -74,7 +55,6 @@ class FacultyAPITests(TestCase):
         ids = {item["id"] for item in data}
         self.assertIn(self.user1.id, ids)
         self.assertIn(self.user2.id, ids)
-
 
     def test_api_faculty_matches_capitalized_roles(self):
         user4 = User.objects.create(
@@ -205,13 +185,13 @@ class OutcomesAPITests(TestCase):
         self.org = Organization.objects.create(name="Science", org_type=self.ot)
         program = Program.objects.create(name="Prog", organization=self.org)
         self.po = ProgramOutcome.objects.create(program=program, description="PO1")
-        self.pso = ProgramSpecificOutcome.objects.create(program=program, description="PSO1")
+        self.pso = ProgramSpecificOutcome.objects.create(
+            program=program, description="PSO1"
+        )
         self.user = User.objects.create(username="user")
         RoleAssignment.objects.create(
             user=self.user,
-            role=OrganizationRole.objects.create(
-                organization=self.org, name="Member"
-            ),
+            role=OrganizationRole.objects.create(organization=self.org, name="Member"),
             organization=self.org,
         )
         self.client.force_login(self.user)
@@ -275,7 +255,9 @@ class AutosaveProposalTests(TestCase):
 
         post_data = self._payload()
         post_data["final_submit"] = "1"
-        resp2 = self.client.post(reverse("emt:submit_proposal_with_pk", args=[pid]), post_data)
+        resp2 = self.client.post(
+            reverse("emt:submit_proposal_with_pk", args=[pid]), post_data
+        )
         self.assertEqual(resp2.status_code, 302)
         proposal.refresh_from_db()
         ids_after = set(proposal.faculty_incharges.values_list("id", flat=True))
@@ -314,11 +296,13 @@ class AutosaveProposalTests(TestCase):
 
     def test_autosave_saves_activity_fields(self):
         payload = self._payload()
-        payload.update({
-            "num_activities": "1",
-            "activity_name_1": "Orientation",
-            "activity_date_1": "2025-05-01",
-        })
+        payload.update(
+            {
+                "num_activities": "1",
+                "activity_name_1": "Orientation",
+                "activity_date_1": "2025-05-01",
+            }
+        )
         resp = self.client.post(
             reverse("emt:autosave_proposal"),
             data=json.dumps(payload),
@@ -343,10 +327,12 @@ class AutosaveProposalTests(TestCase):
 
     def test_autosave_income_optional_fields(self):
         payload = self._payload()
-        payload.update({
-            "income_particulars_0": "Registration Fees",
-            "income_amount_0": "5000",
-        })
+        payload.update(
+            {
+                "income_particulars_0": "Registration Fees",
+                "income_amount_0": "5000",
+            }
+        )
         resp = self.client.post(
             reverse("emt:autosave_proposal"),
             data=json.dumps(payload),
@@ -382,10 +368,7 @@ class AutosaveProposalTests(TestCase):
 
     def test_autosave_activity_missing_fields(self):
         payload = self._payload()
-        payload.update({
-            "num_activities": "1",
-            "activity_name_1": "Orientation"
-        })
+        payload.update({"num_activities": "1", "activity_name_1": "Orientation"})
         resp = self.client.post(
             reverse("emt:autosave_proposal"),
             data=json.dumps(payload),
@@ -414,13 +397,15 @@ class AutosaveProposalTests(TestCase):
 
     def test_autosave_speaker_invalid_name(self):
         payload = self._payload()
-        payload.update({
-            "speaker_full_name_0": "1234",
-            "speaker_designation_0": "Prof",
-            "speaker_affiliation_0": "Uni",
-            "speaker_contact_email_0": "a@b.com",
-            "speaker_detailed_profile_0": "Profile",
-        })
+        payload.update(
+            {
+                "speaker_full_name_0": "1234",
+                "speaker_designation_0": "Prof",
+                "speaker_affiliation_0": "Uni",
+                "speaker_contact_email_0": "a@b.com",
+                "speaker_detailed_profile_0": "Profile",
+            }
+        )
         resp = self.client.post(
             reverse("emt:autosave_proposal"),
             data=json.dumps(payload),
@@ -465,14 +450,18 @@ class AutosaveProposalTests(TestCase):
 
     def test_autosave_with_file_upload(self):
         payload = self._payload()
-        payload.update({
-            "speaker_full_name_0": "Dr. Jane",
-            "speaker_designation_0": "Prof",
-            "speaker_affiliation_0": "Uni",
-            "speaker_contact_email_0": "a@b.com",
-            "speaker_detailed_profile_0": "Profile",
-        })
-        payload["speaker_photo_0"] = SimpleUploadedFile("photo.jpg", b"file", content_type="image/jpeg")
+        payload.update(
+            {
+                "speaker_full_name_0": "Dr. Jane",
+                "speaker_designation_0": "Prof",
+                "speaker_affiliation_0": "Uni",
+                "speaker_contact_email_0": "a@b.com",
+                "speaker_detailed_profile_0": "Profile",
+            }
+        )
+        payload["speaker_photo_0"] = SimpleUploadedFile(
+            "photo.jpg", b"file", content_type="image/jpeg"
+        )
         resp = self.client.post(reverse("emt:autosave_proposal"), data=payload)
         self.assertEqual(resp.status_code, 200)
         pid = resp.json()["proposal_id"]
@@ -490,17 +479,19 @@ class AutosaveProposalTests(TestCase):
             user=high_faculty, role=self.faculty_role, organization=self.org
         )
         payload = self._payload()
-        payload.update({
-            "faculty_incharges": [str(high_faculty.id)],
-            "num_activities": "1",
-            "activity_name_1": "Session",
-            "activity_date_1": "2025-06-01",
-            "speaker_full_name_0": "Dr. Jane",
-            "speaker_designation_0": "Prof",
-            "speaker_affiliation_0": "Uni",
-            "speaker_contact_email_0": "a@b.com",
-            "speaker_detailed_profile_0": "Profile",
-        })
+        payload.update(
+            {
+                "faculty_incharges": [str(high_faculty.id)],
+                "num_activities": "1",
+                "activity_name_1": "Session",
+                "activity_date_1": "2025-06-01",
+                "speaker_full_name_0": "Dr. Jane",
+                "speaker_designation_0": "Prof",
+                "speaker_affiliation_0": "Uni",
+                "speaker_contact_email_0": "a@b.com",
+                "speaker_detailed_profile_0": "Profile",
+            }
+        )
         payload["speaker_photo_0"] = SimpleUploadedFile(
             "photo.jpg", b"file", content_type="image/jpeg"
         )
@@ -605,9 +596,7 @@ class AutosaveProposalTests(TestCase):
         data = resp2.json()
         self.assertTrue(data.get("success"))
         self.assertEqual(data.get("proposal_id"), pid)
-        self.assertEqual(
-            EventNeedAnalysis.objects.get(proposal_id=pid).content, "Need"
-        )
+        self.assertEqual(EventNeedAnalysis.objects.get(proposal_id=pid).content, "Need")
         self.assertEqual(
             EventObjectives.objects.get(proposal_id=pid).content, "Objectives"
         )
@@ -680,9 +669,7 @@ class EventApprovalsNavTests(TestCase):
         fac_role = OrganizationRole.objects.create(
             organization=org, name=ApprovalStep.Role.FACULTY.value
         )
-        student_role = OrganizationRole.objects.create(
-            organization=org, name="Student"
-        )
+        student_role = OrganizationRole.objects.create(organization=org, name="Student")
         RoleAssignment.objects.create(
             user=self.faculty, role=fac_role, organization=org
         )
@@ -776,7 +763,9 @@ class ApprovalLogicTests(TestCase):
         hod = User.objects.create_user("hod", password="pass")
         director = User.objects.create_user("director", password="pass")
         RoleAssignment.objects.create(user=hod, role=hod_role, organization=org)
-        RoleAssignment.objects.create(user=director, role=director_role, organization=org)
+        RoleAssignment.objects.create(
+            user=director, role=director_role, organization=org
+        )
 
         ApprovalFlowTemplate.objects.create(
             organization=org,
@@ -873,7 +862,7 @@ class ForwardingFlowTests(TestCase):
 
     def test_auto_approve_duplicate_non_optional(self):
         proposal = self._create_proposal()
-        step1 = ApprovalStep.objects.create(
+        _ = ApprovalStep.objects.create(
             proposal=proposal,
             step_order=1,
             order_index=1,

@@ -1,9 +1,10 @@
-from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand
 
 
 class Command(BaseCommand):
     """Delete all user accounts."""
+
     help = "Remove all users from the database. Use with caution."
 
     def handle(self, *args, **options):

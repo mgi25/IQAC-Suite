@@ -98,9 +98,7 @@ class SpeakerApiTests(TestCase):
     def test_upload_new_photo(self):
         self.client.force_login(self.submitter)
         payload = self._payload()
-        new_photo = SimpleUploadedFile(
-            "new.jpg", b"newfile", content_type="image/jpeg"
-        )
+        new_photo = SimpleUploadedFile("new.jpg", b"newfile", content_type="image/jpeg")
         payload["photo"] = new_photo
         response = self.client.post(self.url, payload)
         self.assertEqual(response.status_code, 200)

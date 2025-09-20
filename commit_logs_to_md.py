@@ -4,9 +4,9 @@ from pathlib import Path
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=(
-        "Convert commit log file into grouped markdown file."
-    ))
+    parser = argparse.ArgumentParser(
+        description=("Convert commit log file into grouped markdown file.")
+    )
     parser.add_argument(
         "input",
         type=Path,

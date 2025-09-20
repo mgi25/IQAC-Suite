@@ -1,5 +1,6 @@
 from django.test import SimpleTestCase
 
+
 class CommitteesCollaborationsDuplicateTests(SimpleTestCase):
     def dedup(self, names, ids):
         seen = set()
@@ -14,8 +15,8 @@ class CommitteesCollaborationsDuplicateTests(SimpleTestCase):
         return uniq_names, uniq_ids
 
     def test_dedup_case_insensitive(self):
-        names = ['Org A', 'org a', 'Org B', 'ORG B']
-        ids = ['1', '2', '3', '3']
+        names = ["Org A", "org a", "Org B", "ORG B"]
+        ids = ["1", "2", "3", "3"]
         uniq_names, uniq_ids = self.dedup(names, ids)
-        self.assertEqual(uniq_names, ['Org A', 'Org B'])
-        self.assertEqual(uniq_ids, ['1', '3'])
+        self.assertEqual(uniq_names, ["Org A", "Org B"])
+        self.assertEqual(uniq_ids, ["1", "3"])

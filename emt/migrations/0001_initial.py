@@ -11,169 +11,513 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('core', '0001_initial'),
+        ("core", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='EventProposal',
+            name="EventProposal",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('needs_finance_approval', models.BooleanField(default=False, help_text='Check if this event needs finance approval')),
-                ('is_big_event', models.BooleanField(default=False, help_text='Check if this is a big event (Dean sign-off needed)')),
-                ('committees', models.TextField(blank=True)),
-                ('event_title', models.CharField(blank=True, max_length=200)),
-                ('num_activities', models.PositiveIntegerField(blank=True, null=True)),
-                ('event_datetime', models.DateTimeField(blank=True, null=True)),
-                ('venue', models.CharField(blank=True, max_length=200)),
-                ('academic_year', models.CharField(blank=True, max_length=20)),
-                ('target_audience', models.CharField(blank=True, max_length=200)),
-                ('student_coordinators', models.TextField(blank=True)),
-                ('event_focus_type', models.CharField(blank=True, max_length=200)),
-                ('report_generated', models.BooleanField(default=False)),
-                ('fest_fee_participants', models.PositiveIntegerField(blank=True, null=True)),
-                ('fest_fee_rate', models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True)),
-                ('fest_fee_amount', models.DecimalField(blank=True, decimal_places=2, max_digits=12, null=True)),
-                ('fest_sponsorship_amount', models.DecimalField(blank=True, decimal_places=2, max_digits=12, null=True)),
-                ('conf_fee_participants', models.PositiveIntegerField(blank=True, null=True)),
-                ('conf_fee_rate', models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True)),
-                ('conf_fee_amount', models.DecimalField(blank=True, decimal_places=2, max_digits=12, null=True)),
-                ('conf_sponsorship_amount', models.DecimalField(blank=True, decimal_places=2, max_digits=12, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('status', models.CharField(choices=[('draft', 'Draft'), ('submitted', 'Submitted'), ('under_review', 'Under Review'), ('waiting', 'Waiting'), ('approved', 'Approved'), ('rejected', 'Rejected'), ('returned', 'Returned for Revision'), ('finalized', 'Finalized')], default='draft', max_length=20)),
-                ('association', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='proposals', to='core.association')),
-                ('cell', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='proposals', to='core.cell')),
-                ('center', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='proposals', to='core.center')),
-                ('club', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='proposals', to='core.club')),
-                ('department', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='proposals', to='core.department')),
-                ('faculty_incharges', models.ManyToManyField(blank=True, related_name='faculty_incharge_proposals', to=settings.AUTH_USER_MODEL)),
-                ('submitted_by', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='emt_eventproposals', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "needs_finance_approval",
+                    models.BooleanField(
+                        default=False,
+                        help_text="Check if this event needs finance approval",
+                    ),
+                ),
+                (
+                    "is_big_event",
+                    models.BooleanField(
+                        default=False,
+                        help_text="Check if this is a big event (Dean sign-off needed)",
+                    ),
+                ),
+                ("committees", models.TextField(blank=True)),
+                ("event_title", models.CharField(blank=True, max_length=200)),
+                ("num_activities", models.PositiveIntegerField(blank=True, null=True)),
+                ("event_datetime", models.DateTimeField(blank=True, null=True)),
+                ("venue", models.CharField(blank=True, max_length=200)),
+                ("academic_year", models.CharField(blank=True, max_length=20)),
+                ("target_audience", models.CharField(blank=True, max_length=200)),
+                ("student_coordinators", models.TextField(blank=True)),
+                ("event_focus_type", models.CharField(blank=True, max_length=200)),
+                ("report_generated", models.BooleanField(default=False)),
+                (
+                    "fest_fee_participants",
+                    models.PositiveIntegerField(blank=True, null=True),
+                ),
+                (
+                    "fest_fee_rate",
+                    models.DecimalField(
+                        blank=True, decimal_places=2, max_digits=10, null=True
+                    ),
+                ),
+                (
+                    "fest_fee_amount",
+                    models.DecimalField(
+                        blank=True, decimal_places=2, max_digits=12, null=True
+                    ),
+                ),
+                (
+                    "fest_sponsorship_amount",
+                    models.DecimalField(
+                        blank=True, decimal_places=2, max_digits=12, null=True
+                    ),
+                ),
+                (
+                    "conf_fee_participants",
+                    models.PositiveIntegerField(blank=True, null=True),
+                ),
+                (
+                    "conf_fee_rate",
+                    models.DecimalField(
+                        blank=True, decimal_places=2, max_digits=10, null=True
+                    ),
+                ),
+                (
+                    "conf_fee_amount",
+                    models.DecimalField(
+                        blank=True, decimal_places=2, max_digits=12, null=True
+                    ),
+                ),
+                (
+                    "conf_sponsorship_amount",
+                    models.DecimalField(
+                        blank=True, decimal_places=2, max_digits=12, null=True
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("draft", "Draft"),
+                            ("submitted", "Submitted"),
+                            ("under_review", "Under Review"),
+                            ("waiting", "Waiting"),
+                            ("approved", "Approved"),
+                            ("rejected", "Rejected"),
+                            ("returned", "Returned for Revision"),
+                            ("finalized", "Finalized"),
+                        ],
+                        default="draft",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "association",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="proposals",
+                        to="core.association",
+                    ),
+                ),
+                (
+                    "cell",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="proposals",
+                        to="core.cell",
+                    ),
+                ),
+                (
+                    "center",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="proposals",
+                        to="core.center",
+                    ),
+                ),
+                (
+                    "club",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="proposals",
+                        to="core.club",
+                    ),
+                ),
+                (
+                    "department",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="proposals",
+                        to="core.department",
+                    ),
+                ),
+                (
+                    "faculty_incharges",
+                    models.ManyToManyField(
+                        blank=True,
+                        related_name="faculty_incharge_proposals",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "submitted_by",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="emt_eventproposals",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='EventObjectives',
+            name="EventObjectives",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('content', models.TextField()),
-                ('proposal', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='emt.eventproposal')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("content", models.TextField()),
+                (
+                    "proposal",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="emt.eventproposal",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='EventNeedAnalysis',
+            name="EventNeedAnalysis",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('content', models.TextField()),
-                ('proposal', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='emt.eventproposal')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("content", models.TextField()),
+                (
+                    "proposal",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="emt.eventproposal",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='EventExpectedOutcomes',
+            name="EventExpectedOutcomes",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('content', models.TextField()),
-                ('proposal', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='emt.eventproposal')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("content", models.TextField()),
+                (
+                    "proposal",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="emt.eventproposal",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='ApprovalStep',
+            name="ApprovalStep",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('step_order', models.PositiveIntegerField(blank=True, null=True)),
-                ('role_required', models.CharField(blank=True, help_text='Role needed: e.g., faculty, dept_iqac, hod, director, dean', max_length=50, null=True)),
-                ('approved_at', models.DateTimeField(blank=True, null=True)),
-                ('status', models.CharField(choices=[('pending', 'Pending'), ('approved', 'Approved'), ('rejected', 'Rejected'), ('skipped', 'Skipped')], default='pending', max_length=20)),
-                ('comment', models.TextField(blank=True)),
-                ('approved_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='completed_approvals', to=settings.AUTH_USER_MODEL)),
-                ('assigned_to', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='assigned_approvals', to=settings.AUTH_USER_MODEL)),
-                ('proposal', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='approval_steps', to='emt.eventproposal')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("step_order", models.PositiveIntegerField(blank=True, null=True)),
+                (
+                    "role_required",
+                    models.CharField(
+                        blank=True,
+                        help_text="Role needed: e.g., faculty, dept_iqac, hod, director, dean",
+                        max_length=50,
+                        null=True,
+                    ),
+                ),
+                ("approved_at", models.DateTimeField(blank=True, null=True)),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("pending", "Pending"),
+                            ("approved", "Approved"),
+                            ("rejected", "Rejected"),
+                            ("skipped", "Skipped"),
+                        ],
+                        default="pending",
+                        max_length=20,
+                    ),
+                ),
+                ("comment", models.TextField(blank=True)),
+                (
+                    "approved_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="completed_approvals",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "assigned_to",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="assigned_approvals",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "proposal",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="approval_steps",
+                        to="emt.eventproposal",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['step_order'],
+                "ordering": ["step_order"],
             },
         ),
         migrations.CreateModel(
-            name='EventReport',
+            name="EventReport",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('location', models.CharField(blank=True, max_length=200)),
-                ('blog_link', models.URLField(blank=True)),
-                ('num_student_volunteers', models.PositiveIntegerField(blank=True, null=True)),
-                ('num_participants', models.PositiveIntegerField(blank=True, null=True)),
-                ('external_contact_details', models.TextField(blank=True)),
-                ('summary', models.TextField(blank=True)),
-                ('outcomes', models.TextField(blank=True)),
-                ('impact_on_stakeholders', models.TextField(blank=True)),
-                ('innovations_best_practices', models.TextField(blank=True)),
-                ('pos_pso_mapping', models.TextField(blank=True)),
-                ('needs_grad_attr_mapping', models.TextField(blank=True)),
-                ('contemporary_requirements', models.TextField(blank=True)),
-                ('sdg_value_systems_mapping', models.TextField(blank=True)),
-                ('iqac_feedback', models.TextField(blank=True)),
-                ('report_signed_date', models.DateField(default=django.utils.timezone.now)),
-                ('beneficiaries_details', models.TextField(blank=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('proposal', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='event_report', to='emt.eventproposal')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("location", models.CharField(blank=True, max_length=200)),
+                ("blog_link", models.URLField(blank=True)),
+                (
+                    "num_student_volunteers",
+                    models.PositiveIntegerField(blank=True, null=True),
+                ),
+                (
+                    "num_participants",
+                    models.PositiveIntegerField(blank=True, null=True),
+                ),
+                ("external_contact_details", models.TextField(blank=True)),
+                ("summary", models.TextField(blank=True)),
+                ("outcomes", models.TextField(blank=True)),
+                ("impact_on_stakeholders", models.TextField(blank=True)),
+                ("innovations_best_practices", models.TextField(blank=True)),
+                ("pos_pso_mapping", models.TextField(blank=True)),
+                ("needs_grad_attr_mapping", models.TextField(blank=True)),
+                ("contemporary_requirements", models.TextField(blank=True)),
+                ("sdg_value_systems_mapping", models.TextField(blank=True)),
+                ("iqac_feedback", models.TextField(blank=True)),
+                (
+                    "report_signed_date",
+                    models.DateField(default=django.utils.timezone.now),
+                ),
+                ("beneficiaries_details", models.TextField(blank=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "proposal",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="event_report",
+                        to="emt.eventproposal",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='EventReportAttachment',
+            name="EventReportAttachment",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('file', models.FileField(upload_to='report_attachments/')),
-                ('caption', models.CharField(blank=True, max_length=255)),
-                ('report', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='attachments', to='emt.eventreport')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("file", models.FileField(upload_to="report_attachments/")),
+                ("caption", models.CharField(blank=True, max_length=255)),
+                (
+                    "report",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="attachments",
+                        to="emt.eventreport",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='ExpenseDetail',
+            name="ExpenseDetail",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('sl_no', models.PositiveIntegerField()),
-                ('particulars', models.CharField(max_length=200)),
-                ('amount', models.DecimalField(decimal_places=2, max_digits=12)),
-                ('proposal', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='expense_details', to='emt.eventproposal')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("sl_no", models.PositiveIntegerField()),
+                ("particulars", models.CharField(max_length=200)),
+                ("amount", models.DecimalField(decimal_places=2, max_digits=12)),
+                (
+                    "proposal",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="expense_details",
+                        to="emt.eventproposal",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['sl_no'],
+                "ordering": ["sl_no"],
             },
         ),
         migrations.CreateModel(
-            name='MediaRequest',
+            name="MediaRequest",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('media_type', models.CharField(choices=[('Poster', 'Poster'), ('Video', 'Video')], max_length=20)),
-                ('title', models.CharField(max_length=200)),
-                ('description', models.TextField()),
-                ('event_date', models.DateField()),
-                ('media_file', models.FileField(blank=True, null=True, upload_to='media_requests/')),
-                ('status', models.CharField(choices=[('Pending', 'Pending'), ('Completed', 'Completed'), ('Rejected', 'Rejected')], default='Pending', max_length=20)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "media_type",
+                    models.CharField(
+                        choices=[("Poster", "Poster"), ("Video", "Video")],
+                        max_length=20,
+                    ),
+                ),
+                ("title", models.CharField(max_length=200)),
+                ("description", models.TextField()),
+                ("event_date", models.DateField()),
+                (
+                    "media_file",
+                    models.FileField(
+                        blank=True, null=True, upload_to="media_requests/"
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("Pending", "Pending"),
+                            ("Completed", "Completed"),
+                            ("Rejected", "Rejected"),
+                        ],
+                        default="Pending",
+                        max_length=20,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='SpeakerProfile',
+            name="SpeakerProfile",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('full_name', models.CharField(max_length=100)),
-                ('designation', models.CharField(max_length=100)),
-                ('affiliation', models.CharField(max_length=100)),
-                ('contact_email', models.EmailField(max_length=254)),
-                ('contact_number', models.CharField(max_length=15)),
-                ('photo', models.ImageField(upload_to='speakers/')),
-                ('detailed_profile', models.TextField()),
-                ('proposal', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='emt.eventproposal')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("full_name", models.CharField(max_length=100)),
+                ("designation", models.CharField(max_length=100)),
+                ("affiliation", models.CharField(max_length=100)),
+                ("contact_email", models.EmailField(max_length=254)),
+                ("contact_number", models.CharField(max_length=15)),
+                ("photo", models.ImageField(upload_to="speakers/")),
+                ("detailed_profile", models.TextField()),
+                (
+                    "proposal",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="emt.eventproposal",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='TentativeFlow',
+            name="TentativeFlow",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('content', models.TextField()),
-                ('proposal', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='emt.eventproposal')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("content", models.TextField()),
+                (
+                    "proposal",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="emt.eventproposal",
+                    ),
+                ),
             ],
         ),
     ]

@@ -1,4 +1,5 @@
 import os
+
 import requests
 from django.conf import settings
 
@@ -35,7 +36,8 @@ def _ollama_chat(
 
     payload = {
         "model": model,
-        "messages": ([{"role": "system", "content": system}] if system else []) + messages,
+        "messages": ([{"role": "system", "content": system}] if system else [])
+        + messages,
         "temperature": temperature,
         "stream": False,
     }
@@ -65,7 +67,15 @@ def _ollama_chat(
         raise AIError(str(e))
 
 
-def _openrouter_chat(messages, system=None, model=None, temperature=0.2, timeout=None, api_key=None, options=None):
+def _openrouter_chat(
+    messages,
+    system=None,
+    model=None,
+    temperature=0.2,
+    timeout=None,
+    api_key=None,
+    options=None,
+):
     api_key = api_key or _get("OPENROUTER_API_KEY", "")
     if not api_key:
         # no key -> skip gracefully
@@ -80,7 +90,8 @@ def _openrouter_chat(messages, system=None, model=None, temperature=0.2, timeout
     }
     payload = {
         "model": or_model,
-        "messages": ([{"role": "system", "content": system}] if system else []) + messages,
+        "messages": ([{"role": "system", "content": system}] if system else [])
+        + messages,
         "temperature": temperature,
     }
     try:
@@ -100,7 +111,9 @@ def _openrouter_chat(messages, system=None, model=None, temperature=0.2, timeout
         raise AIError(f"OpenRouter unexpected response: {r.text[:400]} ({e})")
 
 
-def chat(messages, system=None, model=None, temperature=0.2, timeout=None, options=None):
+def chat(
+    messages, system=None, model=None, temperature=0.2, timeout=None, options=None
+):
     """
     Main entry point:
     - Honors AI_BACKEND (default OLLAMA)
@@ -153,4 +166,3 @@ def chat(messages, system=None, model=None, temperature=0.2, timeout=None, optio
             continue
 
     raise AIError(f"All AI backends failed: {last_err}")
-

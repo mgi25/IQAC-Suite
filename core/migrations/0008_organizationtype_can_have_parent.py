@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0007_organizationtype_parent'),
+        ("core", "0007_organizationtype_parent"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='organizationtype',
-            name='can_have_parent',
+            model_name="organizationtype",
+            name="can_have_parent",
             field=models.BooleanField(default=False),
         ),
     ]

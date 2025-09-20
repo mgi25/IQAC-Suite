@@ -7,13 +7,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0006_alter_organizationtype_options_organization_parent'),
+        ("core", "0006_alter_organizationtype_options_organization_parent"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='organizationtype',
-            name='parent',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='core.organizationtype'),
+            model_name="organizationtype",
+            name="parent",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="core.organizationtype",
+            ),
         ),
     ]

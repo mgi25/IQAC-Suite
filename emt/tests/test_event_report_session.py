@@ -1,10 +1,10 @@
 from django.contrib.auth.models import User
+from django.contrib.auth.signals import user_logged_in
+from django.db.models.signals import post_save
 from django.test import TestCase
 from django.urls import reverse
-from django.db.models.signals import post_save
-from django.contrib.auth.signals import user_logged_in
 
-from core.signals import create_or_update_user_profile, assign_role_on_login
+from core.signals import assign_role_on_login, create_or_update_user_profile
 from emt.models import EventProposal
 
 
@@ -24,7 +24,9 @@ class EventReportSessionTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="bob", password="pass")
         self.client.force_login(self.user)
-        self.proposal = EventProposal.objects.create(submitted_by=self.user, event_title="Session Test")
+        self.proposal = EventProposal.objects.create(
+            submitted_by=self.user, event_title="Session Test"
+        )
 
     def _management_data(self):
         return {

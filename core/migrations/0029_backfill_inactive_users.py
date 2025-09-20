@@ -22,5 +22,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(mark_inactive_and_set_activation, migrations.RunPython.noop),
+        migrations.RunPython(
+            mark_inactive_and_set_activation, migrations.RunPython.noop
+        ),
     ]

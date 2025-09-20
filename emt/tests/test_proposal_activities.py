@@ -1,13 +1,12 @@
 from django.contrib.auth.models import User
+from django.contrib.auth.signals import user_logged_in
+from django.db.models.signals import post_save
 from django.test import TestCase
 from django.urls import reverse
-from django.db.models.signals import post_save
-from django.contrib.auth.signals import user_logged_in
 
-from core.signals import create_or_update_user_profile, assign_role_on_login
-from core.models import OrganizationType, Organization
-
-from emt.models import EventProposal, EventActivity
+from core.models import Organization, OrganizationType
+from core.signals import assign_role_on_login, create_or_update_user_profile
+from emt.models import EventActivity, EventProposal
 
 
 class ProposalActivityPersistenceTests(TestCase):
@@ -45,13 +44,19 @@ class ProposalActivityPersistenceTests(TestCase):
         resp = self.client.post(url, data)
         self.assertEqual(resp.status_code, 302)
         proposal = EventProposal.objects.get(submitted_by=self.user)
-        activities = list(EventActivity.objects.filter(proposal=proposal).order_by("date"))
+        activities = list(
+            EventActivity.objects.filter(proposal=proposal).order_by("date")
+        )
         self.assertEqual(len(activities), 2)
         self.assertEqual(activities[0].name, "Orientation")
         self.assertEqual(activities[1].name, "Workshop")
         resp2 = self.client.get(reverse("emt:submit_event_report", args=[proposal.id]))
-        self.assertContains(resp2, 'name="activity_name_1" value="Orientation"', html=False)
-        self.assertContains(resp2, 'name="activity_name_2" value="Workshop"', html=False)
+        self.assertContains(
+            resp2, 'name="activity_name_1" value="Orientation"', html=False
+        )
+        self.assertContains(
+            resp2, 'name="activity_name_2" value="Workshop"', html=False
+        )
 
     def test_invalid_activity_submission_preserves_existing(self):
         url = reverse("emt:submit_proposal")

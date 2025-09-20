@@ -7,17 +7,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0005_delete_association_delete_cell_delete_club_and_more'),
+        ("core", "0005_delete_association_delete_cell_delete_club_and_more"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='organizationtype',
+            name="organizationtype",
             options={},
         ),
         migrations.AddField(
-            model_name='organization',
-            name='parent',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='core.organization'),
+            model_name="organization",
+            name="parent",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="core.organization",
+            ),
         ),
     ]

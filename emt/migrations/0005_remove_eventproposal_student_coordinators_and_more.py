@@ -6,17 +6,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('emt', '0004_alter_approvalstep_options_and_more'),
+        ("emt", "0004_alter_approvalstep_options_and_more"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='eventproposal',
-            name='student_coordinators',
+            model_name="eventproposal",
+            name="student_coordinators",
         ),
         migrations.AddField(
-            model_name='eventproposal',
-            name='student_coordinators',
-            field=models.TextField(blank=True, help_text='Comma-separated student coordinator names (temporary).'),
+            model_name="eventproposal",
+            name="student_coordinators",
+            field=models.TextField(
+                blank=True,
+                help_text="Comma-separated student coordinator names (temporary).",
+            ),
         ),
     ]

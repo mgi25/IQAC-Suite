@@ -1,11 +1,11 @@
 from django.contrib.auth.models import User
+from django.contrib.auth.signals import user_logged_in
+from django.db.models.signals import post_save
 from django.test import TestCase
 from django.urls import reverse
-from django.db.models.signals import post_save
-from django.contrib.auth.signals import user_logged_in
 
-from core.signals import create_or_update_user_profile, assign_role_on_login
-from core.models import OrganizationType, Organization
+from core.models import Organization, OrganizationType
+from core.signals import assign_role_on_login, create_or_update_user_profile
 from emt.models import EventProposal
 from transcript.models import get_active_academic_year
 

@@ -1,25 +1,20 @@
 import logging
-import json
-from django.views.decorators.http import require_POST
+
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from django.conf import settings
-from .ai_client import chat, AIError
-from .prompts import (
-    SYSTEM_WHY_EVENT,
-    user_prompt_wyhevent,
-    SYSTEM_OBJECTIVES,
-    SYSTEM_LEARNING,
-)
+from django.views.decorators.http import require_POST
+
+from .ai_client import AIError, chat
+from .ai_safety import (allowed_numbers_from_facts,
+                        enforce_no_unverified_numbers, parse_model_json,
+                        strip_unverifiable_phrases)
 from .facts import collect_basic_facts, load_fields
-from .ai_safety import (
-    strip_unverifiable_phrases,
-    allowed_numbers_from_facts,
-    enforce_no_unverified_numbers,
-    parse_model_json,
-)
+from .prompts import (SYSTEM_LEARNING, SYSTEM_OBJECTIVES, SYSTEM_WHY_EVENT,
+                      user_prompt_wyhevent)
 
 logger = logging.getLogger(__name__)
+
 
 def _sanitize(text: str, facts: dict) -> str:
     text = strip_unverifiable_phrases(text)
@@ -43,6 +38,7 @@ def _bullets(value, facts):
         for b in items
         if b and b.strip()
     ]
+
 
 @login_required
 @require_POST
@@ -74,9 +70,7 @@ def generate_why_event(request):
                 )
                 objectives = _bullets(obj_text, facts)
             except AIError as e2:
-                logger.error(
-                    "generate_why_event objectives fallback failed: %s", e2
-                )
+                logger.error("generate_why_event objectives fallback failed: %s", e2)
                 objectives = []
 
         outcomes = _bullets(data.get("learning_outcomes", []), facts)
@@ -94,9 +88,7 @@ def generate_why_event(request):
                 )
                 outcomes = _bullets(out_text, facts)
             except AIError as e3:
-                logger.error(
-                    "generate_why_event outcomes fallback failed: %s", e3
-                )
+                logger.error("generate_why_event outcomes fallback failed: %s", e3)
                 outcomes = []
 
         return JsonResponse(
@@ -114,16 +106,16 @@ def generate_why_event(request):
         logger.error("generate_why_event parse error: %s", e)
         return JsonResponse({"ok": False, "error": f"Parse error: {e}"}, status=500)
 
+
 @login_required
 @require_POST
 def generate_need_analysis(request):
     fields = load_fields("need_analysis")
     facts = collect_basic_facts(request, fields)
-    topic = facts.get("event_title", (
-        request.POST.get("topic")
-        or request.POST.get("title")
-        or ""
-    ).strip())
+    topic = facts.get(
+        "event_title",
+        (request.POST.get("topic") or request.POST.get("title") or "").strip(),
+    )
 
     system = (
         "You write concise academic text for university proposals using ONLY provided facts. "
@@ -145,7 +137,10 @@ def generate_need_analysis(request):
         return JsonResponse({"ok": False, "error": str(e)}, status=503)
     except Exception as e:
         logger.error("generate_need_analysis unexpected error: %s", e)
-        return JsonResponse({"ok": False, "error": f"Unexpected error: {e}"}, status=500)
+        return JsonResponse(
+            {"ok": False, "error": f"Unexpected error: {e}"}, status=500
+        )
+
 
 @login_required
 @require_POST
@@ -160,14 +155,19 @@ def generate_objectives(request):
             timeout=getattr(settings, "AI_HTTP_TIMEOUT", 120),
             options={"num_predict": 300},
         )
-        bullets = [b.strip(" •-*0123456789.").strip() for b in text.splitlines() if b.strip()]
+        bullets = [
+            b.strip(" •-*0123456789.").strip() for b in text.splitlines() if b.strip()
+        ]
         return JsonResponse({"ok": True, "field": "objectives", "value": bullets})
     except AIError as e:
         logger.error("generate_objectives failed: %s", e)
         return JsonResponse({"ok": False, "error": str(e)}, status=503)
     except Exception as e:
         logger.error("generate_objectives unexpected error: %s", e)
-        return JsonResponse({"ok": False, "error": f"Unexpected error: {e}"}, status=500)
+        return JsonResponse(
+            {"ok": False, "error": f"Unexpected error: {e}"}, status=500
+        )
+
 
 @login_required
 @require_POST
@@ -182,11 +182,17 @@ def generate_learning_outcomes(request):
             timeout=getattr(settings, "AI_HTTP_TIMEOUT", 120),
             options={"num_predict": 300},
         )
-        bullets = [b.strip(" •-*0123456789.").strip() for b in text.splitlines() if b.strip()]
-        return JsonResponse({"ok": True, "field": "learning_outcomes", "value": bullets})
+        bullets = [
+            b.strip(" •-*0123456789.").strip() for b in text.splitlines() if b.strip()
+        ]
+        return JsonResponse(
+            {"ok": True, "field": "learning_outcomes", "value": bullets}
+        )
     except AIError as e:
         logger.error("generate_learning_outcomes failed: %s", e)
         return JsonResponse({"ok": False, "error": str(e)}, status=503)
     except Exception as e:
         logger.error("generate_learning_outcomes unexpected error: %s", e)
-        return JsonResponse({"ok": False, "error": f"Unexpected error: {e}"}, status=500)
+        return JsonResponse(
+            {"ok": False, "error": f"Unexpected error: {e}"}, status=500
+        )

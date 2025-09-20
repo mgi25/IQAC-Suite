@@ -8,19 +8,26 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('emt', '0011_eventproposal_aligned_sdg_goals_and_more'),
+        ("emt", "0011_eventproposal_aligned_sdg_goals_and_more"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='eventproposal',
-            name='report_assigned_at',
+            model_name="eventproposal",
+            name="report_assigned_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='eventproposal',
-            name='report_assigned_to',
-            field=models.ForeignKey(blank=True, help_text='User assigned to generate the report for this event', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='assigned_report_tasks', to=settings.AUTH_USER_MODEL),
+            model_name="eventproposal",
+            name="report_assigned_to",
+            field=models.ForeignKey(
+                blank=True,
+                help_text="User assigned to generate the report for this event",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="assigned_report_tasks",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
     ]

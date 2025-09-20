@@ -1,8 +1,9 @@
+from typing import List
+
 import torch
 from fastapi import FastAPI
 from pydantic import BaseModel
-from typing import List
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 MODEL_DIR = r"C:\\Users\\mgial\\OneDrive\\Desktop\\IQAC-Suite\\Qwen2.5-7B-Instruct-1M"
 
@@ -20,15 +21,18 @@ model.eval()
 
 app = FastAPI()
 
+
 class Message(BaseModel):
     role: str
     content: str
+
 
 class ChatRequest(BaseModel):
     model: str
     messages: List[Message]
     max_tokens: int = 256
     temperature: float = 0.7
+
 
 @app.post("/v1/chat/completions")
 def chat(req: ChatRequest):
@@ -48,9 +52,13 @@ def chat(req: ChatRequest):
             max_new_tokens=max_tokens,
             temperature=req.temperature,
         )
-    text = tokenizer.decode(output[0][inputs["input_ids"].shape[-1]:], skip_special_tokens=True)
+    text = tokenizer.decode(
+        output[0][inputs["input_ids"].shape[-1] :], skip_special_tokens=True
+    )
     return {"choices": [{"message": {"role": "assistant", "content": text}}]}
+
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("local_ai_server:app", host="127.0.0.1", port=8000)

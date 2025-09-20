@@ -1,8 +1,10 @@
 import logging
+
 from django.conf import settings
 from django.contrib.sites.models import Site
 
 logger = logging.getLogger(__name__)
+
 
 def get_or_create_current_site(request):
     """Return the current Site, creating it from the request host if missing."""

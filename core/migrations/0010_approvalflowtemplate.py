@@ -8,23 +8,46 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0009_remove_organizationtype_parent_and_more'),
+        ("core", "0009_remove_organizationtype_parent_and_more"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ApprovalFlowTemplate',
+            name="ApprovalFlowTemplate",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('step_order', models.PositiveIntegerField()),
-                ('role_required', models.CharField(max_length=50)),
-                ('organization', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='approval_flow_templates', to='core.organization')),
-                ('user', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("step_order", models.PositiveIntegerField()),
+                ("role_required", models.CharField(max_length=50)),
+                (
+                    "organization",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="approval_flow_templates",
+                        to="core.organization",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'ordering': ['organization', 'step_order'],
-                'unique_together': {('organization', 'step_order')},
+                "ordering": ["organization", "step_order"],
+                "unique_together": {("organization", "step_order")},
             },
         ),
     ]

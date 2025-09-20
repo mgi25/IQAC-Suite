@@ -6,33 +6,33 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0001_initial'),
+        ("core", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='association',
-            name='is_active',
+            model_name="association",
+            name="is_active",
             field=models.BooleanField(default=True),
         ),
         migrations.AddField(
-            model_name='cell',
-            name='is_active',
+            model_name="cell",
+            name="is_active",
             field=models.BooleanField(default=True),
         ),
         migrations.AddField(
-            model_name='center',
-            name='is_active',
+            model_name="center",
+            name="is_active",
             field=models.BooleanField(default=True),
         ),
         migrations.AddField(
-            model_name='club',
-            name='is_active',
+            model_name="club",
+            name="is_active",
             field=models.BooleanField(default=True),
         ),
         migrations.AddField(
-            model_name='department',
-            name='is_active',
+            model_name="department",
+            name="is_active",
             field=models.BooleanField(default=True),
         ),
     ]

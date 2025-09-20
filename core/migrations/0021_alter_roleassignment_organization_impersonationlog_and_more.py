@@ -8,29 +8,57 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0020_approvalflowtemplate_optional'),
+        ("core", "0020_approvalflowtemplate_optional"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='roleassignment',
-            name='organization',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='role_assignments', to='core.organization'),
+            model_name="roleassignment",
+            name="organization",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="role_assignments",
+                to="core.organization",
+            ),
         ),
         migrations.CreateModel(
-            name='ImpersonationLog',
+            name="ImpersonationLog",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('started_at', models.DateTimeField(auto_now_add=True)),
-                ('ended_at', models.DateTimeField(blank=True, null=True)),
-                ('ip_address', models.GenericIPAddressField(blank=True, null=True)),
-                ('user_agent', models.TextField(blank=True, null=True)),
-                ('impersonated_user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='impersonations_received', to=settings.AUTH_USER_MODEL)),
-                ('original_user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='impersonations_made', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("started_at", models.DateTimeField(auto_now_add=True)),
+                ("ended_at", models.DateTimeField(blank=True, null=True)),
+                ("ip_address", models.GenericIPAddressField(blank=True, null=True)),
+                ("user_agent", models.TextField(blank=True, null=True)),
+                (
+                    "impersonated_user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="impersonations_received",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "original_user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="impersonations_made",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-started_at'],
+                "ordering": ["-started_at"],
             },
         ),
         # `EventProposal` was removed previously. On some databases the
@@ -45,7 +73,7 @@ class Migration(migrations.Migration):
                 ),
             ],
             state_operations=[
-                migrations.DeleteModel(name='EventProposal'),
+                migrations.DeleteModel(name="EventProposal"),
             ],
         ),
     ]

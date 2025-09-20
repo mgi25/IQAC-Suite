@@ -6,18 +6,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('emt', '0010_speakerprofile_linkedin_url'),
+        ("emt", "0010_speakerprofile_linkedin_url"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='eventproposal',
-            name='aligned_sdg_goals',
-            field=models.TextField(blank=True, help_text='Aligned SDG Goals for this event.'),
+            model_name="eventproposal",
+            name="aligned_sdg_goals",
+            field=models.TextField(
+                blank=True, help_text="Aligned SDG Goals for this event."
+            ),
         ),
         migrations.AddField(
-            model_name='eventproposal',
-            name='committees_collaborations',
-            field=models.TextField(blank=True, help_text='Committees and collaborations involved.'),
+            model_name="eventproposal",
+            name="committees_collaborations",
+            field=models.TextField(
+                blank=True, help_text="Committees and collaborations involved."
+            ),
         ),
     ]
