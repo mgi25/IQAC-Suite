@@ -21,6 +21,17 @@
   }
   
   /* ---- Layout ---- */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+  }
+
   .proposal-layout {
     display: flex;
     min-height: 100vh;
@@ -523,10 +534,17 @@
   /* ---- Speakers / Expenses / Income / CDL cards (flat) ---- */
   .speakers-section, .expenses-section, .income-section, .cdl-section {
     padding: 2rem;
-    min-height: calc(100vh - 200px);
-    display: flex; flex-direction: column; justify-content: center; align-items: stretch; width: 100%;
+    min-height: auto;
+    display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; width: 100%;
   }
-  .speakers-container, .expenses-container, .income-container, .cdl-container { margin-bottom: 2rem; width: 100%; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
+  .speakers-container, .expenses-container, .income-container, .cdl-container {
+    margin-bottom: 2rem;
+    width: 100%;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
   
   .speakers-empty-state, .expenses-empty-state, .income-empty-state, .cdl-empty-state {
     text-align: center; padding: 3rem 2rem; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 16px; margin: 2rem 0;
@@ -541,17 +559,47 @@
   .speaker-form-card, .expense-form-card, .income-form-card, .cdl-service-card {
     background: #fff; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-1); overflow: hidden; transition: box-shadow .2s ease, transform .2s ease;
   }
+  .speaker-form-card { position: relative; }
   .speaker-form-card:hover, .expense-form-card:hover, .income-form-card:hover, .cdl-service-card:hover {
     box-shadow: var(--shadow-2); transform: translateY(-1px);
   }
-  
+
   /* Headers: solid bar, no gradients/patterns */
   .speaker-form-header, .expense-form-header, .income-form-header, .cdl-service-header {
     background: var(--primary-blue); color: #fff; padding: 1rem 1.25rem; display: flex; justify-content: space-between; align-items: center;
   }
+  .speaker-form-header {
+    position: relative;
+    justify-content: flex-start;
+    padding-right: 3.5rem;
+    gap: .75rem;
+  }
   .speaker-title, .expense-title, .income-title, .cdl-service-title {
     font-size: 1.05rem; font-weight: 600; margin: 0;
   }
+
+  .speaker-form-card .btn-remove-speaker {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    box-shadow: none;
+  }
+  .speaker-form-card .btn-remove-speaker:hover {
+    background: rgba(255, 255, 255, 0.25);
+    color: #fff;
+    transform: none;
+  }
+  .speaker-form-card .btn-remove-speaker i { pointer-events: none; }
   
   .speaker-form-content, .expense-form-content, .income-form-content, .cdl-service-content {
     padding: 1.25rem;
