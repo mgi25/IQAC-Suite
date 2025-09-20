@@ -210,6 +210,9 @@
 .chip-btn{padding:6px 12px;border:1px solid var(--border);border-radius:6px;background:#fff;font-size:12px;color:var(--ink);text-decoration:none;transition:all .2s}
 .chip-btn:hover{background:var(--subtle);border-color:var(--primary);color:var(--primary)}
 .chip-btn:focus-visible{outline:3px solid rgba(38,68,135,.3);outline-offset:2px}
+/* Primary variant used for prominent actions (e.g., Notifications -> View) */
+.ems-dashboard.cdl-head .chip-btn.primary{ border-color: var(--primary); color: var(--primary); }
+.ems-dashboard.cdl-head .chip-btn.primary:hover{ background: rgba(65,105,225,.06); }
 
 /* -------- Chart -------- */
 .chart-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:16px}
@@ -220,8 +223,8 @@
 
 /* -------- Segmented Control -------- */
 .header-actions{display:flex;gap:10px;align-items:center}
-.seg{display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden}
-.seg-btn{padding:6px 12px;font-size:12px;color:var(--muted);background:#fff;border:none;cursor:pointer;transition:all .2s}
+.seg{display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;white-space:nowrap}
+.seg-btn{padding:6px 10px;font-size:12px;color:var(--muted);background:#fff;border:none;cursor:pointer;transition:all .2s}
 .seg-btn:hover{background:var(--subtle);color:var(--ink)}
 .seg-btn.active{background:var(--primary);color:#fff}
 
@@ -238,7 +241,10 @@
 .day.has-meeting::after{content:"";position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:6px;height:6px;border-radius:50%;background:#0ea5e9}
 .day:hover{background:var(--subtle)}
 .day.today{background:var(--primary);color:#fff;font-weight:600}
-.day.selected{outline:2px solid #93c5fd; outline-offset:0; box-shadow: inset 0 0 0 2px #bfdbfe; background:#eff6ff}
+/* Ensure the selected day text stays readable even when it's also "today" */
+.day.selected{outline:2px solid #93c5fd; outline-offset:0; box-shadow: inset 0 0 0 2px #bfdbfe; background:#eff6ff; color:var(--ink)}
+/* Extra explicit override for combined state in case of specificity issues */
+.day.today.selected{background:#eff6ff; color:var(--ink)}
 .day.muted{opacity:.4}
 
 /* -------- Upcoming -------- */
@@ -347,6 +353,9 @@
   transform-origin: top left;
   /* Compensate width so scaled content still fills parent. */
   width: calc(100% / var(--cdl-scale));
+  /* Fluid container: expands up to 1800px, stays ~92vw at very wide screens */
+  max-width: clamp(1100px, 92vw, 1800px);
+  margin: 0 auto;
 }
 
 /* progressively compact as viewport width reduces (covers zoom-in as well) */
@@ -420,22 +429,61 @@
   .ems-dashboard.cdl-head #cardEventDetails{ grid-area: right2; }
 }
 
+/* At very wide viewports (including heavy zoom-out), add a bit more breathing room */
+@media (min-width: 1800px){
+  .ems-dashboard.cdl-head .cdl-grid{ gap: 20px; }
+  .ems-dashboard.cdl-head .kpi-row{ gap: 12px; }
+}
+
 /* compact card spacing and visible inner scrollbars; reduce page whitespace */
 .ems-dashboard.cdl-head .card{ border-radius:12px!important; }
 .ems-dashboard.cdl-head .card-header{ padding:8px 10px; }
 .ems-dashboard.cdl-head .card-header h3{ font-size:13px!important; }
+.ems-dashboard.cdl-head #cardTeam .card-header{ gap:8px; }
+.ems-dashboard.cdl-head #cardTeam .card-header h3{ margin-right:6px!important; }
+.ems-dashboard.cdl-head #cardTeam .header-actions{ margin-left:auto; gap:8px; }
+.ems-dashboard.cdl-head #cardTeam .seg-btn{ padding:4px 8px; font-size:11px; }
+.ems-dashboard.cdl-head #cardTeam .select{ font-size:11px; padding:4px 8px; }
+
+/* ChartJS grid lines thinner to mimic employee dashboard */
+.ems-dashboard.cdl-head #cardTeam .chart-wrap canvas{ --grid-color: #eaecef; }
+.ems-dashboard.cdl-head #cardTeam .chart-wrap{ min-height:180px; }
 .ems-dashboard.cdl-head .list{ padding:10px 12px; }
 .ems-dashboard.cdl-head .empty{ padding:16px 0; }
 
 /* keep page scroll minimal; assignment manager full-width at bottom */
 .ems-dashboard.cdl-head #cardAssignAll .table-wrap{ max-height: 280px; overflow:auto; }
 .ems-dashboard.cdl-head #cardAssignAll{ margin-top:16px; }
+/* Better table visuals */
+.ems-dashboard.cdl-head .table{ width:100%; border-collapse: separate; border-spacing:0; }
+.ems-dashboard.cdl-head .table th{ position:sticky; top:0; background:#fafafa; border-bottom:1px solid var(--border); text-align:left; }
+.ems-dashboard.cdl-head .table td, .ems-dashboard.cdl-head .table th{ border-bottom:1px solid var(--border); }
+.ems-dashboard.cdl-head .table .empty-row{ color:var(--muted); text-align:center; padding:18px 0; }
+.ems-dashboard.cdl-head .assignee-select{ min-width:140px; }
+.ems-dashboard.cdl-head .action-btn{ padding:6px 10px; border:1px solid var(--border); background:#fff; border-radius:6px; cursor:pointer; }
+.ems-dashboard.cdl-head .action-btn:disabled{ opacity:.6; cursor:not-allowed; }
+.ems-dashboard.cdl-head .priority-badge{ display:inline-block; padding:2px 6px; border-radius:10px; font-size:10px; background:#e5e7eb; color:#334155; }
+.ems-dashboard.cdl-head .status-badge{ display:inline-block; padding:2px 6px; border-radius:10px; font-size:10px; background:#fee2e2; color:#991b1b; }
+.ems-dashboard.cdl-head .status-badge.assigned{ background:#dcfce7; color:#166534; }
 
 /* Compact notifications list and texts */
 .ems-dashboard.cdl-head .notification-item{ padding:10px; }
+.ems-dashboard.cdl-head .notification-item{
+  /* keep action button pinned in the corner */
+  position: relative;
+  /* leave room on the right so text never overlaps the button */
+  padding-right: 84px;
+  /* make the button stick to the top edge, not vertically centered */
+  align-items: flex-start;
+}
 .ems-dashboard.cdl-head .notification-content h4{ font-size:13px; }
 .ems-dashboard.cdl-head .notification-content p{ font-size:11px; }
 .ems-dashboard.cdl-head .view-btn{ font-size:11px; padding:5px 8px; }
+/* specifically style the notification "View" button to sit in the top-right corner */
+.ems-dashboard.cdl-head .notification-item .view-btn{
+  position:absolute;
+  top:8px; right:12px;
+}
 
 /* Compact calendar day size and title */
 .ems-dashboard.cdl-head #calTitle{ font-size:13px; }
@@ -448,8 +496,15 @@
 
 /* Segmented controls and chips smaller */
 .ems-dashboard.cdl-head .seg-btn{ font-size:11px; padding:5px 8px; }
+.ems-dashboard.cdl-head #cardNotifications .seg-btn{ font-size:10px; padding:4px 7px; }
 .ems-dashboard.cdl-head .chip-btn{ font-size:10px; padding:5px 8px; }
 .ems-dashboard.cdl-head .select{ font-size:11px; padding:5px 8px; }
+/* Card body spacing for less stretch */
+.ems-dashboard.cdl-head .card.eq{ display:flex; flex-direction:column; }
+.ems-dashboard.cdl-head .card.eq > .list,
+.ems-dashboard.cdl-head .card.eq > .chart-wrap,
+.ems-dashboard.cdl-head .card.eq > .mini-cal,
+.ems-dashboard.cdl-head .card.eq > .event-details-content{ flex: 1 1 auto; }
 
 /* Chart area padding only; let it flex to full card height */
 .ems-dashboard.cdl-head #cardTeam .chart-wrap{ padding:10px; max-height:none; }

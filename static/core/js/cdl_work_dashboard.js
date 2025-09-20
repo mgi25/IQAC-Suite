@@ -17,11 +17,15 @@
       setText('#pfFirstpass', pct(STATS.firstpass));
     }
     function isDueToday(r){ const d=new Date(r.due_date); const t=new Date(); t.setHours(0,0,0,0); d.setHours(0,0,0,0); return d.getTime()===t.getTime(); }
+  function isPastDate(iso){ if(!iso) return false; const d=new Date(iso); if(isNaN(d)) return false; const t=new Date(); t.setHours(0,0,0,0); d.setHours(0,0,0,0); return d < t; }
   
     // Inbox
     function renderInbox(filter='all'){
       const list = $('#inboxList'), empty=$('#inboxEmpty');
-      const rows = INBOX.filter(n => filter==='all' ? true : n.type===filter).map(n => `
+      const rows = INBOX
+        .filter(n => filter==='all' ? true : n.type===filter)
+        .filter(n => !isPastDate(n.due_date))
+        .map(n => `
         <article class="list-item" data-id="${n.id}">
           <div class="bullet under_review"><i class="fa-regular fa-envelope"></i></div>
           <div class="list-body">
@@ -70,17 +74,38 @@
     function renderChart(view='workload'){
       const ctx = $('#memberChart'); if(!ctx) return;
       chart?.destroy();
+      const commonOpts = {
+        plugins:{ legend:{ display:false } },
+        scales:{
+          y:{ beginAtZero:true, grid:{ color:'rgba(0,0,0,0.06)', lineWidth:0.7 } },
+          x:{ grid:{ color:'rgba(0,0,0,0.03)', lineWidth:0.7 } }
+        }
+      };
+      const blueFill = 'rgba(51,132,219,0.55)';
+      const blueLine = '#3384db';
       if(view==='ontime'){
-        chart = new Chart(ctx,{type:'line',data:{labels:last7Labels(),datasets:[{data:last7(STATS.ontime_history||[]),tension:.3}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,max:100}}}});
+        chart = new Chart(ctx,{
+          type:'bar',
+          data:{ labels:last7Labels(), datasets:[{ data:last7(STATS.ontime_history||[]), backgroundColor:blueFill, borderColor:blueLine, borderWidth:1 }] },
+          options:{ ...commonOpts, scales:{ ...commonOpts.scales, y:{ ...commonOpts.scales.y, max:100 } } }
+        });
         return;
       }
       if(view==='firstpass'){
-        chart = new Chart(ctx,{type:'line',data:{labels:last7Labels(),datasets:[{data:last7(STATS.firstpass_history||[]),tension:.3}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,max:100}}}});
+        chart = new Chart(ctx,{
+          type:'bar',
+          data:{ labels:last7Labels(), datasets:[{ data:last7(STATS.firstpass_history||[]), backgroundColor:blueFill, borderColor:blueLine, borderWidth:1 }] },
+          options:{ ...commonOpts, scales:{ ...commonOpts.scales, y:{ ...commonOpts.scales.y, max:100 } } }
+        });
         return;
       }
       const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun']; const counts=days.map(()=>0);
       (WORK||[]).forEach(w=>{ const d=new Date(w.created_at||w.assigned_at||Date.now()); counts[d.getDay()===0?6:d.getDay()-1]+=1; });
-      chart = new Chart(ctx,{type:'bar',data:{labels:days,datasets:[{data:counts}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+      chart = new Chart(ctx,{
+        type:'bar',
+        data:{ labels:days, datasets:[{ data:counts, backgroundColor:blueFill, borderColor:blueLine, borderWidth:1 }] },
+        options: commonOpts
+      });
     }
     $$('#cardProgress .seg-btn').forEach(b=>{
       b.addEventListener('click', e=>{
@@ -156,6 +181,12 @@
     function renderWork(){
       const q=($('#wbSearch').value||'').toLowerCase(); const st=$('#wbStatus').value; const due=$('#wbDue').value;
       const rows=WORK.filter(r=>{
+  if(due !== 'overdue' && isPastDate(r.due_date)) return false;
+      if(isPastDate(iso)){
+        $('#eventDetailsContent').innerHTML = '<div class="empty">No events on this date</div>';
+        $('#clearEventDetails')?.style.setProperty('display','inline-flex');
+        return;
+      }
         if(q && !(`${r.event} ${r.type} ${r.status}`.toLowerCase().includes(q))) return false;
         if(st && r.status!==st) return false;
         const d=new Date(r.due_date), t=new Date(); t.setHours(0,0,0,0);
@@ -189,9 +220,9 @@
       });
     }
     function rowActions(r){
-      const view=`<a class="btn xs" href="/cdl/support/?eventId=${r.id}"><i class="fa-regular fa-eye"></i> View</a>`;
-      const chat=`<button class="btn xs" data-act="chat"><i class="fa-regular fa-comments"></i> Chat</button>`;
-      const update=`<a class="btn xs success" href="/cdl/support/${r.id}/assign/?eventId=${r.id}&mode=employee" data-act="update"><i class="fa-solid fa-pen-to-square"></i> Update Task</a>`;
+      const view=`<a class="chip-btn primary" href="/cdl/support/?eventId=${r.id}"><i class="fa-regular fa-eye"></i> View</a>`;
+      const chat=`<button class="chip-btn primary" data-act="chat"><i class="fa-regular fa-comments"></i> Chat</button>`;
+      const update=`<a class="chip-btn primary" href="/cdl/support/${r.id}/assign/?eventId=${r.id}&mode=employee" data-act="update"><i class="fa-solid fa-pen-to-square"></i> Update Task</a>`;
       return `${view} ${chat} ${update}`;
     }
   
@@ -229,6 +260,9 @@
     }
     // Calendar scope selector
     document.addEventListener('change', e=>{
+  if(e.target && e.target.id==='wbStatus'){ renderWork(); }
+  if(e.target && e.target.id==='wbDue'){ renderWork(); }
+  document.addEventListener('input', e=>{ if(e.target && e.target.id==='wbSearch'){ renderWork(); }});
       if(e.target && e.target.id==='calScope'){ calScope = e.target.value; buildCalendar(); }
     });
 

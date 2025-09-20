@@ -92,6 +92,27 @@ def safe_next(request, fallback="/"):
     if nxt and url_has_allowed_host_and_scheme(nxt, allowed_hosts={request.get_host()}):
         return nxt
     return resolve_url(fallback)
+
+@login_required
+def notifications_page(request):
+    """Dedicated Notifications page showing Event Proposals sorted by created_at (earliest first).
+
+    First-come-first-serve ordering; no hardcoded data.
+    """
+    try:
+        proposals = (
+            EventProposal.objects.select_related('submitted_by')
+            .all()
+            .order_by('created_at')
+        )
+    except Exception as e:
+        logger.exception("notifications_page: failed to load proposals: %s", e)
+        proposals = EventProposal.objects.none()
+
+    context = {
+        "notifications": proposals,
+    }
+    return render(request, "core/notifications.html", context)
 @login_required
 def cdl_event_user_view(request):
     """Unified CDL user page (UI only). Expects ?eventId=<id>."""
@@ -491,6 +512,7 @@ def api_cdl_head_dashboard(request):
         EventProposal.objects.filter(status=EventProposal.Status.FINALIZED)
         .select_related("organization")
         .prefetch_related("cdl_support")
+        .exclude(cdl_support__completed=True)  # hide items moved to Analysis
     )
 
     # Filter: support => only proposals with CDL support requested (and finalized)
@@ -565,19 +587,48 @@ def api_cdl_head_dashboard(request):
             "certificates_required": bool(getattr(cs, "certificates_required", False)),
         })
 
-    # Workload - get CDL team members from groups
-    from django.contrib.auth.models import Group
+    # Workload — collect CDL members and their assignment counts
+    from django.contrib.auth.models import Group, User
+    from django.db.models import Count
+    member_users = []
+    labels = []
+
+    # Prefer RoleAssignment-based discovery (robust across setups), fallback to Group("CDL_MEMBER")
     try:
-        cdl_group = Group.objects.get(name="CDL_MEMBER")
-        cdl_members = [user.get_full_name() or user.username for user in cdl_group.user_set.all()]
-        if not cdl_members:
-            cdl_members = []
-    except Group.DoesNotExist:
-        cdl_members = []
-    
+        from .models import RoleAssignment
+        ras = RoleAssignment.objects.select_related("role", "organization", "organization__org_type") \
+            .filter(organization__org_type__name__iexact="CDL")
+        # roles like: CDL Member, CDL Employee, CDL Team (case-insensitive)
+        ras = [ra for ra in ras if (ra.role and ra.role.name and ra.role.name.lower() in {"cdl member", "cdl employee", "cdl team"})]
+        member_users = [ra.user for ra in ras if ra.user is not None]
+    except Exception:
+        member_users = []
+
+    if not member_users:
+        # Fallback: try a Django auth group named CDL_MEMBER
+        try:
+            cdl_group = Group.objects.get(name="CDL_MEMBER")
+            member_users = list(cdl_group.user_set.all())
+        except Group.DoesNotExist:
+            member_users = []
+
+    # Build labels
+    labels = [(u.get_full_name() or u.username) for u in member_users]
+
+    # Count assignments per assignee using EMT's CDLAssignment when available
+    counts_map = { (u.id if isinstance(u.id, int) else u.pk): 0 for u in member_users }
+    try:
+        from emt.models import CDLAssignment
+        agg = CDLAssignment.objects.filter(assignee__in=member_users).values("assignee").annotate(c=Count("id"))
+        for row in agg:
+            counts_map[row["assignee"]] = row["c"]
+    except Exception:
+        # If the model or table isn't available yet, keep zeros
+        pass
+
     workload = {
-        "members": cdl_members,
-        "assignments": [0] * len(cdl_members) if cdl_members else []
+        "members": labels,
+        "assignments": [counts_map.get((u.id if isinstance(u.id, int) else u.pk), 0) for u in member_users]
     }
 
     data = {
@@ -6231,6 +6282,647 @@ def cdl_media_guide(request):
     return HttpResponse("Media Naming Guide (stub)")
 
 # ────────────────────────────────────────────────────────────────
+#  CDL Analysis Page
+# ────────────────────────────────────────────────────────────────
+@login_required
+def cdl_analysis_page(request):
+    """Render CDL Analysis dashboard with DB-driven context (no hardcoded data)."""
+    # Same access as CDL Head dashboard (heads/admins preferred) but allow CDL members to view
+    is_allowed = False
+    if request.user.is_superuser or request.user.groups.filter(name__in=["CDL_HEAD","CDL_MEMBER"]).exists():
+        is_allowed = True
+    else:
+        try:
+            from .models import RoleAssignment
+            ras = (
+                RoleAssignment.objects.filter(user=request.user)
+                .select_related('role', 'organization', 'organization__org_type')
+            )
+            for ra in ras:
+                role_name = (ra.role.name if ra.role else '').lower()
+                org_type = (ra.organization.org_type.name if ra.organization and ra.organization.org_type else '').lower()
+                if org_type == 'cdl' and role_name in {"cdl admin", "cdl head", "cdl employee", "cdl member", "cdl team"}:
+                    is_allowed = True
+                    break
+        except Exception:
+            pass
+    if not is_allowed:
+        return HttpResponseForbidden()
+
+    # ----------------------------
+    # Build filters from request
+    # ----------------------------
+    from datetime import datetime, timedelta
+    from django.db.models import Q
+    from django.utils import timezone
+    
+    get = request.GET
+    def parse_date(s):
+        try:
+            return datetime.strptime(s, '%Y-%m-%d').date()
+        except Exception:
+            return None
+
+    # Default date range: last 6 months
+    default_end = timezone.localdate()
+    default_start = (default_end - timedelta(days=180))
+    start_date = parse_date(get.get('start_date')) or default_start
+    end_date = parse_date(get.get('end_date')) or default_end
+    date_range_flag = (get.get('range') or '').lower()
+    academic_year = get.get('academic_year') or ''
+    # Organizations (ids) — support single value or list
+    org_ids = []
+    vals = get.getlist('organizations') or ([] if not get.get('organizations') else [get.get('organizations')])
+    for s in vals:
+        try:
+            org_ids.append(int(s))
+        except Exception:
+            pass
+    event_type_planned = get.get('event_type_planned') or ''
+    event_type_actual = get.get('event_type_actual') or ''
+    # Service type — support single value or list
+    selected_service_types = get.getlist('service_types') or ([] if not get.get('service_types') else [get.get('service_types')])
+
+    # ----------------------------
+    # Base queryset: finalized + CDL completed
+    # ----------------------------
+    qs = EMTEventProposal.objects.filter(
+        status=EMTEventProposal.Status.FINALIZED,
+        cdl_support__completed=True,
+    ).select_related('organization', 'cdl_support', 'event_report').prefetch_related(
+        'cdl_support__certificate_recipients',
+        'event_report__attendance_rows',
+    )
+
+    # Date filter: use event_start_date OR event_datetime.date()
+    if date_range_flag != 'all':
+        date_q = Q()
+        if start_date:
+            date_q &= (Q(event_start_date__gte=start_date) | (Q(event_start_date__isnull=True) & Q(event_datetime__date__gte=start_date)))
+        if end_date:
+            date_q &= (Q(event_start_date__lte=end_date) | (Q(event_start_date__isnull=True) & Q(event_datetime__date__lte=end_date)))
+        if date_q:
+            qs = qs.filter(date_q)
+
+    if academic_year:
+        qs = qs.filter(academic_year=academic_year)
+    if org_ids:
+        qs = qs.filter(organization_id__in=org_ids)
+    if event_type_planned:
+        qs = qs.filter(event_focus_type__icontains=event_type_planned)
+    if event_type_actual:
+        qs = qs.filter(event_report__actual_event_type__icontains=event_type_actual)
+    if selected_service_types:
+        st_q = Q()
+        for key in selected_service_types:
+            if key == 'poster':
+                st_q |= Q(cdl_support__poster_required=True)
+            elif key == 'certificates':
+                st_q |= Q(cdl_support__certificates_required=True)
+            else:
+                # other_services contains key in list
+                st_q |= Q(cdl_support__other_services__contains=[key])
+        if st_q:
+            qs = qs.filter(st_q)
+
+    events = list(qs[:500])
+
+    # Helper for best date
+    def best_date(p):
+        if getattr(p, 'event_start_date', None):
+            return p.event_start_date
+        if getattr(p, 'event_datetime', None):
+            try:
+                return p.event_datetime.date()
+            except Exception:
+                return None
+        return None
+
+    # ----------------------------
+    # KPI metrics
+    # ----------------------------
+    total_archived_events = len(events)
+    total_participants = 0
+    total_certs = 0
+    completion_times = []  # timedelta list
+    for p in events:
+        rep = getattr(p, 'event_report', None)
+        if rep and rep.num_participants is not None:
+            total_participants += int(rep.num_participants or 0)
+        else:
+            try:
+                total_participants += rep.attendance_rows.filter(absent=False).count() if rep else 0
+            except Exception:
+                pass
+        s = getattr(p, 'cdl_support', None)
+        if s:
+            try:
+                total_certs += s.certificate_recipients.count()
+            except Exception:
+                pass
+            if s.completed_at:
+                # finalized_at proxy: use updated_at (best available)
+                finalized_at = getattr(p, 'updated_at', None)
+                if finalized_at and finalized_at.tzinfo:
+                    finalized_at = finalized_at.date()
+                if finalized_at:
+                    try:
+                        dt = s.completed_at.date() - finalized_at
+                        if dt.days >= 0:
+                            completion_times.append(dt)
+                    except Exception:
+                        pass
+    avg_completion_time = "0 days"
+    if completion_times:
+        avg_days = sum([ct.days for ct in completion_times]) / len(completion_times)
+        avg_completion_time = f"{avg_days:.1f} days"
+
+    # Active assignments
+    from emt.models import CDLAssignment, CDLTaskAssignment, AttendanceRow, CDLCertificateRecipient, CDLMessage
+    # Limit assignments to proposals in current filter
+    prop_ids = [p.id for p in events]
+    task_qs = CDLTaskAssignment.objects.filter(proposal_id__in=prop_ids)
+    assign_qs = CDLAssignment.objects.filter(proposal_id__in=prop_ids)
+    active_assignments = assign_qs.exclude(status=CDLAssignment.Status.COMPLETED).count() + \
+                         task_qs.exclude(status=CDLTaskAssignment.Status.DONE).count()
+
+    kpis = {
+        'total_archived_events': total_archived_events,
+        'total_participants': total_participants,
+        'certificates_issued': total_certs,
+        'avg_completion_time': avg_completion_time,
+        'active_assignments': active_assignments,
+    }
+
+    # ----------------------------
+    # Charts
+    # ----------------------------
+    # Events over time (by month label)
+    from collections import defaultdict
+    from datetime import datetime as dtmod
+    month_counts = defaultdict(int)
+    for p in events:
+        d = best_date(p)
+        if d:
+            key = d.strftime('%Y-%m')
+            month_counts[key] += 1
+    sorted_months = sorted(month_counts.items())
+    events_over_time = {
+        'labels': [dtmod.strptime(m, '%Y-%m').strftime('%b %Y') for m, _ in sorted_months],
+        'data': [c for _, c in sorted_months],
+    }
+
+    # Participants breakdown (student/faculty/external + volunteers)
+    cat_counts = {'student': 0, 'faculty': 0, 'external': 0, 'volunteers': 0}
+    rep_ids = [p.event_report.id for p in events if getattr(p, 'event_report', None)]
+    if rep_ids:
+        att = AttendanceRow.objects.filter(event_report_id__in=rep_ids)
+        cat_counts['student'] = att.filter(category=AttendanceRow.Category.STUDENT, absent=False).count()
+        cat_counts['faculty'] = att.filter(category=AttendanceRow.Category.FACULTY, absent=False).count()
+        cat_counts['external'] = att.filter(category=AttendanceRow.Category.EXTERNAL, absent=False).count()
+        cat_counts['volunteers'] = att.filter(volunteer=True, absent=False).count()
+    participants_breakdown = {
+        'labels': ['Student', 'Faculty', 'External', 'Volunteers'],
+        'data': [cat_counts['student'], cat_counts['faculty'], cat_counts['external'], cat_counts['volunteers']],
+    }
+
+    # Certificates by type
+    cert_type_counts = defaultdict(int)
+    if prop_ids:
+        recs = CDLCertificateRecipient.objects.filter(support__proposal_id__in=prop_ids)
+        for row in recs.values_list('certificate_type', flat=True):
+            cert_type_counts[row or 'other'] += 1
+    cert_types = ['participant', 'core_team', 'event_head', 'other']
+    certificates_by_type = {
+        'labels': [lbl.replace('_', ' ').title() for lbl in cert_types],
+        'data': [cert_type_counts.get(lbl, 0) for lbl in cert_types],
+    }
+
+    # Service usage
+    usage_counts = defaultdict(int)
+    for p in events:
+        s = getattr(p, 'cdl_support', None)
+        if not s:
+            continue
+        if s.poster_required:
+            usage_counts['Poster'] += 1
+        if s.certificates_required:
+            usage_counts['Certificates'] += 1
+        try:
+            for key in (s.other_services or []):
+                usage_counts[str(key).strip().title()] += 1
+        except Exception:
+            pass
+    service_usage = {
+        'labels': list(usage_counts.keys()),
+        'data': [usage_counts[k] for k in usage_counts.keys()],
+    }
+
+    # Workload table by assignee (assignments + tasks)
+    by_user = {}
+    def uname(u):
+        return u.get_full_name() or u.username
+    for a in assign_qs.select_related('assignee'):
+        key = uname(a.assignee)
+        by_user.setdefault(key, {'assignee': key, 'assigned': 0, 'in_progress': 0, 'completed': 0, 'cycle_days': [], 'avg_cycle_time': '—'})
+        if a.status == a.Status.ASSIGNED:
+            by_user[key]['assigned'] += 1
+        elif a.status == a.Status.IN_PROGRESS:
+            by_user[key]['in_progress'] += 1
+        elif a.status == a.Status.COMPLETED:
+            by_user[key]['completed'] += 1
+        # no timestamps on completion to compute cycle; skip
+    for t in task_qs.select_related('assignee'):
+        key = uname(t.assignee) if t.assignee_id else 'Unassigned'
+        by_user.setdefault(key, {'assignee': key, 'assigned': 0, 'in_progress': 0, 'completed': 0, 'cycle_days': [], 'avg_cycle_time': '—'})
+        if t.status == t.Status.ASSIGNED or t.status == t.Status.BACKLOG:
+            by_user[key]['assigned'] += 1
+        elif t.status == t.Status.IN_PROGRESS:
+            by_user[key]['in_progress'] += 1
+        elif t.status == t.Status.DONE:
+            by_user[key]['completed'] += 1
+            try:
+                delta = (t.updated_at.date() - t.assigned_at.date()).days
+                if delta >= 0:
+                    by_user[key]['cycle_days'].append(delta)
+            except Exception:
+                pass
+    workload_rows = []
+    for key, row in by_user.items():
+        if row['cycle_days']:
+            avg = sum(row['cycle_days']) / len(row['cycle_days'])
+            row['avg_cycle_time'] = f"{avg:.1f} days"
+        workload_rows.append({k: v for k, v in row.items() if k != 'cycle_days'})
+    workload_rows.sort(key=lambda r: (-(r['assigned'] + r['in_progress'] + r['completed']), r['assignee']))
+
+    # Task throughput (stacked by status per resource_key)
+    from collections import OrderedDict
+    status_keys = ['backlog', 'assigned', 'in_progress', 'done']
+    key_order = OrderedDict()
+    for t in task_qs:
+        key_order.setdefault(t.resource_key or 'other', {s: 0 for s in status_keys})
+        key_order[t.resource_key or 'other'][t.status] = key_order[t.resource_key or 'other'].get(t.status, 0) + 1
+    task_throughput = {
+        'labels': list(key_order.keys()),
+        'datasets': {
+            'backlog': [key_order[k]['backlog'] for k in key_order.keys()] if key_order else [],
+            'assigned': [key_order[k]['assigned'] for k in key_order.keys()] if key_order else [],
+            'in_progress': [key_order[k]['in_progress'] for k in key_order.keys()] if key_order else [],
+            'done': [key_order[k]['done'] for k in key_order.keys()] if key_order else [],
+        }
+    }
+
+    # Communication intensity (messages per event; in-app vs email)
+    comm_counts = []
+    sup_ids = [p.cdl_support.id for p in events if getattr(p, 'cdl_support', None)]
+    if sup_ids:
+        msgs = CDLMessage.objects.filter(support_id__in=sup_ids)
+        per_support = defaultdict(lambda: {'in_app': 0, 'email': 0, 'title': ''})
+        by_support = {}
+        for p in events:
+            s = getattr(p, 'cdl_support', None)
+            if s:
+                by_support[s.id] = p.event_title
+        for m in msgs:
+            d = per_support[m.support_id]
+            d['title'] = by_support.get(m.support_id, f"Event {m.support_id}")
+            if m.via_email:
+                d['email'] += 1
+            else:
+                d['in_app'] += 1
+        # Sort by total messages and pick top 10
+        comm_counts = sorted(per_support.items(), key=lambda it: (it[1]['in_app'] + it[1]['email']), reverse=True)[:10]
+    comm_intensity = {
+        'labels': [v['title'] for _, v in comm_counts],
+        'in_app': [v['in_app'] for _, v in comm_counts],
+        'email': [v['email'] for _, v in comm_counts],
+    }
+
+    # Content / Reports tracker
+    total = total_archived_events or 1
+    signed = sum(1 for p in events if (getattr(p, 'event_report', None) and p.event_report.report_signed_date))
+    blog = sum(1 for p in events if (getattr(p, 'event_report', None) and (p.event_report.blog_link or '').strip()))
+    outcomes = sum(1 for p in events if (getattr(p, 'event_report', None) and (p.event_report.outcomes or '').strip()))
+    analysis = sum(1 for p in events if (getattr(p, 'event_report', None) and (p.event_report.analysis or '').strip()))
+    tracker = {
+        'reports_signed_pct': round(100 * signed / total, 1) if total_archived_events else 0,
+        'blog_link_pct': round(100 * blog / total, 1) if total_archived_events else 0,
+        'outcomes_pct': round(100 * outcomes / total, 1) if total_archived_events else 0,
+        'analysis_pct': round(100 * analysis / total, 1) if total_archived_events else 0,
+    }
+
+    # Bottom drilldown events list
+    drill_events = []
+    for p in events:
+        rep = getattr(p, 'event_report', None)
+        participants = rep.num_participants if rep and rep.num_participants is not None else 0
+        try:
+            if participants == 0 and rep:
+                participants = rep.attendance_rows.filter(absent=False).count()
+        except Exception:
+            pass
+        s = getattr(p, 'cdl_support', None)
+        certs = 0
+        try:
+            certs = s.certificate_recipients.count() if s else 0
+        except Exception:
+            pass
+        completed_at = s.completed_at if s else None
+        finalized_at = getattr(p, 'updated_at', None)
+        ctime = '—'
+        try:
+            if completed_at and finalized_at:
+                ctime = f"{(completed_at.date() - finalized_at.date()).days} days"
+        except Exception:
+            pass
+        etype = (rep.actual_event_type if rep and rep.actual_event_type else (p.event_focus_type or 'Other'))
+        drill_events.append({
+            'event_title': p.event_title,
+            'department': getattr(p.organization, 'name', 'Unknown') if p.organization else 'Unknown',
+            'academic_year': p.academic_year or '',
+            'event_type': etype,
+            'participants': participants,
+            'certificates_issued': certs,
+            'completion_time': ctime,
+        })
+
+    # ----------------------------
+    # Options for filters (from archived set overall, not limited by current filters)
+    # Optimized: avoid large subqueries; use joins and distinct.
+    # ----------------------------
+    completed_qs = EMTEventProposal.objects.filter(
+        status=EMTEventProposal.Status.FINALIZED,
+        cdl_support__completed=True,
+    )
+    academic_years = list(
+        completed_qs.exclude(academic_year="").values_list('academic_year', flat=True).distinct().order_by('academic_year')
+    )
+    # Organizations by type
+    orgs_map = {}
+    try:
+        all_orgs = Organization.objects.select_related('org_type').filter(is_active=True)
+        for o in all_orgs:
+            t = o.org_type.name if o.org_type else 'Other'
+            orgs_map.setdefault(t, []).append({'id': o.id, 'name': o.name})
+        for k in list(orgs_map.keys()):
+            orgs_map[k] = sorted(orgs_map[k], key=lambda x: x['name'].lower())
+    except Exception:
+        orgs_map = {}
+    planned_event_types = list(
+        completed_qs.exclude(event_focus_type="").values_list('event_focus_type', flat=True).distinct().order_by('event_focus_type')
+    )
+    actual_event_types = list(
+        EMTEventReport.objects.filter(
+            proposal__status=EMTEventProposal.Status.FINALIZED,
+            proposal__cdl_support__completed=True,
+        ).exclude(actual_event_type="").values_list('actual_event_type', flat=True).distinct().order_by('actual_event_type')
+    )
+    # Service types (base + discovered keys)
+    base_services = [{'key': 'poster', 'label': 'Poster'}, {'key': 'certificates', 'label': 'Certificates'}]
+    service_keys = set()
+    for s in CDLSupport.objects.filter(
+        proposal__status=EMTEventProposal.Status.FINALIZED,
+        completed=True,
+    ).values_list('other_services', flat=True).iterator():
+        try:
+            for k in (s or []):
+                service_keys.add(str(k))
+        except Exception:
+            pass
+    service_type_options = base_services + [{'key': k, 'label': k.replace('_', ' ').title()} for k in sorted(service_keys)]
+
+    # Determine what to show back in the UI for date inputs
+    ui_start = '' if date_range_flag == 'all' else start_date.isoformat()
+    ui_end = '' if date_range_flag == 'all' else end_date.isoformat()
+
+    context = {
+        'filters': {
+            'start_date': ui_start,
+            'end_date': ui_end,
+            'academic_year': academic_year,
+            'organizations': org_ids,
+            'event_type_planned': event_type_planned,
+            'event_type_actual': event_type_actual,
+            # For template selection checks, provide selected keys list
+            'service_types': selected_service_types,
+            'range': date_range_flag or 'custom',
+        },
+        'academic_years': academic_years,
+        'organizations_by_type': orgs_map,
+        'planned_event_types': planned_event_types,
+        'actual_event_types': actual_event_types,
+        # Options for multiselect
+        'service_types': service_type_options,
+        'kpis': kpis,
+        'workload_rows': workload_rows,
+        'tracker': tracker,
+        'events': drill_events,
+        # charts
+        'chart_events_over_time': events_over_time,
+        'chart_participants_breakdown': participants_breakdown,
+        'chart_certificates_by_type': certificates_by_type,
+        'chart_service_usage': service_usage,
+        'chart_task_throughput': task_throughput,
+        'chart_comm_intensity': comm_intensity,
+    }
+    return render(request, "core/cdl_analysis.html", context)
+
+@login_required
+@require_GET
+def api_cdl_analysis(request):
+    """API endpoint for CDL analysis dashboard data with filtering and analytics"""
+    from django.contrib.auth.models import User
+    from django.db.models import Sum, Avg, Count, Q
+    from django.db.models.functions import TruncMonth
+    from datetime import datetime, timedelta
+    
+    # Get filter parameters
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    department = request.GET.get('department')
+    event_type = request.GET.get('event_type')
+    sort_by = request.GET.get('sort_by', 'date')
+    
+    def best_date(p):
+        if getattr(p, 'event_start_date', None):
+            return p.event_start_date
+        if getattr(p, 'event_datetime', None):
+            try:
+                return p.event_datetime.date()
+            except Exception:
+                return None
+        return None
+
+    # Build base queryset
+    qs = EMTEventProposal.objects.filter(
+        status=EMTEventProposal.Status.FINALIZED, 
+        cdl_support__completed=True
+    ).select_related('organization', 'cdl_support', 'event_report').prefetch_related('cdl_support__certificate_recipients')
+    
+    # Apply filters
+    if start_date:
+        qs = qs.filter(event_start_date__gte=start_date)
+    if end_date:
+        qs = qs.filter(event_start_date__lte=end_date)
+    if department:
+        qs = qs.filter(organization__name__icontains=department)
+    if event_type:
+        # Match against post-event actual_event_type when available, else proposal focus type
+        qs = qs.filter(Q(event_report__actual_event_type__icontains=event_type) | Q(event_focus_type__icontains=event_type))
+    
+    # Apply sorting
+    if sort_by == 'date':
+        qs = qs.order_by('-event_start_date')
+    elif sort_by == 'title':
+        qs = qs.order_by('event_title')
+    elif sort_by == 'department':
+        qs = qs.order_by('organization__name')
+    elif sort_by == 'completed':
+        qs = qs.order_by('-cdl_support__completed_at')
+    else:
+        qs = qs.order_by('-cdl_support__completed_at')
+    
+    events = qs[:500]  # Limit for performance
+    
+    # Calculate KPIs
+    total_events = events.count()
+    # Participants from EventReport when available
+    total_participants = 0
+    total_certificates = 0
+    for p in events:
+        # participants
+        rep = getattr(p, 'event_report', None)
+        if rep and getattr(rep, 'num_participants', None):
+            total_participants += rep.num_participants or 0
+        # certificates issued based on saved recipients under CDLSupport
+        s = getattr(p, 'cdl_support', None)
+        if s:
+            try:
+                total_certificates += s.certificate_recipients.count()
+            except Exception:
+                pass
+    
+    # Department distribution
+    dept_counts = {}
+    for p in events:
+        dept_name = getattr(p.organization, 'name', 'Unknown') if p.organization else 'Unknown'
+        dept_counts[dept_name] = dept_counts.get(dept_name, 0) + 1
+    dept_data = sorted(dept_counts.items(), key=lambda x: x[1], reverse=True)
+    
+    # Event type distribution
+    type_counts = {}
+    for p in events:
+        # Prefer actual_event_type from post-event report; fallback to proposal focus type
+        etype = None
+        try:
+            etype = (getattr(p, 'event_report', None) and p.event_report.actual_event_type) or None
+        except Exception:
+            etype = None
+        if not etype:
+            etype = getattr(p, 'event_focus_type', None)
+        etype = etype or 'Other'
+        type_counts[etype] = type_counts.get(etype, 0) + 1
+    type_data = sorted(type_counts.items(), key=lambda x: x[1], reverse=True)
+    
+    # Monthly trends (last 12 months)
+    twelve_months_ago = datetime.now() - timedelta(days=365)
+    monthly_counts = {}
+    for p in events:
+        d = best_date(p)
+        if d and d >= twelve_months_ago.date():
+            month_key = d.strftime('%Y-%m')
+            monthly_counts[month_key] = monthly_counts.get(month_key, 0) + 1
+    
+    # Sort monthly data
+    sorted_months = sorted(monthly_counts.items())
+    monthly_labels = [datetime.strptime(m[0], '%Y-%m').strftime('%b %Y') for m in sorted_months]
+    monthly_data = [m[1] for m in sorted_months]
+    
+    # Prepare events data
+    events_data = []
+    for p in events[:100]:  # Limit display
+        d = best_date(p)
+        s = getattr(p, 'cdl_support', None)
+        # participants and event type
+        rep = getattr(p, 'event_report', None)
+        etype = (rep.actual_event_type if rep and rep.actual_event_type else getattr(p, 'event_focus_type', None)) or 'Other'
+        participants = rep.num_participants if rep and rep.num_participants is not None else 0
+        certs = 0
+        try:
+            certs = s.certificate_recipients.count() if s else 0
+        except Exception:
+            certs = 0
+        events_data.append({
+            'id': p.id,
+            'event_title': p.event_title,
+            'organization': getattr(p.organization, 'name', None),
+            'event_date': d.isoformat() if d else None,
+            'department': getattr(p.organization, 'name', 'Unknown') if p.organization else 'Unknown',
+            'event_type': etype,
+            'no_of_participants': participants,
+            'certificates_issued': certs,
+            'rating': None,
+            'completed_at': s.completed_at.isoformat() if s and s.completed_at else None,
+            'completed_by': (s.completed_by.get_full_name() or s.completed_by.username) if s and s.completed_by else None,
+        })
+
+    # Get filter options for dropdowns
+    all_completed = EMTEventProposal.objects.filter(
+        status=EMTEventProposal.Status.FINALIZED, 
+        cdl_support__completed=True
+    ).select_related('organization')
+    
+    # Distinct departments
+    departments = set()
+    for p in all_completed:
+        if p.organization and p.organization.name:
+            departments.add(p.organization.name)
+    departments = sorted(list(departments))
+    
+    # Distinct event types
+    event_types = set()
+    for p in all_completed.select_related('event_report'):
+        etype = None
+        try:
+            etype = (p.event_report.actual_event_type if p.event_report and p.event_report.actual_event_type else None)
+        except Exception:
+            etype = None
+        if not etype:
+            etype = getattr(p, 'event_focus_type', None)
+        if etype:
+            event_types.add(etype)
+    event_types = sorted(event_types)
+    
+    return JsonResponse({
+        'success': True,
+        'kpis': {
+            'total_events': total_events,
+            'total_participants': total_participants,
+            'total_certificates': total_certificates,
+            'avg_participants': round((total_participants / total_events), 1) if total_events else 0,
+        },
+        'charts': {
+            'departments': {
+                'labels': [item[0] for item in dept_data[:8]],  # Top 8
+                'data': [item[1] for item in dept_data[:8]],
+            },
+            'event_types': {
+                'labels': [item[0] for item in type_data[:8]],  # Top 8
+                'data': [item[1] for item in type_data[:8]],
+            },
+            'monthly_trends': {
+                'labels': monthly_labels,
+                'data': monthly_data,
+            },
+        },
+        'events': events_data,
+        'filter_options': {
+            'departments': departments,
+            'event_types': event_types,
+        }
+    })
+
+# ────────────────────────────────────────────────────────────────
 #  CDL SUPPORT DETAIL PAGE + APIS
 # ────────────────────────────────────────────────────────────────
 from django.views.decorators.http import require_http_methods
@@ -6433,6 +7125,9 @@ def api_cdl_support_detail(request, proposal_id:int):
         'poster_design_link': getattr(s, 'poster_design_link', None),
         'certificate_design_link': getattr(s, 'certificate_design_link', None),
         'other_services': getattr(s, 'other_services', []) or [],
+        # completion
+        'cdl_completed': bool(getattr(s, 'completed', False)) if s else False,
+        'cdl_completed_at': (getattr(s, 'completed_at', None).isoformat() if getattr(s, 'completed_at', None) else None) if s else None,
     # assignment details
     'assigned_to_id': (asg.assignee_id if asg else getattr(p, 'report_assigned_to_id', None)),
     'assigned_to_name': ((asg.assignee.get_full_name() or asg.assignee.username) if asg else (p.report_assigned_to.get_full_name() if p.report_assigned_to else None)),
@@ -6440,6 +7135,51 @@ def api_cdl_support_detail(request, proposal_id:int):
     'assigned_status': (asg.status if asg else None),
     }
     return JsonResponse({"success": True, "data": data})
+
+@login_required
+@require_http_methods(["POST"])  # /api/cdl/support/<proposal_id>/complete/
+def api_cdl_support_complete(request, proposal_id:int):
+    """Toggle CDL completion for a proposal's CDLSupport and stamp metadata.
+
+    Body JSON: { completed: bool }
+    Permissions: CDL Head/Admin only.
+    """
+    try:
+        payload = json.loads(request.body or '{}')
+    except Exception:
+        payload = {}
+    mark = bool(payload.get('completed', True))
+
+    # Permission: CDL Head/Admin
+    is_cdl_head = False
+    try:
+        from .models import RoleAssignment
+        heads = RoleAssignment.objects.filter(organization__org_type__name__iexact='CDL', role__name__icontains='head', user=request.user)
+        is_cdl_head = heads.exists() or request.user.is_superuser
+    except Exception:
+        is_cdl_head = request.user.is_superuser
+    if not is_cdl_head:
+        return JsonResponse({'success': False, 'error': 'Not allowed'}, status=403)
+
+    try:
+        p = EMTEventProposal.objects.select_related('cdl_support').get(id=proposal_id)
+    except EMTEventProposal.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Event not found'}, status=404)
+
+    s = getattr(p, 'cdl_support', None)
+    if not s:
+        return JsonResponse({'success': False, 'error': 'CDL support record not found'}, status=404)
+
+    from django.utils import timezone
+    s.completed = mark
+    if mark:
+        s.completed_at = timezone.now()
+        s.completed_by = request.user
+    else:
+        s.completed_at = None
+        s.completed_by = None
+    s.save(update_fields=['completed','completed_at','completed_by'])
+    return JsonResponse({'success': True, 'completed': s.completed, 'completed_at': (s.completed_at.isoformat() if s.completed_at else None)})
 
 @login_required
 @require_http_methods(["POST"])  # /api/cdl/support/<proposal_id>/assign/
@@ -6719,7 +7459,7 @@ def api_cdl_member_work(request):
     This powers the CDL Team Dashboard 'Assigned Events' list.
     """
     me = request.user
-    qs = EMTEventProposal.objects.filter(report_assigned_to=me).select_related('organization')[:100]
+    qs = EMTEventProposal.objects.filter(report_assigned_to=me).select_related('organization','cdl_support').exclude(cdl_support__completed=True)[:100]
     items = []
     for p in qs:
         items.append({
@@ -6806,14 +7546,14 @@ def api_cdl_member_data(request):
     asg_ids = list(_CDLAssignment.objects.filter(assignee=user).values_list('proposal_id', flat=True))
     legacy_qs = EMTEventProposal.objects.filter(report_assigned_to=user).values_list('id', flat=True)
     proposal_ids = list(set(asg_ids) | set(legacy_qs))
-    work_qs = EMTEventProposal.objects.filter(id__in=proposal_ids).select_related('organization')[:200]
+    work_qs = EMTEventProposal.objects.filter(id__in=proposal_ids).select_related('organization','cdl_support').exclude(cdl_support__completed=True)[:200]
     work = []
     due_today = 0
     from datetime import date as _date
     today = _date.today()
     # Also include per-resource assignments (fine-grained tasks)
     from emt.models import CDLTaskAssignment as _Task
-    task_qs = _Task.objects.filter(assignee=user).select_related('proposal')
+    task_qs = _Task.objects.filter(assignee=user, proposal__cdl_support__completed=False).select_related('proposal')
     task_by_proposal = {}
     for t in task_qs:
         d = best_date(t.proposal)

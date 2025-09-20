@@ -21,6 +21,7 @@ urlpatterns = [
     path('dashboard/select/<str:dashboard_key>/', views.select_dashboard, name='select_dashboard'),
     path('my-profile/', views.my_profile, name='my_profile'),
     path('user-dashboard/', views.user_dashboard, name='user_dashboard'),
+    path('notifications/', views.notifications_page, name='notifications'),
     path('event/<int:proposal_id>/details/', views.student_event_details, name='student_event_details'),
 
     # ────────────────────────────────────────────────
@@ -34,6 +35,7 @@ urlpatterns = [
     path("cdl/support/", views.cdl_support_detail_page, name="cdl_support_detail_page"),
     path("cdl/communication/", views.cdl_communication_page, name="cdl_communication_page"),
     path("cdl/support/<int:proposal_id>/assign/", views.cdl_assign_tasks_page, name="cdl_assign_tasks_page"),
+    path("cdl/analysis/", views.cdl_analysis_page, name="cdl_analysis_page"),
     path("cdl/availability/new/", views.cdl_create_availability, name="create_availability"),
     path("cdl/resources/brand-kit/", views.cdl_brand_kit, name="brand_kit"),
     path("cdl/resources/templates/posters/", views.cdl_templates_posters, name="templates_posters"),
@@ -183,10 +185,13 @@ urlpatterns = [
     path('api/cdl/support/<int:proposal_id>/', views.api_cdl_support_detail, name='api_cdl_support_detail'),
     path('api/cdl/communication/', views.api_cdl_communication, name='api_cdl_communication'),
     path('api/cdl/support/<int:proposal_id>/assign/', views.api_cdl_support_assign, name='api_cdl_support_assign'),
+    path('api/cdl/support/<int:proposal_id>/complete/', views.api_cdl_support_complete, name='api_cdl_support_complete'),
     # Per-resource assignment APIs
     path('api/cdl/support/<int:proposal_id>/resources/', views.api_cdl_support_resources, name='api_cdl_support_resources'),
     path('api/cdl/support/<int:proposal_id>/task-assignments/', views.api_cdl_save_task_assignments, name='api_cdl_save_task_assignments'),
     path('api/cdl/support/<int:proposal_id>/tasks/', views.api_cdl_tasks_crud, name='api_cdl_tasks_crud'),
+    # Analysis
+    path('api/cdl/analysis/', views.api_cdl_analysis, name='api_cdl_analysis'),
 
     # --- Calendar (Unified) ---
     path('api/calendar/', views.api_calendar_events, name='api_calendar_events'),
