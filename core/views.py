@@ -5549,8 +5549,6 @@ def impersonate_user(request):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
-    return JsonResponse({'suggestions': suggestions})
-
 # ─────────────────────────────────────────────────────────────
 #  Student Event Details View
 # ─────────────────────────────────────────────────────────────
