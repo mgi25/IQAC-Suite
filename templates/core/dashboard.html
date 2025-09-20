@@ -58,32 +58,39 @@
     </button>
 
     <!-- Profile -->
-    <div class="profile-kpi card">
-      <div class="pkp-avatar">
+    <div class="profile-kpi card" style="padding: 24px 28px; grid-template-columns: 120px 1fr; gap: 28px; align-items: center; min-height: 170px;">
+      <div class="pkp-avatar" style="width: 110px; height: 110px; border-radius: 18px; background: #e5e7eb; overflow: hidden; display: flex; align-items: center; justify-content: center;">
         {% if user.profile and user.profile.photo %}
-          <img src="{{ user.profile.photo.url }}" alt="{{ user.get_full_name|default:user.username }}">
+          <img src="{{ user.profile.photo.url }}" alt="{{ user.get_full_name|default:user.username }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 18px;">
         {% else %}
-          <span class="pkp-initials" aria-hidden="true">
+          <span class="pkp-initials" aria-hidden="true" style="font-size: 38px; font-weight: 900; color: var(--primary);">
             {% if user.first_name %}{{ user.first_name.0|upper }}{% if user.last_name %}{{ user.last_name.0|upper }}{% endif %}{% else %}{{ user.username.0|upper }}{% endif %}
           </span>
         {% endif %}
       </div>
-      <div class="pkp-body">
-        <h1 class="pkp-name">{{ user.get_full_name|default:user.username }}</h1>
-        <h2 class="pkp-sub">{{ user.email }}</h2>
-        <h3 class="pkp-meta">
-          <span>Rank: <strong>{{ user.rank|default:"—" }}</strong></span>
-          <span>Classes: <strong>{{ classes_count|default:0 }}</strong></span>
+      <div class="pkp-body" style="display: flex; flex-direction: column; gap: 10px; min-width: 0;">
+        <h1 class="pkp-name" style="font-size: 24px; font-weight: 800; margin: 0; color: var(--ink); line-height: 1.1;">{{ user.get_full_name|default:user.username }}</h1>
+        <h2 class="pkp-sub" style="font-size: 15px; font-weight: 600; color: var(--muted); margin: 0;">{{ user.email }}</h2>
+        <h3 class="pkp-meta" style="margin: 8px 0 0; display: flex; gap: 24px; font-size: 13px; font-weight: 600; color: var(--muted);">
+          <span>Rank: <strong style="color: var(--ink); font-weight: 800;">{{ user.rank|default:"—" }}</strong></span>
+          <span>Classes: <strong style="color: var(--ink); font-weight: 800;">{{ classes_count|default:0 }}</strong></span>
         </h3>
-        <div class="pkp-actions">
-          <a href="{% url 'my_profile' %}?from_dashboard=true" class="btn btn-profile-primary" aria-label="View profile">
-            <i class="fas fa-user-cog" aria-hidden="true"></i>
-            <span>View Profile</span>
-          </a>
-          <a href="{% url 'my_profile' %}?from_dashboard=true&tab=edit" class="btn btn-profile-secondary" aria-label="Edit profile">
-            <i class="fas fa-edit" aria-hidden="true"></i>
-            <span>Edit Profile</span>
-          </a>
+        <div class="pkp-actions" style="display: flex; gap: 12px; margin-top: 10px;">
+          <form action="{% url 'my_profile' %}" method="get" style="margin:0;">
+            <input type="hidden" name="from_dashboard" value="true">
+            <button type="submit" class="btn btn-profile-primary" aria-label="View profile" style="padding: 8px 18px; border-radius: 6px; background: var(--primary); color: #fff; font-weight: 600; display: flex; align-items: center; gap: 6px; font-size: 14px; border: none; cursor: pointer;">
+              <i class="fas fa-user-cog" aria-hidden="true"></i>
+              <span>View Profile</span>
+            </button>
+          </form>
+          <form action="{% url 'my_profile' %}" method="get" style="margin:0;">
+            <input type="hidden" name="from_dashboard" value="true">
+            <input type="hidden" name="tab" value="edit">
+            <button type="submit" class="btn btn-profile-secondary" aria-label="Edit profile" style="padding: 8px 18px; border-radius: 6px; background: #fff; color: var(--ink); font-weight: 600; border: 1px solid var(--border); display: flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer;">
+              <i class="fas fa-edit" aria-hidden="true"></i>
+              <span>Edit Profile</span>
+            </button>
+          </form>
         </div>
       </div>
     </div>
