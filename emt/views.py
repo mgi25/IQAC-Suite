@@ -295,6 +295,33 @@ def _save_speakers(proposal, data, files):
             )
 
 
+def _serialize_speaker(speaker: SpeakerProfile) -> dict:
+    photo_url = ""
+    if speaker.photo:
+        try:
+            photo_url = speaker.photo.url
+        except ValueError:
+            photo_url = ""
+    return {
+        "id": speaker.id,
+        "full_name": speaker.full_name,
+        "name": speaker.full_name,
+        "designation": speaker.designation,
+        "affiliation": speaker.affiliation,
+        "organization": speaker.affiliation,
+        "contact": speaker.contact_email,
+        "contact_email": speaker.contact_email,
+        "contact_number": speaker.contact_number,
+        "linkedin_url": speaker.linkedin_url,
+        "linkedin": speaker.linkedin_url,
+        "detailed_profile": speaker.detailed_profile,
+        "profile": speaker.detailed_profile,
+        "bio": speaker.detailed_profile,
+        "photo": photo_url,
+        "photo_url": photo_url,
+    }
+
+
 def _parse_sdg_text(text: str):
     """Extract SDGGoal IDs from free text like 'SDG3: Good Health, SDG4: Education' or names.
     Returns a queryset of matching SDGGoal objects.
@@ -486,17 +513,7 @@ def submit_proposal(request, pk=None):
             act["date"] = act["date"].isoformat()
 
     speakers = (
-        list(
-            proposal.speakers.values(
-                "full_name",
-                "designation",
-                "affiliation",
-                "contact_email",
-                "contact_number",
-                "linkedin_url",
-                "detailed_profile",
-            )
-        )
+        [_serialize_speaker(sp) for sp in proposal.speakers.all()]
         if proposal
         else []
     )
@@ -1646,6 +1663,60 @@ def autosave_event_report(request):
 
 
 @login_required
+@require_http_methods(["POST"])
+def api_update_speaker(request, proposal_id, speaker_id):
+    proposal = get_object_or_404(EventProposal, id=proposal_id)
+    if not (
+        proposal.submitted_by == request.user
+        or request.user.has_perm("emt.change_eventreport")
+        or request.user.has_perm("emt.change_speakerprofile")
+    ):
+        return JsonResponse({"success": False, "error": "Forbidden"}, status=403)
+
+    speaker = get_object_or_404(SpeakerProfile, id=speaker_id, proposal=proposal)
+
+    content_type = request.content_type or ""
+    if content_type.startswith("multipart/form-data") or content_type.startswith(
+        "application/x-www-form-urlencoded"
+    ):
+        data = request.POST.copy()
+        files = request.FILES
+    else:
+        try:
+            raw = request.body.decode("utf-8")
+            data = json.loads(raw) if raw else {}
+        except json.JSONDecodeError:
+            logger.debug("api_update_speaker invalid json: %s", raw)
+            return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
+        files = None
+
+    if hasattr(data, "copy"):
+        data = data.copy()
+
+    remove_flag = str(data.pop("remove_photo", "")).lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+    has_new_photo = bool(files and files.get("photo"))
+
+    form = SpeakerProfileForm(data or None, files, instance=speaker)
+    if not form.is_valid():
+        return JsonResponse({"success": False, "errors": form.errors}, status=400)
+
+    updated = form.save(commit=False)
+    if remove_flag and not has_new_photo:
+        if updated.photo:
+            updated.photo.delete(save=False)
+        updated.photo = None
+    updated.save()
+
+    return JsonResponse({"success": True, "speaker": _serialize_speaker(updated)})
+
+
+@login_required
 def api_organizations(request):
     q = request.GET.get("q", "").strip()
     org_type = request.GET.get(
@@ -2143,17 +2214,7 @@ def submit_event_report(request, proposal_id):
 
     # Fetch speakers data for editing
     speakers_qs = SpeakerProfile.objects.filter(proposal=proposal)
-    speakers_json = [
-        {
-            "full_name": s.full_name,
-            "name": s.full_name,  # Backward compatibility
-            "designation": s.designation,
-            "affiliation": s.affiliation,
-            "organization": s.affiliation,  # Backward compatibility
-            "contact": s.contact_email,
-        }
-        for s in speakers_qs
-    ]
+    speakers_json = [_serialize_speaker(speaker) for speaker in speakers_qs]
 
     # Get or create content sections for the report
     event_summary = None
@@ -2187,6 +2248,67 @@ def submit_event_report(request, proposal_id):
         f.get_full_name() or f.username for f in proposal.faculty_incharges.all()
     ]
 
+    def _normalise_numeric(value):
+        if value in (None, ""):
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return value
+
+    def _field_value(field_name):
+        return _normalise_numeric(form[field_name].value()) if form else None
+
+    form_total = _field_value("num_participants")
+    if form_total is not None:
+        total_count = form_total
+    elif report and report.num_participants is not None:
+        total_count = report.num_participants
+    else:
+        total_count = _normalise_numeric(attendance_present)
+
+    form_volunteers = _field_value("num_student_volunteers")
+    if form_volunteers is not None:
+        volunteers_count = form_volunteers
+    elif report and report.num_student_volunteers is not None:
+        volunteers_count = report.num_student_volunteers
+    else:
+        volunteers_count = _normalise_numeric(attendance_volunteers)
+
+    form_students = _field_value("num_student_participants")
+    if form_students is not None:
+        student_count = form_students
+    elif report and report.num_student_participants is not None:
+        student_count = report.num_student_participants
+    else:
+        student_count = None
+
+    form_faculty = _field_value("num_faculty_participants")
+    if form_faculty is not None:
+        faculty_count = form_faculty
+    elif report and report.num_faculty_participants is not None:
+        faculty_count = report.num_faculty_participants
+    else:
+        faculty_count = None
+
+    form_external = _field_value("num_external_participants")
+    if form_external is not None:
+        external_count = form_external
+    elif report and report.num_external_participants is not None:
+        external_count = report.num_external_participants
+    else:
+        external_count = None
+
+    attendance_counts = {
+        "present": _normalise_numeric(attendance_present),
+        "absent": _normalise_numeric(attendance_absent),
+        "volunteers": volunteers_count,
+        "total": total_count,
+        "students": student_count,
+        "faculty": faculty_count,
+        "external": external_count,
+    }
+
     # Prepare SDG goal data for modal and proposal prefill
     sdg_goals_list = [
         {"id": goal.id, "title": goal.name} for goal in SDGGoal.objects.all()
@@ -2212,6 +2334,8 @@ def submit_event_report(request, proposal_id):
         "attendance_present": attendance_present,
         "attendance_absent": attendance_absent,
         "attendance_volunteers": attendance_volunteers,
+        "attendance_counts": attendance_counts,
+        "attendance_counts_json": json.dumps(attendance_counts),
         "faculty_names_json": json.dumps(faculty_names),
         "volunteer_names_json": json.dumps(volunteer_names),
     }

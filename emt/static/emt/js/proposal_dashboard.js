@@ -2038,8 +2038,9 @@ function getWhyThisEventForm() {
                     <div class="speaker-form-card">
                         <div class="speaker-form-header">
                             <h3 class="speaker-title">Speaker ${index + 1}</h3>
-                            <button type="button" class="btn-remove-speaker remove-speaker-btn" data-index="${index}" title="Remove Speaker">
-                                <i class="fas fa-times"></i>
+                            <button type="button" class="btn-remove-speaker remove-speaker-btn" data-index="${index}" title="Remove speaker" aria-label="Remove speaker">
+                                <i class="fas fa-times" aria-hidden="true"></i>
+                                <span class="sr-only">Remove speaker</span>
                             </button>
                         </div>
                         
@@ -2128,6 +2129,8 @@ function getWhyThisEventForm() {
                 });
             });
 
+            const count = container.children('.speaker-form-container').length;
+            index = count;
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
             }
@@ -2246,6 +2249,7 @@ function getWhyThisEventForm() {
             showEmptyState();
         } else {
             // attempt to restore speakers from autosaved draft
+            let restoredFromDraft = false;
             try {
                 const key = `proposal_draft_${window.USER_ID}_${window.location.pathname}_new`;
                 const saved = JSON.parse(localStorage.getItem(key) || '{}');
@@ -2270,9 +2274,15 @@ function getWhyThisEventForm() {
                             }
                         });
                     });
+                    restoredFromDraft = true;
                 }
             } catch (e) {
                 console.warn('Failed to restore speaker autosave', e);
+            }
+
+            if (!restoredFromDraft) {
+                container.empty();
+                addSpeakerForm();
             }
             showEmptyState();
         }

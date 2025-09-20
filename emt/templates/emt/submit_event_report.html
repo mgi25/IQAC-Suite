@@ -204,7 +204,7 @@
                             <div class="input-group">
                                 <label for="attendance-modern">Attendance *</label>
                                 <input type="text" id="attendance-modern" class="proposal-input" readonly value="Present: {{ attendance_present }}, Absent: {{ attendance_absent }}, Volunteers: {{ attendance_volunteers }}" {% if report %}data-attendance-url="{% url 'emt:attendance_upload' report.id %}"{% endif %}>
-                                <input type="hidden" id="num-participants-modern" name="num_participants" value="{{ attendance_present }}">
+                                <input type="hidden" id="num-participants-modern" name="num_participants" value="{{ attendance_counts.total|default_if_none:'' }}">
                                 <div class="help-text">Click attendance box to manage via CSV</div>
                                 {% if form.num_participants.errors %}
                                     <div class="field-error">{{ form.num_participants.errors.0 }}</div>
@@ -212,8 +212,8 @@
                             </div>
                             <div class="input-group">
                                 <label for="num-volunteers-modern">Number of student volunteers</label>
-                                <input type="number" id="num-volunteers-modern" class="proposal-input" value="{{ form.num_student_volunteers.value|default:'' }}" disabled>
-                                <input type="hidden" id="num-volunteers-hidden" name="num_student_volunteers" value="{{ form.num_student_volunteers.value|default:'' }}">
+                                <input type="number" id="num-volunteers-modern" class="proposal-input" value="{{ attendance_counts.volunteers|default_if_none:'' }}" disabled>
+                                <input type="hidden" id="num-volunteers-hidden" name="num_student_volunteers" value="{{ attendance_counts.volunteers|default_if_none:'' }}">
                                 <div class="help-text">Automatically calculated from attendance CSV</div>
                                 {% if form.num_student_volunteers.errors %}
                                     <div class="field-error">{{ form.num_student_volunteers.errors.0 }}</div>
@@ -224,21 +224,21 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="student-participants-modern">Number of student participants</label>
-                                <input type="number" id="student-participants-modern" name="num_student_participants" class="proposal-input" value="{{ form.num_student_participants.value|default:'' }}">
+                                <input type="number" id="student-participants-modern" name="num_student_participants" class="proposal-input" value="{{ attendance_counts.students|default_if_none:'' }}">
                                 {% if form.num_student_participants.errors %}
                                     <div class="field-error">{{ form.num_student_participants.errors.0 }}</div>
                                 {% endif %}
                             </div>
                             <div class="input-group">
                                 <label for="faculty-participants-modern">Number of faculty participants</label>
-                                <input type="number" id="faculty-participants-modern" name="num_faculty_participants" class="proposal-input" value="{{ form.num_faculty_participants.value|default:'' }}">
+                                <input type="number" id="faculty-participants-modern" name="num_faculty_participants" class="proposal-input" value="{{ attendance_counts.faculty|default_if_none:'' }}">
                                 {% if form.num_faculty_participants.errors %}
                                     <div class="field-error">{{ form.num_faculty_participants.errors.0 }}</div>
                                 {% endif %}
                             </div>
                             <div class="input-group">
                                 <label for="external-participants-modern">Number of external participants</label>
-                                <input type="number" id="external-participants-modern" name="num_external_participants" class="proposal-input" value="{{ form.num_external_participants.value|default:'' }}">
+                                <input type="number" id="external-participants-modern" name="num_external_participants" class="proposal-input" value="{{ attendance_counts.external|default_if_none:'' }}">
                                 {% if form.num_external_participants.errors %}
                                     <div class="field-error">{{ form.num_external_participants.errors.0 }}</div>
                                 {% endif %}
@@ -381,9 +381,11 @@
         window.SDG_GOALS = {{ sdg_goals_list|default:'[]'|safe }};
         window.PROPOSAL_ACTIVITIES = {{ proposal_activities_json|safe }};
         window.EXISTING_SPEAKERS = {{ speakers_json|default:'[]'|safe }};
+        window.SPEAKER_UPDATE_BASE = "{% url 'emt:api_update_speaker' proposal.id 0 %}".split('0/')[0];
         window.ATTENDANCE_PRESENT = {{ attendance_present|default:0 }};
         window.ATTENDANCE_ABSENT = {{ attendance_absent|default:0 }};
         window.ATTENDANCE_VOLUNTEERS = {{ attendance_volunteers|default:0 }};
+        window.ATTENDANCE_COUNTS = {{ attendance_counts_json|default:'{}'|safe }};
     // Current saved Graduate Attributes mapping (for reliable summary hydration)
     window.REPORT_GA_MAPPING = "{{ report.needs_grad_attr_mapping|default:''|escapejs }}";
         window.PROPOSAL_DATA = {
