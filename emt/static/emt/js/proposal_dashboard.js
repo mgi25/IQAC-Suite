@@ -831,12 +831,66 @@ $(document).ready(function() {
         const djangoField = $('#django-basic-info [name="student_coordinators"]');
         const orgSelect = $('#django-basic-info [name="organization"]');
         const committeesField = $('#django-basic-info [name="committees_collaborations_ids"]');
+        const audienceField = $('#target-audience-modern');
         const list = $('#student-coordinators-list');
         if (!select.length || !djangoField.length) return;
 
         if (select[0].tomselect) {
             select[0].tomselect.destroy();
         }
+
+        if (audienceField.length) {
+            audienceField.off('change.studentCoordinatorSync');
+        }
+
+        const getAudienceStudentOptions = (query = '') => {
+            if (!audienceField.length) return [];
+            const q = query.trim().toLowerCase();
+            const storedUsers = Array.isArray(audienceField.data('selectedUsers'))
+                ? audienceField.data('selectedUsers')
+                : [];
+            const seen = new Set();
+            return storedUsers.reduce((acc, user) => {
+                const identifier = String(user?.id || '');
+                const rawName = typeof user?.name === 'string' ? user.name.trim() : '';
+                if (!identifier.startsWith('stu-') || !rawName) {
+                    return acc;
+                }
+                const nameLower = rawName.toLowerCase();
+                if (q && !nameLower.includes(q)) {
+                    return acc;
+                }
+                if (seen.has(nameLower)) {
+                    return acc;
+                }
+                seen.add(nameLower);
+                acc.push({ id: identifier, text: rawName });
+                return acc;
+            }, []);
+        };
+
+        const mergeWithAudienceStudents = (options, extras) => {
+            const base = Array.isArray(options) ? options.slice() : [];
+            if (!Array.isArray(extras) || !extras.length) {
+                return base;
+            }
+            const seen = new Set();
+            base.forEach(item => {
+                const key = typeof item?.text === 'string' ? item.text.trim().toLowerCase() : '';
+                if (key) {
+                    seen.add(key);
+                }
+            });
+            extras.forEach(opt => {
+                const key = typeof opt?.text === 'string' ? opt.text.trim().toLowerCase() : '';
+                if (!key || seen.has(key)) {
+                    return;
+                }
+                seen.add(key);
+                base.push({ ...opt, text: opt.text.trim() });
+            });
+            return base;
+        };
 
         const tom = new TomSelect(select[0], {
             plugins: ['remove_button'],
@@ -846,6 +900,7 @@ $(document).ready(function() {
             create: false,
             placeholder: 'Type a student name…',
             load: function(query, callback) {
+                const fallbackOptions = getAudienceStudentOptions(query);
                 const ids = [];
                 const main = orgSelect.val();
                 if (main) ids.push(main);
@@ -857,13 +912,44 @@ $(document).ready(function() {
                 fetch(url)
                     .then(response => response.json())
                     .then(json => {
-                        callback(json);
+                        callback(mergeWithAudienceStudents(json, fallbackOptions));
                     })
                     .catch(() => {
-                        callback();
+                        if (fallbackOptions.length) {
+                            callback(fallbackOptions);
+                        } else {
+                            callback();
+                        }
                     });
             },
         });
+
+        const syncAudienceStudents = () => {
+            if (!audienceField.length) return;
+            const extras = getAudienceStudentOptions();
+            if (!extras.length) return;
+            const valueKey = tom.settings.valueField || 'value';
+            extras.forEach(opt => {
+                const optionText = typeof opt?.text === 'string' ? opt.text.trim() : '';
+                if (!optionText) return;
+                const optionValue = valueKey === 'text'
+                    ? optionText
+                    : (typeof opt[valueKey] === 'string' ? opt[valueKey] : optionText);
+                const lookupKey = valueKey === 'text' ? optionText : optionValue;
+                if (!tom.options[lookupKey]) {
+                    tom.addOption({ ...opt, text: optionText, [valueKey]: optionValue });
+                }
+            });
+        };
+
+        syncAudienceStudents();
+
+        if (audienceField.length) {
+            audienceField.on('change.studentCoordinatorSync', () => {
+                syncAudienceStudents();
+                tom.refreshOptions(false);
+            });
+        }
 
         const existing = djangoField.val()
             ? djangoField.val().split(',').map(s => s.trim()).filter(Boolean)
@@ -1952,8 +2038,9 @@ function getWhyThisEventForm() {
                     <div class="speaker-form-card">
                         <div class="speaker-form-header">
                             <h3 class="speaker-title">Speaker ${index + 1}</h3>
-                            <button type="button" class="btn-remove-speaker remove-speaker-btn" data-index="${index}" title="Remove Speaker">
-                                <i class="fas fa-times"></i>
+                            <button type="button" class="btn-remove-speaker remove-speaker-btn" data-index="${index}" title="Remove speaker" aria-label="Remove speaker">
+                                <i class="fas fa-times" aria-hidden="true"></i>
+                                <span class="sr-only">Remove speaker</span>
                             </button>
                         </div>
                         
@@ -2042,6 +2129,8 @@ function getWhyThisEventForm() {
                 });
             });
 
+            const count = container.children('.speaker-form-container').length;
+            index = count;
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
             }
@@ -2160,6 +2249,7 @@ function getWhyThisEventForm() {
             showEmptyState();
         } else {
             // attempt to restore speakers from autosaved draft
+            let restoredFromDraft = false;
             try {
                 const key = `proposal_draft_${window.USER_ID}_${window.location.pathname}_new`;
                 const saved = JSON.parse(localStorage.getItem(key) || '{}');
@@ -2184,9 +2274,15 @@ function getWhyThisEventForm() {
                             }
                         });
                     });
+                    restoredFromDraft = true;
                 }
             } catch (e) {
                 console.warn('Failed to restore speaker autosave', e);
+            }
+
+            if (!restoredFromDraft) {
+                container.empty();
+                addSpeakerForm();
             }
             showEmptyState();
         }

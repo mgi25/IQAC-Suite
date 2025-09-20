@@ -295,6 +295,33 @@ def _save_speakers(proposal, data, files):
             )
 
 
+def _serialize_speaker(speaker: SpeakerProfile) -> dict:
+    photo_url = ""
+    if speaker.photo:
+        try:
+            photo_url = speaker.photo.url
+        except ValueError:
+            photo_url = ""
+    return {
+        "id": speaker.id,
+        "full_name": speaker.full_name,
+        "name": speaker.full_name,
+        "designation": speaker.designation,
+        "affiliation": speaker.affiliation,
+        "organization": speaker.affiliation,
+        "contact": speaker.contact_email,
+        "contact_email": speaker.contact_email,
+        "contact_number": speaker.contact_number,
+        "linkedin_url": speaker.linkedin_url,
+        "linkedin": speaker.linkedin_url,
+        "detailed_profile": speaker.detailed_profile,
+        "profile": speaker.detailed_profile,
+        "bio": speaker.detailed_profile,
+        "photo": photo_url,
+        "photo_url": photo_url,
+    }
+
+
 def _parse_sdg_text(text: str):
     """Extract SDGGoal IDs from free text like 'SDG3: Good Health, SDG4: Education' or names.
     Returns a queryset of matching SDGGoal objects.
@@ -486,17 +513,7 @@ def submit_proposal(request, pk=None):
             act["date"] = act["date"].isoformat()
 
     speakers = (
-        list(
-            proposal.speakers.values(
-                "full_name",
-                "designation",
-                "affiliation",
-                "contact_email",
-                "contact_number",
-                "linkedin_url",
-                "detailed_profile",
-            )
-        )
+        [_serialize_speaker(sp) for sp in proposal.speakers.all()]
         if proposal
         else []
     )
@@ -1646,6 +1663,60 @@ def autosave_event_report(request):
 
 
 @login_required
+@require_http_methods(["POST"])
+def api_update_speaker(request, proposal_id, speaker_id):
+    proposal = get_object_or_404(EventProposal, id=proposal_id)
+    if not (
+        proposal.submitted_by == request.user
+        or request.user.has_perm("emt.change_eventreport")
+        or request.user.has_perm("emt.change_speakerprofile")
+    ):
+        return JsonResponse({"success": False, "error": "Forbidden"}, status=403)
+
+    speaker = get_object_or_404(SpeakerProfile, id=speaker_id, proposal=proposal)
+
+    content_type = request.content_type or ""
+    if content_type.startswith("multipart/form-data") or content_type.startswith(
+        "application/x-www-form-urlencoded"
+    ):
+        data = request.POST.copy()
+        files = request.FILES
+    else:
+        try:
+            raw = request.body.decode("utf-8")
+            data = json.loads(raw) if raw else {}
+        except json.JSONDecodeError:
+            logger.debug("api_update_speaker invalid json: %s", raw)
+            return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
+        files = None
+
+    if hasattr(data, "copy"):
+        data = data.copy()
+
+    remove_flag = str(data.pop("remove_photo", "")).lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+    has_new_photo = bool(files and files.get("photo"))
+
+    form = SpeakerProfileForm(data or None, files, instance=speaker)
+    if not form.is_valid():
+        return JsonResponse({"success": False, "errors": form.errors}, status=400)
+
+    updated = form.save(commit=False)
+    if remove_flag and not has_new_photo:
+        if updated.photo:
+            updated.photo.delete(save=False)
+        updated.photo = None
+    updated.save()
+
+    return JsonResponse({"success": True, "speaker": _serialize_speaker(updated)})
+
+
+@login_required
 def api_organizations(request):
     q = request.GET.get("q", "").strip()
     org_type = request.GET.get(
@@ -2143,17 +2214,7 @@ def submit_event_report(request, proposal_id):
 
     # Fetch speakers data for editing
     speakers_qs = SpeakerProfile.objects.filter(proposal=proposal)
-    speakers_json = [
-        {
-            "full_name": s.full_name,
-            "name": s.full_name,  # Backward compatibility
-            "designation": s.designation,
-            "affiliation": s.affiliation,
-            "organization": s.affiliation,  # Backward compatibility
-            "contact": s.contact_email,
-        }
-        for s in speakers_qs
-    ]
+    speakers_json = [_serialize_speaker(speaker) for speaker in speakers_qs]
 
     # Get or create content sections for the report
     event_summary = None
@@ -2187,6 +2248,67 @@ def submit_event_report(request, proposal_id):
         f.get_full_name() or f.username for f in proposal.faculty_incharges.all()
     ]
 
+    def _normalise_numeric(value):
+        if value in (None, ""):
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return value
+
+    def _field_value(field_name):
+        return _normalise_numeric(form[field_name].value()) if form else None
+
+    form_total = _field_value("num_participants")
+    if form_total is not None:
+        total_count = form_total
+    elif report and report.num_participants is not None:
+        total_count = report.num_participants
+    else:
+        total_count = _normalise_numeric(attendance_present)
+
+    form_volunteers = _field_value("num_student_volunteers")
+    if form_volunteers is not None:
+        volunteers_count = form_volunteers
+    elif report and report.num_student_volunteers is not None:
+        volunteers_count = report.num_student_volunteers
+    else:
+        volunteers_count = _normalise_numeric(attendance_volunteers)
+
+    form_students = _field_value("num_student_participants")
+    if form_students is not None:
+        student_count = form_students
+    elif report and report.num_student_participants is not None:
+        student_count = report.num_student_participants
+    else:
+        student_count = None
+
+    form_faculty = _field_value("num_faculty_participants")
+    if form_faculty is not None:
+        faculty_count = form_faculty
+    elif report and report.num_faculty_participants is not None:
+        faculty_count = report.num_faculty_participants
+    else:
+        faculty_count = None
+
+    form_external = _field_value("num_external_participants")
+    if form_external is not None:
+        external_count = form_external
+    elif report and report.num_external_participants is not None:
+        external_count = report.num_external_participants
+    else:
+        external_count = None
+
+    attendance_counts = {
+        "present": _normalise_numeric(attendance_present),
+        "absent": _normalise_numeric(attendance_absent),
+        "volunteers": volunteers_count,
+        "total": total_count,
+        "students": student_count,
+        "faculty": faculty_count,
+        "external": external_count,
+    }
+
     # Prepare SDG goal data for modal and proposal prefill
     sdg_goals_list = [
         {"id": goal.id, "title": goal.name} for goal in SDGGoal.objects.all()
@@ -2212,6 +2334,8 @@ def submit_event_report(request, proposal_id):
         "attendance_present": attendance_present,
         "attendance_absent": attendance_absent,
         "attendance_volunteers": attendance_volunteers,
+        "attendance_counts": attendance_counts,
+        "attendance_counts_json": json.dumps(attendance_counts),
         "faculty_names_json": json.dumps(faculty_names),
         "volunteer_names_json": json.dumps(volunteer_names),
     }
@@ -2801,131 +2925,147 @@ def attendance_data(request, report_id):
         for r in report.attendance_rows.all()
     ]
 
-    if not rows:
-        rows = []
-        names = [
-            n.strip()
-            for n in (proposal.target_audience or "").split(",")
-            if n.strip()
-        ]
-        if names:
-            # Map of student display name -> Student
-            students = {
-                (s.user.get_full_name() or s.user.username).strip().lower(): s
-                for s in Student.objects.select_related("user")
-            }
+    had_saved_rows = len(rows) > 0
 
-            # Helper: expand a Class into attendance rows for all its students
-            from core.models import Class  # local import to avoid circulars at module import time
+    def _normalise_reg(value: str) -> str:
+        return (value or "").strip().lower()
 
-            def add_rows_for_class(cls_obj):
-                for stu in cls_obj.students.select_related("user").all():
-                    full_name = (stu.user.get_full_name() or stu.user.username).strip()
-                    reg_no = stu.registration_number or getattr(
-                        getattr(stu.user, "profile", None), "register_no", ""
-                    )
-                    rows.append(
-                        {
-                            "registration_no": reg_no,
-                            "full_name": full_name,
-                            "student_class": cls_obj.code or cls_obj.name,
-                            "absent": False,
-                            "volunteer": False,
-                            "category": AttendanceRow.Category.STUDENT,
-                            "affiliation": cls_obj.code or cls_obj.name,
-                        }
-                    )
+    def _normalise_name(value: str) -> str:
+        return re.sub(r"\s+", "", (value or "").strip()).lower()
 
-            for name in names:
-                # First try exact student name match
-                student = students.get(name.lower())
-                if student:
-                    reg_no = student.registration_number or getattr(
-                        getattr(student.user, "profile", None), "register_no", ""
-                    )
-                    cls = student.classes.filter(is_active=True).first()
-                    rows.append(
-                        {
-                            "registration_no": reg_no,
-                            "full_name": (student.user.get_full_name() or student.user.username).strip(),
-                            "student_class": (cls.code if cls and cls.code else (cls.name if cls else "")),
-                            "absent": False,
-                            "volunteer": False,
-                            "category": AttendanceRow.Category.STUDENT,
-                            "affiliation": (cls.code if cls and cls.code else (cls.name if cls else "")),
-                        }
-                    )
-                    continue
+    existing_registrations = {
+        norm
+        for norm in (_normalise_reg(r.get("registration_no")) for r in rows)
+        if norm
+    }
+    existing_names = {
+        norm
+        for norm in (_normalise_name(r.get("full_name")) for r in rows)
+        if norm
+    }
 
-                # Otherwise, interpret it as a Class selection like "CSE (Dept Name)"
-                class_name = name
-                org_name = None
-                if "(" in name and ")" in name:
-                    try:
-                        class_name = name.split("(")[0].strip()
-                        org_name = name[name.index("(") + 1 : name.rindex(")")].strip()
-                    except Exception:
-                        class_name = name.strip()
-                        org_name = None
+    def add_row_if_missing(row: dict) -> None:
+        reg_norm = _normalise_reg(row.get("registration_no"))
+        name_norm = _normalise_name(row.get("full_name"))
+        if reg_norm and reg_norm in existing_registrations:
+            return
+        if not reg_norm and name_norm and name_norm in existing_names:
+            return
+        rows.append(row)
+        if reg_norm:
+            existing_registrations.add(reg_norm)
+        if name_norm:
+            existing_names.add(name_norm)
 
+    names = [
+        n.strip()
+        for n in (proposal.target_audience or "").split(",")
+        if n.strip()
+    ]
+    if names:
+        students = {
+            (s.user.get_full_name() or s.user.username).strip().lower(): s
+            for s in Student.objects.select_related("user")
+        }
+
+        from core.models import Class  # local import to avoid circulars at module import time
+
+        def add_rows_for_class(cls_obj):
+            for stu in cls_obj.students.select_related("user").all():
+                full_name = (stu.user.get_full_name() or stu.user.username).strip()
+                reg_no = stu.registration_number or getattr(
+                    getattr(stu.user, "profile", None), "register_no", ""
+                )
+                add_row_if_missing(
+                    {
+                        "registration_no": reg_no,
+                        "full_name": full_name,
+                        "student_class": cls_obj.code or cls_obj.name,
+                        "absent": False,
+                        "volunteer": False,
+                        "category": AttendanceRow.Category.STUDENT,
+                        "affiliation": cls_obj.code or cls_obj.name,
+                    }
+                )
+
+        for name in names:
+            student = students.get(name.lower())
+            if student:
+                reg_no = student.registration_number or getattr(
+                    getattr(student.user, "profile", None), "register_no", ""
+                )
+                cls = student.classes.filter(is_active=True).first()
+                add_row_if_missing(
+                    {
+                        "registration_no": reg_no,
+                        "full_name": (student.user.get_full_name() or student.user.username).strip(),
+                        "student_class": (cls.code if cls and cls.code else (cls.name if cls else "")),
+                        "absent": False,
+                        "volunteer": False,
+                        "category": AttendanceRow.Category.STUDENT,
+                        "affiliation": (cls.code if cls and cls.code else (cls.name if cls else "")),
+                    }
+                )
+                continue
+
+            class_name = name
+            org_name = None
+            if "(" in name and ")" in name:
+                try:
+                    class_name = name.split("(")[0].strip()
+                    org_name = name[name.index("(") + 1 : name.rindex(")")].strip()
+                except Exception:
+                    class_name = name.strip()
+                    org_name = None
+
+            cls_obj = None
+            if not had_saved_rows:
                 cls_qs = Class.objects.filter(name__iexact=class_name)
                 if org_name:
                     cls_qs = cls_qs.filter(organization__name__iexact=org_name)
 
                 cls_obj = cls_qs.first()
                 if not cls_obj:
-                    # Try matching by code if not found by name
                     cls_obj = Class.objects.filter(code__iexact=class_name).first()
 
-                if cls_obj:
-                    add_rows_for_class(cls_obj)
-                else:
-                    # Fall back to a generic row using the provided text as a name
-                    rows.append(
-                        {
-                            "registration_no": "",
-                            "full_name": name,
-                            "student_class": "",
-                            "absent": False,
-                            "volunteer": False,
-                            "category": AttendanceRow.Category.EXTERNAL,
-                            "affiliation": "",
-                        }
-                    )
+            if cls_obj:
+                add_rows_for_class(cls_obj)
+                continue
 
-        faculty_users = list(
-            proposal.faculty_incharges.all().select_related("profile")
+            add_row_if_missing(
+                {
+                    "registration_no": "",
+                    "full_name": name,
+                    "student_class": "",
+                    "absent": False,
+                    "volunteer": False,
+                    "category": AttendanceRow.Category.EXTERNAL,
+                    "affiliation": "",
+                }
+            )
+
+    faculty_users = list(
+        proposal.faculty_incharges.all().select_related("profile")
+    )
+    for user in faculty_users:
+        profile = getattr(user, "profile", None)
+        reg_no = (
+            (getattr(profile, "register_no", "") or user.username or "").strip()
         )
-        if faculty_users:
-            existing_registrations = {
-                (r.get("registration_no") or "").strip().lower()
-                for r in rows
-                if (r.get("registration_no") or "").strip()
+        full_name = (user.get_full_name() or user.username or "").strip()
+        if not full_name and not reg_no:
+            continue
+        add_row_if_missing(
+            {
+                "registration_no": reg_no,
+                "full_name": full_name,
+                "student_class": "",
+                "absent": False,
+                "volunteer": False,
+                "category": AttendanceRow.Category.FACULTY,
+                "affiliation": "",
             }
-            for user in faculty_users:
-                profile = getattr(user, "profile", None)
-                reg_no = (
-                    (getattr(profile, "register_no", "") or user.username or "").strip()
-                )
-                full_name = (user.get_full_name() or user.username or "").strip()
-                if not full_name and not reg_no:
-                    continue
-                normalized_reg = reg_no.lower() if reg_no else ""
-                if normalized_reg and normalized_reg in existing_registrations:
-                    continue
-                rows.append(
-                    {
-                        "registration_no": reg_no,
-                        "full_name": full_name,
-                        "student_class": "",
-                        "absent": False,
-                        "volunteer": False,
-                        "category": AttendanceRow.Category.FACULTY,
-                        "affiliation": "",
-                    }
-                )
-                if normalized_reg:
-                    existing_registrations.add(normalized_reg)
+        )
 
     counts = {
         "total": len(rows),

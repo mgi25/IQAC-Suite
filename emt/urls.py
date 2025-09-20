@@ -48,6 +48,11 @@ urlpatterns = [
 
     # THE NEW, GENERIC ORG API ENDPOINT:
     path('api/organizations/', views.api_organizations, name='api_organizations'),
+    path(
+        'api/proposals/<int:proposal_id>/speakers/<int:speaker_id>/',
+        views.api_update_speaker,
+        name='api_update_speaker',
+    ),
 
     # Faculty remains as is
     path("api/faculty/", views.api_faculty, name="api_faculty"),

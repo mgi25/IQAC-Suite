@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const tableSection = document.getElementById('attendance-table-section');
     const tableBody = tableSection ? tableSection.querySelector('tbody') : null;
     const volunteerHeader = document.getElementById('attendance-volunteer-header');
+    const identifierHeader = document.getElementById('attendance-identifier-header');
     const totalEl = document.getElementById('total-count');
     const presentEl = document.getElementById('present-count');
     const absentEl = document.getElementById('absent-count');
@@ -33,6 +34,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const categoryVolunteerLabels = {
         student: 'Student Volunteer',
         faculty: 'Volunteer',
+    };
+
+    const categoryIdentifierLabels = {
+        student: 'Registration No',
+        faculty: 'Emp ID',
     };
 
     const pagination = document.createElement('div');
@@ -237,10 +243,14 @@ document.addEventListener('DOMContentLoaded', function () {
         const volunteerLabel = activeButton
             ? activeButton.dataset.volunteerLabel || categoryVolunteerLabels[currentCategory] || 'Volunteer'
             : categoryVolunteerLabels[currentCategory] || 'Volunteer';
+        const identifierLabel = categoryIdentifierLabels[currentCategory] || 'Registration No';
         const lowerLabel = displayLabel.toLowerCase();
 
         if (volunteerHeader) {
             volunteerHeader.textContent = volunteerLabel;
+        }
+        if (identifierHeader) {
+            identifierHeader.textContent = identifierLabel;
         }
 
         const viewRows = rows.filter((row) => isRowVisibleInCategory(row, currentCategory));

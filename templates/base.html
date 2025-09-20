@@ -56,48 +56,57 @@
 
       <div class="utility-right" style="display: flex; align-items: center; gap: 1.5rem;">
         <div class="notification-section">
-          <button class="utility-btn notification-btn" id="notificationBtn" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
-            <i class="fa-solid fa-bell notification-icon"></i>
+          <button class="utility-btn notification-btn" id="notificationBtn" aria-label="Notifications" aria-haspopup="true" aria-expanded="false" style="position:relative;">
+            <i class="fa fa-bell notification-icon" style="font-size:1.5rem;color:#d4af37;"></i>
             {% if notifications and notifications|length > 0 %}
-            <span class="notification-badge" id="notificationBadge">{{ notifications|length }}</span>
+            <span class="notification-badge" id="notificationBadge" style="position:absolute;top:2px;right:2px;min-width:18px;padding:2px 6px;border-radius:10px;background:#ef4444;color:#fff;font-size:0.75rem;font-weight:700;text-align:center;z-index:2;">{{ notifications|length }}</span>
             {% endif %}
           </button>
-          <div class="notification-dropdown" id="notificationDropdown">
-            <div class="notification-header">
-              <h3>Notifications</h3>
+          <div class="notification-dropdown" id="notificationDropdown" style="position:fixed;top:70px;right:1.5rem;width:340px;max-width:95vw;background:#fff;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 8px 32px rgba(44,90,160,0.13);opacity:0;visibility:hidden;transform:translateY(-10px);transition:all 0.22s cubic-bezier(.4,0,.2,1);z-index:20000;overflow:hidden;">
+            <div class="notification-header" style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;background:#f9fafb;border-bottom:1px solid #e5e7eb;">
+              <h3 style="margin:0;font-size:1.1rem;font-weight:700;color:#2c5aa0;letter-spacing:.01em;">Notifications</h3>
               {% if notifications and notifications|length > 0 %}
-              <button class="mark-all-read" id="markAllRead">Mark all read</button>
+              <button class="mark-all-read" id="markAllRead" style="border-radius:6px;padding:2px 12px;font-size:0.85rem;font-weight:600;background:#f3f4f6;color:#2c5aa0;border:1px solid #2c5aa0;transition:background 0.2s, color 0.2s;cursor:pointer;">
+                <i class="fa fa-check-double" style="margin-right:4px;"></i> Mark all read
+              </button>
               {% endif %}
             </div>
-            <div class="notification-list" id="notificationList">
+            <div class="notification-list" id="notificationList" style="max-height:340px;overflow-y:auto;">
               {% if notifications and notifications|length > 0 %}
                 {% for notification in notifications %}
-                <div class="notification-item {% if not notification.is_read %}unread{% endif %}">
-                  <div class="notification-icon">
-                    <i class="fa-solid fa-{{ notification.icon|default:'bell' }}"></i>
+                <div class="notification-item {% if not notification.is_read %}unread{% endif %}" style="display:flex;gap:.85rem;padding:.95rem 1.25rem;border-bottom:1px solid #f3f4f6;{% if not notification.is_read %}background:#f3f4f6;{% endif %}">
+                  <div class="notification-icon" style="width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#e8f0f9;color:#2c5aa0;font-size:1.2rem;">
+                    <i class="fa fa-{{ notification.icon|default:'bell' }}"></i>
                   </div>
-                  <div class="notification-content">
-                    <div class="notification-title">{{ notification.title }}</div>
-                    <div class="notification-text">{{ notification.message }}</div>
-                    <div class="notification-time">{{ notification.created_at|timesince }} ago</div>
+                  <div class="notification-content" style="flex:1;min-width:0;">
+                    <div class="notification-title" style="font-weight:600;font-size:1rem;color:#1f2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ notification.title }}</div>
+                    <div class="notification-text" style="font-size:.93rem;color:#374151;white-space:normal;word-break:break-word;">{{ notification.message }}</div>
+                    <div class="notification-time" style="font-size:.8rem;color:#6b7280;margin-top:2px;">{{ notification.created_at|timesince }} ago</div>
                   </div>
                 </div>
                 {% endfor %}
               {% else %}
-              <div class="notification-item">
-                <div class="notification-content" style="text-align: center; color: #6b7280; padding: 2rem;">
-                  <div class="notification-title">No notifications</div>
-                  <div class="notification-text">You're all caught up!</div>
-                </div>
+              <div class="notification-item" style="padding:2.5rem 1.25rem;text-align:center;color:#6b7280;background:#f9fafb;">
+                <div class="notification-title" style="font-weight:600;font-size:1.05rem;">No notifications</div>
+                <div class="notification-text" style="font-size:.93rem;">You're all caught up!</div>
               </div>
               {% endif %}
             </div>
             {% if notifications and notifications|length > 0 %}
             <div class="notification-footer">
               <a href="/notifications/" class="view-all-link">View all notifications</a>
+
+            <div class="notification-footer" style="padding:.7rem 1.25rem;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:right;">
+              <a href="/core-admin/notifications/" class="view-all-link" style="color:#2c5aa0;font-weight:600;font-size:.95rem;text-decoration:underline;">View all notifications</a>
+
             </div>
             {% endif %}
           </div>
+          <style>
+            .notification-dropdown.active{opacity:1!important;visibility:visible!important;transform:translateY(0)!important;}
+            .notification-item.unread .notification-title{color:#2c5aa0;}
+            .mark-all-read:hover{background:#2c5aa0!important;color:#fff!important;}
+          </style>
         </div>
         <div class="profile-section">
           <button class="profile-btn" aria-label="Profile">

@@ -123,6 +123,41 @@ class AttendanceDataViewTests(TestCase):
         self.assertEqual(data["counts"]["present"], 1)
         self.assertEqual(data["students"], {})
 
+    def test_includes_faculty_incharges_with_existing_rows(self):
+        org_type = OrganizationType.objects.create(name="Dept of Physics")
+        org = Organization.objects.create(name="Physics", org_type=org_type)
+        faculty_user = User.objects.create_user(
+            "physlead",
+            password="pass",
+            first_name="Phil",
+            last_name="Lead",
+        )
+        faculty_user.profile.register_no = "FAC-321"
+        faculty_user.profile.save()
+        OrganizationMembership.objects.create(
+            user=faculty_user,
+            organization=org,
+            academic_year="2024-2025",
+            role="faculty",
+        )
+
+        proposal = self.report.proposal
+        proposal.faculty_incharges.add(faculty_user)
+
+        url = reverse("emt:attendance_data", args=[self.report.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        rows_by_reg = {r["registration_no"]: r for r in data["rows"] if r.get("registration_no")}
+        self.assertIn("FAC-321", rows_by_reg)
+        row = rows_by_reg["FAC-321"]
+        self.assertEqual(row["category"], "faculty")
+        self.assertEqual(row["full_name"], "Phil Lead")
+        self.assertEqual(row["affiliation"], "Physics")
+        self.assertIn("Physics", data["faculty"])
+        self.assertIn("Phil Lead", data["faculty"]["Physics"])
+
     def test_marks_faculty_rows_with_category(self):
         org_type = OrganizationType.objects.create(name="Dept")
         org = Organization.objects.create(name="Engineering", org_type=org_type)
@@ -275,4 +310,37 @@ class AttendanceDataViewTests(TestCase):
         self.assertEqual(row["full_name"], "Henry Faculty")
         self.assertIn("Humanities", data["faculty"])
         self.assertIn("Henry Faculty", data["faculty"]["Humanities"])
+
+    def test_target_audience_faculty_name_retained_with_existing_rows(self):
+        org_type = OrganizationType.objects.create(name="Dept Social")
+        org = Organization.objects.create(name="Social Sciences", org_type=org_type)
+        faculty_user = User.objects.create_user(
+            "henrysocial",
+            password="pass",
+            first_name="Henry",
+            last_name="Faculty",
+        )
+        OrganizationMembership.objects.create(
+            user=faculty_user,
+            organization=org,
+            academic_year="2024-2025",
+            role="faculty",
+        )
+
+        proposal = self.report.proposal
+        proposal.target_audience = "HenryFaculty"
+        proposal.save(update_fields=["target_audience"])
+
+        url = reverse("emt:attendance_data", args=[self.report.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        matching_rows = [r for r in data["rows"] if r["full_name"] == "Henry Faculty"]
+        self.assertTrue(matching_rows)
+        row = matching_rows[0]
+        self.assertEqual(row["category"], "faculty")
+        self.assertEqual(row["affiliation"], "Social Sciences")
+        self.assertIn("Social Sciences", data["faculty"])
+        self.assertIn("Henry Faculty", data["faculty"]["Social Sciences"])
 

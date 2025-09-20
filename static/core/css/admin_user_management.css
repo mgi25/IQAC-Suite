@@ -1,9 +1,14 @@
+/* Hide the 'Searching...' option in select dropdowns (scoped) */
+.user-mgmt-container option[value="searching"],
+.user-mgmt-container option:contains('Searching...') {
+    display: none !important;
+}
 /* =============================================================================
    ADMIN USER MANAGEMENT - UNIFIED INTERFACE
    ============================================================================= */
 
 /* Extend existing design system variables */
-:root {
+.user-mgmt-container {
     --primary-color: #2c5aa0;
     --primary-dark: #1e4180;
     --primary-light: #e8f0f9;
@@ -24,7 +29,7 @@
    USER MANAGEMENT CONTAINER
    ============================================================================= */
 
-.user-management-container {
+.user-mgmt-container {
     padding: 1rem;
     max-width: 100%;
     margin: 0;
@@ -65,19 +70,15 @@
     font-weight: 600;
 }
 
-/* =============================================================================
-   TAB NAVIGATION (Based on user_dashboard.css)
-   ============================================================================= */
 
-.nav-tabs {
+.user-mgmt-container .nav-tabs {
     display: flex;
     gap: 0.5rem;
     margin-bottom: 1rem;
     border-bottom: 2px solid var(--light-grey);
     padding-bottom: 0;
 }
-
-.nav-tab {
+.user-mgmt-container .nav-tab {
     background: none;
     border: none;
     padding: 0.875rem 1.5rem;
@@ -92,19 +93,16 @@
     align-items: center;
     gap: 0.5rem;
 }
-
-.nav-tab:hover {
+.user-mgmt-container .nav-tab:hover {
     background: var(--light-grey);
     color: var(--primary-color);
 }
-
-.nav-tab.active {
+.user-mgmt-container .nav-tab.active {
     background: var(--primary-color);
     color: white;
     font-weight: 600;
 }
-
-.nav-tab.active::after {
+.user-mgmt-container .nav-tab.active::after {
     content: '';
     position: absolute;
     bottom: -2px;
@@ -113,8 +111,7 @@
     height: 2px;
     background: var(--primary-color);
 }
-
-.tab-icon {
+.user-mgmt-container .tab-icon {
     font-size: 1rem;
 }
 
@@ -674,27 +671,23 @@
    USER TABLE STYLES
    ============================================================================= */
 
-.admin-users-table {
-  width: 100%;
-  border-collapse: collapse;
+.user-mgmt-container .admin-users-table {
+    width: 100%;
+    border-collapse: collapse;
 }
-
-.admin-users-table thead th {
-  background-color: var(--primary-color);
-  color: #fff;
-  font-weight: 600;
+.user-mgmt-container .admin-users-table thead th {
+    background-color: var(--primary-color);
+    color: #fff;
+    font-weight: 600;
 }
-
-.admin-users-table th,
-.admin-users-table td {
-  padding: 0.75rem;
-  vertical-align: middle;
+.user-mgmt-container .admin-users-table th,
+.user-mgmt-container .admin-users-table td {
+    padding: 0.75rem;
+    vertical-align: middle;
 }
-
-.admin-users-table tbody tr:nth-child(even) {
-  background-color: var(--light-grey);
+.user-mgmt-container .admin-users-table tbody tr:nth-child(even) {
+    background-color: var(--light-grey);
 }
-
-.admin-users-table tbody tr:hover {
-  background-color: var(--primary-light);
+.user-mgmt-container .admin-users-table tbody tr:hover {
+    background-color: var(--primary-light);
 }
