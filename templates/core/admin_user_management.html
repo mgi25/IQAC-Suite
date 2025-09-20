@@ -260,6 +260,25 @@
             }
 
             initDataTable() {
+                // Helpers to clean cell content for exports
+                const stripHtml = (data) => {
+                    if (data == null) return '';
+                    let text = data.toString();
+                    // Remove HTML tags and normalize whitespace
+                    text = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+                    return text;
+                };
+
+                const cleanNameOnly = (data) => {
+                    let text = stripHtml(data);
+                    // If content includes a username or email-like token after the name, drop it.
+                    // Keep only the portion before the first line break or ' @handle' or ' (extra)'.
+                    text = text.split(/\r?\n|\s*\|\s*|<br\s*\/?>/i)[0];
+                    // Remove trailing @handle or email-like fragments
+                    text = text.replace(/\s*@[^\s]+/g, ' ').replace(/\s*\([^)]*\)\s*$/, ' ').trim();
+                    return text;
+                };
+
                 this.table = $('#usersTable').DataTable({
                     processing: true,
                     serverSide: true,
@@ -291,7 +310,345 @@
                     lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
                     pageLength: 25,
                     order: [[5, 'desc']],
-                    buttons: ['copy', 'excel', 'pdf', 'print', 'colvis'],
+                    columnDefs: [
+                        { targets: [0, 5], className: 'text-center' },
+                        { targets: [6], className: 'text-start' }
+                    ],
+                    buttons: [
+                        {
+                            text: 'Copy',
+                            action: function (e, dt, button, config) {
+                                const settings = dt.settings()[0];
+                                const oldStart = settings._iDisplayStart;
+
+                                dt.one('preXhr', function (e, s, data) {
+                                    data.start = 0;
+                                    data.length = 2147483647; // fetch all filtered rows
+                                });
+
+                                dt.one('xhr', function () {
+                                    try {
+                                        const headers = ['S.NO', 'Name', 'Email', 'Roles', 'Organization', 'Date Joined', 'Status'];
+                                        const dataArr = dt.rows({ search: 'applied' }).data().toArray();
+
+                                        const processed = dataArr.map(r => [
+                                            (r && r.s_no != null) ? (typeof r.s_no === 'string' ? stripHtml(r.s_no) : String(r.s_no)) : '',
+                                            cleanNameOnly(r && r.name != null ? r.name : ''),
+                                            stripHtml(r && r.email != null ? r.email : ''),
+                                            stripHtml(r && r.roles != null ? r.roles : ''),
+                                            stripHtml(r && r.organization != null ? r.organization : ''),
+                                            stripHtml(r && r.date_joined != null ? r.date_joined : ''),
+                                            stripHtml(r && r.status != null ? r.status : '')
+                                        ]);
+
+                                        const caps = [4, 30, 40, 30, 36, 22, 14];
+                                        const widths = headers.map((h, i) => {
+                                            let maxLen = h.length;
+                                            for (const row of processed) {
+                                                const cell = (row[i] || '').toString();
+                                                if (cell.length > maxLen) maxLen = cell.length;
+                                            }
+                                            return Math.min(maxLen, caps[i]);
+                                        });
+
+                                        const padRight = (str, len) => (str || '').toString().padEnd(len, ' ');
+                                        const padLeft = (str, len) => (str || '').toString().padStart(len, ' ');
+                                        const padCenter = (str, len) => {
+                                            str = (str || '').toString();
+                                            if (str.length >= len) return str.slice(0, len);
+                                            const left = Math.floor((len - str.length) / 2);
+                                            const right = len - str.length - left;
+                                            return ' '.repeat(left) + str + ' '.repeat(right);
+                                        };
+                                        const trunc = (str, len) => {
+                                            str = (str || '').toString();
+                                            if (str.length <= len) return str;
+                                            return str.slice(0, Math.max(0, len - 1)) + '…';
+                                        };
+
+                                        const sep = '  ';
+                                        const headerLine = headers.map((h, i) => {
+                                            if (i === 0) return padLeft(h, widths[i]);
+                                            if (i === 5) return padCenter(h, widths[i]);
+                                            return padRight(h, widths[i]);
+                                        }).join(sep);
+                                        const divider = headers.map((_, i) => '-'.repeat(widths[i])).join(sep);
+
+                                        const lines = ['CHRIST University - Central Command Center', headerLine, divider];
+                                        for (const row of processed) {
+                                            const aligned = row.map((cell, i) => {
+                                                const c = trunc(cell, widths[i]);
+                                                if (i === 0) return padLeft(c, widths[i]);
+                                                if (i === 5) return padCenter(c, widths[i]);
+                                                return padRight(c, widths[i]);
+                                            }).join(sep);
+                                            lines.push(aligned);
+                                        }
+
+                                        const text = lines.join('\n');
+                                        const copyText = async (t) => {
+                                            try {
+                                                if (navigator.clipboard && navigator.clipboard.writeText) {
+                                                    await navigator.clipboard.writeText(t);
+                                                    return true;
+                                                }
+                                            } catch (err) { /* ignore */ }
+                                            const ta = document.createElement('textarea');
+                                            ta.value = t;
+                                            ta.style.position = 'fixed';
+                                            ta.style.opacity = '0';
+                                            document.body.appendChild(ta);
+                                            ta.focus(); ta.select();
+                                            let ok = false;
+                                            try { ok = document.execCommand('copy'); } catch (e) { /* ignore */ }
+                                            document.body.removeChild(ta);
+                                            return ok;
+                                        };
+                                        copyText(text);
+                                    } finally {
+                                        dt.one('preXhr', function (e, s, data) { data.start = oldStart; });
+                                        setTimeout(function () {
+                                            dt.ajax.reload(function () {
+                                                dt.page(Math.floor(oldStart / dt.page.len())).draw('page');
+                                            }, false);
+                                        }, 0);
+                                    }
+                                });
+
+                                dt.ajax.reload();
+                            }
+                        },
+                        {
+                            extend: 'excelHtml5',
+                            text: 'Excel',
+                            exportOptions: {
+                                // Exclude the last 'Action' column from export
+                                columns: [0, 1, 2, 3, 4, 5, 6],
+                                format: {
+                                    body: function (data, row, column, node) {
+                                        if (column === 1) { // Name column
+                                            return cleanNameOnly(data);
+                                        }
+                                        return stripHtml(data);
+                                    }
+                                }
+                            },
+                            action: function (e, dt, button, config) {
+                                const self = this;
+                                const settings = dt.settings()[0];
+                                const oldStart = settings._iDisplayStart;
+
+                                dt.one('preXhr', function (e, s, data) {
+                                    data.start = 0;
+                                    data.length = 2147483647; // fetch all filtered rows
+                                });
+
+                                dt.one('xhr', function () {
+                                    $.fn.dataTable.ext.buttons.excelHtml5.action.call(self, e, dt, button, config);
+
+                                    // Restore original paging
+                                    dt.one('preXhr', function (e, s, data) {
+                                        data.start = oldStart;
+                                    });
+
+                                    setTimeout(function () {
+                                        dt.ajax.reload(function () {
+                                            dt.page(Math.floor(oldStart / dt.page.len())).draw('page');
+                                        }, false);
+                                    }, 0);
+                                });
+
+                                dt.ajax.reload();
+                            }
+                        },
+                        {
+                            extend: 'pdfHtml5',
+                            text: 'PDF',
+                            orientation: 'landscape',
+                            pageSize: 'A3',
+                            title: 'CHRIST University - Central Command Center',
+                            exportOptions: {
+                                // Exclude the last 'Action' column from export
+                                columns: [0, 1, 2, 3, 4, 5, 6],
+                                format: {
+                                    body: function (data, row, column, node) {
+                                        if (column === 1) { // Name column
+                                            return cleanNameOnly(data);
+                                        }
+                                        return stripHtml(data);
+                                    }
+                                }
+                            },
+                            customize: function (doc) {
+                                // Margins and base styles
+                                doc.pageMargins = [20, 20, 28, 20]; // a bit more right margin
+                                doc.defaultStyle.fontSize = 9;
+                                doc.styles.tableHeader = doc.styles.tableHeader || {};
+                                doc.styles.tableHeader.fillColor = '#1e3a8a';
+                                doc.styles.tableHeader.color = '#ffffff';
+                                doc.styles.tableHeader.alignment = 'left';
+                                doc.styles.tableHeader.fontSize = 10;
+                                doc.styles.tableHeader.bold = true;
+
+                                // Title styling (sans-serif look)
+                                doc.styles.reportTitle = {
+                                    fontSize: 18,
+                                    bold: true,
+                                    alignment: 'center',
+                                    color: '#111827',
+                                    margin: [0, 0, 0, 12]
+                                };
+                                if (doc.content && doc.content.length && doc.content[0] && doc.content[0].text) {
+                                    doc.content[0].style = 'reportTitle';
+                                }
+
+                                // Find the table node and set column widths and layout
+                                var tableNode = null;
+                                for (var i = 0; i < doc.content.length; i++) {
+                                    if (doc.content[i].table) { tableNode = doc.content[i]; break; }
+                                }
+                                if (tableNode && tableNode.table && tableNode.table.body && tableNode.table.body.length) {
+                                    // widths for: S.NO, Name, Email, Roles, Organization, Date Joined, Status (A3 landscape)
+                                    // Reduce Roles, increase Status per request
+                                    tableNode.table.widths = [40, 200, 280, 130, 220, 120, 160];
+                                    tableNode.layout = {
+                                        hLineWidth: function (i, node) { return i === 0 || i === node.table.body.length ? 1 : 0.5; },
+                                        vLineWidth: function () { return 0.5; },
+                                        hLineColor: function () { return '#e5e7eb'; },
+                                        vLineColor: function () { return '#e5e7eb'; },
+                                        paddingLeft: function () { return 6; },
+                                        paddingRight: function () { return 6; },
+                                        paddingTop: function () { return 4; },
+                                        paddingBottom: function () { return 4; }
+                                    };
+
+                                    // Center-align S.NO, Date Joined, Status columns for neatness
+                                    var body = tableNode.table.body;
+                                    var header = body[0];
+                                    function ensureObj(cell) {
+                                        if (cell == null) return { text: '' };
+                                        if (typeof cell === 'string') return { text: cell };
+                                        if (Array.isArray(cell)) return { text: cell.join(' ') };
+                                        return cell; // already an object
+                                    }
+
+                                    // Header alignments
+                                    header[0] = ensureObj(header[0]); header[0].alignment = 'center';
+                                    header[5] = ensureObj(header[5]); header[5].alignment = 'center';
+                                    header[6] = ensureObj(header[6]); header[6].alignment = 'center';
+
+                                    // Row alignments
+                                    for (var r = 1; r < body.length; r++) {
+                                        body[r][0] = ensureObj(body[r][0]);
+                                        body[r][0].alignment = 'center';
+
+                                        body[r][5] = ensureObj(body[r][5]);
+                                        body[r][5].alignment = 'center';
+
+                                        body[r][6] = ensureObj(body[r][6]);
+                                        body[r][6].alignment = 'left';
+                                        // allow wrapping to avoid cropping on smaller screens/printers
+                                    }
+                                    // Add a bit of extra right margin to the table
+                                    tableNode.margin = [0, 0, 10, 0];
+                                }
+                            },
+                            action: function (e, dt, button, config) {
+                                const self = this;
+                                const settings = dt.settings()[0];
+                                const oldStart = settings._iDisplayStart;
+
+                                dt.one('preXhr', function (e, s, data) {
+                                    data.start = 0;
+                                    data.length = 2147483647; // fetch all filtered rows
+                                });
+
+                                dt.one('xhr', function () {
+                                    $.fn.dataTable.ext.buttons.pdfHtml5.action.call(self, e, dt, button, config);
+
+                                    // Restore original paging
+                                    dt.one('preXhr', function (e, s, data) {
+                                        data.start = oldStart;
+                                    });
+
+                                    setTimeout(function () {
+                                        dt.ajax.reload(function () {
+                                            dt.page(Math.floor(oldStart / dt.page.len())).draw('page');
+                                        }, false);
+                                    }, 0);
+                                });
+
+                                dt.ajax.reload();
+                            }
+                        },
+                        {
+                            extend: 'print',
+                            text: 'Print',
+                            title: 'CHRIST University - Central Command Center',
+                            exportOptions: {
+                                columns: [0, 1, 2, 3, 4, 5, 6],
+                                format: {
+                                    body: function (data, row, column, node) {
+                                        if (column === 1) { return cleanNameOnly(data); }
+                                        return stripHtml(data);
+                                    }
+                                }
+                            },
+                            customize: function (win) {
+                                var css = `
+                                    @page { size: A3 landscape; margin: 10mm; }
+                                    body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #111827; }
+                                    h1 { font-family: Arial, Helvetica, sans-serif; font-weight: 700; letter-spacing: .2px; text-align: center; margin-bottom: 10mm; }
+                                    table.dataTable { width: 100% !important; border-collapse: collapse !important; }
+                                    table.dataTable th, table.dataTable td { padding: 6px 8px; border: 1px solid #e5e7eb; }
+                                    table.dataTable thead th { background: #1e3a8a !important; color: #fff !important; }
+                                    table.dataTable tbody tr:nth-child(odd) { background: #f7f7f7; }
+                                    /* Column widths and alignment */
+                                    table.dataTable th:nth-child(1), table.dataTable td:nth-child(1) { width: 5%; text-align: center; }
+                                    table.dataTable th:nth-child(2), table.dataTable td:nth-child(2) { width: 18%; }
+                                    table.dataTable th:nth-child(3), table.dataTable td:nth-child(3) { width: 26%; }
+                                    table.dataTable th:nth-child(4), table.dataTable td:nth-child(4) { width: 12%; }
+                                    table.dataTable th:nth-child(5), table.dataTable td:nth-child(5) { width: 20%; }
+                                    table.dataTable th:nth-child(6), table.dataTable td:nth-child(6) { width: 9%; text-align: center; }
+                                    table.dataTable th:nth-child(7), table.dataTable td:nth-child(7) { width: 10%; text-align: left; }
+                                `;
+                                var head = win.document.head || win.document.getElementsByTagName('head')[0];
+                                var style = win.document.createElement('style');
+                                style.type = 'text/css';
+                                style.media = 'print';
+                                style.appendChild(win.document.createTextNode(css));
+                                head.appendChild(style);
+                            },
+                            action: function (e, dt, button, config) {
+                                const self = this;
+                                const settings = dt.settings()[0];
+                                const oldStart = settings._iDisplayStart;
+
+                                dt.one('preXhr', function (e, s, data) {
+                                    data.start = 0;
+                                    data.length = 2147483647; // all filtered rows
+                                });
+
+                                dt.one('xhr', function () {
+                                    $.fn.dataTable.ext.buttons.print.action.call(self, e, dt, button, config);
+
+                                    // Restore original paging
+                                    dt.one('preXhr', function (e, s, data) {
+                                        data.start = oldStart;
+                                    });
+
+                                    setTimeout(function () {
+                                        dt.ajax.reload(function () {
+                                            dt.page(Math.floor(oldStart / dt.page.len())).draw('page');
+                                        }, false);
+                                    }, 0);
+                                });
+
+                                dt.ajax.reload();
+                            }
+                        },
+                        'colvis'
+                    ],
                     language: { search: "_INPUT_", searchPlaceholder: "Search table..." },
                     initComplete: () => {
                         // Apply filters from URL after the table is fully initialized
