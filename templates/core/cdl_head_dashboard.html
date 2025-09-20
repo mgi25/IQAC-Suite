@@ -80,14 +80,12 @@
           <div class="header-actions">
             <div class="seg">
               <button class="seg-btn control-btn active" data-view="workload">Workload</button>
-              <button class="seg-btn control-btn" data-view="ontime">On-time %</button>
-              <button class="seg-btn control-btn" data-view="firstpass">First-pass %</button>
+              <button class="seg-btn control-btn" data-view="ontime">On‑time%</button>
+              <button class="seg-btn control-btn" data-view="firstpass">1st‑pass%</button>
             </div>
-            <div class="seg">
-              <button class="seg-btn time-btn" data-range="7">7d</button>
-              <button class="seg-btn time-btn active" data-range="30">30d</button>
-              <button class="seg-btn time-btn" data-range="90">90d</button>
-            </div>
+            <select id="memberFilter" class="select" aria-label="Select employee" title="Select employee" style="min-width:150px">
+              <option value="">All employees</option>
+            </select>
           </div>
         </div>
         <div class="chart-wrap"><canvas id="teamChart" height="150"></canvas></div>
@@ -145,19 +143,18 @@
         <table class="table compact">
           <thead>
             <tr>
-              <th><input type="checkbox" /></th>
               <th>Event</th>
               <th>Type</th>
               <th>Priority</th>
               <th>Due</th>
-              <th>Assignee</th>
+              <th>Assigned To</th>
               <th>Status</th>
               <th>Rev</th>
               <th class="ta-right">Actions</th>
             </tr>
           </thead>
           <tbody id="taskList">
-            <tr><td colspan="9" class="empty-row">No items</td></tr>
+            <tr><td colspan="8" class="empty-row">No items</td></tr>
           </tbody>
         </table>
       </div>

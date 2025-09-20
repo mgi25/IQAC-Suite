@@ -1,198 +1,295 @@
 
-(function(){
-  // Simple DOM helpers
-  const $  = (s, r=document)=>r.querySelector(s);
-  const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
+(function () {
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
-  // State
-  let DASH = { kpis:{}, events:[], event_details:[], workload:{members:[], assignments:[]} };
-  let calRef = new Date();
-  let chart;
+  // State loaded via AJAX
+  let EVENTS = [];
+  let EVENT_DETAILS = [];
+  let WORKLOAD_DATA = {};
+  let KPIS = { total_active_requests:0, assets_pending:0, unassigned_tasks:0, total_events_supported:0 };
+  let currentScope = 'all'; // all | support
+  let selectedMember = '';
 
-  // Boot
-  init();
-
-  async function init(){
-    bindUI();
-    await loadData($('#calFilter')?.value || 'all');
-    renderAll();
-  }
-
-  function bindUI(){
-    // KPI cards are display-only
-
-    // Notifications filter tabs
-    $$('#cardNotifications .tab-btn').forEach(btn=>{
-      btn.addEventListener('click', e=>{
-        $$('#cardNotifications .tab-btn').forEach(b=>b.classList.remove('active'));
-        e.currentTarget.classList.add('active');
-        renderNotifications(e.currentTarget.dataset.filter || 'all');
-      });
-    });
-
-    // Team chart controls
-    $$('#cardTeam .control-btn').forEach(btn=>{
-      btn.addEventListener('click', e=>{
-        $$('#cardTeam .control-btn').forEach(b=>b.classList.remove('active'));
-        e.currentTarget.classList.add('active');
-        renderChart(e.currentTarget.dataset.view || 'workload');
-      });
-    });
-    $$('#cardTeam .time-btn').forEach(btn=>{
-      btn.addEventListener('click', e=>{
-        $$('#cardTeam .time-btn').forEach(b=>b.classList.remove('active'));
-        e.currentTarget.classList.add('active');
-        // Time range is cosmetic for now
-      });
-    });
-
-    // Calendar navigation
-    $('#calPrev')?.addEventListener('click',()=>{ calRef = new Date(calRef.getFullYear(), calRef.getMonth()-1, 1); buildCalendar(); });
-    $('#calNext')?.addEventListener('click',()=>{ calRef = new Date(calRef.getFullYear(), calRef.getMonth()+1, 1); buildCalendar(); });
-    $('#calFilter')?.addEventListener('change', ()=> loadData($('#calFilter').value).then(()=>{ buildCalendar(); clearEventDetails(); }));
-
-    // Clear event details
-    $('#clearEventDetails')?.addEventListener('click', ()=> clearEventDetails());
-  }
-
-  async function loadData(scope){
+  async function loadData(scope='all'){
     try{
-      const data = await fetchJSON(`/api/cdl/head-dashboard/?scope=${encodeURIComponent(scope||'all')}`);
-      DASH = data || DASH;
-    }catch(e){
-      // keep UI usable
+      const res = await fetch(`/api/cdl/head-dashboard/?scope=${encodeURIComponent(scope)}`, {headers:{'Accept':'application/json'}});
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      KPIS = data.kpis || KPIS;
+      EVENTS = (data.events || []).filter(Boolean);
+      EVENT_DETAILS = (data.event_details || []).filter(Boolean);
+      WORKLOAD_DATA = data.workload || {};
+      renderAll();
+      populateMemberFilter();
+    }catch(err){
+      console.warn('Failed to load CDL dashboard data:', err);
+      // Keep UI with zeros as per requirement
+      KPIS = { total_active_requests:0, assets_pending:0, unassigned_tasks:0, total_events_supported:0 };
+      EVENTS = [];
+      EVENT_DETAILS = [];
+      WORKLOAD_DATA = {};
+      renderAll();
     }
   }
 
-  function renderAll(){
-    renderKPIs();
-    renderNotifications('all');
-    renderChart('workload');
-    buildCalendar();
-    // Try opening today's date if there are entries
-    const todayISO = new Date().toISOString().slice(0,10);
-    const hasToday = (DASH.events||[]).some(e=>e.date===todayISO);
-    if(hasToday) openDate(todayISO); else clearEventDetails();
-  }
-
-  // KPIs
   function renderKPIs(){
-    const k = DASH.kpis || {};
-    setText('#valActive', k.total_active_requests ?? 0);
-    setText('#valAssetsPending', k.assets_pending ?? 0);
-    setText('#valUnassigned', k.unassigned_tasks ?? 0);
-    setText('#valEvents', k.total_events_supported ?? 0);
+    $('#valActive').textContent = KPIS.total_active_requests ?? 0;
+    $('#valAssetsPending').textContent = KPIS.assets_pending ?? 0;
+    $('#valUnassigned').textContent = KPIS.unassigned_tasks ?? 0;
+    $('#valEvents').textContent = KPIS.total_events_supported ?? 0;
   }
 
-  // Notifications list
+  // Notifications (Event Details) filtering
+  let currentEventFilter = 'all';
   function renderNotifications(filter='all'){
-    const container = $('#eventDetailsList');
-    const all = DASH.event_details?.length ? DASH.event_details : (DASH.events||[]);
+    const list = $('#eventDetailsList');
+    if(!list) return;
+    let items = EVENT_DETAILS;
 
-    const items = all.filter(e=>{
-      if(filter==='all') return true;
-      if(filter==='posters') return !!e.poster_required;
-      if(filter==='certificates') return !!e.certificates_required;
-      // coverage/media not present in API yet → return false
-      if(filter==='coverage' || filter==='media') return false;
-      return true;
-    });
+    // helper to check other_services keywords
+    const hasSrv = (ev, keys=[]) => {
+      const arr = Array.isArray(ev.other_services) ? ev.other_services : [];
+      const s = arr.map(String).join(' ').toLowerCase();
+      return keys.some(k => s.includes(k));
+    };
 
-    if(!items.length){ container.innerHTML = '<div class="empty">No notifications</div>'; return; }
-    container.innerHTML = items.map(e=>{
-      const dateStr = e.date ? new Date(e.date).toLocaleDateString(undefined,{day:'2-digit',month:'short'}) : '—';
-      const org = e.organization ? ` • ${esc(e.organization)}` : '';
-      const link = `/cdl/support/?eventId=${e.id}`;
-      return `<article class="list-item">
-        <div class="bullet under_review"><i class="fa-regular fa-bell"></i></div>
+    // Filter by type - only finalized
+    if (filter === 'posters') {
+      items = items.filter(ev => ev.poster_required && ev.status === 'finalized');
+    } else if (filter === 'certificates') {
+      items = items.filter(ev => ev.certificates_required && ev.status === 'finalized');
+    } else if (filter === 'coverage') {
+      // treat "coverage" as photography/media coverage in other_services
+      items = items.filter(ev => ev.status === 'finalized' && hasSrv(ev, ['coverage','photography','photo']));
+    } else if (filter === 'media') {
+      // generic media-related services
+      items = items.filter(ev => ev.status === 'finalized' && hasSrv(ev, ['media','video','press']));
+    } else {
+      items = items.filter(ev => ev.status === 'finalized');
+    }
+
+    if(items.length === 0){
+      list.innerHTML = '<div class="empty">No finalized notifications</div>';
+      return;
+    }
+
+    list.innerHTML = items.map(ev => {
+      const dateStr = ev.date ? new Date(ev.date).toLocaleDateString(undefined, {month:'short', day:'2-digit'}) : '';
+      const org = ev.organization || 'N/A';
+      const assigned = ev.assigned_member || 'Unassigned';
+      const tags = [
+        ev.poster_required ? 'Poster' : null,
+        ev.certificates_required ? 'Certificate' : null
+      ].filter(Boolean).join(' · ');
+      return `<article class="list-item" data-id="${ev.id}">
+        <div class="bullet under_review"><i class="fa-regular fa-envelope"></i></div>
         <div class="list-body">
-          <h4>${esc(e.title||'Event')}</h4>
-          <p>${dateStr}${org}</p>
+          <h4>${ev.title}</h4>
+          <p>Status: ${ev.status}${dateStr?` · Date: ${dateStr}`:''}</p>
+          <p>Department: ${org} · Assigned: ${assigned}${tags?` · ${tags}`:''}</p>
         </div>
-        <div class="btn-group"><a class="chip-btn" href="${link}"><i class="fa-regular fa-eye"></i> View</a></div>
+        <div class="btn-group">
+          <a class="chip-btn primary" href="/cdl/support/?eventId=${ev.id}"><i class="fa-regular fa-eye"></i> View</a>
+        </div>
       </article>`;
     }).join('');
   }
 
-  // Team/Workload chart
-  function renderChart(view='workload'){
-    const ctx = $('#teamChart'); if(!ctx) return;
-    chart?.destroy();
-    if(view!=='workload'){
-      chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
-          datasets: [{ data: [null,null,null,null,null,null,null], tension: 0.3 }]
-        },
-        options: {
-          plugins: { legend: { display: false } },
-          scales: { y: { beginAtZero: true, max: 100 } }
-        }
-      });
-      return;
+  // Filter tabs (scoped to Notifications card)
+  document.addEventListener('click', e => {
+    const t = e.target.closest('#cardNotifications .tab-btn');
+    if(!t) return;
+    $$('#cardNotifications .tab-btn').forEach(b => b.classList.remove('active'));
+    t.classList.add('active');
+    currentEventFilter = t.dataset.filter || 'all';
+    renderNotifications(currentEventFilter);
+  });
+
+  // Assignment Manager - build from EVENT_DETAILS
+  function renderAssignmentTable(){
+    const tbody = $('#taskList'); 
+    if(!tbody) return;
+    const tasks = EVENT_DETAILS.filter(ev => (ev.poster_required || ev.certificates_required));
+    if(tasks.length === 0){ 
+      tbody.innerHTML = '<tr><td colspan="8" class="empty-row">No items</td></tr>'; 
+      return; 
     }
-    const labels = (DASH.workload?.members || []).map(n=> (n&&n.length>12)? (n.slice(0,11)+'…'): n);
-    const data = DASH.workload?.assignments || [];
-    chart = new Chart(ctx, { type:'bar', data:{ labels, datasets:[{ data, backgroundColor:'#4169e1' }] }, options:{ plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, precision:0}} } });
+    tbody.innerHTML = tasks.map(ev => {
+      const dateStr = ev.date ? new Date(ev.date).toLocaleDateString(undefined, {month:'short', day:'2-digit'}) : '';
+      const type = [];
+      if (ev.poster_required) type.push('Poster');
+      if (ev.certificates_required) type.push('Certificate');
+      return `<tr data-id="${ev.id}">
+        <td><a href="/proposal/${ev.id}/detail/" class="link">${ev.title}</a></td>
+        <td>${type.join(', ')}</td>
+        <td><span class="priority-badge normal">Normal</span></td>
+        <td>${dateStr}</td>
+        <td class="assigned-to">${ev.assigned_member || 'Unassigned'}</td>
+        <td><span class="status-badge pending">Pending</span></td>
+        <td>1</td>
+          <td class="ta-right"><a class="chip-btn primary" data-action="open-assign" href="/cdl/support/${ev.id}/assign/"><i class="fa-regular fa-pen-to-square"></i> Assign</a></td>
+      </tr>`;
+    }).join('');
   }
+
+  // Assignment filters
+  document.addEventListener('click', e => {
+    const b = e.target.closest('#cardAssignAll .control-btn[data-filter]');
+    if(!b) return;
+    $$('#cardAssignAll .control-btn[data-filter]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    const filter = b.dataset.filter;
+    $$('#taskList tr[data-id]').forEach(row => {
+      let show = true;
+      if(filter === 'unassigned') show = (row.querySelector('.assigned-to')?.textContent.trim() || '') === '' || row.querySelector('.assigned-to')?.textContent.includes('Unassigned');
+      if(filter === 'urgent') show = row.cells[2]?.textContent.includes('Certificate');
+      row.style.display = show ? '' : 'none';
+    });
+  });
+  // Row Assign action opens Assign Tasks page (navigate via href)
+  // No additional JS needed; link already points to /cdl/support/?eventId=ID
+
+  // Team Analytics
+  let teamChart;
+  function buildTeamChart(labels, data){
+    const ctx = $('#teamChart'); if(!ctx) return;
+    teamChart?.destroy();
+    teamChart = new Chart(ctx, {
+      type: 'bar',
+  data: { labels, datasets:[{ data, backgroundColor:'#3384db', borderWidth:0, barPercentage:0.35, categoryPercentage:0.55, maxBarThickness:18 }]},
+      options: {
+        plugins:{legend:{display:false}},
+        responsive:true,
+        maintainAspectRatio:false,
+        scales:{
+          y:{ beginAtZero:true, grid:{ color:'rgba(0,0,0,0.06)', lineWidth:0.7 } },
+          x:{ grid:{ color:'rgba(0,0,0,0.03)', lineWidth:0.7 } }
+        }
+      }
+    });
+  }
+  function getFilteredWorkload(){
+    const members = WORKLOAD_DATA.members || [];
+    const counts  = WORKLOAD_DATA.assignments || [];
+    if(!members.length) return {labels:['No Members'], data:[0]};
+    if(!selectedMember){
+      return {labels: members, data: counts};
+    }
+    const idx = members.findIndex(n => (n||'') === selectedMember);
+    if(idx === -1) return {labels: members, data: counts};
+    return {labels: [members[idx]], data: [counts[idx]||0]};
+  }
+  function viewWorkload(){
+    const {labels, data} = getFilteredWorkload();
+    buildTeamChart(labels, data);
+  }
+  document.addEventListener('click', e => {
+    const b = e.target.closest('#cardTeam .control-btn[data-view]');
+    if(!b) return;
+    $$('#cardTeam .control-btn[data-view]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    const v = b.dataset.view;
+    if(v==='workload') viewWorkload();
+    if(v==='ontime') buildTeamChart((WORKLOAD_DATA.members||['No Members']), (WORKLOAD_DATA.members||['']).map(()=>0));
+    if(v==='firstpass') buildTeamChart((WORKLOAD_DATA.members||['No Members']), (WORKLOAD_DATA.members||['']).map(()=>0));
+  });
+
+  // Populate and handle member selector
+  function populateMemberFilter(){
+    const sel = document.getElementById('memberFilter');
+    if(!sel) return;
+    const members = WORKLOAD_DATA.members || [];
+    // Preserve current selection if possible
+    const prev = selectedMember;
+    sel.innerHTML = '<option value="">All employees</option>' + members.map(n=>`<option value="${String(n)}">${String(n)}</option>`).join('');
+    // Restore selection
+    if(prev && members.includes(prev)){
+      sel.value = prev;
+    }else{
+      sel.value = '';
+      selectedMember = '';
+    }
+  }
+  document.addEventListener('change', e => {
+    const sel = e.target.closest('#memberFilter');
+    if(!sel) return;
+    selectedMember = sel.value;
+    viewWorkload();
+  });
 
   // Calendar
+  let calRef = new Date();
+  let currentCalFilter = 'all';
+  const fmt2 = v => String(v).padStart(2,'0');
+  const titleEl = $('#calTitle'), gridEl = $('#calGrid');
   function buildCalendar(){
-    $('#calTitle').textContent = calRef.toLocaleString(undefined,{month:'long',year:'numeric'});
-    const first=new Date(calRef.getFullYear(),calRef.getMonth(),1), last=new Date(calRef.getFullYear(),calRef.getMonth()+1,0);
-    const startIdx=first.getDay(), prevLast=new Date(calRef.getFullYear(),calRef.getMonth(),0).getDate();
-    const cells=[];
-    for(let i=startIdx-1;i>=0;i--) cells.push({t:prevLast-i, iso:null, muted:true});
-    for(let d=1; d<=last.getDate(); d++) cells.push({t:d, iso:iso(calRef,d), muted:false});
-    while(cells.length%7!==0) cells.push({t:'', iso:null, muted:true});
-    const todayISO = new Date().toISOString().slice(0,10);
-    $('#calGrid').innerHTML = cells.map(c=>{
-      if(!c.iso){ return `<div class="day muted" data-date="">${c.t}</div>`; }
-      const has = (DASH.events||[]).some(e=>e.date===c.iso);
-      const isToday = c.iso===todayISO;
-      return `<div class="day${has?' has-event':''}${isToday?' today':''}" data-date="${c.iso}">${c.t}</div>`;
+    if(!gridEl || !titleEl) return;
+    titleEl.textContent = calRef.toLocaleString(undefined, {month:'long', year:'numeric'});
+    const first = new Date(calRef.getFullYear(), calRef.getMonth(), 1);
+    const last  = new Date(calRef.getFullYear(), calRef.getMonth()+1, 0);
+    const startIdx = first.getDay();
+    const prevLast = new Date(calRef.getFullYear(), calRef.getMonth(), 0).getDate();
+    const cells = [];
+    for(let i = startIdx-1; i >= 0; i--) cells.push({t: prevLast - i, iso:null, muted:true});
+    for(let d = 1; d <= last.getDate(); d++){
+      const iso = `${calRef.getFullYear()}-${fmt2(calRef.getMonth()+1)}-${fmt2(d)}`;
+      cells.push({t:d, iso, muted:false});
+    }
+    while(cells.length % 7 !== 0) cells.push({t:'', iso:null, muted:true});
+    gridEl.innerHTML = cells.map(c => {
+      if (!c.iso) return `<div class="day muted" data-date="">${c.t}</div>`;
+      const isToday = c.iso === new Date().toISOString().slice(0,10);
+      const dayAll = EVENTS.filter(e => e.date === c.iso);
+      const count = dayAll.length;
+      const hasSupport = dayAll.some(e => e.type === 'cdl_support');
+      let markClass = '';
+      if (count > 0) {
+        markClass = (currentCalFilter === 'support') ? ' has-meeting' : (hasSupport ? ' has-meeting' : ' has-event');
+      }
+      return `<div class="day${markClass}${isToday ? ' today' : ''}" data-date="${c.iso}">${c.t}</div>`;
     }).join('');
-    $$('#calGrid .day[data-date]').forEach(d=> d.addEventListener('click',()=>{
-      $$('#calGrid .day.selected').forEach(x=>x.classList.remove('selected'));
+    $$('.day[data-date]').forEach(d => d.addEventListener('click', () => {
+      $$('.day.selected').forEach(x => x.classList.remove('selected'));
       d.classList.add('selected');
-      openDate(d.dataset.date);
+      openDay(d.dataset.date);
     }));
   }
-  function iso(base,d){ return `${base.getFullYear()}-${String(base.getMonth()+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
-
-  function openDate(iso){
-    const items = (DASH.event_details||[]).filter(e=>e.date===iso);
+  function openDay(iso){
+    let items = EVENTS.filter(e => e.date === iso);
+    if (currentCalFilter === 'support') items = items.filter(e => e.type === 'cdl_support');
     const wrap = $('#eventDetailsContent');
-    if(!items.length){ wrap.innerHTML = '<div class="empty">No events on this date</div>'; $('#clearEventDetails')?.style.setProperty('display','inline-flex'); return; }
-    const dateStr = new Date(iso).toLocaleDateString(undefined,{day:'2-digit',month:'2-digit',year:'numeric'});
-    wrap.innerHTML = items.map(e=>`
+    const dateStr = new Date(iso).toLocaleDateString(undefined, {day:'2-digit', month:'2-digit', year:'numeric'});
+    wrap.innerHTML = items.length ? items.map(e => `
       <div class="event-detail-item">
         <div class="event-detail-title with-actions">
-          <span class="title-text">${esc(e.title||'Event')}</span>
+          <span class="title-text">${e.title}</span>
           <div class="title-actions"><a class="chip-btn" href="/cdl/support/?eventId=${e.id}">View</a></div>
         </div>
-        <div class="event-detail-meta">${dateStr} • Status: ${esc(e.status||'')}${e.organization?` • ${esc(e.organization)}`:''}${e.assigned_member?` • Assigned to: ${esc(e.assigned_member)}`:''}</div>
+        <div class="event-detail-meta">${dateStr} • Status: ${e.status} • Org: ${e.organization||'N/A'}</div>
       </div>
-    `).join('');
-    $('#clearEventDetails')?.style.setProperty('display','inline-flex');
+    `).join('') : `<div class="empty">No events on this date</div>`;
+  }
+  $('#calFilter')?.addEventListener('change', e => {
+    currentCalFilter = e.target.value;
+    currentScope = currentCalFilter;
+    loadData(currentScope);
+  });
+  $('#calPrev')?.addEventListener('click', () => { calRef = new Date(calRef.getFullYear(), calRef.getMonth()-1, 1); buildCalendar(); });
+  $('#calNext')?.addEventListener('click', () => { calRef = new Date(calRef.getFullYear(), calRef.getMonth()+1, 1); buildCalendar(); });
+
+  function renderAll(){
+    renderKPIs();
+    renderNotifications(currentEventFilter);
+    renderAssignmentTable();
+    viewWorkload();
+    buildCalendar();
+    const today = new Date().toISOString().slice(0,10);
+    const todayCell = $(`.day[data-date="${today}"]`);
+    if (todayCell) { todayCell.classList.add('selected'); openDay(today); }
   }
 
-  function clearEventDetails(){
-    $('#eventDetailsContent').innerHTML = '<div class="empty">Select a date in the calendar to view events</div>';
-    $('#clearEventDetails')?.style.setProperty('display','none');
-    $$('#calGrid .day.selected').forEach(x=>x.classList.remove('selected'));
-  }
-
-  // Utilities
-  function setText(sel,v){ const el=$(sel); if(el) el.textContent = v; }
-  function esc(s){ return (s??'').toString().replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
-
-  async function fetchJSON(url, options={}){
-    const res = await fetch(url, { credentials:'same-origin', headers:{ 'Accept':'application/json', ...(options.headers||{}) }, ...options });
-    if(res.status===401 || res.status===403){ window.location.href = '/accounts/login/?next='+encodeURIComponent(location.pathname); throw new Error('auth'); }
-    const ct = res.headers.get('content-type')||'';
-    if(!ct.includes('application/json')){ window.location.href = '/accounts/login/?next='+encodeURIComponent(location.pathname); throw new Error('non-json'); }
-    return res.json();
-  }
+  document.addEventListener('DOMContentLoaded', () => {
+    loadData('all');
+  });
 })();
