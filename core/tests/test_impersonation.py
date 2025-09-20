@@ -13,7 +13,7 @@ class ImpersonationTests(TestCase):
 
     def test_impersonation_flow(self):
         # start impersonation and ensure redirect to dashboard
-        response = self.client.get(reverse('admin_impersonate_user', args=[self.user.id]))
+        response = self.client.post(reverse('admin_impersonate_user', args=[self.user.id]))
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse('dashboard'))
         self.assertNotIn('core-admin', response.url)
@@ -38,7 +38,7 @@ class ImpersonationTests(TestCase):
     def test_impersonate_inactive_user(self):
         """Inactive users should still be impersonatable without 404."""
         inactive = User.objects.create_user('bob', 'bob@example.com', 'pass', is_active=False)
-        response = self.client.get(reverse('admin_impersonate_user', args=[inactive.id]))
+        response = self.client.post(reverse('admin_impersonate_user', args=[inactive.id]))
         self.assertEqual(response.status_code, 302)
         self.assertEqual(self.client.session['impersonate_user_id'], inactive.id)
 
@@ -46,6 +46,12 @@ class ImpersonationTests(TestCase):
         non_admin = User.objects.create_user('eve', 'eve@example.com', 'pass')
         self.client.logout()
         self.client.force_login(non_admin)
-        response = self.client.get(reverse('admin_impersonate_user', args=[self.user.id]))
+        response = self.client.post(reverse('admin_impersonate_user', args=[self.user.id]))
+        self.assertEqual(response.status_code, 403)
+        self.assertNotIn('impersonate_user_id', self.client.session)
+
+    def test_cannot_impersonate_superuser(self):
+        other_admin = User.objects.create_superuser('boss', 'boss@example.com', 'pass')
+        response = self.client.post(reverse('admin_impersonate_user', args=[other_admin.id]))
         self.assertEqual(response.status_code, 403)
         self.assertNotIn('impersonate_user_id', self.client.session)
