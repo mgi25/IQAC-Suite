@@ -24,7 +24,8 @@
     window.USER_ID = "{{ request.user.id|default:'' }}";
   </script>
 </head>
-<body class="command-center-layout">
+{% with has_sidebar=unrestricted_nav or allowed_nav_items|length %}
+<body class="command-center-layout{% if not has_sidebar %} no-sidebar{% endif %}">
 
   {% if messages %}
   <div class="toast-container" aria-live="polite" aria-atomic="true">
@@ -40,12 +41,14 @@
   <div class="top-utility-bar">
     <div class="utility-bar-flex" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
       <div class="utility-left" style="display: flex; align-items: center; gap: 1rem;">
+        {% if has_sidebar %}
         <button id="sidebarToggle" aria-label="Toggle sidebar" style="background:transparent;border:none;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;">
           <span style="display:inline-block;width:18px;height:2px;background:#fff;position:relative;">
             <span style="content:'';position:absolute;left:0;top:-6px;width:18px;height:2px;background:#fff"></span>
             <span style="content:'';position:absolute;left:0;top:6px;width:18px;height:2px;background:#fff"></span>
           </span>
         </button>
+        {% endif %}
         <div class="app-logo" style="display: flex; align-items: center; gap: 0.75rem;">
           <img src="{% static 'core/img/campus-logo.png' %}" alt="CHRIST University" class="logo-img">
           <span class="app-name">Event Management Suite</span>
@@ -137,6 +140,7 @@
     </div>
   </div>
 
+  {% if has_sidebar %}
   <!-- ZONE 2: LEFT CONTROL PANEL -->
   <div class="left-control-panel">
     <nav class="control-navigation">
@@ -304,6 +308,7 @@
 {% endif %}
 
 
+      {% if request.user.is_staff or request.user.is_superuser %}
       <div class="json-controls" style="position: fixed; bottom: 0; left: 0; width: 280px; padding: 6px; background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(8px); border-top: 1px solid rgba(229, 231, 235, 0.3); z-index: 100;">
         <div style="display: flex; gap: 4px;">
           <button id="download-json-btn" class="json-btn" style="flex: 1; padding: 4px; border-radius: 4px; border: 1px solid rgba(229, 231, 235, 0.4); background: rgba(248, 250, 252, 0.4); color: rgba(55, 65, 81, 0.65); font-size: 0.7rem; display: flex; align-items: center; justify-content: center; gap: 3px; min-height: 24px; transition: all 0.2s ease;">
@@ -320,9 +325,11 @@
         .json-btn:hover { background: rgba(248, 250, 252, 0.8) !important; color: rgba(55, 65, 81, 0.9) !important; border-color: rgba(229, 231, 235, 0.6) !important; }
         .json-btn:hover i { opacity: 0.8 !important; }
       </style>
+      {% endif %}
 
     </nav>
   </div>
+  {% endif %}
 
   <!-- ZONE 3: MAIN VIEWSCREEN -->
   <div class="main-viewscreen main-content">
@@ -436,4 +443,5 @@
   {% block scripts %}{% endblock %}
   {% block scripts_extra %}{% endblock %}
 </body>
+{% endwith %}
 </html>

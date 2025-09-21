@@ -116,6 +116,15 @@ body.command-center-layout{
   overflow-x:hidden;
 }
 
+body.command-center-layout.no-sidebar{
+  grid-template-areas: "topbar" "main";
+  grid-template-columns: 1fr;
+}
+
+body.command-center-layout.no-sidebar .left-control-panel{
+  display:none;
+}
+
 /* 5) Responsive shell helpers */
 @media (max-width: 992px){
   body.command-center-layout {
