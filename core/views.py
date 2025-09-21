@@ -30,6 +30,7 @@ from .models import (
     RoleAssignment,
     Organization,
     OrganizationType,
+    DashboardAssignment,
     Report,
     Class,
     OrganizationRole,
