@@ -3,7 +3,6 @@
 
 {% block head_extra %}
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css"
     rel="stylesheet" />
@@ -14,7 +13,7 @@
 <link rel="stylesheet" href="{% static 'core/css/admin_user_management.css' %}">
 
 <style>
-    .filters-section {
+    .user-mgmt-container .filters-section {
         background: #f8f9fa;
         border: 1px solid #dee2e6;
         border-radius: 8px;
@@ -22,34 +21,34 @@
         margin-bottom: 20px;
     }
 
-    .filters-header {
+    .user-mgmt-container .filters-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 15px;
     }
 
-    .filters-header h5 {
+    .user-mgmt-container .filters-header h5 {
         margin: 0;
         color: #495057;
         font-weight: 600;
     }
 
-    .filter-row {
+    .user-mgmt-container .filter-row {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 15px;
         margin-bottom: 15px;
     }
 
-    .filter-group label {
+    .user-mgmt-container .filter-group label {
         font-size: 0.9rem;
         font-weight: 500;
         color: #6c757d;
         margin-bottom: 5px;
     }
 
-    .toggle-filters {
+    .user-mgmt-container .toggle-filters {
         background: none;
         border: none;
         color: #007bff;
@@ -60,35 +59,82 @@
         gap: 5px;
     }
 
-    .filters-collapsed .filter-content {
+    .user-mgmt-container.filters-collapsed .filter-content,
+    .user-mgmt-container .filters-collapsed .filter-content {
         display: none;
     }
 
-    .btn-primary,
-    .dt-buttons .btn.btn-primary {
+    .user-mgmt-container .btn-primary,
+    .user-mgmt-container .dt-buttons .btn.btn-primary {
         background-color: var(--christ-blue) !important;
         border-color: var(--christ-blue) !important;
     }
 
-    .btn-primary:hover,
-    .dt-buttons .btn.btn-primary:hover {
+    .user-mgmt-container .btn-primary:hover,
+    .user-mgmt-container .dt-buttons .btn.btn-primary:hover {
         background-color: var(--christ-blue-dark) !important;
         border-color: var(--christ-blue-dark) !important;
     }
 
-    .admin-users-table thead th {
+    .user-mgmt-container .admin-users-table thead th {
         background: var(--christ-blue);
         color: var(--white);
     }
 
-    .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice {
+    .user-mgmt-container .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice {
         background-color: var(--christ-blue);
         border-color: var(--christ-blue);
         color: #fff;
     }
 
-    .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice__remove {
+    .user-mgmt-container .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice__remove {
         color: #fff;
+    }
+
+    /* DataTable overlay wrapper anchors the overlay to this section only */
+    .user-mgmt-container .dt-overlay-wrapper {
+        position: relative;
+        min-height: 240px; /* prevent overlay jump on small tables */
+    }
+
+    /* Full-cover overlay that centers its content and fades in/out */
+    .user-mgmt-container .dt-overlay {
+        position: absolute;
+        inset: 0; /* top/right/bottom/left: 0 */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.72);
+        backdrop-filter: blur(2px);
+        z-index: 20000; /* ensure above DataTables buttons/headers */
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none; /* don't block when hidden */
+        transition: opacity .18s ease, visibility 0s linear .18s;
+    }
+
+    .user-mgmt-container .dt-overlay.show {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto; /* block interactions while loading */
+        transition: opacity .18s ease; /* remove visibility delay when showing */
+    }
+
+    .user-mgmt-container .dt-overlay-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .user-mgmt-container .dt-overlay-text {
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    /* Hide DataTables' built-in processing node to avoid double spinners */
+    .user-mgmt-container .dataTables_processing {
+        display: none !important;
     }
 </style>
 {% endblock %}
@@ -150,7 +196,11 @@
         </div>
     </div>
 
-    <div class="table-responsive">
+    <!--
+      Wrap the DataTable with a positioned container so the overlay
+      covers only this section (buttons + table), not the entire page.
+    -->
+    <div id="users-table-wrapper" class="table-responsive dt-overlay-wrapper">
         <table id="usersTable" class="admin-users-table table table-striped table-hover align-middle display nowrap"
             style="width:100%" data-api-url="{% url 'api_admin_search_users' %}">
             <thead>
@@ -168,12 +218,20 @@
             <tbody>
             </tbody>
         </table>
+
+        <!-- Centered loading overlay; initially hidden -->
+        <div id="users-table-overlay" class="dt-overlay" aria-hidden="true">
+            <div class="dt-overlay-content">
+                <!-- Bootstrap 5 spinner -->
+                <div class="spinner-border text-primary" role="status" aria-label="Loading"></div>
+                <div class="dt-overlay-text">Loading users…</div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts_extra %}
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
@@ -194,6 +252,8 @@
             constructor() {
                 this.table = null;
                 this.apiUrl = $('#usersTable').data('api-url');
+                // Cache overlay element for quick show/hide
+                this.$overlay = $('#users-table-overlay');
             }
 
             init() {
@@ -260,6 +320,8 @@
             }
 
             initDataTable() {
+                // Show overlay for the initial load before DataTables fires its first Ajax
+                this.showOverlay();
                 // Helpers to clean cell content for exports
                 const stripHtml = (data) => {
                     if (data == null) return '';
@@ -280,6 +342,7 @@
                 };
 
                 this.table = $('#usersTable').DataTable({
+                    searching: false, // disable global search box
                     processing: true,
                     serverSide: true,
                     ajax: {
@@ -304,7 +367,8 @@
                         { data: 'status', name: 'status', orderable: false, searchable: false },
                         { data: 'action', name: 'action', orderable: false, searchable: false }
                     ],
-                    dom: '<"dt-toolbar d-flex justify-content-between align-items-center flex-wrap mb-3"lBf>rtip',
+                    // remove the filter box and keep buttons on the right like before
+                    dom: '<"dt-toolbar d-flex justify-content-between align-items-center flex-wrap mb-3"<"dt-left"l><"dt-right"B>>rtip',
                     responsive: true,
                     pagingType: 'simple_numbers',
                     lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
@@ -656,6 +720,15 @@
                     }
                 });
 
+                // Tie overlay visibility to DataTables lifecycle
+                // Show whenever processing starts; hide when it ends
+                $('#usersTable').on('processing.dt', (e, settings, processing) => {
+                    processing ? this.showOverlay() : this.hideOverlay();
+                });
+                // Extra safety: before XHR show; after XHR/draw hide
+                $('#usersTable').on('preXhr.dt', () => this.showOverlay());
+                $('#usersTable').on('xhr.dt draw.dt', () => this.hideOverlay());
+
                 $.fn.dataTable.ext.errMode = 'none';
                 $('#usersTable').on('error.dt', (e, settings, techNote, message) => {
                     console.error('DataTables error:', message);
@@ -705,6 +778,8 @@
             }
 
             applyFilters(updateUrl = false) {
+                // Show overlay immediately on user action, then reload
+                this.showOverlay();
                 this.table.ajax.reload();
                 if (updateUrl) {
                     this.updateURL();
@@ -718,6 +793,8 @@
 
                 $('#q, #status').val('');
                 $('#org_type, #organization, #role').val(null).trigger('change');
+                // Show overlay and reload after clearing filters
+                this.showOverlay();
                 this.table.ajax.reload();
             }
 
@@ -800,10 +877,17 @@
                 $('#filterToggleIcon').toggleClass('fa-chevron-up fa-chevron-down');
                 $('#filterToggleText').text(isCollapsed ? 'Expand' : 'Collapse');
             }
+
+            // Overlay helpers to control loader visibility
+            showOverlay() { this.$overlay.addClass('show').attr('aria-hidden', 'false'); }
+            hideOverlay() { setTimeout(() => this.$overlay.removeClass('show').attr('aria-hidden', 'true'), 80); }
         }
 
         const manager = new UserFilterManager();
         manager.init();
+        // Expose helpers globally so export buttons can control the overlay lifecycle
+        window.showUserMgmtOverlay = () => manager.showOverlay();
+        window.hideUserMgmtOverlay = () => manager.hideOverlay();
     });
 </script>
 {% endblock %}

@@ -1503,7 +1503,7 @@
     color: #374151;
     line-height: 1.4;
 }
-.outcome-text:hover { cursor: text; }
+.outcome-text:hover { cursor: default; }
 
 .outcome-actions {
     display: flex;

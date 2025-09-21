@@ -23,6 +23,22 @@ img { height: auto; }
 input, button, textarea, select { font: inherit; }
 a { text-decoration: none; color: inherit; }
 
+/* Prevent blinking caret on non-editables and enforce proper cursors */
+/* Only input, textarea, and contenteditable should show text caret */
+*:not(input):not(textarea):not([contenteditable="true"]) {
+  caret-color: transparent;
+}
+/* Clickable controls use pointer; avoid text cursor on spans/divs */
+.btn, .chip-btn, .nav-link, .nav-sublink, .action-card, .stat-card, [role="button"], button, a { cursor: pointer; }
+/* Clickable UI shouldn’t show text selection/caret */
+.btn, .chip-btn, .nav-link, .nav-sublink, .action-card, .stat-card,
+.kpi-card, .cal-nav, .seg-btn, .notification-btn, .profile-btn,
+.paginate_button, .chip, .tag, .badge, .day {
+  -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
+}
+/* Allow caret where explicitly editable */
+[contenteditable] { caret-color: auto; }
+
 /* 1) Design tokens */
 :root{
   /* Brand palette */
@@ -153,7 +169,7 @@ body.command-center-layout{
   display:flex; align-items:center; justify-content:space-between;
   padding:0 var(--sp-4);
   position:relative;
-  z-index:2000;
+  z-index:3000; /* ensure above other content */
 }
 
 /* Hide the campus logo image (keep text) */
@@ -174,20 +190,26 @@ body.command-center-layout{
 .utility-right > *{ color:#ffffff; }
 
 /* Notification bell (forced GOLD) */
-.notification-section{ position:relative; }
+.notification-section{ position:relative; z-index:3100; }
 .notification-btn{
-  position:relative; width:32px; height:32px;
+  position:relative; width:36px; height:36px;
   display:inline-flex; align-items:center; justify-content:center;
-  background:transparent; border:0; cursor:pointer;
+  background:transparent; border:0; cursor:pointer; border-radius:8px;
 }
 .notification-btn .notification-icon{
-  font-family:"Font Awesome 6 Free", var(--fa-font-solid,"Font Awesome 6 Free") !important;
-  font-weight:900 !important;
-  font-size:1.35rem !important;
-  line-height:1 !important;
-  width:auto; height:auto; background:none;
-  color:var(--gold-accent) !important;
+  display:inline-flex; align-items:center; justify-content:center;
+  width:1.5rem; height:1.5rem;
+  color:var(--gold-accent);
 }
+.notification-btn .notification-icon svg{
+  width:100%; height:100%; display:block; overflow:visible;
+  fill:currentColor;
+  filter: drop-shadow(0 1px 0 rgba(0,0,0,.2));
+}
+.notification-btn:hover{ background:rgba(255,255,255,.08); }
+.notification-btn:active{ background:rgba(255,255,255,.16); transform:translateY(0); }
+.notification-btn[aria-expanded="true"] .notification-icon{ color:#ffd95e !important; }
+.notification-btn:focus-visible{ outline:2px solid #ffd95e; outline-offset:2px; }
 .notification-badge{
   position:absolute;
   top:0;
@@ -204,7 +226,7 @@ body.command-center-layout{
   width:320px; max-width:90vw; max-height:500px;
   background:#fff; border:1px solid var(--gray-200); border-radius:12px;
   box-shadow:var(--shadow-lg); opacity:0; visibility:hidden; transform:translateY(-10px);
-  transition:var(--tr); z-index:20000; overflow:hidden; color:var(--ink-900);
+  transition:var(--tr); z-index:3200; overflow:hidden; color:var(--ink-900);
 }
 .notification-dropdown.active{ opacity:1; visibility:visible; transform:translateY(0); }
 .notification-header{ display:flex; align-items:center; justify-content:space-between; padding:.75rem 1rem; border-bottom:1px solid var(--gray-200); }
@@ -344,3 +366,4 @@ body.command-center-layout .main-viewscreen{ transition:all .25s ease !important
 }
 .action-card::before{
   content:""; position:absolute; top:0; left:0; right:0; height:3
+}
