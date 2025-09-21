@@ -8,6 +8,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils.formats import date_format
 
+from core.models import Organization, OrganizationType
 from core.signals import assign_role_on_login, create_or_update_user_profile
 from emt.forms import EventReportForm
 from emt.models import (AttendanceRow, EventActivity, EventProposal,
@@ -391,6 +392,27 @@ console.log(JSON.stringify({
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "facultya")
+
+    def test_preview_shows_inactive_organization_name(self):
+        org_type = OrganizationType.objects.create(name="Department")
+        archived_org = Organization.objects.create(
+            name="Archived Org", org_type=org_type, is_active=False
+        )
+        self.proposal.organization = archived_org
+        self.proposal.save(update_fields=["organization"])
+
+        url = reverse("emt:preview_event_report", args=[self.proposal.id])
+        data = {
+            "actual_event_type": "Seminar",
+            "report_signed_date": "2024-01-10",
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Archived Org")
 
     def test_proposal_speakers_prefilled(self):
         SpeakerProfile.objects.create(

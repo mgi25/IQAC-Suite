@@ -2369,26 +2369,24 @@ def preview_event_report(request, proposal_id):
         raw_value = bound_field.value()
         field_def = bound_field.field
         if isinstance(field_def, forms.ModelMultipleChoiceField):
+            objs = []
             if raw_value:
                 if field_def.queryset.exists():
-                    objs = field_def.queryset.filter(pk__in=raw_value)
-                elif hasattr(proposal, name):
-                    objs = getattr(proposal, name).all()
-                else:
-                    objs = []
-            else:
-                objs = []
+                    objs = list(field_def.queryset.filter(pk__in=raw_value))
+                if not objs and hasattr(proposal, name):
+                    objs = list(getattr(proposal, name).all())
+            elif hasattr(proposal, name):
+                objs = list(getattr(proposal, name).all())
             display = ", ".join(str(obj) for obj in objs) or "—"
         elif isinstance(field_def, forms.ModelChoiceField):
+            obj = None
             if raw_value:
                 if field_def.queryset.exists():
                     obj = field_def.queryset.filter(pk=raw_value).first()
-                elif hasattr(proposal, name):
+                if not obj and hasattr(proposal, name):
                     obj = getattr(proposal, name)
-                else:
-                    obj = None
-            else:
-                obj = None
+            elif hasattr(proposal, name):
+                obj = getattr(proposal, name)
             display = str(obj) if obj else "—"
         else:
             display = raw_value or "—"
@@ -2509,7 +2507,7 @@ def preview_event_report(request, proposal_id):
         if name in excluded_report_fields:
             continue
         values = post_data.getlist(name)
-        display = ", ".join(values) if values else "—"
+        display = ", ".join(str(v) for v in values) if values else "—"
         report_fields.append((field.label, display))
 
     # Include dynamic activities submitted with the report
