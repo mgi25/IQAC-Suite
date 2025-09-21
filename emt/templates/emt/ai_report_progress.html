@@ -15,16 +15,18 @@
   }
 
   body.command-center-layout {
-    background: #f2f4f7;
-    font-family: "Calibri", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
-    font-size: 11pt;
-    line-height: 1.5;
+    background: #e9edf5;
+    font-family: "Times New Roman", "Georgia", serif;
+    font-size: 12pt;
+    line-height: 1.6;
+    color: #1f2937;
     counter-reset: page;
+    padding-bottom: 48px;
   }
 
   @page {
     size: A4 portrait;
-    margin: 20mm;
+    margin: 20mm 18mm 22mm;
   }
 
   @page {
@@ -37,152 +39,147 @@
   }
 
   .iqac-report-page {
-    padding: 24px 16px 64px;
+    width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 16px;
+    gap: 18px;
+    padding: 24px 0 32px;
   }
 
   .screen-controls {
     position: sticky;
-    top: 16px;
-    z-index: 60;
+    top: 18px;
     display: flex;
-    gap: 8px;
+    gap: 10px;
     align-self: flex-end;
+    margin-right: 24px;
+    z-index: 60;
   }
 
   .screen-controls .btn {
     font-size: 0.85rem;
-    padding: 6px 14px;
-    border-radius: 999px;
-    border: 1px solid #9aa6b2;
+    padding: 6px 16px;
+    border-radius: 4px;
+    border: 1px solid #1f2937;
     background: #fff;
-    color: #1f2933;
+    color: #1f2937;
     cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
+    transition: background 0.2s ease, color 0.2s ease;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.1);
   }
 
   .screen-controls .btn-primary {
-    background: #12497c;
+    background: #113b7a;
+    border-color: #113b7a;
     color: #fff;
-    border-color: #0f3a62;
   }
 
   .screen-controls .btn:hover,
   .screen-controls .btn:focus {
-    filter: brightness(0.95);
+    background: #f3f4f6;
     outline: none;
   }
 
+  .screen-controls .btn-primary:hover,
+  .screen-controls .btn-primary:focus {
+    background: #0d3164;
+    color: #fff;
+  }
+
   .ai-progress-banner {
-    background: rgba(18, 73, 124, 0.08);
-    color: #0f3a62;
-    border: 1px solid rgba(18, 73, 124, 0.25);
-    border-radius: 12px;
+    width: min(100%, 210mm);
+    background: #f8f9fc;
+    border: 1px solid #c5ccd8;
     padding: 10px 16px;
     font-size: 0.9rem;
-    max-width: 720px;
-    width: 100%;
     text-align: center;
+    font-style: italic;
+    color: #1f2937;
   }
 
   .report-wrapper {
-    max-width: 210mm;
-    width: 100%;
+    width: min(100%, 210mm);
+    padding: 0 24px;
   }
 
   .report-sheet {
     background: #fff;
-    border: 1px solid #dcdcdc;
-    box-shadow: 0 18px 35px rgba(15, 23, 42, 0.08);
-    padding: 24mm 18mm 24mm 18mm;
-    position: relative;
-    overflow: hidden;
+    border: 1px solid #1f2937;
+    width: 100%;
+    padding: 28mm 24mm;
+    box-shadow: none;
   }
 
   .report-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 24px;
-    border-bottom: 2px solid #d3d7db;
-    padding-bottom: 18px;
-    margin-bottom: 24px;
+    text-align: center;
+    border-bottom: 1px solid #1f2937;
+    padding-bottom: 14mm;
+    margin-bottom: 18mm;
     position: running(report-header);
   }
 
-  .report-header .brand {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-  }
-
-  .logo-placeholder {
-    width: 90px;
-    height: 90px;
-    border: 2px solid #9aa6b2;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    color: #607080;
-    font-size: 0.8rem;
-  }
-
-  .report-header .institution {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    font-weight: 600;
+  .report-header .institution-name {
+    font-size: 15pt;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    font-size: 0.9rem;
-    color: #1e3a5f;
+    letter-spacing: 0.08em;
+  }
+
+  .report-header .campus-name {
+    font-size: 12pt;
+    font-style: italic;
+    letter-spacing: 0.02em;
+    margin-top: 2px;
   }
 
   .report-header .iqac-title {
-    text-align: right;
-    font-size: 0.9rem;
+    margin-top: 10px;
+    font-size: 10.5pt;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.18em;
     font-weight: 600;
-    color: #0f3a62;
+  }
+
+  .report-header .report-main-title {
+    font-size: 18pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin: 18px 0 0;
+  }
+
+  .report-header .report-subtitle {
+    font-size: 12pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    margin-top: 4px;
   }
 
   .report-body {
     display: flex;
     flex-direction: column;
-    gap: 28px;
-  }
-
-  .report-section {
-    page-break-inside: avoid;
+    gap: 24px;
   }
 
   .section-heading {
+    border-bottom: 1px solid #1f2937;
+    padding-bottom: 6px;
     margin-bottom: 12px;
   }
 
   .section-heading .kicker {
-    display: block;
-    font-size: 0.65rem;
-    text-transform: uppercase;
-    letter-spacing: 0.18em;
-    font-weight: 700;
-    color: #7a8795;
+    display: none;
   }
 
   .section-heading h2 {
-    margin: 4px 0 0 0;
-    font-size: 16pt;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    margin: 0;
+    font-size: 13pt;
     font-weight: 700;
-    color: #1e3a5f;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #1f2937;
   }
 
   table {
@@ -193,24 +190,18 @@
 
   .grid-table th,
   .grid-table td {
-    border: 1px solid #cfd3d7;
-    padding: 8px 10px;
+    border: 1px solid #1f2937;
+    padding: 6px 8px;
     vertical-align: top;
+    background: #fff;
   }
 
   .grid-table th {
-    width: 17%;
-    font-weight: 600;
-    background: #eef2f7;
-    text-transform: uppercase;
-    font-size: 0.7rem;
-    letter-spacing: 0.08em;
-    color: #3b4a5a;
-  }
-
-  .grid-table td {
-    width: 33%;
-    background: #fff;
+    width: 32%;
+    background: #f1f3f8;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-align: left;
   }
 
   .grid-table.full-width th {
@@ -222,21 +213,52 @@
   }
 
   .paper-box {
-    border: 1px solid #cfd3d7;
-    background: #fff;
+    display: block;
+    min-height: 24px;
+    padding: 4px 0;
+    border: none;
+    background: transparent;
+  }
+
+  .grid-table td.paper-box {
     padding: 6px 8px;
-    min-height: 34px;
-    border-radius: 4px;
+  }
+
+  .paper-box.paragraph-box {
+    min-height: 140px;
+    border: 1px solid #1f2937;
+    padding: 12px 14px;
+    text-align: justify;
+    text-justify: inter-word;
+  }
+
+  .paper-box.bullet-list,
+  .paper-box.list-commas {
+    border: none;
+    background: transparent;
+    padding: 0;
   }
 
   .paper-box.bullet-list {
     list-style: disc;
-    padding-left: 20px;
+    margin: 0;
+    padding-left: 24px;
+  }
+
+  .paper-box.bullet-list li {
+    margin-bottom: 4px;
+  }
+
+  .paper-box.bullet-list li:last-child {
+    margin-bottom: 0;
   }
 
   .paper-box.list-commas {
     list-style: none;
-    padding-left: 12px;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
   }
 
   .paper-box.list-commas li {
@@ -251,103 +273,89 @@
     content: "";
   }
 
-  .paper-box p,
-  .paper-box li {
-    margin: 0;
+  .grid-table td .paper-box {
+    border: none;
+    padding: 0;
+    background: transparent;
   }
 
   [data-multiline="true"] {
     white-space: pre-wrap;
   }
 
-  .paragraph-box {
-    text-align: justify;
-    text-justify: inter-word;
-    min-height: 120px;
-    orphans: 3;
-    widows: 3;
-  }
-
-  p {
-    orphans: 3;
-    widows: 3;
-  }
-
-  .muted {
-    color: #8a97a5;
-    font-style: italic;
-    text-align: center;
-    padding: 12px;
-  }
-
   .analysis-grid {
     display: grid;
-    gap: 18px;
+    gap: 16px;
+    grid-template-columns: 1fr;
   }
 
   .analysis-item {
+    border: 1px solid #1f2937;
+    background: #fff;
+    padding: 10px 14px;
     display: flex;
     flex-direction: column;
     gap: 6px;
   }
 
   .analysis-item .sub-label {
-    font-size: 0.75rem;
+    font-size: 10pt;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    font-weight: 600;
-    color: #3b4a5a;
+    font-weight: 700;
+    color: #1f2937;
   }
 
-  .analysis-grid .paper-box {
+  .analysis-item .paper-box {
     min-height: 80px;
+    border: none;
+    padding: 0;
   }
 
-  @media screen and (min-width: 992px), print {
-    .analysis-grid {
-      grid-template-columns: repeat(3, 1fr);
-    }
+  .muted {
+    border: 1px dashed #94a3b8;
+    color: #64748b;
+    font-style: italic;
+    text-align: center;
+    padding: 16px;
+    background: #f8fafc;
   }
 
   .signature-row {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    margin-top: 18px;
+    display: flex;
+    gap: 24px;
+    margin-top: 24px;
   }
 
   .signature-block {
+    flex: 1;
     text-align: center;
   }
 
   .signature-line {
-    border: 1px solid #cfd3d7;
+    border-bottom: 1px solid #1f2937;
     height: 70px;
-    border-radius: 6px;
     margin-bottom: 8px;
-    background: #fafbfc;
   }
 
   .signature-label {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: #3b4a5a;
     font-weight: 600;
   }
 
   .annex-title {
-    font-size: 13pt;
+    font-size: 12pt;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    margin-bottom: 12px;
-    color: #1e3a5f;
+    margin-bottom: 10px;
   }
 
   .annex-grid {
     display: grid;
-    gap: 16px;
+    gap: 12px;
   }
 
   .annex-grid.two-col {
@@ -359,31 +367,19 @@
   }
 
   .annex-card {
-    border: 1px solid #cfd3d7;
-    border-radius: 6px;
+    border: 1px solid #1f2937;
+    border-radius: 2px;
     overflow: hidden;
-    display: flex;
-    flex-direction: column;
     background: #fff;
-    min-height: 160px;
   }
 
   .annex-thumb {
     width: 100%;
-    background: #eceff2;
-    border-bottom: 1px solid #cfd3d7;
+    background: #f1f3f8;
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
-  }
-
-  .annex-card .annex-thumb {
-    height: 140px;
-  }
-
-  .single-attachment .annex-thumb {
-    height: 220px;
+    min-height: 130px;
   }
 
   .annex-thumb img {
@@ -395,60 +391,56 @@
   .annex-card figcaption,
   .single-attachment figcaption {
     padding: 8px 10px;
-    font-size: 0.85rem;
-    background: #f8fafc;
-    border-top: 1px solid #cfd3d7;
-    min-height: 44px;
-  }
-
-  .img-ph {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: repeating-linear-gradient(45deg, #e2e7ec, #e2e7ec 8px, #f5f7fa 8px, #f5f7fa 16px);
-    color: #6b7785;
-    font-weight: 600;
-    font-size: 0.85rem;
-    text-transform: uppercase;
+    font-size: 0.9rem;
+    background: #f8f9fc;
+    border-top: 1px solid #d1d5dc;
   }
 
   .single-attachment {
-    border: 1px solid #cfd3d7;
-    border-radius: 6px;
-    overflow: hidden;
+    border: 1px solid #1f2937;
+    background: #fff;
     max-width: 360px;
   }
 
+  .single-attachment .annex-thumb {
+    min-height: 220px;
+  }
+
+  .img-ph {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6b7280;
+  }
+
   .volunteer-table thead th {
-    background: #eef2f7;
+    background: #f1f3f8;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     font-size: 0.7rem;
-    color: #3b4a5a;
+    color: #1f2937;
   }
 
   .volunteer-table th,
   .volunteer-table td {
-    border: 1px solid #cfd3d7;
-    padding: 8px 10px;
+    border: 1px solid #1f2937;
+    padding: 6px 8px;
     font-size: 0.85rem;
   }
 
   .volunteer-table td {
-    min-height: 38px;
+    min-height: 36px;
   }
 
   .report-footer {
-    border-top: 2px solid #d3d7db;
-    margin-top: 36px;
-    padding-top: 12px;
-    font-size: 0.8rem;
-    color: #516070;
+    border-top: 1px solid #1f2937;
+    margin-top: 24mm;
+    padding-top: 8mm;
+    font-size: 9pt;
+    color: #1f2937;
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    gap: 24px;
     position: running(report-footer);
   }
 
@@ -457,18 +449,27 @@
   }
 
   .date-field {
-    text-align: right;
+    margin-top: 12px;
+    font-weight: 600;
+  }
+
+  .report-actions {
+    width: min(100%, 210mm);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
     margin-top: 16px;
   }
 
-  .page-break {
-    break-before: page;
+  .report-actions .btn {
+    min-width: 150px;
+    border-radius: 4px;
   }
 
   .paper-input {
     width: 100%;
     border: none;
-    border-radius: 4px;
+    border-radius: 0;
     padding: 6px 8px;
     font: inherit;
     background: transparent;
@@ -484,6 +485,7 @@
   .mode-edit .paper-box {
     padding: 0;
     background: #fff;
+    border: 1px solid #1f2937;
   }
 
   .mode-edit .paper-box.list-commas,
@@ -496,37 +498,39 @@
     content: "";
   }
 
-  .report-actions {
-    display: flex;
-    gap: 12px;
-    margin-top: 12px;
-    align-self: flex-end;
-  }
-
-  .report-actions .btn {
-    min-width: 140px;
-    border-radius: 999px;
-  }
-
   @media screen and (max-width: 960px) {
     body.command-center-layout {
-      font-size: 10.5pt;
+      font-size: 11pt;
     }
-    .iqac-report-page {
-      padding: 16px;
-    }
+
     .report-sheet {
-      padding: 18mm 12mm;
+      padding: 24mm 16mm;
     }
-    .report-header {
-      flex-direction: column;
-      align-items: flex-start;
+
+    .analysis-grid {
+      grid-template-columns: 1fr;
     }
-    .report-header .iqac-title {
-      text-align: left;
+
+    .report-header .report-main-title {
+      font-size: 16pt;
     }
+
+    .report-header .report-subtitle {
+      letter-spacing: 0.2em;
+    }
+
     .annex-grid.four-col {
       grid-template-columns: repeat(2, 1fr);
+    }
+
+    .signature-row {
+      flex-direction: column;
+    }
+  }
+
+  @media screen and (min-width: 960px), print {
+    .analysis-grid {
+      grid-template-columns: repeat(3, 1fr);
     }
   }
 
@@ -535,22 +539,22 @@
       background: #fff;
       padding: 0;
     }
+
     .screen-controls,
     .report-actions,
     .ai-progress-banner {
       display: none !important;
     }
-    .iqac-report-page {
+
+    .report-wrapper {
+      width: 100%;
       padding: 0;
     }
+
     .report-sheet {
       border: none;
       box-shadow: none;
       padding: 0;
-    }
-    .report-header,
-    .report-footer {
-      display: block;
     }
   }
 </style>
@@ -568,14 +572,11 @@
   <div class="report-wrapper">
     <article class="report-sheet">
       <header class="report-header">
-        <div class="brand">
-          <div class="logo-placeholder">Logo</div>
-          <div class="institution">
-            <span>CHRIST (Deemed to be University) — Pune Lavasa Campus</span>
-            <span>School of Sciences</span>
-          </div>
-        </div>
-        <div class="iqac-title">Internal Quality Assurance Cell (IQAC) — Event Report</div>
+        <div class="institution-name">CHRIST (Deemed to be University)</div>
+        <div class="campus-name">Pune Lavasa Campus - "The Hub of Analytics"</div>
+        <div class="iqac-title">Internal Quality Assurance Cell (IQAC)</div>
+        <div class="report-main-title" data-field="event_info.title">{{ proposal.event_title|default:"—" }}</div>
+        <div class="report-subtitle">Activity Report</div>
       </header>
 
       <main class="report-body">
@@ -846,10 +847,12 @@
     if (!root) return;
 
     const setText = (sel, val) => {
-      const el = root.querySelector(sel);
-      if (!el) return;
+      const elements = root.querySelectorAll(sel);
+      if (!elements.length) return;
       const value = val ?? '—';
-      el.textContent = value === '' ? '—' : value;
+      elements.forEach((el) => {
+        el.textContent = value === '' ? '—' : value;
+      });
     };
 
     const setList = (sel, arr) => {
