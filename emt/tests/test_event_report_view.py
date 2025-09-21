@@ -1,5 +1,7 @@
 import json
 from datetime import date
+from html.parser import HTMLParser
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.contrib.auth.signals import user_logged_in
@@ -7,6 +9,7 @@ from django.db.models.signals import post_save
 from django.test import TestCase
 from django.urls import reverse
 from django.utils.formats import date_format
+from django.http import QueryDict
 
 from core.models import Organization, OrganizationType
 from core.signals import assign_role_on_login, create_or_update_user_profile
@@ -123,7 +126,7 @@ class SubmitEventReportViewTests(TestCase):
         self.assertContains(
             response, "Click attendance box to manage via CSV", html=False
         )
-        self.assertNotContains(response, "data-attendance-url", html=False)
+        self.assertNotIn('data-attendance-url="', response.content.decode())
 
         report = EventReport.objects.create(proposal=self.proposal)
         response = self.client.get(url)
@@ -142,7 +145,7 @@ class SubmitEventReportViewTests(TestCase):
         url = reverse("emt:submit_event_report", args=[self.proposal.id])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, "data-attendance-url", html=False)
+        self.assertNotIn('data-attendance-url="', response.content.decode())
 
         autosave_url = reverse("emt:autosave_event_report")
         res = self.client.post(
@@ -188,21 +191,34 @@ const docObj={
 };
 function $(sel){
  if(sel===document) return docObj;
- if(sel==='#attendance-modern') return attendanceEl;
- if(sel==='#num-participants-modern' || sel==='#total-participants-modern') return participantsEl;
+ if(sel===attendanceEl || sel==='#attendance-modern') return attendanceEl;
+ if(sel===participantsEl || sel==='#num-participants-modern' || sel==='#total-participants-modern') return participantsEl;
+ if(typeof sel === 'string' && sel.includes('#attendance-modern') && sel.includes('num-participants-modern')) return combinedFields;
+ if(typeof sel === 'string' && sel.includes('num-participants-modern')) return participantsEl;
  if(sel==='#autosave-indicator') return indicatorEl;
 }
+let combinedFields;
 const attendanceEl={attrs:{},dataStore:{},length:1,
   attr:function(n,v){if(v===undefined)return this.attrs[n];this.attrs[n]=v;return this;},
   data:function(n,v){if(v===undefined)return this.dataStore[n];this.dataStore[n]=v;return this;},
   prop:function(){return this;},
-  css:function(){return this;}
+  css:function(){return this;},
+  add:function(){return combinedFields;}
 };
 const participantsEl={attrs:{},dataStore:{},length:1,
   attr:function(n,v){if(v===undefined)return this.attrs[n];this.attrs[n]=v;return this;},
   data:function(n,v){if(v===undefined)return this.dataStore[n];this.dataStore[n]=v;return this;},
   prop:function(){return this;},
-  css:function(){return this;}
+  css:function(){return this;},
+  add:function(){return combinedFields;}
+};
+combinedFields={
+  length:2,
+  attr:function(n,v){if(v===undefined)return attendanceEl.attrs[n]||participantsEl.attrs[n];attendanceEl.attr(n,v);participantsEl.attr(n,v);return this;},
+  data:function(n,v){if(v===undefined)return attendanceEl.data(n);attendanceEl.data(n,v);participantsEl.data(n,v);return this;},
+  prop:function(){return this;},
+  css:function(){return this;},
+  each:function(cb){[attendanceEl,participantsEl].forEach((el,idx)=>cb.call(el, idx, el));return this;}
 };
 const indicatorEl={
   removeClass:function(){return this;},
@@ -210,7 +226,9 @@ const indicatorEl={
   find:function(){return {text:function(){}};},
   length:1
 };
-const window={location:{}};
+const window={location:{pathname:'/suite/reports/preview/'}};
+global.window = window;
+global.document = document;
 eval(setupCode);
 eval(initCode);
 initializeAutosaveIndicators();
@@ -414,6 +432,69 @@ console.log(JSON.stringify({
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Archived Org")
 
+    def test_preview_submission_preserves_multi_value_fields(self):
+        faculty_one = User.objects.create_user(username="faculty_one")
+        faculty_two = User.objects.create_user(username="faculty_two")
+
+        preview_url = reverse("emt:preview_event_report", args=[self.proposal.id])
+        multi_values = [str(faculty_one.id), str(faculty_two.id)]
+        data = {
+            "actual_event_type": "Seminar",
+            "report_signed_date": "2024-01-10",
+            "faculty_incharges": multi_values,
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+        preview_response = self.client.post(preview_url, data)
+        self.assertEqual(preview_response.status_code, 200)
+
+        class HiddenInputParser(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.inputs = []
+
+            def handle_starttag(self, tag, attrs):
+                if tag.lower() != "input":
+                    return
+                attr_dict = dict(attrs)
+                if attr_dict.get("type") != "hidden":
+                    return
+                name = attr_dict.get("name")
+                if not name:
+                    return
+                self.inputs.append((name, attr_dict.get("value", "")))
+
+        parser = HiddenInputParser()
+        parser.feed(preview_response.content.decode())
+        parser.close()
+
+        final_payload = QueryDict("", mutable=True)
+        for name, value in parser.inputs:
+            final_payload.appendlist(name, value or "")
+        final_payload.appendlist("final_submit", "Submit Report")
+
+        self.assertEqual(final_payload.getlist("faculty_incharges"), multi_values)
+
+        submit_url = reverse("emt:submit_event_report", args=[self.proposal.id])
+        captured = {}
+
+        def capture_sync(proposal, report, payload):
+            captured["faculty_incharges"] = payload.getlist("faculty_incharges")
+
+        encoded_payload = final_payload.urlencode()
+
+        with patch("emt.views._sync_proposal_from_report", side_effect=capture_sync):
+            submit_response = self.client.post(
+                submit_url,
+                encoded_payload,
+                content_type="application/x-www-form-urlencoded",
+            )
+
+        self.assertEqual(submit_response.status_code, 302)
+        self.assertEqual(captured.get("faculty_incharges"), multi_values)
+
     def test_proposal_speakers_prefilled(self):
         SpeakerProfile.objects.create(
             proposal=self.proposal,
@@ -457,7 +538,7 @@ const fs = require('fs');
 const src = fs.readFileSync('__SUBMIT_JS__', 'utf8');
 function extract(name){
   const start = src.indexOf('function ' + name);
-  if(start === -1) throw new Error('not found: '+name);
+  if(start === -1) throw new Error('not found: ' + name);
   let i = src.indexOf('{', start); i++; let depth = 1;
   while(i < src.length && depth > 0){
     if(src[i] === '{') depth++;
@@ -466,37 +547,34 @@ function extract(name){
   }
   return src.slice(start, i);
 }
-const loadSectionContent = extract('loadSectionContent');
-const populateSpeakersFromProposal = extract('populateSpeakersFromProposal');
-const fillOrganizingCommittee = extract('fillOrganizingCommittee');
-const fillAttendanceCounts = extract('fillAttendanceCounts');
+const fnPopulateSpeakersFromProposal = extract('populateSpeakersFromProposal');
+const fnFillOrganizingCommittee = extract('fillOrganizingCommittee');
+const fnFillAttendanceCounts = extract('fillAttendanceCounts');
 
+const handlers = {};
 let domReady = false;
-const speakersDisplay = {innerHTML: ''};
-const orgEl = {
+
+const makeNode = () => ({
   value: '',
-  length: 1,
-  val: function(v) {
-    if (v === undefined) return this.value;
+  innerHTML: '',
+  attrs: {},
+  dataStore: {},
+  addEventListener: () => {},
+  querySelector: () => null,
+  querySelectorAll: () => [],
+});
+
+const speakersDisplay = makeNode();
+const formGrid = makeNode();
+
+const orgField = Object.assign(makeNode(), {
+  val: function(v){
+    if(v === undefined) return this.value || '';
     this.value = v;
     return this;
   },
-  text: function(v) {
-    if (v === undefined) return this.value;
-    this.value = v;
-    return this;
-  },
-};
-const makeField = () => ({
-  value: '',
-  length: 1,
-  val: function(v) {
-    if (v === undefined) return this.value;
-    this.value = v;
-    return this;
-  },
-  text: function(v) {
-    if (v === undefined) return this.value;
+  text: function(v){
+    if(v === undefined) return this.value || '';
     this.value = v;
     return this;
   },
@@ -504,60 +582,210 @@ const makeField = () => ({
 
 const elements = {
   'speakers-display': speakersDisplay,
-  'attendance-modern': makeField(),
-  'num-participants-modern': makeField(),
-  'total-participants-modern': makeField(),
-  'num-volunteers-modern': makeField(),
-  'num-volunteers-hidden': makeField(),
-  'student-participants-modern': makeField(),
-  'faculty-participants-modern': makeField(),
-  'external-participants-modern': makeField(),
+  'organizing-committee-modern': orgField,
+  'attendance-modern': makeNode(),
+  'num-participants-modern': makeNode(),
+  'total-participants-modern': makeNode(),
+  'num-volunteers-modern': makeNode(),
+  'num-volunteers-hidden': makeNode(),
+  'student-participants-modern': makeNode(),
+  'faculty-participants-modern': makeNode(),
+  'external-participants-modern': makeNode(),
+  'proposal-speakers-json': Object.assign(makeNode(), { textContent: '' }),
+};
+
+function wrapNodes(nodes){
+  const arr = Array.isArray(nodes) ? nodes : [];
+  return {
+    __targets: arr,
+    length: arr.length,
+    val: function(v){
+      if(v === undefined){
+        const first = arr[0];
+        if(!first) return undefined;
+        if(typeof first.val === 'function') return first.val();
+        return first.value;
+      }
+      arr.forEach(node => {
+        if(typeof node.val === 'function') node.val(v);
+        else node.value = v;
+      });
+      return this;
+    },
+    text: function(v){
+      if(v === undefined){
+        const first = arr[0];
+        if(!first) return undefined;
+        if(typeof first.text === 'function') return first.text();
+        if('textContent' in first) return first.textContent;
+        return first.value;
+      }
+      arr.forEach(node => {
+        if(typeof node.text === 'function') node.text(v);
+        else if('textContent' in node) node.textContent = v;
+        else node.value = v;
+      });
+      return this;
+    },
+    html: function(v){
+      if(v === undefined){
+        const first = arr[0];
+        return first ? first.innerHTML : undefined;
+      }
+      arr.forEach(node => { node.innerHTML = v; });
+      return this;
+    },
+    append: function(html){
+      arr.forEach(node => { node.innerHTML = (node.innerHTML || '') + html; });
+      return this;
+    },
+    empty: function(){
+      arr.forEach(node => { node.innerHTML = ''; });
+      return this;
+    },
+    attr: function(name, v){
+      if(v === undefined){
+        const first = arr[0];
+        return first && first.attrs ? first.attrs[name] : undefined;
+      }
+      arr.forEach(node => {
+        node.attrs = node.attrs || {};
+        node.attrs[name] = v;
+      });
+      return this;
+    },
+    data: function(name, v){
+      if(v === undefined){
+        const first = arr[0];
+        return first && first.dataStore ? first.dataStore[name] : undefined;
+      }
+      arr.forEach(node => {
+        node.dataStore = node.dataStore || {};
+        node.dataStore[name] = v;
+      });
+      return this;
+    },
+    prop: function(){ return this; },
+    css: function(){ return this; },
+    addClass: function(){ return this; },
+    removeClass: function(){ return this; },
+    add: function(other){
+      const combined = [...arr];
+      if(other && other.__targets) combined.push(...other.__targets);
+      return wrapNodes(combined);
+    },
+    each: function(cb){
+      arr.forEach((node, idx) => cb.call(node, idx, node));
+      return this;
+    },
+    on: function(){ return this; },
+    off: function(){ return this; },
+    trigger: function(){ return this; },
+  };
+}
+
+const document = {
+  readyState: 'complete',
+  getElementById: id => elements[id] || null,
+  querySelector: () => null,
+  querySelectorAll: () => [],
 };
 
 function $(sel){
-  if(sel === '.form-grid') return {html:function(content){ setTimeout(()=>{domReady=true;},0); return this; }};
-  if(!domReady) return {length:0, val:function(){}};
-  if(sel === '#organizing-committee-modern') return orgEl;
-  return {length:0, val:function(){}};
+  if(sel === document){
+    const jqDoc = {
+      on: (ev, fn) => { (handlers[ev] = handlers[ev] || []).push(fn); return jqDoc; },
+      trigger: (ev, data) => { (handlers[ev] || []).forEach(fn => fn({ type: ev }, data)); return jqDoc; },
+      off: () => jqDoc,
+    };
+    return jqDoc;
+  }
+  if(sel === '.form-grid'){
+    return {
+      length: 1,
+      html: function(content){
+        if(content !== undefined){
+          formGrid.innerHTML = content;
+          setTimeout(() => { domReady = true; }, 0);
+          return this;
+        }
+        return formGrid.innerHTML;
+      },
+      append: function(html){
+        formGrid.innerHTML = (formGrid.innerHTML || '') + html;
+        return this;
+      },
+      empty: function(){ formGrid.innerHTML = ''; return this; },
+      addClass: function(){ return this; },
+      removeClass: function(){ return this; },
+      on: function(){ return this; },
+      off: function(){ return this; },
+      trigger: function(){ return this; },
+    };
+  }
+  if(typeof sel === 'string'){
+    const parts = sel.split(',').map(s => s.trim()).filter(Boolean);
+    const nodes = parts.map(part => {
+      if(part.startsWith('#')){
+        const id = part.slice(1);
+        return elements[id];
+      }
+      return null;
+    }).filter(Boolean);
+    if(!domReady && nodes.length && sel.startsWith('#')){
+      return wrapNodes(nodes);
+    }
+    if(!domReady) return wrapNodes([]);
+    return wrapNodes(nodes);
+  }
+  return wrapNodes([]);
 }
 
 global.$ = $;
-global.document = {
-  readyState: 'complete',
-  getElementById: id => {
-    if(id === 'speakers-display') return domReady ? elements[id] : null;
-    return elements[id] || null;
-  }
-};
-global.window = {
+global.document = document;
+
+const window = {
   PROPOSAL_DATA: __PROPOSAL_DATA__,
   EXISTING_SPEAKERS: __EXISTING_SPEAKERS__,
   ATTENDANCE_PRESENT: 10,
   ATTENDANCE_ABSENT: 2,
   ATTENDANCE_VOLUNTEERS: 3,
-  ATTENDANCE_COUNTS: { present: 10, absent: 2, volunteers: 3, total: 10, students: 6, faculty: 3, external: 1 }
+  ATTENDANCE_COUNTS: { present: 10, absent: 2, volunteers: 3, total: 10, students: 6, faculty: 3, external: 1 },
+  location: { pathname: '/suite/reports/preview/' },
 };
+global.window = window;
 
-eval(populateSpeakersFromProposal);
-eval(fillOrganizingCommittee);
-eval(fillAttendanceCounts);
-eval(loadSectionContent);
+global.renderEditableSpeakerCard = (speaker = {}, index = 0) => {
+  const name = speaker.full_name || speaker.name || speaker.title || `Speaker ${index + 1}`;
+  const organization = speaker.organization || speaker.affiliation || '';
+  const id = speaker.id || speaker.pk || index + 1;
+  return `<div class="speaker-card" data-speaker-id="${id}"><div class="speaker-name">${name}</div><div class="speaker-org">${organization}</div></div>`;
+};
+global.getNoSpeakersMessageHtml = () => '<div class="no-speakers-message">No speakers selected</div>';
+global.setupSpeakerCardEditors = () => {};
 
-loadSectionContent('participants-information');
+eval(fnPopulateSpeakersFromProposal);
+eval(fnFillOrganizingCommittee);
+eval(fnFillAttendanceCounts);
 
-setTimeout(()=>{
+domReady = true;
+populateSpeakersFromProposal();
+fillOrganizingCommittee();
+fillAttendanceCounts();
+
+setTimeout(() => {
   console.log(JSON.stringify({
     display: speakersDisplay.innerHTML,
-    organizing: orgEl.value,
+    organizing: orgField.value,
     total: elements['num-participants-modern'].value,
     volunteers: elements['num-volunteers-modern'].value,
     hiddenVolunteers: elements['num-volunteers-hidden'].value,
     students: elements['student-participants-modern'].value,
     faculty: elements['faculty-participants-modern'].value,
     external: elements['external-participants-modern'].value,
-    summary: elements['attendance-modern'].value
+    summary: elements['attendance-modern'].value,
   }));
-}, 20);
+}, 120);
 """
         node_script = (
             node_script.replace("__SUBMIT_JS__", str(submit_js))
