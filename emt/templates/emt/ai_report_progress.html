@@ -15,11 +15,11 @@
   }
 
   body.command-center-layout {
-    background: #e9edf5;
+    background: #eef1f7;
     font-family: "Times New Roman", "Georgia", serif;
     font-size: 12pt;
     line-height: 1.6;
-    color: #1f2937;
+    color: #17203b;
     counter-reset: page;
     padding-bottom: 48px;
   }
@@ -61,12 +61,12 @@
     font-size: 0.85rem;
     padding: 6px 16px;
     border-radius: 4px;
-    border: 1px solid #1f2937;
+    border: 1px solid #162a52;
     background: #fff;
-    color: #1f2937;
+    color: #162a52;
     cursor: pointer;
     transition: background 0.2s ease, color 0.2s ease;
-    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.1);
+    box-shadow: 0 2px 6px rgba(14, 28, 60, 0.12);
   }
 
   .screen-controls .btn-primary {
@@ -77,7 +77,7 @@
 
   .screen-controls .btn:hover,
   .screen-controls .btn:focus {
-    background: #f3f4f6;
+    background: #f3f4f8;
     outline: none;
   }
 
@@ -88,57 +88,62 @@
   }
 
   .ai-progress-banner {
-    width: min(100%, 210mm);
-    background: #f8f9fc;
-    border: 1px solid #c5ccd8;
+    width: min(100%, 216mm);
+    background: #f5f7fb;
+    border: 1px solid #c3cad6;
     padding: 10px 16px;
     font-size: 0.9rem;
     text-align: center;
     font-style: italic;
-    color: #1f2937;
+    color: #17203b;
   }
 
   .report-wrapper {
-    width: min(100%, 210mm);
+    width: min(100%, 216mm);
     padding: 0 24px;
+    display: flex;
+    justify-content: center;
   }
 
   .report-sheet {
     background: #fff;
-    border: 1px solid #1f2937;
+    border: 1.6px solid #162a52;
     width: 100%;
     padding: 28mm 24mm;
-    box-shadow: none;
+    box-shadow: 0 10px 28px rgba(13, 31, 66, 0.08);
   }
 
   .report-header {
     text-align: center;
-    border-bottom: 1px solid #1f2937;
+    border-bottom: 2px solid #162a52;
     padding-bottom: 14mm;
     margin-bottom: 18mm;
     position: running(report-header);
   }
 
   .report-header .institution-name {
-    font-size: 15pt;
+    font-size: 16.5pt;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
+    color: #0f1f4b;
   }
 
   .report-header .campus-name {
     font-size: 12pt;
     font-style: italic;
-    letter-spacing: 0.02em;
-    margin-top: 2px;
+    letter-spacing: 0.03em;
+    margin-top: 4px;
+    color: #20315a;
   }
 
   .report-header .iqac-title {
     margin-top: 10px;
-    font-size: 10.5pt;
+    font-size: 11pt;
     text-transform: uppercase;
     letter-spacing: 0.18em;
     font-weight: 600;
+    color: #162a52;
   }
 
   .report-header .report-main-title {
@@ -147,24 +152,30 @@
     text-transform: uppercase;
     letter-spacing: 0.12em;
     margin: 18px 0 0;
+    color: #0f1f4b;
   }
 
   .report-header .report-subtitle {
-    font-size: 12pt;
+    font-size: 13pt;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.3em;
-    margin-top: 4px;
+    letter-spacing: 0.26em;
+    margin-top: 6px;
+    color: #0f1f4b;
   }
 
   .report-body {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 28px;
+  }
+
+  .report-section {
+    page-break-inside: avoid;
   }
 
   .section-heading {
-    border-bottom: 1px solid #1f2937;
+    border-bottom: 1.6px solid #162a52;
     padding-bottom: 6px;
     margin-bottom: 12px;
   }
@@ -178,8 +189,8 @@
     font-size: 13pt;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #1f2937;
+    letter-spacing: 0.12em;
+    color: #162a52;
   }
 
   table {
@@ -190,46 +201,49 @@
 
   .grid-table th,
   .grid-table td {
-    border: 1px solid #1f2937;
-    padding: 6px 8px;
+    border: 1.3px solid #162a52;
+    padding: 8px 10px;
     vertical-align: top;
     background: #fff;
   }
 
   .grid-table th {
     width: 32%;
-    background: #f1f3f8;
+    background: #eef2fb;
     font-weight: 700;
-    letter-spacing: 0.02em;
-    text-align: left;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #162a52;
   }
 
   .grid-table.full-width th {
-    width: 35%;
+    width: 34%;
   }
 
   .grid-table.full-width td {
-    width: 65%;
+    width: 66%;
   }
 
   .paper-box {
     display: block;
     min-height: 24px;
-    padding: 4px 0;
+    padding: 0;
     border: none;
     background: transparent;
+    color: inherit;
   }
 
   .grid-table td.paper-box {
-    padding: 6px 8px;
+    padding: 8px 10px;
   }
 
   .paper-box.paragraph-box {
-    min-height: 140px;
-    border: 1px solid #1f2937;
-    padding: 12px 14px;
+    min-height: 150px;
+    border: 1.3px solid #162a52;
+    padding: 14px 16px;
     text-align: justify;
     text-justify: inter-word;
+    background: #fff;
   }
 
   .paper-box.bullet-list,
@@ -237,16 +251,16 @@
     border: none;
     background: transparent;
     padding: 0;
+    margin: 0;
   }
 
   .paper-box.bullet-list {
     list-style: disc;
-    margin: 0;
-    padding-left: 24px;
+    padding-left: 20px;
   }
 
   .paper-box.bullet-list li {
-    margin-bottom: 4px;
+    margin-bottom: 6px;
   }
 
   .paper-box.bullet-list li:last-child {
@@ -255,22 +269,13 @@
 
   .paper-box.list-commas {
     list-style: none;
-    margin: 0;
     display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
+    flex-direction: column;
+    gap: 4px;
   }
 
   .paper-box.list-commas li {
-    display: inline;
-  }
-
-  .paper-box.list-commas li::after {
-    content: ", ";
-  }
-
-  .paper-box.list-commas li:last-child::after {
-    content: "";
+    display: block;
   }
 
   .grid-table td .paper-box {
@@ -285,46 +290,46 @@
 
   .analysis-grid {
     display: grid;
-    gap: 16px;
+    gap: 18px;
     grid-template-columns: 1fr;
   }
 
   .analysis-item {
-    border: 1px solid #1f2937;
+    border: 1.3px solid #162a52;
     background: #fff;
-    padding: 10px 14px;
+    padding: 12px 14px;
     display: flex;
     flex-direction: column;
     gap: 6px;
   }
 
   .analysis-item .sub-label {
-    font-size: 10pt;
+    font-size: 10.5pt;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     font-weight: 700;
-    color: #1f2937;
+    color: #162a52;
   }
 
   .analysis-item .paper-box {
-    min-height: 80px;
+    min-height: 90px;
     border: none;
     padding: 0;
   }
 
   .muted {
-    border: 1px dashed #94a3b8;
-    color: #64748b;
+    border: 1.3px dashed #9ca8c0;
+    color: #63708c;
     font-style: italic;
     text-align: center;
     padding: 16px;
-    background: #f8fafc;
+    background: #f5f7fb;
   }
 
   .signature-row {
     display: flex;
-    gap: 24px;
-    margin-top: 24px;
+    gap: 28px;
+    margin-top: 28px;
   }
 
   .signature-block {
@@ -333,7 +338,7 @@
   }
 
   .signature-line {
-    border-bottom: 1px solid #1f2937;
+    border-bottom: 1.3px solid #162a52;
     height: 70px;
     margin-bottom: 8px;
   }
@@ -351,6 +356,7 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
     margin-bottom: 10px;
+    color: #162a52;
   }
 
   .annex-grid {
@@ -367,7 +373,7 @@
   }
 
   .annex-card {
-    border: 1px solid #1f2937;
+    border: 1.3px solid #162a52;
     border-radius: 2px;
     overflow: hidden;
     background: #fff;
@@ -375,7 +381,7 @@
 
   .annex-thumb {
     width: 100%;
-    background: #f1f3f8;
+    background: #eef2fb;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -392,12 +398,12 @@
   .single-attachment figcaption {
     padding: 8px 10px;
     font-size: 0.9rem;
-    background: #f8f9fc;
-    border-top: 1px solid #d1d5dc;
+    background: #f5f7fb;
+    border-top: 1px solid #d1d7e4;
   }
 
   .single-attachment {
-    border: 1px solid #1f2937;
+    border: 1.3px solid #162a52;
     background: #fff;
     max-width: 360px;
   }
@@ -414,16 +420,16 @@
   }
 
   .volunteer-table thead th {
-    background: #f1f3f8;
+    background: #eef2fb;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    font-size: 0.7rem;
-    color: #1f2937;
+    font-size: 0.72rem;
+    color: #162a52;
   }
 
   .volunteer-table th,
   .volunteer-table td {
-    border: 1px solid #1f2937;
+    border: 1.3px solid #162a52;
     padding: 6px 8px;
     font-size: 0.85rem;
   }
@@ -433,11 +439,11 @@
   }
 
   .report-footer {
-    border-top: 1px solid #1f2937;
-    margin-top: 24mm;
+    border-top: 1.6px solid #162a52;
+    margin-top: 20mm;
     padding-top: 8mm;
     font-size: 9pt;
-    color: #1f2937;
+    color: #162a52;
     display: flex;
     justify-content: space-between;
     gap: 24px;
@@ -449,12 +455,12 @@
   }
 
   .date-field {
-    margin-top: 12px;
+    margin-top: 14px;
     font-weight: 600;
   }
 
   .report-actions {
-    width: min(100%, 210mm);
+    width: min(100%, 216mm);
     display: flex;
     justify-content: flex-end;
     gap: 12px;
@@ -485,7 +491,7 @@
   .mode-edit .paper-box {
     padding: 0;
     background: #fff;
-    border: 1px solid #1f2937;
+    border: 1.3px solid #162a52;
   }
 
   .mode-edit .paper-box.list-commas,
@@ -505,6 +511,7 @@
 
     .report-sheet {
       padding: 24mm 16mm;
+      box-shadow: none;
     }
 
     .analysis-grid {
@@ -525,6 +532,7 @@
 
     .signature-row {
       flex-direction: column;
+      gap: 18px;
     }
   }
 
