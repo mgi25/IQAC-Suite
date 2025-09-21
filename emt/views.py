@@ -2603,6 +2603,101 @@ def preview_event_report(request, proposal_id):
             ("Number of Activities Conducted", _format_display(num_activities))
         )
 
+    # Include dynamic organizing committee details captured on the participants section
+    committee_names = post_data.getlist("committee_member_names[]")
+    committee_roles = post_data.getlist("committee_member_roles[]")
+    committee_departments = post_data.getlist("committee_member_departments[]")
+    committee_contacts = post_data.getlist("committee_member_contacts[]")
+
+    def _combine(values, idx):
+        try:
+            return values[idx]
+        except IndexError:
+            return None
+
+    for idx in range(
+        max(
+            len(committee_names),
+            len(committee_roles),
+            len(committee_departments),
+            len(committee_contacts),
+        )
+    ):
+        name = (committee_names[idx] if idx < len(committee_names) else "") or ""
+        role = _combine(committee_roles, idx)
+        dept = _combine(committee_departments, idx)
+        contact = _combine(committee_contacts, idx)
+        if not any([name, role, dept, contact]):
+            continue
+
+        label_prefix = f"Committee Member {idx + 1}"
+        report_fields.extend(
+            [
+                (f"{label_prefix} - Name", _format_display(name)),
+                (f"{label_prefix} - Role", _format_display(role)),
+                (
+                    f"{label_prefix} - Department/Organization",
+                    _format_display(dept),
+                ),
+                (f"{label_prefix} - Contact", _format_display(contact)),
+            ]
+        )
+
+    # Include per-speaker session details captured in the participants section
+    speaker_topics = post_data.getlist("speaker_topics[]")
+    speaker_durations = post_data.getlist("speaker_durations[]")
+    speaker_feedback = post_data.getlist("speaker_feedback[]")
+    speaker_ids = post_data.getlist("speaker_ids[]")
+
+    speaker_lookup = {
+        str(speaker.id): speaker for speaker in proposal.speakers.all()
+    }
+
+    for idx in range(
+        max(
+            len(speaker_topics),
+            len(speaker_durations),
+            len(speaker_feedback),
+            len(speaker_ids),
+        )
+    ):
+        topic = _combine(speaker_topics, idx)
+        duration = _combine(speaker_durations, idx)
+        feedback = _combine(speaker_feedback, idx)
+        speaker_id = _combine(speaker_ids, idx)
+
+        if not any([topic, duration, feedback, speaker_id]):
+            continue
+
+        label_prefix = f"Speaker Session {idx + 1}"
+        display_values = []
+
+        if speaker_id:
+            speaker_obj = speaker_lookup.get(str(speaker_id))
+            speaker_name = getattr(speaker_obj, "full_name", None) if speaker_obj else None
+            display_values.append(
+                (
+                    f"{label_prefix} - Speaker",
+                    _format_display(speaker_name or speaker_id),
+                )
+            )
+
+        display_values.extend(
+            [
+                (f"{label_prefix} - Topic", _format_display(topic)),
+                (
+                    f"{label_prefix} - Duration (minutes)",
+                    _format_display(duration),
+                ),
+                (
+                    f"{label_prefix} - Feedback/Comments",
+                    _format_display(feedback),
+                ),
+            ]
+        )
+
+        report_fields.extend(display_values)
+
     context = {
         "proposal": proposal,
         "post_data": post_data,

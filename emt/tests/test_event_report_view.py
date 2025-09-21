@@ -435,6 +435,57 @@ console.log(JSON.stringify({
             expected_signed,
         )
 
+    def test_preview_shows_dynamic_committee_and_speaker_details(self):
+        speaker = SpeakerProfile.objects.create(
+            proposal=self.proposal,
+            full_name="Dr. Ada Lovelace",
+            designation="Keynote Speaker",
+        )
+
+        url = reverse("emt:preview_event_report", args=[self.proposal.id])
+        data = {
+            "actual_event_type": "Seminar",
+            "report_signed_date": "2024-03-15",
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+            "committee_member_names[]": ["Alice Johnson", "Bob Smith"],
+            "committee_member_roles[]": ["Coordinator", "Volunteer"],
+            "committee_member_departments[]": ["CSE", "ECE"],
+            "committee_member_contacts[]": ["alice@example.com", ""],
+            "speaker_ids[]": [str(speaker.id)],
+            "speaker_topics[]": ["AI Trends"],
+            "speaker_durations[]": ["45"],
+            "speaker_feedback[]": ["Well received session"],
+        }
+
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+
+        report_fields = response.context["report_fields"]
+
+        self.assertIn(
+            ("Committee Member 1 - Name", "Alice Johnson"), report_fields
+        )
+        self.assertIn(
+            ("Committee Member 1 - Contact", "alice@example.com"), report_fields
+        )
+        self.assertIn(
+            ("Committee Member 2 - Role", "Volunteer"), report_fields
+        )
+        self.assertIn(
+            ("Speaker Session 1 - Speaker", "Dr. Ada Lovelace"), report_fields
+        )
+        self.assertIn(("Speaker Session 1 - Topic", "AI Trends"), report_fields)
+        self.assertIn(
+            ("Speaker Session 1 - Duration (minutes)", "45"), report_fields
+        )
+        self.assertIn(
+            ("Speaker Session 1 - Feedback/Comments", "Well received session"),
+            report_fields,
+        )
+
     def test_preview_displays_cdl_support_details_and_report_textboxes(self):
         org_type = OrganizationType.objects.create(name="Department")
         org = Organization.objects.create(name="IQAC", org_type=org_type)
