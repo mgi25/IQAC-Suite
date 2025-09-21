@@ -55,16 +55,18 @@
         </select>
       </div>
       <div class="filter-item">
-        <label>Department / Organization</label>
-        <select id="filter-organizations" name="organizations" class="form-control">
-          <option value="">All Departments</option>
-          {% for type_name, orgs in organizations_by_type.items %}
-            <optgroup label="{{ type_name }}">
-              {% for org in orgs %}
-                <option value="{{ org.id }}" {% if filters.organizations and org.id in filters.organizations %}selected{% endif %}>{{ org.name }}</option>
-              {% endfor %}
-            </optgroup>
+        <label>Organization Type</label>
+        <select id="filter-org-type" name="organization_type" class="form-control">
+          <option value="">All Types</option>
+          {% for t in organization_types %}
+            <option value="{{ t.id }}" {% if filters.organization_type|default:''|stringformat:'s' == t.id|stringformat:'s' %}selected{% endif %}>{{ t.name }}</option>
           {% endfor %}
+        </select>
+      </div>
+      <div class="filter-item">
+        <label>Organization</label>
+        <select id="filter-organization" name="organization" class="form-control">
+          <option value="">All Organizations</option>
         </select>
       </div>
       <div class="filter-item">
@@ -302,6 +304,7 @@
 {{ chart_service_usage|json_script:"chart-service-usage-data" }}
 {{ chart_task_throughput|json_script:"chart-task-throughput-data" }}
 {{ chart_comm_intensity|json_script:"chart-comm-intensity-data" }}
+{{ org_options_by_type|json_script:"org-options-by-type" }}
 <script>
 function mkChart(id, cfg) {
   const el = document.getElementById(id);
@@ -414,9 +417,11 @@ document.getElementById('applyFilters')?.addEventListener('click', () => {
   if (etp) params.set('event_type_planned', etp);
   if (eta) params.set('event_type_actual', eta);
   if (preset === 'all') params.set('range', 'all');
-  // single-select dropdowns
-  const orgSel = document.getElementById('filter-organizations');
-  if (orgSel && orgSel.value) params.append('organizations', orgSel.value);
+  // organization filters (dependent)
+  const orgTypeSel = document.getElementById('filter-org-type');
+  const orgSel = document.getElementById('filter-organization');
+  if (orgTypeSel && orgTypeSel.value) params.set('organization_type', orgTypeSel.value);
+  if (orgSel && orgSel.value) params.set('organization', orgSel.value);
   const svcSel = document.getElementById('filter-service-types');
   if (svcSel && svcSel.value) params.append('service_types', svcSel.value);
   const url = location.pathname + (params.toString() ? ('?' + params.toString()) : '');
@@ -505,5 +510,34 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   }
 });
+
+// Filter Organization options by selected Organization Type (no extra data/scrolling)
+// Build Organization options based on selected type (uses server-provided JSON)
+(function(){
+  const typeSel = document.getElementById('filter-org-type');
+  const orgSel = document.getElementById('filter-organization');
+  if (!typeSel || !orgSel) return;
+  const DATA = JSON.parse(document.getElementById('org-options-by-type')?.textContent || '{}');
+  function rebuild(typeId, selected){
+    while (orgSel.options.length) orgSel.remove(0);
+    orgSel.add(new Option('All Organizations',''));
+    let list = [];
+    if (typeId) {
+      list = DATA[typeId] || [];
+    } else {
+      // No type selected → show all organizations
+      Object.values(DATA).forEach(arr => { (arr || []).forEach(x => list.push(x)); });
+    }
+    list.forEach(o => {
+      const opt = new Option(o.name, String(o.id));
+      if (selected && String(selected) === String(o.id)) opt.selected = true;
+      orgSel.add(opt);
+    });
+  }
+  const initialType = typeSel.value || '';
+  const initialOrg = "{{ filters.organization|default:'' }}";
+  rebuild(initialType, initialOrg);
+  typeSel.addEventListener('change', () => rebuild(typeSel.value || '', null));
+})();
 </script>
 {% endblock %}

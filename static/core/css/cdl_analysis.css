@@ -19,17 +19,18 @@
   display: flex;
   gap: 0.75rem;
   align-items: flex-end;
-  flex-wrap: nowrap; /* single line */
-  overflow-x: auto; /* horizontal scroll when needed */
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 0.25rem; /* space for scrollbar */
+  flex-wrap: wrap; /* allow wrapping to next line; no horizontal scrolling */
+}
+
+.filters-panel .filter-group + .filter-group {
+  margin-top: 0.5rem;
 }
 
 .filter-item {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  min-width: 180px; /* keep controls readable */
+  min-width: 220px; /* roomier for labels, helps two-line layout */
 }
 
 .filter-item label {
@@ -287,9 +288,7 @@
 
 /* Events Table - Compact like dashboard */
 .events-table {
-  overflow-x: auto;
-  max-height: 400px;
-  overflow-y: auto;
+  overflow: visible; /* no forced scrolling; page will grow */
 }
 
 .table {
