@@ -11,49 +11,24 @@
 {% block content %}
 <div class="preview-layout">
     <main class="proposal-content">
-        <div class="content-header">
-            <div class="hero-surface">
-                <div class="hero-text">
-                    <p class="hero-eyebrow">Event report preview</p>
-                    <h1 class="content-title" id="page-title">{{ proposal.event_title|default:"Event Report" }}</h1>
-                    <p class="content-subtitle">Please verify the information below.</p>
-                    <div class="meta-chips">
-                        {% if proposal.organization %}
-                            <span class="chip">{{ proposal.organization.name }}</span>
-                        {% endif %}
-                        {% if proposal.event_start_date %}
-                            <span class="chip">Start: {{ proposal.event_start_date }}</span>
-                        {% endif %}
-                        {% if proposal.event_end_date %}
-                            <span class="chip">End: {{ proposal.event_end_date }}</span>
-                        {% endif %}
-                        {% if proposal.venue %}
-                            <span class="chip">Venue: {{ proposal.venue }}</span>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="hero-summary">
-                    <div class="hero-card">
-                        <span class="hero-label">Organization</span>
-                        <span class="hero-value{% if not proposal.organization %} muted{% endif %}">{{ proposal.organization.name|default:"Not specified" }}</span>
-                    </div>
-                    <div class="hero-card">
-                        <span class="hero-label">Schedule</span>
-                        <span class="hero-value{% if not proposal.event_start_date and not proposal.event_end_date %} muted{% endif %}">
-                            {% if proposal.event_start_date or proposal.event_end_date %}
-                                {{ proposal.event_start_date|default:"TBA" }} – {{ proposal.event_end_date|default:"TBA" }}
-                            {% else %}
-                                To be announced
-                            {% endif %}
-                        </span>
-                    </div>
-                    <div class="hero-card">
-                        <span class="hero-label">Venue</span>
-                        <span class="hero-value{% if not proposal.venue %} muted{% endif %}">{{ proposal.venue|default:"To be confirmed" }}</span>
-                    </div>
-                </div>
+        <div class="content-header" style="margin-bottom:.5rem;">
+            <h1 class="content-title" id="page-title">{{ proposal.event_title|default:"Event Report" }}</h1>
+            <p class="content-subtitle">Please verify the information below.</p>
+            <div class="meta-chips">
+                {% if proposal.organization %}
+                    <span class="chip">{{ proposal.organization.name }}</span>
+                {% endif %}
+                {% if proposal.event_start_date %}
+                    <span class="chip">Start: {{ proposal.event_start_date }}</span>
+                {% endif %}
+                {% if proposal.event_end_date %}
+                    <span class="chip">End: {{ proposal.event_end_date }}</span>
+                {% endif %}
+                {% if proposal.venue %}
+                    <span class="chip">Venue: {{ proposal.venue }}</span>
+                {% endif %}
             </div>
-            <div class="top-toolbar section-nav-card">
+            <div class="top-toolbar">
                 <nav class="pill-nav">
                     <a href="#section-overview">Overview</a>
                     <a href="#section-proposal">Proposal Details</a>
@@ -82,18 +57,18 @@
                 <div class="section-header">
                     <div class="section-title" id="sec-overview-title">Overview</div>
                 </div>
-                <div class="overview-grid">
-                    <div class="overview-card">
-                        <div class="overview-card__label">Title</div>
-                        <div class="overview-card__value{% if not proposal.event_title %} muted{% endif %}">{{ proposal.event_title|default:"—" }}</div>
+                <div class="grid-two">
+                    <div class="field-row">
+                        <div class="field-label">Title</div>
+                        <div class="field-value">{{ proposal.event_title|default:"—" }}</div>
                     </div>
-                    <div class="overview-card">
-                        <div class="overview-card__label">Organization</div>
-                        <div class="overview-card__value{% if not proposal.organization %} muted{% endif %}">{{ proposal.organization.name|default:"—" }}</div>
+                    <div class="field-row">
+                        <div class="field-label">Organization</div>
+                        <div class="field-value">{{ proposal.organization.name|default:"—" }}</div>
                     </div>
-                    <div class="overview-card">
-                        <div class="overview-card__label">Dates</div>
-                        <div class="overview-card__value{% if not proposal.event_start_date and not proposal.event_end_date %} muted{% endif %}">
+                    <div class="field-row">
+                        <div class="field-label">Dates</div>
+                        <div class="field-value">
                             {% if proposal.event_start_date or proposal.event_end_date %}
                                 {{ proposal.event_start_date|default:"?" }} – {{ proposal.event_end_date|default:"?" }}
                             {% else %}
@@ -101,9 +76,9 @@
                             {% endif %}
                         </div>
                     </div>
-                    <div class="overview-card">
-                        <div class="overview-card__label">Venue</div>
-                        <div class="overview-card__value{% if not proposal.venue %} muted{% endif %}">{{ proposal.venue|default:"—" }}</div>
+                    <div class="field-row">
+                        <div class="field-label">Venue</div>
+                        <div class="field-value">{{ proposal.venue|default:"—" }}</div>
                     </div>
                 </div>
             </section>
@@ -119,9 +94,9 @@
                 <div class="divider"></div>
                 <div class="preview-fields">
                     {% for label, value in proposal_fields %}
-                        <div class="field-card">
-                            <div class="field-card__label">{{ label }}</div>
-                            <div class="field-card__value{% if not value %} muted{% endif %}">{{ value|default:"Not provided" }}</div>
+                        <div class="field-row">
+                            <div class="field-label">{{ label }}</div>
+                            <div class="field-value{% if not value %} muted{% endif %}">{{ value|default:"Not provided" }}</div>
                         </div>
                     {% endfor %}
                 </div>
@@ -138,9 +113,9 @@
                 <div class="divider"></div>
                 <div class="preview-fields">
                     {% for label, value in report_fields %}
-                        <div class="field-card">
-                            <div class="field-card__label">{{ label }}</div>
-                            <div class="field-card__value{% if not value %} muted{% endif %}">{{ value|default:"Not provided" }}</div>
+                        <div class="field-row">
+                            <div class="field-label">{{ label }}</div>
+                            <div class="field-value{% if not value %} muted{% endif %}">{{ value|default:"Not provided" }}</div>
                         </div>
                     {% endfor %}
                 </div>
