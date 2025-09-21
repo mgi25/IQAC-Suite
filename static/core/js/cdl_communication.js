@@ -17,20 +17,34 @@
   function bind(){
     form?.addEventListener('submit', async e => {
       e.preventDefault();
-      const text = textarea.value.trim();
-      if(!text && !fileInput.files.length) return;
-      const fd = new FormData();
-      fd.append('comment', text);
-      if(fileInput.files[0]) fd.append('attachment', fileInput.files[0]);
-      try{
-        const res = await fetch('/api/cdl/communication/', { method:'POST', body: fd, headers: { 'X-Requested-With':'fetch','X-CSRFToken':getCSRF() } });
-        if(!res.ok){ const err = await safeJSON(res); toast(err.error||'Send failed'); return; }
-        const msg = await res.json();
-        appendRow(msg, true);
-        textarea.value=''; fileInput.value='';
-        scrollBottom();
-      }catch(err){ toast('Error sending'); }
+      await sendMessage();
     });
+
+    // Shift+Enter sends, Enter inserts newline (default textarea)
+    textarea?.addEventListener('keydown', async e => {
+      if(e.key === 'Enter' && e.shiftKey){
+        e.preventDefault();
+        await sendMessage();
+      }
+    });
+  }
+
+  async function sendMessage(){
+    const textRaw = textarea.value;
+    const text = textRaw.trim();
+    if(!text && !fileInput.files.length) return;
+    const fd = new FormData();
+    fd.append('comment', textRaw); // preserve users' newlines exactly
+    if(fileInput.files[0]) fd.append('attachment', fileInput.files[0]);
+    try{
+      const res = await fetch('/api/cdl/communication/', { method:'POST', body: fd, headers: { 'X-Requested-With':'fetch','X-CSRFToken':getCSRF() } });
+      if(!res.ok){ const err = await safeJSON(res); toast(err.error||'Send failed'); return; }
+      const msg = await res.json();
+      appendRow(msg, true);
+      textarea.value=''; fileInput.value='';
+      textarea.focus();
+      scrollBottom();
+    }catch(err){ toast('Error sending'); }
   }
 
   let messageCache = [];

@@ -1,5 +1,9 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}CDL Support{% endblock %}
+{% block head_extra %}
+<link rel="stylesheet" href="{% static 'core/css/cdl_event_user_view.css' %}">
+{% endblock %}
 {% block content %}
 <div class="cdl-support-page">
   <div class="pane-left">
@@ -7,7 +11,10 @@
     <div class="pane-body" id="eventList"></div>
   </div>
   <div class="pane-right">
-    <div class="pane-head" id="detailHead">Select an event</div>
+    <div class="pane-head row-between" id="detailHead">
+      <span id="eventNameDisplay">Select an event</span>
+      <a id="btnCommOpen" class="chip-btn disabled" href="#"><i class="fa-regular fa-comments"></i> Chat</a>
+    </div>
     <div class="pane-content">
       <section class="section">
         <h3>Event Details</h3>
@@ -21,32 +28,13 @@
         <h3>Work Process / Status</h3>
         <div id="workProcess" class="card"></div>
       </section>
-      <section class="section">
-        <h3>Communication</h3>
-        <div class="card" id="commSection" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-          <div id="commInfo" class="text-muted" style="font-size:13px">Select an event to open communication.</div>
-          <a id="btnCommOpen" class="chip-btn disabled" style="pointer-events:none;opacity:.5" href="#"><i class="fa-regular fa-comments"></i> Open</a>
-        </div>
-      </section>
     </div>
   </div>
   
 </div>
 <style>
-.cdl-support-page { display:grid; grid-template-columns: 320px 1fr; gap:16px; padding:16px; }
-.pane-left, .pane-right { background:#fff; border:1px solid var(--border,#e9ecef); border-radius:12px; box-shadow: 0 2px 8px #f1f3f5; display:flex; flex-direction:column; }
-.pane-head { padding:12px 14px; border-bottom:1px solid var(--border,#e9ecef); font-weight:600; color:var(--muted,#495057) }
-.pane-body { padding:10px; overflow:auto; max-height: calc(100vh - 220px); }
-.pane-content { padding:12px; overflow:auto; max-height: calc(100vh - 220px); }
-.event-card { border:1px solid var(--border,#e9ecef); border-radius:10px; padding:10px; margin-bottom:10px; cursor:pointer; }
-.event-card:hover { background:#f8f9fa }
-.event-title { font-weight:600; }
-.event-meta { font-size:12px; color:#6c757d }
-.section { margin-bottom:16px }
-.section h3 { font-size:1.05rem; margin:0 0 8px 0; color:#2a3a4a }
-.card { border:1px solid var(--border,#e9ecef); background:#fff; border-radius:10px; padding:10px }
-.placeholder { background: #f6f6f6; border: 1px dashed #bbb; color: #888; text-align: center; }
-@media (max-width: 960px){ .cdl-support-page{ grid-template-columns: 1fr; } .pane-body, .pane-content{ max-height:unset } }
+/* Minimal fallback in case CSS file fails to load */
+.row-between{display:flex;align-items:center;justify-content:space-between;gap:12px}
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', async function() {
@@ -71,7 +59,15 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   async function loadEvent(eventId){
     if(!eventId){ return; }
-    headEl.textContent = 'Event #' + eventId;
+    
+    // First get the event title for the header
+    const headerRes = await fetch(`/api/cdl/event/${eventId}/details/`);
+    const headerData = headerRes.ok ? await headerRes.json() : {};
+    const eventNameEl = document.getElementById('eventNameDisplay');
+    if(eventNameEl) {
+      eventNameEl.textContent = headerData.success && headerData.title ? headerData.title : `Event #${eventId}`;
+    }
+  
   const [dRes, cRes, pRes, docRes] = await Promise.all([
       fetch(`/api/cdl/event/${eventId}/details/`),
       fetch(`/api/cdl/event/${eventId}/content/`),
@@ -87,13 +83,17 @@ document.addEventListener('DOMContentLoaded', async function() {
       <div><strong>Description:</strong> ${d.description || ''}</div>
     ` : '<div class="text-muted">Unable to load details.</div>';
     document.getElementById('eventContent').innerHTML = c.success ? c.html : '<div class="text-muted">No content.</div>';
+    function statusClass(s){
+      if(!s) return 'neutral';
+      const key = String(s).toLowerCase().replace(/\s+/g,'_');
+      return ({assigned:'assigned', backlog:'backlog', in_progress:'in_progress'})[key] || 'neutral';
+    }
     document.getElementById('workProcess').innerHTML = (p.success && Array.isArray(p.items) && p.items.length) ? p.items.map(item=>`
-      <div class="row"><div class="col">${item.label}</div><div class="col text-end"><span class="badge bg-light text-dark">${item.status}</span></div></div>
+      <div class="wp-row"><div class="wp-col label">${item.label}</div><div class="wp-col value"><span class="badge ${statusClass(item.status)}">${item.status||''}</span></div></div>
     `).join('') : '<div class="text-muted">No status yet.</div>';
 
     // Enable communication button
     const commBtn = document.getElementById('btnCommOpen');
-    const commInfo = document.getElementById('commInfo');
     if(commBtn){
       const url = new URL(window.location.origin + '{% url "cdl_communication_page" %}');
       url.searchParams.set('eventId', eventId);
@@ -101,7 +101,6 @@ document.addEventListener('DOMContentLoaded', async function() {
       commBtn.classList.remove('disabled');
       commBtn.style.pointerEvents='auto';
       commBtn.style.opacity='1';
-      if(commInfo) commInfo.textContent = 'Open communication log for this event.';
     }
   }
 
