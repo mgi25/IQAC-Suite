@@ -53,32 +53,33 @@
       </div>
     </button>
 
-    <!-- Profile -->
-    <div class="profile-kpi card">
-      <div class="pkp-avatar">
+    <!-- Profile (student) — unified styling with non-admin card on faculty dashboard -->
+    <div class="profile-kpi card" style="padding: 24px 28px; display:grid; grid-template-columns: 120px 1fr; gap: 28px; align-items: center; min-height: 170px;">
+      <!-- Avatar block: image or initials -->
+      <div class="pkp-avatar" style="width: 110px; height: 110px; border-radius: 18px; background: #e5e7eb; overflow: hidden; display: flex; align-items: center; justify-content: center;">
         {% if user.profile and user.profile.photo %}
-          <img src="{{ user.profile.photo.url }}" alt="{{ user.get_full_name|default:user.username }}">
+          <img src="{{ user.profile.photo.url }}" alt="{{ user.get_full_name|default:user.username }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 18px;">
         {% else %}
-          <span class="pkp-initials">
+          <span class="pkp-initials" aria-hidden="true" style="font-size: 38px; font-weight: 900; color: var(--primary);">
             {% if user.first_name %}{{ user.first_name.0|upper }}{% if user.last_name %}{{ user.last_name.0|upper }}{% endif %}{% else %}{{ user.username.0|upper }}{% endif %}
           </span>
         {% endif %}
       </div>
-      <div class="pkp-body">
-        <h1 class="pkp-name">{{ user.get_full_name|default:user.username }}</h1>
-        <h2 class="pkp-sub">{{ user.email }}</h2>
-        <h3 class="pkp-meta">
-          <span>Department: <strong>{{ user.department|default:"—" }}</strong></span>
-          <span>Year: <strong>{{ user.year|default:"—" }}</strong></span>
+      <!-- Body: name, email, student meta, actions -->
+      <div class="pkp-body" style="display: flex; flex-direction: column; gap: 10px; min-width: 0;">
+        <h1 class="pkp-name" style="font-size: 24px; font-weight: 800; margin: 0; color: var(--ink); line-height: 1.1;">{{ user.get_full_name|default:user.username }}</h1>
+        <h2 class="pkp-sub" style="font-size: 15px; font-weight: 600; color: var(--muted); margin: 0;">{{ user.email }}</h2>
+        <h3 class="pkp-meta" style="margin: 8px 0 0; display: flex; gap: 24px; font-size: 13px; font-weight: 600; color: var(--muted);">
+          {# Student meta pulled from view context for consistency #}
+          <span>Department: <strong style="color: var(--ink); font-weight: 800;">{{ student_department|default:"—" }}</strong></span>
+          <span>Year: <strong style="color: var(--ink); font-weight: 800;">{{ student_year|default:"—" }}</strong></span>
         </h3>
-        <div class="pkp-actions">
-          <a href="{% url 'my_profile' %}?from_dashboard=true" class="btn btn-profile-primary">
-            <i class="fas fa-user-cog"></i>
-            <span>View Profile</span>
+        <div class="pkp-actions" style="display: flex; gap: 12px; margin-top: 10px;">
+          <a href="{% url 'my_profile' %}?from_dashboard=true" class="btn btn-profile-primary" style="padding: 8px 18px; border-radius: 6px; background: var(--primary); color: #fff; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; font-size: 14px;">
+            <i class="fas fa-user-cog"></i> <span>View Profile</span>
           </a>
-          <a href="{% url 'my_profile' %}?from_dashboard=true&tab=edit" class="btn btn-profile-secondary">
-            <i class="fas fa-edit"></i>
-            <span>Edit Profile</span>
+          <a href="{% url 'my_profile' %}?from_dashboard=true&tab=edit" class="btn btn-profile-secondary" style="padding: 8px 18px; border-radius: 6px; background: #fff; color: var(--ink); font-weight: 600; border: 1px solid var(--border); display: inline-flex; align-items: center; gap: 6px; font-size: 14px;">
+            <i class="fas fa-edit"></i> <span>Edit Profile</span>
           </a>
         </div>
       </div>

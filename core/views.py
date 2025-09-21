@@ -863,6 +863,7 @@ def dashboard(request):
         return redirect("cdl_work_dashboard")
 
     is_student = ("student" in role_lc) or email.endswith("@christuniversity.in")
+    is_admin_user = is_admin(user)
 
     # Set session role for sidebar permissions
     if is_student:
@@ -986,6 +987,18 @@ def dashboard(request):
         for p in user_proposals
     ]
 
+    # Optional student meta for non-admin profile UI (safe lookups)
+    student_department = None
+    student_year = None
+    if is_student:
+        try:
+            _stu = Student.objects.filter(user=user).select_related().first()
+            if _stu:
+                student_department = getattr(_stu, "department", None)
+                student_year = getattr(_stu, "academic_year", None)
+        except Exception:
+            pass
+
     # ---- context (always defined) ----
     context = {
         "my_events": my_events,
@@ -1000,6 +1013,9 @@ def dashboard(request):
         "user": user,
         "user_proposals": user_proposals,
         "calendar_events": calendar_events,
+        # role flags for templates
+        "is_admin_user": is_admin_user,
+        "is_student": is_student,
         # student dashboard bindings
         "participated_events_count": participated_events_count,
         "achievements_count": achievements_count,
@@ -1008,6 +1024,9 @@ def dashboard(request):
         "recent_activity": recent_activity,
         "proposals": proposals_min,
         "org_count": org_count,
+        # student profile meta (optional)
+        "student_department": student_department,
+        "student_year": student_year,
     }
 
     # --- robust template selection ---
