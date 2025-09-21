@@ -6,6 +6,7 @@ from django.contrib.auth.signals import user_logged_in
 from django.db.models.signals import post_save
 from django.test import TestCase
 from django.urls import reverse
+from django.utils.formats import date_format
 
 from core.signals import assign_role_on_login, create_or_update_user_profile
 from emt.forms import EventReportForm
@@ -309,10 +310,36 @@ console.log(JSON.stringify({
         self.assertEqual(response.context["post_data"]["needs_projector"], "yes")
         self.assertEqual(response.context["post_data"]["needs_permission"], "")
 
-    def test_preview_includes_all_form_fields(self):
+    def test_preview_includes_expected_report_fields(self):
         url = reverse("emt:preview_event_report", args=[self.proposal.id])
         data = {
+            "department": "Data Science Department",
+            "event_title": "Updated Symposium",
+            "venue": "Innovation Hall",
+            "event_start_date": "2024-02-01",
+            "event_end_date": "2024-02-02",
+            "academic_year": "2024-2025",
             "actual_event_type": "Seminar",
+            "event_summary": "Highlights of the event",
+            "event_outcomes": "Outcome details",
+            "analysis": "Detailed analysis",
+            "participant_feedback": "Great feedback",
+            "measurable_outcomes": "Measured results",
+            "impact_assessment": "Lasting impact",
+            "objective_achievement": "Objectives met",
+            "strengths_analysis": "Key strengths",
+            "challenges_analysis": "Challenges faced",
+            "effectiveness_analysis": "Effectiveness review",
+            "lessons_learned": "Lessons captured",
+            "pos_pso_mapping": "PO1, PSO1",
+            "needs_grad_attr_mapping": "GA1",
+            "contemporary_requirements": "Requirement summary",
+            "sdg_value_systems_mapping": "SDG1",
+            "num_participants": "50",
+            "num_student_volunteers": "5",
+            "num_student_participants": "30",
+            "num_faculty_participants": "10",
+            "num_external_participants": "10",
             "form-TOTAL_FORMS": "0",
             "form-INITIAL_FORMS": "0",
             "form-MIN_NUM_FORMS": "0",
@@ -320,11 +347,34 @@ console.log(JSON.stringify({
         }
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 200)
-        form = EventReportForm()
-        for field in form.fields.values():
-            self.assertContains(
-                response, f"<strong>{field.label}:</strong>", html=False
-            )
+
+        proposal = response.context["proposal"]
+        self.assertEqual(proposal.event_title, "Updated Symposium")
+        self.assertEqual(proposal.venue, "Innovation Hall")
+
+        report_fields = response.context["report_fields"]
+        labels = [label for label, _ in report_fields]
+
+        manual_pairs = report_fields[:6]
+        manual_dict = {label: value for label, value in manual_pairs}
+        expected_start = date_format(date(2024, 2, 1), "DATE_FORMAT")
+        expected_end = date_format(date(2024, 2, 2), "DATE_FORMAT")
+
+        self.assertEqual(manual_dict.get("Department"), "Data Science Department")
+        self.assertEqual(manual_dict.get("Event Title"), "Updated Symposium")
+        self.assertEqual(manual_dict.get("Venue"), "Innovation Hall")
+        self.assertEqual(manual_dict.get("Event Start Date"), expected_start)
+        self.assertEqual(manual_dict.get("Event End Date"), expected_end)
+        self.assertEqual(manual_dict.get("Academic Year"), "2024-2025")
+
+        # Ensure representative report fields still render
+        self.assertIn("Summary", labels)
+        self.assertIn("Participant feedback", labels)
+
+        # Hidden/legacy fields should be filtered out of the preview
+        self.assertNotIn("Attendance notes", labels)
+        self.assertNotIn("Report signed date", labels)
+        self.assertNotIn("Beneficiaries details", labels)
 
     def test_preview_shows_faculty_incharges(self):
         fac = User.objects.create_user(username="facultya")
