@@ -2313,6 +2313,28 @@ def preview_event_report(request, proposal_id):
             return date_format(parsed, "DATE_FORMAT")
         return value
 
+    def _format_display(value):
+        """Normalise values for preview output, collapsing blanks to em dash."""
+
+        if isinstance(value, str):
+            value = value.strip()
+            return value or "—"
+
+        if isinstance(value, (list, tuple, set)):
+            parts = []
+            for item in value:
+                if isinstance(item, str):
+                    item = item.strip()
+                if item in (None, ""):
+                    continue
+                parts.append(str(item))
+            return ", ".join(parts) if parts else "—"
+
+        if value in (None, ""):
+            return "—"
+
+        return str(value)
+
     # Update proposal snapshot values with any edits coming from the report form so
     # that the preview reflects the latest user-provided data instead of the
     # original submission only.
@@ -2476,6 +2498,47 @@ def preview_event_report(request, proposal_id):
             ]
         )
 
+    support = getattr(proposal, "cdl_support", None)
+    if support and getattr(support, "needs_support", False):
+        other_service_labels = dict(
+            CDLSupportForm.base_fields["other_services"].choices
+        )
+
+        def _append_cdl(label, value, *, is_date=False):
+            if is_date:
+                value = _display_date(value)
+            proposal_fields.append((label, _format_display(value)))
+
+        if support.poster_required:
+            _append_cdl("Poster Choice", support.get_poster_choice_display())
+            _append_cdl("Organization Name", support.organization_name)
+            _append_cdl("Event Time", support.poster_time)
+            _append_cdl("Event Date", support.poster_date, is_date=True)
+            _append_cdl("Event Venue", support.poster_venue)
+            _append_cdl("Resource Person Name", support.resource_person_name)
+            _append_cdl(
+                "Resource Person Designation", support.resource_person_designation
+            )
+            _append_cdl("Event Title for Poster", support.poster_event_title)
+            _append_cdl("Event Summary", support.poster_summary)
+            _append_cdl("Design Link/Reference", support.poster_design_link)
+
+        if support.certificates_required and support.certificate_help:
+            _append_cdl(
+                "Certificate Choice", support.get_certificate_choice_display()
+            )
+            _append_cdl(
+                "Design Link/Reference", support.certificate_design_link
+            )
+
+        services = [
+            other_service_labels.get(item, item)
+            for item in (support.other_services or [])
+            if item not in (None, "")
+        ]
+        _append_cdl("Additional Services", services)
+        _append_cdl("Blog Content", support.blog_content)
+
     # Prepare report form fields for preview
     report_fields = []
 
@@ -2489,25 +2552,35 @@ def preview_event_report(request, proposal_id):
     ]
 
     for label, raw in manual_report_fields:
-        value = raw if raw not in (None, "") else "—"
-        report_fields.append((label, value))
-
-    excluded_report_fields = {
-        "actual_speakers",
-        "external_contact_details",
-        "impact_on_stakeholders",
-        "innovations_best_practices",
-        "iqac_feedback",
-        "report_signed_date",
-        "beneficiaries_details",
-        "attendance_notes",
-    }
+        report_fields.append((label, _format_display(raw)))
 
     for name, field in form.fields.items():
-        if name in excluded_report_fields:
-            continue
         values = post_data.getlist(name)
-        display = ", ".join(str(v) for v in values) if values else "—"
+        if name == "report_signed_date":
+            display_value = None
+            for raw in values:
+                if isinstance(raw, str):
+                    raw = raw.strip()
+                if raw:
+                    display_value = _display_date(raw)
+                    break
+            report_fields.append((field.label, _format_display(display_value)))
+            continue
+
+        cleaned_values = []
+        for raw in values:
+            if isinstance(raw, str):
+                raw = raw.strip()
+            if raw in (None, ""):
+                continue
+            cleaned_values.append(raw)
+
+        if not cleaned_values:
+            display = "—"
+        elif len(cleaned_values) == 1:
+            display = _format_display(cleaned_values[0])
+        else:
+            display = _format_display(cleaned_values)
         report_fields.append((field.label, display))
 
     # Include dynamic activities submitted with the report
@@ -2526,7 +2599,9 @@ def preview_event_report(request, proposal_id):
 
     num_activities = post_data.get("num_activities")
     if num_activities:
-        report_fields.append(("Number of Activities Conducted", num_activities))
+        report_fields.append(
+            ("Number of Activities Conducted", _format_display(num_activities))
+        )
 
     context = {
         "proposal": proposal,

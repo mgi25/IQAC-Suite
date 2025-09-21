@@ -14,7 +14,7 @@ from django.http import QueryDict
 from core.models import Organization, OrganizationType
 from core.signals import assign_role_on_login, create_or_update_user_profile
 from emt.forms import EventReportForm
-from emt.models import (AttendanceRow, EventActivity, EventProposal,
+from emt.models import (AttendanceRow, CDLSupport, EventActivity, EventProposal,
                         EventReport, SpeakerProfile)
 
 
@@ -354,6 +354,14 @@ console.log(JSON.stringify({
             "needs_grad_attr_mapping": "GA1",
             "contemporary_requirements": "Requirement summary",
             "sdg_value_systems_mapping": "SDG1",
+            "actual_speakers": "Keynote and panelists",
+            "external_contact_details": "",
+            "impact_on_stakeholders": "Positive impact on alumni",
+            "innovations_best_practices": "Introduced blended format",
+            "iqac_feedback": "IQAC shared guidance",
+            "beneficiaries_details": "Students and faculty",
+            "attendance_notes": "",
+            "report_signed_date": "2024-02-05",
             "num_participants": "50",
             "num_student_volunteers": "5",
             "num_student_participants": "30",
@@ -390,10 +398,178 @@ console.log(JSON.stringify({
         self.assertIn("Summary", labels)
         self.assertIn("Participant feedback", labels)
 
-        # Hidden/legacy fields should be filtered out of the preview
-        self.assertNotIn("Attendance notes", labels)
-        self.assertNotIn("Report signed date", labels)
-        self.assertNotIn("Beneficiaries details", labels)
+        report_dict = {label: value for label, value in report_fields}
+        form = response.context["form"]
+
+        self.assertEqual(
+            report_dict.get(form.fields["actual_speakers"].label),
+            "Keynote and panelists",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["external_contact_details"].label),
+            "—",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["impact_on_stakeholders"].label),
+            "Positive impact on alumni",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["innovations_best_practices"].label),
+            "Introduced blended format",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["iqac_feedback"].label),
+            "IQAC shared guidance",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["beneficiaries_details"].label),
+            "Students and faculty",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["attendance_notes"].label),
+            "—",
+        )
+        expected_signed = date_format(date(2024, 2, 5), "DATE_FORMAT")
+        self.assertEqual(
+            report_dict.get(form.fields["report_signed_date"].label),
+            expected_signed,
+        )
+
+    def test_preview_displays_cdl_support_details_and_report_textboxes(self):
+        org_type = OrganizationType.objects.create(name="Department")
+        org = Organization.objects.create(name="IQAC", org_type=org_type)
+        self.proposal.organization = org
+        self.proposal.venue = "Main Hall"
+        self.proposal.event_start_date = date(2024, 5, 1)
+        self.proposal.event_end_date = date(2024, 5, 2)
+        self.proposal.academic_year = "2024-2025"
+        self.proposal.save(
+            update_fields=[
+                "organization",
+                "venue",
+                "event_start_date",
+                "event_end_date",
+                "academic_year",
+            ]
+        )
+
+        support = CDLSupport.objects.create(
+            proposal=self.proposal,
+            needs_support=True,
+            poster_required=True,
+            poster_choice=CDLSupport.PosterChoice.CDL_CREATE,
+            organization_name="IQAC",
+            poster_time="10:00 AM",
+            poster_date=date(2024, 5, 1),
+            poster_venue="Auditorium",
+            resource_person_name="Dr. Jane Doe",
+            resource_person_designation="Professor",
+            poster_event_title="Innovation Day",
+            poster_summary="Poster summary text",
+            poster_design_link="http://example.com/poster",
+            other_services=["photography", "videography"],
+            certificates_required=True,
+            certificate_help=True,
+            certificate_choice=CDLSupport.CertificateChoice.CDL_CREATE,
+            certificate_design_link="http://example.com/certificate",
+            blog_content="Blog coverage details.",
+        )
+
+        url = reverse("emt:preview_event_report", args=[self.proposal.id])
+        data = {
+            "department": "IQAC",
+            "event_title": "Innovation Day",
+            "venue": "Main Hall",
+            "event_start_date": "2024-05-01",
+            "event_end_date": "2024-05-02",
+            "academic_year": "2024-2025",
+            "actual_event_type": "Symposium",
+            "actual_speakers": "Keynotes and panels",
+            "external_contact_details": "",
+            "impact_on_stakeholders": "Community outreach",
+            "innovations_best_practices": "Hybrid delivery",
+            "iqac_feedback": "Encouraged mentoring",
+            "beneficiaries_details": "200 students",
+            "attendance_notes": "",
+            "report_signed_date": "2024-05-05",
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+
+        proposal_fields = response.context["proposal_fields"]
+
+        expected_poster_date = date_format(date(2024, 5, 1), "DATE_FORMAT")
+        self.assertIn(("Poster Choice", support.get_poster_choice_display()), proposal_fields)
+        self.assertIn(("Organization Name", "IQAC"), proposal_fields)
+        self.assertIn(("Event Time", "10:00 AM"), proposal_fields)
+        self.assertIn(("Event Date", expected_poster_date), proposal_fields)
+        self.assertIn(("Event Venue", "Auditorium"), proposal_fields)
+        self.assertIn(("Resource Person Name", "Dr. Jane Doe"), proposal_fields)
+        self.assertIn(("Resource Person Designation", "Professor"), proposal_fields)
+        self.assertIn(("Event Title for Poster", "Innovation Day"), proposal_fields)
+        self.assertIn(("Event Summary", "Poster summary text"), proposal_fields)
+
+        design_links = [
+            value
+            for label, value in proposal_fields
+            if label == "Design Link/Reference"
+        ]
+        self.assertIn("http://example.com/poster", design_links)
+        self.assertIn("http://example.com/certificate", design_links)
+
+        services_value = next(
+            (value for label, value in proposal_fields if label == "Additional Services"),
+            "",
+        )
+        self.assertEqual(services_value, "Event Photography, Event Videography")
+        self.assertIn(("Blog Content", "Blog coverage details."), proposal_fields)
+        self.assertIn(
+            ("Certificate Choice", support.get_certificate_choice_display()),
+            proposal_fields,
+        )
+
+        report_dict = {label: value for label, value in response.context["report_fields"]}
+        form = response.context["form"]
+
+        expected_signed = date_format(date(2024, 5, 5), "DATE_FORMAT")
+        self.assertEqual(
+            report_dict.get(form.fields["actual_speakers"].label),
+            "Keynotes and panels",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["impact_on_stakeholders"].label),
+            "Community outreach",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["innovations_best_practices"].label),
+            "Hybrid delivery",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["iqac_feedback"].label),
+            "Encouraged mentoring",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["beneficiaries_details"].label),
+            "200 students",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["external_contact_details"].label),
+            "—",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["attendance_notes"].label),
+            "—",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["report_signed_date"].label),
+            expected_signed,
+        )
+
 
     def test_preview_shows_faculty_incharges(self):
         fac = User.objects.create_user(username="facultya")
