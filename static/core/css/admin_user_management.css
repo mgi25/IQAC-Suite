@@ -1,6 +1,5 @@
 /* Hide the 'Searching...' option in select dropdowns (scoped) */
-.user-mgmt-container option[value="searching"],
-.user-mgmt-container option:contains('Searching...') {
+.user-mgmt-container option[value="searching"] {
     display: none !important;
 }
 /* =============================================================================
@@ -38,18 +37,18 @@
     width: 100%;
 }
 
-.page-header {
+.user-mgmt-container .page-header {
     margin-bottom: 1rem;
 }
 
-.page-header h1 {
+.user-mgmt-container .page-header h1 {
     margin: 0;
     font-size: 1.75rem;
     color: var(--primary-dark);
     font-weight: 600;
 }
 
-.organization-info {
+.user-mgmt-container .organization-info {
     background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
     color: white;
     padding: 0.875rem 1.25rem;
@@ -60,12 +59,12 @@
     gap: 0.75rem;
 }
 
-.organization-info .org-icon {
+.user-mgmt-container .organization-info .org-icon {
     font-size: 1.25rem;
     opacity: 0.9;
 }
 
-.organization-info .org-name {
+.user-mgmt-container .organization-info .org-name {
     font-size: 1.125rem;
     font-weight: 600;
 }
@@ -119,12 +118,12 @@
    TAB CONTENT
    ============================================================================= */
 
-.tab-content {
+.user-mgmt-container .tab-content {
     display: none;
     animation: fadeIn 0.3s ease-out;
 }
 
-.tab-content.active {
+.user-mgmt-container .tab-content.active {
     display: block;
 }
 
@@ -143,7 +142,7 @@
    DUAL PANE LAYOUT
    ============================================================================= */
 
-.dual-pane-layout {
+.user-mgmt-container .dual-pane-layout {
     display: grid;
     grid-template-columns: 450px 1fr;
     gap: 1.5rem;
@@ -151,8 +150,8 @@
     min-height: 600px;
 }
 
-.upload-pane,
-.results-pane {
+.user-mgmt-container .upload-pane,
+.user-mgmt-container .results-pane {
     background: var(--card-bg);
     border-radius: var(--border-radius);
     box-shadow: var(--shadow);
@@ -165,7 +164,7 @@
    UPLOAD PANE
    ============================================================================= */
 
-.upload-pane {
+.user-mgmt-container .upload-pane {
     position: sticky;
     top: 0;
     height: fit-content;
@@ -173,7 +172,7 @@
     min-height: 500px;
 }
 
-.pane-header {
+.user-mgmt-container .pane-header {
     background: linear-gradient(to right, var(--primary-color), var(--primary-dark));
     color: white;
     padding: 1rem 1.5rem;
@@ -184,7 +183,7 @@
     justify-content: space-between;
 }
 
-.pane-toggle {
+.user-mgmt-container .pane-toggle {
     background: none;
     border: none;
     color: white;
@@ -194,36 +193,36 @@
     transition: background 0.2s;
 }
 
-.pane-toggle:hover {
+.user-mgmt-container .pane-toggle:hover {
     background: rgba(255, 255, 255, 0.1);
 }
 
-.pane-content {
+.user-mgmt-container .pane-content {
     padding: 1.5rem;
     flex: 1;
     overflow-y: auto;
 }
 
-.pane-content.collapsed {
+.user-mgmt-container .pane-content.collapsed {
     display: none;
 }
 
 /* Upload Form Styling */
-.upload-form .form-row {
+.user-mgmt-container .upload-form .form-row {
     display: flex;
     gap: 1rem;
     margin-bottom: 1rem;
 }
 
-.upload-form .form-group {
+.user-mgmt-container .upload-form .form-group {
     flex: 1;
 }
 
-.upload-form .form-group.full-width {
+.user-mgmt-container .upload-form .form-group.full-width {
     flex: 1 1 100%;
 }
 
-.upload-form label {
+.user-mgmt-container .upload-form label {
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 600;
@@ -231,8 +230,8 @@
     font-size: 0.875rem;
 }
 
-.upload-form input,
-.upload-form select {
+.user-mgmt-container .upload-form input,
+.user-mgmt-container .upload-form select {
     width: 100%;
     padding: 0.75rem;
     border: 1px solid var(--medium-grey);
@@ -242,31 +241,31 @@
     box-sizing: border-box;
 }
 
-.upload-form input:focus,
-.upload-form select:focus {
+.user-mgmt-container .upload-form input:focus,
+.user-mgmt-container .upload-form select:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 2px var(--primary-light);
 }
 
 /* Academic year selectors */
-.year-selects {
+.user-mgmt-container .year-selects {
     display: flex;
     align-items: center;
     gap: 0.25rem;
 }
 
-.year-selects select {
+.user-mgmt-container .year-selects select {
     flex: 1;
     width: auto;
 }
 
-.year-separator {
+.user-mgmt-container .year-separator {
     padding: 0 0.25rem;
     font-weight: 600;
 }
 
-.upload-btn {
+.user-mgmt-container .upload-btn {
     width: 100%;
     background: var(--primary-color);
     color: white;
@@ -284,18 +283,18 @@
     margin-top: 1rem;
 }
 
-.upload-btn:hover {
+.user-mgmt-container .upload-btn:hover {
     background: var(--primary-dark);
     transform: translateY(-1px);
 }
 
-.upload-btn:disabled {
+.user-mgmt-container .upload-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
     transform: none;
 }
 
-.upload-tips {
+.user-mgmt-container .upload-tips {
     background: var(--light-grey);
     padding: 1rem;
     border-radius: var(--border-radius);
@@ -304,13 +303,13 @@
     margin-top: 1rem;
 }
 
-.template-link {
+.user-mgmt-container .template-link {
     color: var(--primary-color);
     text-decoration: none;
     font-weight: 500;
 }
 
-.template-link:hover {
+.user-mgmt-container .template-link:hover {
     text-decoration: underline;
 }
 
@@ -318,12 +317,12 @@
    RESULTS PANE
    ============================================================================= */
 
-.results-pane {
+.user-mgmt-container .results-pane {
     min-height: calc(100vh - 250px);
     height: 100%;
 }
 
-.results-header {
+.user-mgmt-container .results-header {
     background: var(--light-grey);
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--medium-grey);
@@ -332,18 +331,18 @@
     justify-content: space-between;
 }
 
-.results-title {
+.user-mgmt-container .results-title {
     font-weight: 600;
     color: var(--text-color);
     margin: 0;
 }
 
-.results-actions {
+.user-mgmt-container .results-actions {
     display: flex;
     gap: 0.5rem;
 }
 
-.filter-toggle {
+.user-mgmt-container .filter-toggle {
     background: var(--card-bg);
     border: 1px solid var(--medium-grey);
     padding: 0.5rem 1rem;
@@ -353,17 +352,17 @@
     transition: all 0.2s;
 }
 
-.filter-toggle:hover {
+.user-mgmt-container .filter-toggle:hover {
     background: var(--light-grey);
 }
 
-.filter-toggle.active {
+.user-mgmt-container .filter-toggle.active {
     background: var(--primary-color);
     color: white;
     border-color: var(--primary-color);
 }
 
-.results-content {
+.user-mgmt-container .results-content {
     flex: 1;
     overflow-y: auto;
     padding: 1rem;
@@ -373,23 +372,23 @@
    TABLE STYLING
    ============================================================================= */
 
-.data-table, .table {
+.user-mgmt-container .data-table, .user-mgmt-container .table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.875rem;
 }
 
-.data-table th,
-.data-table td,
-.table th,
-.table td {
+.user-mgmt-container .data-table th,
+.user-mgmt-container .data-table td,
+.user-mgmt-container .table th,
+.user-mgmt-container .table td {
     text-align: left;
     padding: 0.875rem 0.75rem;
     border-bottom: 1px solid var(--light-grey);
 }
 
-.data-table th,
-.table th {
+.user-mgmt-container .data-table th,
+.user-mgmt-container .table th {
     background: var(--light-grey);
     font-weight: 600;
     color: var(--dark-grey);
@@ -401,50 +400,50 @@
     z-index: 10;
 }
 
-.data-table tbody tr,
-.table tbody tr {
+.user-mgmt-container .data-table tbody tr,
+.user-mgmt-container .table tbody tr {
     transition: background-color 0.2s;
 }
 
-.data-table tbody tr:hover,
-.table tbody tr:hover {
+.user-mgmt-container .data-table tbody tr:hover,
+.user-mgmt-container .table tbody tr:hover {
     background: var(--light-grey);
 }
 
-.data-table .actions,
-.table .actions {
+.user-mgmt-container .data-table .actions,
+.user-mgmt-container .table .actions {
     text-align: right;
     white-space: nowrap;
 }
 
-.data-table .actions .btn,
-.table td .btn {
+.user-mgmt-container .data-table .actions .btn,
+.user-mgmt-container .table td .btn {
     margin-left: 0.25rem;
     padding: 0.375rem 0.75rem;
     font-size: 0.75rem;
 }
 
-.empty-state {
+.user-mgmt-container .empty-state {
     text-align: center;
     padding: 3rem;
     color: var(--dark-grey);
 }
 
-.empty-state .empty-icon {
+.user-mgmt-container .empty-state .empty-icon {
     font-size: 3rem;
     margin-bottom: 1rem;
     opacity: 0.5;
 }
 
-.text-center {
+.user-mgmt-container .text-center {
     text-align: center;
 }
 
-.text-muted {
+.user-mgmt-container .text-muted {
     color: var(--dark-grey);
 }
 
-.p-4 {
+.user-mgmt-container .p-4 {
     padding: 1.5rem;
 }
 
@@ -452,7 +451,7 @@
    BUTTONS
    ============================================================================= */
 
-.btn {
+.user-mgmt-container .btn {
     padding: 0.5rem 1rem;
     border: none;
     border-radius: var(--border-radius);
@@ -467,70 +466,70 @@
     box-sizing: border-box;
 }
 
-.btn-primary {
+.user-mgmt-container .btn-primary {
     background: var(--primary-color);
     color: white;
 }
 
-.btn-primary:hover {
+.user-mgmt-container .btn-primary:hover {
     background: var(--primary-dark);
     color: white;
 }
 
-.btn-secondary {
+.user-mgmt-container .btn-secondary {
     background: var(--dark-grey);
     color: white;
 }
 
-.btn-secondary:hover {
+.user-mgmt-container .btn-secondary:hover {
     background: var(--text-color);
     color: white;
 }
 
-.btn-sm {
+.user-mgmt-container .btn-sm {
     padding: 0.375rem 0.75rem;
     font-size: 0.75rem;
 }
 
-.btn-link {
+.user-mgmt-container .btn-link {
     background: none;
     color: var(--primary-color);
     padding: 0.25rem 0.5rem;
     border: none;
 }
 
-.btn-link:hover {
+.user-mgmt-container .btn-link:hover {
     background: var(--primary-light);
     color: var(--primary-dark);
     text-decoration: none;
 }
 
-.btn-warning {
+.user-mgmt-container .btn-warning {
     background: var(--warning-color);
     color: #000;
 }
 
-.btn-warning:hover {
+.user-mgmt-container .btn-warning:hover {
     background: #e0a800;
     color: #000;
 }
 
-.btn-success {
+.user-mgmt-container .btn-success {
     background: var(--success-color);
     color: white;
 }
 
-.btn-success:hover {
+.user-mgmt-container .btn-success:hover {
     background: #218838;
     color: white;
 }
 
-.btn-danger {
+.user-mgmt-container .btn-danger {
     background: var(--danger-color);
     color: white;
 }
 
-.btn-danger:hover {
+.user-mgmt-container .btn-danger:hover {
     background: #c82333;
     color: white;
 }
@@ -540,7 +539,7 @@
    ============================================================================= */
 
 @media (max-width: 1024px) {
-    .dual-pane-layout {
+    .user-mgmt-container .dual-pane-layout {
         grid-template-columns: 400px 1fr;
         gap: 1rem;
         height: calc(100vh - 220px);
@@ -548,50 +547,50 @@
 }
 
 @media (max-width: 768px) {
-    .user-management-container {
+    .user-mgmt-container .user-management-container {
         padding: 0.75rem;
         min-height: calc(100vh - 60px);
     }
 
-    .nav-tabs {
+    .user-mgmt-container .nav-tabs {
         flex-wrap: wrap;
         gap: 0.25rem;
         margin-bottom: 0.75rem;
     }
 
-    .nav-tab {
+    .user-mgmt-container .nav-tab {
         padding: 0.75rem 1rem;
         font-size: 0.875rem;
     }
 
-    .dual-pane-layout {
+    .user-mgmt-container .dual-pane-layout {
         grid-template-columns: 1fr;
         gap: 1rem;
         height: auto;
         min-height: calc(100vh - 200px);
     }
 
-    .upload-pane {
+    .user-mgmt-container .upload-pane {
         position: static;
         height: auto;
         max-height: none;
         min-height: auto;
     }
 
-    .results-pane {
+    .user-mgmt-container .results-pane {
         min-height: 60vh;
     }
 
-    .upload-form .form-row {
+    .user-mgmt-container .upload-form .form-row {
         flex-direction: column;
         gap: 0.75rem;
     }
 
-    .page-header h1 {
+    .user-mgmt-container .page-header h1 {
         font-size: 1.5rem;
     }
 
-    .organization-info {
+    .user-mgmt-container .organization-info {
         padding: 0.75rem 1rem;
         margin-bottom: 0.75rem;
     }
@@ -601,7 +600,7 @@
    LOADING STATES & ANIMATIONS
    ============================================================================= */
 
-.loading-spinner {
+.user-mgmt-container .loading-spinner {
     animation: spin 1s linear infinite;
 }
 
@@ -610,7 +609,7 @@
     100% { transform: rotate(360deg); }
 }
 
-.upload-progress {
+.user-mgmt-container .upload-progress {
     background: var(--light-grey);
     border-radius: var(--border-radius);
     padding: 1rem;
@@ -623,7 +622,7 @@
    TOAST NOTIFICATIONS (Maintain existing)
    ============================================================================= */
 
-.toast {
+.user-mgmt-container .toast {
     position: fixed;
     bottom: 20px;
     right: 20px;
@@ -639,21 +638,21 @@
     font-weight: 600;
 }
 
-.toast.show {
+.user-mgmt-container .toast.show {
     visibility: visible;
     opacity: 1;
     transform: translateY(0);
 }
 
-.toast.toast-success {
+.user-mgmt-container .toast.toast-success {
     background-color: var(--success-color);
 }
 
-.toast.toast-error {
+.user-mgmt-container .toast.toast-error {
     background-color: var(--danger-color);
 }
 
-.role-dropdown select {
+.user-mgmt-container .role-dropdown select {
   width: 100%;
   padding: 8px;
   border-radius: 6px;
@@ -663,7 +662,7 @@
   font-size: 0.9rem;
 }
 
-.hidden {
+.user-mgmt-container .hidden {
   display: none;
 }
 
