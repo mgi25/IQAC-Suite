@@ -1,4 +1,5 @@
 {% load static group_filters admin_tags %}
+{% with has_sidebar=unrestricted_nav or allowed_nav_items %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -24,7 +25,7 @@
     window.USER_ID = "{{ request.user.id|default:'' }}";
   </script>
 </head>
-<body class="command-center-layout{% if not unrestricted_nav and not allowed_nav_items|length %} no-sidebar{% endif %}">
+<body class="command-center-layout{% if not has_sidebar %} no-sidebar{% endif %}">
 
   {% if messages %}
   <div class="toast-container" aria-live="polite" aria-atomic="true">
@@ -40,7 +41,7 @@
   <div class="top-utility-bar">
     <div class="utility-bar-flex" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
       <div class="utility-left" style="display: flex; align-items: center; gap: 1rem;">
-        {% if unrestricted_nav or allowed_nav_items|length %}
+        {% if has_sidebar %}
         <button id="sidebarToggle" aria-label="Toggle sidebar" style="background:transparent;border:none;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;">
           <span style="display:inline-block;width:18px;height:2px;background:#fff;position:relative;">
             <span style="content:'';position:absolute;left:0;top:-6px;width:18px;height:2px;background:#fff"></span>
@@ -139,7 +140,7 @@
     </div>
   </div>
 
-  {% if unrestricted_nav or allowed_nav_items|length %}
+  {% if has_sidebar %}
   <!-- ZONE 2: LEFT CONTROL PANEL -->
   <div class="left-control-panel">
     <nav class="control-navigation">
@@ -443,3 +444,4 @@
   {% block scripts_extra %}{% endblock %}
 </body>
 </html>
+{% endwith %}
