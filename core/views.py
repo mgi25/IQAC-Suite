@@ -6380,7 +6380,7 @@ def _build_cdl_analysis_context(request):
     from datetime import datetime, timedelta
     from collections import defaultdict
     from django.db.models import Q, Count, Sum
-    from core.models import Organization
+    from core.models import Organization, OrganizationType
     from emt.models import (
         EventProposal,
         EventReport,
@@ -6416,27 +6416,40 @@ def _build_cdl_analysis_context(request):
     if end_date:
         date_q &= (Q(event_start_date__lte=end_date) | Q(event_datetime__date__lte=end_date))
 
-    # Base proposals: finalized only
-    proposals_qs = EventProposal.objects.filter(status=EventProposal.Status.FINALIZED)
+    # Base proposals: finalized only + optional date filter
+    base_proposals_qs = EventProposal.objects.filter(status=EventProposal.Status.FINALIZED)
     if range_key != "all":
-        proposals_qs = proposals_qs.filter(date_q)
+        base_proposals_qs = base_proposals_qs.filter(date_q)
 
     # Academic years and orgs listing
     academic_years = list(
-        proposals_qs.exclude(academic_year__isnull=True).exclude(academic_year="").values_list("academic_year", flat=True).distinct()
+        base_proposals_qs.exclude(academic_year__isnull=True)
+        .exclude(academic_year="")
+        .values_list("academic_year", flat=True)
+        .distinct()
     )
     # Group orgs by type for filter dropdown
     organizations_by_type = defaultdict(list)
     for org in Organization.objects.select_related("org_type").all():
         type_name = org.org_type.name if getattr(org, "org_type", None) else "Other"
         organizations_by_type[type_name].append(org)
+    # Organization types list (id + name) for dependent selects
+    organization_types = list(OrganizationType.objects.filter(is_active=True).order_by("name"))
+    # JSON-friendly map: { org_type_id: [{id,name}, ...] }
+    org_options_by_type = defaultdict(list)
+    for org in Organization.objects.select_related("org_type").filter(is_active=True).order_by("name"):
+        if getattr(org, "org_type_id", None):
+            org_options_by_type[org.org_type_id].append({"id": org.id, "name": org.name})
 
     # Planned/actual event types
     planned_event_types = list(
-        proposals_qs.exclude(event_focus_type__isnull=True).exclude(event_focus_type="").values_list("event_focus_type", flat=True).distinct()
+        base_proposals_qs.exclude(event_focus_type__isnull=True)
+        .exclude(event_focus_type="")
+        .values_list("event_focus_type", flat=True)
+        .distinct()
     )
     actual_event_types = list(
-        EventReport.objects.filter(proposal__in=proposals_qs)
+        EventReport.objects.filter(proposal__in=base_proposals_qs)
         .exclude(actual_event_type__isnull=True)
         .exclude(actual_event_type="")
         .values_list("actual_event_type", flat=True)
@@ -6445,7 +6458,7 @@ def _build_cdl_analysis_context(request):
 
     # Service types (poster/certificates + other_services entries)
     service_types_map = {"poster": "Poster", "certificates": "Certificates"}
-    for sup in CDLSupport.objects.filter(proposal__in=proposals_qs):
+    for sup in CDLSupport.objects.filter(proposal__in=base_proposals_qs):
         for item in (sup.other_services or []):
             key = item if isinstance(item, str) else item.get("key")
             label = item if isinstance(item, str) else item.get("label") or key
@@ -6453,27 +6466,80 @@ def _build_cdl_analysis_context(request):
                 service_types_map.setdefault(key, label or key)
     service_types = [{"key": k, "label": v} for k, v in sorted(service_types_map.items())]
 
+    # Apply selected filters to derive the final proposals queryset for metrics/results
+    results_qs = base_proposals_qs
+
+    # Academic year (single select)
+    academic_year_sel = params.get("academic_year")
+    if academic_year_sel:
+        results_qs = results_qs.filter(academic_year=academic_year_sel)
+
+    # Organization Type (single) → limits available orgs
+    org_type_id = params.get("organization_type")
+    if org_type_id and str(org_type_id).isdigit():
+        results_qs = results_qs.filter(organization__org_type_id=int(org_type_id))
+
+    # Organization (single) takes precedence, else support old multi-select param
+    org_single = params.get("organization") or params.get("org")
+    if org_single and str(org_single).isdigit():
+        results_qs = results_qs.filter(organization_id=int(org_single))
+    else:
+        # Back-compat: Organizations (multi-select list of ids)
+        org_ids = params.getlist("organizations") or []
+        if org_ids:
+            try:
+                org_ids_int = [int(x) for x in org_ids if str(x).isdigit()]
+            except Exception:
+                org_ids_int = []
+            if org_ids_int:
+                results_qs = results_qs.filter(organization_id__in=org_ids_int)
+
+    # Planned event type
+    planned_type = params.get("event_type_planned")
+    if planned_type:
+        results_qs = results_qs.filter(event_focus_type=planned_type)
+
+    # Actual event type (join via EventReport)
+    actual_type = params.get("event_type_actual")
+    if actual_type:
+        results_qs = results_qs.filter(event_report__actual_event_type=actual_type)
+
+    # Service types (poster/certificates/other keys)
+    selected_services = params.getlist("service_types") or []
+    if selected_services:
+        svc_q = Q()
+        for k in selected_services:
+            if k == "poster":
+                svc_q |= Q(cdl_support__poster_required=True)
+            elif k == "certificates":
+                svc_q |= Q(cdl_support__certificates_required=True)
+            else:
+                # Match presence of key in JSON list; fallback to icontains for non-PG backends
+                svc_q |= Q(cdl_support__other_services__icontains=k)
+        if svc_q:
+            results_qs = results_qs.filter(svc_q)
+
     # KPIs
-    total_archived_events = proposals_qs.count()
-    part_agg = proposals_qs.aggregate(
+    total_archived_events = results_qs.count()
+    part_agg = results_qs.aggregate(
         total=Sum("num_activities")  # fallback if participants not tracked on proposal
     )
     # Prefer EventReport participants if available
-    participants_totals = EventReport.objects.filter(proposal__in=proposals_qs).aggregate(
+    participants_totals = EventReport.objects.filter(proposal__in=results_qs).aggregate(
         s=Sum("num_student_participants"), f=Sum("num_faculty_participants"), x=Sum("num_external_participants"), v=Sum("num_student_volunteers")
     )
     total_participants = sum(filter(None, participants_totals.values())) or 0
 
-    certificates_issued = CDLCertificateRecipient.objects.filter(support__proposal__in=proposals_qs).count()
+    certificates_issued = CDLCertificateRecipient.objects.filter(support__proposal__in=results_qs).count()
 
     # Average completion time (created_at -> updated_at for finalized)
     deltas = []
-    for p in proposals_qs.only("created_at", "updated_at"):
+    for p in results_qs.only("created_at", "updated_at"):
         if p.created_at and p.updated_at:
             deltas.append((p.updated_at - p.created_at).days)
     avg_completion_time = f"{round(sum(deltas)/len(deltas))} days" if deltas else "0 days"
 
-    active_assignments = CDLAssignment.objects.exclude(status=CDLAssignment.Status.COMPLETED).count()
+    active_assignments = CDLAssignment.objects.filter(proposal__in=results_qs).exclude(status=CDLAssignment.Status.COMPLETED).count()
 
     kpis = {
         "total_archived_events": total_archived_events,
@@ -6485,7 +6551,7 @@ def _build_cdl_analysis_context(request):
 
     # Workload rows (by assignee across CDLTaskAssignment)
     workload = defaultdict(lambda: {"assigned": 0, "in_progress": 0, "completed": 0, "backlog": 0})
-    for t in CDLTaskAssignment.objects.select_related("assignee").all():
+    for t in CDLTaskAssignment.objects.select_related("assignee").filter(proposal__in=results_qs):
         name = (t.assignee.get_full_name() or t.assignee.username) if t.assignee_id else "Unassigned"
         workload[name][t.status] = workload[name].get(t.status, 0) + 1
     workload_rows = [
@@ -6505,7 +6571,7 @@ def _build_cdl_analysis_context(request):
 
     # Events over time (by month of event_start_date or event_datetime)
     events_by_month = defaultdict(int)
-    for p in proposals_qs.only("event_start_date", "event_datetime"):
+    for p in results_qs.only("event_start_date", "event_datetime"):
         d = p.event_start_date or (p.event_datetime.date() if p.event_datetime else None)
         if d:
             events_by_month[month_key(d)] += 1
@@ -6525,7 +6591,7 @@ def _build_cdl_analysis_context(request):
 
     # Certificates by type
     cert_counts = (
-        CDLCertificateRecipient.objects.filter(support__proposal__in=proposals_qs)
+        CDLCertificateRecipient.objects.filter(support__proposal__in=results_qs)
         .values("certificate_type")
         .annotate(c=Count("id"))
     )
@@ -6534,7 +6600,7 @@ def _build_cdl_analysis_context(request):
 
     # Service usage counts
     svc_counter = defaultdict(int)
-    for sup in CDLSupport.objects.filter(proposal__in=proposals_qs):
+    for sup in CDLSupport.objects.filter(proposal__in=results_qs):
         if sup.poster_required:
             svc_counter["poster"] += 1
         if sup.certificates_required:
@@ -6546,7 +6612,7 @@ def _build_cdl_analysis_context(request):
     chart_service_usage = {"labels": list(svc_counter.keys()), "data": list(svc_counter.values())}
 
     # Task throughput by status (simple totals)
-    tt = CDLTaskAssignment.objects.values("status").annotate(c=Count("id"))
+    tt = CDLTaskAssignment.objects.filter(proposal__in=results_qs).values("status").annotate(c=Count("id"))
     chart_task_throughput = {
         "labels": ["Work"],
         "datasets": {
@@ -6558,14 +6624,14 @@ def _build_cdl_analysis_context(request):
     }
 
     # Communication intensity
-    comm = CDLMessage.objects.aggregate(
+    comm = CDLMessage.objects.filter(support__proposal__in=results_qs).aggregate(
         in_app=Count("id", filter=Q(via_email=False)),
         email=Count("id", filter=Q(via_email=True)),
     )
     chart_comm_intensity = {"labels": ["Messages"], "in_app": [comm.get("in_app", 0)], "email": [comm.get("email", 0)]}
 
     # Tracker (% based on EventReport presence and fields)
-    reports_qs = EventReport.objects.filter(proposal__in=proposals_qs)
+    reports_qs = EventReport.objects.filter(proposal__in=results_qs)
     total_reports = reports_qs.count() or 1  # avoid div by zero
     tracker = {
         "reports_signed_pct": round(100 * reports_qs.exclude(report_signed_date__isnull=True).count() / total_reports, 1),
@@ -6575,21 +6641,32 @@ def _build_cdl_analysis_context(request):
     }
 
     # Events table (finalized+archived — here, finalized only)
+    # Pre-compute certificate counts per proposal to avoid N+1 queries
+    cert_counts_map = {
+        row["support__proposal_id"]: row["c"]
+        for row in CDLCertificateRecipient.objects.filter(support__proposal__in=results_qs)
+        .values("support__proposal_id").annotate(c=Count("id"))
+    }
+
     events_rows = []
-    for p in proposals_qs.select_related("organization").only(
-        "event_title", "organization__name", "academic_year", "event_focus_type", "created_at", "updated_at"
+    for p in results_qs.select_related("organization", "event_report").only(
+        "event_title", "organization__name", "academic_year", "event_focus_type", "created_at", "updated_at", "event_report__actual_event_type",
     ):
         rep = getattr(p, "event_report", None)
         participants = 0
         if rep:
-            participants = (rep.num_student_participants or 0) + (rep.num_faculty_participants or 0) + (rep.num_external_participants or 0)
+            participants = (
+                (rep.num_student_participants or 0)
+                + (rep.num_faculty_participants or 0)
+                + (rep.num_external_participants or 0)
+            )
         events_rows.append({
             "event_title": p.event_title,
             "department": p.organization.name if p.organization else "",
             "academic_year": p.academic_year or "",
             "event_type": (rep.actual_event_type if rep and rep.actual_event_type else p.event_focus_type) or "",
             "participants": participants,
-            "certificates_issued": CDLCertificateRecipient.objects.filter(support__proposal=p).count(),
+            "certificates_issued": cert_counts_map.get(p.id, 0),
             "completion_time": f"{((p.updated_at - p.created_at).days) if p.updated_at and p.created_at else 0} days",
         })
 
@@ -6599,13 +6676,19 @@ def _build_cdl_analysis_context(request):
             "end_date": end_date_str or "",
             "range": range_key or ("last_30" if (start_date or end_date) else "all"),
             "academic_year": params.get("academic_year") or "",
+            # legacy multi-select list, kept for compatibility with older URLs
             "organizations": params.getlist("organizations") or [],
+            # new single selects
+            "organization_type": (org_type_id if org_type_id else ""),
+            "organization": (org_single if org_single else ""),
             "event_type_planned": params.get("event_type_planned") or "",
             "event_type_actual": params.get("event_type_actual") or "",
             "service_types": params.getlist("service_types") or [],
         },
         "academic_years": academic_years,
         "organizations_by_type": organizations_by_type,
+    "org_options_by_type": dict(org_options_by_type),
+        "organization_types": organization_types,
         "planned_event_types": planned_event_types,
         "actual_event_types": actual_event_types,
         "service_types": service_types,
