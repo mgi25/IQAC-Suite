@@ -1,5 +1,5 @@
 {% load static group_filters admin_tags %}
-{% with has_sidebar=unrestricted_nav or allowed_nav_items %}
+{% with has_sidebar=unrestricted_nav|default:allowed_nav_items %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
