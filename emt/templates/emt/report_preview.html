@@ -10,163 +10,266 @@
 
 {% block content %}
 <div class="preview-layout">
-    <main class="proposal-content">
-        <div class="content-header" style="margin-bottom:.5rem;">
-            <h1 class="content-title" id="page-title">{{ proposal.event_title|default:"Event Report" }}</h1>
-            <p class="content-subtitle">Please verify the information below.</p>
-            <div class="meta-chips">
-                {% if proposal.organization %}
-                    <span class="chip">{{ proposal.organization.name }}</span>
-                {% endif %}
-                {% if proposal.event_start_date %}
-                    <span class="chip">Start: {{ proposal.event_start_date }}</span>
-                {% endif %}
-                {% if proposal.event_end_date %}
-                    <span class="chip">End: {{ proposal.event_end_date }}</span>
-                {% endif %}
-                {% if proposal.venue %}
-                    <span class="chip">Venue: {{ proposal.venue }}</span>
-                {% endif %}
-            </div>
-            <div class="top-toolbar">
-                <nav class="pill-nav">
-                    <a href="#section-overview">Overview</a>
-                    <a href="#section-proposal">Proposal Details</a>
-                    <a href="#section-report">Report Details</a>
-                </nav>
-                <div class="toolbar">
-                    <button type="button" class="btn-ghost" id="btn-expand">Expand all</button>
-                    <button type="button" class="btn-ghost" id="btn-collapse">Collapse all</button>
-                </div>
+    <form method="post" action="{% url 'emt:submit_event_report' proposal.id %}" class="report-preview-form">
+        {% csrf_token %}
+        {% for key, values in post_data.lists %}
+            {% for value in values %}
+                <input type="hidden" name="{{ key }}" value="{{ value|default_if_none:''|escape }}">
+            {% endfor %}
+        {% endfor %}
+        <input type="hidden" name="form-TOTAL_FORMS" value="{{ post_data|get_item:'form-TOTAL_FORMS'|default:'0' }}">
+        <input type="hidden" name="form-INITIAL_FORMS" value="{{ post_data|get_item:'form-INITIAL_FORMS'|default:'0' }}">
+        <input type="hidden" name="form-MIN_NUM_FORMS" value="{{ post_data|get_item:'form-MIN_NUM_FORMS'|default:'0' }}">
+        <input type="hidden" name="form-MAX_NUM_FORMS" value="{{ post_data|get_item:'form-MAX_NUM_FORMS'|default:'1000' }}">
+
+        <div class="preview-intro">
+            <div class="intro-text">
+                <h1 class="intro-title">Preview Activity Report</h1>
+                <p class="intro-subtitle">Review the formatted document before submitting it to IQAC.</p>
             </div>
         </div>
 
-        <form method="post" action="{% url 'emt:submit_event_report' proposal.id %}">
-            {% csrf_token %}
-            {% for key, values in post_data.lists %}
-                {% for value in values %}
-                    <input type="hidden" name="{{ key }}" value="{{ value|default_if_none:''|escape }}">
-                {% endfor %}
-            {% endfor %}
-            {# Ensure attachment formset management fields exist (even if there are no attachments) #}
-            <input type="hidden" name="form-TOTAL_FORMS" value="{{ post_data|get_item:'form-TOTAL_FORMS'|default:'0' }}">
-            <input type="hidden" name="form-INITIAL_FORMS" value="{{ post_data|get_item:'form-INITIAL_FORMS'|default:'0' }}">
-            <input type="hidden" name="form-MIN_NUM_FORMS" value="{{ post_data|get_item:'form-MIN_NUM_FORMS'|default:'0' }}">
-            <input type="hidden" name="form-MAX_NUM_FORMS" value="{{ post_data|get_item:'form-MAX_NUM_FORMS'|default:'1000' }}">
+        <div class="document-wrapper">
+            <div class="document-page">
+                <header class="document-header">
+                    <div class="document-brand">
+                        <div class="document-logo">
+                            <img src="{% static 'core/img/campus-logo.png' %}" alt="Institution logo">
+                        </div>
+                        <div class="document-heading">
+                            <p class="document-institution">{{ proposal.organization.name|default:"Event Management Suite" }}</p>
+                            <h2 class="document-report-label">Activity Report</h2>
+                            <h1 class="document-event-title">{{ proposal.event_title|default:"Event Report" }}</h1>
+                        </div>
+                    </div>
+                    <div class="document-meta-grid">
+                        {% if event_info_summary.department %}
+                            <div class="meta-item">
+                                <span class="meta-label">Department</span>
+                                <span class="meta-value">{{ event_info_summary.department }}</span>
+                            </div>
+                        {% endif %}
+                        {% if event_info_summary.academic_year %}
+                            <div class="meta-item">
+                                <span class="meta-label">Academic Year</span>
+                                <span class="meta-value">{{ event_info_summary.academic_year }}</span>
+                            </div>
+                        {% endif %}
+                        {% if event_info_summary.event_dates %}
+                            <div class="meta-item">
+                                <span class="meta-label">Event Dates</span>
+                                <span class="meta-value">{{ event_info_summary.event_dates }}</span>
+                            </div>
+                        {% endif %}
+                        {% if event_info_summary.venue %}
+                            <div class="meta-item">
+                                <span class="meta-label">Venue</span>
+                                <span class="meta-value">{{ event_info_summary.venue }}</span>
+                            </div>
+                        {% endif %}
+                        {% if event_info_summary.location %}
+                            <div class="meta-item">
+                                <span class="meta-label">Location</span>
+                                <span class="meta-value">{{ event_info_summary.location }}</span>
+                            </div>
+                        {% endif %}
+                        {% if event_info_summary.event_type %}
+                            <div class="meta-item">
+                                <span class="meta-label">Event Type</span>
+                                <span class="meta-value">{{ event_info_summary.event_type }}</span>
+                            </div>
+                        {% endif %}
+                        {% if event_info_summary.signed_date %}
+                            <div class="meta-item">
+                                <span class="meta-label">Report Signed</span>
+                                <span class="meta-value">{{ event_info_summary.signed_date }}</span>
+                            </div>
+                        {% endif %}
+                        {% if event_info_summary.blog_link %}
+                            <div class="meta-item">
+                                <span class="meta-label">Blog Link</span>
+                                <span class="meta-value"><a class="meta-link" href="{{ event_info_summary.blog_link }}" target="_blank" rel="noopener">{{ event_info_summary.blog_link }}</a></span>
+                            </div>
+                        {% endif %}
+                    </div>
+                </header>
 
-            <!-- Overview (concise key info) -->
-            <section id="section-overview" class="section-card" aria-labelledby="sec-overview-title">
-                <div class="section-header">
-                    <div class="section-title" id="sec-overview-title">Overview</div>
-                </div>
-                <div class="grid-two">
-                    <div class="field-row">
-                        <div class="field-label">Title</div>
-                        <div class="field-value">{{ proposal.event_title|default:"—" }}</div>
-                    </div>
-                    <div class="field-row">
-                        <div class="field-label">Organization</div>
-                        <div class="field-value">{{ proposal.organization.name|default:"—" }}</div>
-                    </div>
-                    <div class="field-row">
-                        <div class="field-label">Dates</div>
-                        <div class="field-value">
-                            {% if proposal.event_start_date or proposal.event_end_date %}
-                                {{ proposal.event_start_date|default:"?" }} – {{ proposal.event_end_date|default:"?" }}
+                {% if report_sections %}
+                    {% for section in report_sections %}
+                        <section class="document-section document-section--{{ section.layout }}">
+                            <div class="section-heading">
+                                <span class="section-number">Section {{ forloop.counter }}</span>
+                                <h2 class="section-title">{{ section.title }}</h2>
+                            </div>
+                            {% if section.layout == 'table' %}
+                                <table class="document-table">
+                                    <tbody>
+                                        {% for row in section.rows %}
+                                            {% if row|length == 1 %}
+                                                {% with item=row.0 %}
+                                                    <tr>
+                                                        <th>{{ item.label }}</th>
+                                                        <td colspan="3">{{ item.value|default:"—"|linebreaksbr }}</td>
+                                                    </tr>
+                                                {% endwith %}
+                                            {% else %}
+                                                <tr>
+                                                    {% for item in row %}
+                                                        <th>{{ item.label }}</th>
+                                                        <td>{{ item.value|default:"—"|linebreaksbr }}</td>
+                                                    {% endfor %}
+                                                </tr>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
                             {% else %}
-                                —
+                                <div class="document-blocks">
+                                    {% for item in section.items %}
+                                        {% with value=item.value|default:"" %}
+                                            <div class="document-block{% if value == '—' or value == '' %} is-empty{% endif %}">
+                                                <h3 class="document-block-title">{{ item.label }}</h3>
+                                                <div class="document-block-body">
+                                                    {% if value and value != '—' %}
+                                                        {{ value|linebreaksbr }}
+                                                    {% else %}
+                                                        <span class="muted">—</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        {% endwith %}
+                                    {% endfor %}
+                                </div>
                             {% endif %}
-                        </div>
-                    </div>
-                    <div class="field-row">
-                        <div class="field-label">Venue</div>
-                        <div class="field-value">{{ proposal.venue|default:"—" }}</div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Proposal Details -->
-            <section id="section-proposal" class="section-card" aria-labelledby="sec-proposal-title" data-collapsible>
-                <div class="section-header">
-                    <div class="section-title" id="sec-proposal-title">Proposal Details</div>
-                    <div class="toolbar">
-                        <button type="button" class="btn-ghost" data-toggle>Toggle</button>
-                    </div>
-                </div>
-                <div class="divider"></div>
-                <div class="preview-fields">
-                    {% for label, value in proposal_fields %}
-                        <div class="field-row">
-                            <div class="field-label">{{ label }}</div>
-                            <div class="field-value{% if not value %} muted{% endif %}">{{ value|default:"Not provided" }}</div>
-                        </div>
+                        </section>
                     {% endfor %}
-                </div>
-            </section>
+                {% endif %}
 
-            <!-- Report Details -->
-            <section id="section-report" class="section-card" aria-labelledby="sec-report-title" data-collapsible>
-                <div class="section-header">
-                    <div class="section-title" id="sec-report-title">Report Details</div>
-                    <div class="toolbar">
-                        <button type="button" class="btn-ghost" data-toggle>Toggle</button>
-                    </div>
-                </div>
-                <div class="divider"></div>
-                <div class="preview-fields">
-                    {% for label, value in report_fields %}
-                        <div class="field-row">
-                            <div class="field-label">{{ label }}</div>
-                            <div class="field-value{% if not value %} muted{% endif %}">{{ value|default:"Not provided" }}</div>
-                        </div>
-                    {% endfor %}
-                </div>
-            </section>
+                {% if activities %}
+                    <section class="document-subsection">
+                        <h3 class="document-subsection-title">Activities Conducted</h3>
+                        <table class="document-table document-table--simple">
+                            <thead>
+                                <tr>
+                                    <th>Activity</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for activity in activities %}
+                                    <tr>
+                                        <td>{{ activity.name|default:"—"|linebreaksbr }}</td>
+                                        <td>{{ activity.date|default:"—"|linebreaksbr }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </section>
+                {% endif %}
 
-            <div class="sticky-actions">
-                <div class="actions-bar">
-                    <button type="button" class="btn-secondary" id="btn-back">Back to Edit</button>
-                    <button type="submit" name="final_submit" class="btn-primary">Submit Report</button>
-                </div>
+                {% if committee_members %}
+                    <section class="document-subsection">
+                        <h3 class="document-subsection-title">Organizing Committee</h3>
+                        <table class="document-table document-table--simple">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Role</th>
+                                    <th>Department / Organization</th>
+                                    <th>Contact</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for member in committee_members %}
+                                    <tr>
+                                        <td>{{ member.name|default:"—"|linebreaksbr }}</td>
+                                        <td>{{ member.role|default:"—"|linebreaksbr }}</td>
+                                        <td>{{ member.department|default:"—"|linebreaksbr }}</td>
+                                        <td>{{ member.contact|default:"—"|linebreaksbr }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </section>
+                {% endif %}
+
+                {% if speaker_sessions %}
+                    <section class="document-subsection">
+                        <h3 class="document-subsection-title">Speaker Sessions</h3>
+                        <table class="document-table document-table--simple">
+                            <thead>
+                                <tr>
+                                    <th>Speaker</th>
+                                    <th>Topic</th>
+                                    <th>Duration (minutes)</th>
+                                    <th>Feedback / Comments</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for session in speaker_sessions %}
+                                    <tr>
+                                        <td>{{ session.speaker|default:"—"|linebreaksbr }}</td>
+                                        <td>{{ session.topic|default:"—"|linebreaksbr }}</td>
+                                        <td>{{ session.duration|default:"—"|linebreaksbr }}</td>
+                                        <td>{{ session.feedback|default:"—"|linebreaksbr }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </section>
+                {% endif %}
             </div>
-        </form>
-        </main>
-    </div>
+        </div>
+
+        {% if proposal_snapshot_rows %}
+            <div class="supplementary-panel">
+                <details class="supplementary-details">
+                    <summary>View proposal snapshot</summary>
+                    <div class="supplementary-content">
+                        <table class="document-table document-table--flat">
+                            <tbody>
+                                {% for row in proposal_snapshot_rows %}
+                                    {% if row|length == 1 %}
+                                        {% with item=row.0 %}
+                                            <tr>
+                                                <th>{{ item.label }}</th>
+                                                <td colspan="3">{{ item.value|default:"—"|linebreaksbr }}</td>
+                                            </tr>
+                                        {% endwith %}
+                                    {% else %}
+                                        <tr>
+                                            {% for item in row %}
+                                                <th>{{ item.label }}</th>
+                                                <td>{{ item.value|default:"—"|linebreaksbr }}</td>
+                                            {% endfor %}
+                                        </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+            </div>
+        {% endif %}
+
+        <div class="sticky-actions">
+            <div class="actions-bar">
+                <button type="button" class="btn-secondary" id="btn-back">Back to Edit</button>
+                <button type="submit" name="final_submit" class="btn-primary">Submit Report</button>
+            </div>
+        </div>
+    </form>
+</div>
 
 <script>
-        (function(){
-            // Smooth scroll for top pill links
-            document.querySelectorAll('.pill-nav a').forEach(a => {
-            a.addEventListener('click', (e) => {
-                const href = a.getAttribute('href');
-                if (href && href.startsWith('#')) {
-                    e.preventDefault();
-                    const el = document.querySelector(href);
-                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
+    (function () {
+        const backBtn = document.getElementById('btn-back');
+        if (backBtn) {
+            backBtn.addEventListener('click', function (event) {
+                event.preventDefault();
+                window.history.back();
             });
-        });
-
-        // Collapsible sections
-        function setCollapsed(section, collapsed){
-            const fields = section.querySelector('.preview-fields');
-            if (!fields) return;
-            fields.style.display = collapsed ? 'none' : '';
         }
-        document.querySelectorAll('[data-collapsible]').forEach(sec => {
-            const btn = sec.querySelector('[data-toggle]');
-            if (btn) btn.addEventListener('click', () => {
-                const fields = sec.querySelector('.preview-fields');
-                const isHidden = fields && fields.style.display === 'none';
-                setCollapsed(sec, !isHidden);
-            });
-        });
-        const all = Array.from(document.querySelectorAll('[data-collapsible]'));
-        document.getElementById('btn-expand')?.addEventListener('click', () => all.forEach(s => setCollapsed(s, false)));
-        document.getElementById('btn-collapse')?.addEventListener('click', () => all.forEach(s => setCollapsed(s, true)));
-
-        // Back button
-        document.getElementById('btn-back')?.addEventListener('click', () => { history.back(); });
     })();
 </script>
 {% endblock %}
