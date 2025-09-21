@@ -27,6 +27,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.dateparse import parse_date
+from django.utils.formats import date_format
 from django.utils.timezone import now
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_POST
@@ -2292,6 +2293,49 @@ def preview_event_report(request, proposal_id):
         return redirect("emt:submit_event_report", proposal_id=proposal.id)
 
     post_data = request.POST.copy()
+
+    def _coerce_date(value):
+        if not value:
+            return None
+        parsed = parse_date(value)
+        return parsed or value
+
+    def _display_date(value):
+        if not value:
+            return None
+        if hasattr(value, "isoformat"):
+            try:
+                return date_format(value, "DATE_FORMAT")
+            except Exception:  # pragma: no cover - fallback for unexpected types
+                return str(value)
+        parsed = parse_date(value) if isinstance(value, str) else None
+        if parsed:
+            return date_format(parsed, "DATE_FORMAT")
+        return value
+
+    # Update proposal snapshot values with any edits coming from the report form so
+    # that the preview reflects the latest user-provided data instead of the
+    # original submission only.
+    updated_title = (post_data.get("event_title") or "").strip()
+    if updated_title:
+        proposal.event_title = updated_title
+
+    updated_venue = (post_data.get("venue") or post_data.get("venue_detail") or "").strip()
+    if updated_venue:
+        proposal.venue = updated_venue
+
+    start_value = _coerce_date(post_data.get("event_start_date"))
+    if start_value:
+        proposal.event_start_date = start_value
+
+    end_value = _coerce_date(post_data.get("event_end_date"))
+    if end_value:
+        proposal.event_end_date = end_value
+
+    academic_year_override = (post_data.get("academic_year") or "").strip()
+    if academic_year_override:
+        proposal.academic_year = academic_year_override
+
     # Front-end uses event_summary/event_outcomes; map them to model fields
     if "event_summary" in post_data and "summary" not in post_data:
         post_data["summary"] = post_data.pop("event_summary")
@@ -2436,7 +2480,34 @@ def preview_event_report(request, proposal_id):
 
     # Prepare report form fields for preview
     report_fields = []
+
+    manual_report_fields = [
+        ("Department", (post_data.get("department") or getattr(proposal.organization, "name", "")).strip()),
+        ("Event Title", proposal.event_title),
+        ("Venue", proposal.venue),
+        ("Event Start Date", _display_date(start_value or proposal.event_start_date)),
+        ("Event End Date", _display_date(end_value or proposal.event_end_date)),
+        ("Academic Year", proposal.academic_year),
+    ]
+
+    for label, raw in manual_report_fields:
+        value = raw if raw not in (None, "") else "—"
+        report_fields.append((label, value))
+
+    excluded_report_fields = {
+        "actual_speakers",
+        "external_contact_details",
+        "impact_on_stakeholders",
+        "innovations_best_practices",
+        "iqac_feedback",
+        "report_signed_date",
+        "beneficiaries_details",
+        "attendance_notes",
+    }
+
     for name, field in form.fields.items():
+        if name in excluded_report_fields:
+            continue
         values = post_data.getlist(name)
         display = ", ".join(values) if values else "—"
         report_fields.append((field.label, display))
