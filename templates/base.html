@@ -56,8 +56,12 @@
 
       <div class="utility-right" style="display: flex; align-items: center; gap: 1.5rem;">
         <div class="notification-section">
-          <button class="utility-btn notification-btn" id="notificationBtn" aria-label="Notifications" aria-haspopup="true" aria-expanded="false" style="position:relative;">
-            <i class="fa fa-bell notification-icon" style="font-size:1.5rem;color:#d4af37;"></i>
+          <button class="utility-btn notification-btn" id="notificationBtn" aria-label="Notifications" aria-haspopup="true" aria-expanded="false" type="button">
+            <span class="notification-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" focusable="false" aria-hidden="true">
+                <path d="M12 2a6 6 0 0 0-6 6v3.586l-.707.707A1 1 0 0 0 6 14h12a1 1 0 0 0 .707-1.707L18 11.586V8a6 6 0 0 0-6-6zm0 20a3 3 0 0 0 3-3H9a3 3 0 0 0 3 3z"/>
+              </svg>
+            </span>
             {% if notifications and notifications|length > 0 %}
             <span class="notification-badge" id="notificationBadge" style="position:absolute;top:2px;right:2px;min-width:18px;padding:2px 6px;border-radius:10px;background:#ef4444;color:#fff;font-size:0.75rem;font-weight:700;text-align:center;z-index:2;">{{ notifications|length }}</span>
             {% endif %}
@@ -74,7 +78,7 @@
             <div class="notification-list" id="notificationList" style="max-height:340px;overflow-y:auto;">
               {% if notifications and notifications|length > 0 %}
                 {% for notification in notifications %}
-                <div class="notification-item {% if not notification.is_read %}unread{% endif %}" style="display:flex;gap:.85rem;padding:.95rem 1.25rem;border-bottom:1px solid #f3f4f6;{% if not notification.is_read %}background:#f3f4f6;{% endif %}">
+                <div class="notification-item {% if not notification.is_read %}unread{% endif %}" style="display:flex;gap:.85rem;padding:.95rem 1.25rem;border-bottom:1px solid #f3f4f6;">
                   <div class="notification-icon" style="width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#e8f0f9;color:#2c5aa0;font-size:1.2rem;">
                     <i class="fa fa-{{ notification.icon|default:'bell' }}"></i>
                   </div>
@@ -94,12 +98,13 @@
             </div>
             {% if notifications and notifications|length > 0 %}
             <div class="notification-footer" style="padding:.7rem 1.25rem;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:right;">
-              <a href="{% url 'notifications' %}" class="view-all-link" style="color:#2c5aa0;font-weight:600;font-size:.95rem;text-decoration:underline;">View all notifications</a>
+              <a href="{% url 'cdl_notifications' %}" class="view-all-link" style="color:#2c5aa0;font-weight:600;font-size:.95rem;text-decoration:underline;">View all notifications</a>
             </div>
             {% endif %}
           </div>
           <style>
             .notification-dropdown.active{opacity:1!important;visibility:visible!important;transform:translateY(0)!important;}
+            .notification-item.unread{background:#f3f4f6;}
             .notification-item.unread .notification-title{color:#2c5aa0;}
             .mark-all-read:hover{background:#2c5aa0!important;color:#fff!important;}
           </style>
@@ -216,7 +221,7 @@
     <i class="fas fa-chevron-right expand-icon {% if 'users' in request.path or 'user-roles' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' %}rotated{% endif %}"></i>
   </div>
   <div class="nav-submenu {% if 'users' in request.path or 'user-roles' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' %}open{% endif %}">
-    <a href="/core-admin/users/" class="nav-sublink {% if request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_user_panel' %}active{% endif %}">
+    <a href="/core-admin/users/" class="nav-sublink {% if request.resolver_match.url_name == 'admin_user_management' %}active{% endif %}">
       <i class="fas fa-user"></i> Manage Users
     </a>
     <a href="/core-admin/user-roles/" class="nav-sublink {% if request.resolver_match.url_name == 'admin_role_management' %}active{% endif %}">
@@ -300,22 +305,7 @@
 {% endif %}
 
 
-      <div class="json-controls" style="position: fixed; bottom: 0; left: 0; width: 280px; padding: 6px; background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(8px); border-top: 1px solid rgba(229, 231, 235, 0.3); z-index: 100;">
-        <div style="display: flex; gap: 4px;">
-          <button id="download-json-btn" class="json-btn" style="flex: 1; padding: 4px; border-radius: 4px; border: 1px solid rgba(229, 231, 235, 0.4); background: rgba(248, 250, 252, 0.4); color: rgba(55, 65, 81, 0.65); font-size: 0.7rem; display: flex; align-items: center; justify-content: center; gap: 3px; min-height: 24px; transition: all 0.2s ease;">
-            <i class="fas fa-download" style="font-size: 0.7rem; opacity: 0.5;"></i> JSON
-          </button>
-          <label for="upload-json-input" class="json-btn" style="flex: 1; padding: 4px; border-radius: 4px; border: 1px solid rgba(229, 231, 235, 0.4); background: rgba(248, 250, 252, 0.4); color: rgba(55, 65, 81, 0.65); font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 3px; min-height: 24px; transition: all 0.2s ease;">
-            <i class="fas fa-upload" style="font-size: 0.7rem; opacity: 0.5;"></i> JSON
-          </label>
-          <input type="file" id="upload-json-input" accept=".json" style="display: none;">
-        </div>
-      </div>
-
-      <style>
-        .json-btn:hover { background: rgba(248, 250, 252, 0.8) !important; color: rgba(55, 65, 81, 0.9) !important; border-color: rgba(229, 231, 235, 0.6) !important; }
-        .json-btn:hover i { opacity: 0.8 !important; }
-      </style>
+      
 
     </nav>
   </div>
@@ -428,7 +418,6 @@
     });
   </script>
 
-  <script src="{% static 'emt/js/json_sync.js' %}"></script>
   {% block scripts %}{% endblock %}
   {% block scripts_extra %}{% endblock %}
 </body>

@@ -322,6 +322,10 @@
 .btn-secondary:hover{background: var(--subtle); border-color: var(--muted);}
 .btn-secondary:disabled{opacity:.6; cursor:not-allowed;}
 
+/* Ensure custom profile buttons show clickable cursor */
+.ems-dashboard .btn-profile-primary,
+.ems-dashboard .btn-profile-secondary{ cursor: pointer; }
+
 /* -------- Event Details -------- */
 .event-details-content { padding: 14px 16px; min-height: 120px; max-height: calc(var(--contribH) - 70px); overflow-y: auto }
 .event-detail-item .row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
