@@ -3574,7 +3574,110 @@ def save_ai_report(request):
 @login_required
 def ai_report_progress(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id)
-    return render(request, "emt/ai_report_progress.html", {"proposal": proposal})
+    report = EventReport.objects.filter(proposal=proposal).first()
+
+    def clean_text(value):
+        if value is None:
+            return ""
+        if isinstance(value, (int, float)):
+            return str(value)
+        return str(value).strip()
+
+    def report_value(attr):
+        if not report:
+            return None
+        return getattr(report, attr, None)
+
+    def to_list(value):
+        if not value:
+            return []
+        text = str(value)
+        if "\n" in text or "\r" in text:
+            raw_items = re.split(r"[\r\n]+", text)
+        else:
+            raw_items = re.split(r",|;", text)
+        cleaned = []
+        for item in raw_items:
+            stripped = item.strip()
+            stripped = re.sub(r"^[-*•\u2022]+\s*", "", stripped)
+            if stripped:
+                cleaned.append(stripped)
+        return cleaned
+
+    event_schedule = ""
+    if proposal.event_start_date and proposal.event_end_date:
+        start = date_format(proposal.event_start_date, "d M Y")
+        end = date_format(proposal.event_end_date, "d M Y")
+        if proposal.event_start_date == proposal.event_end_date:
+            event_schedule = start
+        else:
+            event_schedule = f"{start} – {end}"
+    elif proposal.event_start_date:
+        start = date_format(proposal.event_start_date, "d M Y")
+        if proposal.event_end_date and proposal.event_end_date != proposal.event_start_date:
+            end = date_format(proposal.event_end_date, "d M Y")
+            event_schedule = f"{start} – {end}"
+        else:
+            event_schedule = start
+    elif proposal.event_datetime:
+        event_schedule = date_format(proposal.event_datetime, "d M Y, H:i")
+
+    initial_data = {
+        "event_info": {
+            "department": clean_text(proposal.organization) if proposal.organization else "",
+            "location": clean_text(report_value("location")),
+            "title": clean_text(proposal.event_title),
+            "activities_count": clean_text(proposal.num_activities) if proposal.num_activities is not None else "",
+            "datetime": event_schedule,
+            "venue": clean_text(proposal.venue),
+            "academic_year": clean_text(proposal.academic_year),
+            "focus": clean_text(proposal.event_focus_type),
+        },
+        "participants": {
+            "target_audience": clean_text(proposal.target_audience),
+            "external_agencies": clean_text(report_value("actual_speakers")),
+            "external_contacts": clean_text(report_value("external_contact_details")),
+            "organising_committee": to_list(report_value("organizing_committee")),
+            "student_volunteers": clean_text(report_value("num_student_volunteers")),
+            "participants_count": clean_text(report_value("num_participants")),
+        },
+        "summary": clean_text(report_value("summary")),
+        "activities": to_list(report_value("notable_moments")),
+        "social_relevance": to_list(report_value("impact_assessment")),
+        "outcomes": to_list(report_value("outcomes")),
+        "analysis": {
+            "attendees": clean_text(report_value("impact_on_stakeholders")),
+            "schools": clean_text(report_value("analysis")),
+            "volunteers": clean_text(report_value("lessons_learned")),
+        },
+        "relevance": {
+            "graduate_attributes": clean_text(report_value("pos_pso_mapping")),
+            "sdg": clean_text(report_value("sdg_value_systems_mapping")),
+        },
+        "suggestions": to_list(report_value("iqac_feedback")),
+        "suggestions_date": date_format(report_value("report_signed_date"), "d M Y")
+        if report_value("report_signed_date")
+        else "",
+        "annexures": {
+            "photos": [],
+            "brochure_pages": [],
+            "communication": {
+                "subject": "",
+                "date": "",
+                "volunteer_list": [],
+            },
+            "worksheets": [],
+            "evaluation_sheet": None,
+            "feedback_form": None,
+        },
+    }
+
+    context = {
+        "proposal": proposal,
+        "report": report,
+        "initial_report_data": json.dumps(initial_data, ensure_ascii=False),
+    }
+    return render(request, "emt/ai_report_progress.html", context)
 
 
 @csrf_exempt
