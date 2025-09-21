@@ -2705,7 +2705,7 @@ def preview_event_report(request, proposal_id):
         "report_fields": report_fields,
         "form": form,
     }
-    return render(request, "emt/report_preview.html", context)
+    return render(request, "emt/iqac_report_preview.html", context)
 
 
 @login_required
