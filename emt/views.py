@@ -2543,16 +2543,24 @@ def preview_event_report(request, proposal_id):
     report_fields = []
 
     manual_report_fields = [
-        ("Department", (post_data.get("department") or getattr(proposal.organization, "name", "")).strip()),
+        (
+            "Department",
+            (post_data.get("department") or getattr(proposal.organization, "name", "")).strip(),
+        ),
         ("Event Title", proposal.event_title),
         ("Venue", proposal.venue),
-        ("Event Start Date", _display_date(start_value or proposal.event_start_date)),
+        (
+            "Event Start Date",
+            _display_date(start_value or proposal.event_start_date),
+        ),
         ("Event End Date", _display_date(end_value or proposal.event_end_date)),
         ("Academic Year", proposal.academic_year),
     ]
 
     for label, raw in manual_report_fields:
         report_fields.append((label, _format_display(raw)))
+
+    report_signed_date_display = None
 
     for name, field in form.fields.items():
         values = post_data.getlist(name)
@@ -2565,6 +2573,7 @@ def preview_event_report(request, proposal_id):
                     display_value = _display_date(raw)
                     break
             report_fields.append((field.label, _format_display(display_value)))
+            report_signed_date_display = _format_display(display_value)
             continue
 
         cleaned_values = []
@@ -2586,6 +2595,7 @@ def preview_event_report(request, proposal_id):
     # Include dynamic activities submitted with the report
     import re as _re
 
+    preview_activities = []
     idx_pattern = _re.compile(r"^activity_(?:name|date)_(\d+)$")
     indices = sorted(
         {int(m.group(1)) for key in post_data.keys() if (m := idx_pattern.match(key))}
@@ -2594,6 +2604,12 @@ def preview_event_report(request, proposal_id):
         a_name = post_data.get(f"activity_name_{idx}")
         a_date = post_data.get(f"activity_date_{idx}")
         if a_name or a_date:
+            preview_activities.append(
+                {
+                    "name": _format_display(a_name),
+                    "date": _display_date(a_date) or _format_display(a_date),
+                }
+            )
             report_fields.append((f"Activity {idx} - Name", a_name or "—"))
             report_fields.append((f"Activity {idx} - Date", a_date or "—"))
 
@@ -2608,6 +2624,8 @@ def preview_event_report(request, proposal_id):
     committee_roles = post_data.getlist("committee_member_roles[]")
     committee_departments = post_data.getlist("committee_member_departments[]")
     committee_contacts = post_data.getlist("committee_member_contacts[]")
+
+    committee_members = []
 
     def _combine(values, idx):
         try:
@@ -2631,6 +2649,14 @@ def preview_event_report(request, proposal_id):
             continue
 
         label_prefix = f"Committee Member {idx + 1}"
+        committee_members.append(
+            {
+                "name": _format_display(name),
+                "role": _format_display(role),
+                "department": _format_display(dept),
+                "contact": _format_display(contact),
+            }
+        )
         report_fields.extend(
             [
                 (f"{label_prefix} - Name", _format_display(name)),
@@ -2653,6 +2679,8 @@ def preview_event_report(request, proposal_id):
         str(speaker.id): speaker for speaker in proposal.speakers.all()
     }
 
+    speaker_sessions = []
+
     for idx in range(
         max(
             len(speaker_topics),
@@ -2672,37 +2700,301 @@ def preview_event_report(request, proposal_id):
         label_prefix = f"Speaker Session {idx + 1}"
         display_values = []
 
+        speaker_display = None
         if speaker_id:
             speaker_obj = speaker_lookup.get(str(speaker_id))
             speaker_name = getattr(speaker_obj, "full_name", None) if speaker_obj else None
+            speaker_display = _format_display(speaker_name or speaker_id)
             display_values.append(
                 (
                     f"{label_prefix} - Speaker",
-                    _format_display(speaker_name or speaker_id),
+                    speaker_display,
                 )
             )
 
+        topic_display = _format_display(topic)
+        duration_display = _format_display(duration)
+        feedback_display = _format_display(feedback)
+
         display_values.extend(
             [
-                (f"{label_prefix} - Topic", _format_display(topic)),
+                (f"{label_prefix} - Topic", topic_display),
                 (
                     f"{label_prefix} - Duration (minutes)",
-                    _format_display(duration),
+                    duration_display,
                 ),
                 (
                     f"{label_prefix} - Feedback/Comments",
-                    _format_display(feedback),
+                    feedback_display,
                 ),
             ]
         )
 
+        speaker_sessions.append(
+            {
+                "speaker": speaker_display or _format_display(speaker_id),
+                "topic": topic_display,
+                "duration": duration_display,
+                "feedback": feedback_display,
+            }
+        )
+
         report_fields.extend(display_values)
+
+    label_overrides = {
+        "department": "Department",
+        "event title": "Event Title",
+        "venue": "Venue",
+        "event start date": "Event Start Date",
+        "event end date": "Event End Date",
+        "academic year": "Academic Year",
+        "location": "Location",
+        "actual event type": "Event Type (Actual)",
+        "blog link": "Blog Link",
+        "report signed date": "Report Signed Date",
+        "num student volunteers": "No. of Student Volunteers",
+        "num participants": "No. of Participants",
+        "num student participants": "No. of Student Participants",
+        "num faculty participants": "No. of Faculty Participants",
+        "num external participants": "No. of External Participants",
+        "organizing committee": "Organizing Committee",
+        "actual speakers": "Actual Speakers",
+        "external contact details": "External Contact Details",
+        "beneficiaries details": "Beneficiaries Details",
+        "attendance notes": "Attendance Notes",
+        "number of activities conducted": "No. of Activities Conducted",
+        "summary": "Event Summary",
+        "key achievements": "Key Achievements",
+        "notable moments": "Notable Moments",
+        "outcomes": "Outcomes",
+        "learning outcomes": "Learning Outcomes",
+        "participant feedback": "Participant Feedback",
+        "measurable outcomes": "Measurable Outcomes",
+        "impact assessment": "Impact Assessment",
+        "analysis": "Overall Analysis",
+        "objective achievement": "Achievement of Objectives",
+        "strengths analysis": "Strengths Analysis",
+        "challenges analysis": "Challenges Faced",
+        "effectiveness analysis": "Effectiveness Analysis",
+        "lessons learned": "Lessons Learned",
+        "impact on stakeholders": "Impact on Stakeholders",
+        "innovations best practices": "Innovations & Best Practices",
+        "pos pso mapping": "POs / PSOs Mapping",
+        "needs grad attr mapping": "Needs & Graduate Attributes Mapping",
+        "contemporary requirements": "Contemporary Requirements",
+        "sdg value systems mapping": "SDG & Value Systems Mapping",
+        "iqac feedback": "IQAC Feedback & Suggestions",
+    }
+
+    def _normalise_key(label: str) -> str:
+        return _re.sub(r"[^a-z0-9]+", " ", str(label or "").lower()).strip()
+
+    def _beautify_label(label: str) -> str:
+        normalised = _normalise_key(label)
+        if normalised in label_overrides:
+            return label_overrides[normalised]
+        base = str(label or "").replace("_", " ").strip()
+        base = _re.sub(r"\s+", " ", base)
+        if not base:
+            return "—"
+        display = base.title()
+        replacements = {
+            "Iqac": "IQAC",
+            "Sdg": "SDG",
+            "Sdgs": "SDGs",
+            "Pos": "POs",
+            "Pso": "PSO",
+            "Psos": "PSOs",
+        }
+        for source, replacement in replacements.items():
+            display = display.replace(source, replacement)
+        return display
+
+    event_info_keys = {
+        "department",
+        "event title",
+        "venue",
+        "event start date",
+        "event end date",
+        "academic year",
+        "location",
+        "actual event type",
+        "blog link",
+        "report signed date",
+    }
+    participants_keys = {
+        "num participants",
+        "num student participants",
+        "num faculty participants",
+        "num external participants",
+        "num student volunteers",
+        "organizing committee",
+        "actual speakers",
+        "external contact details",
+        "beneficiaries details",
+        "attendance notes",
+        "number of activities conducted",
+    }
+    summary_keys = {"summary", "key achievements", "notable moments"}
+    outcomes_keys = {
+        "outcomes",
+        "learning outcomes",
+        "participant feedback",
+        "measurable outcomes",
+        "impact assessment",
+    }
+    analysis_keys = {
+        "analysis",
+        "objective achievement",
+        "strengths analysis",
+        "challenges analysis",
+        "effectiveness analysis",
+        "lessons learned",
+    }
+    relevance_keys = {
+        "impact on stakeholders",
+        "innovations best practices",
+        "pos pso mapping",
+        "needs grad attr mapping",
+        "contemporary requirements",
+        "sdg value systems mapping",
+    }
+    suggestions_keys = {"iqac feedback"}
+
+    section_definitions = [
+        ("event_info", {"title": "Event Information", "layout": "table"}),
+        ("participants", {"title": "Participants Information", "layout": "table"}),
+        ("summary", {"title": "Summary of the Overall Event", "layout": "blocks"}),
+        ("outcomes", {"title": "Outcomes of the Event", "layout": "blocks"}),
+        ("analysis", {"title": "Analysis", "layout": "blocks"}),
+        ("relevance", {"title": "Relevance of the Event", "layout": "blocks"}),
+        ("suggestions", {"title": "Suggestions for Improvement", "layout": "blocks"}),
+        ("additional", {"title": "Additional Details", "layout": "blocks"}),
+    ]
+
+    section_items: dict[str, list[dict[str, str]]] = {
+        key: [] for key, _ in section_definitions
+    }
+
+    for label, value in report_fields:
+        normalised = _normalise_key(label)
+        if not normalised:
+            continue
+        if normalised.startswith("activity "):
+            continue
+        if normalised.startswith("committee member"):
+            continue
+        if normalised.startswith("speaker session"):
+            continue
+
+        display_label = _beautify_label(label)
+        entry = {
+            "label": display_label,
+            "value": value,
+            "normalized": normalised,
+        }
+        if normalised in event_info_keys:
+            section_items["event_info"].append(entry)
+        elif normalised in participants_keys:
+            section_items["participants"].append(entry)
+        elif normalised in summary_keys:
+            section_items["summary"].append(entry)
+        elif normalised in outcomes_keys:
+            section_items["outcomes"].append(entry)
+        elif normalised in analysis_keys:
+            section_items["analysis"].append(entry)
+        elif normalised in relevance_keys:
+            section_items["relevance"].append(entry)
+        elif normalised in suggestions_keys:
+            section_items["suggestions"].append(entry)
+        else:
+            section_items["additional"].append(entry)
+
+    def _chunk_pairs(items):
+        rows = []
+        current = []
+        for item in items:
+            current.append(item)
+            if len(current) == 2:
+                rows.append(current)
+                current = []
+        if current:
+            rows.append(current)
+        return rows
+
+    document_sections = []
+    for key, meta in section_definitions:
+        items = section_items[key]
+        if not items:
+            continue
+        if all(str(item.get("value", "")).strip() == "—" for item in items):
+            continue
+        section_data = {
+            "key": key,
+            "title": meta["title"],
+            "layout": meta["layout"],
+            "items": items,
+        }
+        if meta["layout"] == "table":
+            section_data["rows"] = _chunk_pairs(items)
+        document_sections.append(section_data)
+
+    def _clean_value(value):
+        text = str(value or "").strip()
+        return "" if text == "—" else text
+
+    def _combine_dates(start_value, end_value):
+        start_text = _clean_value(start_value)
+        end_text = _clean_value(end_value)
+        if start_text and end_text:
+            if start_text == end_text:
+                return start_text
+            return f"{start_text} – {end_text}"
+        if start_text:
+            return start_text
+        if end_text:
+            return end_text
+        return ""
+
+    event_info_lookup = {
+        item["normalized"]: item["value"] for item in section_items["event_info"]
+    }
+    event_info_summary = {
+        "department": _clean_value(event_info_lookup.get("department")),
+        "academic_year": _clean_value(event_info_lookup.get("academic year")),
+        "venue": _clean_value(event_info_lookup.get("venue")),
+        "location": _clean_value(event_info_lookup.get("location")),
+        "event_type": _clean_value(event_info_lookup.get("actual event type")),
+        "blog_link": _clean_value(event_info_lookup.get("blog link")),
+        "event_dates": _combine_dates(
+            event_info_lookup.get("event start date"),
+            event_info_lookup.get("event end date"),
+        ),
+        "signed_date": _clean_value(
+            event_info_lookup.get("report signed date") or report_signed_date_display
+        ),
+    }
+
+    proposal_snapshot_items = [
+        {
+            "label": _beautify_label(label),
+            "value": _format_display(value),
+        }
+        for label, value in proposal_fields
+    ]
+    proposal_snapshot_rows = _chunk_pairs(proposal_snapshot_items)
 
     context = {
         "proposal": proposal,
         "post_data": post_data,
         "proposal_fields": proposal_fields,
         "report_fields": report_fields,
+        "report_sections": document_sections,
+        "event_info_summary": event_info_summary,
+        "activities": preview_activities,
+        "committee_members": committee_members,
+        "speaker_sessions": speaker_sessions,
+        "proposal_snapshot_rows": proposal_snapshot_rows,
         "form": form,
     }
     return render(request, "emt/report_preview.html", context)
