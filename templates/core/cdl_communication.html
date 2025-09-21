@@ -21,6 +21,13 @@
   #commForm input[type=file]{font-size:12px}
   #commForm button{background:#264487;color:#fff;border:none;padding:10px 16px;border-radius:10px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
   #commForm button:hover{background:#1e3a73}
+  #commForm .input-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}
+  #commForm .send-btn{padding:12px 16px;border-radius:10px;height:fit-content;align-self:end}
+  #commForm textarea:focus{outline:2px solid #264487;outline-offset:2px}
+  @media (max-width: 640px){
+    #commForm .input-row{grid-template-columns:1fr}
+    #commForm .send-btn{width:100%}
+  }
   .empty-log{padding:40px 0;text-align:center;color:#64748b;font-size:14px}
 </style>
 {% endblock %}
@@ -54,10 +61,12 @@
       </div>
     </div>
     <form id="commForm" enctype="multipart/form-data">
-      <textarea id="commText" placeholder="Write a comment..." maxlength="4000"></textarea>
+      <div class="input-row">
+        <textarea id="commText" placeholder="Write a comment..." maxlength="4000" aria-label="Message input"></textarea>
+        <button type="submit" class="send-btn" aria-label="Send message" title="Send (Shift+Enter)"><i class="fa-solid fa-paper-plane"></i></button>
+      </div>
       <div class="row" style="align-items:center">
         <input type="file" id="commFile" name="attachment" />
-        <button type="submit" style="padding:6px 14px;font-size:13px;border-radius:8px"><i class="fa-solid fa-paper-plane"></i></button>
       </div>
     </form>
   </section>
