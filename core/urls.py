@@ -1,6 +1,7 @@
 # core/urls.py
 
 from django.urls import path
+from django.views.generic import RedirectView
 
 from . import views
 from . import views_admin_org_users as orgu
@@ -20,7 +21,9 @@ urlpatterns = [
     path("dashboard/select/<str:dashboard_key>/", views.select_dashboard, name="select_dashboard"),
     path("my-profile/", views.my_profile, name="my_profile"),
     path("user-dashboard/", views.user_dashboard, name="user_dashboard"),
-    path("notifications/", views.notifications_page, name="notifications"),
+    # Redirect old notifications URL to the new CDL-specific notifications page
+    path("notifications/", RedirectView.as_view(pattern_name="cdl_notifications", permanent=True)),
+    path("cdl/notifications/", views.cdl_notifications_page, name="cdl_notifications"),
     path("event/<int:proposal_id>/details/", views.student_event_details, name="student_event_details"),
     # ────────────────────────────────────────────────
     # CDL (Creative & Design Lab) Dashboards & Workflows

@@ -74,7 +74,7 @@
             <div class="notification-list" id="notificationList" style="max-height:340px;overflow-y:auto;">
               {% if notifications and notifications|length > 0 %}
                 {% for notification in notifications %}
-                <div class="notification-item {% if not notification.is_read %}unread{% endif %}" style="display:flex;gap:.85rem;padding:.95rem 1.25rem;border-bottom:1px solid #f3f4f6;{% if not notification.is_read %}background:#f3f4f6;{% endif %}">
+                <div class="notification-item {% if not notification.is_read %}unread{% endif %}" style="display:flex;gap:.85rem;padding:.95rem 1.25rem;border-bottom:1px solid #f3f4f6;">
                   <div class="notification-icon" style="width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#e8f0f9;color:#2c5aa0;font-size:1.2rem;">
                     <i class="fa fa-{{ notification.icon|default:'bell' }}"></i>
                   </div>
@@ -94,12 +94,13 @@
             </div>
             {% if notifications and notifications|length > 0 %}
             <div class="notification-footer" style="padding:.7rem 1.25rem;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:right;">
-              <a href="{% url 'notifications' %}" class="view-all-link" style="color:#2c5aa0;font-weight:600;font-size:.95rem;text-decoration:underline;">View all notifications</a>
+              <a href="{% url 'cdl_notifications' %}" class="view-all-link" style="color:#2c5aa0;font-weight:600;font-size:.95rem;text-decoration:underline;">View all notifications</a>
             </div>
             {% endif %}
           </div>
           <style>
             .notification-dropdown.active{opacity:1!important;visibility:visible!important;transform:translateY(0)!important;}
+            .notification-item.unread{background:#f3f4f6;}
             .notification-item.unread .notification-title{color:#2c5aa0;}
             .mark-all-read:hover{background:#2c5aa0!important;color:#fff!important;}
           </style>

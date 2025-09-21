@@ -24,18 +24,19 @@
 
   <!-- Filters Panel (CDL-focused) -->
   <section class="filters-panel">
+    <form id="analysisFilters" method="get" action="{% url 'cdl_analysis_page' %}">
     <div class="filter-group">
       <div class="filter-item">
         <label>Date Range</label>
         <div class="date-range">
-          <input type="date" id="filter-start-date" name="start_date" class="form-control" value="{{ filters.start_date|default:'' }}">
+          <input type="date" id="filter-start-date" name="start_date" class="form-control" placeholder="dd-mm-yyyy" value="{{ filters.start_date|default:'' }}">
           <span>to</span>
-          <input type="date" id="filter-end-date" name="end_date" class="form-control" value="{{ filters.end_date|default:'' }}">
+          <input type="date" id="filter-end-date" name="end_date" class="form-control" placeholder="dd-mm-yyyy" value="{{ filters.end_date|default:'' }}">
         </div>
       </div>
       <div class="filter-item">
         <label>Quick Range</label>
-        <select id="filter-date-preset" class="form-control">
+        <select id="filter-date-preset" name="range" class="form-control">
           <option value="custom" {% if filters.range == 'custom' %}selected{% endif %}>Custom</option>
           <option value="this_week" {% if filters.range == 'this_week' %}selected{% endif %}>This Week</option>
           <option value="last_7" {% if filters.range == 'last_7' %}selected{% endif %}>Last 7 Days</option>
@@ -94,10 +95,11 @@
         </select>
       </div>
       <div class="filter-item">
-        <button class="chip-btn primary" id="applyFilters"><i class="fa-solid fa-filter"></i> Apply</button>
-        <button class="chip-btn" id="resetFilters"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+        <button type="submit" class="chip-btn primary" id="applyFilters"><i class="fa-solid fa-filter"></i> Apply</button>
+        <a class="chip-btn" id="resetFilters" href="{% url 'cdl_analysis_page' %}"><i class="fa-solid fa-rotate-left"></i> Reset</a>
       </div>
     </div>
+    </form>
   </section>
 
   <!-- KPI Cards (CDL metrics) -->
@@ -144,9 +146,9 @@
   <!-- Main Content -->
   <main class="analytics-main">
     <section class="charts-section">
-      <div class="row" style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+  <div class="row chart-row">
         <!-- Left column: event/participants/certificates/services -->
-        <div class="col-left" style="display:flex; flex-direction:column; gap:16px;">
+  <div class="col-left">
           <div class="chart-card">
             <div class="card-header"><h3><i class="fa-solid fa-chart-line"></i> Events Over Time</h3></div>
             <div class="chart-container"><canvas id="chart-events-over-time"></canvas></div>
@@ -170,7 +172,7 @@
         </div>
 
         <!-- Right column: workload/communication/content -->
-        <div class="col-right" style="display:flex; flex-direction:column; gap:16px;">
+  <div class="col-right">
           <div class="card">
             <div class="card-header"><h3><i class="fa-solid fa-users-gear"></i> Assignments & Workload</h3></div>
             <div class="table-wrap">
@@ -440,6 +442,68 @@ document.getElementById('exportBtn')?.addEventListener('click', () => {
   a.href = URL.createObjectURL(blob);
   a.download = 'cdl_analysis_export.csv';
   a.click();
+});
+
+// Filters interactions (Apply/Reset and Quick Range)
+document.addEventListener('DOMContentLoaded', function(){
+  const form = document.getElementById('analysisFilters');
+  const preset = document.getElementById('filter-date-preset');
+  const start = document.getElementById('filter-start-date');
+  const end = document.getElementById('filter-end-date');
+
+  function setRange(key){
+    const today = new Date();
+    const d = new Date(today);
+    let s = '';
+    let e = today.toISOString().slice(0,10);
+    if(key === 'this_week'){
+      const day = today.getDay();
+      const diff = (day === 0 ? 6 : day-1); // Monday start
+      d.setDate(today.getDate() - diff);
+      s = d.toISOString().slice(0,10);
+    } else if(key === 'last_7'){
+      d.setDate(today.getDate() - 7);
+      s = d.toISOString().slice(0,10);
+    } else if(key === 'this_month'){
+      d.setDate(1);
+      s = d.toISOString().slice(0,10);
+    } else if(key === 'last_30'){
+      d.setDate(today.getDate() - 30);
+      s = d.toISOString().slice(0,10);
+    } else if(key === 'all'){
+      s = '';
+      e = '';
+    }
+    if(start) start.value = s;
+    if(end) end.value = e;
+  }
+
+  if(preset){
+    preset.addEventListener('change', function(){
+      if(this.value && this.value !== 'custom'){
+        setRange(this.value);
+      }
+    });
+  }
+
+  if(form){
+    form.addEventListener('submit', function(ev){
+      ev.preventDefault();
+      const params = new URLSearchParams(new FormData(form));
+      fetch('{% url "api_cdl_analysis" %}?'+params.toString())
+        .then(r=>r.json())
+        .then(data=>{
+          // Update top area numbers/charts from API
+          // KPIs
+          // Minimal live-update: reload page sections already wired with static data would require refactors;
+          // for now, refresh the page to apply filters consistently across server-rendered metrics.
+          window.location = '{% url "cdl_analysis_page" %}?'+params.toString();
+        })
+        .catch(()=>{
+          window.location = '{% url "cdl_analysis_page" %}?'+params.toString();
+        });
+    });
+  }
 });
 </script>
 {% endblock %}

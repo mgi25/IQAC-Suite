@@ -14,18 +14,22 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
+.filters-panel #analysisFilters { width: 100%; }
 .filter-group {
   display: flex;
-  gap: 1rem;
-  align-items: end;
-  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+  flex-wrap: nowrap; /* single line */
+  overflow-x: auto; /* horizontal scroll when needed */
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.25rem; /* space for scrollbar */
 }
 
 .filter-item {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  min-width: 140px;
+  min-width: 180px; /* keep controls readable */
 }
 
 .filter-item label {
@@ -35,7 +39,7 @@
 }
 
 .date-range {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 0.5rem;
 }
@@ -46,10 +50,10 @@
 }
 
 .form-control {
-  padding: 0.375rem 0.5rem;
+  padding: 0.5rem 0.625rem;
   border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.75rem;
+  border-radius: 8px;
+  font-size: 0.8125rem;
   transition: border-color 0.2s;
 }
 
@@ -506,13 +510,11 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .filter-group {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row; /* stay single line */
+    align-items: flex-end;
+    overflow-x: auto;
   }
-  
-  .filter-item {
-    min-width: unset;
-  }
+  .filter-item { min-width: 180px; }
   
   .chart-row {
     grid-template-columns: 1fr;
@@ -904,5 +906,60 @@
   
   .date-range span {
     text-align: center;
+  }
+}
+
+/* Equalize card heights in CDL Analysis */
+#cdl-analysis .kpi-grid { align-items: stretch; }
+#cdl-analysis .kpi-card { height: 112px; }
+
+/* Column layout within the 2-col grid */
+#cdl-analysis .charts-section .col-left,
+#cdl-analysis .charts-section .col-right {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Make all analytic cards stretch to the row height (tallest card wins) */
+#cdl-analysis .charts-section .row.chart-row { align-items: stretch; }
+#cdl-analysis .charts-section .col-left .chart-card,
+#cdl-analysis .charts-section .col-right .chart-card,
+#cdl-analysis .charts-section .col-right > .card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 420px; /* base height on desktop; row can grow if the other card is taller */
+}
+
+/* Let inner containers grow to fill the card */
+#cdl-analysis .charts-section .chart-container,
+#cdl-analysis .charts-section .table-wrap {
+  flex: 1 1 auto;
+}
+
+/* Ensure table content scrolls within the card instead of overflowing */
+#cdl-analysis .charts-section .table-wrap { overflow: auto; min-height: 0; }
+
+/* Override fixed chart heights so flex can size them consistently */
+#cdl-analysis .charts-section .chart-container {
+  height: auto;
+  min-height: 320px; /* ensures canvas has room to render */
+  overflow: hidden; /* prevent canvas bleed */
+}
+
+@media (max-width: 1024px) {
+  #cdl-analysis .charts-section .col-left .chart-card,
+  #cdl-analysis .charts-section .col-right .chart-card,
+  #cdl-analysis .charts-section .col-right > .card {
+    min-height: 380px;
+  }
+}
+
+@media (max-width: 768px) {
+  #cdl-analysis .charts-section .col-left .chart-card,
+  #cdl-analysis .charts-section .col-right .chart-card,
+  #cdl-analysis .charts-section .col-right > .card {
+    min-height: 320px;
   }
 }
