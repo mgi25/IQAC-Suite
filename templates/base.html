@@ -93,12 +93,8 @@
               {% endif %}
             </div>
             {% if notifications and notifications|length > 0 %}
-            <div class="notification-footer">
-              <a href="/notifications/" class="view-all-link">View all notifications</a>
-
             <div class="notification-footer" style="padding:.7rem 1.25rem;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:right;">
-              <a href="/core-admin/notifications/" class="view-all-link" style="color:#2c5aa0;font-weight:600;font-size:.95rem;text-decoration:underline;">View all notifications</a>
-
+              <a href="{% url 'notifications' %}" class="view-all-link" style="color:#2c5aa0;font-weight:600;font-size:.95rem;text-decoration:underline;">View all notifications</a>
             </div>
             {% endif %}
           </div>
