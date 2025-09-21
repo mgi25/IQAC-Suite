@@ -43,8 +43,10 @@
 
         <form method="post" action="{% url 'emt:submit_event_report' proposal.id %}">
             {% csrf_token %}
-            {% for key, value in post_data.items %}
-                <input type="hidden" name="{{ key }}" value="{{ value|escape }}">
+            {% for key, values in post_data.lists %}
+                {% for value in values %}
+                    <input type="hidden" name="{{ key }}" value="{{ value|default_if_none:''|escape }}">
+                {% endfor %}
             {% endfor %}
             {# Ensure attachment formset management fields exist (even if there are no attachments) #}
             <input type="hidden" name="form-TOTAL_FORMS" value="{{ post_data|get_item:'form-TOTAL_FORMS'|default:'0' }}">
