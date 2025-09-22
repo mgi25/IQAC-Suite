@@ -51,7 +51,7 @@
   }
 
   .controls button,
-  .controls a.control-button {
+  .controls .control-button {
     font-family: "Times New Roman", Times, serif;
     font-size: 12pt;
     padding: 4px 16px;
@@ -60,7 +60,7 @@
     cursor: pointer;
   }
 
-  .controls a.control-button {
+  .controls .control-button {
     text-decoration: none;
     display: inline-flex;
     align-items: center;
@@ -70,19 +70,19 @@
     color: #000;
   }
 
-  .controls a.control-button.primary {
+  .controls .control-button.primary {
     background: #2c5aa0;
     border-color: #2c5aa0;
     color: #fff;
   }
 
-  .controls a.control-button.primary:hover {
+  .controls .control-button.primary:hover {
     background: #244a82;
     border-color: #244a82;
     color: #fff;
   }
 
-  .controls a.control-button[aria-disabled="true"] {
+  .controls .control-button[aria-disabled="true"] {
     background: #bfc7d3;
     border-color: #bfc7d3;
     color: #f5f5f5;
@@ -90,9 +90,14 @@
   }
 
   .controls button:focus,
-  .controls a.control-button:focus {
+  .controls .control-button:focus {
     outline: 1pt dotted #000;
     outline-offset: 2px;
+  }
+
+  .generate-ai-form {
+    display: inline;
+    margin: 0;
   }
 
   main#report,
@@ -505,7 +510,18 @@
   <div class="control-row">
     <span class="status-pill" id="status-pill">Preparing content…</span>
     <div class="controls">
-      <a href="{{ ai_report_url }}" class="control-button primary" id="generate-ai-report"{% if not form_is_valid %} aria-disabled="true" data-disabled="true" title="Resolve required fields before generating the AI report."{% endif %}>Generate Report</a>
+      <form id="generate-ai-form" class="generate-ai-form" method="post" action="{% url 'emt:submit_event_report' proposal.id %}">
+        {% csrf_token %}
+        {% for key, values in post_data_items %}
+          {% if key != 'csrfmiddlewaretoken' and key != 'generate_ai' %}
+            {% for value in values %}
+              <input type="hidden" name="{{ key }}" value="{{ value }}">
+            {% endfor %}
+          {% endif %}
+        {% endfor %}
+        <input type="hidden" name="generate_ai" value="1">
+        <button type="submit" class="control-button primary" id="generate-ai-report"{% if not form_is_valid %} aria-disabled="true" data-disabled="true" title="Resolve required fields before generating the AI report."{% endif %}>Generate Report</button>
+      </form>
       <button type="button" id="edit-toggle" data-mode="preview">Edit</button>
       <button type="button" id="print-btn">Print / Save PDF</button>
     </div>
@@ -1339,6 +1355,11 @@
           event.preventDefault();
           window.alert('Please complete the required sections in the event report before generating the AI report.');
         });
+        if (generateBtn.form) {
+          generateBtn.form.addEventListener('submit', function (event) {
+            event.preventDefault();
+          });
+        }
       }
     });
   })();
