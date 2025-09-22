@@ -1,17 +1,17 @@
+{% extends "base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>IQAC Report Preview</title>
+
+{% block extra_css %}
 <style>
   @page {
     size: A4;
     margin: 20mm 18mm 22mm;
   }
-  body {
+  body.command-center-layout.iqac-report-preview {
     background: #f4f4f4;
+  }
+
+  body.command-center-layout.iqac-report-preview .iqac-report-preview-page {
     font-family: "Times New Roman", Times, serif;
     font-size: 12pt;
     line-height: 1.45;
@@ -341,7 +341,7 @@
     min-height: 22mm;
   }
   @media print {
-    body {
+    body.command-center-layout {
       background: #fff;
     }
     .sheet {
@@ -380,340 +380,343 @@
     }
   }
 </style>
-</head>
-<body>
-<div class="iqac-preview">
-  <div class="preview-controls">
-    <button type="button" id="mode-toggle" data-mode="preview">Edit</button>
-    <button type="button" id="print-btn">Print / Save PDF</button>
+{% endblock %}
+
+{% block content %}
+<div class="iqac-report-preview-page">
+  <div class="iqac-preview">
+    <div class="preview-controls">
+      <button type="button" id="mode-toggle" data-mode="preview">Edit</button>
+      <button type="button" id="print-btn">Print / Save PDF</button>
+    </div>
+    <article class="sheet">
+      <header class="sheet-header">
+        <p class="hdr-upper">CHRIST (DEEMED TO BE UNIVERSITY)</p>
+        <p class="hdr-italic">Pune Lavasa Campus – ‘The Hub of Analytics’</p>
+        <p class="hdr-upper">Internal Quality Assurance Cell (IQAC)</p>
+        <p class="hdr-event" data-field="event.title">—</p>
+        <p class="hdr-title">Activity Report</p>
+      </header>
+      <hr class="header-rule">
+
+      <section class="section-block">
+        <h2 class="section-title">EVENT INFORMATION</h2>
+        <table class="grid-table four-col">
+          <colgroup>
+            <col class="col-lab">
+            <col class="col-val">
+            <col class="col-lab">
+            <col class="col-val">
+          </colgroup>
+          <tbody>
+            <tr>
+              <th>Department</th>
+              <td data-field="event.department">—</td>
+              <th>Event Title</th>
+              <td data-field="event.title">—</td>
+            </tr>
+            <tr>
+              <th>Location</th>
+              <td data-field="event.location">—</td>
+              <th>Venue</th>
+              <td data-field="event.venue">—</td>
+            </tr>
+            <tr>
+              <th>Date</th>
+              <td data-field="event.date">—</td>
+              <th>Time Window</th>
+              <td data-field="event.time_window">—</td>
+            </tr>
+            <tr>
+              <th>Academic Year</th>
+              <td data-field="event.academic_year">—</td>
+              <th>Event Type &amp; Focus</th>
+              <td data-field="event.event_type_focus">—</td>
+            </tr>
+            <tr>
+              <th>No. of Activities</th>
+              <td data-field="event.no_of_activities">—</td>
+              <th>Blog Link</th>
+              <td><a href="#" data-field="event.blog_link" data-kind="link">—</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section-block">
+        <h2 class="section-title">PARTICIPANTS INFORMATION</h2>
+        <table class="grid-table four-col">
+          <colgroup>
+            <col class="col-lab">
+            <col class="col-val">
+            <col class="col-lab">
+            <col class="col-val">
+          </colgroup>
+          <tbody>
+            <tr>
+              <th>Target Audience</th>
+              <td data-field="participants.target_audience">—</td>
+              <th data-visible-if="participants.external_agencies_speakers">External Agencies / Speakers</th>
+              <td data-field="participants.external_agencies_speakers" data-visible-if="participants.external_agencies_speakers">—</td>
+            </tr>
+            <tr>
+              <th>External Contacts</th>
+              <td data-field="participants.external_contacts">—</td>
+              <th>Student Volunteers</th>
+              <td data-field="participants.organising_committee.student_volunteers_count">—</td>
+            </tr>
+            <tr>
+              <th>Event Coordinators</th>
+              <td>
+                <ul class="cell-ul" data-list="participants.organising_committee.event_coordinators">
+                  <li>—</li>
+                </ul>
+              </td>
+              <th>Total Attendees</th>
+              <td data-field="participants.attendees_count">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section-block">
+        <h2 class="section-title">SUMMARY OF THE OVERALL EVENT</h2>
+        <div class="para-box">
+          <p class="cell-para" data-field="narrative.summary_overall_event" data-edit="textarea">—</p>
+        </div>
+        <div class="sub-section">
+          <h3 class="sub-title">Outcomes</h3>
+          <ul class="cell-ul" data-list="narrative.outcomes">
+            <li>—</li>
+          </ul>
+        </div>
+        <div class="sub-section" data-section="narrative.goal_achievement">
+          <h3 class="sub-title">Goal Achievement</h3>
+          <p class="cell-para" data-field="narrative.goal_achievement" data-edit="textarea">—</p>
+        </div>
+        <div class="sub-section" data-section="narrative.key_takeaways">
+          <h3 class="sub-title">Key Takeaways</h3>
+          <p class="cell-para" data-field="narrative.key_takeaways" data-edit="textarea">—</p>
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2 class="section-title">ANALYSIS</h2>
+        <div class="analysis-grid">
+          <div class="analysis-box">
+            <div class="analysis-label">Impact on Attendees</div>
+            <p class="cell-para" data-field="analysis.impact_attendees" data-edit="textarea">—</p>
+          </div>
+          <div class="analysis-box">
+            <div class="analysis-label">Impact on Schools / Departments</div>
+            <p class="cell-para" data-field="analysis.impact_schools" data-edit="textarea">—</p>
+          </div>
+          <div class="analysis-box">
+            <div class="analysis-label">Impact on Volunteers</div>
+            <p class="cell-para" data-field="analysis.impact_volunteers" data-edit="textarea">—</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2 class="section-title">RELEVANCE / ACADEMIC MAPPING</h2>
+        <table class="grid-table two-col mapping-table">
+          <colgroup>
+            <col class="col-narrow">
+            <col class="col-wide">
+          </colgroup>
+          <tbody>
+            <tr>
+              <th>POS / PSOs</th>
+              <td>
+                <p class="cell-para" data-field="mapping.pos_psos" data-edit="textarea">—</p>
+                <p class="notice hidden" data-visible-if="event.center_level">Link to University Vision &amp; Mission</p>
+              </td>
+            </tr>
+            <tr>
+              <th>Graduate Attributes / Needs</th>
+              <td><p class="cell-para" data-field="mapping.graduate_attributes_or_needs" data-edit="textarea">—</p></td>
+            </tr>
+            <tr>
+              <th>Contemporary Requirements</th>
+              <td><p class="cell-para" data-field="mapping.contemporary_requirements" data-edit="textarea">—</p></td>
+            </tr>
+            <tr>
+              <th>Value Systems</th>
+              <td><p class="cell-para" data-field="mapping.value_systems" data-edit="textarea">—</p></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="sdg-wrapper">
+          <div class="sdg-label">SDG Goal Numbers</div>
+          <ul class="cell-ul sdg-list" data-list="mapping.sdg_goal_numbers">
+            <li>—</li>
+          </ul>
+        </div>
+        <table class="grid-table course-table" style="margin-top:4mm;">
+          <colgroup>
+            <col class="col-code">
+            <col class="col-name">
+            <col class="col-type">
+            <col class="col-note">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Course Code</th>
+              <th>Course Name</th>
+              <th>Mapping Type</th>
+              <th>Note</th>
+            </tr>
+          </thead>
+          <tbody data-rows="mapping.courses">
+            <tr><td colspan="4" style="text-align:center;">—</td></tr>
+          </tbody>
+        </table>
+        <div class="chip-wrapper">
+          <div class="chip-label">NAAC Metrics Tags</div>
+          <div class="chipset" data-list="metrics">
+            <span class="chip">—</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2 class="section-title">SUGGESTIONS FOR IMPROVEMENT / FEEDBACK FROM IQAC</h2>
+        <ul class="cell-ul" data-list="iqac.iqac_suggestions">
+          <li>—</li>
+        </ul>
+        <div class="date-line">IQAC Review Date: <span data-field="iqac.iqac_review_date">—</span></div>
+        <div class="sign-row">
+          <div class="sign-cell">
+            <div class="sign-line"><span data-field="iqac.sign_head_coordinator">—</span></div>
+            <div class="sign-caption">HEAD / COORDINATOR</div>
+          </div>
+          <div class="sign-cell">
+            <div class="sign-line"><span data-field="iqac.sign_faculty_coordinator">—</span></div>
+            <div class="sign-caption">FACULTY COORDINATOR / ORGANISER</div>
+          </div>
+          <div class="sign-cell">
+            <div class="sign-line"><span data-field="iqac.sign_iqac">—</span></div>
+            <div class="sign-caption">IQAC</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2 class="section-title">ATTACHMENTS CHECKLIST</h2>
+        <table class="grid-table checklist-table">
+          <colgroup>
+            <col>
+            <col>
+          </colgroup>
+          <tbody data-checklist>
+            <tr>
+              <td><span class="tick">▢</span><span class="check-label">Facing Sheet</span></td>
+              <td><span class="tick">▢</span><span class="check-label">Summary &amp; Outcomes Sheet</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section-block page-break">
+        <h2 class="section-title">ATTACHMENTS (ANNEXURES)</h2>
+        <p class="notice hidden" data-visible-if="competition.feedback_optional">For competition events, participant and winner details are mandatory; feedback documents are optional.</p>
+        <div class="annexure-title">Annexure A: Photographs</div>
+        <div class="grid-2" data-grid="annexures.photos">
+          <figure class="card"><div class="ph">Image</div><figcaption>—</figcaption></figure>
+        </div>
+      </section>
+
+      <section class="section-block page-break">
+        <div class="annexure-title">Annexure B: Brochure</div>
+        <div class="grid-2" data-grid="annexures.brochure_pages">
+          <figure class="card"><div class="ph">Image</div><figcaption>—</figcaption></figure>
+        </div>
+      </section>
+
+      <section class="section-block page-break">
+        <div class="annexure-title">Annexure C: Communication with Institution</div>
+        <table class="grid-table two-col" style="margin-bottom:4mm;">
+          <colgroup>
+            <col class="col-narrow">
+            <col class="col-wide">
+          </colgroup>
+          <tbody>
+            <tr>
+              <th>Subject</th>
+              <td data-field="annexures.communication.subject">—</td>
+            </tr>
+            <tr>
+              <th>Date</th>
+              <td data-field="annexures.communication.date">—</td>
+            </tr>
+          </tbody>
+        </table>
+        <table class="vol-table">
+          <colgroup>
+            <col class="col-1">
+            <col class="col-2">
+            <col class="col-3">
+            <col class="col-4">
+            <col class="col-5">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Sl No</th>
+              <th>Reg No</th>
+              <th>Name</th>
+              <th>Class</th>
+              <th>Role</th>
+            </tr>
+          </thead>
+          <tbody data-rows="annexures.communication.volunteers">
+            <tr><td colspan="5" style="text-align:center;">—</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section-block page-break">
+        <div class="annexure-title">Annexure D: Worksheets / Activities</div>
+        <div class="grid-2" data-grid="annexures.worksheets">
+          <figure class="card"><div class="ph">Image</div><figcaption>—</figcaption></figure>
+        </div>
+      </section>
+
+      <section class="section-block page-break">
+        <div class="annexure-title">Annexure E: Evaluation Sheet</div>
+        <figure class="card single-card" data-src="annexures.evaluation_sheet"><div class="ph">Image</div><figcaption>—</figcaption></figure>
+      </section>
+
+      <section class="section-block page-break">
+        <div class="annexure-title">Annexure F: Feedback Form</div>
+        <figure class="card single-card" data-src="annexures.feedback_form"><div class="ph">Image</div><figcaption>—</figcaption></figure>
+      </section>
+
+      <section class="section-block page-break hidden" data-visible-if="event.is_competition">
+        <div class="annexure-title">Annexure G: Participants &amp; Winners</div>
+        <table class="grid-table two-col">
+          <colgroup>
+            <col class="col-narrow">
+            <col class="col-wide">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Participant / Team</th>
+              <th>Recognition</th>
+            </tr>
+          </thead>
+          <tbody data-rows="annexures.competition.participants">
+            <tr><td colspan="2" style="text-align:center;">—</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </article>
   </div>
-  <article class="sheet">
-    <header class="sheet-header">
-      <p class="hdr-upper">CHRIST (DEEMED TO BE UNIVERSITY)</p>
-      <p class="hdr-italic">Pune Lavasa Campus – ‘The Hub of Analytics’</p>
-      <p class="hdr-upper">Internal Quality Assurance Cell (IQAC)</p>
-      <p class="hdr-event" data-field="event.title">—</p>
-      <p class="hdr-title">Activity Report</p>
-    </header>
-    <hr class="header-rule">
-
-    <section class="section-block">
-      <h2 class="section-title">EVENT INFORMATION</h2>
-      <table class="grid-table four-col">
-        <colgroup>
-          <col class="col-lab">
-          <col class="col-val">
-          <col class="col-lab">
-          <col class="col-val">
-        </colgroup>
-        <tbody>
-          <tr>
-            <th>Department</th>
-            <td data-field="event.department">—</td>
-            <th>Event Title</th>
-            <td data-field="event.title">—</td>
-          </tr>
-          <tr>
-            <th>Location</th>
-            <td data-field="event.location">—</td>
-            <th>Venue</th>
-            <td data-field="event.venue">—</td>
-          </tr>
-          <tr>
-            <th>Date</th>
-            <td data-field="event.date">—</td>
-            <th>Time Window</th>
-            <td data-field="event.time_window">—</td>
-          </tr>
-          <tr>
-            <th>Academic Year</th>
-            <td data-field="event.academic_year">—</td>
-            <th>Event Type &amp; Focus</th>
-            <td data-field="event.event_type_focus">—</td>
-          </tr>
-          <tr>
-            <th>No. of Activities</th>
-            <td data-field="event.no_of_activities">—</td>
-            <th>Blog Link</th>
-            <td><a href="#" data-field="event.blog_link" data-kind="link">—</a></td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <section class="section-block">
-      <h2 class="section-title">PARTICIPANTS INFORMATION</h2>
-      <table class="grid-table four-col">
-        <colgroup>
-          <col class="col-lab">
-          <col class="col-val">
-          <col class="col-lab">
-          <col class="col-val">
-        </colgroup>
-        <tbody>
-          <tr>
-            <th>Target Audience</th>
-            <td data-field="participants.target_audience">—</td>
-            <th data-visible-if="participants.external_agencies_speakers">External Agencies / Speakers</th>
-            <td data-field="participants.external_agencies_speakers" data-visible-if="participants.external_agencies_speakers">—</td>
-          </tr>
-          <tr>
-            <th>External Contacts</th>
-            <td data-field="participants.external_contacts">—</td>
-            <th>Student Volunteers</th>
-            <td data-field="participants.organising_committee.student_volunteers_count">—</td>
-          </tr>
-          <tr>
-            <th>Event Coordinators</th>
-            <td>
-              <ul class="cell-ul" data-list="participants.organising_committee.event_coordinators">
-                <li>—</li>
-              </ul>
-            </td>
-            <th>Total Attendees</th>
-            <td data-field="participants.attendees_count">—</td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <section class="section-block">
-      <h2 class="section-title">SUMMARY OF THE OVERALL EVENT</h2>
-      <div class="para-box">
-        <p class="cell-para" data-field="narrative.summary_overall_event" data-edit="textarea">—</p>
-      </div>
-      <div class="sub-section">
-        <h3 class="sub-title">Outcomes</h3>
-        <ul class="cell-ul" data-list="narrative.outcomes">
-          <li>—</li>
-        </ul>
-      </div>
-      <div class="sub-section" data-section="narrative.goal_achievement">
-        <h3 class="sub-title">Goal Achievement</h3>
-        <p class="cell-para" data-field="narrative.goal_achievement" data-edit="textarea">—</p>
-      </div>
-      <div class="sub-section" data-section="narrative.key_takeaways">
-        <h3 class="sub-title">Key Takeaways</h3>
-        <p class="cell-para" data-field="narrative.key_takeaways" data-edit="textarea">—</p>
-      </div>
-    </section>
-
-    <section class="section-block">
-      <h2 class="section-title">ANALYSIS</h2>
-      <div class="analysis-grid">
-        <div class="analysis-box">
-          <div class="analysis-label">Impact on Attendees</div>
-          <p class="cell-para" data-field="analysis.impact_attendees" data-edit="textarea">—</p>
-        </div>
-        <div class="analysis-box">
-          <div class="analysis-label">Impact on Schools / Departments</div>
-          <p class="cell-para" data-field="analysis.impact_schools" data-edit="textarea">—</p>
-        </div>
-        <div class="analysis-box">
-          <div class="analysis-label">Impact on Volunteers</div>
-          <p class="cell-para" data-field="analysis.impact_volunteers" data-edit="textarea">—</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="section-block">
-      <h2 class="section-title">RELEVANCE / ACADEMIC MAPPING</h2>
-      <table class="grid-table two-col mapping-table">
-        <colgroup>
-          <col class="col-narrow">
-          <col class="col-wide">
-        </colgroup>
-        <tbody>
-          <tr>
-            <th>POS / PSOs</th>
-            <td>
-              <p class="cell-para" data-field="mapping.pos_psos" data-edit="textarea">—</p>
-              <p class="notice hidden" data-visible-if="event.center_level">Link to University Vision &amp; Mission</p>
-            </td>
-          </tr>
-          <tr>
-            <th>Graduate Attributes / Needs</th>
-            <td><p class="cell-para" data-field="mapping.graduate_attributes_or_needs" data-edit="textarea">—</p></td>
-          </tr>
-          <tr>
-            <th>Contemporary Requirements</th>
-            <td><p class="cell-para" data-field="mapping.contemporary_requirements" data-edit="textarea">—</p></td>
-          </tr>
-          <tr>
-            <th>Value Systems</th>
-            <td><p class="cell-para" data-field="mapping.value_systems" data-edit="textarea">—</p></td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="sdg-wrapper">
-        <div class="sdg-label">SDG Goal Numbers</div>
-        <ul class="cell-ul sdg-list" data-list="mapping.sdg_goal_numbers">
-          <li>—</li>
-        </ul>
-      </div>
-      <table class="grid-table course-table" style="margin-top:4mm;">
-        <colgroup>
-          <col class="col-code">
-          <col class="col-name">
-          <col class="col-type">
-          <col class="col-note">
-        </colgroup>
-        <thead>
-          <tr>
-            <th>Course Code</th>
-            <th>Course Name</th>
-            <th>Mapping Type</th>
-            <th>Note</th>
-          </tr>
-        </thead>
-        <tbody data-rows="mapping.courses">
-          <tr><td colspan="4" style="text-align:center;">—</td></tr>
-        </tbody>
-      </table>
-      <div class="chip-wrapper">
-        <div class="chip-label">NAAC Metrics Tags</div>
-        <div class="chipset" data-list="metrics">
-          <span class="chip">—</span>
-        </div>
-      </div>
-    </section>
-
-    <section class="section-block">
-      <h2 class="section-title">SUGGESTIONS FOR IMPROVEMENT / FEEDBACK FROM IQAC</h2>
-      <ul class="cell-ul" data-list="iqac.iqac_suggestions">
-        <li>—</li>
-      </ul>
-      <div class="date-line">IQAC Review Date: <span data-field="iqac.iqac_review_date">—</span></div>
-      <div class="sign-row">
-        <div class="sign-cell">
-          <div class="sign-line"><span data-field="iqac.sign_head_coordinator">—</span></div>
-          <div class="sign-caption">HEAD / COORDINATOR</div>
-        </div>
-        <div class="sign-cell">
-          <div class="sign-line"><span data-field="iqac.sign_faculty_coordinator">—</span></div>
-          <div class="sign-caption">FACULTY COORDINATOR / ORGANISER</div>
-        </div>
-        <div class="sign-cell">
-          <div class="sign-line"><span data-field="iqac.sign_iqac">—</span></div>
-          <div class="sign-caption">IQAC</div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section-block">
-      <h2 class="section-title">ATTACHMENTS CHECKLIST</h2>
-      <table class="grid-table checklist-table">
-        <colgroup>
-          <col>
-          <col>
-        </colgroup>
-        <tbody data-checklist>
-          <tr>
-            <td><span class="tick">▢</span><span class="check-label">Facing Sheet</span></td>
-            <td><span class="tick">▢</span><span class="check-label">Summary &amp; Outcomes Sheet</span></td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <section class="section-block page-break">
-      <h2 class="section-title">ATTACHMENTS (ANNEXURES)</h2>
-      <p class="notice hidden" data-visible-if="competition.feedback_optional">For competition events, participant and winner details are mandatory; feedback documents are optional.</p>
-      <div class="annexure-title">Annexure A: Photographs</div>
-      <div class="grid-2" data-grid="annexures.photos">
-        <figure class="card"><div class="ph">Image</div><figcaption>—</figcaption></figure>
-      </div>
-    </section>
-
-    <section class="section-block page-break">
-      <div class="annexure-title">Annexure B: Brochure</div>
-      <div class="grid-2" data-grid="annexures.brochure_pages">
-        <figure class="card"><div class="ph">Image</div><figcaption>—</figcaption></figure>
-      </div>
-    </section>
-
-    <section class="section-block page-break">
-      <div class="annexure-title">Annexure C: Communication with Institution</div>
-      <table class="grid-table two-col" style="margin-bottom:4mm;">
-        <colgroup>
-          <col class="col-narrow">
-          <col class="col-wide">
-        </colgroup>
-        <tbody>
-          <tr>
-            <th>Subject</th>
-            <td data-field="annexures.communication.subject">—</td>
-          </tr>
-          <tr>
-            <th>Date</th>
-            <td data-field="annexures.communication.date">—</td>
-          </tr>
-        </tbody>
-      </table>
-      <table class="vol-table">
-        <colgroup>
-          <col class="col-1">
-          <col class="col-2">
-          <col class="col-3">
-          <col class="col-4">
-          <col class="col-5">
-        </colgroup>
-        <thead>
-          <tr>
-            <th>Sl No</th>
-            <th>Reg No</th>
-            <th>Name</th>
-            <th>Class</th>
-            <th>Role</th>
-          </tr>
-        </thead>
-        <tbody data-rows="annexures.communication.volunteers">
-          <tr><td colspan="5" style="text-align:center;">—</td></tr>
-        </tbody>
-      </table>
-    </section>
-
-    <section class="section-block page-break">
-      <div class="annexure-title">Annexure D: Worksheets / Activities</div>
-      <div class="grid-2" data-grid="annexures.worksheets">
-        <figure class="card"><div class="ph">Image</div><figcaption>—</figcaption></figure>
-      </div>
-    </section>
-
-    <section class="section-block page-break">
-      <div class="annexure-title">Annexure E: Evaluation Sheet</div>
-      <figure class="card single-card" data-src="annexures.evaluation_sheet"><div class="ph">Image</div><figcaption>—</figcaption></figure>
-    </section>
-
-    <section class="section-block page-break">
-      <div class="annexure-title">Annexure F: Feedback Form</div>
-      <figure class="card single-card" data-src="annexures.feedback_form"><div class="ph">Image</div><figcaption>—</figcaption></figure>
-    </section>
-
-    <section class="section-block page-break hidden" data-visible-if="event.is_competition">
-      <div class="annexure-title">Annexure G: Participants &amp; Winners</div>
-      <table class="grid-table two-col">
-        <colgroup>
-          <col class="col-narrow">
-          <col class="col-wide">
-        </colgroup>
-        <thead>
-          <tr>
-            <th>Participant / Team</th>
-            <th>Recognition</th>
-          </tr>
-        </thead>
-        <tbody data-rows="annexures.competition.participants">
-          <tr><td colspan="2" style="text-align:center;">—</td></tr>
-        </tbody>
-      </table>
-    </section>
-  </article>
+  <footer class="print-footer">
+    <div>CHRIST (Deemed to be University), Pune Lavasa Campus — 30 Valor Court, Pune 412112, Maharashtra</div>
+    <div class="page-number"></div>
+  </footer>
 </div>
-<footer class="print-footer">
-  <div>CHRIST (Deemed to be University), Pune Lavasa Campus — 30 Valor Court, Pune 412112, Maharashtra</div>
-  <div class="page-number"></div>
-</footer>
 
 <script type="application/json" id="initial-report-data">{{ initial_report_data|default:"{}"|safe }}</script>
 <script>
@@ -1265,7 +1268,9 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', init);
+  document.addEventListener('DOMContentLoaded', function() {
+    document.body.classList.add('iqac-report-preview');
+    init();
+  });
 </script>
-</body>
-</html>
+{% endblock %}
