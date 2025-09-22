@@ -104,38 +104,46 @@
 
   .header-rule {
     border: none;
-    border-top: 1px solid #000;
+    border-top: 0.6pt solid #000;
     margin: 10mm 0 7mm;
   }
 
   .section-block {
-    margin-bottom: 8mm;
+    margin-bottom: 9mm;
+  }
+
+  .section-title {
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin: 0 0 3mm;
   }
 
   .section-table {
     width: 100%;
-    border: 1px solid #000;
+    border: 0.6pt solid #000;
     border-collapse: collapse;
     table-layout: fixed;
-    margin: 9mm 0 7mm;
     background: #fff;
   }
 
   .section-table th,
   .section-table td {
-    border: 1px solid #000;
-    padding: 8px 10px;
+    border: 0.6pt solid #000;
+    padding: 6px 8px;
     vertical-align: top;
-    font-size: 12pt;
   }
 
-  .section-table .section-cap {
-    background: #f2f2f2;
+  .section-table th {
+    text-align: left;
+  }
+
+  .section-cap {
+    background: #f3f3f3;
+    padding: 8px 0;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    font-weight: 700;
     text-align: center;
-    padding: 7px 0;
   }
 
   .section-table .col-lbl {
@@ -147,50 +155,10 @@
     width: 69%;
   }
 
-  .section-title {
-    text-transform: uppercase;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    margin: 0 0 3mm;
-  }
-
-  .grid-table,
-  .checklist {
-    width: 100%;
+  .pane {
     border: 0.6pt solid #000;
-    border-collapse: collapse;
-    table-layout: fixed;
-  }
-
-  .grid-table.four-col col.col-label {
-    width: 27%;
-  }
-
-  .grid-table.four-col col.col-value {
-    width: 23%;
-  }
-
-  .grid-table.two-col col.col-label {
-    width: 35%;
-  }
-
-  .grid-table.two-col col.col-value {
-    width: 65%;
-  }
-
-  .grid-table th,
-  .grid-table td,
-  .checklist th,
-  .checklist td {
-    border: 0.6pt solid #000;
-    padding: 3mm 2.4mm;
-    vertical-align: top;
-  }
-
-  .grid-table th {
-    text-transform: uppercase;
-    font-weight: 700;
-    letter-spacing: 0.03em;
+    padding: 10px 12px;
+    background: #fff;
   }
 
   .cell-para {
@@ -198,12 +166,6 @@
     white-space: pre-wrap;
     text-align: justify;
     text-justify: inter-word;
-  }
-
-  .summary-box {
-    border: 0.6pt solid #000;
-    padding: 3mm;
-    min-height: 32mm;
   }
 
   .cell-ul {
@@ -216,45 +178,46 @@
     padding-left: 0;
   }
 
-  .stack {
+  .analysis-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+
+  @media print, (max-width: 960px) {
+    .analysis-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .analysis-card {
+    border: 0.6pt solid #000;
+    padding: 10px 12px;
     display: flex;
     flex-direction: column;
     gap: 6px;
+    min-height: 48mm;
+    background: #fff;
   }
 
-  .subhead {
-    font-weight: 600;
-  }
-
-  .analysis-grid {
-    display: flex;
-    gap: 4mm;
-  }
-
-  .analysis-box {
-    flex: 1;
-    border: 0.6pt solid #000;
-    padding: 3mm;
-    min-height: 42mm;
-  }
-
-  .analysis-label {
+  .card-cap {
     text-transform: uppercase;
     font-weight: 700;
     letter-spacing: 0.04em;
-    margin-bottom: 2mm;
+    margin-bottom: 2px;
   }
 
   .sdg-row {
-    display: flex;
-    gap: 4mm;
     border: 0.6pt solid #000;
-    padding: 3mm;
-    margin-top: 4mm;
+    padding: 10px 12px;
+    display: flex;
+    gap: 12px;
+    margin-top: 6mm;
+    background: #fff;
   }
 
   .sdg-label {
-    width: 35%;
+    width: 31%;
     text-transform: uppercase;
     font-weight: 700;
     letter-spacing: 0.04em;
@@ -271,29 +234,35 @@
 
   .sdg-list li {
     display: inline-block;
-    margin-right: 6px;
+    margin-right: 8px;
   }
 
-  .course-table col.col-code {
-    width: 18%;
+  .grid-table {
+    width: 100%;
+    border: 0.6pt solid #000;
+    border-collapse: collapse;
+    table-layout: fixed;
+    margin-top: 6mm;
+    background: #fff;
   }
 
-  .course-table col.col-name {
-    width: 36%;
+  .grid-table th,
+  .grid-table td {
+    border: 0.6pt solid #000;
+    padding: 6px 8px;
+    vertical-align: top;
   }
 
-  .course-table col.col-type {
-    width: 22%;
-  }
-
-  .course-table col.col-note {
-    width: 24%;
+  .grid-table th {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
 
   .chips {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+    margin-top: 6mm;
   }
 
   .chip {
@@ -303,13 +272,33 @@
     border-radius: 2px;
   }
 
+  .chip.placeholder {
+    font-style: italic;
+    color: #555;
+  }
+
   .review-date {
-    margin-top: 3mm;
+    margin-top: 4mm;
     font-weight: 700;
   }
 
+  .checklist {
+    width: 100%;
+    border: 0.6pt solid #000;
+    border-collapse: collapse;
+    table-layout: fixed;
+    background: #fff;
+  }
+
   .checklist col.c-tick {
-    width: 8mm;
+    width: 12mm;
+  }
+
+  .checklist th,
+  .checklist td {
+    border: 0.6pt solid #000;
+    padding: 6px 8px;
+    vertical-align: top;
   }
 
   .checklist td:first-child {
@@ -337,11 +326,11 @@
     display: flex;
     align-items: flex-end;
     justify-content: center;
-    padding: 3mm;
+    padding: 6px;
   }
 
   .sign-caption {
-    margin-top: 2mm;
+    margin-top: 4px;
     text-transform: uppercase;
     font-weight: 700;
     letter-spacing: 0.05em;
@@ -355,7 +344,7 @@
     gap: 12px;
   }
 
-  .paper {
+  .annexure-host .paper {
     width: 210mm;
   }
 
@@ -367,10 +356,23 @@
 
   .annexure-card {
     border: 0.6pt solid #000;
-    padding: 3mm;
+    padding: 8px;
     display: flex;
     flex-direction: column;
-    gap: 3mm;
+    gap: 6px;
+    background: #fff;
+  }
+
+  .annexure-card figcaption {
+    text-align: center;
+    font-style: italic;
+    font-size: 11pt;
+    margin: 0;
+  }
+
+  .annexure-card.placeholder .media-frame {
+    color: #555;
+    font-style: italic;
   }
 
   .media-frame {
@@ -379,7 +381,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 3mm;
+    padding: 8px;
+    background: #fff;
   }
 
   .media-frame img {
@@ -388,23 +391,12 @@
     display: block;
   }
 
-  .volunteer-table {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
-  }
-
-  .volunteer-table th,
-  .volunteer-table td {
-    border: 0.6pt solid #000;
-    padding: 2.4mm 2mm;
-    vertical-align: top;
-  }
-
-  .volunteer-table th {
-    text-transform: uppercase;
-    font-weight: 700;
-    letter-spacing: 0.03em;
+  table,
+  tr,
+  td,
+  th {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
   .page-break {
@@ -498,8 +490,8 @@
 
     <hr class="header-rule">
 
-    <section class="block">
-      <table class="section-table cols-2">
+    <section class="section-block">
+      <table class="section-table">
         <colgroup>
           <col class="col-lbl">
           <col class="col-val">
@@ -508,28 +500,21 @@
           <tr><th class="section-cap" colspan="2">EVENT INFORMATION</th></tr>
         </thead>
         <tbody>
-          <tr><th>Department</th>     <td data-field="event.department">—</td></tr>
-          <tr><th>Location</th>       <td data-field="event.location">—</td></tr>
-          <tr><th>Event Title</th>    <td data-field="event.title">—</td></tr>
+          <tr><th>Department</th><td data-field="event.department">—</td></tr>
+          <tr><th>Location</th><td data-field="event.location">—</td></tr>
+          <tr><th>Event Title</th><td data-field="event.title">—</td></tr>
           <tr><th>No of Activities</th><td data-field="event.no_of_activities">—</td></tr>
-          <tr>
-            <th>Date and Time</th>
-            <td>
-              <div data-field="event.date">—</div>
-              <div data-field="event.time_window" data-hide-blank="true">—</div>
-            </td>
-          </tr>
-          <tr><th>Venue</th>          <td data-field="event.venue">—</td></tr>
-          <tr><th>Academic Year</th>  <td data-field="event.academic_year">—</td></tr>
-          <tr><th>Event Type (Focus)</th>
-              <td data-field="event.event_type_focus">—</td></tr>
-          <tr><th>Blog Link</th>      <td><a data-field="event.blog_link" data-kind="link">—</a></td></tr>
+          <tr><th>Date and Time</th><td data-field="event.date">—</td></tr>
+          <tr><th>Venue</th><td data-field="event.venue">—</td></tr>
+          <tr><th>Academic Year</th><td data-field="event.academic_year">—</td></tr>
+          <tr><th>Event Type (Focus)</th><td data-field="event.event_type_focus">—</td></tr>
+          <tr><th>Blog Link</th><td><a data-field="event.blog_link" data-kind="link">—</a></td></tr>
         </tbody>
       </table>
     </section>
 
-    <section class="block">
-      <table class="section-table cols-2">
+    <section class="section-block">
+      <table class="section-table">
         <colgroup>
           <col class="col-lbl">
           <col class="col-val">
@@ -538,47 +523,121 @@
           <tr><th class="section-cap" colspan="2">PARTICIPANTS INFORMATION</th></tr>
         </thead>
         <tbody>
-          <tr>
-            <th>Target Audience</th>
-            <td data-field="participants.target_audience">—</td>
-          </tr>
-          <tr>
-            <th>Details of any External Agencies, Speakers, Guests with Affiliation</th>
-            <td data-field="participants.external_agencies_speakers">—</td>
-          </tr>
-          <tr>
-            <th>Website / Contact of External Members</th>
-            <td data-field="participants.external_contacts">—</td>
-          </tr>
+          <tr><th>Target Audience</th><td data-field="participants.target_audience">—</td></tr>
+          <tr><th>Details of any External Agencies, Speakers, Guests with Affiliation</th><td data-field="participants.external_agencies_speakers">—</td></tr>
+          <tr><th>Website / Contact of External Members</th><td data-field="participants.external_contacts">—</td></tr>
           <tr>
             <th>Organising Committee Details</th>
             <td>
-              <div class="stack">
-                <div class="subhead">Event Coordinators:</div>
+              <div class="pane" style="padding: 8px;">
+                <div><strong>Event Coordinators:</strong></div>
                 <ul class="cell-ul" data-list="participants.organising_committee.event_coordinators">
                   <li>—</li>
                 </ul>
-                <div>
-                  <span class="subhead">No of Student Volunteers:</span>
+                <div style="margin-top: 6px;">
+                  <strong>No of Student Volunteers:</strong>
                   <span data-field="participants.organising_committee.student_volunteers_count">—</span>
                 </div>
               </div>
             </td>
           </tr>
-          <tr>
-            <th>No of Attendees / Participants</th>
-            <td data-field="participants.attendees_count">—</td>
-          </tr>
+          <tr><th>No of Attendees / Participants</th><td data-field="participants.attendees_count">—</td></tr>
         </tbody>
       </table>
     </section>
 
     <section class="section-block">
       <h2 class="section-title">Summary of the Overall Event</h2>
-      <div class="summary-box cell-para" data-field="narrative.summary_overall_event" data-edit="textarea">—</div>
+      <div class="pane">
+        <p class="cell-para" data-field="narrative.summary_overall_event" data-edit="textarea">—</p>
+      </div>
     </section>
 
-    <section id="dynamic-sections"></section>
+    <section class="section-block">
+      <h2 class="section-title">Social Relevance</h2>
+      <ul class="cell-ul" data-list="narrative.social_relevance" data-empty="true">
+        <li>—</li>
+      </ul>
+    </section>
+
+    <section class="section-block">
+      <h2 class="section-title">Outcomes of the Event</h2>
+      <ul class="cell-ul" data-list="narrative.outcomes" data-empty="true">
+        <li>—</li>
+      </ul>
+    </section>
+
+    <section class="section-block">
+      <h2 class="section-title">Analysis</h2>
+      <div class="analysis-grid">
+        <div class="analysis-card">
+          <div class="card-cap">Impact on Attendees</div>
+          <p class="cell-para" data-field="analysis.impact_attendees" data-edit="textarea">—</p>
+        </div>
+        <div class="analysis-card">
+          <div class="card-cap">Impact on Schools / Departments</div>
+          <p class="cell-para" data-field="analysis.impact_schools" data-edit="textarea">—</p>
+        </div>
+        <div class="analysis-card">
+          <div class="card-cap">Impact on Volunteers</div>
+          <p class="cell-para" data-field="analysis.impact_volunteers" data-edit="textarea">—</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-block">
+      <h2 class="section-title">Relevance / Academic Mapping</h2>
+      <table class="section-table">
+        <colgroup>
+          <col class="col-lbl">
+          <col class="col-val">
+        </colgroup>
+        <tbody>
+          <tr><th>POS / PSOs</th><td><p class="cell-para" data-field="mapping.pos_psos" data-edit="textarea">—</p></td></tr>
+          <tr><th>Graduate Attributes / Needs</th><td><p class="cell-para" data-field="mapping.graduate_attributes_or_needs" data-edit="textarea">—</p></td></tr>
+          <tr><th>Contemporary Requirements</th><td><p class="cell-para" data-field="mapping.contemporary_requirements" data-edit="textarea">—</p></td></tr>
+          <tr><th>Value Systems</th><td><p class="cell-para" data-field="mapping.value_systems" data-edit="textarea">—</p></td></tr>
+        </tbody>
+      </table>
+      <div class="sdg-row">
+        <div class="sdg-label">SDG Goal Numbers</div>
+        <div class="sdg-values">
+          <ul class="cell-ul sdg-list" data-list="mapping.sdg_goal_numbers" data-empty="true">
+            <li>—</li>
+          </ul>
+        </div>
+      </div>
+      <table class="grid-table course-table" style="margin-top: 6mm;">
+        <colgroup>
+          <col class="col-code" style="width: 18%;">
+          <col class="col-name" style="width: 36%;">
+          <col class="col-type" style="width: 22%;">
+          <col class="col-note" style="width: 24%;">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Course Code</th>
+            <th>Course Name</th>
+            <th>Mapping Type</th>
+            <th>Note</th>
+          </tr>
+        </thead>
+        <tbody data-rows="mapping.courses" data-row-type="courses">
+          <tr><td colspan="4" style="text-align: center;">—</td></tr>
+        </tbody>
+      </table>
+      <div class="chips" data-chips="metrics.naac_tags">
+        <span class="chip placeholder">—</span>
+      </div>
+    </section>
+
+    <section class="section-block">
+      <h2 class="section-title">Suggestions for Improvement / Feedback from IQAC</h2>
+      <ul class="cell-ul" data-list="iqac.iqac_suggestions" data-empty="true">
+        <li>—</li>
+      </ul>
+      <div class="review-date">Date: <span data-field="iqac.iqac_review_date">—</span></div>
+    </section>
 
     <section class="signatures">
       <div class="signature-block">
@@ -594,9 +653,113 @@
         <div class="sign-caption">IQAC</div>
       </div>
     </section>
+
+    <section class="section-block" style="margin-top: 12mm;">
+      <h2 class="section-title">Attachments Checklist</h2>
+      <table class="checklist">
+        <colgroup>
+          <col class="c-tick">
+          <col>
+        </colgroup>
+        <tbody data-checklist>
+          <tr><td><span class="tick">▢</span></td><td>Facing Sheet</td></tr>
+          <tr><td><span class="tick">▢</span></td><td>Summary &amp; Outcomes Sheet</td></tr>
+          <tr><td><span class="tick">▢</span></td><td>Suggestions Sheet</td></tr>
+          <tr><td><span class="tick">▢</span></td><td>Department Seal &amp; Signature on Each Page</td></tr>
+          <tr><td><span class="tick">▢</span></td><td>Detailed Report / Blog Printout</td></tr>
+          <tr><td><span class="tick">▢</span></td><td>Participant List</td></tr>
+          <tr><td><span class="tick">▢</span></td><td>Feedback Forms</td></tr>
+          <tr><td><span class="tick">▢</span></td><td>Photographs</td></tr>
+        </tbody>
+      </table>
+    </section>
   </main>
 
-  <div id="annexures" class="annexure-host"></div>
+  <section id="annexures" class="annexure-host">
+    <article class="paper page-break">
+      <section class="section-block">
+        <h2 class="section-title">Annexure A. Photographs</h2>
+        <div class="annexure-grid" data-grid="annexures.photos">
+          <figure class="annexure-card placeholder"><div class="media-frame">—</div><figcaption>—</figcaption></figure>
+        </div>
+      </section>
+    </article>
+
+    <article class="paper page-break">
+      <section class="section-block">
+        <h2 class="section-title">Annexure B. Brochure</h2>
+        <div class="annexure-grid" data-grid="annexures.brochure_pages">
+          <figure class="annexure-card placeholder"><div class="media-frame">—</div><figcaption>—</figcaption></figure>
+        </div>
+      </section>
+    </article>
+
+    <article class="paper page-break">
+      <section class="section-block">
+        <h2 class="section-title">Annexure C. Communication with Institution</h2>
+        <table class="section-table">
+          <colgroup>
+            <col class="col-lbl">
+            <col class="col-val">
+          </colgroup>
+          <tbody>
+            <tr><th>Subject</th><td data-field="annexures.communication.subject">—</td></tr>
+            <tr><th>Date</th><td data-field="annexures.communication.date">—</td></tr>
+          </tbody>
+        </table>
+        <table class="grid-table volunteer-table" style="margin-top: 6mm;">
+          <colgroup>
+            <col style="width: 10%;">
+            <col style="width: 20%;">
+            <col style="width: 30%;">
+            <col style="width: 20%;">
+            <col style="width: 20%;">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Sl No</th>
+              <th>Reg No</th>
+              <th>Name</th>
+              <th>Class</th>
+              <th>Role</th>
+            </tr>
+          </thead>
+          <tbody data-rows="annexures.communication.volunteers" data-row-type="volunteers">
+            <tr><td colspan="5" style="text-align: center;">—</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </article>
+
+    <article class="paper page-break">
+      <section class="section-block">
+        <h2 class="section-title">Annexure D. Worksheets / Activities</h2>
+        <div class="annexure-grid" data-grid="annexures.worksheets">
+          <figure class="annexure-card placeholder"><div class="media-frame">—</div><figcaption>—</figcaption></figure>
+        </div>
+      </section>
+    </article>
+
+    <article class="paper page-break">
+      <section class="section-block">
+        <h2 class="section-title">Annexure E. Evaluation Sheet</h2>
+        <figure class="annexure-card" data-single="annexures.evaluation_sheet">
+          <div class="media-frame">—</div>
+          <figcaption>—</figcaption>
+        </figure>
+      </section>
+    </article>
+
+    <article class="paper page-break">
+      <section class="section-block">
+        <h2 class="section-title">Annexure F. Feedback Form</h2>
+        <figure class="annexure-card" data-single="annexures.feedback_form">
+          <div class="media-frame">—</div>
+          <figcaption>—</figcaption>
+        </figure>
+      </section>
+    </article>
+  </section>
 
   <footer class="print-footer">
     <div>CHRIST (Deemed to be University), Pune Lavasa Campus – 30 Valor Court, Pune 412112, Maharashtra</div>
@@ -614,7 +777,8 @@
 
     const editState = {
       fields: [],
-      lists: []
+      lists: [],
+      chips: []
     };
 
     const CHECKLIST_LABELS = {
@@ -761,14 +925,16 @@
 
     function setChips(selector, arr) {
       const nodes = resolveNodes(selector);
-      const values = toArray(arr);
       nodes.forEach(node => {
+        const values = toArray(arr);
+        node.innerHTML = '';
         if (!values.length) {
-          const section = node.closest('.section-block');
-          if (section) section.remove();
+          const chip = document.createElement('span');
+          chip.className = 'chip placeholder';
+          chip.textContent = '—';
+          node.appendChild(chip);
           return;
         }
-        node.innerHTML = '';
         values.forEach(item => {
           const span = document.createElement('span');
           span.className = 'chip';
@@ -794,12 +960,24 @@
 
     function setGrid(selector, items) {
       const nodes = resolveNodes(selector);
-      const list = Array.isArray(items)
-        ? items.map(normalizeMediaItem).filter(entry => entry && !isBlank(entry.src))
-        : [];
       nodes.forEach(node => {
         node.innerHTML = '';
-        if (!list.length) return;
+        const list = Array.isArray(items)
+          ? items.map(normalizeMediaItem).filter(entry => entry && entry.src)
+          : [];
+        if (!list.length) {
+          const figure = document.createElement('figure');
+          figure.className = 'annexure-card placeholder';
+          const frame = document.createElement('div');
+          frame.className = 'media-frame';
+          frame.textContent = '—';
+          const caption = document.createElement('figcaption');
+          caption.textContent = '—';
+          figure.appendChild(frame);
+          figure.appendChild(caption);
+          node.appendChild(figure);
+          return;
+        }
         list.forEach(entry => {
           const figure = document.createElement('figure');
           figure.className = 'annexure-card';
@@ -823,7 +1001,10 @@
       nodes.forEach(node => {
         const type = node.getAttribute('data-row-type') || '';
         node.innerHTML = '';
-        if (!Array.isArray(rows) || !rows.length) {
+        const list = Array.isArray(rows)
+          ? rows.filter(entry => entry && !(typeof entry === 'string' && isBlank(entry)))
+          : [];
+        if (!list.length) {
           const table = node.closest('table');
           const colCount = table ? (table.querySelectorAll('col').length || table.querySelectorAll('th').length || 1) : 1;
           const tr = document.createElement('tr');
@@ -836,7 +1017,7 @@
           return;
         }
         if (type === 'volunteers') {
-          rows.forEach((row, index) => {
+          list.forEach((row, index) => {
             const tr = document.createElement('tr');
             const sl = row.sl ?? row.sl_no ?? row.serial ?? row.index ?? index + 1;
             const reg = row.reg ?? row.reg_no ?? row.registration_number ?? row.id ?? '';
@@ -851,7 +1032,7 @@
             node.appendChild(tr);
           });
         } else if (type === 'courses') {
-          rows.forEach(row => {
+          list.forEach(row => {
             const tr = document.createElement('tr');
             const code = row.course_code ?? row.code ?? '';
             const name = row.course_name ?? row.name ?? '';
@@ -865,7 +1046,7 @@
             node.appendChild(tr);
           });
         } else {
-          rows.forEach(row => {
+          list.forEach(row => {
             const tr = document.createElement('tr');
             const td = document.createElement('td');
             td.textContent = displayValue(row);
@@ -878,8 +1059,8 @@
 
     function setSingle(selector, item) {
       const nodes = resolveNodes(selector);
-      const entry = normalizeMediaItem(item);
       nodes.forEach(node => {
+        const entry = normalizeMediaItem(item);
         const frame = node.querySelector('.media-frame');
         const caption = node.querySelector('figcaption');
         if (!frame) return;
@@ -889,6 +1070,8 @@
           img.src = entry.src;
           img.alt = entry.caption || 'Annexure Image';
           frame.appendChild(img);
+        } else {
+          frame.textContent = '—';
         }
         if (caption) {
           caption.textContent = displayValue(entry && entry.caption ? entry.caption : '');
@@ -896,69 +1079,23 @@
       });
     }
 
-    function resolveTarget(target) {
-      if (!target) return document.getElementById('dynamic-sections');
-      if (typeof target === 'string') {
-        return document.querySelector(target);
+    function populateChecklist(data) {
+      const tbody = document.querySelector('[data-checklist]');
+      if (!tbody) return;
+      const keys = [...CHECKLIST_ORDER];
+      if (data && typeof data === 'object') {
+        Object.keys(data).forEach(key => {
+          if (!keys.includes(key)) keys.push(key);
+        });
       }
-      return target;
-    }
-
-    function addSection(title, html, opts) {
-      const options = opts || {};
-      const container = resolveTarget(options.target);
-      if (!container) return null;
-      const section = document.createElement('section');
-      section.className = 'section-block';
-      if (options.classes) {
-        options.classes.split(/\s+/).filter(Boolean).forEach(cls => section.classList.add(cls));
-      }
-      if (options.pageBreak) {
-        section.classList.add('page-break');
-      }
-      const heading = document.createElement('h2');
-      heading.className = 'section-title';
-      heading.textContent = title;
-      section.appendChild(heading);
-      if (html instanceof Node) {
-        section.appendChild(html);
-      } else if (html) {
-        const template = document.createElement('template');
-        template.innerHTML = html;
-        section.appendChild(template.content.cloneNode(true));
-      }
-      container.appendChild(section);
-      return section;
-    }
-
-    function renderChecklist(data) {
-      if (!data || typeof data !== 'object') return null;
-      const keys = [];
-      CHECKLIST_ORDER.forEach(key => {
-        if (Object.prototype.hasOwnProperty.call(data, key)) {
-          keys.push(key);
-        }
-      });
-      Object.keys(data).forEach(key => {
-        if (!keys.includes(key)) keys.push(key);
-      });
-      if (!keys.length) return null;
-      const table = document.createElement('table');
-      table.className = 'checklist';
-      const colgroup = document.createElement('colgroup');
-      const colTick = document.createElement('col');
-      colTick.className = 'c-tick';
-      const colLabel = document.createElement('col');
-      colgroup.appendChild(colTick);
-      colgroup.appendChild(colLabel);
-      table.appendChild(colgroup);
-      const tbody = document.createElement('tbody');
+      tbody.innerHTML = '';
       keys.forEach(key => {
         const tr = document.createElement('tr');
         const tickCell = document.createElement('td');
         const tick = document.createElement('span');
         tick.className = 'tick';
-        tick.textContent = data[key] ? '☑' : '▢';
+        const value = data && typeof data === 'object' && Object.prototype.hasOwnProperty.call(data, key) ? data[key] : false;
+        tick.textContent = value ? '☑' : '▢';
         tickCell.appendChild(tick);
         const labelCell = document.createElement('td');
         const label = CHECKLIST_LABELS[key] || key.replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -967,181 +1104,15 @@
         tr.appendChild(labelCell);
         tbody.appendChild(tr);
       });
-      table.appendChild(tbody);
-      return table;
     }
 
-    function createAnnexureArticle() {
-      const host = document.getElementById('annexures');
-      if (!host) return null;
-      const article = document.createElement('article');
-      article.className = 'paper page-break';
-      host.appendChild(article);
-      return article;
-    }
-
-    function generateDynamicSections(data) {
-      const dynamic = document.getElementById('dynamic-sections');
-      const annexureHost = document.getElementById('annexures');
-      if (dynamic) dynamic.innerHTML = '';
-      if (annexureHost) annexureHost.innerHTML = '';
-      if (!dynamic) return;
-
-      const outcomes = toArray(getValue(data, 'narrative.outcomes'));
-      if (outcomes.length) {
-        addSection('Outcomes', '<ul class="cell-ul" data-list="narrative.outcomes"></ul>');
-        setList('#dynamic-sections [data-list="narrative.outcomes"]', outcomes);
-      }
-
-      const analysisItems = [
-        { key: 'analysis.impact_attendees', label: 'Impact on Attendees', value: getValue(data, 'analysis.impact_attendees') },
-        { key: 'analysis.impact_schools', label: 'Impact on Schools', value: getValue(data, 'analysis.impact_schools') },
-        { key: 'analysis.impact_volunteers', label: 'Impact on Volunteers', value: getValue(data, 'analysis.impact_volunteers') }
-      ].filter(item => !isBlank(item.value));
-
-      if (analysisItems.length) {
-        const html = '<div class="analysis-grid">' + analysisItems.map(item => (
-          '<div class="analysis-box">' +
-            '<div class="analysis-label">' + item.label + '</div>' +
-            '<p class="cell-para" data-field="' + item.key + '" data-edit="textarea">—</p>' +
-          '</div>'
-        )).join('') + '</div>';
-        addSection('Analysis', html);
-        analysisItems.forEach(item => setText('[data-field="' + item.key + '"]', item.value));
-      }
-
-      const mappingEntries = [
-        { key: 'mapping.pos_psos', label: 'POS / PSOs', value: getValue(data, 'mapping.pos_psos') },
-        { key: 'mapping.graduate_attributes_or_needs', label: 'Graduate Attributes / Needs', value: getValue(data, 'mapping.graduate_attributes_or_needs') },
-        { key: 'mapping.contemporary_requirements', label: 'Contemporary Requirements', value: getValue(data, 'mapping.contemporary_requirements') },
-        { key: 'mapping.value_systems', label: 'Value Systems', value: getValue(data, 'mapping.value_systems') }
-      ].filter(item => !isBlank(item.value));
-      const sdgNumbers = toArray(getValue(data, 'mapping.sdg_goal_numbers'));
-      const coursesRaw = getValue(data, 'mapping.courses');
-      const courseRows = Array.isArray(coursesRaw) ? coursesRaw.filter(Boolean) : [];
-
-      if (mappingEntries.length || sdgNumbers.length || courseRows.length) {
-        let html = '';
-        if (mappingEntries.length) {
-          html += '<table class="grid-table two-col"><colgroup><col class="col-label"><col class="col-value"></colgroup><tbody>';
-          html += mappingEntries.map(item => (
-            '<tr><th>' + item.label + '</th><td><p class="cell-para" data-field="' + item.key + '" data-edit="textarea">—</p></td></tr>'
-          )).join('');
-          html += '</tbody></table>';
-        }
-        if (sdgNumbers.length) {
-          html += '<div class="sdg-row"><div class="sdg-label">SDG Goal Numbers</div><div class="sdg-values"><ul class="cell-ul sdg-list" data-list="mapping.sdg_goal_numbers"></ul></div></div>';
-        }
-        if (courseRows.length) {
-          html += '<table class="grid-table course-table" style="margin-top:4mm;"><colgroup><col class="col-code"><col class="col-name"><col class="col-type"><col class="col-note"></colgroup><thead><tr><th>Course Code</th><th>Course Name</th><th>Mapping Type</th><th>Note</th></tr></thead><tbody data-rows="mapping.courses" data-row-type="courses"></tbody></table>';
-        }
-        addSection('Relevance / Academic Mapping', html);
-        mappingEntries.forEach(item => setText('[data-field="' + item.key + '"]', item.value));
-        if (sdgNumbers.length) setList('#dynamic-sections [data-list="mapping.sdg_goal_numbers"]', sdgNumbers);
-        if (courseRows.length) setRows('#dynamic-sections [data-rows="mapping.courses"]', courseRows);
-      }
-
-      const metrics = toArray(getValue(data, 'metrics'));
-      if (metrics.length) {
-        addSection('NAAC Metrics Tags', '<div class="chips" data-chips="metrics"></div>');
-        setChips('#dynamic-sections [data-chips="metrics"]', metrics);
-      }
-
-      const suggestions = toArray(getValue(data, 'iqac.iqac_suggestions'));
-      const reviewDate = getValue(data, 'iqac.iqac_review_date');
-      if (suggestions.length || !isBlank(reviewDate)) {
-        let html = '<ul class="cell-ul" data-list="iqac.iqac_suggestions"></ul>';
-        if (!isBlank(reviewDate)) {
-          html += '<div class="review-date">Review Date: <span data-field="iqac.iqac_review_date">—</span></div>';
-        }
-        addSection('Suggestions for Improvement / Feedback from IQAC', html);
-        setList('#dynamic-sections [data-list="iqac.iqac_suggestions"]', suggestions);
-        if (!isBlank(reviewDate)) setText('#dynamic-sections [data-field="iqac.iqac_review_date"]', reviewDate);
-      }
-
-      const checklistData = getValue(data, 'attachments.checklist');
-      if (checklistData && typeof checklistData === 'object' && Object.keys(checklistData).length) {
-        const table = renderChecklist(checklistData);
-        if (table) {
-          addSection('Attachments Checklist', table);
-        }
-      }
-
-      const annexures = data.annexures || {};
-      const photos = Array.isArray(annexures.photos) ? annexures.photos : [];
-      const photoEntries = photos.map(normalizeMediaItem).filter(entry => entry && entry.src);
-      if (photoEntries.length) {
-        const article = createAnnexureArticle();
-        if (article) {
-          addSection('Annexure A: Photographs', '<div class="annexure-grid" data-grid="annexures.photos"></div>', { target: article });
-          setGrid('#annexures [data-grid="annexures.photos"]', photoEntries);
-        }
-      }
-
-      const brochure = Array.isArray(annexures.brochure_pages) ? annexures.brochure_pages : [];
-      const brochureEntries = brochure.map(normalizeMediaItem).filter(entry => entry && entry.src);
-      if (brochureEntries.length) {
-        const article = createAnnexureArticle();
-        if (article) {
-          addSection('Annexure B: Brochure', '<div class="annexure-grid" data-grid="annexures.brochure_pages"></div>', { target: article });
-          setGrid('#annexures [data-grid="annexures.brochure_pages"]', brochureEntries);
-        }
-      }
-
-      const communication = annexures.communication || {};
-      const volunteers = Array.isArray(communication.volunteers) ? communication.volunteers : [];
-      if (!isBlank(communication.subject) || !isBlank(communication.date) || volunteers.length) {
-        const article = createAnnexureArticle();
-        if (article) {
-          const html = '<table class="grid-table two-col"><colgroup><col class="col-label"><col class="col-value"></colgroup><tbody>' +
-            '<tr><th>Subject</th><td data-field="annexures.communication.subject">—</td></tr>' +
-            '<tr><th>Date</th><td data-field="annexures.communication.date">—</td></tr>' +
-          '</tbody></table>' +
-          '<table class="volunteer-table" style="margin-top:4mm;"><colgroup><col style="width:10%"><col style="width:20%"><col style="width:30%"><col style="width:20%"><col style="width:20%"></colgroup><thead><tr><th>Sl No</th><th>Reg No</th><th>Name</th><th>Class</th><th>Role</th></tr></thead><tbody data-rows="annexures.communication.volunteers" data-row-type="volunteers"></tbody></table>';
-          addSection('Annexure C: Communication with Institution', html, { target: article });
-          setText('#annexures [data-field="annexures.communication.subject"]', communication.subject);
-          setText('#annexures [data-field="annexures.communication.date"]', communication.date);
-          setRows('#annexures [data-rows="annexures.communication.volunteers"]', volunteers);
-        }
-      }
-
-      const worksheets = Array.isArray(annexures.worksheets) ? annexures.worksheets : [];
-      const worksheetEntries = worksheets.map(normalizeMediaItem).filter(entry => entry && entry.src);
-      if (worksheetEntries.length) {
-        const article = createAnnexureArticle();
-        if (article) {
-          addSection('Annexure D: Worksheets / Activities', '<div class="annexure-grid" data-grid="annexures.worksheets"></div>', { target: article });
-          setGrid('#annexures [data-grid="annexures.worksheets"]', worksheetEntries);
-        }
-      }
-
-      const evaluationSheet = normalizeMediaItem(annexures.evaluation_sheet);
-      if (evaluationSheet && evaluationSheet.src) {
-        const article = createAnnexureArticle();
-        if (article) {
-          addSection('Annexure E: Evaluation Sheet', '<figure class="annexure-card" data-single="annexures.evaluation_sheet"><div class="media-frame"></div><figcaption>—</figcaption></figure>', { target: article });
-          setSingle('#annexures [data-single="annexures.evaluation_sheet"]', evaluationSheet);
-        }
-      }
-
-      const feedbackForm = normalizeMediaItem(annexures.feedback_form);
-      if (feedbackForm && feedbackForm.src) {
-        const article = createAnnexureArticle();
-        if (article) {
-          addSection('Annexure F: Feedback Form', '<figure class="annexure-card" data-single="annexures.feedback_form"><div class="media-frame"></div><figcaption>—</figcaption></figure>', { target: article });
-          setSingle('#annexures [data-single="annexures.feedback_form"]', feedbackForm);
-        }
-      }
-    }
-
-    function populateStaticFields(data) {
+    function populateReport(data) {
       const fieldMap = [
         { selector: '[data-field="event.title"]', path: 'event.title' },
         { selector: '[data-field="event.department"]', path: 'event.department' },
         { selector: '[data-field="event.location"]', path: 'event.location' },
         { selector: '[data-field="event.no_of_activities"]', path: 'event.no_of_activities' },
         { selector: '[data-field="event.date"]', path: 'event.date' },
-        { selector: '[data-field="event.time_window"]', path: 'event.time_window' },
         { selector: '[data-field="event.venue"]', path: 'event.venue' },
         { selector: '[data-field="event.academic_year"]', path: 'event.academic_year' },
         { selector: '[data-field="event.event_type_focus"]', path: 'event.event_type_focus' },
@@ -1152,18 +1123,49 @@
         { selector: '[data-field="participants.organising_committee.student_volunteers_count"]', path: 'participants.organising_committee.student_volunteers_count' },
         { selector: '[data-field="participants.attendees_count"]', path: 'participants.attendees_count' },
         { selector: '[data-field="narrative.summary_overall_event"]', path: 'narrative.summary_overall_event' },
+        { selector: '[data-field="analysis.impact_attendees"]', path: 'analysis.impact_attendees' },
+        { selector: '[data-field="analysis.impact_schools"]', path: 'analysis.impact_schools' },
+        { selector: '[data-field="analysis.impact_volunteers"]', path: 'analysis.impact_volunteers' },
+        { selector: '[data-field="mapping.pos_psos"]', path: 'mapping.pos_psos' },
+        { selector: '[data-field="mapping.graduate_attributes_or_needs"]', path: 'mapping.graduate_attributes_or_needs' },
+        { selector: '[data-field="mapping.contemporary_requirements"]', path: 'mapping.contemporary_requirements' },
+        { selector: '[data-field="mapping.value_systems"]', path: 'mapping.value_systems' },
+        { selector: '[data-field="iqac.iqac_review_date"]', path: 'iqac.iqac_review_date' },
         { selector: '[data-field="iqac.sign_head_coordinator"]', path: 'iqac.sign_head_coordinator' },
         { selector: '[data-field="iqac.sign_faculty_coordinator"]', path: 'iqac.sign_faculty_coordinator' },
-        { selector: '[data-field="iqac.sign_iqac"]', path: 'iqac.sign_iqac' }
+        { selector: '[data-field="iqac.sign_iqac"]', path: 'iqac.sign_iqac' },
+        { selector: '[data-field="annexures.communication.subject"]', path: 'annexures.communication.subject' },
+        { selector: '[data-field="annexures.communication.date"]', path: 'annexures.communication.date' }
       ];
+
       fieldMap.forEach(item => setText(item.selector, getValue(data, item.path)));
-      const coordinatorList = data?.participants?.organising_committee?.event_coordinators;
-      setList('[data-list="participants.organising_committee.event_coordinators"]', coordinatorList);
+
+      setList('[data-list="participants.organising_committee.event_coordinators"]', getValue(data, 'participants.organising_committee.event_coordinators'));
+      setList('[data-list="narrative.social_relevance"]', getValue(data, 'narrative.social_relevance'));
+      setList('[data-list="narrative.outcomes"]', getValue(data, 'narrative.outcomes'));
+      setList('[data-list="mapping.sdg_goal_numbers"]', getValue(data, 'mapping.sdg_goal_numbers'));
+      setList('[data-list="iqac.iqac_suggestions"]', getValue(data, 'iqac.iqac_suggestions'));
+
+      const courseRows = getValue(data, 'mapping.courses');
+      setRows('[data-rows="mapping.courses"]', Array.isArray(courseRows) ? courseRows.filter(Boolean) : []);
+
+      const volunteers = getValue(data, 'annexures.communication.volunteers');
+      setRows('[data-rows="annexures.communication.volunteers"]', Array.isArray(volunteers) ? volunteers.filter(Boolean) : []);
+
+      setChips('[data-chips="metrics.naac_tags"]', getValue(data, 'metrics.naac_tags'));
+
+      populateChecklist(getValue(data, 'attachments.checklist'));
+
+      const annexures = data && typeof data === 'object' ? data.annexures || {} : {};
+      setGrid('[data-grid="annexures.photos"]', annexures.photos);
+      setGrid('[data-grid="annexures.brochure_pages"]', annexures.brochure_pages);
+      setGrid('[data-grid="annexures.worksheets"]', annexures.worksheets);
+      setSingle('[data-single="annexures.evaluation_sheet"]', annexures.evaluation_sheet);
+      setSingle('[data-single="annexures.feedback_form"]', annexures.feedback_form);
     }
 
     function renderReport() {
-      populateStaticFields(state.data);
-      generateDynamicSections(state.data);
+      populateReport(state.data);
       const status = document.getElementById('status-pill');
       if (status) status.classList.add('hidden');
     }
@@ -1172,6 +1174,7 @@
       if (state.mode === 'edit') return;
       editState.fields = [];
       editState.lists = [];
+      editState.chips = [];
       document.querySelectorAll('[data-field]').forEach(node => {
         const path = node.getAttribute('data-field');
         if (!path) return;
@@ -1206,6 +1209,18 @@
         node.appendChild(textarea);
         editState.lists.push({ node, path, textarea });
       });
+      document.querySelectorAll('[data-chips]').forEach(node => {
+        const path = node.getAttribute('data-chips');
+        if (!path) return;
+        if (node.dataset.editing === 'true') return;
+        const textarea = document.createElement('textarea');
+        textarea.className = 'edit-textarea';
+        textarea.value = toArray(getValue(state.data, path)).join('\n');
+        node.dataset.editing = 'true';
+        node.innerHTML = '';
+        node.appendChild(textarea);
+        editState.chips.push({ node, path, textarea });
+      });
       state.mode = 'edit';
     }
 
@@ -1223,8 +1238,16 @@
         entry.node.removeAttribute('data-editing');
         entry.node.innerHTML = '';
       });
+      editState.chips.forEach(entry => {
+        const raw = entry.textarea.value.replace(/\r/g, '\n');
+        const items = toArray(raw);
+        setValue(state.data, entry.path, items);
+        entry.node.removeAttribute('data-editing');
+        entry.node.innerHTML = '';
+      });
       editState.fields = [];
       editState.lists = [];
+      editState.chips = [];
       state.mode = 'preview';
       renderReport();
     }
