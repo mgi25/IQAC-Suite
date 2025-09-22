@@ -3,7 +3,7 @@ from django.urls import path
 from ai import enhance_summary as ai_views
 from suite import views as suite_views
 
-from . import views, views_report_assets
+from . import views
 
 app_name = "emt"
 
@@ -110,21 +110,6 @@ urlpatterns = [
         "reports/<int:report_id>/attendance/data/",
         views.attendance_data,
         name="attendance_data",
-    ),
-    path(
-        "report/<int:report_id>/annexures/",
-        views_report_assets.submit_step_7,
-        name="report_annexures",
-    ),
-    path(
-        "report/<int:report_id>/assets/",
-        views_report_assets.assets_collection,
-        name="report_assets_collection",
-    ),
-    path(
-        "report/assets/<int:asset_id>/",
-        views_report_assets.asset_detail,
-        name="report_asset_detail",
     ),
     # Graduate Attributes editor
     path(
