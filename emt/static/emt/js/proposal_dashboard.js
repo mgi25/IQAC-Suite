@@ -109,6 +109,7 @@ $(document).ready(function() {
             const pid = window.PROPOSAL_ID;
             fetch(window.RESET_DRAFT_URL, {
                 method: 'POST',
+                credentials: 'same-origin',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': window.AUTOSAVE_CSRF || ''
@@ -327,7 +328,7 @@ $(document).ready(function() {
             const url = $('.proposal-nav .nav-link[data-section="cdl-support"]').data('url');
             if (url) {
                 formEl.attr('action', url);
-                fetch(url)
+                fetch(url, { credentials: 'same-origin' })
                     .then(res => res.text())
                     .then(html => {
                         const parser = new DOMParser();
@@ -636,7 +637,7 @@ $(document).ready(function() {
             load: (query, callback) => {
                 const orgId = djangoOrgSelect.val();
                 if (!query.length || !orgId) return callback();
-                fetch(`${window.API_FACULTY}?org_id=${orgId}&q=${encodeURIComponent(query)}`)
+                fetch(`${window.API_FACULTY}?org_id=${orgId}&q=${encodeURIComponent(query)}`, { credentials: 'same-origin' })
                     .then(r => r.json())
                     .then(callback)
                     .catch(() => callback());
@@ -664,7 +665,7 @@ $(document).ready(function() {
         if (initialValues && initialValues.length) {
             const missing = initialValues.filter(v => !tomselect.options[v] || tomselect.options[v].text === v);
             if (missing.length) {
-                fetch(`${window.API_FACULTY}?ids=${missing.join(',')}`)
+                fetch(`${window.API_FACULTY}?ids=${missing.join(',')}`, { credentials: 'same-origin' })
                     .then(r => r.json())
                     .then(data => {
                         data.forEach(opt => {
@@ -722,7 +723,7 @@ $(document).ready(function() {
             load: (query, callback) => {
                 if (!query.length) return callback();
                 const mainOrg = orgSelect.val();
-                fetch(`${window.API_ORGANIZATIONS}?q=${encodeURIComponent(query)}`)
+                fetch(`${window.API_ORGANIZATIONS}?q=${encodeURIComponent(query)}`, { credentials: 'same-origin' })
                     .then(r => r.json())
                     .then(data => {
                         if (mainOrg) {
@@ -793,7 +794,7 @@ $(document).ready(function() {
             const main = orgSelect.val();
             const filteredIds = main ? existingIds.filter(id => String(id) !== String(main)) : existingIds;
             if (filteredIds.length) {
-                fetch(`${window.API_ORGANIZATIONS}?ids=${filteredIds.join(',')}`)
+                fetch(`${window.API_ORGANIZATIONS}?ids=${filteredIds.join(',')}`, { credentials: 'same-origin' })
                     .then(r => r.json())
                     .then(data => {
                         data.forEach(opt => tom.addOption(opt));
@@ -909,7 +910,7 @@ $(document).ready(function() {
                 }
                 const orgParam = ids.length ? `&org_ids=${encodeURIComponent(ids.join(','))}` : '';
                 const url = `/suite/api/students/?q=${encodeURIComponent(query)}${orgParam}`;
-                fetch(url)
+                fetch(url, { credentials: 'same-origin' })
                     .then(response => response.json())
                     .then(json => {
                         callback(mergeWithAudienceStudents(json, fallbackOptions));
@@ -1436,7 +1437,7 @@ $(document).ready(function() {
         }
         modal.addClass('show');
         container.text('Loading...');
-        fetch(url)
+        fetch(url, { credentials: 'same-origin' })
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
@@ -1602,7 +1603,7 @@ $(document).ready(function() {
                 placeholder: `Type ${label} name...`,
                 load: (query, callback) => {
                     if (!query || query.length < 2) return callback();
-                    fetch(`${window.API_ORGANIZATIONS}?q=${encodeURIComponent(query)}&org_type=${encodeURIComponent(label)}`)
+                    fetch(`${window.API_ORGANIZATIONS}?q=${encodeURIComponent(query)}&org_type=${encodeURIComponent(label)}`, { credentials: 'same-origin' })
                         .then(r => r.json())
                         .then(callback)
                         .catch(() => callback());
@@ -2192,6 +2193,7 @@ function getWhyThisEventForm() {
             try {
                 const resp = await fetch(window.API_FETCH_LINKEDIN, {
                     method: 'POST',
+                    credentials: 'same-origin',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': window.AUTOSAVE_CSRF || ''

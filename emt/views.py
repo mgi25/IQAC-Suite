@@ -29,7 +29,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.utils.formats import date_format
 from django.utils.timezone import now
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods, require_POST
 
 from core.models import (SDG_GOALS, Class, Organization,
@@ -367,6 +367,7 @@ def _save_income(proposal, data):
 # PROPOSAL STEP 1: Proposal Submission
 # ──────────────────────────────
 @login_required
+@ensure_csrf_cookie
 def submit_proposal(request, pk=None):
     from transcript.models import get_active_academic_year
 
@@ -546,6 +547,7 @@ def submit_proposal(request, pk=None):
 #  Review proposal before final submit
 # ──────────────────────────────────────────────────────────────
 @login_required
+@ensure_csrf_cookie
 def review_proposal(request, proposal_id):
     proposal_qs = EventProposal.objects.select_related(
         "need_analysis",
@@ -1068,6 +1070,7 @@ def submit_expense_details(request, proposal_id):
 # PROPOSAL STEP 8: CDL Support
 # ──────────────────────────────
 @login_required
+@ensure_csrf_cookie
 def submit_cdl_support(request, proposal_id):
     proposal = get_object_or_404(
         EventProposal, id=proposal_id, submitted_by=request.user
