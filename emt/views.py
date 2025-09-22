@@ -187,9 +187,18 @@ def _save_activities(proposal, data, form=None):
         name = data.get(f"activity_name_{index}")
         date = data.get(f"activity_date_{index}")
         if name and date:
-            new_activities.append(
-                EventActivity(proposal=proposal, name=name, date=date)
-            )
+            # Ensure we persist a proper date object. If parsing fails, treat as incomplete.
+            parsed_date = parse_date(str(date)) if date else None
+            if parsed_date:
+                new_activities.append(
+                    EventActivity(proposal=proposal, name=name, date=parsed_date)
+                )
+            else:
+                has_incomplete = True
+                msg = f"Activity {index} has an invalid date."
+                logger.warning(msg)
+                if form is not None:
+                    form.add_error(None, msg)
         elif name or date:
             has_incomplete = True
             msg = f"Activity {index} requires both name and date."

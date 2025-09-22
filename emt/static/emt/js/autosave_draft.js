@@ -5,18 +5,57 @@ window.AutosaveManager = (function() {
     let proposalId = window.PROPOSAL_ID || '';
     let timeoutId = null;
     let fields = [];
+    // Sequence tracking to prevent out-of-order responses from overriding newer state
+    let saveSeq = 0;
+    let lastHandledSeq = 0;
 
     // Unique key for this page's local storage scoped per-user
     const pageKey = `proposal_draft_${window.USER_ID}_${window.location.pathname}_new`;
     const legacyPageKey = `proposal_draft_${window.location.pathname}_new`;
 
     function getSavedData() {
+        // Read current key
+        let current = {};
         try {
-            return JSON.parse(localStorage.getItem(pageKey) || '{}');
+            current = JSON.parse(localStorage.getItem(pageKey) || '{}');
         } catch (e) {
             console.error('Error parsing saved draft:', e);
-            return {};
+            current = {};
         }
+
+        // If current looks fine, return it
+        const hasActivities = Object.keys(current).some(k => /^activity_(?:name|date)_\d+$/.test(k));
+        if (Object.keys(current).length && (hasActivities || current._proposal_id)) {
+            return current;
+        }
+
+        // Fallback: search for drafts saved under a different pathname (e.g., before/after ID)
+        try {
+            const keys = Object.keys(localStorage);
+            const prefix = `proposal_draft_${window.USER_ID}_`;
+            const candidates = keys.filter(k => k.startsWith(prefix) && k.endsWith('_new') && k.includes('/emt/submit_proposal'));
+            let best = null;
+            for (const k of candidates) {
+                if (k === pageKey) continue;
+                try {
+                    const data = JSON.parse(localStorage.getItem(k) || '{}');
+                    if (!data || typeof data !== 'object') continue;
+                    const hasAct = Object.keys(data).some(x => /^activity_(?:name|date)_\d+$/.test(x));
+                    const matchesPid = data._proposal_id && window.PROPOSAL_ID && String(data._proposal_id) === String(window.PROPOSAL_ID);
+                    if (!best) best = data;
+                    if (matchesPid) { best = data; break; }
+                    if (hasAct && !Object.keys(best).some(x => /^activity_(?:name|date)_\d+$/.test(x))) {
+                        best = data;
+                    }
+                } catch { /* ignore */ }
+            }
+            if (best) {
+                // Migrate to current key for consistency
+                try { localStorage.setItem(pageKey, JSON.stringify(best)); } catch {}
+                return best;
+            }
+        } catch { /* ignore */ }
+        return current || {};
     }
 
     function migrateLegacyDraft() {
@@ -125,6 +164,7 @@ window.AutosaveManager = (function() {
     }
 
     function autosaveDraft() {
+        const seq = ++saveSeq;
         // Don't autosave for submitted proposals
         if (window.PROPOSAL_STATUS && window.PROPOSAL_STATUS !== 'draft') {
             clearLocal();
@@ -139,7 +179,7 @@ window.AutosaveManager = (function() {
         const formEl = document.querySelector('form');
         const hasFile = formEl && Array.from(formEl.querySelectorAll('input[type="file"]')).some(f => f.files.length > 0);
 
-        document.dispatchEvent(new Event('autosave:start'));
+    document.dispatchEvent(new Event('autosave:start'));
 
         const headers = { 'X-CSRFToken': window.AUTOSAVE_CSRF };
         const options = {
@@ -183,18 +223,26 @@ window.AutosaveManager = (function() {
         })
         .then(data => {
             if (data && data.proposal_id) {
-                proposalId = data.proposal_id;
-                window.PROPOSAL_ID = data.proposal_id;
-                saveLocal();
-                document.dispatchEvent(new CustomEvent('autosave:success', {
-                    detail: { proposalId: data.proposal_id, errors: data.errors, success: data.success }
-                }));
+                // Only update UI/events if this response is not stale
+                if (seq >= lastHandledSeq) {
+                    lastHandledSeq = seq;
+                    proposalId = data.proposal_id;
+                    window.PROPOSAL_ID = data.proposal_id;
+                    saveLocal();
+                    document.dispatchEvent(new CustomEvent('autosave:success', {
+                        detail: { proposalId: data.proposal_id, errors: data.errors, success: data.success }
+                    }));
+                }
                 return data;
             }
             return Promise.reject(data);
         })
         .catch(err => {
-            document.dispatchEvent(new CustomEvent('autosave:error', {detail: err}));
+            // Only dispatch error if this response is not stale
+            if (seq >= lastHandledSeq) {
+                lastHandledSeq = seq;
+                document.dispatchEvent(new CustomEvent('autosave:error', {detail: err}));
+            }
             return Promise.reject(err);
         });
     }
@@ -316,7 +364,14 @@ window.AutosaveManager = (function() {
         reinitialize,
         manualSave,
         autosaveDraft,
-        clearLocal
+        clearLocal,
+        // Expose a read-only snapshot of saved draft values so other modules
+        // (e.g., dynamic field renderers) can hydrate UI when the server
+        // hasn't yet persisted those values.
+        getSavedDraft: () => {
+            try { return JSON.parse(localStorage.getItem(pageKey) || '{}'); }
+            catch { return {}; }
+        }
     };
 })();
 
