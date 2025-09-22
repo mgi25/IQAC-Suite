@@ -60,8 +60,7 @@
         <div id="commEmpty" class="empty-log" style="margin:0">No messages yet.</div>
       </div>
     </div>
-    <form id="commForm" method="post" enctype="multipart/form-data">
-      {% csrf_token %}
+    <form id="commForm" enctype="multipart/form-data">
       <div class="input-row">
         <textarea id="commText" placeholder="Write a comment..." maxlength="4000" aria-label="Message input"></textarea>
         <button type="submit" class="send-btn" aria-label="Send message" title="Send (Shift+Enter)"><i class="fa-solid fa-paper-plane"></i></button>
