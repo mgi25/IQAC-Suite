@@ -62,7 +62,7 @@
                   <div style="display:flex; gap:8px; flex-wrap:wrap">
                     <a class="btn-view" href="{% url 'cdl_support_detail_page' %}?eventId={{ p.id }}"><i class="fa-regular fa-eye"></i> View</a>
                     <a class="btn-view" href="{% url 'cdl_assign_tasks_page' p.id %}?eventId={{ p.id }}"><i class="fa-regular fa-pen-to-square"></i> Assign</a>
-                    <a class="btn-view" href="{% url 'cdl_communication_page' %}?eventId={{ p.id }}"><i class="fa-regular fa-comments"></i> Chat</a>
+                    <a class="btn-view" href="{% url 'cdl_thread' p.id %}"><i class="fa-regular fa-comments"></i> Chat</a>
                   </div>
                 </td>
               </tr>

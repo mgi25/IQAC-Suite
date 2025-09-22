@@ -1,15 +1,13 @@
 import pytest
-from django.contrib.auth.models import Group, User
+from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
 
 @pytest.mark.django_db
 def test_cdl_communication_create_and_list(client):
-    # Ensure group exists
-    grp, _ = Group.objects.get_or_create(name="CDL_MEMBER")
-    user = User.objects.create_user(username="alice", password="pass123")
-    user.groups.add(grp)
+    # Use superuser (Main Admin) per new policy: only admins can access global log
+    user = User.objects.create_superuser(username="alice", email="alice@example.com", password="pass123")
     assert client.login(username="alice", password="pass123")
 
     url = reverse("api_cdl_communication")

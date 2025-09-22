@@ -75,11 +75,25 @@ def sidebar_permissions(request):
 
     # Anonymous users: nothing and restricted
     if not request.user.is_authenticated:
-        return {"allowed_nav_items": [], "unrestricted_nav": False}
+        return {"allowed_nav_items": [], "unrestricted_nav": False, "is_english_faculty": False}
 
     # Superusers: unrestricted; keep allowed_nav_items as [] for backward compat
     if request.user.is_superuser:
-        return {"allowed_nav_items": [], "unrestricted_nav": True}
+        return {"allowed_nav_items": [], "unrestricted_nav": True, "is_english_faculty": False}
+
+    # Pre-compute English Faculty heuristic for conditional UI
+    def _is_english_faculty_user(u):
+        try:
+            raqs = RoleAssignment.objects.select_related("role").filter(user=u, role__isnull=False)
+            for ra in raqs:
+                name = (getattr(ra.role, "name", "") or "").lower()
+                if "english" in name and ("faculty" in name or "review" in name or "proof" in name):
+                    return True
+        except Exception:
+            return False
+        return False
+
+    _english_flag = _is_english_faculty_user(request.user)
 
     def _expand_with_parents(ids):
         if not ids:
@@ -109,6 +123,7 @@ def sidebar_permissions(request):
         return {
             "allowed_nav_items": _expand_with_parents(user_perm.items),
             "unrestricted_nav": False,
+            "is_english_faculty": _english_flag,
         }
 
     # 2) Merge permissions from all assigned organization roles
@@ -164,6 +179,7 @@ def sidebar_permissions(request):
         return {
             "allowed_nav_items": _expand_with_parents(sorted(role_items)),
             "unrestricted_nav": False,
+            "is_english_faculty": _english_flag,
         }
 
     try:
@@ -173,4 +189,4 @@ def sidebar_permissions(request):
         )
     except Exception:
         pass
-    return {"allowed_nav_items": [], "unrestricted_nav": False}
+    return {"allowed_nav_items": [], "unrestricted_nav": False, "is_english_faculty": _english_flag}

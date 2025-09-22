@@ -6836,36 +6836,81 @@ def cdl_assign_tasks_page(request, proposal_id:int):
 # ────────────────────────────────────────────────────────────────
 @login_required
 def cdl_communication_page(request):
-    """Render the communication log page. Accessible to CDL head and employees/members."""
-    # Basic role check similar to work dashboard
-    is_allowed = request.user.is_superuser or request.user.groups.filter(name="CDL_MEMBER").exists()
-    if not is_allowed:
+    """Render the communication log page.
+
+    New rule: Only Main Admin (superuser) and CDL Admin (CDL Head/Admin roles under
+    org type 'CDL') can view/manage the global CDL communication log. CDL Employees
+    are restricted to per-event chats of events assigned to them, so they cannot
+    access the global log.
+    """
+
+    def _is_cdl_admin(user) -> bool:
+        if user.is_superuser:
+            return True
         try:
             from .models import RoleAssignment
-            for ra in RoleAssignment.objects.filter(user=request.user).select_related('role','organization','organization__org_type'):
-                role_name = (ra.role.name if ra.role else '').lower()
-                org_type = (ra.organization.org_type.name if ra.organization and ra.organization.org_type else '').lower()
-                if org_type == 'cdl' and any(k in role_name for k in ['head','employee','member','team']):
-                    is_allowed = True; break
+            for ra in (
+                RoleAssignment.objects.filter(user=user)
+                .select_related("role", "organization", "organization__org_type")
+            ):
+                role_name = (ra.role.name if ra.role else "").lower()
+                org_type = (
+                    ra.organization.org_type.name.lower()
+                    if (ra.organization and ra.organization.org_type)
+                    else ""
+                )
+                if org_type == "cdl" and any(k in role_name for k in ["head", "admin"]):
+                    return True
         except Exception:
             pass
-    if not is_allowed:
+        return False
+
+    if not _is_cdl_admin(request.user):
         return HttpResponseForbidden()
-    return render(request, 'core/cdl_communication.html')
+    return render(request, "core/cdl_communication.html")
 
 from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
 from django.forms.models import model_to_dict
 from .models import CDLCommunicationMessage
+from .models import ProofreadSubmission, ProofreadItem
 
 @login_required
 @require_http_methods(["GET","POST"])
 def api_cdl_communication(request):
-    """List or create communication messages.
-    GET params: page (optional), page_size (default 100 to return most recent quickly)
-    POST expects: comment (text) and optional attachment file
-    Returns JSON suitable for frontend consumption.
+    """List or create communication messages for the global CDL log.
+
+    Access control:
+    - Main Admin (superuser) and CDL Admin (Head/Admin under CDL) → full access
+    - CDL Employees → no access here; they should use per‑event chats only
+
+    GET params: page, page_size
+    POST expects: comment and optional attachment
     """
+    def _is_cdl_admin(user) -> bool:
+        if user.is_superuser:
+            return True
+        try:
+            from .models import RoleAssignment
+            for ra in (
+                RoleAssignment.objects.filter(user=user)
+                .select_related("role", "organization", "organization__org_type")
+            ):
+                role_name = (ra.role.name if ra.role else "").lower()
+                org_type = (
+                    ra.organization.org_type.name.lower()
+                    if (ra.organization and ra.organization.org_type)
+                    else ""
+                )
+                if org_type == "cdl" and any(k in role_name for k in ["head", "admin"]):
+                    return True
+        except Exception:
+            pass
+        return False
+
+    if not _is_cdl_admin(request.user):
+        return JsonResponse({"success": False, "error": "Not allowed"}, status=403)
+
     if request.method == 'POST':
         comment = (request.POST.get('comment') or '').strip()
         if not comment and 'attachment' not in request.FILES:
@@ -6891,14 +6936,320 @@ def api_cdl_communication(request):
     })
 
 def _comm_dict(m:CDLCommunicationMessage):
+    # Only include attachment_url if the file exists on storage to avoid 404s
+    att_url = None
+    att_missing = False
+    try:
+        if m.attachment and getattr(m.attachment, 'name', None):
+            storage = getattr(m.attachment, 'storage', None)
+            name = m.attachment.name
+            if storage and storage.exists(name):
+                att_url = m.attachment.url
+            else:
+                att_missing = True
+    except Exception:
+        att_missing = True
+        att_url = None
+
+    # Best-effort MIME type guess for client preview
+    attachment_mime = None
+    attachment_name = None
+    try:
+        if m.attachment and getattr(m.attachment, 'name', None):
+            import mimetypes
+            attachment_name = m.attachment.name.split('/')[-1]
+            guess, _ = mimetypes.guess_type(m.attachment.name)
+            attachment_mime = guess
+    except Exception:
+        attachment_mime = None
+
     return {
         'id': m.id,
         'user_id': m.user_id,
         'user_username': m.user.username,
         'comment': m.comment,
         'created_at': m.created_at.isoformat(),
-        'attachment_url': m.attachment.url if m.attachment else None,
+        'attachment_url': att_url,
+        'attachment_missing': att_missing,
+        'attachment_mime': attachment_mime,
+        'attachment_name': attachment_name,
     }
+
+
+# ────────────────────────────────────────────────
+# Proof-reading APIs
+# ────────────────────────────────────────────────
+
+def _is_english_faculty(user) -> bool:
+    try:
+        from .models import RoleAssignment
+        for ra in (
+            RoleAssignment.objects.filter(user=user)
+            .select_related("role", "organization", "organization__org_type")
+        ):
+            role_name = (ra.role.name if ra.role else "").lower()
+            if "english" in role_name and ("faculty" in role_name or "review" in role_name):
+                return True
+    except Exception:
+        pass
+    return False
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_proofread_reviewers(request):
+    """List available English Faculty reviewers based on role naming.
+
+    Filters RoleAssignment for roles whose name contains 'english' and 'faculty'/'review'.
+    Returns minimal user list for picker.
+    """
+    try:
+        from .models import RoleAssignment
+        ras = (
+            RoleAssignment.objects
+            .filter(role__name__icontains='english')
+            .filter(Q(role__name__icontains='faculty') | Q(role__name__icontains='review'))
+            .select_related('user')
+        )
+        seen = set()
+        items = []
+        for ra in ras:
+            u = ra.user
+            if u.id in seen:
+                continue
+            seen.add(u.id)
+            items.append({
+                'id': u.id,
+                'name': (u.get_full_name() or u.username),
+                'email': u.email,
+            })
+        return JsonResponse({'success': True, 'reviewers': items})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_proofread_submit(request):
+    """Submit content for proof-reading.
+
+    POST form-data supports:
+    - proposal_id: int (required)
+    - reviewer_id: int (required)
+    - items[n][kind]=file|text
+      If file: items[n][file] (binary upload) and optional items[n][label]
+      If text: items[n][content_text] and optional items[n][label]
+    Also supports a simple mode with a single 'content_text' or 'file' and optional 'label'.
+    """
+    try:
+        me = request.user
+        proposal_id = int(request.POST.get('proposal_id') or 0)
+        reviewer_id = int(request.POST.get('reviewer_id') or 0)
+        if not proposal_id or not reviewer_id:
+            return JsonResponse({'success': False, 'error': 'proposal_id and reviewer_id are required'}, status=400)
+        try:
+            proposal = EventProposal.objects.get(id=proposal_id)
+        except EventProposal.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Event not found'}, status=404)
+
+        # Access: owner of proposal, CDL admin, or assigned CDL employee
+        allowed = user_can_access_proposal(request, proposal) or _is_cdl_admin_user(me)
+        if not allowed:
+            try:
+                from emt.models import CDLAssignment, CDLTaskAssignment
+                allowed = CDLAssignment.objects.filter(proposal=proposal, assignee=me).exists() or CDLTaskAssignment.objects.filter(proposal=proposal, assignee=me).exists()
+            except Exception:
+                allowed = False
+        if not allowed:
+            return JsonResponse({'success': False, 'error': 'Not allowed'}, status=403)
+
+        reviewer = User.objects.filter(id=reviewer_id).first()
+        if not reviewer:
+            return JsonResponse({'success': False, 'error': 'Reviewer not found'}, status=404)
+        if not _is_english_faculty(reviewer):
+            return JsonResponse({'success': False, 'error': 'Reviewer is not English Faculty'}, status=400)
+
+        with transaction.atomic():
+            sub = ProofreadSubmission.objects.create(
+                proposal=proposal,
+                submitted_by=me,
+                reviewer=reviewer,
+                status=ProofreadSubmission.Status.PENDING,
+            )
+            # Parse items[] or simple fields
+            has_any = False
+            # Array-style items
+            idx = 0
+            while True:
+                kind = request.POST.get(f'items[{idx}][kind]')
+                if kind is None:
+                    break
+                label = request.POST.get(f'items[{idx}][label]') or ''
+                if kind == 'text':
+                    content_text = (request.POST.get(f'items[{idx}][content_text]') or '').strip()
+                    if content_text:
+                        ProofreadItem.objects.create(submission=sub, kind=ProofreadItem.Kind.TEXT, label=label, content_text=content_text)
+                        has_any = True
+                elif kind == 'file':
+                    f = request.FILES.get(f'items[{idx}][file]')
+                    if f:
+                        ProofreadItem.objects.create(submission=sub, kind=ProofreadItem.Kind.FILE, label=label, file=f)
+                        has_any = True
+                idx += 1
+
+            # Simple mode
+            if not has_any:
+                label = request.POST.get('label') or ''
+                content_text = (request.POST.get('content_text') or '').strip()
+                the_file = request.FILES.get('file')
+                if the_file:
+                    ProofreadItem.objects.create(submission=sub, kind=ProofreadItem.Kind.FILE, label=label, file=the_file)
+                    has_any = True
+                elif content_text:
+                    ProofreadItem.objects.create(submission=sub, kind=ProofreadItem.Kind.TEXT, label=label, content_text=content_text)
+                    has_any = True
+
+            if not has_any:
+                raise ValueError('No items to submit')
+
+        return JsonResponse({'success': True, 'id': sub.id})
+    except ValueError as ve:
+        return JsonResponse({'success': False, 'error': str(ve)}, status=400)
+    except Exception as e:
+        logger.exception('api_proofread_submit failed')
+        return JsonResponse({'success': False, 'error': 'Server error'}, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_proofread_list(request):
+    """List proof-reading submissions for a proposal or for the reviewer.
+
+    Query:
+      - proposal_id: list submissions for that event (requires owner/CDL assignment/CDL admin)
+      - as_reviewer=true: list for me where I am the reviewer
+    """
+    try:
+        me = request.user
+        as_reviewer = (request.GET.get('as_reviewer','').lower() in {'1','true','yes'})
+        if as_reviewer:
+            subs = ProofreadSubmission.objects.filter(reviewer=me).select_related('proposal','submitted_by','reviewer','proposal__organization').order_by('-created_at')
+        else:
+            proposal_id = int(request.GET.get('proposal_id') or 0)
+            if not proposal_id:
+                return JsonResponse({'success': False, 'error': 'proposal_id required'}, status=400)
+            try:
+                proposal = EventProposal.objects.get(id=proposal_id)
+            except EventProposal.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Event not found'}, status=404)
+            allowed = user_can_access_proposal(request, proposal) or _is_cdl_admin_user(me)
+            if not allowed:
+                try:
+                    from emt.models import CDLAssignment, CDLTaskAssignment
+                    allowed = (
+                        CDLAssignment.objects.filter(proposal=proposal, assignee=me).exists()
+                        or CDLTaskAssignment.objects.filter(proposal=proposal, assignee=me).exists()
+                        or ProofreadSubmission.objects.filter(proposal=proposal, reviewer=me).exists()
+                    )
+                except Exception:
+                    allowed = False
+            if not allowed:
+                return JsonResponse({'success': False, 'error': 'Not allowed'}, status=403)
+            subs = ProofreadSubmission.objects.filter(proposal=proposal).select_related('submitted_by','reviewer','proposal','proposal__organization').order_by('-created_at')
+
+        def item_dict(it: ProofreadItem):
+            url = None
+            missing = False
+            try:
+                if it.file and getattr(it.file, 'name', None):
+                    st = getattr(it.file, 'storage', None)
+                    name = it.file.name
+                    if st and st.exists(name):
+                        url = it.file.url
+                    else:
+                        missing = True
+            except Exception:
+                missing = True
+            return {
+                'id': it.id,
+                'kind': it.kind,
+                'label': it.label,
+                'content_text': it.content_text,
+                'file_url': url,
+                'file_missing': missing,
+            }
+
+        out = []
+        for s in subs:
+            can_review = bool(me.is_superuser or _is_cdl_admin_user(me) or (s.reviewer_id == me.id))
+            out.append({
+                'id': s.id,
+                'proposal_id': s.proposal_id,
+                'proposal_title': getattr(s.proposal, 'event_title', None),
+                'organization': getattr(getattr(s.proposal, 'organization', None), 'name', None),
+                'submitted_by_id': s.submitted_by_id,
+                'submitted_by': s.submitted_by.get_full_name() or s.submitted_by.username,
+                'reviewer_id': s.reviewer_id,
+                'reviewer': s.reviewer.get_full_name() or s.reviewer.username,
+                'status': s.status,
+                'feedback': s.feedback,
+                'created_at': s.created_at.isoformat(),
+                'updated_at': s.updated_at.isoformat() if hasattr(s, 'updated_at') and s.updated_at else s.created_at.isoformat(),
+                'can_review': can_review,
+                'items': [item_dict(it) for it in s.items.all()],
+            })
+        return JsonResponse({'success': True, 'submissions': out})
+    except Exception as e:
+        logger.exception('api_proofread_list failed')
+        return JsonResponse({'success': False, 'error': 'Server error'}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_proofread_review(request):
+    """Reviewer updates status and adds feedback.
+
+    POST: submission_id, action=approve|changes_needed, feedback(optional)
+    Only the assigned reviewer or admins can perform this.
+    """
+    try:
+        me = request.user
+        sid = int(request.POST.get('submission_id') or 0)
+        action = (request.POST.get('action') or '').lower()
+        feedback = request.POST.get('feedback') or ''
+        if not sid or action not in {'approve','changes_needed'}:
+            return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
+        sub = ProofreadSubmission.objects.select_related('reviewer').filter(id=sid).first()
+        if not sub:
+            return JsonResponse({'success': False, 'error': 'Submission not found'}, status=404)
+
+        if not (me.is_superuser or me == sub.reviewer or _is_cdl_admin_user(me)):
+            return JsonResponse({'success': False, 'error': 'Not allowed'}, status=403)
+
+        if action == 'approve':
+            sub.status = ProofreadSubmission.Status.APPROVED
+        else:
+            sub.status = ProofreadSubmission.Status.CHANGES_NEEDED
+        if feedback:
+            sub.feedback = feedback
+        sub.save(update_fields=['status','feedback','updated_at'])
+
+        # Minimal integration with CDL Approval section: if a support/config model
+        # exists that can store readiness, toggle it. This keeps compatibility if
+        # fields are absent.
+        try:
+            proposal = sub.proposal
+            s = getattr(proposal, 'cdl_support', None)
+            if s and action == 'approve' and hasattr(s, 'proofread_ready'):
+                setattr(s, 'proofread_ready', True)
+                s.save(update_fields=['proofread_ready','updated_at'] if hasattr(s, 'updated_at') else ['proofread_ready'])
+        except Exception:
+            # Non-fatal: fallback is computed flag in api_cdl_support_detail
+            pass
+        return JsonResponse({'success': True, 'status': sub.status})
+    except Exception:
+        logger.exception('api_proofread_review failed')
+        return JsonResponse({'success': False, 'error': 'Server error'}, status=500)
 
 @login_required
 @require_http_methods(["GET"])  # /api/cdl/support/<proposal_id>/
@@ -6935,6 +7286,12 @@ def api_cdl_support_detail(request, proposal_id:int):
     from emt.models import CDLAssignment as _CDLAssignment
     asg = getattr(p, 'cdl_assignment', None)
 
+    # Derived readiness: any approved proof-reading submissions
+    try:
+        pr_ready = ProofreadSubmission.objects.filter(proposal_id=proposal_id, status=ProofreadSubmission.Status.APPROVED).exists()
+    except Exception:
+        pr_ready = False
+
     data = {
         'id': p.id,
         'title': p.event_title,
@@ -6955,6 +7312,7 @@ def api_cdl_support_detail(request, proposal_id:int):
         'poster_design_link': getattr(s, 'poster_design_link', None),
         'certificate_design_link': getattr(s, 'certificate_design_link', None),
         'other_services': getattr(s, 'other_services', []) or [],
+        'proofread_ready': pr_ready,
     # assignment details
     'assigned_to_id': (asg.assignee_id if asg else getattr(p, 'report_assigned_to_id', None)),
     'assigned_to_name': ((asg.assignee.get_full_name() or asg.assignee.username) if asg else (p.report_assigned_to.get_full_name() if p.report_assigned_to else None)),
@@ -7507,7 +7865,31 @@ def api_cdl_member_accept(request):
 # ────────────────────────────────────────────────────────────────
 
 def user_can_access_proposal(request, proposal):
+    """Base access for proposal: admin or owner (submitter)."""
     return request.user.is_superuser or proposal.submitted_by == request.user
+
+
+def _is_cdl_admin_user(user) -> bool:
+    """Return True if user is Main Admin or CDL Admin (Head/Admin under CDL)."""
+    if user.is_superuser:
+        return True
+    try:
+        from .models import RoleAssignment
+        for ra in (
+            RoleAssignment.objects.filter(user=user)
+            .select_related("role", "organization", "organization__org_type")
+        ):
+            role_name = (ra.role.name if ra.role else "").lower()
+            org_type = (
+                ra.organization.org_type.name.lower()
+                if (ra.organization and ra.organization.org_type)
+                else ""
+            )
+            if org_type == "cdl" and any(k in role_name for k in ["head", "admin"]):
+                return True
+    except Exception:
+        pass
+    return False
 
 
 @login_required
@@ -7563,11 +7945,31 @@ def run_ai_validation(batch):
 @login_required
 def cdl_thread(request, proposal_id):
     proposal = get_object_or_404(EventProposal, pk=proposal_id)
-    if not user_can_access_proposal(request, proposal) and not (
-        request.user.is_superuser
-        or request.user.groups.filter(name__in=["CDL_HEAD", "CDL_MEMBER"]).exists()
-    ):
-        return HttpResponseForbidden()
+    # Access rules:
+    # - Main Admin → full access
+    # - CDL Admin (Head/Admin under CDL) → full access to all CDL chats
+    # - CDL Employee → access only if assigned to this event (CDLAssignment, CDLTaskAssignment, or legacy report_assigned_to)
+    # - Event submitter retains access to their event's chat
+    user = request.user
+    if not user_can_access_proposal(request, proposal):
+        if _is_cdl_admin_user(user):
+            allowed = True
+        else:
+            # Check employee assignment
+            allowed = False
+            try:
+                from emt.models import CDLAssignment, CDLTaskAssignment
+                if CDLAssignment.objects.filter(proposal=proposal, assignee=user).exists():
+                    allowed = True
+                elif CDLTaskAssignment.objects.filter(proposal=proposal, assignee=user).exists():
+                    allowed = True
+                elif getattr(proposal, "report_assigned_to_id", None) == user.id:
+                    allowed = True
+            except Exception:
+                # Fallback to legacy group check (if configured)
+                allowed = False
+        if not allowed:
+            return HttpResponseForbidden()
 
     thread, _ = CDLCommunicationThread.objects.get_or_create(proposal=proposal)
 
@@ -7593,6 +7995,65 @@ def cdl_thread(request, proposal_id):
             "proposal": proposal,
         },
     )
+
+
+@login_required
+def proofread_thread(request, proposal_id:int):
+    """Proof-reading page with chat-like timeline bound to a proposal.
+
+    Access rules mirror cdl_thread: owner, CDL admin, or assigned CDL employee.
+    The timeline is composed from ProofreadSubmission and nested items with reviewer replies.
+    """
+    proposal = get_object_or_404(EventProposal, pk=proposal_id)
+    me = request.user
+    # Access like cdl_thread
+    if not user_can_access_proposal(request, proposal):
+        if _is_cdl_admin_user(me):
+            allowed = True
+        else:
+            allowed = False
+            try:
+                from emt.models import CDLAssignment, CDLTaskAssignment
+                if CDLAssignment.objects.filter(proposal=proposal, assignee=me).exists():
+                    allowed = True
+                elif CDLTaskAssignment.objects.filter(proposal=proposal, assignee=me).exists():
+                    allowed = True
+                elif getattr(proposal, "report_assigned_to_id", None) == me.id:
+                    allowed = True
+            except Exception:
+                allowed = False
+        if not allowed:
+            return HttpResponseForbidden()
+
+    # Load submissions and items
+    subs = (
+        ProofreadSubmission.objects
+        .filter(proposal=proposal)
+        .select_related('submitted_by','reviewer')
+        .prefetch_related('items')
+        .order_by('-created_at')
+    )
+
+    return render(
+        request,
+        "core/proofread_thread.html",
+        {
+            'proposal': proposal,
+            'submissions': subs,
+        }
+    )
+
+
+@login_required
+def faculty_review_page(request):
+    """English Faculty inbox for proof-reading submissions assigned to them.
+
+    Access: Only users with an English Faculty/reviewer role (by name heuristic).
+    CDL Admin/Employees should not access this page.
+    """
+    if not _is_english_faculty(request.user):
+        return HttpResponseForbidden()
+    return render(request, "core/faculty_review.html")
 
 
 # ====================================================================

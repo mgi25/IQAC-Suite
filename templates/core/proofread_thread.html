@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Proof-reading · {{ proposal.event_title }}{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
+<style>
+  .pf-wrap { max-width: 1100px; margin: 0 auto; }
+  .pf-header { display:flex; align-items:center; justify-content:space-between; margin: 12px 0 16px; }
+  .pf-timeline { display:flex; flex-direction:column; gap:14px; padding:8px 0; }
+  .msg { display:flex; }
+  .msg.left { justify-content:flex-start; }
+  .msg.right { justify-content:flex-end; }
+  .bubble { max-width: 78%; background:#fff; border:1px solid #e6e8f0; border-radius:16px; padding:12px 14px; box-shadow:0 8px 30px rgba(2,6,23,.04); }
+  .bubble .meta { font-size:12px; color:var(--muted); margin-bottom:6px; display:flex; gap:8px; align-items:center; }
+  .bubble .items { display:grid; gap:8px; }
+  .chip { display:inline-block; padding:3px 8px; border-radius:999px; font-size:12px; background:#eef2ff; color:#3730a3; }
+  .chip.ok { background:#dcfce7; color:#166534; }
+  .chip.warn { background:#fff7ed; color:#9a3412; }
+  .itm { background:#f8fafc; border:1px dashed #dbe0ea; border-radius:10px; padding:10px; }
+  .pf-controls { background:#fff; border:1px solid #e6e8f0; border-radius:12px; padding:12px; margin-top:16px; }
+  .link-muted { color:#164c8d; text-decoration:none; }
+  .link-muted:hover { text-decoration:underline; }
+  @media (max-width: 720px){ .bubble{ max-width:100%; } }
+  .pf-view-toggle { display:flex; gap:8px; align-items:center; }
+  .pf-log { background:#fff; border:1px solid #e6e8f0; border-radius:12px; margin-top:16px; overflow:hidden; }
+  .pf-log-header { position:sticky; top:0; background:#f1f5f9; padding:6px 8px; font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:#475569; border-bottom:1px solid #e2e8f0 }
+  .pf-log table { width:100%; border-collapse:collapse; font-size:13px }
+  .pf-log th, .pf-log td { padding:6px 8px; border-bottom:1px solid #e2e8f0; text-align:left; vertical-align:top }
+  .pf-from { font-weight:600; color:#1e3a8a; font-size:12px; white-space:nowrap }
+  .pf-time { font-size:10px; font-weight:400; color:#64748b; margin-top:2px }
+  .pf-msg { white-space:pre-wrap; word-break:break-word }
+  .pf-att a { font-size:11px; text-decoration:none; display:inline-flex; gap:6px; align-items:center }
+  .pf-empty { padding:18px; text-align:center; color:#64748b }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pf-wrap">
+  <div class="pf-header">
+    <div>
+      <h1 style="margin:0 0 4px">Proof-reading</h1>
+      <div class="pf-meta">Event · {{ proposal.event_title }}</div>
+    </div>
+    <div>
+      <a class="chip-btn" href="{% url 'cdl_support_detail_page' %}?eventId={{ proposal.id }}"><i class="fa-solid fa-arrow-left"></i> Back</a>
+    </div>
+  </div>
+
+  <div class="pf-controls">
+    <form id="pfForm" enctype="multipart/form-data">
+      <input type="hidden" name="proposal_id" value="{{ proposal.id }}">
+      <label class="label">Reviewer</label>
+      <select name="reviewer_id" id="pfReviewer" class="select"></select>
+      <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px">
+        <div>
+          <label class="label">Link URL</label>
+          <input name="content_text" id="pfUrl" class="input" placeholder="Paste a link to review…" />
+          <div id="pfQuick" style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"></div>
+        </div>
+      </div>
+      <label class="label" style="margin-top:8px">Label (optional)</label>
+      <input name="label" class="input" placeholder="e.g., Poster caption, Invite" />
+      <div style="display:flex;gap:8px;justify-content:space-between;margin-top:8px;align-items:center;flex-wrap:wrap">
+        <div class="pf-view-toggle">
+          <span style="font-size:12px;color:#64748b">View:</span>
+          <button type="button" id="viewTable" class="chip-btn">Table</button>
+          <button type="button" id="viewChat" class="chip-btn">Chat</button>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button type="button" class="chip-btn" id="pfReset">Clear</button>
+          <button type="submit" class="btn-primary"><i class="fa-regular fa-paper-plane"></i> Send</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div id="pfListChat" class="pf-timeline" style="margin-top:16px; display:none">
+    <div class="empty">Loading…</div>
+  </div>
+  <div id="pfListTable" class="pf-log" style="display:block">
+    <div style="max-height:520px; overflow:auto">
+      <table>
+        <thead class="pf-log-header">
+          <tr>
+            <th style="width:140px">Date</th>
+            <th style="width:180px">From</th>
+            <th>Message</th>
+            <th style="width:140px">Attachments</th>
+          </tr>
+        </thead>
+        <tbody id="pfLogBody"></tbody>
+      </table>
+      <div id="pfLogEmpty" class="pf-empty" style="display:none">No submissions yet</div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+(async function(){
+  const listChat = document.getElementById('pfListChat');
+  const listTable = document.getElementById('pfListTable');
+  const logBody = document.getElementById('pfLogBody');
+  const logEmpty = document.getElementById('pfLogEmpty');
+  const form = document.getElementById('pfForm');
+  const reviewerSel = document.getElementById('pfReviewer');
+  const urlInput = document.getElementById('pfUrl');
+  const quick = document.getElementById('pfQuick');
+  const btnViewTable = document.getElementById('viewTable');
+  const btnViewChat = document.getElementById('viewChat');
+  let currentMode = 'table';
+
+  function setMode(mode){
+    currentMode = mode;
+    const isTable = mode==='table';
+    listTable.style.display = isTable ? 'block':'none';
+    listChat.style.display = isTable ? 'none':'block';
+    btnViewTable.classList.toggle('primary', isTable);
+    btnViewChat.classList.toggle('primary', !isTable);
+  }
+
+  async function loadReviewers(){
+    const r=await fetch('/api/cdl/proofread/reviewers/');
+    const d=await r.json();
+    if(!r.ok||!d.success) throw new Error(d.error||('HTTP '+r.status));
+    reviewerSel.innerHTML = (d.reviewers||[]).map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
+  }
+  async function loadList(){
+    const r=await fetch(`/api/cdl/proofread/list/?proposal_id={{ proposal.id }}`);
+    const d=await r.json();
+    if(!r.ok||!d.success) throw new Error(d.error||('HTTP '+r.status));
+    const subs=(d.submissions||[]).sort((a,b)=> new Date(a.created_at)-new Date(b.created_at));
+    const out=subs.map(s=>{
+      const cls = s.status==='approved'?'ok':(s.status==='changes_needed'?'warn':'');
+      const itemViews = (s.items||[]).map(it=>{
+        if(it.kind==='text'){
+          const label = it.label ? `<div style='font-size:12px;color:var(--muted);margin-bottom:4px'>${it.label}</div>`: '';
+          const link = it.content_text ? `<a class='link-muted' href='${it.content_text}' target='_blank'>${it.content_text}</a>` : '';
+          return `<div class='itm'>${label}<div>${link}</div></div>`;
+        }
+        const link = it.file_missing ? `<span class='chip warn'>Missing file</span>` : `<a class='link-muted' href='${it.file_url}' target='_blank'>${it.label||'File'}</a>`;
+        return `<div class='itm'>${link}</div>`;
+      }).join('');
+      const actions = s.can_review ? `<div style='display:flex;gap:6px;margin-top:8px'>
+          <button data-act='approve' data-id='${s.id}' class='chip-btn'>Approve</button>
+          <button data-act='changes_needed' data-id='${s.id}' class='chip-btn'>Request changes</button>
+        </div>` : '';
+      const submitBubble = `
+        <div class='msg left'>
+          <div class='bubble'>
+            <div class='meta'><strong>${s.submitted_by}</strong><span>→</span><span>${s.reviewer}</span><span style='margin-left:auto' class='chip ${cls}'>${s.status.replace('_',' ')}</span></div>
+            <div class='items'>${itemViews}</div>${actions}
+          </div>
+        </div>`;
+      const feedbackBubble = s.feedback ? `
+        <div class='msg right'>
+          <div class='bubble'>
+            <div class='meta'><strong>Reviewer</strong></div>
+            <div>${s.feedback}</div>
+          </div>
+        </div>` : '';
+      return submitBubble + feedbackBubble;
+    });
+    listChat.innerHTML = out.join('') || '<div class="empty">No submissions yet</div>';
+    renderTable(subs);
+  }
+
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const fd = new FormData(form);
+    // Enforce links-only: remove file if any and validate URL
+    fd.delete('file');
+    const url = (urlInput.value||'').trim();
+    if(!url){ alert('Please paste a link to send for review.'); return; }
+    const ok = /^(https?:\/\/|ftp:\/\/|www\.)/i.test(url);
+    if(!ok){ alert('Please enter a valid URL (starting with http/https).'); return; }
+    fd.set('content_text', url);
+    try{
+      const r=await fetch('/api/cdl/proofread/submit/', { method:'POST', body: fd, headers:{'X-CSRFToken':(document.querySelector('meta[name="csrf-token"]')||{}).content}});
+      const d=await r.json();
+      if(!r.ok||!d.success) throw new Error(d.error||('HTTP '+r.status));
+      form.reset();
+      urlInput.value='';
+      await loadList();
+    }catch(err){ alert('Failed: '+(err.message||'Error')); }
+  });
+  document.getElementById('pfReset').addEventListener('click', ()=> form.reset());
+
+  async function loadSupportLinks(){
+    try{
+      quick.innerHTML = '';
+      const r1 = await fetch(`/api/cdl/support/{{ proposal.id }}/`);
+      const d1 = await r1.json();
+      if(r1.ok && d1.success){
+        const data = d1.data||{};
+        const poster = data.poster_design_link;
+        const cert = data.certificate_design_link;
+        if(poster){ addQuick('Use Poster link', poster, 'Poster design link'); }
+        if(cert){ addQuick('Use Certificate link', cert, 'Certificate link'); }
+        const speakers = Array.isArray(d1.speakers)? d1.speakers: [];
+        for(const sp of speakers){ if(sp.linkedin_url){ addQuick(`Speaker: ${sp.full_name} LinkedIn`, sp.linkedin_url, 'Speaker LinkedIn'); } }
+      }
+      const r2 = await fetch(`/api/cdl/event/{{ proposal.id }}/documents/`);
+      const d2 = await r2.json();
+      if(r2.ok && d2.success){
+        const docs = d2.documents||{};
+        const poster2 = docs.poster && docs.poster.design_link;
+        const cert2 = docs.certificates && docs.certificates.design_link;
+        if(poster2){ addQuick('Poster (documents)', poster2, 'Poster design link'); }
+        if(cert2){ addQuick('Certificate (documents)', cert2, 'Certificate link'); }
+      }
+    }catch{}
+  }
+
+  function addQuick(label, url, autoLabel){
+    if(!url) return;
+    const btn=document.createElement('button'); btn.type='button'; btn.className='chip-btn'; btn.textContent=label;
+    btn.onclick=()=>{ urlInput.value=url; if(autoLabel){ form.label.value=autoLabel; } };
+    quick.appendChild(btn);
+  }
+
+  function renderAttachmentCell(items){
+    const links = (items||[]).map(it=>{
+      if(it.kind==='text'){
+        const url = (it.content_text||'').trim(); if(!url) return '';
+        const label = it.label || 'Link';
+        return `<a href='${url}' target='_blank' rel='noopener noreferrer'><i class="fa-regular fa-paperclip"></i> ${label}</a>`;
+      }
+      if(it.file_missing){ return `<span style='font-size:11px;color:#b91c1c;display:inline-flex;gap:4px;align-items:center'><i class="fa-regular fa-triangle-exclamation"></i> Missing file</span>`; }
+      const label = it.label || 'File';
+      return `<a href='${it.file_url}' target='_blank' rel='noopener noreferrer'><i class="fa-regular fa-paperclip"></i> ${label}</a>`;
+    }).filter(Boolean);
+    return links.join('<br>');
+  }
+
+  function renderSubmitterMessage(s){
+    const parts = [];
+    for(const it of (s.items||[])){
+      if(it.kind==='text'){
+        const label = it.label ? `<div style='font-size:12px;color:var(--muted);margin-bottom:4px'>${it.label}</div>`: '';
+        const link = it.content_text ? `<a class='link-muted' href='${it.content_text}' target='_blank' rel='noopener noreferrer'>${it.content_text}</a>` : '';
+        parts.push(`<div>${label}${link}</div>`);
+      }else{
+        const label = it.label || 'File attached';
+        parts.push(`<div>${label}</div>`);
+      }
+    }
+    return parts.join('') || '';
+  }
+
+  function dayKey(iso){ try{ const d=new Date(iso); return d.toISOString().slice(0,10);}catch{return String(iso).slice(0,10);} }
+  function fmtDay(iso){ try{ const d=new Date(iso); return d.toLocaleDateString(undefined,{day:'2-digit',month:'short',year:'numeric'});}catch{return String(iso).slice(0,10);} }
+  function fmtTime(iso){ try{ const d=new Date(iso); return d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});}catch{return '';} }
+
+  function renderTable(subs){
+    logBody.innerHTML='';
+    if(!subs.length){ logEmpty.style.display='block'; return; }
+    logEmpty.style.display='none';
+    const rows=[];
+    for(const s of subs){
+      rows.push({ day:dayKey(s.created_at), dayLabel:fmtDay(s.created_at), time:fmtTime(s.created_at), from:s.submitted_by, msg:renderSubmitterMessage(s), att:renderAttachmentCell(s.items)});
+      const showFaculty = (s.status!=='pending') || (s.feedback && s.feedback.trim());
+      if(showFaculty){ const t=s.updated_at||s.created_at; rows.push({ day:dayKey(t), dayLabel:fmtDay(t), time:fmtTime(t), from:`${s.reviewer} <span style='font-weight:400;color:#64748b'>(review)</span>`, msg:`<div><strong>Status:</strong> ${s.status.replace('_',' ')}</div>${s.feedback? `<div style='margin-top:6px'><strong>Feedback</strong><div>${s.feedback}</div></div>`:''}`, att:''}); }
+    }
+    const groups=new Map();
+    for(const r of rows){ if(!groups.has(r.day)) groups.set(r.day,{label:r.dayLabel, rows:[]}); groups.get(r.day).rows.push(r); }
+    const dayKeys=Array.from(groups.keys()).sort();
+    for(const dk of dayKeys){ const g=groups.get(dk); const span=g.rows.length; g.rows.forEach((r,i)=>{ const tr=document.createElement('tr'); tr.innerHTML = `${i===0?`<td rowspan='${span}' style='white-space:nowrap;font-size:12px;font-weight:600;color:#334155'>${g.label}</td>`:''}<td class='pf-from'>${r.from}<div class='pf-time'>${r.time}</div></td><td class='pf-msg'>${r.msg}</td><td class='pf-att'>${r.att}</td>`; logBody.appendChild(tr); }); }
+  }
+
+  // Actions on chat bubbles
+  document.addEventListener('click', async (e)=>{
+    const btn = e.target.closest('button[data-act]');
+    if(!btn) return;
+    const action = btn.dataset.act;
+    const id = btn.dataset.id;
+    let feedback = '';
+    if(action==='changes_needed'){
+      feedback = prompt('Optional feedback for the submitter:')||'';
+    }
+    const fd = new FormData();
+    fd.append('submission_id', id);
+    fd.append('action', action);
+    if(feedback) fd.append('feedback', feedback);
+    try{
+      const r = await fetch('/api/cdl/proofread/review/', { method:'POST', body: fd, headers:{'X-CSRFToken':(document.querySelector('meta[name="csrf-token"]')||{}).content}});
+      const d = await r.json();
+      if(!r.ok||!d.success) throw new Error(d.error||('HTTP '+r.status));
+      await loadList();
+    }catch(err){ alert('Failed: '+(err.message||'Error')); }
+  });
+
+  btnViewTable.addEventListener('click', ()=> setMode('table'));
+  btnViewChat.addEventListener('click', ()=> setMode('chat'));
+
+  try{ setMode('table'); await loadReviewers(); await loadSupportLinks(); await loadList(); }catch(e){
+    listChat.innerHTML = `<div class='error'>${e.message||'Failed'}</div>`;
+    logBody.innerHTML = '';
+    logEmpty.style.display='block';
+  }
+})();
+</script>
+{% endblock %}
