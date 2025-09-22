@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils import timezone
 
@@ -703,3 +704,46 @@ class Student(models.Model):
 
     def __str__(self):
         return self.user.get_full_name() or self.user.username
+
+
+# ────────────────────────────────────────────────────────────────
+#  REPORT ASSETS
+# ────────────────────────────────────────────────────────────────
+
+
+class ReportAsset(models.Model):
+    class Category(models.TextChoices):
+        PHOTO = "photo", "Photograph"
+        BROCHURE = "brochure", "Brochure Page"
+        COMMUNICATION = "communication", "Communication (Letter/Email)"
+        WORKSHEET = "worksheet", "Worksheet / Activity"
+        EVALUATION = "evaluation", "Evaluation Sheet"
+        FEEDBACK = "feedback", "Feedback Form"
+
+    report = models.ForeignKey(
+        "core.Report", related_name="assets", on_delete=models.CASCADE
+    )
+    category = models.CharField(max_length=32, choices=Category.choices)
+    file = models.FileField(
+        upload_to="reports/%Y/%m/%d/",
+        validators=[
+            FileExtensionValidator(
+                ["jpg", "jpeg", "png", "webp", "pdf"],
+                message="Unsupported file type.",
+            )
+        ],
+    )
+    caption = models.CharField(max_length=300, blank=True, default="")
+    order_index = models.PositiveIntegerField(default=0)
+    meta = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["category", "order_index", "id"]
+
+    def __str__(self) -> str:  # pragma: no cover - human readable
+        return f"{self.get_category_display()} ({self.report_id})"
+
+    @property
+    def owner(self):
+        return getattr(self.report, "submitted_by", None)

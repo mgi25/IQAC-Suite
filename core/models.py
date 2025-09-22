@@ -316,6 +316,10 @@ class Report(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     report_type = models.CharField(max_length=30, choices=REPORT_TYPE_CHOICES)
     file = models.FileField(upload_to="reports/", blank=True, null=True)
+    communication_subject = models.CharField(max_length=255, blank=True, default="")
+    communication_date = models.CharField(max_length=64, blank=True, default="")
+    volunteer_rows = models.JSONField(default=list, blank=True)
+    generated_payload = models.JSONField(default=dict, blank=True)
 
     STATUS_CHOICES = [
         ("draft", "Draft"),
