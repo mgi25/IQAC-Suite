@@ -1,141 +1,1367 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Preview Event Report{% endblock %}
+{% block extra_css %}
+<style>
+  @page {
+    size: A4;
+    margin: 20mm 18mm 22mm;
+  }
 
-{% block head_extra %}
-<link rel="stylesheet" href="{% static 'emt/css/report_preview.css' %}">
+  body.command-center-layout {
+    background: #f4f4f4;
+    font-family: "Times New Roman", Times, serif;
+    font-size: 12pt;
+    line-height: 1.45;
+    color: #000;
+  }
+
+  body.command-center-layout.iqac-report-preview {
+    background: #f4f4f4;
+  }
+
+  .preview-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+    padding: 24px;
+  }
+
+  .control-row {
+    width: 210mm;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .controls {
+    display: flex;
+    gap: 8px;
+  }
+
+  .status-pill {
+    margin-left: auto;
+    padding: 4px 10px;
+    border: 0.6pt solid #000;
+    border-radius: 12px;
+    font-size: 11pt;
+    background: #f0f0f0;
+  }
+
+  .controls button,
+  .controls .control-button {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 12pt;
+    padding: 4px 16px;
+    border: 0.6pt solid #000;
+    background: #fafafa;
+    cursor: pointer;
+  }
+
+  .controls .control-button {
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    line-height: 1.2;
+    color: #000;
+  }
+
+  .controls .control-button.primary {
+    background: #2c5aa0;
+    border-color: #2c5aa0;
+    color: #fff;
+  }
+
+  .controls .control-button.primary:hover {
+    background: #244a82;
+    border-color: #244a82;
+    color: #fff;
+  }
+
+  .controls .control-button[aria-disabled="true"] {
+    background: #bfc7d3;
+    border-color: #bfc7d3;
+    color: #f5f5f5;
+    cursor: not-allowed;
+  }
+
+  .controls button:focus,
+  .controls .control-button:focus {
+    outline: 1pt dotted #000;
+    outline-offset: 2px;
+  }
+
+  .generate-ai-form {
+    display: inline;
+    margin: 0;
+  }
+
+  main#report,
+  .paper {
+    width: 210mm;
+    min-height: 297mm;
+    background: #fff;
+    padding: 20mm 18mm 22mm;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
+  }
+
+  main#report {
+    min-height: 297mm;
+  }
+
+  .report-header {
+    text-align: center;
+  }
+
+  .hdr-line {
+    margin: 0;
+  }
+
+  .hdr-upper {
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+
+  .hdr-italic {
+    font-style: italic;
+  }
+
+  .hdr-event,
+  .hdr-title {
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+
+  .header-rule {
+    border: none;
+    border-top: 0.6pt solid #000;
+    margin: 10mm 0 7mm;
+  }
+
+  .section-block {
+    margin-bottom: 9mm;
+  }
+
+  .section-title {
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin: 0 0 3mm;
+  }
+
+  .section-table {
+    width: 100%;
+    border: 0.6pt solid #000;
+    border-collapse: collapse;
+    table-layout: fixed;
+    background: #fff;
+  }
+
+  .section-table th,
+  .section-table td {
+    border: 0.6pt solid #000;
+    padding: 6px 8px;
+    vertical-align: top;
+  }
+
+  .section-table th {
+    text-align: left;
+  }
+
+  .section-cap {
+    background: #f3f3f3;
+    padding: 8px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    text-align: center;
+  }
+
+  .section-table .col-lbl {
+    width: 31%;
+    background: #f7f7f7;
+  }
+
+  .section-table .col-val {
+    width: 69%;
+  }
+
+  .pane {
+    border: 0.6pt solid #000;
+    padding: 10px 12px;
+    background: #fff;
+  }
+
+  .cell-para {
+    margin: 0;
+    white-space: pre-wrap;
+    text-align: justify;
+    text-justify: inter-word;
+  }
+
+  .cell-ul {
+    margin: 0;
+    padding-left: 18px;
+  }
+
+  .cell-ul[data-empty="true"] {
+    list-style: none;
+    padding-left: 0;
+  }
+
+  .analysis-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+
+  @media print, (max-width: 960px) {
+    .analysis-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .analysis-card {
+    border: 0.6pt solid #000;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 48mm;
+    background: #fff;
+  }
+
+  .card-cap {
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    margin-bottom: 2px;
+  }
+
+  .sdg-row {
+    border: 0.6pt solid #000;
+    padding: 10px 12px;
+    display: flex;
+    gap: 12px;
+    margin-top: 6mm;
+    background: #fff;
+  }
+
+  .sdg-label {
+    width: 31%;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+
+  .sdg-values {
+    flex: 1;
+  }
+
+  .sdg-list {
+    margin: 0;
+    padding-left: 18px;
+  }
+
+  .sdg-list li {
+    display: inline-block;
+    margin-right: 8px;
+  }
+
+  .grid-table {
+    width: 100%;
+    border: 0.6pt solid #000;
+    border-collapse: collapse;
+    table-layout: fixed;
+    margin-top: 6mm;
+    background: #fff;
+  }
+
+  .grid-table th,
+  .grid-table td {
+    border: 0.6pt solid #000;
+    padding: 6px 8px;
+    vertical-align: top;
+  }
+
+  .grid-table th {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6mm;
+  }
+
+  .chip {
+    border: 0.6pt solid #000;
+    padding: 2px 6px;
+    font-size: 10.5pt;
+    border-radius: 2px;
+  }
+
+  .chip.placeholder {
+    font-style: italic;
+    color: #555;
+  }
+
+  .review-date {
+    margin-top: 4mm;
+    font-weight: 700;
+  }
+
+  .checklist {
+    width: 100%;
+    border: 0.6pt solid #000;
+    border-collapse: collapse;
+    table-layout: fixed;
+    background: #fff;
+  }
+
+  .checklist col.c-tick {
+    width: 12mm;
+  }
+
+  .checklist th,
+  .checklist td {
+    border: 0.6pt solid #000;
+    padding: 6px 8px;
+    vertical-align: top;
+  }
+
+  .checklist td:first-child {
+    text-align: center;
+  }
+
+  .tick {
+    font-size: 12pt;
+  }
+
+  .signatures {
+    display: flex;
+    gap: 6mm;
+    margin-top: 12mm;
+  }
+
+  .signature-block {
+    flex: 1;
+    text-align: center;
+  }
+
+  .signature-line {
+    border-top: 0.6pt solid #000;
+    min-height: 28mm;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 6px;
+  }
+
+  .sign-caption {
+    margin-top: 4px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+
+  .annexure-host {
+    width: 210mm;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .annexure-host .paper {
+    width: 210mm;
+  }
+
+  .annexure-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6mm;
+  }
+
+  .annexure-card {
+    border: 0.6pt solid #000;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: #fff;
+  }
+
+  .annexure-card figcaption {
+    text-align: center;
+    font-style: italic;
+    font-size: 11pt;
+    margin: 0;
+  }
+
+  .annexure-card.placeholder .media-frame {
+    color: #555;
+    font-style: italic;
+  }
+
+  .media-frame {
+    border: 0.6pt solid #000;
+    min-height: 48mm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    background: #fff;
+  }
+
+  .media-frame img {
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
+  }
+
+  table,
+  tr,
+  td,
+  th {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .page-break {
+    break-before: page;
+  }
+
+  .hidden {
+    display: none !important;
+  }
+
+  .edit-input,
+  .edit-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    font-family: "Times New Roman", Times, serif;
+    font-size: 12pt;
+    line-height: 1.45;
+    border: 0.6pt solid #7a7a7a;
+    padding: 2mm;
+  }
+
+  .edit-textarea {
+    min-height: 24mm;
+    resize: vertical;
+  }
+
+  @media print {
+    body.command-center-layout {
+      background: #fff;
+    }
+
+    .top-utility-bar,
+    .left-control-panel {
+      display: none !important;
+    }
+
+    .control-row,
+    .status-pill,
+    .controls,
+    .preview-shell > .control-row {
+      display: none !important;
+    }
+
+    main#report,
+    .paper {
+      box-shadow: none;
+      margin: 0;
+    }
+
+    .print-footer {
+      position: fixed;
+      left: 18mm;
+      right: 18mm;
+      bottom: 10mm;
+      display: flex;
+      justify-content: space-between;
+      font-size: 10pt;
+    }
+
+    .print-footer .page-count::after {
+      content: "Page " counter(page) " of " counter(pages);
+    }
+  }
+
+  @media screen {
+    .print-footer {
+      display: none;
+    }
+  }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="preview-layout">
-  <div class="proposal-content">
-    <div class="content-header">
-      <h1 class="content-title">{{ proposal.event_title|default:"Event Report Preview" }}</h1>
-      <p class="content-subtitle">Review the captured event details before starting AI report generation.</p>
-      {% if overview_highlights %}
-        <div class="meta-chips">
-          {% for item in overview_highlights %}
-            <span class="chip">{{ item.label }}: {{ item.value }}</span>
-          {% endfor %}
-        </div>
-      {% endif %}
-    </div>
-
-    {% if preview_nav %}
-      <div class="top-toolbar">
-        <div class="pill-nav">
-          {% for item in preview_nav %}
-            <a href="#{{ item.id }}">{{ item.title }}</a>
-          {% endfor %}
-        </div>
-        <div class="toolbar">
-          <a href="{% url 'emt:submit_event_report' proposal.id %}" class="btn-ghost">Edit Report</a>
-          <button type="button" class="btn-ghost" id="print-preview">Print / Save PDF</button>
-        </div>
-      </div>
-    {% endif %}
-
-    {% if not form_is_valid %}
-      <section class="section-card" role="alert">
-        <div class="section-title">Some sections still need attention</div>
-        <p class="content-subtitle">
-          Please resolve the validation messages on the report form before triggering AI generation.
-        </p>
-      </section>
-    {% endif %}
-
-    {% for section in preview_sections %}
-      <section id="{{ section.id }}" class="section-card">
-        <div class="section-header">
-          <h2 class="section-title">{{ section.title }}</h2>
-        </div>
-
-        {% if section.fields %}
-          <div class="preview-fields">
-            {% for field in section.fields %}
-              <div class="field-row">
-                <div class="field-label">{{ field.label }}</div>
-                <div class="field-value{% if field.muted %} muted{% endif %}">
-                  {{ field.value|default:"—" }}
-                </div>
-              </div>
+<div class="preview-shell">
+  <div class="control-row">
+    <span class="status-pill" id="status-pill">Preparing content…</span>
+    <div class="controls">
+      <form id="generate-ai-form" class="generate-ai-form" method="post" action="{% url 'emt:submit_event_report' proposal.id %}">
+        {% csrf_token %}
+        {% for key, values in post_data_items %}
+          {% if key != 'csrfmiddlewaretoken' and key != 'generate_ai' %}
+            {% for value in values %}
+              <input type="hidden" name="{{ key }}" value="{{ value }}">
             {% endfor %}
-          </div>
-        {% endif %}
-
-        {% if section.lists %}
-          {% for list in section.lists %}
-            <div class="divider"></div>
-            <div class="field-label">{{ list.label }}</div>
-            <ul class="preview-list">
-              {% if list.items %}
-                {% for item in list.items %}
-                  <li>{{ item }}</li>
-                {% endfor %}
-              {% else %}
-                <li class="muted">—</li>
-              {% endif %}
-            </ul>
-          {% endfor %}
-        {% endif %}
-
-        {% if section.chips %}
-          <div class="meta-chips">
-            {% for chip in section.chips %}
-              <span class="chip">{{ chip }}</span>
-            {% endfor %}
-          </div>
-        {% endif %}
-      </section>
-    {% empty %}
-      <section class="section-card">
-        <p class="content-subtitle muted">Preview information is not available for this report.</p>
-      </section>
-    {% endfor %}
-
-    <div class="sticky-actions">
-      <div class="actions-bar">
-        <a href="{% url 'emt:submit_event_report' proposal.id %}" class="btn-secondary">Back to Editing</a>
-        <form id="generate-ai-form" class="generate-ai-form" method="post" action="{% url 'emt:submit_event_report' proposal.id %}">
-          {% csrf_token %}
-          {% for key, values in post_data_items %}
-            {% if key != 'csrfmiddlewaretoken' and key != 'generate_ai' %}
-              {% for value in values %}
-                <input type="hidden" name="{{ key }}" value="{{ value }}">
-              {% endfor %}
-            {% endif %}
-          {% endfor %}
-          <input type="hidden" name="generate_ai" value="1">
-          <button type="submit" class="btn-primary" id="generate-ai-report"{% if not form_is_valid %} disabled aria-disabled="true" data-disabled="true" title="Resolve required fields before generating the AI report."{% endif %}>
-            Generate Report
-          </button>
-        </form>
-      </div>
+          {% endif %}
+        {% endfor %}
+        <input type="hidden" name="generate_ai" value="1">
+        <button type="submit" class="control-button primary" id="generate-ai-report"{% if not form_is_valid %} aria-disabled="true" data-disabled="true" title="Resolve required fields before generating the AI report."{% endif %}>Generate Report</button>
+      </form>
+      <button type="button" id="edit-toggle" data-mode="preview">Edit</button>
+      <button type="button" id="print-btn">Print / Save PDF</button>
     </div>
   </div>
+
+  <main id="report" class="paper">
+    <header class="report-header">
+      <p class="hdr-line hdr-upper">CHRIST (DEEMED TO BE UNIVERSITY)</p>
+      <p class="hdr-line hdr-italic">Pune Lavasa Campus – 'The Hub of Analytics'</p>
+      <p class="hdr-line hdr-upper">Internal Quality Assurance Cell (IQAC)</p>
+      <p class="hdr-line hdr-event" data-field="event.title">—</p>
+      <p class="hdr-line hdr-title">Activity Report</p>
+    </header>
+
+    <hr class="header-rule">
+
+    <section class="section-block">
+      <table class="section-table">
+        <colgroup>
+          <col class="col-lbl">
+          <col class="col-val">
+        </colgroup>
+        <thead>
+          <tr><th class="section-cap" colspan="2">EVENT INFORMATION</th></tr>
+        </thead>
+        <tbody>
+          <tr><th>Department</th><td data-field="event.department">—</td></tr>
+          <tr><th>Location</th><td data-field="event.location">—</td></tr>
+          <tr><th>Event Title</th><td data-field="event.title">—</td></tr>
+          <tr><th>No of Activities</th><td data-field="event.no_of_activities">—</td></tr>
+          <tr><th>Date and Time</th><td data-field="event.date">—</td></tr>
+          <tr><th>Venue</th><td data-field="event.venue">—</td></tr>
+          <tr><th>Academic Year</th><td data-field="event.academic_year">—</td></tr>
+          <tr><th>Event Type (Focus)</th><td data-field="event.event_type_focus">—</td></tr>
+          <tr><th>Blog Link</th><td><a data-field="event.blog_link" data-kind="link">—</a></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section-block">
+      <table class="section-table">
+        <colgroup>
+          <col class="col-lbl">
+          <col class="col-val">
+        </colgroup>
+        <thead>
+          <tr><th class="section-cap" colspan="2">PARTICIPANTS INFORMATION</th></tr>
+        </thead>
+        <tbody>
+          <tr><th>Target Audience</th><td data-field="participants.target_audience">—</td></tr>
+          <tr><th>Details of any External Agencies, Speakers, Guests with Affiliation</th><td data-field="participants.external_agencies_speakers">—</td></tr>
+          <tr><th>Website / Contact of External Members</th><td data-field="participants.external_contacts">—</td></tr>
+          <tr>
+            <th>Organising Committee Details</th>
+            <td>
+              <div class="pane" style="padding: 8px;">
+                <div><strong>Event Coordinators:</strong></div>
+                <ul class="cell-ul" data-list="participants.organising_committee.event_coordinators">
+                  <li>—</li>
+                </ul>
+                <div style="margin-top: 6px;">
+                  <strong>No of Student Volunteers:</strong>
+                  <span data-field="participants.organising_committee.student_volunteers_count">—</span>
+                </div>
+              </div>
+            </td>
+          </tr>
+          <tr><th>No of Attendees / Participants</th><td data-field="participants.attendees_count">—</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section-block">
+      <h2 class="section-title">Summary of the Overall Event</h2>
+      <div class="pane">
+        <p class="cell-para" data-field="narrative.summary_overall_event" data-edit="textarea">—</p>
+      </div>
+    </section>
+
+    <section class="section-block">
+      <h2 class="section-title">Social Relevance</h2>
+      <ul class="cell-ul" data-list="narrative.social_relevance" data-empty="true">
+        <li>—</li>
+      </ul>
+    </section>
+
+    <section class="section-block">
+      <h2 class="section-title">Outcomes of the Event</h2>
+      <ul class="cell-ul" data-list="narrative.outcomes" data-empty="true">
+        <li>—</li>
+      </ul>
+    </section>
+
+    <section class="section-block">
+      <h2 class="section-title">Analysis</h2>
+      <div class="analysis-grid">
+        <div class="analysis-card">
+          <div class="card-cap">Impact on Attendees</div>
+          <p class="cell-para" data-field="analysis.impact_attendees" data-edit="textarea">—</p>
+        </div>
+        <div class="analysis-card">
+          <div class="card-cap">Impact on Schools / Departments</div>
+          <p class="cell-para" data-field="analysis.impact_schools" data-edit="textarea">—</p>
+        </div>
+        <div class="analysis-card">
+          <div class="card-cap">Impact on Volunteers</div>
+          <p class="cell-para" data-field="analysis.impact_volunteers" data-edit="textarea">—</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-block">
+      <h2 class="section-title">Relevance / Academic Mapping</h2>
+      <table class="section-table">
+        <colgroup>
+          <col class="col-lbl">
+          <col class="col-val">
+        </colgroup>
+        <tbody>
+          <tr><th>POS / PSOs</th><td><p class="cell-para" data-field="mapping.pos_psos" data-edit="textarea">—</p></td></tr>
+          <tr><th>Graduate Attributes / Needs</th><td><p class="cell-para" data-field="mapping.graduate_attributes_or_needs" data-edit="textarea">—</p></td></tr>
+          <tr><th>Contemporary Requirements</th><td><p class="cell-para" data-field="mapping.contemporary_requirements" data-edit="textarea">—</p></td></tr>
+          <tr><th>Value Systems</th><td><p class="cell-para" data-field="mapping.value_systems" data-edit="textarea">—</p></td></tr>
+        </tbody>
+      </table>
+      <div class="sdg-row">
+        <div class="sdg-label">SDG Goal Numbers</div>
+        <div class="sdg-values">
+          <ul class="cell-ul sdg-list" data-list="mapping.sdg_goal_numbers" data-empty="true">
+            <li>—</li>
+          </ul>
+        </div>
+      </div>
+      <table class="grid-table course-table" style="margin-top: 6mm;">
+        <colgroup>
+          <col class="col-code" style="width: 18%;">
+          <col class="col-name" style="width: 36%;">
+          <col class="col-type" style="width: 22%;">
+          <col class="col-note" style="width: 24%;">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Course Code</th>
+            <th>Course Name</th>
+            <th>Mapping Type</th>
+            <th>Note</th>
+          </tr>
+        </thead>
+        <tbody data-rows="mapping.courses" data-row-type="courses">
+          <tr><td colspan="4" style="text-align: center;">—</td></tr>
+        </tbody>
+      </table>
+      <div class="chips" data-chips="metrics.naac_tags">
+        <span class="chip placeholder">—</span>
+      </div>
+    </section>
+
+    <section class="section-block">
+      <h2 class="section-title">Suggestions for Improvement / Feedback from IQAC</h2>
+      <ul class="cell-ul" data-list="iqac.iqac_suggestions" data-empty="true">
+        <li>—</li>
+      </ul>
+      <div class="review-date">Date: <span data-field="iqac.iqac_review_date">—</span></div>
+    </section>
+
+    <section class="signatures">
+      <div class="signature-block">
+        <div class="signature-line"><span data-field="iqac.sign_head_coordinator">—</span></div>
+        <div class="sign-caption">Head / Coordinator</div>
+      </div>
+      <div class="signature-block">
+        <div class="signature-line"><span data-field="iqac.sign_faculty_coordinator">—</span></div>
+        <div class="sign-caption">Faculty Coordinator / Organiser</div>
+      </div>
+      <div class="signature-block">
+        <div class="signature-line"><span data-field="iqac.sign_iqac">—</span></div>
+        <div class="sign-caption">IQAC</div>
+      </div>
+    </section>
+
+    <section class="section-block" style="margin-top: 12mm;">
+      <h2 class="section-title">Attachments Checklist</h2>
+      <table class="checklist">
+        <colgroup>
+          <col class="c-tick">
+          <col>
+        </colgroup>
+        <tbody data-checklist>
+          <tr><td><span class="tick">▢</span></td><td>Facing Sheet</td></tr>
+          <tr><td><span class="tick">▢</span></td><td>Summary &amp; Outcomes Sheet</td></tr>
+          <tr><td><span class="tick">▢</span></td><td>Suggestions Sheet</td></tr>
+          <tr><td><span class="tick">▢</span></td><td>Department Seal &amp; Signature on Each Page</td></tr>
+          <tr><td><span class="tick">▢</span></td><td>Detailed Report / Blog Printout</td></tr>
+          <tr><td><span class="tick">▢</span></td><td>Participant List</td></tr>
+          <tr><td><span class="tick">▢</span></td><td>Feedback Forms</td></tr>
+          <tr><td><span class="tick">▢</span></td><td>Photographs</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <section id="annexures" class="annexure-host">
+    <article class="paper page-break">
+      <section class="section-block">
+        <h2 class="section-title">Annexure A. Photographs</h2>
+        <div class="annexure-grid" data-grid="annexures.photos">
+          <figure class="annexure-card placeholder"><div class="media-frame">—</div><figcaption>—</figcaption></figure>
+        </div>
+      </section>
+    </article>
+
+    <article class="paper page-break">
+      <section class="section-block">
+        <h2 class="section-title">Annexure B. Brochure</h2>
+        <div class="annexure-grid" data-grid="annexures.brochure_pages">
+          <figure class="annexure-card placeholder"><div class="media-frame">—</div><figcaption>—</figcaption></figure>
+        </div>
+      </section>
+    </article>
+
+    <article class="paper page-break">
+      <section class="section-block">
+        <h2 class="section-title">Annexure C. Communication with Institution</h2>
+        <table class="section-table">
+          <colgroup>
+            <col class="col-lbl">
+            <col class="col-val">
+          </colgroup>
+          <tbody>
+            <tr><th>Subject</th><td data-field="annexures.communication.subject">—</td></tr>
+            <tr><th>Date</th><td data-field="annexures.communication.date">—</td></tr>
+          </tbody>
+        </table>
+        <table class="grid-table volunteer-table" style="margin-top: 6mm;">
+          <colgroup>
+            <col style="width: 10%;">
+            <col style="width: 20%;">
+            <col style="width: 30%;">
+            <col style="width: 20%;">
+            <col style="width: 20%;">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Sl No</th>
+              <th>Reg No</th>
+              <th>Name</th>
+              <th>Class</th>
+              <th>Role</th>
+            </tr>
+          </thead>
+          <tbody data-rows="annexures.communication.volunteers" data-row-type="volunteers">
+            <tr><td colspan="5" style="text-align: center;">—</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </article>
+
+    <article class="paper page-break">
+      <section class="section-block">
+        <h2 class="section-title">Annexure D. Worksheets / Activities</h2>
+        <div class="annexure-grid" data-grid="annexures.worksheets">
+          <figure class="annexure-card placeholder"><div class="media-frame">—</div><figcaption>—</figcaption></figure>
+        </div>
+      </section>
+    </article>
+
+    <article class="paper page-break">
+      <section class="section-block">
+        <h2 class="section-title">Annexure E. Evaluation Sheet</h2>
+        <figure class="annexure-card" data-single="annexures.evaluation_sheet">
+          <div class="media-frame">—</div>
+          <figcaption>—</figcaption>
+        </figure>
+      </section>
+    </article>
+
+    <article class="paper page-break">
+      <section class="section-block">
+        <h2 class="section-title">Annexure F. Feedback Form</h2>
+        <figure class="annexure-card" data-single="annexures.feedback_form">
+          <div class="media-frame">—</div>
+          <figcaption>—</figcaption>
+        </figure>
+      </section>
+    </article>
+  </section>
+
+  <footer class="print-footer">
+    <div>CHRIST (Deemed to be University), Pune Lavasa Campus – 30 Valor Court, Pune 412112, Maharashtra</div>
+    <div class="page-count"></div>
+  </footer>
 </div>
-{% endblock %}
 
-{% block scripts %}
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    var printBtn = document.getElementById('print-preview');
-    if (printBtn) {
-      printBtn.addEventListener('click', function () {
-        window.print();
-      });
-    }
-
-    var generateBtn = document.getElementById('generate-ai-report');
-    if (generateBtn && generateBtn.dataset.disabled === 'true') {
-      generateBtn.addEventListener('click', function (event) {
-        event.preventDefault();
-        event.stopPropagation();
-        alert('Please resolve required fields before generating the AI report.');
-      });
-    }
-  });
-</script>
 <script type="application/json" id="initial-report-data">{{ initial_report_data|default:"{}"|safe }}</script>
+<script>
+  (function () {
+    const state = {
+      data: {},
+      mode: 'preview'
+    };
+
+    const editState = {
+      fields: [],
+      lists: [],
+      chips: []
+    };
+
+    const CHECKLIST_LABELS = {
+      facing_sheet_present: 'Facing Sheet',
+      summary_outcomes_sheet_present: 'Summary & Outcomes Sheet',
+      suggestions_sheet_present: 'Suggestions Sheet',
+      department_seal_sign_each_page: 'Department Seal & Signature on Each Page',
+      detailed_report_or_blog_printout_present: 'Detailed Report / Blog Printout',
+      participant_list_present: 'Participant List',
+      feedback_forms_present: 'Feedback Forms',
+      photos_present: 'Photographs'
+    };
+
+    const CHECKLIST_ORDER = [
+      'facing_sheet_present',
+      'summary_outcomes_sheet_present',
+      'suggestions_sheet_present',
+      'department_seal_sign_each_page',
+      'detailed_report_or_blog_printout_present',
+      'participant_list_present',
+      'feedback_forms_present',
+      'photos_present'
+    ];
+
+    function isBlank(value) {
+      if (value === null || value === undefined) return true;
+      if (Array.isArray(value)) return value.every(isBlank);
+      const str = String(value).trim();
+      return str.length === 0;
+    }
+
+    function toArray(value) {
+      if (!value && value !== 0) return [];
+      if (Array.isArray(value)) {
+        return value
+          .map(item => (typeof item === 'string' ? item.trim() : item))
+          .filter(item => !isBlank(item));
+      }
+      if (typeof value === 'string') {
+        return value
+          .split(/[\n;,]+/)
+          .map(item => item.trim())
+          .filter(item => item);
+      }
+      return [];
+    }
+
+    function getValue(obj, path) {
+      if (!obj || !path) return undefined;
+      return path.split('.').reduce((acc, key) => {
+        if (acc === null || acc === undefined) return undefined;
+        return acc[key];
+      }, obj);
+    }
+
+    function setValue(obj, path, value) {
+      if (!path) return;
+      const parts = path.split('.');
+      let ref = obj;
+      parts.forEach((part, index) => {
+        if (index === parts.length - 1) {
+          ref[part] = value;
+        } else {
+          if (typeof ref[part] !== 'object' || ref[part] === null) {
+            ref[part] = {};
+          }
+          ref = ref[part];
+        }
+      });
+    }
+
+    function resolveNodes(selectorOrNodes) {
+      if (!selectorOrNodes) return [];
+      if (typeof selectorOrNodes === 'string') {
+        return Array.from(document.querySelectorAll(selectorOrNodes));
+      }
+      if (selectorOrNodes instanceof Node) {
+        return [selectorOrNodes];
+      }
+      if (selectorOrNodes instanceof NodeList || Array.isArray(selectorOrNodes)) {
+        return Array.from(selectorOrNodes);
+      }
+      return [];
+    }
+
+    function displayValue(value) {
+      if (value === null || value === undefined) return '—';
+      const str = String(value).trim();
+      return str === '' ? '—' : str;
+    }
+
+    function setText(selector, value) {
+      const nodes = resolveNodes(selector);
+      if (!nodes.length) return;
+      const content = displayValue(value);
+      nodes.forEach(node => {
+        const hideBlank = node.dataset && node.dataset.hideBlank === 'true';
+        const isPlaceholder = content === '—';
+        const finalContent = hideBlank && isPlaceholder ? '' : content;
+
+        if (node.dataset && node.dataset.kind === 'link' && node.tagName === 'A') {
+          node.textContent = finalContent;
+          if (isPlaceholder) {
+            node.removeAttribute('href');
+          } else {
+            node.setAttribute('href', String(value));
+            node.setAttribute('target', '_blank');
+            node.setAttribute('rel', 'noopener');
+          }
+        } else {
+          node.textContent = finalContent;
+        }
+
+        if (hideBlank) {
+          node.style.display = finalContent ? '' : 'none';
+        }
+      });
+    }
+
+    function setList(selector, arr) {
+      const nodes = resolveNodes(selector);
+      if (!nodes.length) return;
+      const values = toArray(arr);
+
+      nodes.forEach(node => {
+        if (!node) return;
+        const isList = node.tagName === 'UL' || node.tagName === 'OL';
+        const items = values.length ? values.map(item => String(item)) : ['—'];
+
+        node.innerHTML = '';
+
+        if (isList) {
+          items.forEach(text => {
+            const li = document.createElement('li');
+            li.textContent = text;
+            node.appendChild(li);
+          });
+          node.setAttribute('data-empty', items.length === 1 && items[0] === '—' ? 'true' : 'false');
+        } else {
+          node.textContent = items.join(', ');
+        }
+      });
+    }
+
+    function setChips(selector, arr) {
+      const nodes = resolveNodes(selector);
+      nodes.forEach(node => {
+        const values = toArray(arr);
+        node.innerHTML = '';
+        if (!values.length) {
+          const chip = document.createElement('span');
+          chip.className = 'chip placeholder';
+          chip.textContent = '—';
+          node.appendChild(chip);
+          return;
+        }
+        values.forEach(item => {
+          const span = document.createElement('span');
+          span.className = 'chip';
+          span.textContent = String(item);
+          node.appendChild(span);
+        });
+      });
+    }
+
+    function normalizeMediaItem(item) {
+      if (!item) return null;
+      if (typeof item === 'string') {
+        return { src: item, caption: '' };
+      }
+      if (typeof item === 'object') {
+        return {
+          src: item.src || item.url || '',
+          caption: item.caption || item.title || ''
+        };
+      }
+      return null;
+    }
+
+    function setGrid(selector, items) {
+      const nodes = resolveNodes(selector);
+      nodes.forEach(node => {
+        node.innerHTML = '';
+        const list = Array.isArray(items)
+          ? items.map(normalizeMediaItem).filter(entry => entry && entry.src)
+          : [];
+        if (!list.length) {
+          const figure = document.createElement('figure');
+          figure.className = 'annexure-card placeholder';
+          const frame = document.createElement('div');
+          frame.className = 'media-frame';
+          frame.textContent = '—';
+          const caption = document.createElement('figcaption');
+          caption.textContent = '—';
+          figure.appendChild(frame);
+          figure.appendChild(caption);
+          node.appendChild(figure);
+          return;
+        }
+        list.forEach(entry => {
+          const figure = document.createElement('figure');
+          figure.className = 'annexure-card';
+          const frame = document.createElement('div');
+          frame.className = 'media-frame';
+          const img = document.createElement('img');
+          img.src = entry.src;
+          img.alt = entry.caption || 'Annexure Image';
+          frame.appendChild(img);
+          const caption = document.createElement('figcaption');
+          caption.textContent = displayValue(entry.caption);
+          figure.appendChild(frame);
+          figure.appendChild(caption);
+          node.appendChild(figure);
+        });
+      });
+    }
+
+    function setRows(selector, rows) {
+      const nodes = resolveNodes(selector);
+      nodes.forEach(node => {
+        const type = node.getAttribute('data-row-type') || '';
+        node.innerHTML = '';
+        const list = Array.isArray(rows)
+          ? rows.filter(entry => entry && !(typeof entry === 'string' && isBlank(entry)))
+          : [];
+        if (!list.length) {
+          const table = node.closest('table');
+          const colCount = table ? (table.querySelectorAll('col').length || table.querySelectorAll('th').length || 1) : 1;
+          const tr = document.createElement('tr');
+          const td = document.createElement('td');
+          td.colSpan = colCount;
+          td.textContent = '—';
+          td.style.textAlign = 'center';
+          tr.appendChild(td);
+          node.appendChild(tr);
+          return;
+        }
+        if (type === 'volunteers') {
+          list.forEach((row, index) => {
+            const tr = document.createElement('tr');
+            const sl = row.sl ?? row.sl_no ?? row.serial ?? row.index ?? index + 1;
+            const reg = row.reg ?? row.reg_no ?? row.registration_number ?? row.id ?? '';
+            const name = row.name ?? row.full_name ?? row.participant ?? '';
+            const className = row.class ?? row.class_ ?? row.program ?? row.section ?? '';
+            const role = row.role ?? row.responsibility ?? row.duty ?? '';
+            [sl, reg, name, className, role].forEach(value => {
+              const td = document.createElement('td');
+              td.textContent = displayValue(value);
+              tr.appendChild(td);
+            });
+            node.appendChild(tr);
+          });
+        } else if (type === 'courses') {
+          list.forEach(row => {
+            const tr = document.createElement('tr');
+            const code = row.course_code ?? row.code ?? '';
+            const name = row.course_name ?? row.name ?? '';
+            const mappingType = row.mapping_type ?? row.type ?? '';
+            const note = row.note ?? row.remark ?? row.remarks ?? '';
+            [code, name, mappingType, note].forEach(value => {
+              const td = document.createElement('td');
+              td.textContent = displayValue(value);
+              tr.appendChild(td);
+            });
+            node.appendChild(tr);
+          });
+        } else {
+          list.forEach(row => {
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.textContent = displayValue(row);
+            tr.appendChild(td);
+            node.appendChild(tr);
+          });
+        }
+      });
+    }
+
+    function setSingle(selector, item) {
+      const nodes = resolveNodes(selector);
+      nodes.forEach(node => {
+        const entry = normalizeMediaItem(item);
+        const frame = node.querySelector('.media-frame');
+        const caption = node.querySelector('figcaption');
+        if (!frame) return;
+        frame.innerHTML = '';
+        if (entry && entry.src) {
+          const img = document.createElement('img');
+          img.src = entry.src;
+          img.alt = entry.caption || 'Annexure Image';
+          frame.appendChild(img);
+        } else {
+          frame.textContent = '—';
+        }
+        if (caption) {
+          caption.textContent = displayValue(entry && entry.caption ? entry.caption : '');
+        }
+      });
+    }
+
+    function populateChecklist(data) {
+      const tbody = document.querySelector('[data-checklist]');
+      if (!tbody) return;
+      const keys = [...CHECKLIST_ORDER];
+      if (data && typeof data === 'object') {
+        Object.keys(data).forEach(key => {
+          if (!keys.includes(key)) keys.push(key);
+        });
+      }
+      tbody.innerHTML = '';
+      keys.forEach(key => {
+        const tr = document.createElement('tr');
+        const tickCell = document.createElement('td');
+        const tick = document.createElement('span');
+        tick.className = 'tick';
+        const value = data && typeof data === 'object' && Object.prototype.hasOwnProperty.call(data, key) ? data[key] : false;
+        tick.textContent = value ? '☑' : '▢';
+        tickCell.appendChild(tick);
+        const labelCell = document.createElement('td');
+        const label = CHECKLIST_LABELS[key] || key.replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        labelCell.textContent = label;
+        tr.appendChild(tickCell);
+        tr.appendChild(labelCell);
+        tbody.appendChild(tr);
+      });
+    }
+
+    function populateReport(data) {
+      const fieldMap = [
+        { selector: '[data-field="event.title"]', path: 'event.title' },
+        { selector: '[data-field="event.department"]', path: 'event.department' },
+        { selector: '[data-field="event.location"]', path: 'event.location' },
+        { selector: '[data-field="event.no_of_activities"]', path: 'event.no_of_activities' },
+        { selector: '[data-field="event.date"]', path: 'event.date' },
+        { selector: '[data-field="event.venue"]', path: 'event.venue' },
+        { selector: '[data-field="event.academic_year"]', path: 'event.academic_year' },
+        { selector: '[data-field="event.event_type_focus"]', path: 'event.event_type_focus' },
+        { selector: '[data-field="event.blog_link"]', path: 'event.blog_link' },
+        { selector: '[data-field="participants.target_audience"]', path: 'participants.target_audience' },
+        { selector: '[data-field="participants.external_agencies_speakers"]', path: 'participants.external_agencies_speakers' },
+        { selector: '[data-field="participants.external_contacts"]', path: 'participants.external_contacts' },
+        { selector: '[data-field="participants.organising_committee.student_volunteers_count"]', path: 'participants.organising_committee.student_volunteers_count' },
+        { selector: '[data-field="participants.attendees_count"]', path: 'participants.attendees_count' },
+        { selector: '[data-field="narrative.summary_overall_event"]', path: 'narrative.summary_overall_event' },
+        { selector: '[data-field="analysis.impact_attendees"]', path: 'analysis.impact_attendees' },
+        { selector: '[data-field="analysis.impact_schools"]', path: 'analysis.impact_schools' },
+        { selector: '[data-field="analysis.impact_volunteers"]', path: 'analysis.impact_volunteers' },
+        { selector: '[data-field="mapping.pos_psos"]', path: 'mapping.pos_psos' },
+        { selector: '[data-field="mapping.graduate_attributes_or_needs"]', path: 'mapping.graduate_attributes_or_needs' },
+        { selector: '[data-field="mapping.contemporary_requirements"]', path: 'mapping.contemporary_requirements' },
+        { selector: '[data-field="mapping.value_systems"]', path: 'mapping.value_systems' },
+        { selector: '[data-field="iqac.iqac_review_date"]', path: 'iqac.iqac_review_date' },
+        { selector: '[data-field="iqac.sign_head_coordinator"]', path: 'iqac.sign_head_coordinator' },
+        { selector: '[data-field="iqac.sign_faculty_coordinator"]', path: 'iqac.sign_faculty_coordinator' },
+        { selector: '[data-field="iqac.sign_iqac"]', path: 'iqac.sign_iqac' },
+        { selector: '[data-field="annexures.communication.subject"]', path: 'annexures.communication.subject' },
+        { selector: '[data-field="annexures.communication.date"]', path: 'annexures.communication.date' }
+      ];
+
+      fieldMap.forEach(item => setText(item.selector, getValue(data, item.path)));
+
+      setList('[data-list="participants.organising_committee.event_coordinators"]', getValue(data, 'participants.organising_committee.event_coordinators'));
+      setList('[data-list="narrative.social_relevance"]', getValue(data, 'narrative.social_relevance'));
+      setList('[data-list="narrative.outcomes"]', getValue(data, 'narrative.outcomes'));
+      setList('[data-list="mapping.sdg_goal_numbers"]', getValue(data, 'mapping.sdg_goal_numbers'));
+      setList('[data-list="iqac.iqac_suggestions"]', getValue(data, 'iqac.iqac_suggestions'));
+
+      const courseRows = getValue(data, 'mapping.courses');
+      setRows('[data-rows="mapping.courses"]', Array.isArray(courseRows) ? courseRows.filter(Boolean) : []);
+
+      const volunteers = getValue(data, 'annexures.communication.volunteers');
+      setRows('[data-rows="annexures.communication.volunteers"]', Array.isArray(volunteers) ? volunteers.filter(Boolean) : []);
+
+      setChips('[data-chips="metrics.naac_tags"]', getValue(data, 'metrics.naac_tags'));
+
+      populateChecklist(getValue(data, 'attachments.checklist'));
+
+      const annexures = data && typeof data === 'object' ? data.annexures || {} : {};
+      setGrid('[data-grid="annexures.photos"]', annexures.photos);
+      setGrid('[data-grid="annexures.brochure_pages"]', annexures.brochure_pages);
+      setGrid('[data-grid="annexures.worksheets"]', annexures.worksheets);
+      setSingle('[data-single="annexures.evaluation_sheet"]', annexures.evaluation_sheet);
+      setSingle('[data-single="annexures.feedback_form"]', annexures.feedback_form);
+    }
+
+    function renderReport() {
+      populateReport(state.data);
+      const status = document.getElementById('status-pill');
+      if (status) status.classList.add('hidden');
+    }
+
+    function enterEdit() {
+      if (state.mode === 'edit') return;
+      editState.fields = [];
+      editState.lists = [];
+      editState.chips = [];
+      document.querySelectorAll('[data-field]').forEach(node => {
+        const path = node.getAttribute('data-field');
+        if (!path) return;
+        if (node.dataset.editing === 'true') return;
+        if (node.dataset && node.dataset.hideBlank === 'true') {
+          node.style.display = '';
+        }
+        const multiline = node.dataset.edit === 'textarea';
+        const input = multiline ? document.createElement('textarea') : document.createElement('input');
+        input.className = multiline ? 'edit-textarea' : 'edit-input';
+        if (!multiline) input.type = 'text';
+        const currentValue = getValue(state.data, path);
+        if (!isBlank(currentValue)) {
+          input.value = Array.isArray(currentValue) ? currentValue.join(', ') : String(currentValue);
+        } else {
+          input.value = '';
+        }
+        node.dataset.editing = 'true';
+        node.innerHTML = '';
+        node.appendChild(input);
+        editState.fields.push({ node, path, input, multiline });
+      });
+      document.querySelectorAll('[data-list]').forEach(node => {
+        const path = node.getAttribute('data-list');
+        if (!path) return;
+        if (node.dataset.editing === 'true') return;
+        const textarea = document.createElement('textarea');
+        textarea.className = 'edit-textarea';
+        textarea.value = toArray(getValue(state.data, path)).join('\n');
+        node.dataset.editing = 'true';
+        node.innerHTML = '';
+        node.appendChild(textarea);
+        editState.lists.push({ node, path, textarea });
+      });
+      document.querySelectorAll('[data-chips]').forEach(node => {
+        const path = node.getAttribute('data-chips');
+        if (!path) return;
+        if (node.dataset.editing === 'true') return;
+        const textarea = document.createElement('textarea');
+        textarea.className = 'edit-textarea';
+        textarea.value = toArray(getValue(state.data, path)).join('\n');
+        node.dataset.editing = 'true';
+        node.innerHTML = '';
+        node.appendChild(textarea);
+        editState.chips.push({ node, path, textarea });
+      });
+      state.mode = 'edit';
+    }
+
+    function exitEdit() {
+      editState.fields.forEach(entry => {
+        const value = entry.input.value.trim();
+        setValue(state.data, entry.path, value);
+        entry.node.removeAttribute('data-editing');
+        entry.node.innerHTML = '';
+      });
+      editState.lists.forEach(entry => {
+        const raw = entry.textarea.value.replace(/\r/g, '\n');
+        const items = toArray(raw);
+        setValue(state.data, entry.path, items);
+        entry.node.removeAttribute('data-editing');
+        entry.node.innerHTML = '';
+      });
+      editState.chips.forEach(entry => {
+        const raw = entry.textarea.value.replace(/\r/g, '\n');
+        const items = toArray(raw);
+        setValue(state.data, entry.path, items);
+        entry.node.removeAttribute('data-editing');
+        entry.node.innerHTML = '';
+      });
+      editState.fields = [];
+      editState.lists = [];
+      editState.chips = [];
+      state.mode = 'preview';
+      renderReport();
+    }
+
+    function attachEvents() {
+      const toggle = document.getElementById('edit-toggle');
+      const printBtn = document.getElementById('print-btn');
+      if (toggle) {
+        toggle.addEventListener('click', function () {
+          if (state.mode === 'preview') {
+            enterEdit();
+            toggle.textContent = 'Preview';
+          } else {
+            exitEdit();
+            toggle.textContent = 'Edit';
+          }
+        });
+      }
+      if (printBtn) {
+        printBtn.addEventListener('click', function () {
+          if (state.mode === 'edit') {
+            exitEdit();
+            const toggleBtn = document.getElementById('edit-toggle');
+            if (toggleBtn) toggleBtn.textContent = 'Edit';
+          }
+          window.print();
+        });
+      }
+    }
+
+    function init() {
+      const raw = document.getElementById('initial-report-data');
+      let data = {};
+      if (raw && raw.textContent.trim()) {
+        try {
+          data = JSON.parse(raw.textContent);
+        } catch (err) {
+          console.warn('Unable to parse initial report data', err);
+        }
+      }
+      if (!data || typeof data !== 'object') {
+        data = {};
+      }
+      state.data = data;
+      renderReport();
+      attachEvents();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      document.body.classList.add('iqac-report-preview');
+      init();
+
+      const generateBtn = document.getElementById('generate-ai-report');
+      if (generateBtn && generateBtn.dataset.disabled === 'true') {
+        generateBtn.setAttribute('tabindex', '-1');
+        generateBtn.addEventListener('click', function (event) {
+          event.preventDefault();
+          window.alert('Please complete the required sections in the event report before generating the AI report.');
+        });
+        if (generateBtn.form) {
+          generateBtn.form.addEventListener('submit', function (event) {
+            event.preventDefault();
+          });
+        }
+      }
+    });
+  })();
+</script>
 {% endblock %}
