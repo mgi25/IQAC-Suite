@@ -15,7 +15,7 @@ from django.db.models import Q, Sum, Count
 from django.forms import inlineformset_factory
 from django import forms
 from django.urls import reverse
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 from django.db import models, transaction
 from django.db.models.functions import TruncDate
@@ -6835,6 +6835,7 @@ def cdl_assign_tasks_page(request, proposal_id:int):
 #  CDL Communication Page & APIs
 # ────────────────────────────────────────────────────────────────
 @login_required
+@ensure_csrf_cookie
 def cdl_communication_page(request):
     """Render the communication log page. Accessible to CDL head and employees/members."""
     # Basic role check similar to work dashboard
