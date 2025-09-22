@@ -104,12 +104,47 @@
 
   .header-rule {
     border: none;
-    border-top: 0.6pt solid #000;
-    margin: 8mm 0 6mm;
+    border-top: 1px solid #000;
+    margin: 10mm 0 7mm;
   }
 
   .section-block {
     margin-bottom: 8mm;
+  }
+
+  .section-table {
+    width: 100%;
+    border: 1px solid #000;
+    border-collapse: collapse;
+    table-layout: fixed;
+    margin: 9mm 0 7mm;
+    background: #fff;
+  }
+
+  .section-table th,
+  .section-table td {
+    border: 1px solid #000;
+    padding: 8px 10px;
+    vertical-align: top;
+    font-size: 12pt;
+  }
+
+  .section-table .section-cap {
+    background: #f2f2f2;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    text-align: center;
+    padding: 7px 0;
+  }
+
+  .section-table .col-lbl {
+    width: 31%;
+    background: #f7f7f7;
+  }
+
+  .section-table .col-val {
+    width: 69%;
   }
 
   .section-title {
@@ -176,9 +211,19 @@
     padding-left: 18px;
   }
 
-  ul[data-empty="true"] {
+  .cell-ul[data-empty="true"] {
     list-style: none;
     padding-left: 0;
+  }
+
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .subhead {
+    font-weight: 600;
   }
 
   .analysis-grid {
@@ -453,79 +498,76 @@
 
     <hr class="header-rule">
 
-    <section class="section-block">
-      <h2 class="section-title">Event Information</h2>
-      <table class="grid-table four-col">
+    <section class="block">
+      <table class="section-table cols-2">
         <colgroup>
-          <col class="col-label">
-          <col class="col-value">
-          <col class="col-label">
-          <col class="col-value">
+          <col class="col-lbl">
+          <col class="col-val">
         </colgroup>
+        <thead>
+          <tr><th class="section-cap" colspan="2">EVENT INFORMATION</th></tr>
+        </thead>
         <tbody>
+          <tr><th>Department</th>     <td data-field="event.department">—</td></tr>
+          <tr><th>Location</th>       <td data-field="event.location">—</td></tr>
+          <tr><th>Event Title</th>    <td data-field="event.title">—</td></tr>
+          <tr><th>No of Activities</th><td data-field="event.no_of_activities">—</td></tr>
           <tr>
-            <th>Department</th>
-            <td data-field="event.department">—</td>
-            <th>Location</th>
-            <td data-field="event.location">—</td>
+            <th>Date and Time</th>
+            <td>
+              <div data-field="event.date">—</div>
+              <div data-field="event.time_window" data-hide-blank="true">—</div>
+            </td>
           </tr>
-          <tr>
-            <th>Event Title</th>
-            <td data-field="event.title">—</td>
-            <th>No. of Activities</th>
-            <td data-field="event.no_of_activities">—</td>
-          </tr>
-          <tr>
-            <th>Date</th>
-            <td data-field="event.date">—</td>
-            <th>Time Window</th>
-            <td data-field="event.time_window">—</td>
-          </tr>
-          <tr>
-            <th>Venue</th>
-            <td data-field="event.venue">—</td>
-            <th>Academic Year</th>
-            <td data-field="event.academic_year">—</td>
-          </tr>
-          <tr>
-            <th>Event Type &amp; Focus</th>
-            <td data-field="event.event_type_focus">—</td>
-            <th>Blog Link</th>
-            <td><a data-field="event.blog_link" data-kind="link">—</a></td>
-          </tr>
+          <tr><th>Venue</th>          <td data-field="event.venue">—</td></tr>
+          <tr><th>Academic Year</th>  <td data-field="event.academic_year">—</td></tr>
+          <tr><th>Event Type (Focus)</th>
+              <td data-field="event.event_type_focus">—</td></tr>
+          <tr><th>Blog Link</th>      <td><a data-field="event.blog_link" data-kind="link">—</a></td></tr>
         </tbody>
       </table>
     </section>
 
-    <section class="section-block">
-      <h2 class="section-title">Participants Information</h2>
-      <table class="grid-table four-col">
+    <section class="block">
+      <table class="section-table cols-2">
         <colgroup>
-          <col class="col-label">
-          <col class="col-value">
-          <col class="col-label">
-          <col class="col-value">
+          <col class="col-lbl">
+          <col class="col-val">
         </colgroup>
+        <thead>
+          <tr><th class="section-cap" colspan="2">PARTICIPANTS INFORMATION</th></tr>
+        </thead>
         <tbody>
           <tr>
             <th>Target Audience</th>
             <td data-field="participants.target_audience">—</td>
-            <th>External Agencies / Speakers</th>
+          </tr>
+          <tr>
+            <th>Details of any External Agencies, Speakers, Guests with Affiliation</th>
             <td data-field="participants.external_agencies_speakers">—</td>
           </tr>
           <tr>
-            <th>External Contacts</th>
+            <th>Website / Contact of External Members</th>
             <td data-field="participants.external_contacts">—</td>
-            <th>Student Volunteers Count</th>
-            <td data-field="participants.organising_committee.student_volunteers_count">—</td>
           </tr>
           <tr>
-            <th>Attendees Count</th>
-            <td data-field="participants.attendees_count">—</td>
-            <th>Event Coordinators</th>
+            <th>Organising Committee Details</th>
             <td>
-              <ul class="cell-ul" data-list="participants.organising_committee.event_coordinators"></ul>
+              <div class="stack">
+                <div class="subhead">Event Coordinators:</div>
+                <ul class="cell-ul" data-list="participants.organising_committee.event_coordinators">
+                  <li>—</li>
+                </ul>
+                <div>
+                  <span class="subhead">No of Student Volunteers:</span>
+                  <span data-field="participants.organising_committee.student_volunteers_count">—</span>
+                </div>
+              </div>
             </td>
+          </tr>
+          <tr>
+            <th>No of Attendees / Participants</th>
+            <td data-field="participants.attendees_count">—</td>
           </tr>
         </tbody>
       </table>
@@ -669,9 +711,13 @@
       if (!nodes.length) return;
       const content = displayValue(value);
       nodes.forEach(node => {
+        const hideBlank = node.dataset && node.dataset.hideBlank === 'true';
+        const isPlaceholder = content === '—';
+        const finalContent = hideBlank && isPlaceholder ? '' : content;
+
         if (node.dataset && node.dataset.kind === 'link' && node.tagName === 'A') {
-          node.textContent = content;
-          if (content === '—') {
+          node.textContent = finalContent;
+          if (isPlaceholder) {
             node.removeAttribute('href');
           } else {
             node.setAttribute('href', String(value));
@@ -679,36 +725,36 @@
             node.setAttribute('rel', 'noopener');
           }
         } else {
-          node.textContent = content;
+          node.textContent = finalContent;
+        }
+
+        if (hideBlank) {
+          node.style.display = finalContent ? '' : 'none';
         }
       });
     }
 
     function setList(selector, arr) {
       const nodes = resolveNodes(selector);
+      if (!nodes.length) return;
       const values = toArray(arr);
+
       nodes.forEach(node => {
+        if (!node) return;
+        const isList = node.tagName === 'UL' || node.tagName === 'OL';
+        const items = values.length ? values.map(item => String(item)) : ['—'];
+
         node.innerHTML = '';
-        if (!values.length) {
-          if (node.tagName === 'UL' || node.tagName === 'OL') {
-            node.dataset.empty = 'true';
+
+        if (isList) {
+          items.forEach(text => {
             const li = document.createElement('li');
-            li.textContent = '—';
-            node.appendChild(li);
-          } else {
-            node.textContent = '—';
-          }
-          return;
-        }
-        if (node.tagName === 'UL' || node.tagName === 'OL') {
-          delete node.dataset.empty;
-          values.forEach(item => {
-            const li = document.createElement('li');
-            li.textContent = String(item);
+            li.textContent = text;
             node.appendChild(li);
           });
+          node.setAttribute('data-empty', items.length === 1 && items[0] === '—' ? 'true' : 'false');
         } else {
-          node.textContent = values.join(', ');
+          node.textContent = items.join(', ');
         }
       });
     }
@@ -1111,7 +1157,8 @@
         { selector: '[data-field="iqac.sign_iqac"]', path: 'iqac.sign_iqac' }
       ];
       fieldMap.forEach(item => setText(item.selector, getValue(data, item.path)));
-      setList('[data-list="participants.organising_committee.event_coordinators"]', getValue(data, 'participants.organising_committee.event_coordinators'));
+      const coordinatorList = data?.participants?.organising_committee?.event_coordinators;
+      setList('[data-list="participants.organising_committee.event_coordinators"]', coordinatorList);
     }
 
     function renderReport() {
@@ -1129,6 +1176,9 @@
         const path = node.getAttribute('data-field');
         if (!path) return;
         if (node.dataset.editing === 'true') return;
+        if (node.dataset && node.dataset.hideBlank === 'true') {
+          node.style.display = '';
+        }
         const multiline = node.dataset.edit === 'textarea';
         const input = multiline ? document.createElement('textarea') : document.createElement('input');
         input.className = multiline ? 'edit-textarea' : 'edit-input';
