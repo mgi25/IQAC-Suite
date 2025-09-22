@@ -1,9 +1,10 @@
-{% extends "base.html" %}
 {% load static %}
-
-{% block title %}IQAC Report Preview{% endblock %}
-
-{% block head_extra %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IQAC Report Preview</title>
 <style>
   @page {
     size: A4;
@@ -379,9 +380,8 @@
     }
   }
 </style>
-{% endblock %}
-
-{% block content %}
+</head>
+<body>
 <div class="iqac-preview">
   <div class="preview-controls">
     <button type="button" id="mode-toggle" data-mode="preview">Edit</button>
@@ -1267,4 +1267,5 @@
 
   document.addEventListener('DOMContentLoaded', init);
 </script>
-{% endblock %}
+</body>
+</html>
