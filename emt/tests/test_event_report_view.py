@@ -312,6 +312,22 @@ console.log(JSON.stringify({
         self.assertContains(response, "Frontend summary")
         self.assertContains(response, "Frontend outcomes")
 
+    def test_preview_includes_generate_report_link(self):
+        url = reverse("emt:preview_event_report", args=[self.proposal.id])
+        data = {
+            "actual_event_type": "Seminar",
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        ai_url = reverse("emt:ai_generate_report", args=[self.proposal.id])
+        self.assertEqual(response.context["ai_report_url"], ai_url)
+        self.assertContains(response, 'id="generate-ai-report"', html=False)
+        self.assertContains(response, ai_url)
+
     def test_preview_preserves_checked_and_unchecked_fields(self):
         url = reverse("emt:preview_event_report", args=[self.proposal.id])
         data = {
