@@ -1,6 +1,7 @@
 import base64
 import io
 import json
+import logging
 import zipfile
 from collections import defaultdict
 from datetime import date
@@ -11,8 +12,37 @@ from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.template.loader import get_template, render_to_string
 from django.urls import reverse
-from weasyprint import HTML
 from xhtml2pdf import pisa
+
+logger = logging.getLogger(__name__)
+
+try:  # pragma: no cover - optional dependency
+    from weasyprint import HTML
+except (ImportError, OSError) as exc:  # pragma: no cover - optional dependency
+    HTML = None
+    logger.warning(
+        "WeasyPrint import failed, falling back to xhtml2pdf for PDF generation. %s",
+        exc,
+    )
+
+
+class PDFGenerationError(Exception):
+    """Raised when PDF generation fails."""
+
+
+def render_pdf_from_html(html: str) -> bytes:
+    """Render an HTML string into PDF bytes using the available backend."""
+
+    if HTML is not None:
+        return HTML(string=html).write_pdf()
+
+    pdf_buffer = io.BytesIO()
+    pisa_status = pisa.CreatePDF(html, dest=pdf_buffer)
+    if pisa_status.err:
+        raise PDFGenerationError("Failed to generate PDF using xhtml2pdf.")
+
+    pdf_buffer.seek(0)
+    return pdf_buffer.getvalue()
 
 from .models import (AcademicYear, AttributeStrengthMap, CharacterStrength,
                      Participation, Student)
@@ -244,7 +274,17 @@ def transcript_pdf(request, roll_no):
         }
     )
 
-    pdf_file = HTML(string=html).write_pdf()
+    try:
+        pdf_file = render_pdf_from_html(html)
+    except PDFGenerationError:
+        logger.exception(
+            "Failed to generate transcript PDF for student %s", student.roll_no
+        )
+        return HttpResponse(
+            "An error occurred while generating the PDF. Please try again later.",
+            status=500,
+        )
+
     response = HttpResponse(pdf_file, content_type="application/pdf")
     response["Content-Disposition"] = (
         f'attachment; filename="transcript_{student.roll_no}.pdf"'
@@ -317,57 +357,67 @@ def bulk_download_handler(request):
     if not students.exists():
         raise Http404("No students found")
 
-    if download_type == "zip":
-        buffer = io.BytesIO()
-        with zipfile.ZipFile(buffer, "w") as zip_file:
-            for student in students:
-                strength_data, participations = calculate_strength_data(student)
-                sorted_events = sorted(
-                    participations,
-                    key=lambda p: len(p.event.attributes.all()),
-                    reverse=True,
-                )
-                top_events = [
-                    (p.event.name, p.role.name if p.role else "Participant")
-                    for p in sorted_events[:5]
-                ]
-
-                qr_b64 = None
-                if participations.count() > 5:
-                    all_events_url = request.build_absolute_uri(
-                        reverse(
-                            "transcript:all_events", kwargs={"roll_no": student.roll_no}
-                        )
+    try:
+        if download_type == "zip":
+            buffer = io.BytesIO()
+            with zipfile.ZipFile(buffer, "w") as zip_file:
+                for student in students:
+                    strength_data, participations = calculate_strength_data(student)
+                    sorted_events = sorted(
+                        participations,
+                        key=lambda p: len(p.event.attributes.all()),
+                        reverse=True,
                     )
-                    qr = qrcode.make(all_events_url)
-                    buf = io.BytesIO()
-                    qr.save(buf, format="PNG")
-                    qr_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+                    top_events = [
+                        (p.event.name, p.role.name if p.role else "Participant")
+                        for p in sorted_events[:5]
+                    ]
 
-                html = render_to_string(
-                    "transcript_app/pdf.html",
-                    {
-                        "student": student,
-                        "strength_data": strength_data,
-                        "today": date.today(),
-                        "top_events": top_events,
-                        "qr_code": qr_b64,
-                    },
-                )
+                    qr_b64 = None
+                    if participations.count() > 5:
+                        all_events_url = request.build_absolute_uri(
+                            reverse(
+                                "transcript:all_events",
+                                kwargs={"roll_no": student.roll_no},
+                            )
+                        )
+                        qr = qrcode.make(all_events_url)
+                        buf = io.BytesIO()
+                        qr.save(buf, format="PNG")
+                        qr_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
 
-                pdf_buffer = io.BytesIO()
-                HTML(string=html).write_pdf(target=pdf_buffer)
-                zip_file.writestr(
-                    f"{student.roll_no}_{student.name}.pdf", pdf_buffer.getvalue()
-                )
+                    html = render_to_string(
+                        "transcript_app/pdf.html",
+                        {
+                            "student": student,
+                            "strength_data": strength_data,
+                            "today": date.today(),
+                            "top_events": top_events,
+                            "qr_code": qr_b64,
+                        },
+                    )
 
-        buffer.seek(0)
-        response = HttpResponse(buffer.read(), content_type="application/zip")
-        response["Content-Disposition"] = 'attachment; filename="All_Student_PDFs.zip"'
+                    try:
+                        pdf_bytes = render_pdf_from_html(html)
+                    except PDFGenerationError:
+                        logger.exception(
+                            "Failed to generate transcript PDF for student %s",
+                            student.roll_no,
+                        )
+                        raise
 
-        return response
+                    zip_file.writestr(
+                        f"{student.roll_no}_{student.name}.pdf", pdf_bytes
+                    )
 
-    else:
+            buffer.seek(0)
+            response = HttpResponse(buffer.read(), content_type="application/zip")
+            response["Content-Disposition"] = (
+                'attachment; filename="All_Student_PDFs.zip"'
+            )
+
+            return response
+
         combined_html = ""
         for student in students:
             strength_data, participations = calculate_strength_data(student)
@@ -406,11 +456,21 @@ def bulk_download_handler(request):
 
             combined_html += f'<div style="page-break-after: always;">{html}</div>'
 
-        pdf_buffer = io.BytesIO()
-        pisa.CreatePDF(combined_html, dest=pdf_buffer)
-        response = HttpResponse(pdf_buffer.getvalue(), content_type="application/pdf")
+        pdf_bytes = render_pdf_from_html(combined_html)
+        response = HttpResponse(pdf_bytes, content_type="application/pdf")
         response["Content-Disposition"] = (
             'attachment; filename="Course_Transcripts.pdf"'
         )
 
         return response
+    except PDFGenerationError:
+        logger.exception(
+            "Failed to generate bulk transcripts for year=%s, school=%s, course=%s",
+            year,
+            school,
+            course,
+        )
+        return HttpResponse(
+            "Unable to generate transcript files at this time. Please try again later.",
+            status=500,
+        )
