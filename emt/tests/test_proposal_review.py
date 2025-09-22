@@ -312,3 +312,35 @@ class ProposalReviewFlowTests(TestCase):
         resp2 = self.client.post(edit_url, post_data)
         self.assertEqual(resp2.status_code, 302)
         self.assertEqual(resp2.headers["Location"], review_url)
+
+    def test_submit_proposal_sets_csrf_cookie(self):
+        resp = self.client.get(reverse("emt:submit_proposal"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("csrftoken", resp.cookies)
+        self.assertTrue(resp.cookies["csrftoken"].value)
+
+    def test_cdl_support_sets_csrf_cookie(self):
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(self._payload()),
+            content_type="application/json",
+        )
+        pid = resp.json()["proposal_id"]
+
+        resp2 = self.client.get(reverse("emt:submit_cdl_support", args=[pid]))
+        self.assertEqual(resp2.status_code, 200)
+        self.assertIn("csrftoken", resp2.cookies)
+        self.assertTrue(resp2.cookies["csrftoken"].value)
+
+    def test_review_proposal_sets_csrf_cookie(self):
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(self._payload()),
+            content_type="application/json",
+        )
+        pid = resp.json()["proposal_id"]
+
+        resp2 = self.client.get(reverse("emt:review_proposal", args=[pid]))
+        self.assertEqual(resp2.status_code, 200)
+        self.assertIn("csrftoken", resp2.cookies)
+        self.assertTrue(resp2.cookies["csrftoken"].value)
