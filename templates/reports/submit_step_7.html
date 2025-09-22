@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Evidence & Annexures – Step 7{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'emt/css/report_assets.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="report-step" data-report-id="{{ report.id }}">
+  <header class="step-header">
+    <div class="step-meta">
+      <span class="step-pill">Step 7</span>
+      <h1>Evidence &amp; Annexures</h1>
+      <p>Upload supporting materials for the IQAC report. Accepted formats: JPG, JPEG, PNG, WEBP, PDF (max 10&nbsp;MB each).</p>
+    </div>
+  </header>
+
+  <section class="panel-grid">
+    {% for panel in panel_config %}
+    <div class="asset-panel" data-category="{{ panel.category }}" data-multiple="{{ panel.multiple|yesno:'true,false' }}"{% if panel.max_items %} data-max-items="{{ panel.max_items }}"{% endif %}{% if panel.category in singleton_categories %} data-singleton="true"{% endif %}>
+      <div class="asset-panel-header">
+        <h2>{{ panel.title }}</h2>
+        <div class="panel-subtext">{{ panel.description }}</div>
+        <div class="panel-counter" data-role="counter"></div>
+      </div>
+      <div class="dropzone" data-role="dropzone">
+        <div class="dropzone-instructions">
+          <strong>Drag &amp; drop files</strong>
+          <span>or</span>
+          <button type="button" class="btn-browse" data-role="browse">Browse files</button>
+          <input type="file" class="file-input" data-role="file-input" {% if panel.multiple %}multiple{% endif %} accept=".jpg,.jpeg,.png,.webp,.pdf">
+        </div>
+        <p class="dropzone-hint">Hold ⇧ to select multiple files. PDF uploads display a placeholder in the grid.</p>
+      </div>
+      <div class="asset-grid" data-role="grid"></div>
+      <div class="panel-footer">
+        <div class="panel-helper" data-role="helper"></div>
+      </div>
+    </div>
+    {% endfor %}
+  </section>
+
+  <form method="post" class="step-form" data-role="save-form">
+    {% csrf_token %}
+    {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+    <button type="submit" class="btn-primary" data-role="save-btn">Save &amp; Continue</button>
+  </form>
+</div>
+
+{{ assets_by_category|json_script:"asset-initial-data" }}
+{{ annexures_payload|json_script:"annexures-initial-data" }}
+<script>
+  window.initial_report_data = window.initial_report_data || {};
+  window.initial_report_data.annexures = window.initial_report_data.annexures || JSON.parse(document.getElementById('annexures-initial-data').textContent);
+</script>
+<script src="{% static 'emt/js/assets.js' %}"></script>
+{% endblock %}

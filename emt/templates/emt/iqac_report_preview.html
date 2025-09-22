@@ -350,17 +350,32 @@
 
   .annexure-grid {
     display: grid;
+    gap: 14mm;
+    page-break-inside: avoid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 6mm;
+  }
+
+  .annexure-grid.photos {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .annexure-grid.four-col {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .annexure-grid.communication {
+    grid-template-columns: 1fr;
   }
 
   .annexure-card {
-    border: 0.6pt solid #000;
-    padding: 8px;
+    border: 1pt solid #0f1f4b;
+    border-radius: 2px;
+    padding: 6mm 6mm 4mm;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4mm;
     background: #fff;
+    page-break-inside: avoid;
   }
 
   .annexure-card figcaption {
@@ -368,6 +383,7 @@
     font-style: italic;
     font-size: 11pt;
     margin: 0;
+    padding-top: 2mm;
   }
 
   .annexure-card.placeholder .media-frame {
@@ -376,19 +392,29 @@
   }
 
   .media-frame {
-    border: 0.6pt solid #000;
-    min-height: 48mm;
+    border: 1pt solid #0f1f4b;
+    border-radius: 2px;
+    min-height: 52mm;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 8px;
-    background: #fff;
+    padding: 4mm;
+    background: #f6f7fb;
+    font-family: "Times New Roman", Times, serif;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .media-frame.pdf {
+    font-weight: 700;
+    color: #0f1f4b;
   }
 
   .media-frame img {
     max-width: 100%;
     max-height: 100%;
     display: block;
+    object-fit: cover;
   }
 
   table,
@@ -679,7 +705,7 @@
     <article class="paper page-break">
       <section class="section-block">
         <h2 class="section-title">Annexure A. Photographs</h2>
-        <div class="annexure-grid" data-grid="annexures.photos">
+        <div class="annexure-grid photos" data-grid="annexures.photos">
           <figure class="annexure-card placeholder"><div class="media-frame">—</div><figcaption>—</figcaption></figure>
         </div>
       </section>
@@ -688,7 +714,7 @@
     <article class="paper page-break">
       <section class="section-block">
         <h2 class="section-title">Annexure B. Brochure</h2>
-        <div class="annexure-grid" data-grid="annexures.brochure_pages">
+        <div class="annexure-grid four-col" data-grid="annexures.brochure_pages">
           <figure class="annexure-card placeholder"><div class="media-frame">—</div><figcaption>—</figcaption></figure>
         </div>
       </section>
@@ -707,6 +733,9 @@
             <tr><th>Date</th><td data-field="annexures.communication.date">—</td></tr>
           </tbody>
         </table>
+        <div class="annexure-grid communication" data-grid="annexures.communication.files">
+          <figure class="annexure-card placeholder"><div class="media-frame">—</div><figcaption>—</figcaption></figure>
+        </div>
         <table class="grid-table volunteer-table" style="margin-top: 6mm;">
           <colgroup>
             <col style="width: 10%;">
@@ -947,15 +976,53 @@
     function normalizeMediaItem(item) {
       if (!item) return null;
       if (typeof item === 'string') {
-        return { src: item, caption: '' };
+        return { src: item, caption: '', meta: {} };
       }
       if (typeof item === 'object') {
         return {
           src: item.src || item.url || '',
-          caption: item.caption || item.title || ''
+          caption: item.caption || item.title || '',
+          meta: item.meta || {}
         };
       }
       return null;
+    }
+
+    function isPdfEntry(entry) {
+      if (!entry) return false;
+      if (entry.meta && typeof entry.meta.content_type === 'string') {
+        if (entry.meta.content_type.toLowerCase().includes('pdf')) {
+          return true;
+        }
+      }
+      if (entry.meta && typeof entry.meta.extension === 'string') {
+        if (entry.meta.extension.toLowerCase() === 'pdf') {
+          return true;
+        }
+      }
+      if (typeof entry.src === 'string') {
+        return entry.src.toLowerCase().endsWith('.pdf');
+      }
+      return false;
+    }
+
+    function createMediaFrame(entry) {
+      const frame = document.createElement('div');
+      frame.className = 'media-frame';
+      if (!entry || !entry.src) {
+        frame.textContent = '—';
+        return frame;
+      }
+      if (isPdfEntry(entry)) {
+        frame.classList.add('pdf');
+        frame.textContent = 'PDF';
+        return frame;
+      }
+      const img = document.createElement('img');
+      img.src = entry.src;
+      img.alt = entry.caption || 'Annexure Image';
+      frame.appendChild(img);
+      return frame;
     }
 
     function setGrid(selector, items) {
@@ -968,9 +1035,7 @@
         if (!list.length) {
           const figure = document.createElement('figure');
           figure.className = 'annexure-card placeholder';
-          const frame = document.createElement('div');
-          frame.className = 'media-frame';
-          frame.textContent = '—';
+          const frame = createMediaFrame(null);
           const caption = document.createElement('figcaption');
           caption.textContent = '—';
           figure.appendChild(frame);
@@ -981,12 +1046,7 @@
         list.forEach(entry => {
           const figure = document.createElement('figure');
           figure.className = 'annexure-card';
-          const frame = document.createElement('div');
-          frame.className = 'media-frame';
-          const img = document.createElement('img');
-          img.src = entry.src;
-          img.alt = entry.caption || 'Annexure Image';
-          frame.appendChild(img);
+          const frame = createMediaFrame(entry);
           const caption = document.createElement('figcaption');
           caption.textContent = displayValue(entry.caption);
           figure.appendChild(frame);
@@ -1064,15 +1124,8 @@
         const frame = node.querySelector('.media-frame');
         const caption = node.querySelector('figcaption');
         if (!frame) return;
-        frame.innerHTML = '';
-        if (entry && entry.src) {
-          const img = document.createElement('img');
-          img.src = entry.src;
-          img.alt = entry.caption || 'Annexure Image';
-          frame.appendChild(img);
-        } else {
-          frame.textContent = '—';
-        }
+        const freshFrame = createMediaFrame(entry);
+        frame.replaceWith(freshFrame);
         if (caption) {
           caption.textContent = displayValue(entry && entry.caption ? entry.caption : '');
         }
