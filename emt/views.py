@@ -2082,6 +2082,12 @@ def submit_event_report(request, proposal_id):
     draft = drafts.get(str(proposal_id), {})
 
     if request.method == "POST":
+        trigger_ai = str(request.POST.get("generate_ai", "")).lower() in {
+            "1",
+            "true",
+            "on",
+            "yes",
+        }
         drafts[str(proposal_id)] = {
             key: (
                 request.POST.getlist(key)
@@ -2089,6 +2095,7 @@ def submit_event_report(request, proposal_id):
                 else request.POST.get(key)
             )
             for key in request.POST.keys()
+            if key != "generate_ai"
         }
         request.session.modified = True
 
@@ -2127,10 +2134,18 @@ def submit_event_report(request, proposal_id):
             drafts.pop(str(proposal_id), None)
             request.session.modified = True
 
+            if trigger_ai:
+                messages.success(
+                    request,
+                    "Report submitted successfully! Starting AI generation...",
+                )
+                return redirect("emt:ai_report_progress", proposal_id=proposal.id)
+
             messages.success(
-                request, "Report submitted successfully! Starting AI generation..."
+                request,
+                "Report saved successfully. Review the preview before generating the AI report.",
             )
-            return redirect("emt:ai_report_progress", proposal_id=proposal.id)
+            return preview_event_report(request, proposal.id)
     else:
         form = EventReportForm(initial=draft, instance=report)
         attachments_qs = (
@@ -3038,10 +3053,13 @@ def preview_event_report(request, proposal_id):
         },
     }
 
+    post_data_items = list(post_data.lists())
+
     context = {
         "proposal": proposal,
         "report": report,
         "post_data": post_data,
+        "post_data_items": post_data_items,
         "proposal_fields": proposal_fields,
         "report_fields": report_fields,
         "form": form,
