@@ -29,6 +29,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.utils.formats import date_format
 from django.utils.timezone import now
+from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods, require_POST
 
@@ -3039,11 +3040,14 @@ def preview_event_report(request, proposal_id):
 
     context = {
         "proposal": proposal,
+        "report": report,
         "post_data": post_data,
         "proposal_fields": proposal_fields,
         "report_fields": report_fields,
         "form": form,
+        "form_is_valid": form_is_valid,
         "initial_report_data": json.dumps(initial_data, ensure_ascii=False),
+        "ai_report_url": reverse("emt:ai_generate_report", args=[proposal.id]),
     }
     return render(request, "emt/iqac_report_preview.html", context)
 
