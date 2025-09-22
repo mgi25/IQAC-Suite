@@ -37,7 +37,12 @@
     fd.append('comment', textRaw); // preserve users' newlines exactly
     if(fileInput.files[0]) fd.append('attachment', fileInput.files[0]);
     try{
-      const res = await fetch('/api/cdl/communication/', { method:'POST', body: fd, headers: { 'X-Requested-With':'fetch','X-CSRFToken':getCSRF() } });
+      const res = await fetch('/api/cdl/communication/', {
+        method: 'POST',
+        body: fd,
+        headers: { 'X-Requested-With': 'fetch', 'X-CSRFToken': getCSRF() },
+        credentials: 'same-origin',
+      });
       if(!res.ok){ const err = await safeJSON(res); toast(err.error||'Send failed'); return; }
       const msg = await res.json();
       appendRow(msg, true);
@@ -51,7 +56,7 @@
 
   async function loadMessages(){
     try{
-      const res = await fetch('/api/cdl/communication/');
+      const res = await fetch('/api/cdl/communication/', { credentials: 'same-origin' });
       if(!res.ok) return;
       const data = await res.json();
       messageCache = (data.messages||[]).reverse();

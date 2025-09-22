@@ -1,169 +1,425 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block title %}IQAC Event Report Preview{% endblock %}
+
 {% block head_extra %}
-<link rel="stylesheet" href="{% static 'emt/css/styles.css' %}">
-<link rel="stylesheet" href="{% static 'emt/css/ai_report_progress.css' %}">
+<style>
+  /* ===== Paper constants ===== */
+  :root { --ink:#000; --grid:#000; --hair:0.6pt; --pad:8px; }
+  * { box-sizing: border-box; }
+  body { background:#f3f4f6; }
+
+  /* A4 canvas */
+  .wrap { width:210mm; margin:24px auto 60px; }
+  @page { size: A4 portrait; margin:20mm 18mm 22mm; }
+
+  .sheet{
+    background:#fff; color:var(--ink);
+    font-family:"Times New Roman", Times, serif;
+    font-size:12pt; line-height:1.45;
+    counter-reset: page;
+    box-shadow:0 6px 20px rgba(0,0,0,.12);
+  }
+
+  /* Header (paper) */
+  .hdr{ text-align:center; padding:22mm 18mm 8mm; border-bottom:var(--hair) solid var(--grid); }
+  .u{ text-transform:uppercase; letter-spacing:.06em; }
+  .hdr .univ{ font-weight:700; font-size:15pt; margin-bottom:2mm; }
+  .hdr .campus{ font-style:italic; font-size:11.5pt; margin-bottom:2mm; }
+  .hdr .iqac{ font-size:11pt; margin-bottom:4mm; }
+  .hdr .title{ font-weight:700; font-size:16pt; margin-top:6mm; }
+  .hdr .subtitle{ font-weight:600; letter-spacing:.18em; margin-top:2mm; }
+
+  /* Body */
+  .body{ padding:10mm 18mm 12mm; }
+  .sec{ font-weight:700; text-transform:uppercase; letter-spacing:.08em; font-size:12.5pt; margin:6mm 0 2mm; }
+
+  /* Pair table (label/value | label/value) */
+  table.grid{ width:100%; border-collapse:collapse; table-layout:fixed; }
+  /* exact column widths ensure perfect vertical alignment across rows */
+  table.grid col.c-lab { width:27%; }
+  table.grid col.c-val { width:23%; }
+
+  table.grid th, table.grid td{ border:var(--hair) solid var(--grid); padding:var(--pad) 9px; vertical-align:top; }
+  table.grid th{ background:#fff; font-weight:700; text-transform:uppercase; font-size:10.5pt; }
+
+  /* Full-width two-row grid */
+  .full col.c-lab{ width:35%; } .full col.c-val{ width:65%; }
+
+  /* Lists/paragraphs inside cells – normalize spacing */
+  .cell-ul{ margin:0; padding-left:18px; }
+  .cell-ul li{ margin:2px 0; }
+  .cell-para{ margin:0; white-space:pre-wrap; text-align:justify; text-justify:inter-word; }
+
+  /* Boxed narrative areas (like the sample) */
+  .para-box{
+    border:var(--hair) solid var(--grid); padding:10px 12px;
+    min-height:28mm; text-align:justify; text-justify:inter-word;
+  }
+  .pane{ border:var(--hair) solid var(--grid); padding:8px 12px; }
+
+  /* Analysis three equal columns */
+  .analysis{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .a{ border:var(--hair) solid var(--grid); padding:10px 12px; min-height:35mm; }
+  .lbl{ font-weight:700; text-transform:uppercase; letter-spacing:.06em; font-size:10.5pt; margin-bottom:3px; }
+
+  /* Signatures */
+  .signs{ display:flex; gap:18mm; margin-top:10mm; }
+  .sign{ flex:1; text-align:center; }
+  .line{ height:0; border-top:var(--hair) solid var(--grid); margin:20mm 0 2mm; }
+  .cap{ font-size:10pt; text-transform:uppercase; letter-spacing:.06em; }
+
+  /* Annexures */
+  .break{ break-before:page; }
+  .ann{ font-weight:700; text-transform:uppercase; letter-spacing:.08em; margin:2mm 0 2mm; }
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:6mm; }
+  figure.card{ border:var(--hair) solid var(--grid); }
+  .ph{ height:52mm; background:#f2f2f2; display:flex; align-items:center; justify-content:center; font-size:10pt; color:#555; }
+  figcaption{ border-top:var(--hair) solid var(--grid); padding:6px 8px; font-size:10.5pt; }
+
+  .vol{ width:100%; border-collapse:collapse; margin-top:3mm; }
+  .vol th, .vol td{ border:var(--hair) solid var(--grid); padding:6px 8px; font-size:10.5pt; }
+  .vol thead th{ text-transform:uppercase; letter-spacing:.06em; }
+
+  /* Footer – show numbers only in print (avoid Page 0 of 0 on screen) */
+  .ftr{ padding:6mm 18mm 10mm; border-top:var(--hair) solid var(--grid); font-size:10pt; display:flex; justify-content:space-between; }
+  .pg{ visibility:hidden; }
+  @media print {
+    body{ background:#fff; }
+    .wrap{ width:auto; margin:0; }
+    .sheet{ box-shadow:none; }
+    .ctrl{ display:none !important; }
+    .pg{ visibility:visible; }
+    .pg::after{ content:"Page " counter(page) " of " counter(pages); }
+  }
+
+  /* Screen controls */
+  .ctrl{ position:sticky; top:14px; width:210mm; margin:10px auto; display:flex; gap:10px; justify-content:flex-end; z-index:2; }
+  .btn{ border:1px solid #111; background:#fff; padding:6px 14px; font-family:inherit; font-size:12px; cursor:pointer; }
+  .btn.p{ background:#111; color:#fff; }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="ai-layout">
-  <main class="proposal-content">
-    <section class="section-card" style="margin-top: .75rem;">
-      <div class="section-header">
-        <div>
-          <div class="section-title">Internal Quality Assurance Cell (IQAC) — Event Report</div>
-          <div class="ai-subtitle">AI is generating your report in real time...</div>
-        </div>
-      </div>
-      <div class="divider"></div>
-
-      <div class="section-title" style="font-size:1rem; margin-bottom:.5rem;">1. Event Information</div>
-      <table class="ai-table">
-        <tr><th>Event Title</th><td id="f_event_title" class="ai-field-blank">...</td></tr>
-        <tr><th>Date &amp; Time</th><td id="f_date_time" class="ai-field-blank">...</td></tr>
-        <tr><th>Venue</th><td id="f_venue" class="ai-field-blank">...</td></tr>
-        <tr><th>Academic Year</th><td id="f_academic_year" class="ai-field-blank">...</td></tr>
-        <tr><th>Focus / Objective</th><td id="f_focus_objective" class="ai-field-blank">...</td></tr>
-        <tr><th>Target Audience</th><td id="f_target_audience" class="ai-field-blank">...</td></tr>
-        <tr><th>Organization</th><td id="f_organizing_dept" class="ai-field-blank">...</td></tr>
-        <tr><th>No. of Participants</th><td id="f_no_participants" class="ai-field-blank">...</td></tr>
-      </table>
-
-      <div class="section-title" style="font-size:1rem; margin:1rem 0 .5rem;">2. Event Summary</div>
-      <div id="f_summary" class="ai-field-blank" style="margin-bottom:12px;">...</div>
-
-      <div class="section-title" style="font-size:1rem; margin:1rem 0 .5rem;">3. Outcomes</div>
-      <div id="f_outcomes" class="ai-field-blank" style="margin-bottom:12px;">...</div>
-
-      <div class="section-title" style="font-size:1rem; margin:1rem 0 .5rem;">4. Feedback &amp; Suggestions</div>
-      <div id="f_feedback" class="ai-field-blank" style="margin-bottom:12px;">...</div>
-
-      <div class="section-title" style="font-size:1rem; margin:1rem 0 .5rem;">5. Recommendations</div>
-      <div id="f_recommendations" class="ai-field-blank" style="margin-bottom:12px;">...</div>
-
-      <div class="section-title" style="font-size:1rem; margin:1rem 0 .5rem;">6. Attachments</div>
-      <div id="f_attachments" class="ai-field-blank" style="margin-bottom:12px;">...</div>
-
-      <div class="actions-bar">
-        <button type="button" class="btn-secondary" id="editBtn">Edit Report</button>
-        <button type="button" class="btn-primary" id="submitBtn">Submit</button>
-      </div>
-      <div id="ai_status" class="ai-field-blank" hidden>AI has filled your report!</div>
-    </section>
-  </main>
+<div class="ctrl">
+  <button id="toggle-edit" class="btn">Edit</button>
+  <button id="print-btn" class="btn p">Print / Save PDF</button>
 </div>
 
+<div class="wrap">
+  <article class="sheet">
+    <!-- HEADER -->
+    <header class="hdr">
+      <div class="univ u">CHRIST (DEEMED TO BE UNIVERSITY)</div>
+      <div class="campus">Pune Lavasa Campus – “The Hub of Analytics”</div>
+      <div class="iqac u">Internal Quality Assurance Cell (IQAC)</div>
+      <div class="title u" data-field="event_info.title">{{ proposal.event_title|default:"—" }}</div>
+      <div class="subtitle u">Activity Report</div>
+    </header>
+
+    <div class="body">
+      <!-- 1. EVENT INFORMATION -->
+      <h2 class="sec">Event Information</h2>
+      <table class="grid">
+        <colgroup>
+          <col class="c-lab"><col class="c-val"><col class="c-lab"><col class="c-val">
+        </colgroup>
+        <tbody>
+          <tr>
+            <th>Department</th><td data-field="event_info.department">—</td>
+            <th>Location</th><td data-field="event_info.location">—</td>
+          </tr>
+          <tr>
+            <th>Event Title</th><td data-field="event_info.title">—</td>
+            <th>No. of Activities</th><td data-field="event_info.activities_count">—</td>
+          </tr>
+          <tr>
+            <th>Date &amp; Time</th><td data-field="event_info.datetime">—</td>
+            <th>Venue</th><td data-field="event_info.venue">—</td>
+          </tr>
+          <tr>
+            <th>Academic Year</th><td data-field="event_info.academic_year">—</td>
+            <th>Event Type (Focus)</th><td data-field="event_info.focus">—</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- 2. PARTICIPANTS -->
+      <h2 class="sec">Participants Information</h2>
+      <table class="grid">
+        <colgroup>
+          <col class="c-lab"><col class="c-val"><col class="c-lab"><col class="c-val">
+        </colgroup>
+        <tbody>
+          <tr>
+            <th>Target Audience</th><td data-field="participants.target_audience">—</td>
+            <th>External Agencies / Speakers / Guests</th><td data-field="participants.external_agencies">—</td>
+          </tr>
+          <tr>
+            <th>Website / Contact of External Members</th><td data-field="participants.external_contacts">—</td>
+            <th>Organising Committee</th>
+            <td>
+              <ul class="cell-ul" data-list="participants.organising_committee"><li>—</li></ul>
+            </td>
+          </tr>
+          <tr>
+            <th>No. of Student Volunteers</th><td data-field="participants.student_volunteers">—</td>
+            <th>No. of Attendees / Participants</th><td data-field="participants.participants_count">—</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- 3. SUMMARY -->
+      <h2 class="sec">Summary of the Overall Event</h2>
+      <div class="para-box" data-field="summary" data-multiline="true">—</div>
+
+      <div style="height:4mm"></div>
+      <div class="lbl">Activities</div>
+      <div class="pane">
+        <ul class="cell-ul" data-list="activities"><li>—</li></ul>
+      </div>
+
+      <!-- 4. SOCIAL RELEVANCE -->
+      <h2 class="sec">Social Relevance</h2>
+      <div class="pane">
+        <ul class="cell-ul" data-list="social_relevance"><li>—</li></ul>
+      </div>
+
+      <!-- 5. OUTCOMES -->
+      <h2 class="sec">Outcomes of the Event</h2>
+      <div class="pane">
+        <ul class="cell-ul" data-list="outcomes"><li>—</li></ul>
+      </div>
+
+      <!-- 6. ANALYSIS -->
+      <h2 class="sec">Analysis</h2>
+      <div class="analysis">
+        <div class="a">
+          <div class="lbl">Impact on Attendees</div>
+          <p class="cell-para" data-field="analysis.attendees" data-multiline="true">—</p>
+        </div>
+        <div class="a">
+          <div class="lbl">Impact on Schools</div>
+          <p class="cell-para" data-field="analysis.schools" data-multiline="true">—</p>
+        </div>
+        <div class="a">
+          <div class="lbl">Impact on Volunteers</div>
+          <p class="cell-para" data-field="analysis.volunteers" data-multiline="true">—</p>
+        </div>
+      </div>
+
+      <!-- 7. RELEVANCE -->
+      <h2 class="sec">Relevance of the Event</h2>
+      <table class="grid full">
+        <colgroup>
+          <col class="c-lab"><col class="c-val">
+        </colgroup>
+        <tbody>
+          <tr>
+            <th>With reference to Graduate Attributes</th>
+            <td><p class="cell-para" data-field="relevance.graduate_attributes" data-multiline="true">—</p></td>
+          </tr>
+          <tr>
+            <th>Support to Value Systems (SDGs / Social Commitment)</th>
+            <td><p class="cell-para" data-field="relevance.sdg" data-multiline="true">—</p></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- 8. SUGGESTIONS -->
+      <h2 class="sec">Suggestions for Improvement / Feedback from IQAC</h2>
+      <div class="pane"><ul class="cell-ul" data-list="suggestions"><li>—</li></ul></div>
+      <div style="margin-top:5mm;">Date: <span data-field="suggestions_date">—</span></div>
+
+      <div class="signs">
+        <div class="sign"><div class="line"></div><div class="cap">Head / Coordinator</div></div>
+        <div class="sign"><div class="line"></div><div class="cap">Faculty Coordinator / Organiser</div></div>
+        <div class="sign"><div class="line"></div><div class="cap">IQAC</div></div>
+      </div>
+
+      <!-- 9. ANNEXURES -->
+      <div class="break"></div>
+      <h2 class="sec">Attachments (Annexures)</h2>
+
+      <div class="ann">Annexure A. Photographs</div>
+      <div class="grid-2" data-grid="annexures.photos">
+        <figure class="card"><div class="ph">Image</div><figcaption>—</figcaption></figure>
+      </div>
+
+      <div class="break"></div>
+      <div class="ann">Annexure B. Brochure (4 pages)</div>
+      <div class="grid-2" data-grid="annexures.brochure_pages">
+        <figure class="card"><div class="ph">Image</div><figcaption>—</figcaption></figure>
+      </div>
+
+      <div class="break"></div>
+      <div class="ann">Annexure C. Communication with Institution</div>
+      <table class="grid" style="margin-bottom:4mm;">
+        <colgroup><col class="c-lab"><col class="c-val"></colgroup>
+        <tbody>
+          <tr><th>Subject</th><td data-field="annexures.communication.subject">—</td></tr>
+          <tr><th>Date</th><td data-field="annexures.communication.date">—</td></tr>
+        </tbody>
+      </table>
+      <table class="vol">
+        <thead><tr><th>Sl No</th><th>Reg No</th><th>Name</th><th>Class</th><th>Role</th></tr></thead>
+        <tbody data-rows="annexures.communication.volunteer_list"><tr><td colspan="5" style="text-align:center;">—</td></tr></tbody>
+      </table>
+
+      <div class="break"></div>
+      <div class="ann">Annexure D. Worksheets / Activities</div>
+      <div class="grid-2" data-grid="annexures.worksheets">
+        <figure class="card"><div class="ph">Image</div><figcaption>—</figcaption></figure>
+      </div>
+
+      <div class="break"></div>
+      <div class="ann">Annexure E. Evaluation Sheet</div>
+      <figure class="card" data-src="annexures.evaluation_sheet"><div class="ph">Image</div><figcaption>—</figcaption></figure>
+
+      <div class="break"></div>
+      <div class="ann">Annexure F. Feedback Form</div>
+      <figure class="card" data-src="annexures.feedback_form"><div class="ph">Image</div><figcaption>—</figcaption></figure>
+
+    </div>
+
+    <footer class="ftr">
+      <div>CHRIST (Deemed to be University), Pune Lavasa Campus — 30 Valor Court, Pune 412112, Maharashtra</div>
+      <div class="pg"></div>
+    </footer>
+  </article>
+</div>
+
+<script type="application/json" id="initial-report-data">{{ initial_report_data|default:"{}"|safe }}</script>
+
 <script>
-// 1. Field mapping (AI label to DOM element ID, lowercased)
-const aiFieldMap = {
-  'event title': 'f_event_title',
-  'date & time': 'f_date_time',
-  'venue': 'f_venue',
-  'academic year': 'f_academic_year',
-  'focus/objective': 'f_focus_objective',
-  'focus / objective': 'f_focus_objective',
-  'target audience': 'f_target_audience',
-  'organizing department': 'f_organizing_dept',
-  'organizing department/committee': 'f_organizing_dept',
-  'no. of participants': 'f_no_participants',
-  'number of participants': 'f_no_participants',
-  'event summary': 'f_summary',
-  'summary': 'f_summary',
-  'outcomes': 'f_outcomes',
-  'feedback': 'f_feedback',
-  'feedback & suggestions': 'f_feedback',
-  'recommendations': 'f_recommendations',
-  'attachments': 'f_attachments',
-  'prepared by': 'f_prepared_by',
-  'date of submission': 'f_date_sub',
-  'approved by': 'f_approved_by',
-};
-
-// 2. Typing animation for a field
-function animateFieldFill(id, text) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.classList.remove('ai-field-blank');
-  el.classList.add('ai-fill-anim');
-  // Typing effect
-  let i = 0;
-  function type() {
-    if (i <= text.length) {
-      el.innerHTML = text.slice(0, i) + '<span class="ai-cursor">|</span>';
-      i++;
-      setTimeout(type, 9 + Math.random() * 22);
-    } else {
-      el.innerHTML = text;
-      el.classList.remove('ai-fill-anim');
-    }
-  }
-  type();
-}
-
-// 3. Parse "Field: Value" lines (robust, trims, ignores case, ignores blank lines)
-function parseReportFields(reportText) {
-    // Remove markdown stars, underscores, etc. and trim
-    let txt = reportText.replace(/[*_]+/g, '').replace(/\r/g, '');
-    // For debug: see raw AI
-    console.log("RAW AI:\n" + txt);
-    let fields = {};
-    let lines = txt.split('\n');
-    for (let i = 0; i < lines.length; ++i) {
-      let line = lines[i].trim();
-      if (!line) continue;
-      let idx = line.indexOf(':');
-      if (idx > 0) {
-        let key = line.slice(0, idx).trim().toLowerCase();
-        let val = line.slice(idx + 1).trim();
-        if (key && val !== undefined) fields[key] = val;
-      }
-    }
-    return fields;
-}
-
-// 4. Streaming fetch logic (Gemini or simulate for dev)
-fetch("{% url 'emt:generate_ai_report_stream' proposal.id %}", { method: "GET" })
-  .then(response => {
-    const reader = response.body.getReader();
-    let buffer = '';
-    function pump() {
-      return reader.read().then(({ value, done }) => {
-        if (done) {
-          // Final fill for any remaining blanks
-          const fields = parseReportFields(buffer);
-          Object.entries(aiFieldMap).forEach(([k, v]) => {
-            if (fields[k] && document.getElementById(v).textContent === '...') {
-              animateFieldFill(v, fields[k]);
-            }
-          });
-          document.getElementById('ai_status').hidden = false;
-          document.getElementById('editBtn').style.display = "inline-block";
-          return;
-        }
-        buffer += new TextDecoder("utf-8").decode(value);
-        // Live update
-        const fields = parseReportFields(buffer);
-        Object.entries(aiFieldMap).forEach(([k, v]) => {
-          if (fields[k] && (document.getElementById(v).textContent === '...' || document.getElementById(v).classList.contains('ai-field-blank'))) {
-            animateFieldFill(v, fields[k]);
-          }
-        });
-        return pump();
+  /* ---------- Hydration ---------- */
+  function hydrateReport(data = {}) {
+    const root = document.querySelector('.sheet'); if (!root) return;
+    const txt = (sel, v) => { const el = root.querySelector(sel); if (el) el.textContent = (v ?? '—') === '' ? '—' : v; };
+    const list = (sel, arr) => {
+      const ul = root.querySelector(sel); if (!ul) return;
+      ul.innerHTML = ''; (arr && arr.length ? arr : ['—']).forEach(x => { const li = document.createElement('li'); li.textContent = x; ul.appendChild(li); });
+    };
+    const grid = (sel, items) => {
+      const wrap = root.querySelector(sel); if (!wrap) return;
+      wrap.innerHTML = '';
+      (items || []).forEach(it => {
+        const f = document.createElement('figure'); f.className='card';
+        const ph = document.createElement('div'); ph.className='ph';
+        if (it && it.src){ const img=document.createElement('img'); img.src=it.src; img.alt=it.caption||'Image'; img.style.maxWidth='100%'; img.style.maxHeight='100%'; ph.appendChild(img); }
+        else { ph.textContent='Image'; }
+        const cap=document.createElement('figcaption'); cap.textContent = it && it.caption ? it.caption : '—';
+        f.appendChild(ph); f.appendChild(cap); wrap.appendChild(f);
       });
-    }
-    return pump();
-  })
-  .catch(err => {
-    // If Gemini/stream fails, show an error
-    alert("AI report generation failed! Please try again.\n" + (err && err.message ? err.message : ""));
-  });
+      if (!items || !items.length) wrap.innerHTML = '<figure class="card"><div class="ph">Image</div><figcaption>—</figcaption></figure>';
+    };
+    const rows = (sel, rs) => {
+      const tb = root.querySelector(sel); if (!tb) return;
+      tb.innerHTML = '';
+      (rs || []).forEach((r,i) => {
+        const tr=document.createElement('tr');
+        ['sl','reg','name','class_','role'].forEach(k=>{
+          const td=document.createElement('td'); td.textContent = (k==='sl'? (r?.sl ?? i+1) : (r?.[k] ?? '—')); tr.appendChild(td);
+        });
+        tb.appendChild(tr);
+      });
+      if (!rs || !rs.length) tb.innerHTML = '<tr><td colspan="5" style="text-align:center;">—</td></tr>';
+    };
 
-document.getElementById('editBtn').onclick = function() {
-  window.location.href = "{% url 'emt:ai_report_edit' proposal.id %}";
-};
-document.getElementById('submitBtn').onclick = function() {
-  window.location.href = "{% url 'emt:ai_report_submit' proposal.id %}";
-};
+    /* Map all fields */
+    txt('[data-field="event_info.title"]', data?.event_info?.title);
+    txt('[data-field="event_info.department"]', data?.event_info?.department);
+    txt('[data-field="event_info.location"]', data?.event_info?.location);
+    txt('[data-field="event_info.activities_count"]', data?.event_info?.activities_count);
+    txt('[data-field="event_info.datetime"]', data?.event_info?.datetime);
+    txt('[data-field="event_info.venue"]', data?.event_info?.venue);
+    txt('[data-field="event_info.academic_year"]', data?.event_info?.academic_year);
+    txt('[data-field="event_info.focus"]', data?.event_info?.focus);
+
+    txt('[data-field="participants.target_audience"]', data?.participants?.target_audience);
+    txt('[data-field="participants.external_agencies"]', data?.participants?.external_agencies);
+    txt('[data-field="participants.external_contacts"]', data?.participants?.external_contacts);
+    list('[data-list="participants.organising_committee"]', data?.participants?.organising_committee);
+    txt('[data-field="participants.student_volunteers"]', data?.participants?.student_volunteers);
+    txt('[data-field="participants.participants_count"]', data?.participants?.participants_count);
+
+    txt('[data-field="summary"]', data?.summary);
+    list('[data-list="activities"]', data?.activities);
+    list('[data-list="social_relevance"]', data?.social_relevance);
+    list('[data-list="outcomes"]', data?.outcomes);
+
+    txt('[data-field="analysis.attendees"]', data?.analysis?.attendees);
+    txt('[data-field="analysis.schools"]', data?.analysis?.schools);
+    txt('[data-field="analysis.volunteers"]', data?.analysis?.volunteers);
+
+    txt('[data-field="relevance.graduate_attributes"]', data?.relevance?.graduate_attributes);
+    txt('[data-field="relevance.sdg"]', data?.relevance?.sdg);
+
+    list('[data-list="suggestions"]', data?.suggestions);
+    txt('[data-field="suggestions_date"]', data?.suggestions_date);
+
+    grid('[data-grid="annexures.photos"]', data?.annexures?.photos);
+    grid('[data-grid="annexures.brochure_pages"]', data?.annexures?.brochure_pages);
+    txt('[data-field="annexures.communication.subject"]', data?.annexures?.communication?.subject);
+    txt('[data-field="annexures.communication.date"]', data?.annexures?.communication?.date);
+    rows('[data-rows="annexures.communication.volunteer_list"]', data?.annexures?.communication?.volunteer_list);
+    grid('[data-grid="annexures.worksheets"]', data?.annexures?.worksheets);
+    (function single(sel, item){
+      const host=document.querySelector(sel); if(!host) return; const ph=host.querySelector('.ph'); const cap=host.querySelector('figcaption');
+      ph.innerHTML=''; cap.textContent = item && item.caption ? item.caption : '—';
+      if (item && item.src){ const img=document.createElement('img'); img.src=item.src; img.alt=cap.textContent||'Image'; img.style.maxWidth='100%'; img.style.maxHeight='100%'; ph.appendChild(img); }
+      else { ph.textContent='Image'; }
+    })('[data-src="annexures.evaluation_sheet"]', data?.annexures?.evaluation_sheet);
+    (function single(sel, item){
+      const host=document.querySelector(sel); if(!host) return; const ph=host.querySelector('.ph'); const cap=host.querySelector('figcaption');
+      ph.innerHTML=''; cap.textContent = item && item.caption ? item.caption : '—';
+      if (item && item.src){ const img=document.createElement('img'); img.src=item.src; img.alt=cap.textContent||'Image'; img.style.maxWidth='100%'; img.style.maxHeight='100%'; ph.appendChild(img); }
+      else { ph.textContent='Image'; }
+    })('[data-src="annexures.feedback_form"]', data?.annexures?.feedback_form);
+  }
+
+  (function init(){
+    /* hydrate from server JSON if present */
+    const raw=document.getElementById('initial-report-data');
+    if(raw && raw.textContent.trim()){
+      try{ hydrateReport(JSON.parse(raw.textContent)); }catch(_){}
+    }
+    document.getElementById('print-btn')?.addEventListener('click', ()=>window.print());
+
+    /* lightweight edit/preview (paper look preserved) */
+    let editing=false;
+    document.getElementById('toggle-edit')?.addEventListener('click', ()=>{
+      editing=!editing; const btn=document.getElementById('toggle-edit'); btn.textContent=editing?'Preview':'Edit';
+
+      const toInputs=()=>{
+        document.querySelectorAll('[data-field]').forEach(el=>{
+          if(el.querySelector('input,textarea')) return;
+          const multi=el.getAttribute('data-multiline')==='true';
+          const v=el.textContent.trim()==='—'?'':el.textContent.trim();
+          const tag=multi?'textarea':'input'; const c=document.createElement(tag);
+          c.value=v; c.style.width='100%'; c.style.border='none'; c.style.outline='none'; c.style.font='inherit'; c.style.lineHeight='inherit'; c.style.padding='0';
+          if(multi) c.rows=5; el.innerHTML=''; el.appendChild(c);
+        });
+        document.querySelectorAll('[data-list]').forEach(ul=>{
+          const vals=Array.from(ul.querySelectorAll('li')).map(li=>li.textContent.trim()).filter(Boolean);
+          const ta=document.createElement('textarea'); ta.rows=4; ta.style.width='100%'; ta.style.border='none'; ta.style.outline='none'; ta.style.font='inherit';
+          ta.value=vals.join('\n'); ul.innerHTML=''; ul.appendChild(ta);
+        });
+      };
+      const toText=()=>{
+        document.querySelectorAll('[data-field]').forEach(el=>{
+          const c=el.querySelector('input,textarea'); if(!c) return; const v=c.value.trim(); el.innerHTML=v||'—';
+        });
+        document.querySelectorAll('[data-list]').forEach(ul=>{
+          const ta=ul.querySelector('textarea'); if(!ta) return;
+          const items=ta.value.split('\n').map(x=>x.trim()).filter(Boolean);
+          ul.innerHTML=''; (items.length?items:['—']).forEach(x=>{ const li=document.createElement('li'); li.textContent=x; ul.appendChild(li); });
+        });
+      };
+
+      if(editing) toInputs(); else toText();
+    });
+  })();
 </script>
 {% endblock %}

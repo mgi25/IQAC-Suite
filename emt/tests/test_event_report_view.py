@@ -1,5 +1,7 @@
 import json
 from datetime import date
+from html.parser import HTMLParser
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.contrib.auth.signals import user_logged_in
@@ -7,10 +9,12 @@ from django.db.models.signals import post_save
 from django.test import TestCase
 from django.urls import reverse
 from django.utils.formats import date_format
+from django.http import QueryDict
 
+from core.models import Organization, OrganizationType
 from core.signals import assign_role_on_login, create_or_update_user_profile
 from emt.forms import EventReportForm
-from emt.models import (AttendanceRow, EventActivity, EventProposal,
+from emt.models import (AttendanceRow, CDLSupport, EventActivity, EventProposal,
                         EventReport, SpeakerProfile)
 
 
@@ -122,7 +126,7 @@ class SubmitEventReportViewTests(TestCase):
         self.assertContains(
             response, "Click attendance box to manage via CSV", html=False
         )
-        self.assertNotContains(response, "data-attendance-url", html=False)
+        self.assertNotIn('data-attendance-url="', response.content.decode())
 
         report = EventReport.objects.create(proposal=self.proposal)
         response = self.client.get(url)
@@ -141,7 +145,7 @@ class SubmitEventReportViewTests(TestCase):
         url = reverse("emt:submit_event_report", args=[self.proposal.id])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, "data-attendance-url", html=False)
+        self.assertNotIn('data-attendance-url="', response.content.decode())
 
         autosave_url = reverse("emt:autosave_event_report")
         res = self.client.post(
@@ -187,21 +191,34 @@ const docObj={
 };
 function $(sel){
  if(sel===document) return docObj;
- if(sel==='#attendance-modern') return attendanceEl;
- if(sel==='#num-participants-modern' || sel==='#total-participants-modern') return participantsEl;
+ if(sel===attendanceEl || sel==='#attendance-modern') return attendanceEl;
+ if(sel===participantsEl || sel==='#num-participants-modern' || sel==='#total-participants-modern') return participantsEl;
+ if(typeof sel === 'string' && sel.includes('#attendance-modern') && sel.includes('num-participants-modern')) return combinedFields;
+ if(typeof sel === 'string' && sel.includes('num-participants-modern')) return participantsEl;
  if(sel==='#autosave-indicator') return indicatorEl;
 }
+let combinedFields;
 const attendanceEl={attrs:{},dataStore:{},length:1,
   attr:function(n,v){if(v===undefined)return this.attrs[n];this.attrs[n]=v;return this;},
   data:function(n,v){if(v===undefined)return this.dataStore[n];this.dataStore[n]=v;return this;},
   prop:function(){return this;},
-  css:function(){return this;}
+  css:function(){return this;},
+  add:function(){return combinedFields;}
 };
 const participantsEl={attrs:{},dataStore:{},length:1,
   attr:function(n,v){if(v===undefined)return this.attrs[n];this.attrs[n]=v;return this;},
   data:function(n,v){if(v===undefined)return this.dataStore[n];this.dataStore[n]=v;return this;},
   prop:function(){return this;},
-  css:function(){return this;}
+  css:function(){return this;},
+  add:function(){return combinedFields;}
+};
+combinedFields={
+  length:2,
+  attr:function(n,v){if(v===undefined)return attendanceEl.attrs[n]||participantsEl.attrs[n];attendanceEl.attr(n,v);participantsEl.attr(n,v);return this;},
+  data:function(n,v){if(v===undefined)return attendanceEl.data(n);attendanceEl.data(n,v);participantsEl.data(n,v);return this;},
+  prop:function(){return this;},
+  css:function(){return this;},
+  each:function(cb){[attendanceEl,participantsEl].forEach((el,idx)=>cb.call(el, idx, el));return this;}
 };
 const indicatorEl={
   removeClass:function(){return this;},
@@ -209,7 +226,9 @@ const indicatorEl={
   find:function(){return {text:function(){}};},
   length:1
 };
-const window={location:{}};
+const window={location:{pathname:'/suite/reports/preview/'}};
+global.window = window;
+global.document = document;
 eval(setupCode);
 eval(initCode);
 initializeAutosaveIndicators();
@@ -335,6 +354,14 @@ console.log(JSON.stringify({
             "needs_grad_attr_mapping": "GA1",
             "contemporary_requirements": "Requirement summary",
             "sdg_value_systems_mapping": "SDG1",
+            "actual_speakers": "Keynote and panelists",
+            "external_contact_details": "",
+            "impact_on_stakeholders": "Positive impact on alumni",
+            "innovations_best_practices": "Introduced blended format",
+            "iqac_feedback": "IQAC shared guidance",
+            "beneficiaries_details": "Students and faculty",
+            "attendance_notes": "",
+            "report_signed_date": "2024-02-05",
             "num_participants": "50",
             "num_student_volunteers": "5",
             "num_student_participants": "30",
@@ -371,10 +398,229 @@ console.log(JSON.stringify({
         self.assertIn("Summary", labels)
         self.assertIn("Participant feedback", labels)
 
-        # Hidden/legacy fields should be filtered out of the preview
-        self.assertNotIn("Attendance notes", labels)
-        self.assertNotIn("Report signed date", labels)
-        self.assertNotIn("Beneficiaries details", labels)
+        report_dict = {label: value for label, value in report_fields}
+        form = response.context["form"]
+
+        self.assertEqual(
+            report_dict.get(form.fields["actual_speakers"].label),
+            "Keynote and panelists",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["external_contact_details"].label),
+            "—",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["impact_on_stakeholders"].label),
+            "Positive impact on alumni",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["innovations_best_practices"].label),
+            "Introduced blended format",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["iqac_feedback"].label),
+            "IQAC shared guidance",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["beneficiaries_details"].label),
+            "Students and faculty",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["attendance_notes"].label),
+            "—",
+        )
+        expected_signed = date_format(date(2024, 2, 5), "DATE_FORMAT")
+        self.assertEqual(
+            report_dict.get(form.fields["report_signed_date"].label),
+            expected_signed,
+        )
+
+    def test_preview_shows_dynamic_committee_and_speaker_details(self):
+        speaker = SpeakerProfile.objects.create(
+            proposal=self.proposal,
+            full_name="Dr. Ada Lovelace",
+            designation="Keynote Speaker",
+        )
+
+        url = reverse("emt:preview_event_report", args=[self.proposal.id])
+        data = {
+            "actual_event_type": "Seminar",
+            "report_signed_date": "2024-03-15",
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+            "committee_member_names[]": ["Alice Johnson", "Bob Smith"],
+            "committee_member_roles[]": ["Coordinator", "Volunteer"],
+            "committee_member_departments[]": ["CSE", "ECE"],
+            "committee_member_contacts[]": ["alice@example.com", ""],
+            "speaker_ids[]": [str(speaker.id)],
+            "speaker_topics[]": ["AI Trends"],
+            "speaker_durations[]": ["45"],
+            "speaker_feedback[]": ["Well received session"],
+        }
+
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+
+        report_fields = response.context["report_fields"]
+
+        self.assertIn(
+            ("Committee Member 1 - Name", "Alice Johnson"), report_fields
+        )
+        self.assertIn(
+            ("Committee Member 1 - Contact", "alice@example.com"), report_fields
+        )
+        self.assertIn(
+            ("Committee Member 2 - Role", "Volunteer"), report_fields
+        )
+        self.assertIn(
+            ("Speaker Session 1 - Speaker", "Dr. Ada Lovelace"), report_fields
+        )
+        self.assertIn(("Speaker Session 1 - Topic", "AI Trends"), report_fields)
+        self.assertIn(
+            ("Speaker Session 1 - Duration (minutes)", "45"), report_fields
+        )
+        self.assertIn(
+            ("Speaker Session 1 - Feedback/Comments", "Well received session"),
+            report_fields,
+        )
+
+    def test_preview_displays_cdl_support_details_and_report_textboxes(self):
+        org_type = OrganizationType.objects.create(name="Department")
+        org = Organization.objects.create(name="IQAC", org_type=org_type)
+        self.proposal.organization = org
+        self.proposal.venue = "Main Hall"
+        self.proposal.event_start_date = date(2024, 5, 1)
+        self.proposal.event_end_date = date(2024, 5, 2)
+        self.proposal.academic_year = "2024-2025"
+        self.proposal.save(
+            update_fields=[
+                "organization",
+                "venue",
+                "event_start_date",
+                "event_end_date",
+                "academic_year",
+            ]
+        )
+
+        support = CDLSupport.objects.create(
+            proposal=self.proposal,
+            needs_support=True,
+            poster_required=True,
+            poster_choice=CDLSupport.PosterChoice.CDL_CREATE,
+            organization_name="IQAC",
+            poster_time="10:00 AM",
+            poster_date=date(2024, 5, 1),
+            poster_venue="Auditorium",
+            resource_person_name="Dr. Jane Doe",
+            resource_person_designation="Professor",
+            poster_event_title="Innovation Day",
+            poster_summary="Poster summary text",
+            poster_design_link="http://example.com/poster",
+            other_services=["photography", "videography"],
+            certificates_required=True,
+            certificate_help=True,
+            certificate_choice=CDLSupport.CertificateChoice.CDL_CREATE,
+            certificate_design_link="http://example.com/certificate",
+            blog_content="Blog coverage details.",
+        )
+
+        url = reverse("emt:preview_event_report", args=[self.proposal.id])
+        data = {
+            "department": "IQAC",
+            "event_title": "Innovation Day",
+            "venue": "Main Hall",
+            "event_start_date": "2024-05-01",
+            "event_end_date": "2024-05-02",
+            "academic_year": "2024-2025",
+            "actual_event_type": "Symposium",
+            "actual_speakers": "Keynotes and panels",
+            "external_contact_details": "",
+            "impact_on_stakeholders": "Community outreach",
+            "innovations_best_practices": "Hybrid delivery",
+            "iqac_feedback": "Encouraged mentoring",
+            "beneficiaries_details": "200 students",
+            "attendance_notes": "",
+            "report_signed_date": "2024-05-05",
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+
+        proposal_fields = response.context["proposal_fields"]
+
+        expected_poster_date = date_format(date(2024, 5, 1), "DATE_FORMAT")
+        self.assertIn(("Poster Choice", support.get_poster_choice_display()), proposal_fields)
+        self.assertIn(("Organization Name", "IQAC"), proposal_fields)
+        self.assertIn(("Event Time", "10:00 AM"), proposal_fields)
+        self.assertIn(("Event Date", expected_poster_date), proposal_fields)
+        self.assertIn(("Event Venue", "Auditorium"), proposal_fields)
+        self.assertIn(("Resource Person Name", "Dr. Jane Doe"), proposal_fields)
+        self.assertIn(("Resource Person Designation", "Professor"), proposal_fields)
+        self.assertIn(("Event Title for Poster", "Innovation Day"), proposal_fields)
+        self.assertIn(("Event Summary", "Poster summary text"), proposal_fields)
+
+        design_links = [
+            value
+            for label, value in proposal_fields
+            if label == "Design Link/Reference"
+        ]
+        self.assertIn("http://example.com/poster", design_links)
+        self.assertIn("http://example.com/certificate", design_links)
+
+        services_value = next(
+            (value for label, value in proposal_fields if label == "Additional Services"),
+            "",
+        )
+        self.assertEqual(services_value, "Event Photography, Event Videography")
+        self.assertIn(("Blog Content", "Blog coverage details."), proposal_fields)
+        self.assertIn(
+            ("Certificate Choice", support.get_certificate_choice_display()),
+            proposal_fields,
+        )
+
+        report_dict = {label: value for label, value in response.context["report_fields"]}
+        form = response.context["form"]
+
+        expected_signed = date_format(date(2024, 5, 5), "DATE_FORMAT")
+        self.assertEqual(
+            report_dict.get(form.fields["actual_speakers"].label),
+            "Keynotes and panels",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["impact_on_stakeholders"].label),
+            "Community outreach",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["innovations_best_practices"].label),
+            "Hybrid delivery",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["iqac_feedback"].label),
+            "Encouraged mentoring",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["beneficiaries_details"].label),
+            "200 students",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["external_contact_details"].label),
+            "—",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["attendance_notes"].label),
+            "—",
+        )
+        self.assertEqual(
+            report_dict.get(form.fields["report_signed_date"].label),
+            expected_signed,
+        )
+
 
     def test_preview_shows_faculty_incharges(self):
         fac = User.objects.create_user(username="facultya")
@@ -391,6 +637,90 @@ console.log(JSON.stringify({
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "facultya")
+
+    def test_preview_shows_inactive_organization_name(self):
+        org_type = OrganizationType.objects.create(name="Department")
+        archived_org = Organization.objects.create(
+            name="Archived Org", org_type=org_type, is_active=False
+        )
+        self.proposal.organization = archived_org
+        self.proposal.save(update_fields=["organization"])
+
+        url = reverse("emt:preview_event_report", args=[self.proposal.id])
+        data = {
+            "actual_event_type": "Seminar",
+            "report_signed_date": "2024-01-10",
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Archived Org")
+
+    def test_preview_submission_preserves_multi_value_fields(self):
+        faculty_one = User.objects.create_user(username="faculty_one")
+        faculty_two = User.objects.create_user(username="faculty_two")
+
+        preview_url = reverse("emt:preview_event_report", args=[self.proposal.id])
+        multi_values = [str(faculty_one.id), str(faculty_two.id)]
+        data = {
+            "actual_event_type": "Seminar",
+            "report_signed_date": "2024-01-10",
+            "faculty_incharges": multi_values,
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+        preview_response = self.client.post(preview_url, data)
+        self.assertEqual(preview_response.status_code, 200)
+
+        class HiddenInputParser(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.inputs = []
+
+            def handle_starttag(self, tag, attrs):
+                if tag.lower() != "input":
+                    return
+                attr_dict = dict(attrs)
+                if attr_dict.get("type") != "hidden":
+                    return
+                name = attr_dict.get("name")
+                if not name:
+                    return
+                self.inputs.append((name, attr_dict.get("value", "")))
+
+        parser = HiddenInputParser()
+        parser.feed(preview_response.content.decode())
+        parser.close()
+
+        final_payload = QueryDict("", mutable=True)
+        for name, value in parser.inputs:
+            final_payload.appendlist(name, value or "")
+        final_payload.appendlist("final_submit", "Submit Report")
+
+        self.assertEqual(final_payload.getlist("faculty_incharges"), multi_values)
+
+        submit_url = reverse("emt:submit_event_report", args=[self.proposal.id])
+        captured = {}
+
+        def capture_sync(proposal, report, payload):
+            captured["faculty_incharges"] = payload.getlist("faculty_incharges")
+
+        encoded_payload = final_payload.urlencode()
+
+        with patch("emt.views._sync_proposal_from_report", side_effect=capture_sync):
+            submit_response = self.client.post(
+                submit_url,
+                encoded_payload,
+                content_type="application/x-www-form-urlencoded",
+            )
+
+        self.assertEqual(submit_response.status_code, 302)
+        self.assertEqual(captured.get("faculty_incharges"), multi_values)
 
     def test_proposal_speakers_prefilled(self):
         SpeakerProfile.objects.create(
@@ -435,7 +765,7 @@ const fs = require('fs');
 const src = fs.readFileSync('__SUBMIT_JS__', 'utf8');
 function extract(name){
   const start = src.indexOf('function ' + name);
-  if(start === -1) throw new Error('not found: '+name);
+  if(start === -1) throw new Error('not found: ' + name);
   let i = src.indexOf('{', start); i++; let depth = 1;
   while(i < src.length && depth > 0){
     if(src[i] === '{') depth++;
@@ -444,37 +774,34 @@ function extract(name){
   }
   return src.slice(start, i);
 }
-const loadSectionContent = extract('loadSectionContent');
-const populateSpeakersFromProposal = extract('populateSpeakersFromProposal');
-const fillOrganizingCommittee = extract('fillOrganizingCommittee');
-const fillAttendanceCounts = extract('fillAttendanceCounts');
+const fnPopulateSpeakersFromProposal = extract('populateSpeakersFromProposal');
+const fnFillOrganizingCommittee = extract('fillOrganizingCommittee');
+const fnFillAttendanceCounts = extract('fillAttendanceCounts');
 
+const handlers = {};
 let domReady = false;
-const speakersDisplay = {innerHTML: ''};
-const orgEl = {
+
+const makeNode = () => ({
   value: '',
-  length: 1,
-  val: function(v) {
-    if (v === undefined) return this.value;
+  innerHTML: '',
+  attrs: {},
+  dataStore: {},
+  addEventListener: () => {},
+  querySelector: () => null,
+  querySelectorAll: () => [],
+});
+
+const speakersDisplay = makeNode();
+const formGrid = makeNode();
+
+const orgField = Object.assign(makeNode(), {
+  val: function(v){
+    if(v === undefined) return this.value || '';
     this.value = v;
     return this;
   },
-  text: function(v) {
-    if (v === undefined) return this.value;
-    this.value = v;
-    return this;
-  },
-};
-const makeField = () => ({
-  value: '',
-  length: 1,
-  val: function(v) {
-    if (v === undefined) return this.value;
-    this.value = v;
-    return this;
-  },
-  text: function(v) {
-    if (v === undefined) return this.value;
+  text: function(v){
+    if(v === undefined) return this.value || '';
     this.value = v;
     return this;
   },
@@ -482,60 +809,210 @@ const makeField = () => ({
 
 const elements = {
   'speakers-display': speakersDisplay,
-  'attendance-modern': makeField(),
-  'num-participants-modern': makeField(),
-  'total-participants-modern': makeField(),
-  'num-volunteers-modern': makeField(),
-  'num-volunteers-hidden': makeField(),
-  'student-participants-modern': makeField(),
-  'faculty-participants-modern': makeField(),
-  'external-participants-modern': makeField(),
+  'organizing-committee-modern': orgField,
+  'attendance-modern': makeNode(),
+  'num-participants-modern': makeNode(),
+  'total-participants-modern': makeNode(),
+  'num-volunteers-modern': makeNode(),
+  'num-volunteers-hidden': makeNode(),
+  'student-participants-modern': makeNode(),
+  'faculty-participants-modern': makeNode(),
+  'external-participants-modern': makeNode(),
+  'proposal-speakers-json': Object.assign(makeNode(), { textContent: '' }),
+};
+
+function wrapNodes(nodes){
+  const arr = Array.isArray(nodes) ? nodes : [];
+  return {
+    __targets: arr,
+    length: arr.length,
+    val: function(v){
+      if(v === undefined){
+        const first = arr[0];
+        if(!first) return undefined;
+        if(typeof first.val === 'function') return first.val();
+        return first.value;
+      }
+      arr.forEach(node => {
+        if(typeof node.val === 'function') node.val(v);
+        else node.value = v;
+      });
+      return this;
+    },
+    text: function(v){
+      if(v === undefined){
+        const first = arr[0];
+        if(!first) return undefined;
+        if(typeof first.text === 'function') return first.text();
+        if('textContent' in first) return first.textContent;
+        return first.value;
+      }
+      arr.forEach(node => {
+        if(typeof node.text === 'function') node.text(v);
+        else if('textContent' in node) node.textContent = v;
+        else node.value = v;
+      });
+      return this;
+    },
+    html: function(v){
+      if(v === undefined){
+        const first = arr[0];
+        return first ? first.innerHTML : undefined;
+      }
+      arr.forEach(node => { node.innerHTML = v; });
+      return this;
+    },
+    append: function(html){
+      arr.forEach(node => { node.innerHTML = (node.innerHTML || '') + html; });
+      return this;
+    },
+    empty: function(){
+      arr.forEach(node => { node.innerHTML = ''; });
+      return this;
+    },
+    attr: function(name, v){
+      if(v === undefined){
+        const first = arr[0];
+        return first && first.attrs ? first.attrs[name] : undefined;
+      }
+      arr.forEach(node => {
+        node.attrs = node.attrs || {};
+        node.attrs[name] = v;
+      });
+      return this;
+    },
+    data: function(name, v){
+      if(v === undefined){
+        const first = arr[0];
+        return first && first.dataStore ? first.dataStore[name] : undefined;
+      }
+      arr.forEach(node => {
+        node.dataStore = node.dataStore || {};
+        node.dataStore[name] = v;
+      });
+      return this;
+    },
+    prop: function(){ return this; },
+    css: function(){ return this; },
+    addClass: function(){ return this; },
+    removeClass: function(){ return this; },
+    add: function(other){
+      const combined = [...arr];
+      if(other && other.__targets) combined.push(...other.__targets);
+      return wrapNodes(combined);
+    },
+    each: function(cb){
+      arr.forEach((node, idx) => cb.call(node, idx, node));
+      return this;
+    },
+    on: function(){ return this; },
+    off: function(){ return this; },
+    trigger: function(){ return this; },
+  };
+}
+
+const document = {
+  readyState: 'complete',
+  getElementById: id => elements[id] || null,
+  querySelector: () => null,
+  querySelectorAll: () => [],
 };
 
 function $(sel){
-  if(sel === '.form-grid') return {html:function(content){ setTimeout(()=>{domReady=true;},0); return this; }};
-  if(!domReady) return {length:0, val:function(){}};
-  if(sel === '#organizing-committee-modern') return orgEl;
-  return {length:0, val:function(){}};
+  if(sel === document){
+    const jqDoc = {
+      on: (ev, fn) => { (handlers[ev] = handlers[ev] || []).push(fn); return jqDoc; },
+      trigger: (ev, data) => { (handlers[ev] || []).forEach(fn => fn({ type: ev }, data)); return jqDoc; },
+      off: () => jqDoc,
+    };
+    return jqDoc;
+  }
+  if(sel === '.form-grid'){
+    return {
+      length: 1,
+      html: function(content){
+        if(content !== undefined){
+          formGrid.innerHTML = content;
+          setTimeout(() => { domReady = true; }, 0);
+          return this;
+        }
+        return formGrid.innerHTML;
+      },
+      append: function(html){
+        formGrid.innerHTML = (formGrid.innerHTML || '') + html;
+        return this;
+      },
+      empty: function(){ formGrid.innerHTML = ''; return this; },
+      addClass: function(){ return this; },
+      removeClass: function(){ return this; },
+      on: function(){ return this; },
+      off: function(){ return this; },
+      trigger: function(){ return this; },
+    };
+  }
+  if(typeof sel === 'string'){
+    const parts = sel.split(',').map(s => s.trim()).filter(Boolean);
+    const nodes = parts.map(part => {
+      if(part.startsWith('#')){
+        const id = part.slice(1);
+        return elements[id];
+      }
+      return null;
+    }).filter(Boolean);
+    if(!domReady && nodes.length && sel.startsWith('#')){
+      return wrapNodes(nodes);
+    }
+    if(!domReady) return wrapNodes([]);
+    return wrapNodes(nodes);
+  }
+  return wrapNodes([]);
 }
 
 global.$ = $;
-global.document = {
-  readyState: 'complete',
-  getElementById: id => {
-    if(id === 'speakers-display') return domReady ? elements[id] : null;
-    return elements[id] || null;
-  }
-};
-global.window = {
+global.document = document;
+
+const window = {
   PROPOSAL_DATA: __PROPOSAL_DATA__,
   EXISTING_SPEAKERS: __EXISTING_SPEAKERS__,
   ATTENDANCE_PRESENT: 10,
   ATTENDANCE_ABSENT: 2,
   ATTENDANCE_VOLUNTEERS: 3,
-  ATTENDANCE_COUNTS: { present: 10, absent: 2, volunteers: 3, total: 10, students: 6, faculty: 3, external: 1 }
+  ATTENDANCE_COUNTS: { present: 10, absent: 2, volunteers: 3, total: 10, students: 6, faculty: 3, external: 1 },
+  location: { pathname: '/suite/reports/preview/' },
 };
+global.window = window;
 
-eval(populateSpeakersFromProposal);
-eval(fillOrganizingCommittee);
-eval(fillAttendanceCounts);
-eval(loadSectionContent);
+global.renderEditableSpeakerCard = (speaker = {}, index = 0) => {
+  const name = speaker.full_name || speaker.name || speaker.title || `Speaker ${index + 1}`;
+  const organization = speaker.organization || speaker.affiliation || '';
+  const id = speaker.id || speaker.pk || index + 1;
+  return `<div class="speaker-card" data-speaker-id="${id}"><div class="speaker-name">${name}</div><div class="speaker-org">${organization}</div></div>`;
+};
+global.getNoSpeakersMessageHtml = () => '<div class="no-speakers-message">No speakers selected</div>';
+global.setupSpeakerCardEditors = () => {};
 
-loadSectionContent('participants-information');
+eval(fnPopulateSpeakersFromProposal);
+eval(fnFillOrganizingCommittee);
+eval(fnFillAttendanceCounts);
 
-setTimeout(()=>{
+domReady = true;
+populateSpeakersFromProposal();
+fillOrganizingCommittee();
+fillAttendanceCounts();
+
+setTimeout(() => {
   console.log(JSON.stringify({
     display: speakersDisplay.innerHTML,
-    organizing: orgEl.value,
+    organizing: orgField.value,
     total: elements['num-participants-modern'].value,
     volunteers: elements['num-volunteers-modern'].value,
     hiddenVolunteers: elements['num-volunteers-hidden'].value,
     students: elements['student-participants-modern'].value,
     faculty: elements['faculty-participants-modern'].value,
     external: elements['external-participants-modern'].value,
-    summary: elements['attendance-modern'].value
+    summary: elements['attendance-modern'].value,
   }));
-}, 20);
+}, 120);
 """
         node_script = (
             node_script.replace("__SUBMIT_JS__", str(submit_js))

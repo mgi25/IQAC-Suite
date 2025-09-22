@@ -264,11 +264,11 @@
                             <div class="activity-row">
                                 <div class="input-group">
                                     <label for="activity_name_{{ forloop.counter }}" class="activity-label">{{ forloop.counter }}. Activity Name</label>
-                                    <input type="text" id="activity_name_{{ forloop.counter }}" name="activity_name_{{ forloop.counter }}" class="proposal-input" value="{{ act.activity_name }}">
+                                    <input type="text" id="activity_name_{{ forloop.counter }}" name="activity_name_{{ forloop.counter }}" value="{{ act.activity_name }}" class="proposal-input">
                                 </div>
                                 <div class="input-group">
                                     <label for="activity_date_{{ forloop.counter }}" class="date-label">{{ forloop.counter }}. Activity Date</label>
-                                    <input type="date" id="activity_date_{{ forloop.counter }}" name="activity_date_{{ forloop.counter }}" class="proposal-input" value="{{ act.activity_date }}">
+                                    <input type="date" id="activity_date_{{ forloop.counter }}" name="activity_date_{{ forloop.counter }}" value="{{ act.activity_date }}" class="proposal-input">
                                 </div>
                                 <button type="button" class="remove-activity btn btn-sm btn-outline-danger">×</button>
                             </div>

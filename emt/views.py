@@ -29,7 +29,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.utils.formats import date_format
 from django.utils.timezone import now
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods, require_POST
 
 from core.models import (SDG_GOALS, Class, Organization,
@@ -376,6 +376,7 @@ def _save_income(proposal, data):
 # PROPOSAL STEP 1: Proposal Submission
 # ──────────────────────────────
 @login_required
+@ensure_csrf_cookie
 def submit_proposal(request, pk=None):
     from transcript.models import get_active_academic_year
 
@@ -555,6 +556,7 @@ def submit_proposal(request, pk=None):
 #  Review proposal before final submit
 # ──────────────────────────────────────────────────────────────
 @login_required
+@ensure_csrf_cookie
 def review_proposal(request, proposal_id):
     proposal_qs = EventProposal.objects.select_related(
         "need_analysis",
@@ -1077,6 +1079,7 @@ def submit_expense_details(request, proposal_id):
 # PROPOSAL STEP 8: CDL Support
 # ──────────────────────────────
 @login_required
+@ensure_csrf_cookie
 def submit_cdl_support(request, proposal_id):
     proposal = get_object_or_404(
         EventProposal, id=proposal_id, submitted_by=request.user
@@ -2302,6 +2305,7 @@ def preview_event_report(request, proposal_id):
         return redirect("emt:submit_event_report", proposal_id=proposal.id)
 
     post_data = request.POST.copy()
+    report = EventReport.objects.filter(proposal=proposal).first()
 
     def _coerce_date(value):
         if not value:
@@ -2321,6 +2325,28 @@ def preview_event_report(request, proposal_id):
         if parsed:
             return date_format(parsed, "DATE_FORMAT")
         return value
+
+    def _format_display(value):
+        """Normalise values for preview output, collapsing blanks to em dash."""
+
+        if isinstance(value, str):
+            value = value.strip()
+            return value or "—"
+
+        if isinstance(value, (list, tuple, set)):
+            parts = []
+            for item in value:
+                if isinstance(item, str):
+                    item = item.strip()
+                if item in (None, ""):
+                    continue
+                parts.append(str(item))
+            return ", ".join(parts) if parts else "—"
+
+        if value in (None, ""):
+            return "—"
+
+        return str(value)
 
     # Update proposal snapshot values with any edits coming from the report form so
     # that the preview reflects the latest user-provided data instead of the
@@ -2352,7 +2378,8 @@ def preview_event_report(request, proposal_id):
         post_data["outcomes"] = post_data.pop("event_outcomes")
 
     form = EventReportForm(post_data)
-    if not form.is_valid():
+    form_is_valid = form.is_valid()
+    if not form_is_valid:
         logger.debug(
             "Preview form invalid for proposal %s: %s", proposal.id, form.errors
         )
@@ -2378,26 +2405,24 @@ def preview_event_report(request, proposal_id):
         raw_value = bound_field.value()
         field_def = bound_field.field
         if isinstance(field_def, forms.ModelMultipleChoiceField):
+            objs = []
             if raw_value:
                 if field_def.queryset.exists():
-                    objs = field_def.queryset.filter(pk__in=raw_value)
-                elif hasattr(proposal, name):
-                    objs = getattr(proposal, name).all()
-                else:
-                    objs = []
-            else:
-                objs = []
+                    objs = list(field_def.queryset.filter(pk__in=raw_value))
+                if not objs and hasattr(proposal, name):
+                    objs = list(getattr(proposal, name).all())
+            elif hasattr(proposal, name):
+                objs = list(getattr(proposal, name).all())
             display = ", ".join(str(obj) for obj in objs) or "—"
         elif isinstance(field_def, forms.ModelChoiceField):
+            obj = None
             if raw_value:
                 if field_def.queryset.exists():
                     obj = field_def.queryset.filter(pk=raw_value).first()
-                elif hasattr(proposal, name):
+                if not obj and hasattr(proposal, name):
                     obj = getattr(proposal, name)
-                else:
-                    obj = None
-            else:
-                obj = None
+            elif hasattr(proposal, name):
+                obj = getattr(proposal, name)
             display = str(obj) if obj else "—"
         else:
             display = raw_value or "—"
@@ -2487,6 +2512,47 @@ def preview_event_report(request, proposal_id):
             ]
         )
 
+    support = getattr(proposal, "cdl_support", None)
+    if support and getattr(support, "needs_support", False):
+        other_service_labels = dict(
+            CDLSupportForm.base_fields["other_services"].choices
+        )
+
+        def _append_cdl(label, value, *, is_date=False):
+            if is_date:
+                value = _display_date(value)
+            proposal_fields.append((label, _format_display(value)))
+
+        if support.poster_required:
+            _append_cdl("Poster Choice", support.get_poster_choice_display())
+            _append_cdl("Organization Name", support.organization_name)
+            _append_cdl("Event Time", support.poster_time)
+            _append_cdl("Event Date", support.poster_date, is_date=True)
+            _append_cdl("Event Venue", support.poster_venue)
+            _append_cdl("Resource Person Name", support.resource_person_name)
+            _append_cdl(
+                "Resource Person Designation", support.resource_person_designation
+            )
+            _append_cdl("Event Title for Poster", support.poster_event_title)
+            _append_cdl("Event Summary", support.poster_summary)
+            _append_cdl("Design Link/Reference", support.poster_design_link)
+
+        if support.certificates_required and support.certificate_help:
+            _append_cdl(
+                "Certificate Choice", support.get_certificate_choice_display()
+            )
+            _append_cdl(
+                "Design Link/Reference", support.certificate_design_link
+            )
+
+        services = [
+            other_service_labels.get(item, item)
+            for item in (support.other_services or [])
+            if item not in (None, "")
+        ]
+        _append_cdl("Additional Services", services)
+        _append_cdl("Blog Content", support.blog_content)
+
     # Prepare report form fields for preview
     report_fields = []
 
@@ -2500,25 +2566,35 @@ def preview_event_report(request, proposal_id):
     ]
 
     for label, raw in manual_report_fields:
-        value = raw if raw not in (None, "") else "—"
-        report_fields.append((label, value))
-
-    excluded_report_fields = {
-        "actual_speakers",
-        "external_contact_details",
-        "impact_on_stakeholders",
-        "innovations_best_practices",
-        "iqac_feedback",
-        "report_signed_date",
-        "beneficiaries_details",
-        "attendance_notes",
-    }
+        report_fields.append((label, _format_display(raw)))
 
     for name, field in form.fields.items():
-        if name in excluded_report_fields:
-            continue
         values = post_data.getlist(name)
-        display = ", ".join(values) if values else "—"
+        if name == "report_signed_date":
+            display_value = None
+            for raw in values:
+                if isinstance(raw, str):
+                    raw = raw.strip()
+                if raw:
+                    display_value = _display_date(raw)
+                    break
+            report_fields.append((field.label, _format_display(display_value)))
+            continue
+
+        cleaned_values = []
+        for raw in values:
+            if isinstance(raw, str):
+                raw = raw.strip()
+            if raw in (None, ""):
+                continue
+            cleaned_values.append(raw)
+
+        if not cleaned_values:
+            display = "—"
+        elif len(cleaned_values) == 1:
+            display = _format_display(cleaned_values[0])
+        else:
+            display = _format_display(cleaned_values)
         report_fields.append((field.label, display))
 
     # Include dynamic activities submitted with the report
@@ -2537,7 +2613,429 @@ def preview_event_report(request, proposal_id):
 
     num_activities = post_data.get("num_activities")
     if num_activities:
-        report_fields.append(("Number of Activities Conducted", num_activities))
+        report_fields.append(
+            ("Number of Activities Conducted", _format_display(num_activities))
+        )
+
+    # Include dynamic organizing committee details captured on the participants section
+    committee_names = post_data.getlist("committee_member_names[]")
+    committee_roles = post_data.getlist("committee_member_roles[]")
+    committee_departments = post_data.getlist("committee_member_departments[]")
+    committee_contacts = post_data.getlist("committee_member_contacts[]")
+
+    def _combine(values, idx):
+        try:
+            return values[idx]
+        except IndexError:
+            return None
+
+    for idx in range(
+        max(
+            len(committee_names),
+            len(committee_roles),
+            len(committee_departments),
+            len(committee_contacts),
+        )
+    ):
+        name = (committee_names[idx] if idx < len(committee_names) else "") or ""
+        role = _combine(committee_roles, idx)
+        dept = _combine(committee_departments, idx)
+        contact = _combine(committee_contacts, idx)
+        if not any([name, role, dept, contact]):
+            continue
+
+        label_prefix = f"Committee Member {idx + 1}"
+        report_fields.extend(
+            [
+                (f"{label_prefix} - Name", _format_display(name)),
+                (f"{label_prefix} - Role", _format_display(role)),
+                (
+                    f"{label_prefix} - Department/Organization",
+                    _format_display(dept),
+                ),
+                (f"{label_prefix} - Contact", _format_display(contact)),
+            ]
+        )
+
+    # Include per-speaker session details captured in the participants section
+    speaker_topics = post_data.getlist("speaker_topics[]")
+    speaker_durations = post_data.getlist("speaker_durations[]")
+    speaker_feedback = post_data.getlist("speaker_feedback[]")
+    speaker_ids = post_data.getlist("speaker_ids[]")
+
+    speaker_lookup = {
+        str(speaker.id): speaker for speaker in proposal.speakers.all()
+    }
+
+    for idx in range(
+        max(
+            len(speaker_topics),
+            len(speaker_durations),
+            len(speaker_feedback),
+            len(speaker_ids),
+        )
+    ):
+        topic = _combine(speaker_topics, idx)
+        duration = _combine(speaker_durations, idx)
+        feedback = _combine(speaker_feedback, idx)
+        speaker_id = _combine(speaker_ids, idx)
+
+        if not any([topic, duration, feedback, speaker_id]):
+            continue
+
+        label_prefix = f"Speaker Session {idx + 1}"
+        display_values = []
+
+        if speaker_id:
+            speaker_obj = speaker_lookup.get(str(speaker_id))
+            speaker_name = getattr(speaker_obj, "full_name", None) if speaker_obj else None
+            display_values.append(
+                (
+                    f"{label_prefix} - Speaker",
+                    _format_display(speaker_name or speaker_id),
+                )
+            )
+
+        display_values.extend(
+            [
+                (f"{label_prefix} - Topic", _format_display(topic)),
+                (
+                    f"{label_prefix} - Duration (minutes)",
+                    _format_display(duration),
+                ),
+                (
+                    f"{label_prefix} - Feedback/Comments",
+                    _format_display(feedback),
+                ),
+            ]
+        )
+
+        report_fields.extend(display_values)
+
+    def _is_blank(value):
+        if value is None:
+            return True
+        if isinstance(value, str):
+            return value.strip() == ""
+        if isinstance(value, (list, tuple, set)):
+            return all(_is_blank(item) for item in value)
+        if isinstance(value, dict):
+            return all(_is_blank(item) for item in value.values())
+        return False
+
+    def _text(value):
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            return value.strip()
+        if isinstance(value, (int, float)):
+            return str(value)
+        if hasattr(value, "isoformat"):
+            try:
+                return date_format(value, "DATE_FORMAT")
+            except Exception:  # pragma: no cover - fallback for unexpected types
+                return str(value)
+        return str(value)
+
+    def _listify(value):
+        if not value and value != 0:
+            return []
+        if isinstance(value, (list, tuple, set)):
+            items = []
+            for entry in value:
+                cleaned = _text(entry)
+                if cleaned:
+                    items.append(cleaned)
+            return items
+        text = _text(value)
+        if not text:
+            return []
+        raw_items = re.split(r"[\r\n;,]+", text)
+        cleaned = []
+        for item in raw_items:
+            stripped = re.sub(r"^[\-*•\u2022]+\s*", "", item.strip())
+            if stripped:
+                cleaned.append(stripped)
+        return cleaned
+
+    def _first_value(*values, default=""):
+        for entry in values:
+            if not _is_blank(entry):
+                return entry
+        return default
+
+    def _committee_members():
+        names = [n.strip() for n in post_data.getlist("committee_member_names[]") if isinstance(n, str)]
+        roles = [r.strip() for r in post_data.getlist("committee_member_roles[]") if isinstance(r, str)]
+        depts = [d.strip() for d in post_data.getlist("committee_member_departments[]") if isinstance(d, str)]
+        contacts = [c.strip() for c in post_data.getlist("committee_member_contacts[]") if isinstance(c, str)]
+        max_len = max(len(names), len(roles), len(depts), len(contacts))
+        entries: list[str] = []
+        for idx in range(max_len):
+            name = names[idx] if idx < len(names) else ""
+            role = roles[idx] if idx < len(roles) else ""
+            dept = depts[idx] if idx < len(depts) else ""
+            contact = contacts[idx] if idx < len(contacts) else ""
+            if not any([name, role, dept, contact]):
+                continue
+            details = [part for part in [role, dept, contact] if part]
+            if name and details:
+                entries.append(f"{name} – {', '.join(details)}")
+            elif name:
+                entries.append(name)
+            elif details:
+                entries.append(", ".join(details))
+        if entries:
+            return entries
+        fallback = _first_value(
+            post_data.get("organizing_committee"),
+            getattr(report, "organizing_committee", None),
+        )
+        return _listify(fallback)
+
+    def _format_chip(value):
+        text = _text(value)
+        if not text:
+            return ""
+        return text.replace("_", " ").replace("-", " ").title()
+
+    def _bool_from_post(key):
+        raw = post_data.get(key)
+        if raw is None:
+            return False
+        if isinstance(raw, str):
+            return raw.strip().lower() in {"1", "true", "yes", "on", "checked"}
+        return bool(raw)
+
+    department_value = _text(
+        _first_value(post_data.get("department"), getattr(proposal.organization, "name", None))
+    )
+    location_value = _text(
+        _first_value(post_data.get("location"), getattr(report, "location", None), proposal.venue)
+    )
+    num_activities_value = _text(_first_value(post_data.get("num_activities"), proposal.num_activities))
+
+    start_display = _text(_display_date(proposal.event_start_date))
+    end_display = _text(_display_date(proposal.event_end_date))
+    if start_display and end_display:
+        event_date_value = start_display if start_display == end_display else f"{start_display} – {end_display}"
+    elif start_display:
+        event_date_value = start_display
+    elif end_display:
+        event_date_value = end_display
+    else:
+        event_date_value = ""
+        if getattr(proposal, "event_datetime", None):
+            try:
+                event_date_value = date_format(proposal.event_datetime, "DATETIME_FORMAT")
+            except Exception:  # pragma: no cover - fallback for unexpected types
+                event_date_value = str(proposal.event_datetime)
+        if not event_date_value:
+            event_date_value = _text(_display_date(post_data.get("event_start_date")))
+
+    academic_year_value = _text(
+        _first_value(post_data.get("academic_year"), proposal.academic_year)
+    )
+    event_type_value = _text(
+        _first_value(post_data.get("actual_event_type"), proposal.event_focus_type)
+    )
+    blog_link_value = _text(
+        _first_value(post_data.get("blog_link"), getattr(report, "blog_link", None))
+    )
+
+    target_audience_value = _text(
+        _first_value(post_data.get("target_audience"), proposal.target_audience)
+    )
+    external_agencies_value = _text(
+        _first_value(post_data.get("actual_speakers"), getattr(report, "actual_speakers", None))
+    )
+    external_contacts_value = _text(
+        _first_value(
+            post_data.get("external_contact_details"),
+            getattr(report, "external_contact_details", None),
+        )
+    )
+    committee_entries = _committee_members()
+    student_volunteers_value = _text(
+        _first_value(
+            post_data.get("num_student_volunteers"),
+            getattr(report, "num_student_volunteers", None),
+        )
+    )
+    attendees_count_value = _text(
+        _first_value(post_data.get("num_participants"), getattr(report, "num_participants", None))
+    )
+
+    summary_value = _text(
+        _first_value(post_data.get("summary"), getattr(report, "summary", None))
+    )
+    social_relevance_list = _listify(
+        _first_value(post_data.get("impact_assessment"), getattr(report, "impact_assessment", None))
+    )
+    outcomes_list = _listify(
+        _first_value(post_data.get("outcomes"), getattr(report, "outcomes", None))
+    )
+
+    analysis_attendees_value = _text(
+        _first_value(
+            post_data.get("impact_on_stakeholders"),
+            getattr(report, "impact_on_stakeholders", None),
+        )
+    )
+    analysis_schools_value = _text(
+        _first_value(post_data.get("analysis"), getattr(report, "analysis", None))
+    )
+    analysis_volunteers_value = _text(
+        _first_value(post_data.get("lessons_learned"), getattr(report, "lessons_learned", None))
+    )
+
+    mapping_pos_value = _text(
+        _first_value(
+            post_data.get("pos_pso_mapping"),
+            getattr(report, "pos_pso_mapping", None),
+            proposal.pos_pso,
+        )
+    )
+    mapping_grad_value = _text(
+        _first_value(
+            post_data.get("needs_grad_attr_mapping"),
+            getattr(report, "needs_grad_attr_mapping", None),
+        )
+    )
+    mapping_contemporary_value = _text(
+        _first_value(
+            post_data.get("contemporary_requirements"),
+            getattr(report, "contemporary_requirements", None),
+        )
+    )
+    mapping_value_systems_value = _text(
+        _first_value(
+            post_data.get("sdg_value_systems_mapping"),
+            getattr(report, "sdg_value_systems_mapping", None),
+        )
+    )
+    sdg_goal_numbers = [
+        f"SDG {goal.id}: {goal.name}"
+        for goal in proposal.sdg_goals.all().order_by("id")
+    ]
+
+    naac_tags = [
+        formatted
+        for formatted in (_format_chip(value) for value in post_data.getlist("graduate_attributes"))
+        if formatted
+    ]
+
+    iqac_suggestions = _listify(
+        _first_value(post_data.get("iqac_feedback"), getattr(report, "iqac_feedback", None))
+    )
+    review_date_value = _first_value(
+        post_data.get("report_signed_date"), getattr(report, "report_signed_date", None)
+    )
+    iqac_review_date_value = _text(_display_date(review_date_value)) if review_date_value else ""
+
+    head_name = ""
+    if proposal.submitted_by_id:
+        head_name = proposal.submitted_by.get_full_name() or proposal.submitted_by.username
+    faculty_names = [
+        user.get_full_name() or user.username
+        for user in proposal.faculty_incharges.all().order_by("id")
+    ]
+    faculty_signature = ", ".join(name for name in faculty_names if name)
+
+    checklist_keys = [
+        "facing_sheet_present",
+        "summary_outcomes_sheet_present",
+        "suggestions_sheet_present",
+        "department_seal_sign_each_page",
+        "detailed_report_or_blog_printout_present",
+        "participant_list_present",
+        "feedback_forms_present",
+        "photos_present",
+    ]
+    attachments_checklist = {key: _bool_from_post(key) for key in checklist_keys}
+
+    annexure_photos = []
+    if report:
+        for attachment in report.attachments.all():
+            file_url = getattr(attachment.file, "url", "")
+            if not file_url:
+                continue
+            lower_url = file_url.lower()
+            if not lower_url.endswith((".png", ".jpg", ".jpeg", ".gif", ".webp")):
+                continue
+            annexure_photos.append(
+                {
+                    "src": file_url,
+                    "caption": _text(attachment.caption),
+                }
+            )
+
+    initial_data = {
+        "event": {
+            "title": _text(proposal.event_title),
+            "department": department_value,
+            "location": location_value,
+            "no_of_activities": num_activities_value,
+            "date": event_date_value,
+            "venue": _text(proposal.venue),
+            "academic_year": academic_year_value,
+            "event_type_focus": event_type_value,
+            "blog_link": blog_link_value,
+        },
+        "participants": {
+            "target_audience": target_audience_value,
+            "external_agencies_speakers": external_agencies_value,
+            "external_contacts": external_contacts_value,
+            "organising_committee": {
+                "event_coordinators": committee_entries,
+                "student_volunteers_count": student_volunteers_value,
+            },
+            "attendees_count": attendees_count_value,
+        },
+        "narrative": {
+            "summary_overall_event": summary_value,
+            "social_relevance": social_relevance_list,
+            "outcomes": outcomes_list,
+        },
+        "analysis": {
+            "impact_attendees": analysis_attendees_value,
+            "impact_schools": analysis_schools_value,
+            "impact_volunteers": analysis_volunteers_value,
+        },
+        "mapping": {
+            "pos_psos": mapping_pos_value,
+            "graduate_attributes_or_needs": mapping_grad_value,
+            "contemporary_requirements": mapping_contemporary_value,
+            "value_systems": mapping_value_systems_value,
+            "sdg_goal_numbers": sdg_goal_numbers,
+            "courses": [],
+        },
+        "metrics": {
+            "naac_tags": naac_tags,
+        },
+        "iqac": {
+            "iqac_suggestions": iqac_suggestions,
+            "iqac_review_date": iqac_review_date_value,
+            "sign_head_coordinator": _text(head_name),
+            "sign_faculty_coordinator": _text(faculty_signature),
+            "sign_iqac": "",
+        },
+        "attachments": {
+            "checklist": attachments_checklist,
+        },
+        "annexures": {
+            "photos": annexure_photos,
+            "brochure_pages": [],
+            "communication": {
+                "subject": "",
+                "date": "",
+                "volunteers": [],
+            },
+            "worksheets": [],
+            "evaluation_sheet": None,
+            "feedback_form": None,
+        },
+    }
 
     context = {
         "proposal": proposal,
@@ -2545,8 +3043,9 @@ def preview_event_report(request, proposal_id):
         "proposal_fields": proposal_fields,
         "report_fields": report_fields,
         "form": form,
+        "initial_report_data": json.dumps(initial_data, ensure_ascii=False),
     }
-    return render(request, "emt/report_preview.html", context)
+    return render(request, "emt/iqac_report_preview.html", context)
 
 
 @login_required
@@ -3415,7 +3914,110 @@ def save_ai_report(request):
 @login_required
 def ai_report_progress(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id)
-    return render(request, "emt/ai_report_progress.html", {"proposal": proposal})
+    report = EventReport.objects.filter(proposal=proposal).first()
+
+    def clean_text(value):
+        if value is None:
+            return ""
+        if isinstance(value, (int, float)):
+            return str(value)
+        return str(value).strip()
+
+    def report_value(attr):
+        if not report:
+            return None
+        return getattr(report, attr, None)
+
+    def to_list(value):
+        if not value:
+            return []
+        text = str(value)
+        if "\n" in text or "\r" in text:
+            raw_items = re.split(r"[\r\n]+", text)
+        else:
+            raw_items = re.split(r",|;", text)
+        cleaned = []
+        for item in raw_items:
+            stripped = item.strip()
+            stripped = re.sub(r"^[-*•\u2022]+\s*", "", stripped)
+            if stripped:
+                cleaned.append(stripped)
+        return cleaned
+
+    event_schedule = ""
+    if proposal.event_start_date and proposal.event_end_date:
+        start = date_format(proposal.event_start_date, "d M Y")
+        end = date_format(proposal.event_end_date, "d M Y")
+        if proposal.event_start_date == proposal.event_end_date:
+            event_schedule = start
+        else:
+            event_schedule = f"{start} – {end}"
+    elif proposal.event_start_date:
+        start = date_format(proposal.event_start_date, "d M Y")
+        if proposal.event_end_date and proposal.event_end_date != proposal.event_start_date:
+            end = date_format(proposal.event_end_date, "d M Y")
+            event_schedule = f"{start} – {end}"
+        else:
+            event_schedule = start
+    elif proposal.event_datetime:
+        event_schedule = date_format(proposal.event_datetime, "d M Y, H:i")
+
+    initial_data = {
+        "event_info": {
+            "department": clean_text(proposal.organization) if proposal.organization else "",
+            "location": clean_text(report_value("location")),
+            "title": clean_text(proposal.event_title),
+            "activities_count": clean_text(proposal.num_activities) if proposal.num_activities is not None else "",
+            "datetime": event_schedule,
+            "venue": clean_text(proposal.venue),
+            "academic_year": clean_text(proposal.academic_year),
+            "focus": clean_text(proposal.event_focus_type),
+        },
+        "participants": {
+            "target_audience": clean_text(proposal.target_audience),
+            "external_agencies": clean_text(report_value("actual_speakers")),
+            "external_contacts": clean_text(report_value("external_contact_details")),
+            "organising_committee": to_list(report_value("organizing_committee")),
+            "student_volunteers": clean_text(report_value("num_student_volunteers")),
+            "participants_count": clean_text(report_value("num_participants")),
+        },
+        "summary": clean_text(report_value("summary")),
+        "activities": to_list(report_value("notable_moments")),
+        "social_relevance": to_list(report_value("impact_assessment")),
+        "outcomes": to_list(report_value("outcomes")),
+        "analysis": {
+            "attendees": clean_text(report_value("impact_on_stakeholders")),
+            "schools": clean_text(report_value("analysis")),
+            "volunteers": clean_text(report_value("lessons_learned")),
+        },
+        "relevance": {
+            "graduate_attributes": clean_text(report_value("pos_pso_mapping")),
+            "sdg": clean_text(report_value("sdg_value_systems_mapping")),
+        },
+        "suggestions": to_list(report_value("iqac_feedback")),
+        "suggestions_date": date_format(report_value("report_signed_date"), "d M Y")
+        if report_value("report_signed_date")
+        else "",
+        "annexures": {
+            "photos": [],
+            "brochure_pages": [],
+            "communication": {
+                "subject": "",
+                "date": "",
+                "volunteer_list": [],
+            },
+            "worksheets": [],
+            "evaluation_sheet": None,
+            "feedback_form": None,
+        },
+    }
+
+    context = {
+        "proposal": proposal,
+        "report": report,
+        "initial_report_data": json.dumps(initial_data, ensure_ascii=False),
+    }
+    return render(request, "emt/ai_report_progress.html", context)
 
 
 @csrf_exempt
