@@ -18,15 +18,7 @@
         <div class="profile-basic-info">
           <h1 class="profile-title">{{ user.get_full_name|default:user.username }}</h1>
           <p class="profile-subtitle">{{ user.email }}</p>
-          <div class="profile-completion-section">
-            <div class="completion-label">Profile Completion</div>
-            <div class="completion-bar-container">
-              <div class="completion-bar">
-                <div class="completion-fill" style="width: 85%"></div>
-              </div>
-              <span class="completion-percentage">85%</span>
-            </div>
-          </div>
+
         </div>
       </div>
       <div class="profile-stats-section">
@@ -49,24 +41,6 @@
               <div class="stat-label">ORGANIZATIONS</div>
             </div>
           </div>
-          <div class="stat-card">
-            <div class="stat-icon">
-              <i class="fas fa-trophy"></i>
-            </div>
-            <div class="stat-content">
-              <div class="stat-number">{{ user_achievements|length|default:"0" }}</div>
-              <div class="stat-label">ACHIEVEMENTS</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon">
-              <i class="fas fa-clock"></i>
-            </div>
-            <div class="stat-content">
-              <div class="stat-number">{{ years_active|default:"0" }}</div>
-              <div class="stat-label">YEARS ACTIVE</div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -79,10 +53,6 @@
         <button class="tab-btn active" onclick="showTab('basic-info')">
           <i class="fas fa-user"></i>
           <span>Basic Info</span>
-        </button>
-        <button class="tab-btn" onclick="showTab('achievements')">
-          <i class="fas fa-trophy"></i>
-          <span>Achievements</span>
         </button>
         <button class="tab-btn" onclick="showTab('roles')">
           <i class="fas fa-users-cog"></i>
@@ -106,9 +76,7 @@
               </div>
               <h2>Personal Information</h2>
             </div>
-            <button class="edit-btn">
-              <i class="fas fa-edit"></i>
-            </button>
+            <!-- Removed edit button -->
           </div>
           <div class="card-body">
             <div class="info-grid-expanded">
@@ -147,157 +115,6 @@
             </div>
           </div>
         </div>
-
-        <!-- Account Status -->
-        <div class="content-card medium-card">
-          <div class="card-header">
-            <div class="header-left">
-              <div class="header-icon">
-                <i class="fas fa-shield-alt"></i>
-              </div>
-              <h2>Account Status</h2>
-            </div>
-          </div>
-          <div class="card-body">
-            <div class="status-list-compact">
-              <div class="status-item-large">
-                <div class="status-indicator active">
-                  <i class="fas fa-check"></i>
-                </div>
-                <div class="status-content">
-                  <div class="status-title">Account Active</div>
-                  <div class="status-description">Your account is in good standing</div>
-                </div>
-              </div>
-              <div class="status-item-large">
-                <div class="status-indicator verified">
-                  <i class="fas fa-envelope-check"></i>
-                </div>
-                <div class="status-content">
-                  <div class="status-title">Email Verified</div>
-                  <div class="status-description">Your email address is verified</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Quick Actions -->
-      <div class="content-row">
-        <div class="content-card full-width-card">
-          <div class="card-header">
-            <div class="header-left">
-              <div class="header-icon">
-                <i class="fas fa-bolt"></i>
-              </div>
-              <h2>Quick Actions</h2>
-            </div>
-          </div>
-          <div class="card-body">
-            <div class="actions-grid-expanded">
-              <button class="action-card-large">
-                <div class="action-icon">
-                  <i class="fas fa-download"></i>
-                </div>
-                <div class="action-content">
-                  <div class="action-title">Download Data</div>
-                  <div class="action-description">Export all your data and information</div>
-                </div>
-                <div class="action-arrow">
-                  <i class="fas fa-chevron-right"></i>
-                </div>
-              </button>
-              <button class="action-card-large">
-                <div class="action-icon">
-                  <i class="fas fa-cog"></i>
-                </div>
-                <div class="action-content">
-                  <div class="action-title">Account Settings</div>
-                  <div class="action-description">Manage privacy and notification settings</div>
-                </div>
-                <div class="action-arrow">
-                  <i class="fas fa-chevron-right"></i>
-                </div>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Achievements Tab -->
-    <div id="achievements" class="tab-content-panel">
-      <div class="content-row">
-        <div class="content-card full-width-card">
-          <div class="card-header">
-            <div class="header-left">
-              <div class="header-icon">
-                <i class="fas fa-trophy"></i>
-              </div>
-              <h2>My Achievements</h2>
-            </div>
-            <button class="btn btn-primary">
-              <i class="fas fa-plus"></i>
-              <span>Add Achievement</span>
-            </button>
-          </div>
-          <div class="card-body full-height">
-            {% if user_achievements %}
-              <div class="achievements-grid-expanded">
-                {% for achievement in user_achievements %}
-                <div class="achievement-card-large">
-                  <div class="achievement-header">
-                    <div class="achievement-icon">
-                      <i class="fas fa-trophy"></i>
-                    </div>
-                    <div class="achievement-actions">
-                      <button class="action-btn">
-                        <i class="fas fa-edit"></i>
-                      </button>
-                      <button class="action-btn">
-                        <i class="fas fa-trash"></i>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="achievement-content">
-                    <h4>{{ achievement.title }}</h4>
-                    <div class="achievement-meta">
-                      <div class="meta-item">
-                        <i class="fas fa-calendar"></i>
-                        <span>{{ achievement.date_achieved|date:"M d, Y" }}</span>
-                      </div>
-                      <div class="meta-item">
-                        <i class="fas fa-building"></i>
-                        <span>{{ achievement.issuing_organization }}</span>
-                      </div>
-                    </div>
-                    {% if achievement.description %}
-                    <div class="achievement-description">
-                      {{ achievement.description }}
-                    </div>
-                    {% endif %}
-                  </div>
-                </div>
-                {% endfor %}
-              </div>
-            {% else %}
-              <div class="empty-state-expanded">
-                <div class="empty-icon">
-                  <i class="fas fa-trophy"></i>
-                </div>
-                <div class="empty-content">
-                  <h3>No Achievements Yet</h3>
-                  <p>Start building your achievement portfolio by adding your accomplishments and recognitions. Showcase your awards, certifications, and professional milestones.</p>
-                  <button class="btn btn-primary btn-lg">
-                    <i class="fas fa-plus"></i>
-                    <span>Add Your First Achievement</span>
-                  </button>
-                </div>
-              </div>
-            {% endif %}
-          </div>
-        </div>
       </div>
     </div>
 
@@ -312,10 +129,6 @@
               </div>
               <h2>Roles & Organizations</h2>
             </div>
-            <button class="btn btn-primary">
-              <i class="fas fa-plus"></i>
-              <span>Join Organization</span>
-            </button>
           </div>
           <div class="card-body full-height">
             {% if user_organizations %}
@@ -329,14 +142,6 @@
                     <div class="org-info">
                       <h4>{{ org.name }}</h4>
                       <div class="org-badge">{{ org.type }}</div>
-                    </div>
-                    <div class="org-actions">
-                      <button class="action-btn">
-                        <i class="fas fa-eye"></i>
-                      </button>
-                      <button class="action-btn">
-                        <i class="fas fa-cog"></i>
-                      </button>
                     </div>
                   </div>
                   <div class="org-details">
@@ -360,10 +165,6 @@
                 <div class="empty-content">
                   <h3>No Organizations</h3>
                   <p>You are not currently associated with any organizations. Join organizations to collaborate and contribute to meaningful projects and initiatives.</p>
-                  <button class="btn btn-primary btn-lg">
-                    <i class="fas fa-plus"></i>
-                    <span>Join Your First Organization</span>
-                  </button>
                 </div>
               </div>
             {% endif %}
