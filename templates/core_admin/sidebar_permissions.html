@@ -706,6 +706,65 @@
     const availableData = JSON.parse('{{ available_permissions|safe|escapejs }}'.replace(/&quot;/g,'"') || '[]');
 const assignedData  = JSON.parse('{{ assigned_permissions|safe|escapejs }}'.replace(/&quot;/g,'"') || '[]');
 
+// 🔹 Merge two permission trees (by id), preserving order and children
+function mergeTrees(a = [], b = []){
+  const byId = new Map();
+
+  function cloneShallow(n){
+    return {
+      id: n.id,
+      label: n.label,
+      description: n.description || '',
+      children: n.children && n.children.length ? [] : undefined
+    };
+  }
+
+  function mergeNode(target, source){
+    if (!source) return target;
+    // merge label/description only if missing on target
+    if (!target.label && source.label) target.label = source.label;
+    if (!target.description && source.description) target.description = source.description;
+    const tChildren = target.children || [];
+    const sChildren = source.children || [];
+    if (!tChildren.length && !sChildren.length){
+      target.children = undefined;
+      return target;
+    }
+    const childMap = new Map(tChildren.map(c => [c.id, c]));
+    for (const sc of sChildren){
+      if (!childMap.has(sc.id)) childMap.set(sc.id, cloneShallow(sc));
+      const merged = mergeNode(childMap.get(sc.id), sc);
+      childMap.set(sc.id, merged);
+    }
+    target.children = Array.from(childMap.values());
+    return target;
+  }
+
+  function addList(list){
+    for (const n of list){
+      if (!byId.has(n.id)) byId.set(n.id, cloneShallow(n));
+      const merged = mergeNode(byId.get(n.id), n);
+      byId.set(n.id, merged);
+    }
+  }
+
+  addList(a);
+  addList(b);
+
+  // preserve top-level order: first from a then b for any new ids
+  const order = [...(a||[]).map(x=>x.id), ...(b||[]).map(x=>x.id)];
+  const seen = new Set();
+  const out = [];
+  for (const id of order){
+    if (seen.has(id)) continue;
+    const node = byId.get(id);
+    if (node){ out.push(node); seen.add(id); }
+  }
+  // Append any remaining nodes not in order (edge-case)
+  for (const [id,node] of byId){ if(!seen.has(id)) out.push(node); }
+  return out;
+}
+
 // 🔹 Helper: build available list preserving hierarchy, hiding only assigned items
 function buildAvailableList(originalData, assigned) {
   // Get all assigned IDs (both standalone and children)
@@ -750,7 +809,9 @@ function buildAvailableList(originalData, assigned) {
     .filter(item => item !== null);
 }
 
-let available = buildAvailableList(availableData, assignedData);
+// Build a full tree so removed items reappear in Available
+const fullNavTree = mergeTrees(availableData, assignedData);
+let available = buildAvailableList(fullNavTree, assignedData);
 let assigned  = assignedData;
 
 let selectedAvailable = new Set(); 
@@ -829,7 +890,7 @@ let selectedAssigned  = new Set();
     }
 
     async function populateOrganizations({triggerChange=true}={}){
-      if(!orgTypeSelect) return;
+      if(!orgTypeSelect || !orgSelect) return; // guard: orgSelect may not exist in this layout
       const typeId = orgTypeSelect.value;
       const search = new URLSearchParams(window.location.search);
       const selectedOrg = search.get('organization') || '';
@@ -880,6 +941,7 @@ let selectedAssigned  = new Set();
         event:'fas fa-calendar-alt',
         user:'fas fa-users',
         report:'fas fa-chart-bar',
+        analysis:'fas fa-chart-line',
         setting:'fas fa-cog',
         management:'fas fa-tools',
         cdl:'fas fa-paint-brush',
@@ -896,7 +958,7 @@ let selectedAssigned  = new Set();
         grade:'fas fa-star',
         attendance:'fas fa-calendar-check',
         fee:'fas fa-dollar-sign',
-        library:'fas fa-books',
+  library:'fas fa-book',
         hostel:'fas fa-bed',
         transport:'fas fa-bus'
       };
@@ -1142,8 +1204,8 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
       
       selectedAvailable.clear();
       
-      // Rebuild available list to reflect changes and update partial states
-      available = buildAvailableList(availableData, assigned);
+      // Rebuild available list from full tree to reflect changes
+      available = buildAvailableList(fullNavTree, assigned);
       render();
     });
 
@@ -1181,8 +1243,8 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
       
       selectedAssigned.clear();
       
-      // Rebuild available list to reflect changes and update partial states
-      available = buildAvailableList(availableData, assigned);
+      // Rebuild available list from full tree to reflect changes
+      available = buildAvailableList(fullNavTree, assigned);
       render();
     });
 
@@ -1206,7 +1268,13 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
   selectAllUsersBtn?.addEventListener('click',()=>{
     Array.from(userSelect.options).forEach(o=>o.selected=true);
   });
-  if(orgTypeSelect) orgTypeSelect.addEventListener('change',()=>{ if(!orgTypeSelect.value){ orgRoleSelect && (orgRoleSelect.value=''); orgSelect && (orgSelect.value=''); } populateOrganizations({triggerChange:true}).then(()=> reloadWithFilters()); });
+  if(orgTypeSelect) orgTypeSelect.addEventListener('change', async ()=>{
+    if(!orgTypeSelect.value){ if(orgRoleSelect) orgRoleSelect.value=''; if(orgSelect) orgSelect.value=''; }
+    // Populate orgs only if the dropdown exists; always refresh roles
+    if(orgSelect) await populateOrganizations({triggerChange:false});
+    await populateRoles();
+    reloadWithFilters();
+  });
   if(orgSelect) orgSelect.addEventListener('change',()=>{ populateRoles().then(()=> reloadWithFilters()); });
   if(orgRoleSelect) orgRoleSelect.addEventListener('change',()=> reloadWithFilters());
 
