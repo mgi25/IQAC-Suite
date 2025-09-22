@@ -582,6 +582,21 @@ $(document).ready(function() {
                         $(`#activity_name_${index}`).val(act.name);
                         $(`#activity_date_${index}`).val(act.date);
                     });
+                } else if (window.AutosaveManager && typeof window.AutosaveManager.getSavedDraft === 'function') {
+                    // Prefill from local draft when server hasn't provided activities yet
+                    const draft = window.AutosaveManager.getSavedDraft() || {};
+                    for (let i = 1; i <= count; i++) {
+                        const n = draft[`activity_name_${i}`] || '';
+                        const d = draft[`activity_date_${i}`] || '';
+                        if (n) {
+                            const el = document.getElementById(`activity_name_${i}`);
+                            if (el) { el.value = n; el.dispatchEvent(new Event('change', { bubbles: true })); }
+                        }
+                        if (d) {
+                            const el = document.getElementById(`activity_date_${i}`);
+                            if (el) { el.value = d; el.dispatchEvent(new Event('change', { bubbles: true })); }
+                        }
+                    }
                 }
                 reindexActivityRows();
             }
@@ -606,10 +621,23 @@ $(document).ready(function() {
             numActivitiesInput.value = window.EXISTING_ACTIVITIES.length;
             render(window.EXISTING_ACTIVITIES.length);
         } else {
-            const savedCount = parseInt(numActivitiesInput.value, 10);
-            if (savedCount > 0) {
-                render(savedCount);
+            // Try draft-backed count if input is empty
+            let savedCount = parseInt(numActivitiesInput.value, 10);
+            if (!savedCount && window.AutosaveManager && typeof window.AutosaveManager.getSavedDraft === 'function') {
+                const draft = window.AutosaveManager.getSavedDraft() || {};
+                const indices = Object.keys(draft)
+                    .map(k => {
+                        const m = k.match(/^activity_(?:name|date)_(\d+)$/);
+                        return m ? parseInt(m[1], 10) : 0;
+                    })
+                    .filter(Boolean);
+                const inferred = indices.length ? Math.max(...indices) : 0;
+                if (inferred > 0) {
+                    savedCount = inferred;
+                    numActivitiesInput.value = inferred;
+                }
             }
+            if (savedCount > 0) render(savedCount);
         }
     }
     
@@ -1746,7 +1774,7 @@ $(document).ready(function() {
                 <div class="form-row">
                     <div class="input-group">
                         <label for="num-activities-modern">Number of Activities</label>
-                        <input type="number" id="num-activities-modern" class="proposal-input" min="1" max="50" placeholder="Enter number of activities">
+                        <input type="number" id="num-activities-modern" name="num_activities" class="proposal-input" min="1" max="50" placeholder="Enter number of activities">
                         <div class="help-text">How many activities will your event include?</div>
                     </div>
                     <div class="input-group">
@@ -2181,7 +2209,9 @@ function getWhyThisEventForm() {
                 localStorage.setItem(pageKey, JSON.stringify(saved));
             } catch (e) { /* ignore */ }
 
-            if (window.autosaveDraft) {
+            if (window.AutosaveManager && window.AutosaveManager.autosaveDraft) {
+                window.AutosaveManager.autosaveDraft().catch(() => {});
+            } else if (window.autosaveDraft) {
                 window.autosaveDraft().catch(() => {});
             }
         });
@@ -2690,13 +2720,13 @@ function getWhyThisEventForm() {
                     }
                     if (Object.keys(relevantErrors).length) {
                         handleAutosaveErrors({errors: relevantErrors});
-                        showNotification('Please fix the errors before continuing.', 'error');
+                        // Do not show a toast here; errors are highlighted inline.
                         return;
                     }
 
                     // Only mark as complete if validation passed and save succeeded
                     markSectionComplete(currentExpandedCard);
-                    showNotification('Section saved successfully!', 'success');
+                    showNotification('Saved successfully.', 'success');
 
                     const nextSection = getNextSection(currentExpandedCard);
                     if (nextSection) {
@@ -2719,14 +2749,14 @@ function getWhyThisEventForm() {
                     if (hasFieldErrors) {
                         handleAutosaveErrors(err);
                     } else {
-                        showNotification('Save failed. Please check for missing or invalid fields.', 'error');
+                        // Errors are shown inline or via the autosave indicator; suppress additional toasts.
                     }
                 });
         } else {
             hideLoadingOverlay();
             // For cases without AutosaveManager, still mark complete only after validation
             markSectionComplete(currentExpandedCard);
-            showNotification('Section saved successfully!', 'success');
+            showNotification('Saved successfully.', 'success');
         }
     }
 
@@ -3002,9 +3032,7 @@ function getWhyThisEventForm() {
                 setTimeout(() => nextNavLink.removeClass('animate-bounce'), 1000);
                 console.log('unlockNextSection: nextNavLink unlocked', nextNavLink[0]);
                 
-                // Show notification about unlocked section
-                const nextSectionTitle = nextNavLink.find('.nav-item-title').text();
-                showNotification(`${nextSectionTitle} section is now available!`, 'success');
+                // Notification suppressed: avoid multiple toasts; only show explicit "Saved successfully." on section save.
             } else {
                 console.log('unlockNextSection: nextNavLink already enabled', nextNavLink[0]);
             }
@@ -3356,7 +3384,6 @@ function getWhyThisEventForm() {
             e.preventDefault();
             if (window.AutosaveManager && window.AutosaveManager.manualSave) {
                 window.AutosaveManager.manualSave().catch(() => {});
-                showNotification('Draft saved manually.', 'info');
             }
         }
         if (e.which === 27 && currentExpandedCard) { // Escape key
@@ -3562,17 +3589,20 @@ function getWhyThisEventForm() {
         }
         const focusField = firstSpeakerField.length ? firstSpeakerField : firstErrorField;
         if (focusField && focusField.length) {
-            showNotification('Draft saved with validation warnings. Please review highlighted fields.', 'info');
-            $('html, body').animate({scrollTop: focusField.offset().top - 100}, 500);
-            if (focusField[0]?.tomselect) {
-                focusField[0].tomselect.focus();
-            } else {
-                focusField.focus();
+            // During autosave or background validations, do not show toasts; just highlight fields.
+            // Avoid jarring auto-scroll on autosave; only focus silently when not autosave.
+            if (!(errorData && errorData.context === 'autosave')) {
+                $('html, body').animate({scrollTop: focusField.offset().top - 100}, 500);
+                if (focusField[0]?.tomselect) {
+                    focusField[0].tomselect.focus();
+                } else {
+                    focusField.focus();
+                }
             }
         } else if (nonFieldMessages.length) {
-            showNotification(nonFieldMessages.join(' '), 'error');
+            // Suppress toasts; rely on inline highlights/messages.
         } else {
-            showNotification('Autosave failed. Please try again.', 'error');
+            // Suppress generic autosave failure toast here; dedicated autosave indicator handles this.
         }
     }
 
@@ -3604,7 +3634,8 @@ function getWhyThisEventForm() {
     // ===== AUTOSAVE INTEGRATION - ENHANCED =====
     
     // Hook into autosave system if available
-    if (window.autosaveDraft) {
+    // Use container-level fallback only when AutosaveManager is NOT present to avoid duplicate triggers
+    if (!window.AutosaveManager && window.autosaveDraft) {
         // Trigger autosave on form changes
         $('#form-panel-content').on('input change', 'input, textarea, select', debounce(function() {
             const flowField = document.getElementById('schedule-modern') || document.querySelector('textarea[name="flow"]');
@@ -3680,6 +3711,7 @@ function getWhyThisEventForm() {
                 if (filtered.activities) {
                     delete filtered.activities;
                 }
+                // Highlight inline without toasts; avoid scroll/focus during autosave
                 handleAutosaveErrors({ errors: filtered, context: 'autosave' });
             }
             const indicator = $('#autosave-indicator');
@@ -3694,9 +3726,7 @@ function getWhyThisEventForm() {
             const indicator = $('#autosave-indicator');
             indicator.removeClass('saving saved').addClass('error show');
             indicator.find('.indicator-text').text('Save Failed');
-            if (e.originalEvent && e.originalEvent.detail) {
-                handleAutosaveErrors({ ...e.originalEvent.detail, context: 'autosave' });
-            }
+            // Inline highlights are enough; suppress toasts during autosave errors.
             setTimeout(() => {
                 indicator.removeClass('show');
             }, 3000);
