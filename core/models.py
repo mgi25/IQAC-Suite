@@ -875,6 +875,56 @@ class CertificateEntry(models.Model):
         return f"{self.name} ({self.role})"  # pragma: no cover
 
 
+# ────────────────────────────────────────────────────────────────
+#  CDL PROOF-READING SUBMISSION MODELS
+# ────────────────────────────────────────────────────────────────
+class ProofreadSubmission(models.Model):
+    """Represents a request from a CDL member to an English faculty to proof‑read content."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        APPROVED = "approved", "Approved"
+        CHANGES_NEEDED = "changes_needed", "Changes Needed"
+
+    proposal = models.ForeignKey(
+        "emt.EventProposal", on_delete=models.CASCADE, related_name="proofread_submissions"
+    )
+    submitted_by = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="proofread_submissions_made"
+    )
+    reviewer = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="proofread_reviews_assigned"
+    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    feedback = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Proofread for {self.proposal_id} → {self.reviewer_id} [{self.status}]"
+
+
+class ProofreadItem(models.Model):
+    class Kind(models.TextChoices):
+        FILE = "file", "File"
+        TEXT = "text", "Text/Link"
+
+    submission = models.ForeignKey(
+        ProofreadSubmission, on_delete=models.CASCADE, related_name="items"
+    )
+    kind = models.CharField(max_length=10, choices=Kind.choices)
+    label = models.CharField(max_length=255, blank=True)
+    content_text = models.TextField(blank=True)
+    file = models.FileField(upload_to="cdl/proofread/", null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.kind} for submission {self.submission_id}"
+
+
 class SidebarPermission(models.Model):
     """
     Stores allowed sidebar navigation items for a user or role.

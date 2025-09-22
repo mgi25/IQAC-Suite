@@ -214,7 +214,7 @@
         b.addEventListener('click', e=>{
           const tr=e.currentTarget.closest('tr'); const id=+tr.dataset.id; if(!id) return;
           const act=e.currentTarget.dataset.act;
-          if(act==='chat'){ window.location.href = `/cdl/communication/?eventId=${id}`; }
+          if(act==='chat'){ window.location.href = `/proposal/${id}/cdl/thread/`; }
           // 'update' is now a direct link (anchor), no JS action needed
         });
       });

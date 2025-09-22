@@ -92,12 +92,10 @@ document.addEventListener('DOMContentLoaded', async function() {
       <div class="wp-row"><div class="wp-col label">${item.label}</div><div class="wp-col value"><span class="badge ${statusClass(item.status)}">${item.status||''}</span></div></div>
     `).join('') : '<div class="text-muted">No status yet.</div>';
 
-    // Enable communication button
+    // Enable communication button (per-event chat thread)
     const commBtn = document.getElementById('btnCommOpen');
     if(commBtn){
-      const url = new URL(window.location.origin + '{% url "cdl_communication_page" %}');
-      url.searchParams.set('eventId', eventId);
-      commBtn.href = url.toString();
+  commBtn.href = `/proposal/${eventId}/cdl/thread/`;
       commBtn.classList.remove('disabled');
       commBtn.style.pointerEvents='auto';
       commBtn.style.opacity='1';

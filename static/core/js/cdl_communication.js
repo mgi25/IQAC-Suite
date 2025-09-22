@@ -89,8 +89,8 @@
         tr.innerHTML = `
           ${dateCell}
           <td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#1e3a8a;font-size:12px;white-space:nowrap">${esc(m.user_username||'User')}<div style='font-size:10px;font-weight:400;color:#64748b;margin-top:2px'>${fmtTime(m.created_at)}</div></td>
-          <td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;white-space:pre-wrap;word-break:break-word">${esc(m.comment)}</td>
-          <td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">${m.attachment_url?`<a href='${m.attachment_url}' target='_blank' style='font-size:11px;text-decoration:none;display:inline-flex;gap:4px;align-items:center'><i class="fa-regular fa-paperclip"></i> File</a>`:''}</td>`;
+          <td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;white-space:pre-wrap;word-break:break-word">${linkify(m.comment)}</td>
+            <td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">${renderAttachment(m)}</td>`;
         tbody.appendChild(tr);
       });
     }
@@ -101,6 +101,23 @@
   function refreshEmpty(){ empty.style.display = messageCache.length? 'none':'block'; }
   function scrollBottom(){ scroller.scrollTop = scroller.scrollHeight; }
   function esc(s){ return (s??'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+  function linkify(text){
+    const t=(text??'').toString();
+    if(!t) return '';
+    // First escape to avoid XSS, then convert URLs/emails to anchors
+    const safe=esc(t);
+    // URL regex: matches http(s):// or www.
+    const urlRe = /(?:\bhttps?:\/\/|\bwww\.)[\w\-]+(\.[\w\-]+)+(?:\:[0-9]+)?(?:\/[\w\-\.#%&?=+~:@,;!\(\)]*)?/gi;
+    // Email regex
+    const emailRe = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
+    const linked = safe
+      .replace(urlRe, (m)=>{
+        const href = m.startsWith('www.') ? `https://${m}` : m;
+        return `<a href="${href}" target="_blank" rel="noopener noreferrer">${m}</a>`;
+      })
+      .replace(emailRe, (m)=>`<a href="mailto:${m}">${m}</a>`);
+    return linked;
+  }
   function fmtDate(day){ try{ const d=new Date(day); return d.toLocaleDateString(undefined,{day:'2-digit',month:'short',year:'numeric'});}catch{return day;} }
   function fmtTime(iso){ try{ const d=new Date(iso); return d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});}catch{return '';} }
   function getCSRF(){ const m=document.cookie.match(/csrftoken=([^;]+)/); return m?m[1]:''; }
@@ -109,5 +126,29 @@
     let t=$('#toast');
     if(!t){ t=document.createElement('div'); t.id='toast'; t.style.cssText='position:fixed;bottom:16px;right:16px;background:#1e3a8a;color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:600;z-index:999;box-shadow:0 6px 24px rgba(15,23,42,.25)'; document.body.appendChild(t);}    
     t.textContent=msg; t.style.opacity='0'; t.style.display='block'; requestAnimationFrame(()=>{ t.style.transition='.25s'; t.style.opacity='1';}); setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>{ t.style.display='none';},250); },1700);
+  }
+  function renderAttachment(m){
+    if(m.attachment_url){
+      const name = m.attachment_name || 'File';
+      const mime = (m.attachment_mime||'').toLowerCase();
+      const url = m.attachment_url;
+      const isImg = mime.startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(url);
+      const isPdf = mime === 'application/pdf' || /\.pdf$/i.test(url);
+      if(isImg){
+        return `
+          <a href='${url}' target='_blank' style='display:inline-block'>
+            <img src='${url}' alt='${esc(name)}' style='max-width:120px; max-height:80px; border:1px solid #e2e8f0; border-radius:6px; display:block'>
+            <span style='display:inline-flex;gap:6px;align-items:center;font-size:11px;margin-top:4px'><i class="fa-regular fa-paperclip"></i> ${esc(name)}</span>
+          </a>`;
+      }
+      if(isPdf){
+        return `<a href='${url}' target='_blank' style='font-size:11px;text-decoration:none;display:inline-flex;gap:6px;align-items:center'><i class="fa-regular fa-file-pdf"></i> ${esc(name)}</a>`;
+      }
+      return `<a href='${url}' target='_blank' style='font-size:11px;text-decoration:none;display:inline-flex;gap:6px;align-items:center'><i class="fa-regular fa-paperclip"></i> ${esc(name)}</a>`;
+    }
+    if(m.attachment_missing){
+      return `<span style='font-size:11px;color:#b91c1c;display:inline-flex;gap:4px;align-items:center'><i class="fa-regular fa-triangle-exclamation"></i> Missing file</span>`;
+    }
+    return '';
   }
 })();

@@ -2,8 +2,8 @@
 
 /* CSS Variables */
 :root {
-  --profile-primary: #1E3A8A;
-  --profile-secondary: #2563EB;
+  --profile-primary: #2c5aa0;
+  --profile-secondary: #1e4180;
   --profile-white: #ffffff;
   --profile-gray-50: #f9fafb;
   --profile-gray-100: #f3f4f6;
@@ -219,7 +219,7 @@
   padding: 0 2rem;
   display: flex;
   align-items: center;
-  gap: 3rem;
+  gap: 2rem;
   justify-content: space-between;
   width: 100%;
   box-sizing: border-box;
@@ -228,7 +228,7 @@
 .profile-left-section {
   display: flex;
   align-items: center;
-  gap: 2rem;
+  gap: 1.5rem;
   flex: 1;
 }
 
@@ -329,13 +329,15 @@
 /* Stats Section */
 .profile-stats-section {
   flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .profile-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.25rem;
-  width: 100%;
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  width: auto;
 }
 
 .stat-card {
@@ -349,6 +351,7 @@
   backdrop-filter: blur(10px);
   transition: all 0.3s ease;
   box-shadow: var(--shadow-md);
+  min-width: 200px;
 }
 
 .stat-card:hover {
@@ -506,6 +509,11 @@
 
 .content-row:last-child {
   margin-bottom: 0;
+}
+
+/* Tidy layout after removals */
+.content-row > .content-card:only-child {
+  flex: 1 1 100%;
 }
 
 /* Card Sizes */
@@ -1586,8 +1594,13 @@
     gap: 2rem;
   }
   
+  .profile-stats-section {
+    justify-content: flex-start;
+  }
+  
   .profile-stats-grid {
-    grid-template-columns: repeat(2, 1fr);
+    flex-wrap: wrap;
+    justify-content: flex-start;
   }
   
   .events-grid-expanded,
@@ -1770,3 +1783,11 @@
     min-height: 300px;
   }
 }
+
+/* Org header aligns well without right-side actions */
+.organization-card-large .org-header {
+  justify-content: flex-start;
+}
+
+/* Reduce gap after removed elements */
+.tab-content-panel .content-row:empty { display: none; }
