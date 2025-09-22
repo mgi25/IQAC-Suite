@@ -38,6 +38,7 @@
     const statusEl = $('#statusCard');
     if(statusEl){
       const statusPills = [ chip((d.status||'').toUpperCase(), d.status==='finalized'?'ok':(d.status==='draft'?'warn':'')) ];
+      if (d.proofread_ready) statusPills.push(chip('PROOF-READ OK','ok'));
       statusEl.innerHTML = [
         kv('Status', statusPills.join(' ')),
         kv('Assigned To', esc(d.assigned_to_name||'Unassigned')),

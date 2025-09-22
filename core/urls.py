@@ -35,6 +35,7 @@ urlpatterns = [
     path("cdl/member/", views.cdl_member_dashboard, name="cdl_member_dashboard"),
     path("cdl/support/", views.cdl_support_detail_page, name="cdl_support_detail_page"),
     path("cdl/communication/", views.cdl_communication_page, name="cdl_communication_page"),
+    path("cdl/review/", views.faculty_review_page, name="faculty_review_page"),
     path("cdl/support/<int:proposal_id>/assign/", views.cdl_assign_tasks_page, name="cdl_assign_tasks_page"),
     path("cdl/analysis/", views.cdl_analysis_page, name="cdl_analysis_page"),
     path("cdl/availability/new/", views.cdl_create_availability, name="create_availability"),
@@ -44,6 +45,7 @@ urlpatterns = [
     path("cdl/resources/media-guide/", views.cdl_media_guide, name="media_guide"),
     path("proposal/<int:proposal_id>/cdl/", views.submit_proposal_cdl, name="submit_proposal_cdl"),
     path("proposal/<int:proposal_id>/cdl/thread/", views.cdl_thread, name="cdl_thread"),
+    path("proposal/<int:proposal_id>/proofread/", views.proofread_thread, name="proofread_thread"),
     # ────────────────────────────────────────────────
     # General Event Proposal Views
     # ────────────────────────────────────────────────
@@ -176,6 +178,11 @@ urlpatterns = [
     path("api/cdl/communication/", views.api_cdl_communication, name="api_cdl_communication"),
     path("api/cdl/support/<int:proposal_id>/assign/", views.api_cdl_support_assign, name="api_cdl_support_assign"),
     path("api/cdl/support/<int:proposal_id>/complete/", views.api_cdl_support_complete, name="api_cdl_support_complete"),
+    # Proof-reading APIs
+    path("api/cdl/proofread/submit/", views.api_proofread_submit, name="api_proofread_submit"),
+    path("api/cdl/proofread/list/", views.api_proofread_list, name="api_proofread_list"),
+    path("api/cdl/proofread/review/", views.api_proofread_review, name="api_proofread_review"),
+    path("api/cdl/proofread/reviewers/", views.api_proofread_reviewers, name="api_proofread_reviewers"),
     # Per-resource assignment APIs
     path("api/cdl/support/<int:proposal_id>/resources/", views.api_cdl_support_resources, name="api_cdl_support_resources"),
     path("api/cdl/support/<int:proposal_id>/task-assignments/", views.api_cdl_save_task_assignments, name="api_cdl_save_task_assignments"),

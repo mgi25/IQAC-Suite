@@ -36,7 +36,7 @@
       <div class="list" id="organizerCard"><div class="empty">Loading…</div></div>
     </section>
 
-    {% if request.user.is_superuser or request.session.role == 'cdl_head' %}
+  {% if request.user.is_superuser or request.session.role == 'cdl_head' %}
     <section class="card eq" id="cardStatus">
       <div class="card-header" style="justify-content:space-between;align-items:center">
         <h3><i class="fa-solid fa-circle-check"></i> Status</h3>
@@ -50,7 +50,12 @@
     <section class="card eq" id="cardCommunicationLink">
       <div class="card-header" style="justify-content:space-between;align-items:center">
         <h3><i class="fa-regular fa-comments"></i> Communication</h3>
-        <a class="chip-btn" href="{% url 'cdl_communication_page' %}?{{ request.GET.urlencode }}"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open</a>
+        {# For employees, open per-event chat if eventId present #}
+        {% if request.GET.eventId %}
+  <a class="chip-btn" href="/proposal/{{ request.GET.eventId }}/cdl/thread/"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open</a>
+        {% else %}
+        <span class="chip-btn disabled" title="Select an event to open chat"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open</span>
+        {% endif %}
       </div>
       <div class="list"><div class="empty" style="padding:24px 0">Open communication log to view & post updates.</div></div>
     </section>
@@ -77,6 +82,17 @@
       </div>
       <div class="list" id="supportCard"><div class="empty">Loading…</div></div>
       <div class="list" id="assignmentList" style="margin-top:8px"></div>
+      <div class="list" id="proofreadSection" style="margin-top:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <h4 style="margin:0;font-size:14px;color:var(--muted)"><i class="fa-solid fa-spell-check"></i> Proof-reading</h4>
+          {% if request.GET.eventId %}
+          <a class="chip-btn" href="/proposal/{{ request.GET.eventId }}/proofread/"><i class="fa-regular fa-paper-plane"></i> Open</a>
+          {% else %}
+          <span class="chip-btn disabled" title="Select an event to open"><i class="fa-regular fa-paper-plane"></i> Open</span>
+          {% endif %}
+        </div>
+        <div class="empty">No submissions yet</div>
+      </div>
     </section>
   </main>
 </div>
@@ -121,5 +137,6 @@
       setCompleted(!nowReopen);
     });
   })();
+  // Proof-reading moved to dedicated page; see /proposal/<id>/proofread/
 </script>
 {% endblock %}

@@ -1,23 +1,102 @@
 {% extends "base.html" %}
-{% block title %}CDL Thread{% endblock %}
+{% load static %}
+{% block title %}CDL — Communication{% endblock %}
+{% block head_extra %}
+<link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
+<style>
+  .card { background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px 20px; box-shadow:0 8px 30px rgba(2,6,23,.04); }
+  .chip-btn { padding:8px 12px; border-radius:10px; border:1px solid #d1d5db; background:#f8fafc; cursor:pointer; }
+  .chip-btn:hover { background:#eef2ff; }
+  #commScroller{max-height:520px;overflow:auto}
+  #commTable{width:100%;border-collapse:collapse;font-size:13px}
+  #commTable thead{position:sticky;top:0;background:#f1f5f9;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#475569}
+  #commTable th,#commTable td{padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:left;vertical-align:top}
+  .from-cell{font-weight:600;color:#1e3a8a;font-size:12px;white-space:nowrap}
+  .from-time{font-size:10px;font-weight:400;color:#64748b;margin-top:2px}
+  .empty-log{padding:40px 0;text-align:center;color:#64748b;font-size:14px}
+  .input-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-top:14px}
+  textarea[name="body"]{resize:vertical;min-height:70px;font-size:14px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;width:100%}
+  .send-btn{background:#264487;color:#fff;border:none;padding:12px 16px;border-radius:10px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .send-btn:hover{background:#1e3a73}
+  .att-cell a{font-size:11px;text-decoration:none;display:inline-flex;gap:6px;align-items:center}
+  .att-missing{font-size:11px;color:#b91c1c;display:inline-flex;gap:4px;align-items:center}
+</style>
+{% endblock %}
 {% block content %}
-<h1>CDL Communication</h1>
-<div class="border p-3 mb-3" style="max-height:400px; overflow-y:auto;">
-  {% for m in messages %}
-    <div class="mb-2">
-      <strong>{{ m.author.username }}</strong> <small class="text-muted">{{ m.created_at }}</small><br>
-      <div>{{ m.body|linebreaksbr }}</div>
-      {% if m.file %}<a href="{{ m.file.url }}">Attachment</a>{% endif %}
+<div class="ems-dashboard">
+  <header class="topbar">
+    <div>
+      <h1>CDL — Communication</h1>
+      <span class="topbar-date">{% now 'F j, Y · l' %}</span>
     </div>
-  {% empty %}
-    <p class="text-muted">No messages yet.</p>
-  {% endfor %}
+    <div class="header-actions">
+      <a class="chip-btn" href="{% url 'cdl_support_detail_page' %}?{{ request.GET.urlencode }}"><i class="fa-solid fa-arrow-left"></i> Back</a>
+    </div>
+  </header>
+
+  <section class="card">
+    <h3 style="margin:0 0 14px;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px"><i class="fa-regular fa-comments"></i> Communication Log</h3>
+    <div id="commLog" style="padding:0">
+      <div id="commScroller">
+        <table id="commTable">
+          <thead>
+            <tr>
+              <th style="width:120px">Date</th>
+              <th style="width:160px">User</th>
+              <th>Comment</th>
+              <th style="width:120px">Attachment</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if messages %}
+              {% regroup messages by created_at.date as day_groups %}
+              {% for g in day_groups %}
+                {% for m in g.list %}
+                  <tr>
+                    {% if forloop.first %}
+                      <td rowspan="{{ g.list|length }}" style="font-size:12px;font-weight:600;color:#334155;white-space:nowrap">{{ g.grouper|date:'d M Y' }}</td>
+                    {% endif %}
+                    <td class="from-cell">{{ m.author.get_full_name|default:m.author.username }}
+                      <div class="from-time">{{ m.created_at|time:'H:i' }}</div>
+                    </td>
+                    <td style="white-space:pre-wrap;word-break:break-word" class="comment-cell">{{ m.body|urlize|linebreaksbr }}</td>
+                    <td class="att-cell">
+                      {% if m.file %}
+                        <a href="{{ m.file.url }}" target="_blank" rel="noopener noreferrer"><i class="fa-regular fa-paperclip"></i> Attachment</a>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="4"><div class="empty-log" style="margin:0">No messages yet.</div></td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" id="threadForm" style="margin-top:14px">
+      {% csrf_token %}
+      <div class="input-row">
+        {{ form.body.as_textarea }}
+        <button type="submit" class="send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        {{ form.file }}
+        <label style="display:inline-flex;gap:6px;align-items:center;font-size:12px">{{ form.sent_via_email }} <span>Sent via email</span></label>
+      </div>
+    </form>
+  </section>
 </div>
-<form method="post" enctype="multipart/form-data" class="mt-3">
-  {% csrf_token %}
-  {{ form.body.label_tag }} {{ form.body }}
-  {{ form.file.label_tag }} {{ form.file }}
-  <div class="form-check">{{ form.sent_via_email }} {{ form.sent_via_email.label_tag }}</div>
-  <button class="btn btn-primary mt-2" type="submit">Post</button>
-</form>
+{% endblock %}
+{% block scripts_extra %}
+<script>
+  // Ensure message links open in new tab
+  (function(){
+    const root=document.getElementById('commTable');
+    if(!root) return;
+    root.querySelectorAll('.comment-cell a[href^="http"]').forEach(a=>{ a.target='_blank'; a.rel='noopener noreferrer'; });
+  })();
+</script>
 {% endblock %}
