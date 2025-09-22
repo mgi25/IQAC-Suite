@@ -144,6 +144,24 @@
     gap: 0.4rem;
 }
 
+.preview-list {
+    margin: 0.6rem 0 0.2rem 1.25rem;
+    padding-left: 0.75rem;
+    list-style: disc;
+    color: #0f172a;
+    line-height: 1.5;
+}
+
+.preview-list li {
+    margin: 0.15rem 0;
+    white-space: pre-wrap;
+}
+
+.preview-list .muted {
+    color: #6b7280;
+    font-style: italic;
+}
+
 .toolbar {
     display: flex;
     align-items: center;
