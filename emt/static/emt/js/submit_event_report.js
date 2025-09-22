@@ -100,6 +100,130 @@ document.addEventListener('DOMContentLoaded', function(){
 
   const previewUrl = $('#report-form').data('preview-url');
 
+  function ensureAutosaveUrl() {
+      if (window.AUTOSAVE_URL) {
+          return;
+      }
+      const path = window.location.pathname || '';
+      let prefix = '';
+      if (path.startsWith('/suite/')) prefix = '/suite';
+      else if (path.startsWith('/emt/')) prefix = '/emt';
+      window.AUTOSAVE_URL = `${prefix}/autosave-event-report/`;
+  }
+
+  function autosaveThen(callback) {
+      showLoadingOverlay('Saving...');
+      ensureAutosaveUrl();
+      const savePromise = (window.ReportAutosaveManager && window.ReportAutosaveManager.manualSave)
+          ? window.ReportAutosaveManager.manualSave()
+          : Promise.resolve();
+
+      const invoke = () => {
+          let submitted = false;
+          try {
+              submitted = Boolean(callback());
+          } catch (err) {
+              hideLoadingOverlay();
+              throw err;
+          }
+          if (!submitted) {
+              hideLoadingOverlay();
+          }
+          return submitted;
+      };
+
+      return savePromise.then(
+          () => invoke(),
+          () => {
+              showNotification('Save failed', 'error');
+              return invoke();
+          }
+      );
+  }
+
+  function submitForPreview() {
+      if (!previewUrl) {
+          showNotification('Preview unavailable. Please reload the page.', 'error');
+          return false;
+      }
+
+      const form = $('#report-form');
+      if (!form.length) {
+          showNotification('Unable to locate the report form.', 'error');
+          return false;
+      }
+
+      form.find('input.section-state-hidden').remove();
+
+      const fieldsByName = {};
+      form.find('input[name], select[name], textarea[name]').each(function(){
+          const name = this.name;
+          if(!fieldsByName[name]){
+              fieldsByName[name] = [];
+          }
+          fieldsByName[name].push(this);
+      });
+
+      const appendHidden = (frm, name, value) => {
+          frm.append($('<input>', {
+              type: 'hidden',
+              class: 'section-state-hidden',
+              name: name,
+              value: value,
+          }));
+      };
+
+      Object.entries(fieldsByName).forEach(([name, elements]) => {
+          const el = elements[0];
+          if(el.tagName === 'SELECT'){
+              const $el = $(el);
+              const vals = $el.val();
+              if(Array.isArray(vals)){
+                  if(vals.length){
+                      vals.forEach(v => appendHidden(form, name, v));
+                  } else {
+                      appendHidden(form, name, '');
+                  }
+              } else {
+                  appendHidden(form, name, vals || '');
+              }
+          } else if(el.type === 'checkbox'){
+              const checkedVals = elements.filter(e => e.checked).map(e => e.value);
+              if(checkedVals.length){
+                  checkedVals.forEach(v => appendHidden(form, name, v));
+              } else {
+                  appendHidden(form, name, '');
+              }
+          } else if(el.type === 'radio'){
+              const checked = elements.find(e => e.checked);
+              appendHidden(form, name, checked ? checked.value : '');
+          } else {
+              appendHidden(form, name, $(el).val() || '');
+          }
+      });
+
+      Object.entries(sectionState).forEach(([name, value]) => {
+          if (fieldsByName[name]) return;
+          if (name === 'csrfmiddlewaretoken') return;
+          if (Array.isArray(value)) {
+              if (value.length) {
+                  value.forEach(v => appendHidden(form, name, v));
+              } else {
+                  appendHidden(form, name, '');
+              }
+          } else if (typeof value === 'boolean') {
+              appendHidden(form, name, value ? 'on' : '');
+          } else {
+              appendHidden(form, name, value != null ? String(value) : '');
+          }
+      });
+
+      form.attr('action', previewUrl);
+      showLoadingOverlay('Generating preview...');
+      form[0].submit();
+      return true;
+  }
+
       // Reset progress and always start from the first section on load
       if (RESET_PROGRESS_ON_LOAD) {
           try {
@@ -120,6 +244,8 @@ document.addEventListener('DOMContentLoaded', function(){
           if (submitSection) submitSection.classList.add('hidden');
           const submitBtn = document.getElementById('submit-report-btn');
           if (submitBtn) submitBtn.disabled = true;
+          const reviewBtn = document.getElementById('review-report-btn');
+          if (reviewBtn) reviewBtn.disabled = true;
       } else {
           // Rehydrate progress from server-rendered classes (if editing existing draft)
           document.querySelectorAll('.nav-link').forEach(link => {
@@ -441,8 +567,7 @@ $(document).on('click', '#ai-sdg-implementation', function(){
           return;
       }
 
-    let submitted = false;
-    const proceed = () => {
+      autosaveThen(() => {
           markSectionComplete(currentSection);
           const nextSection = getNextSection(currentSection);
 
@@ -450,108 +575,36 @@ $(document).on('click', '#ai-sdg-implementation', function(){
               enableSection(nextSection);
               activateSection(nextSection);
               showNotification('Section saved! Moving to next section', 'success');
-          } else {
-              showNotification('All sections completed! Review your report.', 'success');
-              const form = $('#report-form');
-
-              // Remove any previously appended hidden inputs
-              form.find('input.section-state-hidden').remove();
-
-              // Serialize every form control currently in DOM, including empty or unchecked ones
-              const fieldsByName = {};
-              form.find('input[name], select[name], textarea[name]').each(function(){
-                  const name = this.name;
-                  if(!fieldsByName[name]){
-                      fieldsByName[name] = [];
-                  }
-                  fieldsByName[name].push(this);
-              });
-              const appendHidden = (frm, name, value) => {
-                  frm.append($('<input>', {
-                      type: 'hidden',
-                      class: 'section-state-hidden',
-                      name: name,
-                      value: value
-                  }));
-              };
-
-              // First, mirror values that are present in the DOM right now
-              Object.entries(fieldsByName).forEach(([name, elements]) => {
-                  const el = elements[0];
-                  if(el.tagName === 'SELECT'){
-                      const $el = $(el);
-                      const vals = $el.val();
-                      if(Array.isArray(vals)){
-                          if(vals.length){
-                              vals.forEach(v => appendHidden(form, name, v));
-                          } else {
-                              appendHidden(form, name, '');
-                          }
-                      } else {
-                          appendHidden(form, name, vals || '');
-                      }
-                  } else if(el.type === 'checkbox'){
-                      const checkedVals = elements.filter(e => e.checked).map(e => e.value);
-                      if(checkedVals.length){
-                          checkedVals.forEach(v => appendHidden(form, name, v));
-                      } else {
-                          appendHidden(form, name, '');
-                      }
-                  } else if(el.type === 'radio'){
-                      const checked = elements.find(e => e.checked);
-                      appendHidden(form, name, checked ? checked.value : '');
-                  } else {
-                      appendHidden(form, name, $(el).val() || '');
-                  }
-              });
-
-              // Then, include values from sections not currently rendered using our sectionState snapshot
-              // Avoid duplicating names already captured above
-              Object.entries(sectionState).forEach(([name, value]) => {
-                  if (fieldsByName[name]) return; // already added from DOM
-                  if (name === 'csrfmiddlewaretoken') return; // Django already has it
-                  if (Array.isArray(value)) {
-                      if (value.length) {
-                          value.forEach(v => appendHidden(form, name, v));
-                      } else {
-                          appendHidden(form, name, '');
-                      }
-                  } else if (typeof value === 'boolean') {
-                      appendHidden(form, name, value ? 'on' : '');
-                  } else {
-                      appendHidden(form, name, value != null ? String(value) : '');
-                  }
-              });
-
-              form.attr('action', previewUrl);
-              showLoadingOverlay('Generating preview...');
-              form[0].submit();
-              submitted = true;
+              return false;
           }
-      };
 
-      showLoadingOverlay('Saving...');
-      // Fallback: if autosave URL isn't injected, infer it from current path
-      if (!window.AUTOSAVE_URL) {
-          const path = window.location.pathname || '';
-          let prefix = '';
-          if (path.startsWith('/suite/')) prefix = '/suite';
-          else if (path.startsWith('/emt/')) prefix = '/emt';
-          window.AUTOSAVE_URL = `${prefix}/autosave-event-report/`;
-      }
-      const savePromise = (window.ReportAutosaveManager && window.ReportAutosaveManager.manualSave)
-          ? window.ReportAutosaveManager.manualSave()
-          : Promise.resolve();
-
-      savePromise.then(() => {
-          proceed();
-          if (!submitted) hideLoadingOverlay();
-      }).catch(() => {
-          showNotification('Save failed', 'error');
-          proceed();
-          if (!submitted) hideLoadingOverlay();
+          showNotification('All sections completed! Review your report.', 'success');
+          return submitForPreview();
       });
   });
+
+    $(document).on('click', '#review-report-btn', function(e) {
+        e.preventDefault();
+
+        if (!allSectionsCompleted()) {
+            showNotification('Complete all sections before reviewing', 'error');
+            return;
+        }
+
+        if (!validateCurrentSection()) {
+            showNotification('Please fill in all required fields', 'error');
+            return;
+        }
+
+        autosaveThen(() => {
+            if (!sectionProgress[currentSection]) {
+                markSectionComplete(currentSection);
+            } else {
+                saveProgress();
+            }
+            return submitForPreview();
+        });
+    });
 
     // Back navigation is handled via the navbar; no inline Previous buttons
   
@@ -850,6 +903,8 @@ $(document).on('click', '#ai-sdg-implementation', function(){
       }
       const btn = document.getElementById('submit-report-btn');
       if(btn){ btn.disabled = false; }
+      const reviewBtn = document.getElementById('review-report-btn');
+      if(reviewBtn){ reviewBtn.disabled = false; }
   }
   
   function enableSection(sectionName) {

@@ -287,8 +287,11 @@
             </div>
 
             <div class="submit-section hidden">
-                <button type="submit" name="final_submit" class="btn-submit" id="submit-report-btn" disabled>Submit Report</button>
-                <div class="submit-help-text">Complete all sections above to enable submission</div>
+                <div class="submit-actions">
+                    <button type="button" class="btn-review btn-draft-section" id="review-report-btn" disabled>Review &amp; Submit</button>
+                    <button type="submit" name="final_submit" class="btn-submit" id="submit-report-btn" disabled>Submit Report</button>
+                </div>
+                <div class="submit-help-text">Complete all sections, then choose &ldquo;Review &amp; Submit&rdquo; to open the review page. Final submission happens from that screen.</div>
             </div>
 
             <div style="display: none;" id="django-forms">
