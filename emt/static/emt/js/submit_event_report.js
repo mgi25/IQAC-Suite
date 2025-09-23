@@ -77,13 +77,42 @@ document.addEventListener('DOMContentLoaded', function(){
      SUBMIT EVENT REPORT PAGE INLINE JAVASCRIPT
      Moved from submit_event_report.html template
      =========================================== */
-  
+
   // Global variables for form management
   if (typeof window.REPORT_ID === 'undefined') {
     console.log('Event Report Form initializing...');
   }
-  
-  let currentSection = 'event-information';
+
+  const DEFAULT_SECTION_SEQUENCE = [
+      'event-information',
+      'participants-information',
+      'event-summary',
+      'event-outcomes',
+      'analysis',
+      'event-relevance',
+      'attachments'
+  ];
+  const navLinks = Array.from(document.querySelectorAll('.nav-link[data-section]'));
+  const derivedSectionOrder = navLinks
+      .map((link, index) => {
+          const rawOrder = parseInt(link.dataset.order, 10);
+          const order = Number.isFinite(rawOrder) ? rawOrder : (index + 1);
+          return { section: link.dataset.section, order, index };
+      })
+      .sort((a, b) => {
+          if (a.order === b.order) {
+              return a.index - b.index;
+          }
+          return a.order - b.order;
+      })
+      .map(item => item.section)
+      .filter(Boolean);
+  const SECTION_SEQUENCE = derivedSectionOrder.length ? derivedSectionOrder : DEFAULT_SECTION_SEQUENCE;
+  const FIRST_SECTION = SECTION_SEQUENCE.includes('event-information')
+      ? 'event-information'
+      : (SECTION_SEQUENCE[0] || 'event-information');
+
+  let currentSection = FIRST_SECTION;
   let sectionProgress = {
       'event-information': false,
       'participants-information': false,
@@ -93,6 +122,11 @@ document.addEventListener('DOMContentLoaded', function(){
       'event-relevance': false,
       'attachments': false
   };
+  SECTION_SEQUENCE.forEach(section => {
+      if (!sectionProgress.hasOwnProperty(section)) {
+          sectionProgress[section] = false;
+      }
+  });
 
   // Persist progress per proposal to survive page reloads or navigation to GA editor
   const LS_PROGRESS_KEY = `event_report_progress_${window.PROPOSAL_ID || ''}`;
@@ -264,14 +298,17 @@ document.addEventListener('DOMContentLoaded', function(){
               localStorage.removeItem(LS_PROGRESS_KEY);
           } catch (e) {}
           // Clear any UI state
+          Object.keys(sectionProgress).forEach(key => {
+              sectionProgress[key] = false;
+          });
           document.querySelectorAll('.nav-link').forEach(link => {
               link.classList.remove('completed', 'active');
-              if (link.dataset.section !== 'event-information') {
+              if (link.dataset.section !== FIRST_SECTION) {
                   link.classList.add('disabled');
               }
           });
           // Ensure first section is active and content is loaded
-          activateSection('event-information');
+          activateSection(FIRST_SECTION);
           // Hide final submit
           const submitSection = document.querySelector('.submit-section');
           if (submitSection) submitSection.classList.add('hidden');
@@ -766,11 +803,13 @@ $(document).on('click', '#ai-sdg-implementation', function(){
   }
   
     function getNextSection(current) {
-            // Order must exactly match existing nav/link + sectionProgress keys.
-            // Removed 'suggestions' (no nav item defined) which previously blocked final submission.
-            const order = ['event-information', 'participants-information', 'event-summary', 'event-outcomes', 'analysis', 'event-relevance', 'attachments'];
-      const currentIndex = order.indexOf(current);
-      return currentIndex < order.length - 1 ? order[currentIndex + 1] : null;
+        const currentIndex = SECTION_SEQUENCE.indexOf(current);
+        if (currentIndex === -1) {
+            return null;
+        }
+        return currentIndex < SECTION_SEQUENCE.length - 1
+            ? SECTION_SEQUENCE[currentIndex + 1]
+            : null;
   }
 
         // getPreviousSection removed; navbar permits free navigation to unlocked sections
@@ -943,7 +982,7 @@ $(document).on('click', '#ai-sdg-implementation', function(){
   }
 
   function allSectionsCompleted(){
-      return Object.values(sectionProgress).every(Boolean);
+      return SECTION_SEQUENCE.every(section => Boolean(sectionProgress[section]));
   }
 
   function enableFinalSubmission(){
