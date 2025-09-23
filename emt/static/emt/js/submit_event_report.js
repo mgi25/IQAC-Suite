@@ -113,6 +113,7 @@ document.addEventListener('DOMContentLoaded', function(){
       : (SECTION_SEQUENCE[0] || 'event-information');
 
   let currentSection = FIRST_SECTION;
+  let saveAndContinueInFlight = false;
   let sectionProgress = {
       'event-information': false,
       'participants-information': false,
@@ -632,12 +633,32 @@ $(document).on('click', '#ai-sdg-implementation', function(){
     // Global Save & Continue: explicitly exclude GA editor, SDG select, SDG save, and Outcome save buttons
     $(document).on('click', '.btn-save-section:not(.btn-ga-editor):not(.btn-sdg-select):not(.btn-sdg-save):not(.btn-outcome-save)', function(e) {
       e.preventDefault();
+
+      if (saveAndContinueInFlight) {
+          return;
+      }
+
       if (!validateCurrentSection()) {
           showNotification('Please fill in all required fields', 'error');
           return;
       }
 
-      autosaveThen(() => {
+      const $btn = $(this);
+      const wasDisabled = $btn.prop('disabled');
+
+      saveAndContinueInFlight = true;
+      if (!wasDisabled) {
+          $btn.prop('disabled', true);
+      }
+
+      const resetInFlightState = () => {
+          saveAndContinueInFlight = false;
+          if (!wasDisabled) {
+              $btn.prop('disabled', false);
+          }
+      };
+
+      const savePromise = autosaveThen(() => {
           markSectionComplete(currentSection);
           const nextSection = getNextSection(currentSection);
 
@@ -651,6 +672,20 @@ $(document).on('click', '#ai-sdg-implementation', function(){
           showNotification('All sections completed! Review your report.', 'success');
           return submitForPreview();
       });
+
+      savePromise
+          .then((submitted) => {
+              if (!submitted) {
+                  resetInFlightState();
+              }
+              return submitted;
+          })
+          .catch((err) => {
+              resetInFlightState();
+              throw err;
+          });
+
+      return savePromise;
   });
 
     $(document).on('click', '#review-report-btn', function(e) {
