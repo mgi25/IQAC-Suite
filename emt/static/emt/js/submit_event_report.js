@@ -98,7 +98,11 @@ document.addEventListener('DOMContentLoaded', function(){
       } catch (e) { /* noop */ }
   }
 
-  const previewUrl = $('#report-form').data('preview-url');
+  const $reportForm = $('#report-form');
+  const previewUrl =
+      $reportForm.attr('data-preview-url') ||
+      $reportForm.data('previewUrl') ||
+      $reportForm.data('preview-url');
 
   function ensureAutosaveUrl() {
       if (window.AUTOSAVE_URL) {
