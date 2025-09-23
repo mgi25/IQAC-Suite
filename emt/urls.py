@@ -229,4 +229,8 @@ urlpatterns = [
         name="api_organization_types",
     ),
     path("api/outcomes/<int:org_id>/", views.api_outcomes, name="api_outcomes"),
+    # Single Review page and APIs
+    path("suite/review/", views.review_center, name="review_center"),
+    path("suite/review/action/", views.review_action, name="review_action"),
+    path("suite/review/message/", views.review_message, name="review_message"),
 ]

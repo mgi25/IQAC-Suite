@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Review{% endblock %}
+{% block content %}
+<div class="page-container">
+  <h1 class="page-title">Review Center</h1>
+  <p class="page-subtitle">Stage: {{ stage|title }}</p>
+
+  <div class="cards-grid">
+    {% for r in reports %}
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">{{ r.proposal.event_title }}</div>
+          <div class="card-subtitle">{{ r.proposal.organization.name|default:'—' }} · by {{ r.proposal.submitted_by.get_full_name|default:r.proposal.submitted_by.username }}</div>
+        </div>
+        <div class="badge" style="background:#1e60b1;color:#fff;">{{ r.get_review_stage_display }}</div>
+      </div>
+      <div class="card-body">
+        <div class="two-col">
+          <div>
+            <div><b>Event Dates:</b> {{ r.proposal.event_start_date }} — {{ r.proposal.event_end_date }}</div>
+            <div><b>Type:</b> {{ r.actual_event_type|default:'—' }}</div>
+            <div><b>Participants:</b> {{ r.num_participants|default:'—' }}</div>
+          </div>
+          <div>
+            <div><b>Summary:</b> {{ r.summary|default:'—'|truncatechars:200 }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-section">
+        <h3 class="section-title">Communication</h3>
+        <div id="thread-{{ r.id }}" class="thread">
+          {% include 'emt/partials/review_messages.html' with report=r %}
+        </div>
+        <form class="thread-form" data-report="{{ r.id }}">
+          {% csrf_token %}
+          <input type="hidden" name="report_id" value="{{ r.id }}" />
+          <textarea name="message" rows="2" class="ultra-input" placeholder="Write a message…" required></textarea>
+          <button type="submit" class="btn btn-primary">Post</button>
+        </form>
+      </div>
+      <div class="card-section">
+        <h3 class="section-title">Review Decision</h3>
+        <form class="action-form" data-report="{{ r.id }}">
+          {% csrf_token %}
+          <input type="hidden" name="report_id" value="{{ r.id }}" />
+          <textarea name="feedback" rows="3" class="ultra-input" placeholder="Provide clear feedback (required)" required></textarea>
+          <div class="actions">
+            {% if stage != 'user' and r.review_stage != 'finalized' %}
+            <button type="submit" name="action" value="approve" class="btn btn-success">Approve</button>
+            <button type="submit" name="action" value="reject" class="btn btn-danger">Reject</button>
+            {% else %}
+            <div class="note">You can view and comment on this report. Decisions are disabled at this stage.</div>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+    {% empty %}
+    <div class="empty-state">No reports found for your stage.</div>
+    {% endfor %}
+  </div>
+</div>
+<style>
+.page-container{padding:20px}
+.page-title{font-size:24px;margin:0 0 6px;color:#1e60b1}
+.page-subtitle{color:#555;margin:0 0 16px}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px}
+.card{background:#fff;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.06);overflow:hidden;display:flex;flex-direction:column}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #eef2f7}
+.card-title{font-size:16px;font-weight:600}
+.card-subtitle{font-size:12px;color:#666}
+.badge{padding:6px 10px;border-radius:10px;font-size:12px}
+.card-body{padding:12px 16px}
+.two-col{display:grid;grid-template-columns:1fr;gap:10px}
+@media(min-width:720px){.two-col{grid-template-columns:1fr 1fr}}
+.card-section{padding:12px 16px;border-top:1px solid #eef2f7}
+.section-title{font-size:14px;margin:0 0 8px;color:#1e60b1}
+.thread{max-height:180px;overflow:auto;background:#f9fbff;border:1px solid #e6eefc;border-radius:10px;padding:8px}
+.thread-item{margin:6px 0;padding:8px;background:#fff;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.thread-meta{font-size:12px;color:#6b7280;margin-bottom:4px}
+.thread-text{font-size:14px;color:#111}
+.ultra-input{width:100%;padding:10px;border-radius:10px;border:1px solid #d5d9e2}
+.actions{display:flex;gap:8px;margin-top:8px}
+.btn{padding:8px 12px;border-radius:10px;border:none;cursor:pointer}
+.btn-primary{background:#1e60b1;color:#fff}
+.btn-success{background:#1e9b50;color:#fff}
+.btn-danger{background:#d64545;color:#fff}
+.note{color:#666}
+.empty-state{padding:24px;text-align:center;color:#666;background:#fff;border-radius:12px}
+</style>
+<script>
+(function(){
+  async function post(url, form){
+    const fd = new FormData(form);
+    const r = await fetch(url, {method:'POST', body: fd, headers:{'X-Requested-With':'fetch'}});
+    return await r.json();
+  }
+  document.querySelectorAll('.thread-form').forEach(f=>{
+    f.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const res = await post('{% url "emt:review_message" %}', f);
+      if(res.ok){
+        const id = f.dataset.report;
+        document.getElementById('thread-'+id).innerHTML = res.html;
+        f.reset();
+      }else{ alert(res.error || 'Failed'); }
+    });
+  });
+  document.querySelectorAll('.action-form').forEach(f=>{
+    f.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const btn = e.submitter; // which button
+      if(!btn){ return; }
+      const action = btn.value;
+      const fd = new FormData(f);
+      fd.append('action', action);
+      const r = await fetch('{% url "emt:review_action" %}', {method:'POST', body: fd, headers:{'X-Requested-With':'fetch'}});
+      const res = await r.json();
+      if(res.ok){
+        // Simple reload to refresh stages & lists
+        location.reload();
+      } else {
+        alert(res.error || 'Action failed');
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}

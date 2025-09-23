@@ -69,6 +69,131 @@ if api_key:
     genai.configure(api_key=api_key)
 
 
+# ────────────────────────────────────────────────────────────────
+#  Review Center (Single Page Workflow)
+# ────────────────────────────────────────────────────────────────
+
+def _user_role_stage(request):
+    """Derive the review stage for the current user.
+    Returns one of EventReport.ReviewStage values.
+    """
+    # Default to USER
+    stage = EventReport.ReviewStage.USER
+    roles_lower = [
+        (ra.role.name.lower() if ra.role else "") for ra in getattr(request.user, "role_assignments", []).all()
+    ] if hasattr(request.user, "role_assignments") else []
+    prof_role = getattr(getattr(request.user, "profile", None), "role", "")
+    if prof_role:
+        roles_lower.append(prof_role.lower())
+    role_blob = " ".join(roles_lower)
+    if "hod" in role_blob or "head" in role_blob:
+        stage = EventReport.ReviewStage.HOD
+    if "iqac" in role_blob and ("university" in role_blob or "coord" in role_blob or "admin" in role_blob):
+        stage = EventReport.ReviewStage.UIQAC
+    elif "iqac" in role_blob:
+        stage = EventReport.ReviewStage.DIQAC
+    return stage
+
+
+def _reports_for_user(request):
+    stage = _user_role_stage(request)
+    user = request.user
+    qs = EventReport.objects.select_related("proposal", "proposal__organization", "proposal__submitted_by")
+    if stage == EventReport.ReviewStage.USER:
+        return qs.filter(proposal__submitted_by=user)
+    if stage == EventReport.ReviewStage.DIQAC:
+        # Department IQAC: restrict to user's organizations
+        org_ids = list(user.role_assignments.exclude(organization__isnull=True).values_list("organization_id", flat=True)) if hasattr(user, "role_assignments") else []
+        return qs.filter(proposal__organization_id__in=org_ids).exclude(review_stage=EventReport.ReviewStage.FINALIZED)
+    if stage == EventReport.ReviewStage.HOD:
+        org_ids = list(user.role_assignments.exclude(organization__isnull=True).values_list("organization_id", flat=True)) if hasattr(user, "role_assignments") else []
+        return qs.filter(proposal__organization_id__in=org_ids).exclude(review_stage=EventReport.ReviewStage.FINALIZED)
+    if stage == EventReport.ReviewStage.UIQAC:
+        # University IQAC: see all non-finalized
+        return qs.exclude(review_stage=EventReport.ReviewStage.FINALIZED)
+    return qs.none()
+
+
+@login_required
+def review_center(request):
+    stage = _user_role_stage(request)
+    reports = _reports_for_user(request).order_by("-updated_at")
+    context = {
+        "stage": stage,
+        "reports": reports,
+    }
+    return render(request, "emt/review_center.html", context)
+
+
+@login_required
+@require_POST
+def review_action(request):
+    """Approve/Reject an EventReport with mandatory feedback and stage transitions."""
+    report_id = request.POST.get("report_id")
+    action = request.POST.get("action")  # approve|reject
+    feedback = (request.POST.get("feedback") or "").strip()
+    if not report_id or action not in {"approve", "reject"}:
+        return JsonResponse({"ok": False, "error": "Invalid request"}, status=400)
+    if not feedback:
+        return JsonResponse({"ok": False, "error": "Feedback is required"}, status=400)
+
+    report = get_object_or_404(EventReport, id=report_id)
+    stage = _user_role_stage(request)
+
+    # Only allow acting if the user's stage matches the report's current ownership flow
+    allowed = False
+    next_stage = report.review_stage
+    if stage == EventReport.ReviewStage.DIQAC and report.review_stage in [EventReport.ReviewStage.USER, EventReport.ReviewStage.DIQAC]:
+        allowed = True
+        next_on_approve = EventReport.ReviewStage.HOD
+        next_on_reject = EventReport.ReviewStage.USER
+    elif stage == EventReport.ReviewStage.HOD and report.review_stage in [EventReport.ReviewStage.DIQAC, EventReport.ReviewStage.HOD]:
+        allowed = True
+        next_on_approve = EventReport.ReviewStage.UIQAC
+        next_on_reject = EventReport.ReviewStage.USER
+    elif stage == EventReport.ReviewStage.UIQAC and report.review_stage in [EventReport.ReviewStage.HOD, EventReport.ReviewStage.UIQAC]:
+        allowed = True
+        next_on_approve = EventReport.ReviewStage.FINALIZED
+        next_on_reject = EventReport.ReviewStage.USER
+    else:
+        # Submitter cannot approve/reject; only view & comment
+        allowed = False
+
+    if not allowed:
+        return JsonResponse({"ok": False, "error": "Not permitted for this stage"}, status=403)
+
+    report.session_feedback = feedback
+    if action == "approve":
+        report.iqac_feedback = (report.iqac_feedback + "\n\n" if report.iqac_feedback else "") + feedback
+        report.review_stage = next_on_approve
+    else:
+        # reject
+        report.iqac_feedback = (report.iqac_feedback + "\n\n" if report.iqac_feedback else "") + f"REJECTED: {feedback}"
+        report.review_stage = next_on_reject
+
+    report.save(update_fields=["session_feedback", "iqac_feedback", "review_stage", "updated_at"])
+    return JsonResponse({"ok": True, "stage": report.review_stage})
+
+
+@login_required
+@require_POST
+def review_message(request):
+    """Post a message to the report communication thread."""
+    from .models import EventReportMessage
+
+    report_id = request.POST.get("report_id")
+    message = (request.POST.get("message") or "").strip()
+    if not report_id or not message:
+        return JsonResponse({"ok": False, "error": "Message required"}, status=400)
+    report = get_object_or_404(EventReport, id=report_id)
+    # Access control: user should at least be in viewable set
+    if not _reports_for_user(request).filter(id=report.id).exists():
+        return JsonResponse({"ok": False, "error": "Not permitted"}, status=403)
+    EventReportMessage.objects.create(report=report, sender=request.user, message=message)
+    html = render_to_string("emt/partials/review_messages.html", {"report": report}, request=request)
+    return JsonResponse({"ok": True, "html": html})
+
+
 @login_required
 def submit_request_view(request):
     if request.method == "POST":
