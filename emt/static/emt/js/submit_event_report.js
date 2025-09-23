@@ -90,7 +90,8 @@ document.addEventListener('DOMContentLoaded', function(){
       'event-summary': false,
       'event-outcomes': false,
       'analysis': false,
-      'event-relevance': false
+      'event-relevance': false,
+      'attachments': false
   };
 
   // Persist progress per proposal to survive page reloads or navigation to GA editor
@@ -678,11 +679,18 @@ $(document).on('click', '#ai-sdg-implementation', function(){
           case 'event-relevance':
               content = getEventRelevanceContent();
               break;
+          case 'attachments':
+              content = getAttachmentsContent();
+              break;
           default:
               content = getEventInformationContent();
       }
-      
+
       $('.form-grid').html(content);
+
+      if (sectionName === 'attachments') {
+          setTimeout(() => initAttachments(), 50);
+      }
 
       if (sectionName === 'participants-information') {
           // Defer population until after the new DOM elements are attached, with retries
@@ -737,17 +745,21 @@ $(document).on('click', '#ai-sdg-implementation', function(){
               title: 'Outcomes of the Event', 
               subtitle: 'Post-event evaluation and achievements' 
           },
-          'analysis': { 
-              title: 'Analysis', 
-              subtitle: 'Detailed analysis and insights (minimum 500 words)' 
+          'analysis': {
+              title: 'Analysis',
+              subtitle: 'Detailed analysis and insights (minimum 500 words)'
           },
-          'event-relevance': { 
-              title: 'Relevance of the Event', 
-              subtitle: 'Program outcomes, graduate attributes, SDGs mapping' 
+          'event-relevance': {
+              title: 'Relevance of the Event',
+              subtitle: 'Program outcomes, graduate attributes, SDGs mapping'
           },
-          'suggestions': { 
-              title: 'Suggestions for Improvements', 
-              subtitle: 'IQAC coordinator feedback and recommendations' 
+          'attachments': {
+              title: 'Attachments & Evidence',
+              subtitle: 'Upload photos, certificates, and other supporting files'
+          },
+          'suggestions': {
+              title: 'Suggestions for Improvements',
+              subtitle: 'IQAC coordinator feedback and recommendations'
           }
       };
       return sections[section] || { title: 'Section', subtitle: 'Complete this section' };
@@ -756,7 +768,7 @@ $(document).on('click', '#ai-sdg-implementation', function(){
     function getNextSection(current) {
             // Order must exactly match existing nav/link + sectionProgress keys.
             // Removed 'suggestions' (no nav item defined) which previously blocked final submission.
-            const order = ['event-information', 'participants-information', 'event-summary', 'event-outcomes', 'analysis', 'event-relevance'];
+            const order = ['event-information', 'participants-information', 'event-summary', 'event-outcomes', 'analysis', 'event-relevance', 'attachments'];
       const currentIndex = order.indexOf(current);
       return currentIndex < order.length - 1 ? order[currentIndex + 1] : null;
   }
@@ -776,6 +788,8 @@ $(document).on('click', '#ai-sdg-implementation', function(){
           return validateAnalysis();
       } else if (currentSection === 'event-relevance') {
           return validateEventRelevance();
+      } else if (currentSection === 'attachments') {
+          return validateAttachments();
       }
       // Add other section validations as needed
       return true;
@@ -887,7 +901,7 @@ $(document).on('click', '#ai-sdg-implementation', function(){
           { id: '#contemporary-requirements-modern', name: 'Contemporary Requirements' },
           { id: '#sdg-implementation-modern', name: 'SDG Implementation' }
       ];
-      
+
       requiredFields.forEach(function(field) {
           const element = $(field.id);
           if (field.id !== '#graduate-attributes-modern') {
@@ -910,10 +924,14 @@ $(document).on('click', '#ai-sdg-implementation', function(){
               }
           }
       });
-      
+
       return isValid;
   }
-  
+
+  function validateAttachments() {
+      return true;
+  }
+
   function markSectionComplete(sectionName) {
       sectionProgress[sectionName] = true;
       $(`.nav-link[data-section="${sectionName}"]`).addClass('completed');
@@ -1450,14 +1468,27 @@ $(document).on('click', '#ai-sdg-implementation', function(){
 
           <!-- Save Section -->
           <div class="form-row full-width">
-              <div class="save-section-container">
-                  <button type="button" class="btn-save-section">Save & Continue</button>
-                  <div class="save-help-text">Complete this section to unlock the next one</div>
-              </div>
+          <div class="save-section-container">
+              <button type="button" class="btn-save-section">Save & Continue</button>
+              <div class="save-help-text">Complete this section to unlock the next one</div>
           </div>
-      `;
+      </div>
+  `;
+}
+
+  function getAttachmentsContent() {
+      const tpl = document.getElementById('attachments-section-template');
+      if (!tpl) {
+          return `
+              <div class="form-row full-width">
+                  <div class="help-text">Attachments section unavailable. Please reload the page.</div>
+              </div>
+          `;
+      }
+
+      return tpl.innerHTML.trim();
   }
-  
+
   // Form submission validation
   $('#report-form').on('submit', function(e) {
       // Validate current and ensure all sections complete before final submit
@@ -2594,54 +2625,112 @@ function initAttachments(){
   const totalInput = document.querySelector('input[name$="-TOTAL_FORMS"]');
   if(!list || !addBtn || !template || !totalInput) return;
 
+  const placeholderMarkup = '<span class="attach-add">+</span><span class="attach-text">Add file</span>';
+
+  function setPlaceholder(upload){
+    upload.innerHTML = placeholderMarkup;
+    delete upload.dataset.fileUrl;
+    delete upload.dataset.previewType;
+  }
+
   function bind(block){
     const upload = block.querySelector('.attach-upload');
     const fileInput = block.querySelector('.file-input');
     const removeBtn = block.querySelector('.attach-remove');
-    upload.addEventListener('click', () => {
-      const img = upload.querySelector('img');
-      if(img){
-        openImageModal(img.src);
-      } else {
-        fileInput.click();
+    const deleteToggle = block.querySelector('input[name$="-DELETE"]');
+    if(!upload || !fileInput || !removeBtn) return;
+
+    const ensureRemovePlacement = () => {
+      if (!upload.contains(removeBtn)) {
+        upload.appendChild(removeBtn);
       }
+    };
+
+    const toggleRemoveVisibility = (visible) => {
+      removeBtn.style.display = visible ? 'flex' : 'none';
+    };
+
+    upload.addEventListener('click', () => {
+      const fileUrl = upload.dataset.fileUrl;
+      const previewType = upload.dataset.previewType;
+      if (fileUrl) {
+        if (previewType === 'image') {
+          openImageModal(fileUrl);
+        } else {
+          try {
+            window.open(fileUrl, '_blank', 'noopener');
+          } catch (_) {}
+        }
+        return;
+      }
+      fileInput.click();
     });
+
     fileInput.addEventListener('change', () => {
       if(fileInput.files && fileInput.files[0]){
-        const url = URL.createObjectURL(fileInput.files[0]);
-        upload.innerHTML = `<img src="${url}">`;
-        upload.appendChild(removeBtn);
-        removeBtn.style.display = 'flex';
+        const file = fileInput.files[0];
+        const isImage = file.type && file.type.startsWith('image/');
+        const objectUrl = URL.createObjectURL(file);
+        if(isImage){
+          upload.innerHTML = `<img src="${objectUrl}" alt="Attachment preview">`;
+          upload.dataset.previewType = 'image';
+        } else {
+          const safeName = escapeHtml(file.name || 'Attachment');
+          upload.innerHTML = `<div class="attach-file"><span class="attach-file-name">${safeName}</span><span class="attach-text">Click to download</span></div>`;
+          upload.dataset.previewType = 'file';
+        }
+        upload.dataset.fileUrl = objectUrl;
+        ensureRemovePlacement();
+        toggleRemoveVisibility(true);
+        if (deleteToggle) deleteToggle.checked = false;
+        if (window.ReportAutosaveManager) {
+          ReportAutosaveManager.reinitialize();
+        }
+      } else if (!upload.dataset.fileUrl) {
+        setPlaceholder(upload);
+        toggleRemoveVisibility(false);
       }
     });
+
     removeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       fileInput.value = '';
-      upload.innerHTML = '<span class="attach-add">+</span>';
-      removeBtn.style.display = 'none';
-      const del = block.querySelector('input[name$="-DELETE"]');
-      if(del) del.checked = true;
+      if (deleteToggle) deleteToggle.checked = true;
+      setPlaceholder(upload);
+      toggleRemoveVisibility(false);
       if (window.ReportAutosaveManager) {
         ReportAutosaveManager.reinitialize();
       }
     });
+
+    if (upload.dataset.fileUrl) {
+      ensureRemovePlacement();
+      toggleRemoveVisibility(true);
+    } else {
+      if (!upload.innerHTML.trim()) {
+        setPlaceholder(upload);
+      }
+      toggleRemoveVisibility(false);
+    }
   }
 
   list.querySelectorAll('.attachment-block').forEach(bind);
 
   addBtn.addEventListener('click', () => {
-    const idx = +totalInput.value;
+    const idx = parseInt(totalInput.value, 10) || 0;
     const html = template.innerHTML.replace(/__prefix__/g, idx);
     const temp = document.createElement('div');
     temp.innerHTML = html.trim();
     const block = temp.firstElementChild;
+    if(!block) return;
     list.appendChild(block);
-    totalInput.value = idx + 1;
+    totalInput.value = String(idx + 1);
     bind(block);
     if (window.ReportAutosaveManager) {
       ReportAutosaveManager.reinitialize();
     }
-    block.querySelector('.file-input').click();
+    const input = block.querySelector('.file-input');
+    if (input) input.click();
   });
 }
 
