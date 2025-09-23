@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% load static dict_filters %}
+
+{% block title %}Review Event Report{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{% static 'emt/css/styles.css' %}">
+<link rel="stylesheet" href="{% static 'emt/css/report_preview.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="preview-layout">
+    <main class="proposal-content">
+        <div class="content-header" style="margin-bottom:.5rem;">
+            <h1 class="content-title" id="page-title">{{ proposal.event_title|default:"Event Report" }}</h1>
+            <p class="content-subtitle">Please verify the information below.</p>
+            <div class="meta-chips">
+                {% if proposal.organization %}
+                    <span class="chip">{{ proposal.organization.name }}</span>
+                {% endif %}
+                {% if proposal.event_start_date %}
+                    <span class="chip">Start: {{ proposal.event_start_date }}</span>
+                {% endif %}
+                {% if proposal.event_end_date %}
+                    <span class="chip">End: {{ proposal.event_end_date }}</span>
+                {% endif %}
+                {% if proposal.venue %}
+                    <span class="chip">Venue: {{ proposal.venue }}</span>
+                {% endif %}
+            </div>
+            <div class="top-toolbar">
+                <nav class="pill-nav">
+                    <a href="#section-overview">Overview</a>
+                    <a href="#section-proposal">Proposal Details</a>
+                    <a href="#section-report">Report Details</a>
+                </nav>
+                <div class="toolbar">
+                    <button type="button" class="btn-ghost" id="btn-expand">Expand all</button>
+                    <button type="button" class="btn-ghost" id="btn-collapse">Collapse all</button>
+                </div>
+            </div>
+        </div>
+
+        <form method="post" action="{% url 'emt:submit_event_report' proposal.id %}">
+            {% csrf_token %}
+            {% for key, value in post_data.items %}
+                <input type="hidden" name="{{ key }}" value="{{ value|escape }}">
+            {% endfor %}
+            {# Ensure attachment formset management fields exist (even if there are no attachments) #}
+            <input type="hidden" name="form-TOTAL_FORMS" value="{{ post_data|get_item:'form-TOTAL_FORMS'|default:'0' }}">
+            <input type="hidden" name="form-INITIAL_FORMS" value="{{ post_data|get_item:'form-INITIAL_FORMS'|default:'0' }}">
+            <input type="hidden" name="form-MIN_NUM_FORMS" value="{{ post_data|get_item:'form-MIN_NUM_FORMS'|default:'0' }}">
+            <input type="hidden" name="form-MAX_NUM_FORMS" value="{{ post_data|get_item:'form-MAX_NUM_FORMS'|default:'1000' }}">
+
+            <!-- Overview (concise key info) -->
+            <section id="section-overview" class="section-card" aria-labelledby="sec-overview-title">
+                <div class="section-header">
+                    <div class="section-title" id="sec-overview-title">Overview</div>
+                </div>
+                <div class="grid-two">
+                    <div class="field-row">
+                        <div class="field-label">Title</div>
+                        <div class="field-value">{{ proposal.event_title|default:"—" }}</div>
+                    </div>
+                    <div class="field-row">
+                        <div class="field-label">Organization</div>
+                        <div class="field-value">{{ proposal.organization.name|default:"—" }}</div>
+                    </div>
+                    <div class="field-row">
+                        <div class="field-label">Dates</div>
+                        <div class="field-value">
+                            {% if proposal.event_start_date or proposal.event_end_date %}
+                                {{ proposal.event_start_date|default:"?" }} – {{ proposal.event_end_date|default:"?" }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="field-row">
+                        <div class="field-label">Venue</div>
+                        <div class="field-value">{{ proposal.venue|default:"—" }}</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Proposal Details -->
+            <section id="section-proposal" class="section-card" aria-labelledby="sec-proposal-title" data-collapsible>
+                <div class="section-header">
+                    <div class="section-title" id="sec-proposal-title">Proposal Details</div>
+                    <div class="toolbar">
+                        <button type="button" class="btn-ghost" data-toggle>Toggle</button>
+                    </div>
+                </div>
+                <div class="divider"></div>
+                <div class="preview-fields">
+                    {% for label, value in proposal_fields %}
+                        <div class="field-row">
+                            <div class="field-label">{{ label }}</div>
+                            <div class="field-value{% if not value %} muted{% endif %}">{{ value|default:"Not provided" }}</div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <!-- Report Details -->
+            <section id="section-report" class="section-card" aria-labelledby="sec-report-title" data-collapsible>
+                <div class="section-header">
+                    <div class="section-title" id="sec-report-title">Report Details</div>
+                    <div class="toolbar">
+                        <button type="button" class="btn-ghost" data-toggle>Toggle</button>
+                    </div>
+                </div>
+                <div class="divider"></div>
+                <div class="preview-fields">
+                    {% for label, value in report_fields %}
+                        <div class="field-row">
+                            <div class="field-label">{{ label }}</div>
+                            <div class="field-value{% if not value %} muted{% endif %}">{{ value|default:"Not provided" }}</div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <div class="sticky-actions">
+                <div class="actions-bar">
+                    <button type="button" class="btn-secondary" id="btn-back">Back to Edit</button>
+                    <button type="submit" name="final_submit" class="btn-primary">Submit Report</button>
+                </div>
+            </div>
+        </form>
+        </main>
+    </div>
+
+<script>
+        (function(){
+            // Smooth scroll for top pill links
+            document.querySelectorAll('.pill-nav a').forEach(a => {
+            a.addEventListener('click', (e) => {
+                const href = a.getAttribute('href');
+                if (href && href.startsWith('#')) {
+                    e.preventDefault();
+                    const el = document.querySelector(href);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // Collapsible sections
+        function setCollapsed(section, collapsed){
+            const fields = section.querySelector('.preview-fields');
+            if (!fields) return;
+            fields.style.display = collapsed ? 'none' : '';
+        }
+        document.querySelectorAll('[data-collapsible]').forEach(sec => {
+            const btn = sec.querySelector('[data-toggle]');
+            if (btn) btn.addEventListener('click', () => {
+                const fields = sec.querySelector('.preview-fields');
+                const isHidden = fields && fields.style.display === 'none';
+                setCollapsed(sec, !isHidden);
+            });
+        });
+        const all = Array.from(document.querySelectorAll('[data-collapsible]'));
+        document.getElementById('btn-expand')?.addEventListener('click', () => all.forEach(s => setCollapsed(s, false)));
+        document.getElementById('btn-collapse')?.addEventListener('click', () => all.forEach(s => setCollapsed(s, true)));
+
+        // Back button
+        document.getElementById('btn-back')?.addEventListener('click', () => { history.back(); });
+    })();
+</script>
+{% endblock %}
