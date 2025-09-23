@@ -100,6 +100,34 @@
     margin: 0;
   }
 
+  .submit-report-actions {
+    width: 210mm;
+    display: flex;
+    justify-content: flex-end;
+    margin: 12px 0 32px;
+  }
+
+  .submit-report-actions form {
+    margin: 0;
+  }
+
+  .submit-report-actions .submit-report-button {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 12pt;
+    padding: 6px 20px;
+    border: 0.6pt solid #2c5aa0;
+    background: #2c5aa0;
+    color: #fff;
+    cursor: pointer;
+  }
+
+  .submit-report-actions .submit-report-button:hover,
+  .submit-report-actions .submit-report-button:focus {
+    background: #244a82;
+    border-color: #244a82;
+    color: #fff;
+  }
+
   main#report,
   .paper {
     width: 210mm;
@@ -813,6 +841,13 @@
     <div>CHRIST (Deemed to be University), Pune Lavasa Campus – 30 Valor Court, Pune 412112, Maharashtra</div>
     <div class="page-count"></div>
   </footer>
+
+  <div class="submit-report-actions">
+    <form method="post" action="{% url 'emt:ai_report_submit' proposal.id %}">
+      {% csrf_token %}
+      <button type="submit" class="submit-report-button">Submit Report</button>
+    </form>
+  </div>
 </div>
 
 <script type="application/json" id="initial-report-data">{{ initial_report_data|default:"{}"|safe }}</script>
