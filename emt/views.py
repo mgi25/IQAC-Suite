@@ -2981,7 +2981,13 @@ def preview_event_report(request, proposal_id):
     annexure_photos = []
     if report:
         for attachment in report.attachments.all():
-            file_url = getattr(attachment.file, "url", "")
+            file_field = getattr(attachment, "file", None)
+            if not file_field:
+                continue
+            try:
+                file_url = file_field.url
+            except ValueError:
+                continue
             if not file_url:
                 continue
             lower_url = file_url.lower()
