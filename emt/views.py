@@ -2321,6 +2321,14 @@ def preview_event_report(request, proposal_id):
         return redirect("emt:submit_event_report", proposal_id=proposal.id)
 
     post_data = request.POST.copy()
+    show_iqac_flag = str(post_data.get("show_iqac", "")).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    if "show_iqac" in post_data:
+        post_data.pop("show_iqac")
     report = EventReport.objects.filter(proposal=proposal).first()
 
     def _coerce_date(value):
@@ -3066,8 +3074,14 @@ def preview_event_report(request, proposal_id):
         "form_is_valid": form_is_valid,
         "initial_report_data": json.dumps(initial_data, ensure_ascii=False),
         "ai_report_url": reverse("emt:ai_generate_report", args=[proposal.id]),
+        "show_iqac": show_iqac_flag,
     }
-    return render(request, "emt/iqac_report_preview.html", context)
+    template_name = (
+        "emt/iqac_report_preview.html"
+        if show_iqac_flag
+        else "emt/report_preview.html"
+    )
+    return render(request, template_name, context)
 
 
 @login_required
