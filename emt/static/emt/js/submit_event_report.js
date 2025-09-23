@@ -25,6 +25,34 @@ function fetchWithOverlay(url, options = {}, text = 'Loading...') {
 }
 
 document.addEventListener('DOMContentLoaded', function(){
+        const reportFormElement = document.getElementById('report-form');
+    const iqacContinueButton = document.querySelector('[data-preview-continue="iqac"]');
+    if (!reportFormElement) {
+        if (iqacContinueButton) {
+            const previewForm = iqacContinueButton.closest('form');
+            const previewAction =
+                iqacContinueButton.getAttribute('data-preview-action') ||
+                iqacContinueButton.getAttribute('formaction');
+            iqacContinueButton.addEventListener('click', (event) => {
+                event.preventDefault();
+                if (!previewForm) return;
+                let flagField = previewForm.querySelector('input[name="show_iqac"]');
+                if (!flagField) {
+                    flagField = document.createElement('input');
+                    flagField.type = 'hidden';
+                    flagField.name = 'show_iqac';
+                    previewForm.appendChild(flagField);
+                }
+                flagField.value = '1';
+                if (previewAction) {
+                    previewForm.setAttribute('action', previewAction);
+                }
+                showLoadingOverlay('Preparing IQAC preview...');
+                previewForm.submit();
+            });
+        }
+        return;
+    }
         // Central init (single DOMContentLoaded listener)
         const sectionState = {}; // fieldName -> value snapshot
     const urlParams = new URLSearchParams(window.location.search || '');

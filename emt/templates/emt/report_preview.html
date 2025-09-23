@@ -124,6 +124,14 @@
             <div class="sticky-actions">
                 <div class="actions-bar">
                     <button type="button" class="btn-secondary" id="btn-back">Back to Edit</button>
+                    <button
+                        type="button"
+                        class="btn-primary"
+                        data-preview-continue="iqac"
+                        data-preview-action="{% url 'emt:preview_event_report' proposal.id %}"
+                    >
+                        Continue to IQAC Preview
+                    </button>
                     <button type="submit" name="final_submit" class="btn-primary">Submit Report</button>
                 </div>
             </div>
@@ -131,6 +139,7 @@
         </main>
     </div>
 
+<script src="{% static 'emt/js/submit_event_report.js' %}"></script>
 <script>
         (function(){
             // Smooth scroll for top pill links
