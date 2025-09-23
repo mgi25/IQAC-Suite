@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', function(){
                 if (previewAction) {
                     previewForm.setAttribute('action', previewAction);
                 }
-                showLoadingOverlay('Preparing IQAC preview...');
+                showLoadingOverlay('Generating report...');
                 previewForm.submit();
             });
         }
