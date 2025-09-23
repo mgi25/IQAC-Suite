@@ -44,6 +44,22 @@ class SubmitEventReportViewTests(TestCase):
             date=date(2024, 1, 1),
         )
 
+    def _build_valid_report_post_data(self, extra=None):
+        data = {
+            "actual_event_type": "Seminar",
+            "report_signed_date": "2024-01-10",
+            "num_activities": "1",
+            "activity_name_1": "Session 1",
+            "activity_date_1": "2024-01-02",
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+        if extra:
+            data.update(extra)
+        return data
+
     def test_activities_prefilled_in_report_form(self):
         response = self.client.get(
             reverse("emt:submit_event_report", args=[self.proposal.id])
@@ -68,27 +84,39 @@ class SubmitEventReportViewTests(TestCase):
 
     def test_can_update_activities_via_report_submission(self):
         url = reverse("emt:submit_event_report", args=[self.proposal.id])
-        data = {
-            "actual_event_type": "Seminar",
-            "report_signed_date": "2024-01-10",
-            "num_activities": "2",
-            "activity_name_1": "Session 1",
-            "activity_date_1": "2024-01-02",
-            "activity_name_2": "Session 2",
-            "activity_date_2": "2024-01-03",
-            "form-TOTAL_FORMS": "0",
-            "form-INITIAL_FORMS": "0",
-            "form-MIN_NUM_FORMS": "0",
-            "form-MAX_NUM_FORMS": "1000",
-        }
+        data = self._build_valid_report_post_data(
+            {
+                "num_activities": "2",
+                "activity_name_2": "Session 2",
+                "activity_date_2": "2024-01-03",
+            }
+        )
         response = self.client.post(url, data)
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "emt/report_preview.html")
+        self.assertNotContains(response, 'id="generate-ai-report"', html=False)
         activities = list(
             EventActivity.objects.filter(proposal=self.proposal).order_by("date")
         )
         self.assertEqual(len(activities), 2)
         self.assertEqual(activities[0].name, "Session 1")
         self.assertEqual(activities[1].name, "Session 2")
+
+    def test_submit_event_report_without_generate_ai_renders_preview(self):
+        url = reverse("emt:submit_event_report", args=[self.proposal.id])
+        response = self.client.post(url, self._build_valid_report_post_data())
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "emt/report_preview.html")
+        self.assertNotContains(response, 'id="generate-ai-report"', html=False)
+        self.assertContains(response, 'data-preview-continue="iqac"', html=False)
+
+    def test_submit_event_report_with_generate_ai_redirects_to_progress(self):
+        url = reverse("emt:submit_event_report", args=[self.proposal.id])
+        data = self._build_valid_report_post_data({"generate_ai": "1"})
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 302)
+        progress_url = reverse("emt:ai_report_progress", args=[self.proposal.id])
+        self.assertEqual(response["Location"], progress_url)
 
     def test_attendance_counts_displayed(self):
         report = EventReport.objects.create(proposal=self.proposal)
@@ -272,6 +300,22 @@ console.log(JSON.stringify({
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Seminar")
 
+    def test_preview_event_report_with_show_iqac_flag(self):
+        url = reverse("emt:preview_event_report", args=[self.proposal.id])
+        data = {
+            "actual_event_type": "Seminar",
+            "report_signed_date": "2024-01-10",
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+            "show_iqac": "1",
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "emt/iqac_report_preview.html")
+        self.assertNotIn("show_iqac", response.context["post_data"])
+
     def test_preview_renders_multiple_sections_data(self):
         url = reverse("emt:preview_event_report", args=[self.proposal.id])
         data = {
@@ -311,6 +355,27 @@ console.log(JSON.stringify({
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Frontend summary")
         self.assertContains(response, "Frontend outcomes")
+
+    def test_preview_includes_generate_report_link(self):
+        url = reverse("emt:preview_event_report", args=[self.proposal.id])
+        data = {
+            "actual_event_type": "Seminar",
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+            "show_iqac": "1",
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "emt/iqac_report_preview.html")
+        ai_url = reverse("emt:ai_generate_report", args=[self.proposal.id])
+        self.assertEqual(response.context["ai_report_url"], ai_url)
+        self.assertContains(response, 'id="generate-ai-report"', html=False)
+        submit_url = reverse("emt:submit_event_report", args=[self.proposal.id])
+        self.assertContains(response, 'id="generate-ai-form"', html=False)
+        self.assertContains(response, f'action="{submit_url}"', html=False)
+        self.assertContains(response, 'name="generate_ai"', html=False)
 
     def test_preview_preserves_checked_and_unchecked_fields(self):
         url = reverse("emt:preview_event_report", args=[self.proposal.id])

@@ -50,7 +50,8 @@
     background: #f0f0f0;
   }
 
-  .controls button {
+  .controls button,
+  .controls .control-button {
     font-family: "Times New Roman", Times, serif;
     font-size: 12pt;
     padding: 4px 16px;
@@ -59,9 +60,72 @@
     cursor: pointer;
   }
 
-  .controls button:focus {
+  .controls .control-button {
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    line-height: 1.2;
+    color: #000;
+  }
+
+  .controls .control-button.primary {
+    background: #2c5aa0;
+    border-color: #2c5aa0;
+    color: #fff;
+  }
+
+  .controls .control-button.primary:hover {
+    background: #244a82;
+    border-color: #244a82;
+    color: #fff;
+  }
+
+  .controls .control-button[aria-disabled="true"] {
+    background: #bfc7d3;
+    border-color: #bfc7d3;
+    color: #f5f5f5;
+    cursor: not-allowed;
+  }
+
+  .controls button:focus,
+  .controls .control-button:focus {
     outline: 1pt dotted #000;
     outline-offset: 2px;
+  }
+
+  .generate-ai-form {
+    display: inline;
+    margin: 0;
+  }
+
+  .submit-report-actions {
+    width: 210mm;
+    display: flex;
+    justify-content: flex-end;
+    margin: 12px 0 32px;
+  }
+
+  .submit-report-actions form {
+    margin: 0;
+  }
+
+  .submit-report-actions .submit-report-button {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 12pt;
+    padding: 6px 20px;
+    border: 0.6pt solid #2c5aa0;
+    background: #2c5aa0;
+    color: #fff;
+    cursor: pointer;
+  }
+
+  .submit-report-actions .submit-report-button:hover,
+  .submit-report-actions .submit-report-button:focus {
+    background: #244a82;
+    border-color: #244a82;
+    color: #fff;
   }
 
   main#report,
@@ -474,6 +538,18 @@
   <div class="control-row">
     <span class="status-pill" id="status-pill">Preparing content…</span>
     <div class="controls">
+      <form id="generate-ai-form" class="generate-ai-form" method="post" action="{% url 'emt:submit_event_report' proposal.id %}">
+        {% csrf_token %}
+        {% for key, values in post_data_items %}
+          {% if key != 'csrfmiddlewaretoken' and key != 'generate_ai' %}
+            {% for value in values %}
+              <input type="hidden" name="{{ key }}" value="{{ value }}">
+            {% endfor %}
+          {% endif %}
+        {% endfor %}
+        <input type="hidden" name="generate_ai" value="1">
+        <button type="submit" class="control-button primary" id="generate-ai-report"{% if not form_is_valid %} aria-disabled="true" data-disabled="true" title="Resolve required fields before generating the AI report."{% endif %}>Generate Report</button>
+      </form>
       <button type="button" id="edit-toggle" data-mode="preview">Edit</button>
       <button type="button" id="print-btn">Print / Save PDF</button>
     </div>
@@ -765,6 +841,13 @@
     <div>CHRIST (Deemed to be University), Pune Lavasa Campus – 30 Valor Court, Pune 412112, Maharashtra</div>
     <div class="page-count"></div>
   </footer>
+
+  <div class="submit-report-actions">
+    <form method="post" action="{% url 'emt:ai_report_submit' proposal.id %}">
+      {% csrf_token %}
+      <button type="submit" class="submit-report-button">Submit Report</button>
+    </form>
+  </div>
 </div>
 
 <script type="application/json" id="initial-report-data">{{ initial_report_data|default:"{}"|safe }}</script>
@@ -1299,6 +1382,20 @@
     document.addEventListener('DOMContentLoaded', function () {
       document.body.classList.add('iqac-report-preview');
       init();
+
+      const generateBtn = document.getElementById('generate-ai-report');
+      if (generateBtn && generateBtn.dataset.disabled === 'true') {
+        generateBtn.setAttribute('tabindex', '-1');
+        generateBtn.addEventListener('click', function (event) {
+          event.preventDefault();
+          window.alert('Please complete the required sections in the event report before generating the AI report.');
+        });
+        if (generateBtn.form) {
+          generateBtn.form.addEventListener('submit', function (event) {
+            event.preventDefault();
+          });
+        }
+      }
     });
   })();
 </script>

@@ -29,6 +29,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.utils.formats import date_format
 from django.utils.timezone import now
+from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods, require_POST
 
@@ -2081,6 +2082,12 @@ def submit_event_report(request, proposal_id):
     draft = drafts.get(str(proposal_id), {})
 
     if request.method == "POST":
+        trigger_ai = str(request.POST.get("generate_ai", "")).lower() in {
+            "1",
+            "true",
+            "on",
+            "yes",
+        }
         drafts[str(proposal_id)] = {
             key: (
                 request.POST.getlist(key)
@@ -2088,6 +2095,7 @@ def submit_event_report(request, proposal_id):
                 else request.POST.get(key)
             )
             for key in request.POST.keys()
+            if key != "generate_ai"
         }
         request.session.modified = True
 
@@ -2126,10 +2134,18 @@ def submit_event_report(request, proposal_id):
             drafts.pop(str(proposal_id), None)
             request.session.modified = True
 
+            if trigger_ai:
+                messages.success(
+                    request,
+                    "Report submitted successfully! Starting AI generation...",
+                )
+                return redirect("emt:ai_report_progress", proposal_id=proposal.id)
+
             messages.success(
-                request, "Report submitted successfully! Starting AI generation..."
+                request,
+                "Report saved successfully. Review the preview before generating the AI report.",
             )
-            return redirect("emt:ai_report_progress", proposal_id=proposal.id)
+            return preview_event_report(request, proposal.id)
     else:
         form = EventReportForm(initial=draft, instance=report)
         attachments_qs = (
@@ -2305,6 +2321,14 @@ def preview_event_report(request, proposal_id):
         return redirect("emt:submit_event_report", proposal_id=proposal.id)
 
     post_data = request.POST.copy()
+    show_iqac_flag = str(post_data.get("show_iqac", "")).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    if "show_iqac" in post_data:
+        post_data.pop("show_iqac")
     report = EventReport.objects.filter(proposal=proposal).first()
 
     def _coerce_date(value):
@@ -3037,15 +3061,27 @@ def preview_event_report(request, proposal_id):
         },
     }
 
+    post_data_items = list(post_data.lists())
+
     context = {
         "proposal": proposal,
+        "report": report,
         "post_data": post_data,
+        "post_data_items": post_data_items,
         "proposal_fields": proposal_fields,
         "report_fields": report_fields,
         "form": form,
+        "form_is_valid": form_is_valid,
         "initial_report_data": json.dumps(initial_data, ensure_ascii=False),
+        "ai_report_url": reverse("emt:ai_generate_report", args=[proposal.id]),
+        "show_iqac": show_iqac_flag,
     }
-    return render(request, "emt/iqac_report_preview.html", context)
+    template_name = (
+        "emt/iqac_report_preview.html"
+        if show_iqac_flag
+        else "emt/report_preview.html"
+    )
+    return render(request, template_name, context)
 
 
 @login_required
