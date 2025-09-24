@@ -62,8 +62,17 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a href="#" class="nav-link disabled" data-section="attachments" data-order="6">
+                <a href="#" class="nav-link disabled" data-section="event-relevance" data-order="6">
                     <span class="nav-number">6</span>
+                    <div class="nav-content">
+                        <div class="nav-item-title">Relevance of the Event</div>
+                        <div class="nav-item-subtitle">POs, PSOs, graduate attributes, SDGs</div>
+                    </div>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link disabled" data-section="attachments" data-order="7">
+                    <span class="nav-number">7</span>
                     <div class="nav-content">
                         <div class="nav-item-title">Attachments &amp; Evidence</div>
                         <div class="nav-item-subtitle">Upload photos, certificates, supporting files</div>
@@ -295,72 +304,62 @@
             </div>
 
             <template id="attachments-section-template">
-                <section class="evidence-section" aria-labelledby="attachments-heading">
-                    <header class="evidence-header">
-                        <h2 id="attachments-heading" class="evidence-title">ATTACHMENTS &amp; EVIDENCE</h2>
-                        <p class="evidence-intro">Upload photos, certificates, reports, or any other evidence that documents the event.</p>
-                    </header>
+                <div class="form-section-header">
+                    <h3>Supporting Attachments</h3>
+                    <p class="section-subtitle">Share photos, certificates, reports, or any other evidence that documents the event.</p>
+                </div>
 
-                    <div class="evidence-guidance">
-                        <h3 class="guidance-title">Helpful guidance</h3>
-                        <ul class="guidance-list">
-                            <li>Upload high-quality images (JPG, PNG) up to 10&nbsp;MB each.</li>
-                            <li>Add as many files as needed &mdash; photos, reports, certificates, brochures.</li>
-                            <li>Use the caption field to briefly describe each attachment.</li>
+                <div class="form-row full-width">
+                    <div class="attachment-guidelines">
+                        <h4>Helpful guidance</h4>
+                        <ul>
+                            <li>Upload high-quality images that clearly capture the highlights of your event.</li>
+                            <li>Include certificates, reports, brochures, or press coverage as supporting documents.</li>
+                            <li>Use the caption field to briefly describe what each attachment represents.</li>
                         </ul>
                     </div>
+                </div>
 
-                    {% if formset.non_form_errors %}
-                        <div class="form-row full-width">
-                            <div class="field-error">
-                                {% for error in formset.non_form_errors %}
-                                    {{ error }}{% if not forloop.last %}<br>{% endif %}
-                                {% endfor %}
-                            </div>
+                {% if formset.non_form_errors %}
+                    <div class="form-row full-width">
+                        <div class="field-error">
+                            {% for error in formset.non_form_errors %}
+                                {{ error }}<br>
+                            {% endfor %}
                         </div>
-                    {% endif %}
-
-                    <div class="visually-hidden">
-                        {{ formset.management_form }}
                     </div>
+                {% endif %}
 
-                    <div class="evidence-dropzone" data-dropzone>
-                        <div class="dropzone-inner">
-                            <div class="dropzone-icon">+</div>
-                            <div class="dropzone-text">
-                                <strong>Drag &amp; drop files here</strong>
-                                <span>or</span>
-                                <button type="button" class="dropzone-browse" data-dropzone-browse>Browse files</button>
-                                <p class="dropzone-hint">Accepted formats: JPG, PNG, PDF &mdash; up to 10&nbsp;MB per file.</p>
-                            </div>
-                        </div>
-                        <input type="file" id="bulk-attachment-input" class="visually-hidden" data-dropzone-input accept=".jpg,.jpeg,.png,.webp,.pdf" multiple>
-                    </div>
+                <div class="visually-hidden">
+                    {{ formset.management_form }}
+                </div>
 
-                    <div class="evidence-list" id="attachment-list" data-attachment-list>
-                        {% for form in formset.forms %}
-                            {% include 'emt/partials/attachment_block.html' %}
-                        {% empty %}
-                            <div class="evidence-empty" data-empty-state>No attachments added yet.</div>
-                        {% endfor %}
-                    </div>
+                <div id="attachment-list" class="attachment-grid">
+                    {% for form in formset.forms %}
+                        {% include 'emt/partials/attachment_block.html' %}
+                    {% empty %}
+                        <div class="attachment-empty">No attachment slots available.</div>
+                    {% endfor %}
+                </div>
 
-                    <div class="evidence-actions">
-                        <button type="button" class="evidence-add" id="add-attachment-btn" data-add-attachment>
-                            <span aria-hidden="true">+</span>
-                            <span>Add another attachment</span>
-                        </button>
-                        <span class="evidence-save-status" id="attachments-save-status" aria-live="polite"></span>
-                    </div>
+                <div class="attachment-actions">
+                    <button type="button" id="add-attachment-btn" class="btn-draft-section">
+                        <span class="btn-icon">+</span>
+                        Add another attachment
+                    </button>
+                    <p class="attachment-hint">Accepted formats: JPG, PNG, PDF (up to 10&nbsp;MB per file).</p>
+                </div>
 
-                    <template id="attachment-template">
-                        {% include 'emt/partials/attachment_block.html' with form=formset.empty_form %}
-                    </template>
+                <template id="attachment-template">
+                    {% include 'emt/partials/attachment_block.html' with form=formset.empty_form %}
+                </template>
 
-                    <div class="evidence-footer">
+                <div class="form-row full-width">
+                    <div class="save-section-container">
                         <button type="button" class="btn-save-section">Save &amp; Continue</button>
+                        <div class="save-help-text">Attachments are saved when you continue to the preview page.</div>
                     </div>
-                </section>
+                </div>
             </template>
 
             <div style="display: none;" id="django-forms">

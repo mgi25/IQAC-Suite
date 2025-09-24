@@ -1,54 +1,26 @@
 {% load static %}
-{% with prefix=form.prefix %}
-<div class="evidence-item" data-form-prefix="{{ prefix }}" draggable="true">
-    {% for hidden in form.hidden_fields %}
-        {{ hidden }}
-    {% endfor %}
-    <div class="evidence-card" data-attachment-card>
-        <div class="evidence-card-header">
-            <button type="button" class="evidence-handle" data-drag-handle aria-label="Reorder attachment">
-                <span aria-hidden="true">&#x2630;</span>
-            </button>
-            <button type="button" class="evidence-remove" title="Delete attachment">
-                <span aria-hidden="true">&times;</span>
-                <span class="visually-hidden">Delete attachment</span>
-            </button>
-        </div>
-        <div class="evidence-upload" data-upload
-            {% if form.instance.file %}
-                data-file-url="{{ form.instance.file.url }}"
-                data-file-name="{{ form.instance.file.name|default:'Attachment' }}"
-            {% endif %}>
-            <div class="upload-preview" data-preview>
-                <div class="preview-placeholder" data-placeholder>
-                    <span class="placeholder-icon">+</span>
-                    <span class="placeholder-text">Add file</span>
-                </div>
-                <div class="preview-file" data-file-preview hidden>
-                    <div class="preview-thumb" data-thumb></div>
-                    <div class="preview-details">
-                        <span class="preview-name" data-filename></span>
-                        <span class="preview-meta" data-filemeta></span>
-                    </div>
-                </div>
-            </div>
-            <button type="button" class="preview-browse" data-select-file>Browse file</button>
-            {{ form.file }}
-        </div>
-        <div class="evidence-meta-row">
-            <label for="{{ form.category.id_for_label }}" class="evidence-label">Attachment Type</label>
-            {{ form.category }}
-        </div>
-        <div class="evidence-meta-row">
-            <label for="{{ form.caption.id_for_label }}" class="evidence-label">Caption (optional)</label>
-            {{ form.caption }}
-            <div class="caption-counter" data-caption-counter>0/150</div>
-        </div>
-        {{ form.order_index }}
-        <div class="evidence-error" data-error></div>
-        <div class="visually-hidden">
-            {{ form.DELETE }}
-        </div>
-    </div>
-</div>
+{% with file_field=form.instance.file %}
+    {% if file_field %}
+        {% with file_url=file_field.url %}
+            {% with file_name=file_field.name|default:file_url %}
+                {% with lower_name=file_name|lower %}
+                    {% if lower_name|slice:"-4:" == '.png' or lower_name|slice:"-4:" == '.jpg' or lower_name|slice:"-5:" == '.jpeg' or lower_name|slice:"-4:" == '.gif' or lower_name|slice:"-5:" == '.webp' %}
+                        {% with preview_type='image' %}
+                            {% include 'emt/partials/attachment_block_inner.html' %}
+                        {% endwith %}
+                    {% else %}
+                        {% with preview_type='file' %}
+                            {% include 'emt/partials/attachment_block_inner.html' %}
+                        {% endwith %}
+                    {% endif %}
+                {% endwith %}
+            {% endwith %}
+        {% endwith %}
+    {% else %}
+        {% with file_url='' file_name='' lower_name='' %}
+            {% with preview_type='file' %}
+                {% include 'emt/partials/attachment_block_inner.html' %}
+            {% endwith %}
+        {% endwith %}
+    {% endif %}
 {% endwith %}

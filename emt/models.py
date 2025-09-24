@@ -643,28 +643,11 @@ class EventReport(models.Model):
 class EventReportAttachment(models.Model):
     """An attachment (e.g., image, PDF) for an event report."""
 
-    class AttachmentCategory(models.TextChoices):
-        PHOTO = "photo", "Photograph"
-        BROCHURE = "brochure", "Brochure"
-        COMMUNICATION = "communication", "Communication"
-        WORKSHEET = "worksheet", "Worksheet / Activity"
-        EVALUATION = "evaluation", "Evaluation Sheet"
-        FEEDBACK = "feedback", "Feedback Form"
-
     report = models.ForeignKey(
         EventReport, on_delete=models.CASCADE, related_name="attachments"
     )
     file = models.FileField(upload_to="report_attachments/")
     caption = models.CharField(max_length=255, blank=True)
-    category = models.CharField(
-        max_length=32,
-        choices=AttachmentCategory.choices,
-        default=AttachmentCategory.PHOTO,
-    )
-    order_index = models.PositiveIntegerField(default=0)
-
-    class Meta:
-        ordering = ["order_index", "id"]
 
     def __str__(self):
         return f"Attachment for {self.report.proposal.event_title}"
