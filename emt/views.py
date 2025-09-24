@@ -2075,7 +2075,10 @@ def submit_event_report(request, proposal_id):
 
     report = EventReport.objects.filter(proposal=proposal).first()
     AttachmentFormSet = modelformset_factory(
-        EventReportAttachment, form=EventReportAttachmentForm, extra=2, can_delete=True
+        EventReportAttachment,
+        form=EventReportAttachmentForm,
+        extra=0,
+        can_delete=True,
     )
 
     drafts = request.session.setdefault("event_report_draft", {})
@@ -2108,7 +2111,9 @@ def submit_event_report(request, proposal_id):
 
         form = EventReportForm(post_data, instance=report)
         attachments_qs = (
-            report.attachments.all() if report else EventReportAttachment.objects.none()
+            report.attachments.order_by("category", "order_index", "id")
+            if report
+            else EventReportAttachment.objects.none()
         )
         formset = AttachmentFormSet(post_data, request.FILES, queryset=attachments_qs)
         if (
@@ -2124,12 +2129,99 @@ def submit_event_report(request, proposal_id):
             # Sync proposal snapshot fields based on final report edits
             _sync_proposal_from_report(proposal, report, post_data)
 
-            instances = formset.save(commit=False)
-            for obj in instances:
-                obj.report = report
-                obj.save()
+            for attachment_form in formset.forms:
+                if not hasattr(attachment_form, "cleaned_data"):
+                    continue
+                cleaned = attachment_form.cleaned_data
+                if not cleaned:
+                    continue
+                if cleaned.get("DELETE"):
+                    continue
+                asset = attachment_form.save(commit=False)
+                asset.report = report
+                category_value = cleaned.get("category") or EventReportAttachment.Category.PHOTOGRAPH
+                order_value = cleaned.get("order_index")
+                try:
+                    order_int = int(order_value)
+                except (TypeError, ValueError):
+                    order_int = 0
+                requires_flag = cleaned.get("requires_extraction")
+                if isinstance(requires_flag, str):
+                    requires_flag = requires_flag.lower() in {"true", "1", "yes"}
+                if requires_flag not in (True, False):
+                    file_field = cleaned.get("file") or asset.file
+                    filename = getattr(file_field, "name", "")
+                    requires_flag = bool(filename and filename.lower().endswith(".pdf"))
+                asset.category = category_value
+                asset.order_index = order_int
+                asset.requires_extraction = bool(requires_flag)
+                asset.save()
+
             for obj in formset.deleted_objects:
                 obj.delete()
+
+            # Normalize order indices within each category
+            categorized = {}
+            for asset in report.attachments.order_by("category", "order_index", "id"):
+                categorized.setdefault(asset.category, []).append(asset)
+            for assets in categorized.values():
+                for index, asset in enumerate(assets):
+                    if asset.order_index != index:
+                        EventReportAttachment.objects.filter(pk=asset.pk).update(
+                            order_index=index
+                        )
+
+            # Update generated payload with annexure mapping
+            refreshed_assets = list(
+                report.attachments.order_by("category", "order_index", "id")
+            )
+
+            def _asset_payload(asset):
+                file_url = ""
+                file_field = getattr(asset, "file", None)
+                if file_field:
+                    try:
+                        file_url = file_field.url
+                    except ValueError:
+                        file_url = ""
+                return {
+                    "id": asset.id,
+                    "caption": asset.caption or "",
+                    "file": file_url,
+                    "order_index": asset.order_index,
+                    "requires_extraction": asset.requires_extraction,
+                }
+
+            grouped = {
+                key: [] for key in EventReportAttachment.Category.values
+            }
+            for asset in refreshed_assets:
+                grouped.setdefault(asset.category, []).append(_asset_payload(asset))
+
+            annexures_payload = {
+                "photos": grouped.get(EventReportAttachment.Category.PHOTOGRAPH, []),
+                "brochure_pages": grouped.get(EventReportAttachment.Category.BROCHURE, []),
+                "communication": {
+                    "files": grouped.get(EventReportAttachment.Category.COMMUNICATION, [])
+                },
+                "worksheets": grouped.get(EventReportAttachment.Category.WORKSHEET, []),
+                "evaluation_sheet": next(
+                    iter(grouped.get(EventReportAttachment.Category.EVALUATION, [])),
+                    None,
+                ),
+                "feedback_form": next(
+                    iter(grouped.get(EventReportAttachment.Category.FEEDBACK, [])),
+                    None,
+                ),
+            }
+
+            payload = report.generated_payload or {}
+            payload["annexures"] = annexures_payload
+            report.generated_payload = payload
+            report.save(update_fields=[
+                "generated_payload",
+                "updated_at",
+            ])
 
             drafts.pop(str(proposal_id), None)
             request.session.modified = True
@@ -2149,7 +2241,9 @@ def submit_event_report(request, proposal_id):
     else:
         form = EventReportForm(initial=draft, instance=report)
         attachments_qs = (
-            report.attachments.all() if report else EventReportAttachment.objects.none()
+            report.attachments.order_by("category", "order_index", "id")
+            if report
+            else EventReportAttachment.objects.none()
         )
         formset = AttachmentFormSet(queryset=attachments_qs)
 
@@ -2893,55 +2987,37 @@ def preview_event_report(request, proposal_id):
     summary_value = _text(
         _first_value(post_data.get("summary"), getattr(report, "summary", None))
     )
-    social_relevance_list = _listify(
-        _first_value(post_data.get("impact_assessment"), getattr(report, "impact_assessment", None))
+    impact_assessment_list = _listify(
+        _first_value(
+            post_data.get("impact_assessment"),
+            getattr(report, "impact_assessment", None),
+        )
     )
     outcomes_list = _listify(
         _first_value(post_data.get("outcomes"), getattr(report, "outcomes", None))
     )
 
-    analysis_attendees_value = _text(
-        _first_value(
-            post_data.get("impact_on_stakeholders"),
-            getattr(report, "impact_on_stakeholders", None),
-        )
+    analysis_raw_value = _first_value(
+        post_data.get("analysis"), getattr(report, "analysis", None)
     )
-    analysis_schools_value = _text(
-        _first_value(post_data.get("analysis"), getattr(report, "analysis", None))
-    )
-    analysis_volunteers_value = _text(
-        _first_value(post_data.get("lessons_learned"), getattr(report, "lessons_learned", None))
-    )
+    analysis_text_value = _text(analysis_raw_value)
+    analysis_points = _listify(analysis_raw_value)
+    if not analysis_points and analysis_text_value:
+        analysis_points = [analysis_text_value]
 
-    mapping_pos_value = _text(
+    relevance_institutional_value = _text(
         _first_value(
             post_data.get("pos_pso_mapping"),
             getattr(report, "pos_pso_mapping", None),
             proposal.pos_pso,
         )
     )
-    mapping_grad_value = _text(
+    relevance_graduate_value = _text(
         _first_value(
             post_data.get("needs_grad_attr_mapping"),
             getattr(report, "needs_grad_attr_mapping", None),
         )
     )
-    mapping_contemporary_value = _text(
-        _first_value(
-            post_data.get("contemporary_requirements"),
-            getattr(report, "contemporary_requirements", None),
-        )
-    )
-    mapping_value_systems_value = _text(
-        _first_value(
-            post_data.get("sdg_value_systems_mapping"),
-            getattr(report, "sdg_value_systems_mapping", None),
-        )
-    )
-    sdg_goal_numbers = [
-        f"SDG {goal.id}: {goal.name}"
-        for goal in proposal.sdg_goals.all().order_by("id")
-    ]
 
     naac_tags = [
         formatted
@@ -2966,39 +3042,80 @@ def preview_event_report(request, proposal_id):
     ]
     faculty_signature = ", ".join(name for name in faculty_names if name)
 
-    checklist_keys = [
-        "facing_sheet_present",
-        "summary_outcomes_sheet_present",
-        "suggestions_sheet_present",
-        "department_seal_sign_each_page",
-        "detailed_report_or_blog_printout_present",
-        "participant_list_present",
-        "feedback_forms_present",
-        "photos_present",
-    ]
-    attachments_checklist = {key: _bool_from_post(key) for key in checklist_keys}
+    annexures_payload = {}
+    if report and report.generated_payload:
+        annexures_payload = report.generated_payload.get("annexures", {}) or {}
 
-    annexure_photos = []
-    if report:
-        for attachment in report.attachments.all():
-            file_field = getattr(attachment, "file", None)
-            if not file_field:
-                continue
-            try:
-                file_url = file_field.url
-            except ValueError:
-                continue
-            if not file_url:
-                continue
-            lower_url = file_url.lower()
-            if not lower_url.endswith((".png", ".jpg", ".jpeg", ".gif", ".webp")):
-                continue
-            annexure_photos.append(
-                {
-                    "src": file_url,
-                    "caption": _text(attachment.caption),
-                }
-            )
+    if not annexures_payload:
+        annexures_payload = {
+            "photos": [],
+            "brochure_pages": [],
+            "communication": {
+                "files": [],
+                "subject": "",
+                "date": "",
+                "volunteer_list": [],
+            },
+            "worksheets": [],
+            "evaluation_sheet": None,
+            "feedback_form": None,
+        }
+    else:
+        annexures_payload.setdefault("photos", [])
+        annexures_payload.setdefault("brochure_pages", [])
+        annexures_payload.setdefault("communication", {"files": []})
+        if isinstance(annexures_payload["communication"], dict):
+            annexures_payload["communication"].setdefault("files", [])
+        annexures_payload.setdefault("worksheets", [])
+        annexures_payload.setdefault("evaluation_sheet", None)
+        annexures_payload.setdefault("feedback_form", None)
+
+    def _normalize_asset(entry):
+        if not isinstance(entry, dict):
+            return None
+        src = entry.get("src") or entry.get("file") or ""
+        caption_text = _text(entry.get("caption"))
+        normalized = {
+            "caption": caption_text,
+            "src": src,
+            "file": entry.get("file") or src,
+            "requires_extraction": bool(entry.get("requires_extraction")),
+        }
+        if "order_index" in entry:
+            normalized["order_index"] = entry.get("order_index")
+        if "id" in entry:
+            normalized["id"] = entry.get("id")
+        return normalized
+
+    def _normalize_list(values):
+        normalized_items = []
+        for value in values or []:
+            normalized = _normalize_asset(value)
+            if normalized is not None:
+                normalized_items.append(normalized)
+        return normalized_items
+
+    def _normalize_single(value):
+        if isinstance(value, (list, tuple)):
+            value = next((item for item in value if isinstance(item, dict)), None)
+        return _normalize_asset(value)
+
+    communication_payload = annexures_payload.get("communication", {})
+    if isinstance(communication_payload, dict):
+        communication_files = communication_payload.get("files", [])
+    elif isinstance(communication_payload, (list, tuple)):
+        communication_files = list(communication_payload)
+    else:
+        communication_files = []
+
+    normalized_annexures = {
+        "photos": _normalize_list(annexures_payload.get("photos")),
+        "brochure_pages": _normalize_list(annexures_payload.get("brochure_pages")),
+        "communication": {"files": _normalize_list(communication_files)},
+        "worksheets": _normalize_list(annexures_payload.get("worksheets")),
+        "evaluation_sheet": _normalize_single(annexures_payload.get("evaluation_sheet")),
+        "feedback_form": _normalize_single(annexures_payload.get("feedback_form")),
+    }
 
     initial_data = {
         "event": {
@@ -3024,21 +3141,16 @@ def preview_event_report(request, proposal_id):
         },
         "narrative": {
             "summary_overall_event": summary_value,
-            "social_relevance": social_relevance_list,
+            "impact_assessment": impact_assessment_list,
             "outcomes": outcomes_list,
         },
         "analysis": {
-            "impact_attendees": analysis_attendees_value,
-            "impact_schools": analysis_schools_value,
-            "impact_volunteers": analysis_volunteers_value,
+            "points": analysis_points,
+            "text": analysis_text_value,
         },
-        "mapping": {
-            "pos_psos": mapping_pos_value,
-            "graduate_attributes_or_needs": mapping_grad_value,
-            "contemporary_requirements": mapping_contemporary_value,
-            "value_systems": mapping_value_systems_value,
-            "sdg_goal_numbers": sdg_goal_numbers,
-            "courses": [],
+        "relevance": {
+            "institutional_alignment": relevance_institutional_value,
+            "graduate_attributes": relevance_graduate_value,
         },
         "metrics": {
             "naac_tags": naac_tags,
@@ -3050,21 +3162,9 @@ def preview_event_report(request, proposal_id):
             "sign_faculty_coordinator": _text(faculty_signature),
             "sign_iqac": "",
         },
-        "attachments": {
-            "checklist": attachments_checklist,
-        },
-        "annexures": {
-            "photos": annexure_photos,
-            "brochure_pages": [],
-            "communication": {
-                "subject": "",
-                "date": "",
-                "volunteers": [],
-            },
-            "worksheets": [],
-            "evaluation_sheet": None,
-            "feedback_form": None,
-        },
+        "annexures": normalized_annexures,
+        "suggestions": iqac_suggestions,
+        "suggestions_date": iqac_review_date_value,
     }
 
     post_data_items = list(post_data.lists())
@@ -4004,6 +4104,97 @@ def ai_report_progress(request, proposal_id):
     elif proposal.event_datetime:
         event_schedule = date_format(proposal.event_datetime, "d M Y, H:i")
 
+    annexures_payload = {}
+    if report and report.generated_payload:
+        annexures_payload = report.generated_payload.get("annexures", {}) or {}
+
+    if not annexures_payload:
+        annexures_payload = {
+            "photos": [],
+            "brochure_pages": [],
+            "communication": {"files": []},
+            "worksheets": [],
+            "evaluation_sheet": None,
+            "feedback_form": None,
+        }
+    else:
+        annexures_payload.setdefault("photos", [])
+        annexures_payload.setdefault("brochure_pages", [])
+        annexures_payload.setdefault("communication", {"files": []})
+        if isinstance(annexures_payload["communication"], dict):
+            annexures_payload["communication"].setdefault("files", [])
+        annexures_payload.setdefault("worksheets", [])
+        annexures_payload.setdefault("evaluation_sheet", None)
+        annexures_payload.setdefault("feedback_form", None)
+
+    def normalize_asset(entry):
+        if not isinstance(entry, dict):
+            return None
+        src = entry.get("src") or entry.get("file") or ""
+        caption_text = clean_text(entry.get("caption"))
+        normalized = {
+            "caption": caption_text,
+            "src": src,
+            "file": entry.get("file") or src,
+            "requires_extraction": bool(entry.get("requires_extraction")),
+        }
+        if "order_index" in entry:
+            normalized["order_index"] = entry.get("order_index")
+        if "id" in entry:
+            normalized["id"] = entry.get("id")
+        return normalized
+
+    def normalize_list(values):
+        normalised = []
+        for value in values or []:
+            asset = normalize_asset(value)
+            if asset is not None:
+                normalised.append(asset)
+        return normalised
+
+    def normalize_single(value):
+        if isinstance(value, (list, tuple)):
+            value = next((item for item in value if isinstance(item, dict)), None)
+        return normalize_asset(value)
+
+    communication_payload = annexures_payload.get("communication", {})
+    if isinstance(communication_payload, dict):
+        communication_files = communication_payload.get("files", [])
+    elif isinstance(communication_payload, (list, tuple)):
+        communication_files = list(communication_payload)
+    else:
+        communication_files = []
+
+    normalized_annexures = {
+        "photos": normalize_list(annexures_payload.get("photos")),
+        "brochure_pages": normalize_list(annexures_payload.get("brochure_pages")),
+        "communication": {"files": normalize_list(communication_files)},
+        "worksheets": normalize_list(annexures_payload.get("worksheets")),
+        "evaluation_sheet": normalize_single(annexures_payload.get("evaluation_sheet")),
+        "feedback_form": normalize_single(annexures_payload.get("feedback_form")),
+    }
+
+    analysis_text = clean_text(report_value("analysis"))
+    raw_analysis_points = []
+    raw_analysis_points.extend(to_list(report_value("analysis")))
+    raw_analysis_points.extend(to_list(report_value("impact_on_stakeholders")))
+    raw_analysis_points.extend(to_list(report_value("lessons_learned")))
+    analysis_points = [
+        point
+        for point in dict.fromkeys(
+            [p for p in raw_analysis_points if p and p.strip()]
+        )
+    ]
+    if not analysis_points and analysis_text:
+        analysis_points = [analysis_text]
+
+    institutional_alignment = clean_text(report_value("pos_pso_mapping")) or clean_text(
+        getattr(proposal, "pos_pso", "")
+    )
+    graduate_attributes_text = clean_text(report_value("needs_grad_attr_mapping"))
+    if not graduate_attributes_text:
+        graduate_attributes_text = clean_text(report_value("sdg_value_systems_mapping"))
+
     initial_data = {
         "event_info": {
             "department": clean_text(proposal.organization) if proposal.organization else "",
@@ -4025,33 +4216,17 @@ def ai_report_progress(request, proposal_id):
         },
         "summary": clean_text(report_value("summary")),
         "activities": to_list(report_value("notable_moments")),
-        "social_relevance": to_list(report_value("impact_assessment")),
         "outcomes": to_list(report_value("outcomes")),
-        "analysis": {
-            "attendees": clean_text(report_value("impact_on_stakeholders")),
-            "schools": clean_text(report_value("analysis")),
-            "volunteers": clean_text(report_value("lessons_learned")),
-        },
+        "analysis": {"points": analysis_points, "text": analysis_text},
         "relevance": {
-            "graduate_attributes": clean_text(report_value("pos_pso_mapping")),
-            "sdg": clean_text(report_value("sdg_value_systems_mapping")),
+            "institutional_alignment": institutional_alignment,
+            "graduate_attributes": graduate_attributes_text,
         },
         "suggestions": to_list(report_value("iqac_feedback")),
         "suggestions_date": date_format(report_value("report_signed_date"), "d M Y")
         if report_value("report_signed_date")
         else "",
-        "annexures": {
-            "photos": [],
-            "brochure_pages": [],
-            "communication": {
-                "subject": "",
-                "date": "",
-                "volunteer_list": [],
-            },
-            "worksheets": [],
-            "evaluation_sheet": None,
-            "feedback_form": None,
-        },
+        "annexures": normalized_annexures,
     }
 
     context = {

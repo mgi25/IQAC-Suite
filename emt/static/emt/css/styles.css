@@ -3088,218 +3088,349 @@ textarea {
     border: 0;
 }
 
-.section-subtitle {
-    margin-top: .25rem;
-    color: #475569;
-    font-size: .95rem;
+.evidence-wrapper,
+.evidence-wrapper * {
+    font-family: 'Times New Roman', Times, serif;
 }
 
-.attachment-guidelines {
-    background: #f8fafc;
-    border: 1px dashed #cbd5f5;
-    border-radius: .9rem;
-    padding: 1.25rem 1.5rem;
-    color: #1f2937;
-    line-height: 1.55;
+.evidence-wrapper {
+    background: #ffffff;
+    border: 0.9pt solid #b8c0cc;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
 }
 
-.attachment-guidelines h4 {
-    font-size: 1rem;
-    font-weight: 600;
-    margin: 0 0 .65rem;
-    color: #0f172a;
+.evidence-header {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
-.attachment-guidelines ul {
-    list-style: disc;
+.evidence-title {
+    font-size: 14pt;
+    text-transform: uppercase;
+    font-weight: 700;
     margin: 0;
-    padding-left: 1.5rem;
+    letter-spacing: 0.05em;
+    color: #1f2937;
 }
 
-.attachment-guidelines li {
-    margin-bottom: .35rem;
-    color: #475569;
-    font-size: .92rem;
+.evidence-divider {
+    border: 0;
+    border-top: 0.9pt solid #1f2937;
+    margin: 4px 0 10px;
 }
 
-.attachment-guidelines li:last-child {
+.evidence-lead {
+    font-size: 11pt;
+    line-height: 1.55;
+    margin: 0;
+    color: #1f2937;
+}
+
+.evidence-guidance {
+    border: 0.9pt solid #b8c0cc;
+    background: #f8fafc;
+    padding: 12px 16px;
+}
+
+.guidance-heading {
+    margin: 0 0 6px;
+    font-size: 14pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #1f2937;
+}
+
+.guidance-list {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 11pt;
+    line-height: 1.5;
+    color: #1f2937;
+}
+
+.guidance-list li {
+    margin-bottom: 4px;
+}
+
+.guidance-list li:last-child {
     margin-bottom: 0;
 }
 
-.attachment-grid {
+.evidence-errors {
+    border: 0.9pt solid #d9534f;
+    background: #fff5f5;
+    padding: 10px 14px;
+    font-size: 11pt;
+    color: #7f1d1d;
+}
+
+.evidence-panels {
     display: grid;
-    gap: 1.25rem;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    margin-top: 1.5rem;
+    gap: 18px;
 }
 
-.attachment-block {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: .9rem;
-    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
-    padding: 1rem;
+.evidence-section {
+    border: 0.9pt solid #b8c0cc;
+    padding: 12px 16px;
+    background: #ffffff;
     display: flex;
     flex-direction: column;
-    min-height: 100%;
-    transition: border-color .2s ease, box-shadow .2s ease;
+    gap: 12px;
 }
 
-.attachment-block:hover {
-    border-color: rgba(37, 99, 235, 0.35);
-    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+.section-header h3 {
+    margin: 0;
+    font-size: 14pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #1f2937;
 }
 
-.attachment-card {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    height: 100%;
+.section-subtext {
+    margin: 2px 0 10px;
+    font-size: 11pt;
+    font-style: italic;
+    color: #364152;
 }
 
-.attach-upload {
+.evidence-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.evidence-card {
+    border: 0.9pt solid #939fb2;
+    background: #ffffff;
+    padding: 10px;
     position: relative;
-    border: 2px dashed #d0d5dd;
-    border-radius: .85rem;
-    min-height: 200px;
+    cursor: move;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 1.25rem;
-    background: #f8fafc;
-    color: #475569;
-    cursor: pointer;
-    transition: border-color .2s ease, background .2s ease, color .2s ease;
 }
 
-.attach-upload:hover {
-    border-color: var(--primary-blue, #2563eb);
-    background: #eef2ff;
-    color: #1e3a8a;
+.evidence-card.dragging {
+    opacity: 0.75;
+    border-color: #1f4c82;
+    background: #eef3fb;
 }
 
-.attach-upload img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: .75rem;
-}
-
-.attach-add {
-    font-size: 2.5rem;
-    font-weight: 600;
-    color: #94a3b8;
-    line-height: 1;
-}
-
-.attach-text {
-    display: block;
-    font-size: .9rem;
-    margin-top: .5rem;
-}
-
-.attach-file {
+.evidence-card-frame {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: .5rem;
-    font-weight: 600;
-    color: #1e293b;
-}
-
-.attach-file-name {
-    max-width: 100%;
-    word-break: break-word;
-}
-
-.attach-remove {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    width: 36px;
-    height: 36px;
-    border-radius: 999px;
-    background: rgba(15, 23, 42, 0.85);
-    color: #fff;
-    border: none;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.35rem;
-    cursor: pointer;
-    transition: background .2s ease, transform .2s ease;
-}
-
-.attach-remove:hover {
-    background: rgba(37, 99, 235, 0.9);
-    transform: scale(1.05);
-}
-
-.attachment-meta {
-    display: flex;
-    flex-direction: column;
-    gap: .75rem;
+    gap: 10px;
     flex: 1;
 }
 
-.attachment-label {
-    font-weight: 600;
-    font-size: .95rem;
-    color: #1e293b;
-}
-
-.attachment-caption {
-    border: 1px solid #d0d5dd;
-    border-radius: .6rem;
-    padding: .65rem .75rem;
-    font-size: .95rem;
-    width: 100%;
-    transition: border-color .2s ease, box-shadow .2s ease;
-}
-
-.attachment-caption:focus {
-    outline: none;
-    border-color: var(--primary-blue, #2563eb);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
-}
-
-.attachment-actions {
-    margin-top: 1.75rem;
+.evidence-card-header {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    align-items: center;
 }
 
-.attachment-hint {
-    margin: 0;
-    color: #475569;
-    font-size: .92rem;
+.evidence-drag-handle {
+    border: none;
+    background: transparent;
+    cursor: grab;
+    padding: 4px 6px;
 }
 
-.btn-icon {
-    display: inline-flex;
+.evidence-card.dragging .evidence-drag-handle {
+    cursor: grabbing;
+}
+
+.drag-grip {
+    display: inline-block;
+    width: 12px;
+    height: 16px;
+    background-image: linear-gradient(#1f2937 33%, rgba(255, 255, 255, 0) 0);
+    background-size: 4px 4px;
+}
+
+.evidence-remove {
+    border: none;
+    background: transparent;
+    font-size: 18px;
+    line-height: 1;
+    color: #8b1d1d;
+    cursor: pointer;
+    padding: 2px 6px;
+}
+
+.evidence-remove:hover {
+    color: #b91c1c;
+}
+
+.evidence-preview {
+    border: 0.9pt solid #c6ccd6;
+    min-height: 170px;
+    display: flex;
     align-items: center;
     justify-content: center;
-    width: 1.75rem;
-    height: 1.75rem;
-    border-radius: 999px;
-    background: rgba(37, 99, 235, 0.15);
-    color: var(--primary-blue, #2563eb);
-    font-weight: 600;
-    margin-right: .5rem;
+    padding: 12px;
+    text-align: center;
+    background: #f9fbff;
+    cursor: pointer;
 }
 
-.attachment-empty {
-    padding: 2rem;
-    text-align: center;
-    color: #64748b;
-    background: #f8fafc;
-    border-radius: .75rem;
-    border: 1px dashed #cbd5f5;
+.evidence-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: cover;
+    border: 0.9pt solid #aab4c3;
+    padding: 2px;
+    background: #ffffff;
+}
+
+.evidence-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: #58647a;
+}
+
+.placeholder-icon {
+    font-size: 28px;
+    line-height: 1;
+}
+
+.placeholder-text {
+    font-size: 11pt;
+}
+
+.evidence-file {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 11pt;
+    font-weight: 600;
+    color: #25304a;
+}
+
+.evidence-file .file-note {
+    font-weight: 400;
+    font-size: 10pt;
+    font-style: italic;
+}
+
+.evidence-meta label {
+    font-size: 11pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    color: #1f2937;
+}
+
+.meta-optional {
+    font-weight: 400;
+    font-style: italic;
+    text-transform: none;
+}
+
+.attachment-caption-input {
+    width: 100%;
+    border: 0.9pt solid #939fb2;
+    padding: 8px;
+    font-size: 11pt;
+    background: #ffffff;
+    color: #1f2937;
+}
+
+.attachment-caption-input:focus {
+    outline: none;
+    border-color: #1f4c82;
+    box-shadow: 0 0 0 2px rgba(31, 76, 130, 0.2);
+}
+
+.evidence-note {
+    margin: 4px 0 0;
+    font-size: 10pt;
+    font-style: italic;
+    color: #2f3b52;
+}
+
+.evidence-card-errors .field-error {
+    margin: 4px 0 0;
+    font-size: 10.5pt;
+}
+
+.analysis-guidance {
+    margin: 6px 0 0;
+    padding-left: 20px;
+    font-size: 11pt;
+    line-height: 1.45;
+}
+
+.analysis-guidance li {
+    margin-bottom: 4px;
+}
+
+.relevance-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 0.9pt solid #b8c0cc;
+    font-family: 'Times New Roman', Times, serif;
+}
+
+.relevance-table th,
+.relevance-table td {
+    border: 0.9pt solid #b8c0cc;
+    padding: 8px 10px;
+    font-size: 11pt;
+    vertical-align: top;
+}
+
+.relevance-table th {
+    width: 28%;
+    background: #f1f4fa;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.relevance-table textarea {
+    width: 100%;
+    border: none;
+    resize: vertical;
+    min-height: 120px;
+    font-size: 11pt;
+    font-family: 'Times New Roman', Times, serif;
+}
+
+.relevance-table textarea:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(31, 76, 130, 0.2);
+}
+
+.evidence-add {
+    align-self: flex-start;
+    font-size: 11pt;
+    font-weight: 700;
+    color: #1f4c82;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.evidence-add[disabled] {
+    color: #9aa5b5;
+    cursor: not-allowed;
+}
+
+.evidence-save {
+    font-size: 11pt;
+    font-family: 'Times New Roman', Times, serif;
 }
 
 .attachment-modal {
@@ -3361,17 +3492,16 @@ textarea {
 }
 
 @media (max-width: 768px) {
-    .attachment-grid {
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    .evidence-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     }
 
-    .attachment-actions {
-        flex-direction: column;
-        align-items: flex-start;
+    .evidence-wrapper {
+        padding: 14px;
     }
 
-    .attachment-hint {
-        line-height: 1.4;
+    .evidence-section {
+        padding: 10px 12px;
     }
 }
 
