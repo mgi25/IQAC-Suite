@@ -6,7 +6,7 @@
 {% block head_extra %}
 <style>
   /* ===== Paper constants ===== */
-  :root { --ink:#000; --grid:#000; --hair:0.9pt; --pad:8px; }
+  :root { --ink:#000; --grid:#000; --hair:0.6pt; --pad:8px; }
   * { box-sizing: border-box; }
   body { background:#f3f4f6; }
 
@@ -17,7 +17,7 @@
   .sheet{
     background:#fff; color:var(--ink);
     font-family:"Times New Roman", Times, serif;
-    font-size:11pt; line-height:1.45;
+    font-size:12pt; line-height:1.45;
     counter-reset: page;
     box-shadow:0 6px 20px rgba(0,0,0,.12);
   }
@@ -33,10 +33,10 @@
 
   /* Body */
   .body{ padding:10mm 18mm 12mm; }
-  .sec{ font-weight:700; text-transform:uppercase; letter-spacing:.08em; font-size:14pt; margin:6mm 0 2mm; }
+  .sec{ font-weight:700; text-transform:uppercase; letter-spacing:.08em; font-size:12.5pt; margin:6mm 0 2mm; }
 
   /* Pair table (label/value | label/value) */
-  table.grid{ width:100%; border-collapse:collapse; table-layout:fixed; break-inside: avoid; }
+  table.grid{ width:100%; border-collapse:collapse; table-layout:fixed; }
   /* exact column widths ensure perfect vertical alignment across rows */
   table.grid col.c-lab { width:27%; }
   table.grid col.c-val { width:23%; }
@@ -56,13 +56,12 @@
   .para-box{
     border:var(--hair) solid var(--grid); padding:10px 12px;
     min-height:28mm; text-align:justify; text-justify:inter-word;
-    break-inside: avoid;
   }
-  .pane{ border:var(--hair) solid var(--grid); padding:8px 12px; break-inside: avoid; }
+  .pane{ border:var(--hair) solid var(--grid); padding:8px 12px; }
 
   /* Analysis three equal columns */
   .analysis{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
-  .a{ border:var(--hair) solid var(--grid); padding:10px 12px; min-height:35mm; break-inside: avoid; }
+  .a{ border:var(--hair) solid var(--grid); padding:10px 12px; min-height:35mm; }
   .lbl{ font-weight:700; text-transform:uppercase; letter-spacing:.06em; font-size:10.5pt; margin-bottom:3px; }
 
   /* Signatures */
@@ -181,13 +180,19 @@
         <ul class="cell-ul" data-list="activities"><li>—</li></ul>
       </div>
 
-      <!-- 4. OUTCOMES -->
+      <!-- 4. SOCIAL RELEVANCE -->
+      <h2 class="sec">Social Relevance</h2>
+      <div class="pane">
+        <ul class="cell-ul" data-list="social_relevance"><li>—</li></ul>
+      </div>
+
+      <!-- 5. OUTCOMES -->
       <h2 class="sec">Outcomes of the Event</h2>
       <div class="pane">
         <ul class="cell-ul" data-list="outcomes"><li>—</li></ul>
       </div>
 
-      <!-- 5. ANALYSIS -->
+      <!-- 6. ANALYSIS -->
       <h2 class="sec">Analysis</h2>
       <div class="analysis">
         <div class="a">
@@ -204,7 +209,25 @@
         </div>
       </div>
 
-      <!-- 6. SUGGESTIONS -->
+      <!-- 7. RELEVANCE -->
+      <h2 class="sec">Relevance of the Event</h2>
+      <table class="grid full">
+        <colgroup>
+          <col class="c-lab"><col class="c-val">
+        </colgroup>
+        <tbody>
+          <tr>
+            <th>With reference to Graduate Attributes</th>
+            <td><p class="cell-para" data-field="relevance.graduate_attributes" data-multiline="true">—</p></td>
+          </tr>
+          <tr>
+            <th>Support to Value Systems (SDGs / Social Commitment)</th>
+            <td><p class="cell-para" data-field="relevance.sdg" data-multiline="true">—</p></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- 8. SUGGESTIONS -->
       <h2 class="sec">Suggestions for Improvement / Feedback from IQAC</h2>
       <div class="pane"><ul class="cell-ul" data-list="suggestions"><li>—</li></ul></div>
       <div style="margin-top:5mm;">Date: <span data-field="suggestions_date">—</span></div>
@@ -214,6 +237,49 @@
         <div class="sign"><div class="line"></div><div class="cap">Faculty Coordinator / Organiser</div></div>
         <div class="sign"><div class="line"></div><div class="cap">IQAC</div></div>
       </div>
+
+      <!-- 9. ANNEXURES -->
+      <div class="break"></div>
+      <h2 class="sec">Attachments (Annexures)</h2>
+
+      <div class="ann">Annexure A. Photographs</div>
+      <div class="grid-2" data-grid="annexures.photos">
+        <figure class="card"><div class="ph">Image</div><figcaption>—</figcaption></figure>
+      </div>
+
+      <div class="break"></div>
+      <div class="ann">Annexure B. Brochure (4 pages)</div>
+      <div class="grid-2" data-grid="annexures.brochure_pages">
+        <figure class="card"><div class="ph">Image</div><figcaption>—</figcaption></figure>
+      </div>
+
+      <div class="break"></div>
+      <div class="ann">Annexure C. Communication with Institution</div>
+      <table class="grid" style="margin-bottom:4mm;">
+        <colgroup><col class="c-lab"><col class="c-val"></colgroup>
+        <tbody>
+          <tr><th>Subject</th><td data-field="annexures.communication.subject">—</td></tr>
+          <tr><th>Date</th><td data-field="annexures.communication.date">—</td></tr>
+        </tbody>
+      </table>
+      <table class="vol">
+        <thead><tr><th>Sl No</th><th>Reg No</th><th>Name</th><th>Class</th><th>Role</th></tr></thead>
+        <tbody data-rows="annexures.communication.volunteer_list"><tr><td colspan="5" style="text-align:center;">—</td></tr></tbody>
+      </table>
+
+      <div class="break"></div>
+      <div class="ann">Annexure D. Worksheets / Activities</div>
+      <div class="grid-2" data-grid="annexures.worksheets">
+        <figure class="card"><div class="ph">Image</div><figcaption>—</figcaption></figure>
+      </div>
+
+      <div class="break"></div>
+      <div class="ann">Annexure E. Evaluation Sheet</div>
+      <figure class="card" data-src="annexures.evaluation_sheet"><div class="ph">Image</div><figcaption>—</figcaption></figure>
+
+      <div class="break"></div>
+      <div class="ann">Annexure F. Feedback Form</div>
+      <figure class="card" data-src="annexures.feedback_form"><div class="ph">Image</div><figcaption>—</figcaption></figure>
 
     </div>
 
@@ -280,16 +346,37 @@
 
     txt('[data-field="summary"]', data?.summary);
     list('[data-list="activities"]', data?.activities);
+    list('[data-list="social_relevance"]', data?.social_relevance);
     list('[data-list="outcomes"]', data?.outcomes);
 
     txt('[data-field="analysis.attendees"]', data?.analysis?.attendees);
     txt('[data-field="analysis.schools"]', data?.analysis?.schools);
     txt('[data-field="analysis.volunteers"]', data?.analysis?.volunteers);
 
+    txt('[data-field="relevance.graduate_attributes"]', data?.relevance?.graduate_attributes);
+    txt('[data-field="relevance.sdg"]', data?.relevance?.sdg);
 
     list('[data-list="suggestions"]', data?.suggestions);
     txt('[data-field="suggestions_date"]', data?.suggestions_date);
 
+    grid('[data-grid="annexures.photos"]', data?.annexures?.photos);
+    grid('[data-grid="annexures.brochure_pages"]', data?.annexures?.brochure_pages);
+    txt('[data-field="annexures.communication.subject"]', data?.annexures?.communication?.subject);
+    txt('[data-field="annexures.communication.date"]', data?.annexures?.communication?.date);
+    rows('[data-rows="annexures.communication.volunteer_list"]', data?.annexures?.communication?.volunteer_list);
+    grid('[data-grid="annexures.worksheets"]', data?.annexures?.worksheets);
+    (function single(sel, item){
+      const host=document.querySelector(sel); if(!host) return; const ph=host.querySelector('.ph'); const cap=host.querySelector('figcaption');
+      ph.innerHTML=''; cap.textContent = item && item.caption ? item.caption : '—';
+      if (item && item.src){ const img=document.createElement('img'); img.src=item.src; img.alt=cap.textContent||'Image'; img.style.maxWidth='100%'; img.style.maxHeight='100%'; ph.appendChild(img); }
+      else { ph.textContent='Image'; }
+    })('[data-src="annexures.evaluation_sheet"]', data?.annexures?.evaluation_sheet);
+    (function single(sel, item){
+      const host=document.querySelector(sel); if(!host) return; const ph=host.querySelector('.ph'); const cap=host.querySelector('figcaption');
+      ph.innerHTML=''; cap.textContent = item && item.caption ? item.caption : '—';
+      if (item && item.src){ const img=document.createElement('img'); img.src=item.src; img.alt=cap.textContent||'Image'; img.style.maxWidth='100%'; img.style.maxHeight='100%'; ph.appendChild(img); }
+      else { ph.textContent='Image'; }
+    })('[data-src="annexures.feedback_form"]', data?.annexures?.feedback_form);
   }
 
   (function init(){
