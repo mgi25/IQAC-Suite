@@ -489,13 +489,24 @@ class EventReportForm(forms.ModelForm):
 class EventReportAttachmentForm(forms.ModelForm):
     class Meta:
         model = EventReportAttachment
-        fields = ["file", "caption"]
+        fields = ["file", "caption", "category", "order_index"]
         widgets = {
             # Use plain FileInput to avoid Django's "Change" and "Clear" controls
             "file": forms.FileInput(
                 attrs={"class": "file-input", "style": "display:none;"}
             ),
-            "caption": forms.TextInput(attrs={"style": "display:none;"}),
+            "caption": forms.Textarea(
+                attrs={
+                    "class": "attachment-caption-input",
+                    "rows": 2,
+                    "maxlength": 150,
+                    "placeholder": "Describe what this attachment represents",
+                }
+            ),
+            "category": forms.Select(
+                attrs={"class": "attachment-category-select"}
+            ),
+            "order_index": forms.HiddenInput(attrs={"class": "attachment-order-input"}),
         }
 
 
