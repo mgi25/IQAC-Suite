@@ -63,14 +63,6 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!el.placeholder) el.placeholder = ' ';
   });
 
-  const posField = document.getElementById('id_pos_pso_mapping');
-  const modal = document.getElementById('outcomeModal');
-  if(posField && modal && modal.dataset.url){
-    posField.addEventListener('click', openOutcomeModal);
-    posField.readOnly = true;
-    posField.style.cursor = 'pointer';
-  }
-
   initAttachments();
   
   /* ===========================================
@@ -375,23 +367,14 @@ document.addEventListener('DOMContentLoaded', function(){
               $('#summary-word-count').parent().removeClass('text-success').addClass('text-danger');
           }
       });
-      
-      // Word counter for lessons learned
-      $(document).on('input', '#lessons-learned-modern', function() {
-          const text = $(this).val().trim();
-          const wordCount = text ? text.split(/\s+/).filter(word => word.length > 0).length : 0;
-          $('#lessons-word-count').text(wordCount);
-          
-          // Update styling based on word count (300 recommended)
-          if (wordCount >= 300) {
-              $('#lessons-word-count').parent().removeClass('text-warning').addClass('text-success');
-          } else if (wordCount >= 150) {
-              $('#lessons-word-count').parent().removeClass('text-success text-danger').addClass('text-warning');
-          } else {
-              $('#lessons-word-count').parent().removeClass('text-success text-warning').addClass('text-danger');
+
+      const hiddenAnalysisField = $('textarea[name="analysis"][hidden]');
+      $(document).on('input', '#analysis-modern', function() {
+          if (hiddenAnalysisField.length) {
+              hiddenAnalysisField.val($(this).val());
           }
       });
-      
+
     // Removed unused societal-impact counter (field not rendered) to avoid dangling listeners
   }
   
@@ -403,17 +386,6 @@ document.addEventListener('DOMContentLoaded', function(){
   
   // Populate fields with proposal data
   populateProposalData();
-
-    // Hook: open POs/PSOs modal when clicking the relevance textarea
-    $(document).on('click', '#pos-pso-modern', function(e){
-        // Prevent any ancestor click handlers from treating this as a section save
-        e.stopPropagation();
-        e.preventDefault();
-        // ensure the hidden Django form textarea mirrors this field as well
-        const hidden = document.getElementById('id_pos_pso_mapping');
-        if(hidden){ hidden.value = $(this).val(); }
-        openOutcomeModal();
-    });
 
   // Helper to generate placeholder summary text
   function generatePlaceholder(words = 500) {
@@ -489,74 +461,11 @@ $(document).on('click', '#ai-impact-assessment', function(){
     finally { btn.prop('disabled', false).text(original); }
 });
 
-$(document).on('click', '#ai-objective-achievement', function(){
+$(document).on('click', '#ai-analysis', function(){
     const btn = $(this);
     const original = btn.text();
     btn.prop('disabled', true).text('...');
-    try { aiFill('#objective-achievement-modern', 320); }
-    catch (err) { console.error(err); }
-    finally { btn.prop('disabled', false).text(original); }
-});
-
-$(document).on('click', '#ai-strengths-analysis', function(){
-    const btn = $(this);
-    const original = btn.text();
-    btn.prop('disabled', true).text('...');
-    try { aiFill('#strengths-analysis-modern', 320); }
-    catch (err) { console.error(err); }
-    finally { btn.prop('disabled', false).text(original); }
-});
-
-$(document).on('click', '#ai-challenges-analysis', function(){
-    const btn = $(this);
-    const original = btn.text();
-    btn.prop('disabled', true).text('...');
-    try { aiFill('#challenges-analysis-modern', 320); }
-    catch (err) { console.error(err); }
-    finally { btn.prop('disabled', false).text(original); }
-});
-
-$(document).on('click', '#ai-effectiveness-analysis', function(){
-    const btn = $(this);
-    const original = btn.text();
-    btn.prop('disabled', true).text('...');
-    try { aiFill('#effectiveness-analysis-modern', 320); }
-    catch (err) { console.error(err); }
-    finally { btn.prop('disabled', false).text(original); }
-});
-
-$(document).on('click', '#ai-lessons-learned', function(){
-    const btn = $(this);
-    const original = btn.text();
-    btn.prop('disabled', true).text('...');
-    try { aiFill('#lessons-learned-modern', 320); }
-    catch (err) { console.error(err); }
-    finally { btn.prop('disabled', false).text(original); }
-});
-
-$(document).on('click', '#ai-pos-pso', function(){
-    const btn = $(this);
-    const original = btn.text();
-    btn.prop('disabled', true).text('...');
-    try { aiFill('#pos-pso-modern', 120); }
-    catch (err) { console.error(err); }
-    finally { btn.prop('disabled', false).text(original); }
-});
-
-$(document).on('click', '#ai-contemporary-requirements', function(){
-    const btn = $(this);
-    const original = btn.text();
-    btn.prop('disabled', true).text('...');
-    try { aiFill('#contemporary-requirements-modern', 120); }
-    catch (err) { console.error(err); }
-    finally { btn.prop('disabled', false).text(original); }
-});
-
-$(document).on('click', '#ai-sdg-implementation', function(){
-    const btn = $(this);
-    const original = btn.text();
-    btn.prop('disabled', true).text('...');
-    try { aiFill('#sdg-implementation-modern', 120); }
+    try { aiFill('#analysis-modern', 320); }
     catch (err) { console.error(err); }
     finally { btn.prop('disabled', false).text(original); }
 });
@@ -819,7 +728,7 @@ $(document).on('click', '#ai-sdg-implementation', function(){
           },
           'analysis': {
               title: 'Analysis',
-              subtitle: 'Detailed analysis and insights (minimum 500 words)'
+              subtitle: 'Integrated summary of outcomes, challenges, and impact'
           },
           'event-relevance': {
               title: 'Relevance of the Event',
@@ -945,57 +854,35 @@ $(document).on('click', '#ai-sdg-implementation', function(){
   }
   
   function validateAnalysis() {
+      const field = $('#analysis-modern');
+      if (!field.length) {
+          return true;
+      }
+      if (!field.val() || field.val().trim() === '') {
+          showFieldError(field, 'Integrated Analysis is required');
+          return false;
+      }
+      clearFieldError(field);
+      return true;
+  }
+
+  function validateEventRelevance() {
       let isValid = true;
       const requiredFields = [
-          { id: '#objective-achievement-modern', name: 'Objective Achievement Analysis' },
-          { id: '#strengths-analysis-modern', name: 'Strengths and Successes' },
-          { id: '#challenges-analysis-modern', name: 'Challenges and Areas for Improvement' },
-          { id: '#effectiveness-analysis-modern', name: 'Overall Effectiveness Analysis' },
-          { id: '#lessons-learned-modern', name: 'Lessons Learned and Insights' }
+          { id: '#relevance-context-modern', name: 'Relevance Context' },
+          { id: '#relevance-benefit-modern', name: 'Stakeholder Benefit' }
       ];
-      
+
       requiredFields.forEach(function(field) {
           const element = $(field.id);
+          if (!element.length) {
+              return;
+          }
           if (!element.val() || element.val().trim() === '') {
               showFieldError(element, field.name + ' is required');
               isValid = false;
           } else {
               clearFieldError(element);
-          }
-      });
-      
-      return isValid;
-  }
-  
-  function validateEventRelevance() {
-      let isValid = true;
-      const requiredFields = [
-          { id: '#pos-pso-modern', name: "PO's and PSO's Management" },
-          { id: '#graduate-attributes-modern', name: 'Graduate Attributes' },
-          { id: '#contemporary-requirements-modern', name: 'Contemporary Requirements' },
-          { id: '#sdg-implementation-modern', name: 'SDG Implementation' }
-      ];
-
-      requiredFields.forEach(function(field) {
-          const element = $(field.id);
-          if (field.id !== '#graduate-attributes-modern') {
-              // For textarea and input fields
-              if (!element.val() || element.val().trim() === '') {
-                  showFieldError(element, field.name + ' is required');
-                  isValid = false;
-              } else {
-                  clearFieldError(element);
-              }
-          } else {
-              // For GA, rely on hidden Django field or summary content if present
-              const hidden = document.getElementById('id_needs_grad_attr_mapping');
-              const hasValue = hidden ? (hidden.value && hidden.value.trim() !== '') : (element.text().trim() !== '');
-              if (!hasValue) {
-                  showFieldError(element, field.name + ' - Please select at least one attribute');
-                  isValid = false;
-              } else {
-                  clearFieldError(element);
-              }
           }
       });
 
@@ -1404,79 +1291,27 @@ $(document).on('click', '#ai-sdg-implementation', function(){
   
   function getAnalysisContent() {
       return `
-          <!-- Objective Achievement Analysis Section -->
           <div class="form-section-header">
-              <h3>Objective Achievement Analysis</h3>
-          </div>
-          
-          <div class="form-row full-width">
-              <div class="input-group ai-input">
-                  <label for="objective-achievement-modern">Achievement of Planned Objectives *</label>
-                  <textarea id="objective-achievement-modern" name="objective_achievement" rows="10" required
-                      placeholder="Analyze how well the event achieved its planned objectives:&#10;&#10;Original Objectives:&#10;• Objective 1: [Status - Fully/Partially/Not Achieved]&#10;  Analysis: [Detailed explanation]&#10;&#10;• Objective 2: [Status - Fully/Partially/Not Achieved]&#10;  Analysis: [Detailed explanation]&#10;&#10;Overall Achievement Rate: [X%]&#10;Factors contributing to success/challenges: [Analysis]"></textarea>
-                  <button type="button" id="ai-objective-achievement" class="ai-fill-btn" title="Fill with AI">AI</button>
-                  <div class="help-text">Detailed analysis of how well planned objectives were achieved</div>
-              </div>
-          </div>
-
-          <!-- Strengths and Challenges Analysis Section -->
-          <div class="form-section-header">
-              <h3>Strengths and Challenges Analysis</h3>
-          </div>
-
-          <div class="form-row">
-              <div class="input-group ai-input">
-                  <label for="strengths-analysis-modern">Strengths and Successes *</label>
-                  <textarea id="strengths-analysis-modern" name="strengths_analysis" rows="8" required
-                      placeholder="Identify and analyze the key strengths:&#10;&#10;• Organizational strengths: [What worked well in planning/execution]&#10;• Content strengths: [Quality of sessions, speakers, materials]&#10;• Participant engagement: [What kept participants engaged]&#10;• Infrastructure/logistics: [What supported the event well]&#10;• Team collaboration: [How the team worked effectively]&#10;&#10;Provide specific examples and evidence."></textarea>
-                  <button type="button" id="ai-strengths-analysis" class="ai-fill-btn" title="Fill with AI">AI</button>
-                  <div class="help-text">Analyze what worked well and contributed to success</div>
-              </div>
-              <div class="input-group ai-input">
-                  <label for="challenges-analysis-modern">Challenges and Areas for Improvement *</label>
-                  <textarea id="challenges-analysis-modern" name="challenges_analysis" rows="8" required
-                      placeholder="Identify challenges faced and areas for improvement:&#10;&#10;• Organizational challenges: [Planning, coordination issues]&#10;• Technical challenges: [Equipment, platform, connectivity]&#10;• Participant-related challenges: [Attendance, engagement]&#10;• Content/delivery challenges: [Session quality, timing]&#10;• Resource constraints: [Budget, time, personnel]&#10;&#10;For each challenge, suggest specific improvements."></textarea>
-                  <button type="button" id="ai-challenges-analysis" class="ai-fill-btn" title="Fill with AI">AI</button>
-                  <div class="help-text">Honest assessment of challenges and improvement opportunities</div>
-              </div>
-          </div>
-
-          <!-- Effectiveness Analysis Section -->
-          <div class="form-section-header">
-              <h3>Effectiveness Analysis</h3>
+              <h3>Comprehensive Analysis</h3>
           </div>
 
           <div class="form-row full-width">
               <div class="input-group ai-input">
-                  <label for="effectiveness-analysis-modern">Overall Effectiveness Analysis *</label>
-                  <textarea id="effectiveness-analysis-modern" name="effectiveness_analysis" rows="10" required
-                      placeholder="Provide a comprehensive effectiveness analysis:&#10;&#10;Methodology Used:&#10;• Data collection methods: [Surveys, interviews, observations]&#10;• Metrics evaluated: [Attendance, satisfaction, learning gains]&#10;&#10;Effectiveness Rating: [X/10 or percentage]&#10;&#10;Key Findings:&#10;• Most effective aspects: [What worked exceptionally well]&#10;• Least effective aspects: [What needs significant improvement]&#10;• Unexpected findings: [Surprising results or outcomes]&#10;&#10;Evidence-based analysis with specific data points where available."></textarea>
-                  <button type="button" id="ai-effectiveness-analysis" class="ai-fill-btn" title="Fill with AI">AI</button>
-                  <div class="help-text">Comprehensive analysis of event effectiveness with supporting evidence</div>
-              </div>
-          </div>
-
-          <!-- Lessons Learned Section -->
-          <div class="form-section-header">
-              <h3>Lessons Learned and Insights</h3>
-          </div>
-
-          <div class="form-row full-width">
-              <div class="input-group ai-input">
-                  <label for="lessons-learned-modern">Lessons Learned and Future Insights *</label>
-                  <textarea id="lessons-learned-modern" name="lessons_learned" rows="10" required
-                      placeholder="Document key lessons learned and insights for future events:&#10;&#10;Key Lessons Learned:&#10;• Planning phase: [What to do differently in planning]&#10;• Execution phase: [What to improve in delivery]&#10;• Participant management: [Better engagement strategies]&#10;• Resource management: [More efficient resource utilization]&#10;&#10;Actionable Insights:&#10;• Best practices to replicate: [Successful strategies to repeat]&#10;• Practices to avoid: [What didn't work and should be avoided]&#10;• Innovation opportunities: [New approaches to try]&#10;&#10;Recommendations for future similar events."></textarea>
-                  <button type="button" id="ai-lessons-learned" class="ai-fill-btn" title="Fill with AI">AI</button>
+                  <label for="analysis-modern">Integrated Analysis *</label>
+                  <textarea id="analysis-modern" name="analysis" rows="12" required
+                      placeholder="Summarize how the event met its objectives, highlight key strengths, and document any challenges or lessons learned."></textarea>
+                  <button type="button" id="ai-analysis" class="ai-fill-btn" title="Fill with AI">AI</button>
                   <div class="help-text">
-                      Key lessons and insights for future improvement - minimum 300 words recommended
-                      <span class="word-counter text-danger">
-                          Word count: <span id="lessons-word-count">0</span> / 300 recommended
-                      </span>
+                      Structure your analysis around:
+                      <ul class="analysis-guidance">
+                          <li>Achievement of planned objectives and notable successes.</li>
+                          <li>Operational challenges or gaps encountered during planning or delivery.</li>
+                          <li>Impact on participants and the institution with evidence or data points.</li>
+                      </ul>
                   </div>
               </div>
           </div>
 
-          <!-- Save Section -->
           <div class="form-row full-width">
               <div class="save-section-container">
                   <button type="button" class="btn-save-section">Save & Continue</button>
@@ -1488,67 +1323,42 @@ $(document).on('click', '#ai-sdg-implementation', function(){
   
   function getEventRelevanceContent() {
       return `
-          <!-- POs and PSOs Section -->
           <div class="form-section-header">
-              <h3>Program Outcomes & Program Specific Outcomes</h3>
-          </div>
-          
-          <div class="form-row full-width">
-              <div class="input-group ai-input">
-                  <label for="pos-pso-modern">PO's and PSO's Management *</label>
-                  <textarea id="pos-pso-modern" name="pos_pso_mapping" rows="15" required
-                      placeholder="Describe how the event addresses Program Outcomes (POs) and Program Specific Outcomes (PSOs):&#10;&#10;Program Outcomes:&#10;• PO1: Engineering Knowledge&#10;• PO2: Problem Analysis&#10;• PO3: Design/Development of Solutions&#10;&#10;Program Specific Outcomes:&#10;• PSO1: [Specific to your program]&#10;• PSO2: [Specific to your program]&#10;&#10;Provide detailed explanation of how each relevant outcome was addressed through this event."></textarea>
-                  <button type="button" id="ai-pos-pso" class="ai-fill-btn" title="Fill with AI">AI</button>
-                  <div class="help-text">Detail how the event contributes to achieving specific program outcomes</div>
-              </div>
+              <h3>Event Relevance</h3>
           </div>
 
-          <!-- Graduate Attributes Section (summary only, open dedicated editor) -->
-          <div class="form-section-header">
-              <h3>Graduate Attributes & Contemporary Requirements</h3>
-          </div>
-          
           <div class="form-row full-width">
               <div class="input-group">
-                  <label for="graduate-attributes-modern" style="display:flex;align-items:center;gap:8px;width:100%;">
-                      <span>Graduate Attributes *</span>
-                      <span style="flex:1 1 auto"></span>
-                      <button type="button" id="ga-open-editor-btn" class="btn-ga-editor ga-editor-btn" title="Open dedicated GA editor" style="margin-left:auto;width:auto;">Open GA Editor</button>
-                  </label>
-                  <div id="graduate-attributes-modern" class="graduate-attributes-groups" style="min-height: 48px;">
-                      <div id="ga-summary" class="help-text" data-empty-text="Open the Graduate Attributes editor to select attributes. Your selections will be saved back to this report.">Open the Graduate Attributes editor to select attributes. Your selections will be saved back to this report.</div>
-                  </div>
-              </div>
-          </div>
-          
-          <div class="form-row">
-              <div class="input-group ai-input">
-                  <label for="contemporary-requirements-modern">Contemporary Requirements *</label>
-                  <textarea id="contemporary-requirements-modern" name="contemporary_requirements" rows="12" required
-                      placeholder="Describe how the event addresses contemporary requirements:&#10;&#10;• Employability enhancement&#10;• Entrepreneurship development&#10;• Skill development initiatives&#10;• Industry 4.0 readiness&#10;• Digital transformation skills&#10;• Innovation and creativity&#10;• Leadership and soft skills&#10;• Global competency development&#10;&#10;Provide specific examples of how these requirements were addressed."></textarea>
-                  <button type="button" id="ai-contemporary-requirements" class="ai-fill-btn" title="Fill with AI">AI</button>
-                  <div class="help-text">Explain how the event addresses employability, entrepreneurship, skill development, etc.</div>
-              </div>
-
-              <div class="input-group ai-input">
-                  <label for="sdg-implementation-modern">SDG Implementation *</label>
-                  <textarea id="sdg-implementation-modern" name="sdg_value_systems_mapping" rows="10" required
-                      placeholder="Click 'Select SDG Goals' to choose from the 17 Sustainable Development Goals&#10;&#10;Selected goals will appear here and can be edited:&#10;&#10;You can modify the SDG selection or add additional context about how your event addresses these goals."></textarea>
-                  <button type="button" id="ai-sdg-implementation" class="ai-fill-btn" title="Fill with AI">AI</button>
-                  <button type="button" id="sdg-select-btn" class="btn-sdg-select sdg-select-btn" style="background:var(--primary-blue);">Select SDG Goals</button>
-                  <div class="help-text">Sustainable Development Goals addressed by this event (editable)</div>
+                  <table class="relevance-table">
+                      <tbody>
+                          <tr>
+                              <th scope="row">Institutional Alignment *</th>
+                              <td>
+                                  <textarea id="relevance-context-modern" name="pos_pso_mapping" rows="6" required
+                                      placeholder="Explain how this event advances institutional priorities, accreditation focus areas, or strategic plans."></textarea>
+                              </td>
+                          </tr>
+                          <tr>
+                              <th scope="row">Stakeholder Benefit *</th>
+                              <td>
+                                  <textarea id="relevance-benefit-modern" name="sdg_value_systems_mapping" rows="6" required
+                                      placeholder="Describe the value created for students, faculty, industry partners, or the community."></textarea>
+                              </td>
+                          </tr>
+                      </tbody>
+                  </table>
+                  <div class="help-text">Summarize why the event matters and who benefits most from its outcomes.</div>
               </div>
           </div>
 
-          <!-- Save Section -->
           <div class="form-row full-width">
-          <div class="save-section-container">
-              <button type="button" class="btn-save-section">Save & Continue</button>
-              <div class="save-help-text">Complete this section to unlock the next one</div>
+              <div class="save-section-container">
+                  <button type="button" class="btn-save-section">Save & Continue</button>
+                  <div class="save-help-text">Complete this section to unlock the next one</div>
+              </div>
           </div>
-      </div>
-  `;
-}
+      `;
+  }
 
   function getAttachmentsContent() {
       const tpl = document.getElementById('attachments-section-template');
@@ -2693,119 +2503,381 @@ if(_outcomeSaveBtn && document.getElementById('outcomeModal')){
 }
 
 function initAttachments(){
-  const list = document.getElementById('attachment-list');
-  const addBtn = document.getElementById('add-attachment-btn');
+  const staging = document.querySelector('[data-attachment-staging]');
   const template = document.getElementById('attachment-template');
+  const panelsRoot = document.querySelector('[data-attachment-root]');
   const totalInput = document.querySelector('input[name$="-TOTAL_FORMS"]');
-  if(!list || !addBtn || !template || !totalInput) return;
-
-  const placeholderMarkup = '<span class="attach-add">+</span><span class="attach-text">Add file</span>';
-
-  function setPlaceholder(upload){
-    upload.innerHTML = placeholderMarkup;
-    delete upload.dataset.fileUrl;
-    delete upload.dataset.previewType;
+  if (!staging || !template || !panelsRoot || !totalInput) {
+    return;
   }
 
-  function bind(block){
-    const upload = block.querySelector('.attach-upload');
-    const fileInput = block.querySelector('.file-input');
-    const removeBtn = block.querySelector('.attach-remove');
-    const deleteToggle = block.querySelector('input[name$="-DELETE"]');
-    if(!upload || !fileInput || !removeBtn) return;
+  const categoryMeta = {};
+  panelsRoot.querySelectorAll('[data-panel]').forEach(section => {
+    const key = section.getAttribute('data-panel');
+    const list = section.querySelector('[data-panel-list]');
+    const button = section.querySelector('[data-add]');
+    const limitAttr = section.getAttribute('data-limit');
+    const limit = limitAttr === '' || limitAttr === null ? null : parseInt(limitAttr, 10) || null;
+    categoryMeta[key] = { section, list, button, limit, label: section.getAttribute('data-label') || '' };
+  });
 
-    const ensureRemovePlacement = () => {
-      if (!upload.contains(removeBtn)) {
-        upload.appendChild(removeBtn);
+  const filePlaceholder = () => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'evidence-placeholder';
+    wrapper.innerHTML = '<span class="placeholder-icon">+</span><span class="placeholder-text">Add file</span>';
+    return wrapper;
+  };
+
+  function updateOrderIndices(category){
+    const meta = categoryMeta[category];
+    if (!meta) return;
+    const cards = Array.from(meta.list.querySelectorAll('.evidence-card')).filter(card => card.dataset.removed !== '1');
+    cards.forEach((card, index) => {
+      const orderField = card.querySelector('.attachment-order-input');
+      if (orderField) {
+        orderField.value = index;
       }
-    };
+    });
+  }
 
-    const toggleRemoveVisibility = (visible) => {
-      removeBtn.style.display = visible ? 'flex' : 'none';
-    };
+  function updateButtonState(category){
+    const meta = categoryMeta[category];
+    if (!meta || !meta.button) return;
+    if (!meta.limit) {
+      meta.button.disabled = false;
+      return;
+    }
+    const active = meta.list.querySelectorAll('.evidence-card:not(.is-removed)').length;
+    meta.button.disabled = active >= meta.limit;
+  }
 
-    upload.addEventListener('click', () => {
-      const fileUrl = upload.dataset.fileUrl;
-      const previewType = upload.dataset.previewType;
-      if (fileUrl) {
-        if (previewType === 'image') {
-          openImageModal(fileUrl);
-        } else {
-          try {
-            window.open(fileUrl, '_blank', 'noopener');
-          } catch (_) {}
-        }
+  function showPreview(card, fileUrl, type, name){
+    const preview = card.querySelector('[data-preview]');
+    if (!preview) return;
+    preview.innerHTML = '';
+    if (fileUrl && type === 'image') {
+      const img = document.createElement('img');
+      img.src = fileUrl;
+      img.alt = 'Attachment preview image';
+      preview.appendChild(img);
+    } else if (fileUrl) {
+      const fileBox = document.createElement('div');
+      fileBox.className = 'evidence-file';
+      const nameEl = document.createElement('span');
+      nameEl.className = 'file-name';
+      nameEl.textContent = name || 'Attachment';
+      const note = document.createElement('span');
+      note.className = 'file-note';
+      note.textContent = 'Images will be extracted';
+      fileBox.appendChild(nameEl);
+      fileBox.appendChild(note);
+      preview.appendChild(fileBox);
+    } else {
+      preview.appendChild(filePlaceholder());
+    }
+    preview.dataset.previewType = type || 'file';
+    if (fileUrl) {
+      preview.dataset.fileUrl = fileUrl;
+    } else {
+      delete preview.dataset.fileUrl;
+    }
+  }
+
+  function showError(card, message){
+    const container = card.querySelector('.evidence-card-errors');
+    if (!container) return;
+    container.innerHTML = '';
+    if (message) {
+      const div = document.createElement('div');
+      div.className = 'field-error';
+      div.textContent = message;
+      container.appendChild(div);
+    }
+  }
+
+  function clearError(card){
+    showError(card, '');
+  }
+
+  function setPdfNote(card, visible){
+    const note = card.querySelector('[data-pdf-note]');
+    if (!note) return;
+    note.hidden = !visible;
+  }
+
+  function bindCard(card, category){
+    const meta = categoryMeta[category];
+    if (!meta) return;
+    const preview = card.querySelector('[data-preview]');
+    const fileInput = card.querySelector('.file-input');
+    const removeBtn = card.querySelector('.evidence-remove');
+    const deleteToggle = card.querySelector('input[name$="-DELETE"]');
+    const categoryField = card.querySelector('.attachment-category-input');
+    const orderField = card.querySelector('.attachment-order-input');
+    const extractField = card.querySelector('.attachment-extract-flag');
+    const dragHandle = card.querySelector('.evidence-drag-handle');
+
+    card.dataset.category = category;
+    if (categoryField) {
+      categoryField.value = category;
+    }
+    if (orderField && !orderField.value) {
+      orderField.value = meta.list.querySelectorAll('.evidence-card').length;
+    }
+
+    const existingUrl = preview?.dataset.fileUrl || '';
+    const existingType = preview?.dataset.previewType || 'file';
+    if (!existingUrl) {
+      showPreview(card, '', 'file');
+      setPdfNote(card, false);
+    } else {
+      setPdfNote(card, existingType !== 'image');
+    }
+
+    function handlePreviewClick(){
+      if (!preview) return;
+      const url = preview.dataset.fileUrl;
+      if (!url) {
+        if (fileInput) fileInput.click();
         return;
       }
-      fileInput.click();
-    });
+      if (preview.dataset.previewType === 'image') {
+        openImageModal(url);
+      } else {
+        try {
+          window.open(url, '_blank', 'noopener');
+        } catch (_) {}
+      }
+    }
 
-    fileInput.addEventListener('change', () => {
-      if(fileInput.files && fileInput.files[0]){
-        const file = fileInput.files[0];
-        const isImage = file.type && file.type.startsWith('image/');
-        const objectUrl = URL.createObjectURL(file);
-        if(isImage){
-          upload.innerHTML = `<img src="${objectUrl}" alt="Attachment preview">`;
-          upload.dataset.previewType = 'image';
-        } else {
-          const safeName = escapeHtml(file.name || 'Attachment');
-          upload.innerHTML = `<div class="attach-file"><span class="attach-file-name">${safeName}</span><span class="attach-text">Click to download</span></div>`;
-          upload.dataset.previewType = 'file';
+    if (preview) {
+      preview.addEventListener('click', handlePreviewClick);
+    }
+
+    if (fileInput) {
+      fileInput.addEventListener('change', () => {
+        clearError(card);
+        setPdfNote(card, false);
+        if (!fileInput.files || !fileInput.files[0]) {
+          if (!preview.dataset.fileUrl) {
+            showPreview(card, '', 'file');
+          }
+          if (extractField) extractField.value = 'False';
+          return;
         }
-        upload.dataset.fileUrl = objectUrl;
-        ensureRemovePlacement();
-        toggleRemoveVisibility(true);
+        const file = fileInput.files[0];
+        const name = file.name || 'Attachment';
+        const type = file.type || '';
+        const lowerName = name.toLowerCase();
+        const isImage = type.startsWith('image/') || lowerName.endsWith('.png') || lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg') || lowerName.endsWith('.webp') || lowerName.endsWith('.gif');
+        const isPdf = type === 'application/pdf' || lowerName.endsWith('.pdf');
+        if (!isImage && !isPdf) {
+          showError(card, 'Only JPG, PNG, or PDF files are supported.');
+          fileInput.value = '';
+          return;
+        }
+        const objectUrl = URL.createObjectURL(file);
+        showPreview(card, objectUrl, isImage ? 'image' : 'file', name);
+        setPdfNote(card, isPdf);
         if (deleteToggle) deleteToggle.checked = false;
+        if (extractField) extractField.value = isPdf ? 'True' : 'False';
         if (window.ReportAutosaveManager) {
           ReportAutosaveManager.reinitialize();
         }
-      } else if (!upload.dataset.fileUrl) {
-        setPlaceholder(upload);
-        toggleRemoveVisibility(false);
+      });
+    }
+
+    if (removeBtn) {
+      removeBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (fileInput) {
+          fileInput.value = '';
+        }
+        if (deleteToggle) {
+          deleteToggle.checked = true;
+        }
+        if (extractField) {
+          extractField.value = 'False';
+        }
+        card.dataset.removed = '1';
+        card.classList.add('is-removed');
+        card.style.display = 'none';
+        showPreview(card, '', 'file');
+        setPdfNote(card, false);
+        clearError(card);
+        updateOrderIndices(category);
+        updateButtonState(category);
+        if (window.ReportAutosaveManager) {
+          ReportAutosaveManager.reinitialize();
+        }
+      });
+    }
+
+    if (dragHandle) {
+      card.draggable = true;
+      dragHandle.addEventListener('mousedown', () => {
+        card.dataset.dragEnabled = '1';
+      });
+      dragHandle.addEventListener('mouseup', () => {
+        delete card.dataset.dragEnabled;
+      });
+      dragHandle.addEventListener('mouseleave', () => {
+        delete card.dataset.dragEnabled;
+      });
+      card.addEventListener('dragstart', (event) => {
+        if (card.dataset.dragEnabled !== '1') {
+          event.preventDefault();
+          return;
+        }
+        event.dataTransfer.effectAllowed = 'move';
+        card.classList.add('dragging');
+        card.dataset.originalCategory = card.dataset.category || '';
+      });
+      card.addEventListener('dragend', () => {
+        delete card.dataset.dragEnabled;
+        card.classList.remove('dragging');
+        const currentCategory = card.dataset.category || category;
+        updateOrderIndices(currentCategory);
+        updateButtonState(currentCategory);
+        if (card.dataset.originalCategory && card.dataset.originalCategory !== currentCategory) {
+          updateOrderIndices(card.dataset.originalCategory);
+          updateButtonState(card.dataset.originalCategory);
+        }
+        delete card.dataset.originalCategory;
+        if (window.ReportAutosaveManager) {
+          ReportAutosaveManager.reinitialize();
+        }
+      });
+    }
+  }
+
+  function getDragAfter(list, y){
+    const cards = [...list.querySelectorAll('.evidence-card:not(.dragging):not(.is-removed)')];
+    return cards.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) {
+        return { offset, element: child };
+      }
+      return closest;
+    }, { offset: Number.NEGATIVE_INFINITY, element: null }).element;
+  }
+
+  Object.values(categoryMeta).forEach(meta => {
+    if (!meta.list) return;
+    meta.list.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      const dragging = meta.list.querySelector('.evidence-card.dragging');
+      if (!dragging) return;
+      const afterElement = getDragAfter(meta.list, event.clientY);
+      if (!afterElement) {
+        meta.list.appendChild(dragging);
+      } else if (afterElement !== dragging) {
+        meta.list.insertBefore(dragging, afterElement);
       }
     });
-
-    removeBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      fileInput.value = '';
-      if (deleteToggle) deleteToggle.checked = true;
-      setPlaceholder(upload);
-      toggleRemoveVisibility(false);
+    meta.list.addEventListener('drop', (event) => {
+      event.preventDefault();
+      const dragging = meta.list.querySelector('.evidence-card.dragging');
+      if (!dragging) return;
+      dragging.classList.remove('dragging');
+      const targetCategory = meta.section.getAttribute('data-panel');
+      const previousCategory = dragging.dataset.category || dragging.dataset.originalCategory || targetCategory;
+      dragging.dataset.category = targetCategory;
+      const categoryField = dragging.querySelector('.attachment-category-input');
+      if (categoryField) {
+        categoryField.value = targetCategory;
+      }
+      updateOrderIndices(targetCategory);
+      updateButtonState(targetCategory);
+      if (previousCategory && previousCategory !== targetCategory) {
+        updateOrderIndices(previousCategory);
+        updateButtonState(previousCategory);
+      }
+      delete dragging.dataset.originalCategory;
       if (window.ReportAutosaveManager) {
         ReportAutosaveManager.reinitialize();
       }
     });
+  });
 
-    if (upload.dataset.fileUrl) {
-      ensureRemovePlacement();
-      toggleRemoveVisibility(true);
-    } else {
-      if (!upload.innerHTML.trim()) {
-        setPlaceholder(upload);
-      }
-      toggleRemoveVisibility(false);
-    }
-  }
-
-  list.querySelectorAll('.attachment-block').forEach(bind);
-
-  addBtn.addEventListener('click', () => {
+  function createCard(category){
     const idx = parseInt(totalInput.value, 10) || 0;
     const html = template.innerHTML.replace(/__prefix__/g, idx);
     const temp = document.createElement('div');
     temp.innerHTML = html.trim();
-    const block = temp.firstElementChild;
-    if(!block) return;
-    list.appendChild(block);
+    const card = temp.firstElementChild;
+    if (!card) return null;
     totalInput.value = String(idx + 1);
-    bind(block);
+    placeCard(card, category, true);
     if (window.ReportAutosaveManager) {
       ReportAutosaveManager.reinitialize();
     }
-    const input = block.querySelector('.file-input');
-    if (input) input.click();
+    const input = card.querySelector('.file-input');
+    if (input) {
+      input.click();
+    }
+    return card;
+  }
+
+  function placeCard(card, category, isNew){
+    const meta = categoryMeta[category] || categoryMeta.photo;
+    if (!meta) return;
+    card.classList.remove('is-removed');
+    card.dataset.removed = '';
+    card.style.display = '';
+    meta.list.appendChild(card);
+    bindCard(card, category);
+    if (isNew) {
+      updateOrderIndices(category);
+    }
+    updateButtonState(category);
+  }
+
+  Object.keys(categoryMeta).forEach(category => {
+    const meta = categoryMeta[category];
+    if (meta && meta.button) {
+      meta.button.addEventListener('click', (event) => {
+        event.preventDefault();
+        if (meta.limit) {
+          const active = meta.list.querySelectorAll('.evidence-card:not(.is-removed)').length;
+          if (active >= meta.limit) {
+            updateButtonState(category);
+            return;
+          }
+        }
+        createCard(category);
+      });
+    }
   });
+
+  const existingCards = Array.from(staging.children);
+  existingCards.forEach(card => {
+    const categoryField = card.querySelector('.attachment-category-input');
+    const orderField = card.querySelector('.attachment-order-input');
+    const category = categoryField && categoryField.value ? categoryField.value : (card.dataset.category || 'photo');
+    card.remove();
+    placeCard(card, category, false);
+    const preview = card.querySelector('[data-preview]');
+    if (preview && preview.dataset.previewType === 'file') {
+      setPdfNote(card, !!preview.dataset.fileUrl);
+    }
+  });
+
+  Object.keys(categoryMeta).forEach(category => {
+    const meta = categoryMeta[category];
+    if (!meta) return;
+    const sorted = Array.from(meta.list.querySelectorAll('.evidence-card')).sort((a, b) => {
+      const orderA = parseInt(a.querySelector('.attachment-order-input')?.value || '0', 10);
+      const orderB = parseInt(b.querySelector('.attachment-order-input')?.value || '0', 10);
+      return orderA - orderB;
+    });
+    sorted.forEach(card => meta.list.appendChild(card));
+  });
+
+  Object.keys(categoryMeta).forEach(category => updateOrderIndices(category));
+  Object.keys(categoryMeta).forEach(category => updateButtonState(category));
 }
 
 function openImageModal(src){

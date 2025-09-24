@@ -489,14 +489,55 @@ class EventReportForm(forms.ModelForm):
 class EventReportAttachmentForm(forms.ModelForm):
     class Meta:
         model = EventReportAttachment
-        fields = ["file", "caption"]
+        fields = [
+            "file",
+            "caption",
+            "category",
+            "order_index",
+            "requires_extraction",
+        ]
         widgets = {
             # Use plain FileInput to avoid Django's "Change" and "Clear" controls
             "file": forms.FileInput(
                 attrs={"class": "file-input", "style": "display:none;"}
             ),
-            "caption": forms.TextInput(attrs={"style": "display:none;"}),
+            "caption": forms.TextInput(
+                attrs={
+                    "class": "attachment-caption-input",
+                    "placeholder": "Describe what this attachment shows",
+                }
+            ),
+            "category": forms.HiddenInput(attrs={"class": "attachment-category-input"}),
+            "order_index": forms.HiddenInput(attrs={"class": "attachment-order-input"}),
+            "requires_extraction": forms.HiddenInput(
+                attrs={"class": "attachment-extract-flag"}
+            ),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Caption remains optional; surface via custom UI
+        self.fields["caption"].required = False
+
+        category_value = (
+            self.initial.get("category")
+            or getattr(self.instance, "category", None)
+            or EventReportAttachment.Category.PHOTOGRAPH
+        )
+        self.initial["category"] = category_value
+        self.fields["category"].initial = category_value
+
+        order_value = self.initial.get("order_index")
+        if order_value is None:
+            order_value = getattr(self.instance, "order_index", 0) or 0
+            self.initial["order_index"] = order_value
+        self.fields["order_index"].initial = order_value
+
+        extraction_value = self.initial.get("requires_extraction")
+        if extraction_value is None:
+            extraction_value = bool(getattr(self.instance, "requires_extraction", False))
+            self.initial["requires_extraction"] = extraction_value
+        self.fields["requires_extraction"].initial = extraction_value
 
 
 class CDLSupportForm(forms.ModelForm):
