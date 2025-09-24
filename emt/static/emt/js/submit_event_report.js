@@ -89,7 +89,6 @@ document.addEventListener('DOMContentLoaded', function(){
       'event-summary',
       'event-outcomes',
       'analysis',
-      'event-relevance',
       'attachments'
   ];
   const navLinks = Array.from(document.querySelectorAll('.nav-link[data-section]'));
@@ -120,7 +119,6 @@ document.addEventListener('DOMContentLoaded', function(){
       'event-summary': false,
       'event-outcomes': false,
       'analysis': false,
-      'event-relevance': false,
       'attachments': false
   };
   SECTION_SEQUENCE.forEach(section => {
@@ -748,9 +746,6 @@ $(document).on('click', '#ai-sdg-implementation', function(){
           case 'analysis':
               content = getAnalysisContent();
               break;
-          case 'event-relevance':
-              content = getEventRelevanceContent();
-              break;
           case 'attachments':
               content = getAttachmentsContent();
               break;
@@ -778,10 +773,6 @@ $(document).on('click', '#ai-sdg-implementation', function(){
           };
           setTimeout(() => initParticipantsSection(0), 50);
       }
-
-          if (sectionName === 'event-relevance') {
-              fillEventRelevance();
-          }
 
       if (sectionName === 'event-information') {
           // Initialize activities after content is loaded
@@ -821,10 +812,6 @@ $(document).on('click', '#ai-sdg-implementation', function(){
               title: 'Analysis',
               subtitle: 'Detailed analysis and insights (minimum 500 words)'
           },
-          'event-relevance': {
-              title: 'Relevance of the Event',
-              subtitle: 'Program outcomes, graduate attributes, SDGs mapping'
-          },
           'attachments': {
               title: 'Attachments & Evidence',
               subtitle: 'Upload photos, certificates, and other supporting files'
@@ -860,8 +847,6 @@ $(document).on('click', '#ai-sdg-implementation', function(){
           return validateEventOutcomes();
       } else if (currentSection === 'analysis') {
           return validateAnalysis();
-      } else if (currentSection === 'event-relevance') {
-          return validateEventRelevance();
       } else if (currentSection === 'attachments') {
           return validateAttachments();
       }
@@ -967,42 +952,14 @@ $(document).on('click', '#ai-sdg-implementation', function(){
       return isValid;
   }
   
-  function validateEventRelevance() {
-      let isValid = true;
-      const requiredFields = [
-          { id: '#pos-pso-modern', name: "PO's and PSO's Management" },
-          { id: '#graduate-attributes-modern', name: 'Graduate Attributes' },
-          { id: '#contemporary-requirements-modern', name: 'Contemporary Requirements' },
-          { id: '#sdg-implementation-modern', name: 'SDG Implementation' }
-      ];
-
-      requiredFields.forEach(function(field) {
-          const element = $(field.id);
-          if (field.id !== '#graduate-attributes-modern') {
-              // For textarea and input fields
-              if (!element.val() || element.val().trim() === '') {
-                  showFieldError(element, field.name + ' is required');
-                  isValid = false;
-              } else {
-                  clearFieldError(element);
-              }
-          } else {
-              // For GA, rely on hidden Django field or summary content if present
-              const hidden = document.getElementById('id_needs_grad_attr_mapping');
-              const hasValue = hidden ? (hidden.value && hidden.value.trim() !== '') : (element.text().trim() !== '');
-              if (!hasValue) {
-                  showFieldError(element, field.name + ' - Please select at least one attribute');
-                  isValid = false;
-              } else {
-                  clearFieldError(element);
-              }
-          }
-      });
-
-      return isValid;
-  }
-
   function validateAttachments() {
+      const list = document.querySelector('[data-attachment-list]');
+      if (!list) return true;
+      const errorEl = Array.from(list.querySelectorAll('.evidence-error')).find(el => (el.textContent || '').trim() !== '');
+      if (errorEl) {
+          try { errorEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
+          return false;
+      }
       return true;
   }
 
@@ -1486,70 +1443,6 @@ $(document).on('click', '#ai-sdg-implementation', function(){
       `;
   }
   
-  function getEventRelevanceContent() {
-      return `
-          <!-- POs and PSOs Section -->
-          <div class="form-section-header">
-              <h3>Program Outcomes & Program Specific Outcomes</h3>
-          </div>
-          
-          <div class="form-row full-width">
-              <div class="input-group ai-input">
-                  <label for="pos-pso-modern">PO's and PSO's Management *</label>
-                  <textarea id="pos-pso-modern" name="pos_pso_mapping" rows="15" required
-                      placeholder="Describe how the event addresses Program Outcomes (POs) and Program Specific Outcomes (PSOs):&#10;&#10;Program Outcomes:&#10;• PO1: Engineering Knowledge&#10;• PO2: Problem Analysis&#10;• PO3: Design/Development of Solutions&#10;&#10;Program Specific Outcomes:&#10;• PSO1: [Specific to your program]&#10;• PSO2: [Specific to your program]&#10;&#10;Provide detailed explanation of how each relevant outcome was addressed through this event."></textarea>
-                  <button type="button" id="ai-pos-pso" class="ai-fill-btn" title="Fill with AI">AI</button>
-                  <div class="help-text">Detail how the event contributes to achieving specific program outcomes</div>
-              </div>
-          </div>
-
-          <!-- Graduate Attributes Section (summary only, open dedicated editor) -->
-          <div class="form-section-header">
-              <h3>Graduate Attributes & Contemporary Requirements</h3>
-          </div>
-          
-          <div class="form-row full-width">
-              <div class="input-group">
-                  <label for="graduate-attributes-modern" style="display:flex;align-items:center;gap:8px;width:100%;">
-                      <span>Graduate Attributes *</span>
-                      <span style="flex:1 1 auto"></span>
-                      <button type="button" id="ga-open-editor-btn" class="btn-ga-editor ga-editor-btn" title="Open dedicated GA editor" style="margin-left:auto;width:auto;">Open GA Editor</button>
-                  </label>
-                  <div id="graduate-attributes-modern" class="graduate-attributes-groups" style="min-height: 48px;">
-                      <div id="ga-summary" class="help-text" data-empty-text="Open the Graduate Attributes editor to select attributes. Your selections will be saved back to this report.">Open the Graduate Attributes editor to select attributes. Your selections will be saved back to this report.</div>
-                  </div>
-              </div>
-          </div>
-          
-          <div class="form-row">
-              <div class="input-group ai-input">
-                  <label for="contemporary-requirements-modern">Contemporary Requirements *</label>
-                  <textarea id="contemporary-requirements-modern" name="contemporary_requirements" rows="12" required
-                      placeholder="Describe how the event addresses contemporary requirements:&#10;&#10;• Employability enhancement&#10;• Entrepreneurship development&#10;• Skill development initiatives&#10;• Industry 4.0 readiness&#10;• Digital transformation skills&#10;• Innovation and creativity&#10;• Leadership and soft skills&#10;• Global competency development&#10;&#10;Provide specific examples of how these requirements were addressed."></textarea>
-                  <button type="button" id="ai-contemporary-requirements" class="ai-fill-btn" title="Fill with AI">AI</button>
-                  <div class="help-text">Explain how the event addresses employability, entrepreneurship, skill development, etc.</div>
-              </div>
-
-              <div class="input-group ai-input">
-                  <label for="sdg-implementation-modern">SDG Implementation *</label>
-                  <textarea id="sdg-implementation-modern" name="sdg_value_systems_mapping" rows="10" required
-                      placeholder="Click 'Select SDG Goals' to choose from the 17 Sustainable Development Goals&#10;&#10;Selected goals will appear here and can be edited:&#10;&#10;You can modify the SDG selection or add additional context about how your event addresses these goals."></textarea>
-                  <button type="button" id="ai-sdg-implementation" class="ai-fill-btn" title="Fill with AI">AI</button>
-                  <button type="button" id="sdg-select-btn" class="btn-sdg-select sdg-select-btn" style="background:var(--primary-blue);">Select SDG Goals</button>
-                  <div class="help-text">Sustainable Development Goals addressed by this event (editable)</div>
-              </div>
-          </div>
-
-          <!-- Save Section -->
-          <div class="form-row full-width">
-          <div class="save-section-container">
-              <button type="button" class="btn-save-section">Save & Continue</button>
-              <div class="save-help-text">Complete this section to unlock the next one</div>
-          </div>
-      </div>
-  `;
-}
-
   function getAttachmentsContent() {
       const tpl = document.getElementById('attachments-section-template');
       if (!tpl) {
@@ -1648,182 +1541,14 @@ function showNotification(message, type = 'info') {
 }
 
 // Populate fields with proposal data
-function fillEventRelevance() {
-    // POS/PSO: prefer current report value (hidden field), then keep existing, then fall back to proposal snapshot
-    (function syncPosPso(){
-        const $modern = $('#pos-pso-modern');
-        if (!$modern.length) return;
-        const hiddenEl = document.getElementById('id_pos_pso_mapping');
-        const hiddenVal = (hiddenEl && hiddenEl.value ? String(hiddenEl.value) : '').trim();
-        const modernVal = String($modern.val() || '').trim();
-        const proposalVal = (window.PROPOSAL_DATA && typeof window.PROPOSAL_DATA.pos_pso !== 'undefined')
-            ? String(window.PROPOSAL_DATA.pos_pso || '').trim()
-            : '';
-
-        // Decide the desired value without clobbering user edits
-        let desired = '';
-        if (hiddenVal) desired = hiddenVal; else if (modernVal) desired = modernVal; else desired = proposalVal;
-
-        // Only write if the field is empty; don't overwrite non-empty user input
-        if (!modernVal && desired) {
-            $modern.val(desired); // no trigger to avoid unintended autosave churn
-        }
-        // Keep hidden in sync if it's empty but visible has content
-        if (hiddenEl && !hiddenVal && modernVal) {
-            hiddenEl.value = modernVal;
-        }
-    })();
-
-    // SDG text: same preference order; avoid overwriting if user already has content
-    (function syncSdg(){
-        const $modern = $('#sdg-implementation-modern');
-        if (!$modern.length) return;
-        const hiddenEl = document.getElementById('id_sdg_value_systems_mapping');
-        const hiddenVal = (hiddenEl && hiddenEl.value ? String(hiddenEl.value) : '').trim();
-        const modernVal = String($modern.val() || '').trim();
-        const proposalVal = (window.PROPOSAL_DATA && window.PROPOSAL_DATA.sdg_goals)
-            ? String(window.PROPOSAL_DATA.sdg_goals || '').trim()
-            : '';
-
-        let desired = '';
-        if (hiddenVal) desired = hiddenVal; else if (modernVal) desired = modernVal; else desired = proposalVal;
-
-        if (!modernVal && desired) {
-            $modern.val(desired); // avoid firing change to prevent autosave overrides
-        }
-        if (hiddenEl && !hiddenVal && modernVal) {
-            hiddenEl.value = modernVal;
-        }
-    })();
-    // Rebuild GA summary container each time to avoid stale DOM
-    updateGASummary();
-}
-
-// Helper to (re)construct GA summary pills smartly
-function updateGASummary() {
-    try {
-        const container = document.getElementById('graduate-attributes-modern');
-        if (!container) {
-            // Not yet rendered; retry shortly
-            return setTimeout(updateGASummary, 200);
-        }
-        // Remove any previous summary / text nodes to ensure clean slate
-        const existing = container.querySelectorAll('#ga-summary, .ga-pill-container');
-        existing.forEach(el => el.remove());
-
-        // Determine value source
-        const hidden = document.getElementById('id_needs_grad_attr_mapping');
-        let raw = '';
-        if (hidden) raw = (hidden.value || '').trim();
-        if (!raw && window.REPORT_GA_MAPPING) raw = String(window.REPORT_GA_MAPPING).trim();
-
-        // Build new summary element
-        const summaryDiv = document.createElement('div');
-        summaryDiv.id = 'ga-summary';
-        summaryDiv.className = 'ga-pill-container';
-        const emptyText = 'Open the Graduate Attributes editor to select attributes. Your selections will be saved back to this report.';
-        summaryDiv.setAttribute('data-empty-text', emptyText);
-
-        if (!raw) {
-            summaryDiv.classList.add('empty');
-            summaryDiv.textContent = emptyText;
-        } else {
-            // Split on commas, trim, dedupe
-            const items = Array.from(new Set(raw.split(/[,\n]/).map(s => s.trim()).filter(Boolean)));
-            if (items.length === 0) {
-                summaryDiv.classList.add('empty');
-                summaryDiv.textContent = emptyText;
-            } else {
-                items.forEach(txt => {
-                    const span = document.createElement('span');
-                    span.className = 'ga-pill';
-                    span.textContent = txt;
-                    summaryDiv.appendChild(span);
-                });
-            }
-        }
-        container.appendChild(summaryDiv);
-    } catch (e) { /* silent */ }
-}
-
-function fillOrganizingCommittee() {
-    const field = $('#organizing-committee-modern');
-    if (field.length && field.val().trim() === '' && window.PROPOSAL_DATA) {
-        const parts = [];
-        if (window.PROPOSAL_DATA.proposer) {
-            parts.push(`Proposer: ${window.PROPOSAL_DATA.proposer}`);
-        }
-        if (window.PROPOSAL_DATA.faculty_incharges && window.PROPOSAL_DATA.faculty_incharges.length) {
-            parts.push(`Faculty In-Charge: ${window.PROPOSAL_DATA.faculty_incharges.join(', ')}`);
-        }
-        if (window.PROPOSAL_DATA.student_coordinators) {
-            parts.push(`Student Coordinators: ${window.PROPOSAL_DATA.student_coordinators}`);
-        }
-        if (window.PROPOSAL_DATA.volunteers && window.PROPOSAL_DATA.volunteers.length) {
-            parts.push(`Volunteers: ${window.PROPOSAL_DATA.volunteers.join(', ')}`);
-        }
-        field.val(parts.join('\n'));
-    }
-}
-
-function fillAttendanceCounts() {
-    const counts = window.ATTENDANCE_COUNTS || {};
-    const present = (counts.present !== undefined && counts.present !== null)
-        ? counts.present
-        : window.ATTENDANCE_PRESENT;
-    const absent = (counts.absent !== undefined && counts.absent !== null)
-        ? counts.absent
-        : window.ATTENDANCE_ABSENT;
-    const volunteers = (counts.volunteers !== undefined && counts.volunteers !== null)
-        ? counts.volunteers
-        : window.ATTENDANCE_VOLUNTEERS;
-    const total = (counts.total !== undefined && counts.total !== null)
-        ? counts.total
-        : present;
-
-    const updateField = (id, value) => {
-        if (value === undefined || value === null) return;
-        const el = document.getElementById(id);
-        if (!el) return;
-        if ('value' in el && typeof el.value !== 'undefined') {
-            el.value = value;
-        } else {
-            el.textContent = value;
-        }
-    };
-
-    const summaryField = document.getElementById('attendance-modern');
-    if (summaryField) {
-        const parts = [];
-        if (present !== undefined && present !== null) parts.push(`Present: ${present}`);
-        if (absent !== undefined && absent !== null) parts.push(`Absent: ${absent}`);
-        if (volunteers !== undefined && volunteers !== null) parts.push(`Volunteers: ${volunteers}`);
-        if (parts.length) summaryField.value = parts.join(', ');
-    }
-
-    updateField('num-participants-modern', total);
-    updateField('total-participants-modern', total);
-    updateField('num-volunteers-modern', volunteers);
-    updateField('num-volunteers-hidden', volunteers);
-    updateField('student-participants-modern', counts.students);
-    updateField('faculty-participants-modern', counts.faculty);
-    updateField('external-participants-modern', counts.external);
-
-    if (typeof setupAttendanceLink === 'function') setupAttendanceLink();
-}
-
 function populateProposalData() {
     // Initial fill if fields exist
     setTimeout(function() {
-        fillEventRelevance();
         fillOrganizingCommittee();
         fillAttendanceCounts();
     }, 100);
 
     // Populate when sections become active
-    $(document).on('click', '[data-section="event-relevance"]', function() {
-        setTimeout(fillEventRelevance, 100);
-    });
     $(document).on('click', '[data-section="participants-information"]', function() {
         const init = (attempt=0) => {
             const container = document.getElementById('speakers-display');
@@ -2692,122 +2417,423 @@ if(_outcomeSaveBtn && document.getElementById('outcomeModal')){
     };
 }
 
+
 function initAttachments(){
-  const list = document.getElementById('attachment-list');
-  const addBtn = document.getElementById('add-attachment-btn');
+  const list = document.querySelector('[data-attachment-list]');
   const template = document.getElementById('attachment-template');
   const totalInput = document.querySelector('input[name$="-TOTAL_FORMS"]');
-  if(!list || !addBtn || !template || !totalInput) return;
+  if (!list || !template || !totalInput) return;
+  if (list.dataset.attachmentsBound === 'true') return;
+  list.dataset.attachmentsBound = 'true';
 
-  const placeholderMarkup = '<span class="attach-add">+</span><span class="attach-text">Add file</span>';
+  const addBtn = document.querySelector('[data-add-attachment]');
+  const dropzone = document.querySelector('[data-dropzone]');
+  const bulkInput = dropzone ? dropzone.querySelector('[data-dropzone-input]') : null;
+  const status = document.getElementById('attachments-save-status');
 
-  function setPlaceholder(upload){
-    upload.innerHTML = placeholderMarkup;
+  const ACCEPTED_TYPES = ['image/jpeg','image/jpg','image/png','image/webp','application/pdf'];
+  const MAX_SIZE = 10 * 1024 * 1024;
+  const IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.webp'];
+  let dirty = false;
+
+  const showStatus = (msg) => { if (status) status.textContent = msg || ''; };
+  const markDirty = () => { dirty = true; showStatus(''); };
+
+  const isImageType = (type, name='') => {
+    if (type && type.startsWith('image/')) return true;
+    const lower = (name || '').toLowerCase();
+    return IMAGE_EXTS.some(ext => lower.endsWith(ext));
+  };
+
+  const updateEmptyState = () => {
+    const rows = Array.from(list.querySelectorAll('.evidence-item')).filter(row => row.dataset.removed !== 'true');
+    const empty = list.querySelector('[data-empty-state]');
+    if (empty) empty.style.display = rows.length ? 'none' : '';
+  };
+
+  const updateOrderInputs = () => {
+    let index = 0;
+    list.querySelectorAll('.evidence-item').forEach(row => {
+      if (row.dataset.removed === 'true') return;
+      const orderField = row.querySelector('.attachment-order-input');
+      if (orderField) orderField.value = index;
+      index += 1;
+    });
+  };
+
+  const resetPreview = (upload) => {
+    if (!upload) return;
+    const placeholder = upload.querySelector('[data-placeholder]');
+    const preview = upload.querySelector('[data-file-preview]');
+    const thumb = upload.querySelector('[data-thumb]');
+    const nameEl = upload.querySelector('[data-filename]');
+    const metaEl = upload.querySelector('[data-filemeta]');
+    if (thumb) thumb.innerHTML = '';
+    if (nameEl) nameEl.textContent = '';
+    if (metaEl) metaEl.textContent = '';
+    if (placeholder) placeholder.hidden = false;
+    if (preview) preview.hidden = true;
     delete upload.dataset.fileUrl;
+    delete upload.dataset.fileName;
     delete upload.dataset.previewType;
-  }
+    upload.dataset.hasFile = 'false';
+  };
 
-  function bind(block){
-    const upload = block.querySelector('.attach-upload');
-    const fileInput = block.querySelector('.file-input');
-    const removeBtn = block.querySelector('.attach-remove');
-    const deleteToggle = block.querySelector('input[name$="-DELETE"]');
-    if(!upload || !fileInput || !removeBtn) return;
+  const setPreview = (upload, {src, name, meta, type}) => {
+    if (!upload) return;
+    const placeholder = upload.querySelector('[data-placeholder]');
+    const preview = upload.querySelector('[data-file-preview]');
+    const thumb = upload.querySelector('[data-thumb]');
+    const nameEl = upload.querySelector('[data-filename]');
+    const metaEl = upload.querySelector('[data-filemeta]');
+    if (placeholder) placeholder.hidden = true;
+    if (preview) preview.hidden = false;
+    if (thumb) {
+      thumb.innerHTML = '';
+      if (type === 'image' && src) {
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = name || 'Attachment';
+        thumb.appendChild(img);
+      } else {
+        thumb.textContent = 'PDF';
+      }
+    }
+    if (nameEl) nameEl.textContent = name || 'Attachment';
+    if (metaEl) metaEl.textContent = meta || '';
+    if (src) upload.dataset.fileUrl = src;
+    if (name) upload.dataset.fileName = name;
+    upload.dataset.previewType = type || '';
+    upload.dataset.hasFile = 'true';
+  };
 
-    const ensureRemovePlacement = () => {
-      if (!upload.contains(removeBtn)) {
-        upload.appendChild(removeBtn);
+  const clearRow = (row) => {
+    const upload = row.querySelector('[data-upload]');
+    const fileInput = row.querySelector('.file-input');
+    if (fileInput) fileInput.setAttribute('accept', '.jpg,.jpeg,.png,.webp,.pdf');
+    const deleteToggle = row.querySelector('input[name$="-DELETE"]');
+    if (fileInput) fileInput.value = '';
+    if (upload) resetPreview(upload);
+    if (deleteToggle) deleteToggle.checked = false;
+  };
+
+  const bindRow = (row) => {
+    if (!row || row.dataset.bound === 'true') return;
+    row.dataset.bound = 'true';
+    if (!row.dataset.removed) row.dataset.removed = 'false';
+    row.removeAttribute('hidden');
+
+    const upload = row.querySelector('[data-upload]');
+    const fileInput = row.querySelector('.file-input');
+    const deleteToggle = row.querySelector('input[name$="-DELETE"]');
+    const removeBtn = row.querySelector('.evidence-remove');
+    const browseBtn = row.querySelector('[data-select-file]');
+    const caption = row.querySelector('.attachment-caption-input');
+    const category = row.querySelector('.attachment-category-select');
+    const counter = row.querySelector('[data-caption-counter]');
+    const errorEl = row.querySelector('[data-error]');
+
+    const setError = (msg) => { if (errorEl) errorEl.textContent = msg || ''; };
+    const clearError = () => setError('');
+
+    const updateCounter = () => {
+      if (!counter || !caption) return;
+      const len = caption.value ? caption.value.length : 0;
+      counter.textContent = `${len}/150`;
+    };
+    updateCounter();
+
+    if (caption) {
+      caption.addEventListener('input', () => { updateCounter(); markDirty(); });
+    }
+    if (category) {
+      category.addEventListener('change', () => { markDirty(); });
+    }
+
+    if (removeBtn) {
+      removeBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        clearRow(row);
+        if (deleteToggle) deleteToggle.checked = true;
+        row.dataset.removed = 'true';
+        row.setAttribute('hidden', 'true');
+        updateEmptyState();
+        updateOrderInputs();
+        markDirty();
+        if (window.ReportAutosaveManager) { ReportAutosaveManager.reinitialize(); }
+      });
+    }
+
+    const openPreview = () => {
+      if (!upload || upload.dataset.hasFile !== 'true') return;
+      const fileUrl = upload.dataset.fileUrl;
+      const type = upload.dataset.previewType || '';
+      if (!fileUrl) return;
+      if (type === 'image') {
+        openImageModal(fileUrl);
+      } else {
+        try { window.open(fileUrl, '_blank', 'noopener'); } catch (_) {}
       }
     };
 
-    const toggleRemoveVisibility = (visible) => {
-      removeBtn.style.display = visible ? 'flex' : 'none';
-    };
-
-    upload.addEventListener('click', () => {
-      const fileUrl = upload.dataset.fileUrl;
-      const previewType = upload.dataset.previewType;
-      if (fileUrl) {
-        if (previewType === 'image') {
-          openImageModal(fileUrl);
-        } else {
-          try {
-            window.open(fileUrl, '_blank', 'noopener');
-          } catch (_) {}
+    if (upload) {
+      upload.addEventListener('click', (e) => {
+        if (e.target.closest('[data-select-file]')) return;
+        if (upload.dataset.hasFile === 'true') {
+          e.preventDefault();
+          openPreview();
+        } else if (fileInput) {
+          fileInput.click();
         }
+      });
+    }
+
+    if (browseBtn && fileInput) {
+      browseBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        fileInput.click();
+      });
+    }
+
+    const applyExisting = () => {
+      if (!upload) return;
+      const existingUrl = upload.dataset.fileUrl;
+      const existingName = upload.dataset.fileName || '';
+      if (existingUrl) {
+        const type = isImageType('', existingName) ? 'image' : 'file';
+        const meta = type === 'image' ? 'Image attachment' : 'Document attachment';
+        setPreview(upload, {src: existingUrl, name: existingName, meta, type});
+      } else {
+        resetPreview(upload);
+      }
+    };
+    applyExisting();
+
+    if (fileInput) {
+      fileInput.addEventListener('change', () => {
+        clearError();
+        if (!fileInput.files || !fileInput.files.length) {
+          if (upload && upload.dataset.fileUrl) return;
+          if (upload) resetPreview(upload);
+          return;
+        }
+        const file = fileInput.files[0];
+        if (!ACCEPTED_TYPES.includes(file.type)) {
+          setError('Unsupported file type. Upload JPG, PNG, WEBP, or PDF.');
+          fileInput.value = '';
+          if (upload) resetPreview(upload);
+          return;
+        }
+        if (file.size > MAX_SIZE) {
+          setError('File exceeds 10 MB limit. Please compress or choose a smaller file.');
+          fileInput.value = '';
+          if (upload) resetPreview(upload);
+          return;
+        }
+        const objectUrl = URL.createObjectURL(file);
+        const type = isImageType(file.type, file.name) ? 'image' : 'file';
+        const meta = type === 'image'
+          ? `${(file.size / (1024 * 1024)).toFixed(2)} MB`
+          : `${(file.size / 1024).toFixed(0)} KB`;
+        setPreview(upload, {src: objectUrl, name: file.name, meta, type});
+        if (deleteToggle) deleteToggle.checked = false;
+        row.dataset.removed = 'false';
+        row.removeAttribute('hidden');
+        updateEmptyState();
+        updateOrderInputs();
+        markDirty();
+        if (window.ReportAutosaveManager) { ReportAutosaveManager.reinitialize(); }
+      });
+    }
+
+    row.addEventListener('dragstart', (e) => {
+      if (!e.target.closest('[data-drag-handle]')) {
+        e.preventDefault();
         return;
       }
-      fileInput.click();
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', row.dataset.formPrefix || ''); } catch (_) {}
     });
 
-    fileInput.addEventListener('change', () => {
-      if(fileInput.files && fileInput.files[0]){
-        const file = fileInput.files[0];
-        const isImage = file.type && file.type.startsWith('image/');
-        const objectUrl = URL.createObjectURL(file);
-        if(isImage){
-          upload.innerHTML = `<img src="${objectUrl}" alt="Attachment preview">`;
-          upload.dataset.previewType = 'image';
-        } else {
-          const safeName = escapeHtml(file.name || 'Attachment');
-          upload.innerHTML = `<div class="attach-file"><span class="attach-file-name">${safeName}</span><span class="attach-text">Click to download</span></div>`;
-          upload.dataset.previewType = 'file';
-        }
-        upload.dataset.fileUrl = objectUrl;
-        ensureRemovePlacement();
-        toggleRemoveVisibility(true);
-        if (deleteToggle) deleteToggle.checked = false;
-        if (window.ReportAutosaveManager) {
-          ReportAutosaveManager.reinitialize();
-        }
-      } else if (!upload.dataset.fileUrl) {
-        setPlaceholder(upload);
-        toggleRemoveVisibility(false);
-      }
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
     });
+  };
 
-    removeBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      fileInput.value = '';
-      if (deleteToggle) deleteToggle.checked = true;
-      setPlaceholder(upload);
-      toggleRemoveVisibility(false);
-      if (window.ReportAutosaveManager) {
-        ReportAutosaveManager.reinitialize();
-      }
-    });
-
-    if (upload.dataset.fileUrl) {
-      ensureRemovePlacement();
-      toggleRemoveVisibility(true);
-    } else {
-      if (!upload.innerHTML.trim()) {
-        setPlaceholder(upload);
-      }
-      toggleRemoveVisibility(false);
-    }
-  }
-
-  list.querySelectorAll('.attachment-block').forEach(bind);
-
-  addBtn.addEventListener('click', () => {
+  const createRow = () => {
     const idx = parseInt(totalInput.value, 10) || 0;
     const html = template.innerHTML.replace(/__prefix__/g, idx);
     const temp = document.createElement('div');
     temp.innerHTML = html.trim();
     const block = temp.firstElementChild;
-    if(!block) return;
+    if (!block) return null;
     list.appendChild(block);
     totalInput.value = String(idx + 1);
-    bind(block);
-    if (window.ReportAutosaveManager) {
-      ReportAutosaveManager.reinitialize();
-    }
-    const input = block.querySelector('.file-input');
-    if (input) input.click();
-  });
-}
+    return block;
+  };
 
+  const getAvailableRow = () => {
+    const rows = Array.from(list.querySelectorAll('.evidence-item')).filter(row => row.dataset.removed !== 'true');
+    for (const row of rows) {
+      const upload = row.querySelector('[data-upload]');
+      const fileInput = row.querySelector('.file-input');
+      if (!upload || !fileInput) continue;
+      const hasFile = upload.dataset.hasFile === 'true';
+      if (!hasFile && !fileInput.files.length) {
+        return row;
+      }
+    }
+    const newRow = createRow();
+    if (newRow) {
+      bindRow(newRow);
+      if (window.ReportAutosaveManager) { ReportAutosaveManager.reinitialize(); }
+    }
+    return newRow;
+  };
+
+  const assignFileToRow = (row, file) => {
+    if (!row) return;
+    const upload = row.querySelector('[data-upload]');
+    const fileInput = row.querySelector('.file-input');
+    const deleteToggle = row.querySelector('input[name$="-DELETE"]');
+    const errorEl = row.querySelector('[data-error]');
+    if (!fileInput) return;
+    if (errorEl) errorEl.textContent = '';
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    fileInput.files = dt.files;
+    const type = isImageType(file.type, file.name) ? 'image' : 'file';
+    const meta = type === 'image' ? `${(file.size / (1024 * 1024)).toFixed(2)} MB` : `${(file.size / 1024).toFixed(0)} KB`;
+    const objectUrl = URL.createObjectURL(file);
+    setPreview(upload, {src: objectUrl, name: file.name, meta, type});
+    if (deleteToggle) deleteToggle.checked = false;
+    row.dataset.removed = 'false';
+    row.removeAttribute('hidden');
+  };
+
+  const handleFiles = (files) => {
+    if (!files || !files.length) return;
+    Array.from(files).forEach(file => {
+      if (!ACCEPTED_TYPES.includes(file.type)) {
+        showStatus('Unsupported file skipped.');
+        return;
+      }
+      if (file.size > MAX_SIZE) {
+        showStatus('Some files exceeded 10 MB and were skipped.');
+        return;
+      }
+      const row = getAvailableRow();
+      if (!row) return;
+      assignFileToRow(row, file);
+    });
+    updateEmptyState();
+    updateOrderInputs();
+    markDirty();
+    if (window.ReportAutosaveManager) { ReportAutosaveManager.reinitialize(); }
+  };
+
+  list.querySelectorAll('.evidence-item').forEach(bindRow);
+  updateEmptyState();
+  updateOrderInputs();
+
+  list.addEventListener('dragover', (e) => {
+    const dragging = list.querySelector('.evidence-item.dragging');
+    if (!dragging) return;
+    e.preventDefault();
+    const candidates = Array.from(list.querySelectorAll('.evidence-item')).filter(el => el.dataset.removed !== 'true' && !el.classList.contains('dragging'));
+    let closest = {offset: Number.NEGATIVE_INFINITY, element: null};
+    candidates.forEach(el => {
+      const box = el.getBoundingClientRect();
+      const offset = e.clientY - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) {
+        closest = {offset, element: el};
+      }
+    });
+    if (!closest.element) {
+      list.appendChild(dragging);
+    } else {
+      list.insertBefore(dragging, closest.element);
+    }
+  });
+
+  list.addEventListener('drop', (e) => {
+    const dragging = list.querySelector('.evidence-item.dragging');
+    if (!dragging) return;
+    e.preventDefault();
+    dragging.classList.remove('dragging');
+    updateOrderInputs();
+    markDirty();
+  });
+
+  if (addBtn) {
+    addBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const row = createRow();
+      if (!row) return;
+      bindRow(row);
+      row.dataset.removed = 'false';
+      row.removeAttribute('hidden');
+      updateEmptyState();
+      updateOrderInputs();
+      markDirty();
+      if (window.ReportAutosaveManager) { ReportAutosaveManager.reinitialize(); }
+    });
+  }
+
+  if (dropzone) {
+    const browseTrigger = dropzone.querySelector('[data-dropzone-browse]');
+    if (browseTrigger && bulkInput) {
+      browseTrigger.addEventListener('click', (e) => { e.preventDefault(); bulkInput.click(); });
+    }
+    ['dragenter','dragover'].forEach(evt => {
+      dropzone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        dropzone.classList.add('drag-active');
+      });
+    });
+    ['dragleave','dragend','drop'].forEach(evt => {
+      dropzone.addEventListener(evt, () => dropzone.classList.remove('drag-active'));
+    });
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (e.dataTransfer && e.dataTransfer.files) {
+        handleFiles(e.dataTransfer.files);
+      }
+    });
+  }
+
+  if (bulkInput) {
+    bulkInput.addEventListener('change', () => {
+      if (bulkInput.files && bulkInput.files.length) {
+        handleFiles(bulkInput.files);
+      }
+      bulkInput.value = '';
+    });
+  }
+
+  if (window.__attachmentsSuccessListener) {
+    document.removeEventListener('autosave:success', window.__attachmentsSuccessListener);
+  }
+  if (window.__attachmentsErrorListener) {
+    document.removeEventListener('autosave:error', window.__attachmentsErrorListener);
+  }
+
+  const successListener = () => {
+    if (!dirty) return;
+    showStatus('Saved');
+    dirty = false;
+  };
+  const errorListener = () => {
+    if (!dirty) return;
+    showStatus('Unable to autosave attachments');
+  };
+
+  document.addEventListener('autosave:success', successListener);
+  document.addEventListener('autosave:error', errorListener);
+  window.__attachmentsSuccessListener = successListener;
+  window.__attachmentsErrorListener = errorListener;
+}
 function openImageModal(src){
   const modal = document.getElementById('imgModal');
   const img = document.getElementById('imgModalImg');

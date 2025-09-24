@@ -2979,6 +2979,11 @@ def preview_event_report(request, proposal_id):
     attachments_checklist = {key: _bool_from_post(key) for key in checklist_keys}
 
     annexure_photos = []
+    brochure_pages = []
+    communication_files = []
+    worksheets = []
+    evaluation_sheet = None
+    feedback_form = None
     if report:
         for attachment in report.attachments.all():
             file_field = getattr(attachment, "file", None)
@@ -2990,15 +2995,36 @@ def preview_event_report(request, proposal_id):
                 continue
             if not file_url:
                 continue
-            lower_url = file_url.lower()
-            if not lower_url.endswith((".png", ".jpg", ".jpeg", ".gif", ".webp")):
-                continue
-            annexure_photos.append(
-                {
-                    "src": file_url,
-                    "caption": _text(attachment.caption),
-                }
+
+            entry = {
+                "src": file_url,
+                "caption": _text(attachment.caption),
+            }
+            category = getattr(
+                attachment,
+                "category",
+                EventReportAttachment.AttachmentCategory.PHOTO,
             )
+            if category == EventReportAttachment.AttachmentCategory.PHOTO:
+                annexure_photos.append(entry)
+            elif category == EventReportAttachment.AttachmentCategory.BROCHURE:
+                brochure_pages.append(entry)
+            elif category == EventReportAttachment.AttachmentCategory.COMMUNICATION:
+                communication_files.append(
+                    {
+                        "src": file_url,
+                        "caption": entry["caption"],
+                        "name": os.path.basename(file_field.name or ""),
+                    }
+                )
+            elif category == EventReportAttachment.AttachmentCategory.WORKSHEET:
+                worksheets.append(entry)
+            elif category == EventReportAttachment.AttachmentCategory.EVALUATION:
+                evaluation_sheet = entry
+            elif category == EventReportAttachment.AttachmentCategory.FEEDBACK:
+                feedback_form = entry
+            else:
+                annexure_photos.append(entry)
 
     initial_data = {
         "event": {
@@ -3055,15 +3081,17 @@ def preview_event_report(request, proposal_id):
         },
         "annexures": {
             "photos": annexure_photos,
-            "brochure_pages": [],
+            "brochure_pages": brochure_pages,
             "communication": {
                 "subject": "",
                 "date": "",
                 "volunteers": [],
+                "volunteer_list": [],
+                "files": communication_files,
             },
-            "worksheets": [],
-            "evaluation_sheet": None,
-            "feedback_form": None,
+            "worksheets": worksheets,
+            "evaluation_sheet": evaluation_sheet,
+            "feedback_form": feedback_form,
         },
     }
 
