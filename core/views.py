@@ -31,6 +31,7 @@ from .models import (
     Organization,
     OrganizationType,
     DashboardAssignment,
+    SidebarPermission,
     Report,
     Class,
     OrganizationRole,
@@ -93,6 +94,47 @@ def safe_next(request, fallback="/"):
     if nxt and url_has_allowed_host_and_scheme(nxt, allowed_hosts={request.get_host()}):
         return nxt
     return resolve_url(fallback)
+
+
+# ─────────────────────────────────────────────────────────────
+#  Dashboard helpers
+# ─────────────────────────────────────────────────────────────
+def _get_available_dashboards_for_user(user):
+    """Return a sorted list of dashboard keys the user can access.
+
+    Combines explicit DashboardAssignment rows with SidebarPermission items
+    under the "dashboard:" branch (e.g. "dashboard:admin").
+    """
+    try:
+        # From SidebarPermission
+        items = SidebarPermission.get_allowed_items(user)
+        keys = set()
+        choice_map = dict(DashboardAssignment.DASHBOARD_CHOICES)
+
+        if items == "ALL":
+            keys.update(choice_map.keys())
+        else:
+            for it in items:
+                if isinstance(it, str) and it.startswith("dashboard:"):
+                    key = it.split(":", 1)[1]
+                    if key in choice_map:
+                        keys.add(key)
+
+        # From explicit DashboardAssignment rows
+        for dash_key, _ in DashboardAssignment.get_user_dashboards(user):
+            keys.add(dash_key)
+
+        return sorted(keys)
+    except Exception:
+        return []
+
+def _user_has_dashboard(user, key: str) -> bool:
+    if getattr(user, "is_superuser", False):
+        return True
+    try:
+        return key in _get_available_dashboards_for_user(user)
+    except Exception:
+        return False
 @login_required
 def cdl_event_user_view(request):
     """Unified CDL user page (UI only). Expects ?eventId=<id>."""
@@ -666,11 +708,14 @@ def api_roles(request):
 def dashboard(request):
     user = request.user
 
-    # 1) Direct dashboard assignment shortcut
-    available_dashboards = DashboardAssignment.get_user_dashboards(user)
-    if len(available_dashboards) == 1:
-        dashboard_key = available_dashboards[0][0]
-        return redirect("select_dashboard", dashboard_key=dashboard_key)
+    # 1) Resolve available dashboards from permissions/assignments
+    avail_keys = _get_available_dashboards_for_user(user)
+    # If any available, pick highest priority to ensure permission-driven routing
+    if avail_keys:
+        priority = ["admin", "cdl_head", "cdl_work", "faculty", "student"]
+        for key in priority:
+            if key in avail_keys:
+                return redirect("select_dashboard", dashboard_key=key)
 
     # 2) Role / domain detection (fallback for users without assignments)
     roles = (
@@ -1079,10 +1124,12 @@ def proposal_status(request, pk):
 def select_dashboard(request, dashboard_key):
     """Handle dashboard selection and redirect to appropriate dashboard"""
     from .models import DashboardAssignment
-    
-    # Verify user has access to this dashboard
-    available_dashboards = dict(DashboardAssignment.get_user_dashboards(request.user))
-    
+
+    # Verify user has access to this dashboard (combine assignments + sidebar)
+    avail_keys = _get_available_dashboards_for_user(request.user)
+    choice_map = dict(DashboardAssignment.DASHBOARD_CHOICES)
+    available_dashboards = {k: choice_map.get(k, k) for k in avail_keys}
+
     if dashboard_key not in available_dashboards and not request.user.is_superuser:
         messages.error(request, "You don't have access to that dashboard.")
         return redirect('dashboard')
@@ -1134,7 +1181,6 @@ def _render_faculty_dashboard(request):
 
     # ---- common: events for calendar ----
     from datetime import timedelta
-    from emt.models import EventProposal
     
     try:
         # Limit to finalized events for calendar highlighting consistency
@@ -1344,11 +1390,13 @@ def _render_student_dashboard(request):
 
 # core/views.py
 
-@user_passes_test(lambda u: u.is_superuser)
+@login_required
 def admin_dashboard(request):
     """
     Render the admin dashboard with dynamic analytics and calendar events.
     """
+    if not _user_has_dashboard(request.user, "admin"):
+        return HttpResponseForbidden()
     from django.contrib.auth.models import User
     from django.db.models import Q
     from datetime import timedelta
@@ -6226,25 +6274,26 @@ def api_log_popso_change(request):
 
 @login_required
 def cdl_head_dashboard(request):
-    # Allow superusers, group CDL_HEAD, or users with CDL Admin/Head org roles in CDL orgs
-    is_allowed = False
-    if request.user.is_superuser or request.user.groups.filter(name="CDL_HEAD").exists():
-        is_allowed = True
-    else:
-        try:
-            from .models import RoleAssignment
-            ras = (
-                RoleAssignment.objects.filter(user=request.user)
-                .select_related('role', 'organization', 'organization__org_type')
-            )
-            for ra in ras:
-                role_name = (ra.role.name if ra.role else '').lower()
-                org_type = (ra.organization.org_type.name if ra.organization and ra.organization.org_type else '').lower()
-                if org_type == 'cdl' and role_name in {"cdl admin", "cdl head"}:
-                    is_allowed = True
-                    break
-        except Exception:
-            pass
+    # Allow via dashboard permission first; fallback to group/role checks
+    is_allowed = _user_has_dashboard(request.user, "cdl_head")
+    if not is_allowed:
+        if request.user.groups.filter(name="CDL_HEAD").exists():
+            is_allowed = True
+        else:
+            try:
+                from .models import RoleAssignment
+                ras = (
+                    RoleAssignment.objects.filter(user=request.user)
+                    .select_related('role', 'organization', 'organization__org_type')
+                )
+                for ra in ras:
+                    role_name = (ra.role.name if ra.role else '').lower()
+                    org_type = (ra.organization.org_type.name if ra.organization and ra.organization.org_type else '').lower()
+                    if org_type == 'cdl' and role_name in {"cdl admin", "cdl head"}:
+                        is_allowed = True
+                        break
+            except Exception:
+                pass
     if not is_allowed:
         logger.warning("cdl_head_dashboard: access denied for user=%s", request.user.id)
         return HttpResponseForbidden()
@@ -6752,25 +6801,26 @@ def api_cdl_analysis(request):
 
 @login_required
 def cdl_work_dashboard(request):
-    # Allow superusers, group CDL_MEMBER, or users with CDL Employee/Member/Team org roles in CDL orgs
-    is_allowed = False
-    if request.user.is_superuser or request.user.groups.filter(name="CDL_MEMBER").exists():
-        is_allowed = True
-    else:
-        try:
-            from .models import RoleAssignment
-            ras = (
-                RoleAssignment.objects.filter(user=request.user)
-                .select_related('role', 'organization', 'organization__org_type')
-            )
-            for ra in ras:
-                role_name = (ra.role.name if ra.role else '').lower()
-                org_type = (ra.organization.org_type.name if ra.organization and ra.organization.org_type else '').lower()
-                if org_type == 'cdl' and role_name in {"cdl employee", "cdl member", "cdl team"}:
-                    is_allowed = True
-                    break
-        except Exception:
-            pass
+    # Allow via dashboard permission first; fallback to CDL_MEMBER group and role checks
+    is_allowed = _user_has_dashboard(request.user, "cdl_work")
+    if not is_allowed:
+        if request.user.groups.filter(name="CDL_MEMBER").exists():
+            is_allowed = True
+        else:
+            try:
+                from .models import RoleAssignment
+                ras = (
+                    RoleAssignment.objects.filter(user=request.user)
+                    .select_related('role', 'organization', 'organization__org_type')
+                )
+                for ra in ras:
+                    role_name = (ra.role.name if ra.role else '').lower()
+                    org_type = (ra.organization.org_type.name if ra.organization and ra.organization.org_type else '').lower()
+                    if org_type == 'cdl' and role_name in {"cdl employee", "cdl member", "cdl team"}:
+                        is_allowed = True
+                        break
+            except Exception:
+                pass
     if not is_allowed:
         logger.warning("cdl_work_dashboard: access denied for user=%s", request.user.id)
         return HttpResponseForbidden()

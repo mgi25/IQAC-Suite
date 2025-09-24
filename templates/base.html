@@ -168,16 +168,25 @@
           <i class="fas fa-chevron-right expand-icon {% if 'suite' in request.resolver_match.url_name or '/suite/' in request.path or request.resolver_match.namespace == 'emt' %}rotated{% endif %}"></i>
         </div>
         <div class="nav-submenu {% if 'suite' in request.resolver_match.url_name or '/suite/' in request.path or request.resolver_match.namespace == 'emt' %}open{% endif %}">
+          {% if unrestricted_nav or 'submit_proposal' in allowed_nav_items or 'events:submit_proposal' in allowed_nav_items %}
           <a href="/suite/submit/" class="nav-sublink {% if request.resolver_match.url_name == 'submit_proposal' %}active{% endif %}">
             <i class="fas fa-edit"></i> Event Proposal
           </a>
+          {% endif %}
+
+          {% if unrestricted_nav or 'pending_reports' in allowed_nav_items or 'events:pending_reports' in allowed_nav_items %}
           <a href="/suite/pending-reports/" class="nav-sublink {% if request.resolver_match.url_name == 'pending_reports' %}active{% endif %}">
             <i class="fas fa-chart-bar"></i> Report Generation
           </a>
+          {% endif %}
+
+          {% if unrestricted_nav or 'generated_reports' in allowed_nav_items or 'events:generated_reports' in allowed_nav_items %}
           <a href="/suite/generated-reports/" class="nav-sublink {% if request.resolver_match.url_name == 'generated_reports' %}active{% endif %}">
             <i class="fas fa-eye"></i> View Reports
           </a>
-          {% if unrestricted_nav or 'my_approvals' in allowed_nav_items %}
+          {% endif %}
+
+          {% if unrestricted_nav or 'my_approvals' in allowed_nav_items or 'events:my_approvals' in allowed_nav_items %}
           <a href="{% url 'emt:my_approvals' %}" class="nav-sublink {% if request.resolver_match.url_name == 'my_approvals' %}active{% endif %}">
             <i class="fas fa-check-circle"></i> Event Approvals
           </a>
