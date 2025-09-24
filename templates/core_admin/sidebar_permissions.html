@@ -704,7 +704,7 @@
     }
 
     const availableData = JSON.parse('{{ available_permissions|safe|escapejs }}'.replace(/&quot;/g,'"') || '[]');
-const assignedData  = JSON.parse('{{ assigned_permissions|safe|escapejs }}'.replace(/&quot;/g,'"') || '[]');
+let assignedData  = JSON.parse('{{ assigned_permissions|safe|escapejs }}'.replace(/&quot;/g,'"') || '[]');
 
 // 🔹 Merge two permission trees (by id), preserving order and children
 function mergeTrees(a = [], b = []){
@@ -812,10 +812,11 @@ function buildAvailableList(originalData, assigned) {
 // Build a full tree so removed items reappear in Available
 const fullNavTree = mergeTrees(availableData, assignedData);
 let available = buildAvailableList(fullNavTree, assignedData);
-let assigned  = assignedData;
+let assigned  = JSON.parse(JSON.stringify(assignedData));
 
 let selectedAvailable = new Set(); 
 let selectedAssigned  = new Set();
+let lastSavedLeafIds = null;
 
 
     const availableList = $('#availableList');
@@ -1139,9 +1140,10 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
       moveUpBtn.disabled = selectedAssigned.size === 0;
       moveDownBtn.disabled = selectedAssigned.size === 0;
 
-      const original = assignedData.map(p => p.id).join(',');
-      const current = assigned.map(p => p.id).join(',');
-      const changed = original !== current;
+      // Compare by leaf IDs, not just top-level nodes
+      const originalLeaves = collectLeafIds(assignedData).slice().sort().join(',');
+      const currentLeaves = collectLeafIds(assigned).slice().sort().join(',');
+      const changed = originalLeaves !== currentLeaves;
       changeIndicator.textContent = changed ? 'Changes pending…' : 'No changes made';
       changeIndicator.style.color = changed ? '#b45309' : 'var(--muted)';
 
@@ -1287,6 +1289,8 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
         e.preventDefault();
         // collect assignments (leaf ids in assigned panel)
         const assignedLeafIds = collectLeafIds(assigned);
+        // Remember exactly what we saved to rebuild UI authoritatively
+        lastSavedLeafIds = assignedLeafIds.slice();
         const selUsers = Array.from(userSelect.selectedOptions).map(o=>o.value).filter(Boolean);
         const roleId = orgRoleSelect ? (orgRoleSelect.value||'') : '';
 
@@ -1317,9 +1321,16 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
           });
           const out = await res.json().catch(()=>({success:false}));
           if(!res.ok || !out.success) throw new Error(out.error||('HTTP '+res.status));
-          showToast('Permissions saved.');
-          // Refresh sidebar immediately
-          try{ await refreshSidebarSnapshot(); }catch(_e){}
+          // After successful save: refetch assignments for current selection
+          try{
+            await postSaveRefetchAndRender();
+            showToast('Permissions saved.');
+            // Ensure global sidebar reflects changes without manual reload
+            setTimeout(()=>{ try{ refreshSidebarSnapshot(); }catch(_ee){} }, 200);
+          }catch(_e){
+            // As a fallback, refresh sidebar and reload
+            try{ await refreshSidebarSnapshot(); }catch(_ee){}
+          }
         }catch(err){
           console.error(err);
           showToast('Failed to save permissions.','error');
@@ -1330,8 +1341,7 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
       });
     }
 
-    // After successful POST redirect, the page reloads. For AJAX save flows (future),
-    // call this endpoint to force sidebar refresh in the current tab.
+    // Force sidebar refresh in current tab (used as fallback)
     async function refreshSidebarSnapshot(){
       try{
         const r = await fetch('{% url "api_my_sidebar" %}', {headers:{'X-Requested-With':'fetch'}});
@@ -1340,6 +1350,54 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
           window.location.reload();
         }
       }catch(_e){/*noop*/}
+    }
+
+    // Refetch assignments for current selection (user or role) and rebuild lists
+    async function postSaveRefetchAndRender(){
+      // Try to refetch from backend, but intersect with the just-saved leaf IDs
+      // to avoid "effective" extras (role/dashboard merges) showing up as ghosts.
+      let serverIds = null;
+      try{
+        const selUsers = Array.from(userSelect.selectedOptions).map(o=>o.value).filter(Boolean);
+        const roleId = orgRoleSelect ? (orgRoleSelect.value||'') : '';
+        let url = null;
+        if(selUsers.length===1){
+          url = `${'{% url "api_get_sidebar_permissions" %}'}?user=${encodeURIComponent(selUsers[0])}&effective=0`;
+        }else if(!selUsers.length && roleId){
+          url = `${'{% url "api_get_sidebar_permissions" %}'}?role=${encodeURIComponent(roleId)}&effective=0`;
+        }
+        if(url){
+          const r = await fetch(url, {headers:{'X-Requested-With':'fetch'}});
+          if(r.ok){
+            const data = await r.json();
+            if(Array.isArray(data.assignments)) serverIds = data.assignments;
+          }
+        }
+      }catch(_e){ /* ignore and fall back to saved ids */ }
+
+      let baseIds = Array.isArray(lastSavedLeafIds) ? lastSavedLeafIds.slice() : collectLeafIds(assigned);
+      if(Array.isArray(serverIds)){
+        const savedSet = new Set(baseIds);
+        baseIds = serverIds.filter(id => savedSet.has(id));
+      }
+      const freshSet = new Set(baseIds);
+
+      function pickAssignedFromTree(items){
+        const out = [];
+        for(const it of items){
+          const ch = it.children && it.children.length ? pickAssignedFromTree(it.children) : [];
+          if(ch.length){ out.push({id: it.id, label: it.label, children: ch}); }
+          else if(freshSet.has(it.id)) { out.push({id: it.id, label: it.label}); }
+        }
+        return out;
+      }
+      assigned = pickAssignedFromTree(fullNavTree);
+      available = buildAvailableList(fullNavTree, assigned);
+      // Reset baseline so change indicator clears
+      assignedData = JSON.parse(JSON.stringify(assigned));
+      selectedAvailable.clear();
+      selectedAssigned.clear();
+      render();
     }
 
 
