@@ -624,7 +624,6 @@ class EventReport(models.Model):
     beneficiaries_details = models.TextField(blank=True)
     # Optional notes about attendance to avoid integrity errors if left empty
     attendance_notes = models.TextField(blank=True, default="")
-    generated_payload = models.JSONField(default=dict, blank=True)
     ai_generated_report = models.TextField(
         blank=True,
         null=True,
@@ -644,37 +643,14 @@ class EventReport(models.Model):
 class EventReportAttachment(models.Model):
     """An attachment (e.g., image, PDF) for an event report."""
 
-    class Category(models.TextChoices):
-        PHOTOGRAPH = "photo", "Photographs"
-        BROCHURE = "brochure", "Brochure Pages"
-        COMMUNICATION = "communication", "Communication"
-        WORKSHEET = "worksheet", "Worksheets / Activities"
-        EVALUATION = "evaluation", "Evaluation Sheet"
-        FEEDBACK = "feedback", "Feedback Form"
-
     report = models.ForeignKey(
         EventReport, on_delete=models.CASCADE, related_name="attachments"
     )
     file = models.FileField(upload_to="report_attachments/")
     caption = models.CharField(max_length=255, blank=True)
-    category = models.CharField(
-        max_length=32,
-        choices=Category.choices,
-        default=Category.PHOTOGRAPH,
-        db_index=True,
-    )
-    order_index = models.PositiveIntegerField(default=0)
-    requires_extraction = models.BooleanField(default=False)
-
-    class Meta:
-        ordering = ["category", "order_index", "id"]
 
     def __str__(self):
-        category_display = self.get_category_display()
-        return (
-            f"{category_display or 'Attachment'} for "
-            f"{self.report.proposal.event_title}"
-        )
+        return f"Attachment for {self.report.proposal.event_title}"
 
 
 class AttendanceRow(models.Model):

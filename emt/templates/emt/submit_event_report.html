@@ -199,6 +199,14 @@
                                     <div class="field-error">{{ form.location.errors.0 }}</div>
                                 {% endif %}
                             </div>
+                            <div class="input-group">
+                                <label for="blog-link-modern">Blog Link</label>
+                                <input type="url" id="blog-link-modern" name="blog_link" class="proposal-input" value="{{ form.blog_link.value|default:'' }}" placeholder="https://example.com/blog-post">
+                                <div class="help-text">Optional: Link to blog post or article about the event</div>
+                                {% if form.blog_link.errors %}
+                                    <div class="field-error">{{ form.blog_link.errors.0 }}</div>
+                                {% endif %}
+                            </div>
                         </div>
 
                         <div class="form-row">
@@ -296,108 +304,60 @@
             </div>
 
             <template id="attachments-section-template">
-                <div class="evidence-wrapper">
-                    <div class="evidence-header">
-                        <h2 class="evidence-title">ATTACHMENTS &amp; EVIDENCE</h2>
-                        <hr class="evidence-divider" role="presentation">
-                        <p class="evidence-lead">
-                            Upload high-quality images, certificates, reports or brochures. Each category lets you add multiple files with captions.
-                            For non-image files, only images extracted from them will appear in the final report.
-                        </p>
-                    </div>
+                <div class="form-section-header">
+                    <h3>Supporting Attachments</h3>
+                    <p class="section-subtitle">Share photos, certificates, reports, or any other evidence that documents the event.</p>
+                </div>
 
-                    <div class="evidence-guidance">
-                        <h3 class="guidance-heading">SUPPORTING ATTACHMENTS</h3>
-                        <ul class="guidance-list">
-                            <li>Prepare print-ready images at 300&nbsp;dpi wherever possible for clarity in the compiled report.</li>
-                            <li>Use the caption field on every card to describe what the attachment demonstrates.</li>
-                            <li>Drag the cards within a category to arrange the order in which evidence should appear.</li>
+                <div class="form-row full-width">
+                    <div class="attachment-guidelines">
+                        <h4>Helpful guidance</h4>
+                        <ul>
+                            <li>Upload high-quality images that clearly capture the highlights of your event.</li>
+                            <li>Include certificates, reports, brochures, or press coverage as supporting documents.</li>
+                            <li>Use the caption field to briefly describe what each attachment represents.</li>
                         </ul>
                     </div>
+                </div>
 
-                    {% if formset.non_form_errors %}
-                        <div class="evidence-errors">
+                {% if formset.non_form_errors %}
+                    <div class="form-row full-width">
+                        <div class="field-error">
                             {% for error in formset.non_form_errors %}
-                                <div class="field-error">{{ error }}</div>
+                                {{ error }}<br>
                             {% endfor %}
                         </div>
-                    {% endif %}
-
-                    <div class="visually-hidden">
-                        {{ formset.management_form }}
                     </div>
+                {% endif %}
 
-                    <div id="attachment-staging" class="visually-hidden" data-attachment-staging>
-                        {% for form in formset.forms %}
-                            {% include 'emt/partials/attachment_block.html' %}
-                        {% endfor %}
-                    </div>
+                <div class="visually-hidden">
+                    {{ formset.management_form }}
+                </div>
 
-                    <div class="evidence-panels" data-attachment-root>
-                        <section class="evidence-section" data-panel="photo" data-limit="" data-label="Photographs">
-                            <div class="section-header">
-                                <h3>PHOTOGRAPHS</h3>
-                                <p class="section-subtext">Unlimited photographs showcasing the event.</p>
-                            </div>
-                            <div class="evidence-grid" data-panel-list="photo"></div>
-                            <button type="button" class="evidence-add" data-add="photo">Add another Photographs attachment</button>
-                        </section>
+                <div id="attachment-list" class="attachment-grid">
+                    {% for form in formset.forms %}
+                        {% include 'emt/partials/attachment_block.html' %}
+                    {% empty %}
+                        <div class="attachment-empty">No attachment slots available.</div>
+                    {% endfor %}
+                </div>
 
-                        <section class="evidence-section" data-panel="brochure" data-limit="4" data-label="Brochure Pages">
-                            <div class="section-header">
-                                <h3>BROCHURE PAGES</h3>
-                                <p class="section-subtext">Upload up to four brochure or pamphlet pages.</p>
-                            </div>
-                            <div class="evidence-grid" data-panel-list="brochure"></div>
-                            <button type="button" class="evidence-add" data-add="brochure">Add another Brochure Pages attachment</button>
-                        </section>
+                <div class="attachment-actions">
+                    <button type="button" id="add-attachment-btn" class="btn-draft-section">
+                        <span class="btn-icon">+</span>
+                        Add another attachment
+                    </button>
+                    <p class="attachment-hint">Accepted formats: JPG, PNG, PDF (up to 10&nbsp;MB per file).</p>
+                </div>
 
-                        <section class="evidence-section" data-panel="communication" data-limit="" data-label="Communication">
-                            <div class="section-header">
-                                <h3>COMMUNICATION</h3>
-                                <p class="section-subtext">Letters, emails, or notices. Images within PDFs will be extracted.</p>
-                            </div>
-                            <div class="evidence-grid" data-panel-list="communication"></div>
-                            <button type="button" class="evidence-add" data-add="communication">Add another Communication attachment</button>
-                        </section>
+                <template id="attachment-template">
+                    {% include 'emt/partials/attachment_block.html' with form=formset.empty_form %}
+                </template>
 
-                        <section class="evidence-section" data-panel="worksheet" data-limit="" data-label="Worksheets / Activities">
-                            <div class="section-header">
-                                <h3>WORKSHEETS / ACTIVITIES</h3>
-                                <p class="section-subtext">Upload worksheets, activity sheets, or artefacts.</p>
-                            </div>
-                            <div class="evidence-grid" data-panel-list="worksheet"></div>
-                            <button type="button" class="evidence-add" data-add="worksheet">Add another Worksheets / Activities attachment</button>
-                        </section>
-
-                        <section class="evidence-section" data-panel="evaluation" data-limit="1" data-label="Evaluation Sheet">
-                            <div class="section-header">
-                                <h3>EVALUATION SHEET</h3>
-                                <p class="section-subtext">Single evaluation or assessment sheet.</p>
-                            </div>
-                            <div class="evidence-grid" data-panel-list="evaluation"></div>
-                            <button type="button" class="evidence-add" data-add="evaluation">Add Evaluation Sheet attachment</button>
-                        </section>
-
-                        <section class="evidence-section" data-panel="feedback" data-limit="1" data-label="Feedback Form">
-                            <div class="section-header">
-                                <h3>FEEDBACK FORM</h3>
-                                <p class="section-subtext">Single feedback form or summary.</p>
-                            </div>
-                            <div class="evidence-grid" data-panel-list="feedback"></div>
-                            <button type="button" class="evidence-add" data-add="feedback">Add Feedback Form attachment</button>
-                        </section>
-                    </div>
-
-                    <template id="attachment-template">
-                        {% include 'emt/partials/attachment_block.html' with form=formset.empty_form %}
-                    </template>
-
-                    <div class="form-row full-width">
-                        <div class="save-section-container">
-                            <button type="button" class="btn-save-section evidence-save">Save &amp; Continue</button>
-                            <div class="save-help-text">All attachments, captions, and ordering are saved before continuing.</div>
-                        </div>
+                <div class="form-row full-width">
+                    <div class="save-section-container">
+                        <button type="button" class="btn-save-section">Save &amp; Continue</button>
+                        <div class="save-help-text">Attachments are saved when you continue to the preview page.</div>
                     </div>
                 </div>
             </template>
@@ -406,7 +366,7 @@
                 <!-- Include all remaining Django form fields that aren't shown in the UI -->
                 {% for field in form %}
                     {# Use explicit comparisons to avoid substring-matching bug #}
-                    {% if field.name != 'location' and field.name != 'num_participants' and field.name != 'num_student_volunteers' and field.name != 'actual_event_type' %}
+                    {% if field.name != 'blog_link' and field.name != 'location' and field.name != 'num_participants' and field.name != 'num_student_volunteers' and field.name != 'actual_event_type' %}
                         {{ field }}
                     {% endif %}
                 {% endfor %}

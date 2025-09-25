@@ -59,9 +59,9 @@
   }
   .pane{ border:var(--hair) solid var(--grid); padding:8px 12px; }
 
-  .analysis-box{ min-height:35mm; }
-  .analysis-box .cell-ul{ padding-left:16px; }
-  .analysis-box .cell-ul li{ margin:3px 0; }
+  /* Analysis three equal columns */
+  .analysis{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .a{ border:var(--hair) solid var(--grid); padding:10px 12px; min-height:35mm; }
   .lbl{ font-weight:700; text-transform:uppercase; letter-spacing:.06em; font-size:10.5pt; margin-bottom:3px; }
 
   /* Signatures */
@@ -74,14 +74,13 @@
   .break{ break-before:page; }
   .ann{ font-weight:700; text-transform:uppercase; letter-spacing:.08em; margin:2mm 0 2mm; }
   .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:6mm; }
-  .annexure-grid{ margin-bottom:6mm; }
-  figure.card{ border:var(--hair) solid var(--grid); background:#fff; }
-  figure.card.single-asset{ width:100%; }
-  figure.card img{ width:100%; height:100%; object-fit:contain; }
-  .ph{ height:52mm; background:#f2f2f2; display:flex; align-items:center; justify-content:center; font-size:10pt; color:#555; text-align:center; padding:6px; }
+  figure.card{ border:var(--hair) solid var(--grid); }
+  .ph{ height:52mm; background:#f2f2f2; display:flex; align-items:center; justify-content:center; font-size:10pt; color:#555; }
   figcaption{ border-top:var(--hair) solid var(--grid); padding:6px 8px; font-size:10.5pt; }
-  figure.card.needs-extract .ph{ background:#f8f2e0; color:#7a5d00; font-style:italic; }
-  .extract-note{ border-top:var(--hair) solid var(--grid); padding:4px 8px; font-size:10pt; font-style:italic; background:#fafafa; }
+
+  .vol{ width:100%; border-collapse:collapse; margin-top:3mm; }
+  .vol th, .vol td{ border:var(--hair) solid var(--grid); padding:6px 8px; font-size:10.5pt; }
+  .vol thead th{ text-transform:uppercase; letter-spacing:.06em; }
 
   /* Footer – show numbers only in print (avoid Page 0 of 0 on screen) */
   .ftr{ padding:6mm 18mm 10mm; border-top:var(--hair) solid var(--grid); font-size:10pt; display:flex; justify-content:space-between; }
@@ -181,32 +180,49 @@
         <ul class="cell-ul" data-list="activities"><li>—</li></ul>
       </div>
 
-      <!-- 4. OUTCOMES -->
+      <!-- 4. SOCIAL RELEVANCE -->
+      <h2 class="sec">Social Relevance</h2>
+      <div class="pane">
+        <ul class="cell-ul" data-list="social_relevance"><li>—</li></ul>
+      </div>
+
+      <!-- 5. OUTCOMES -->
       <h2 class="sec">Outcomes of the Event</h2>
       <div class="pane">
         <ul class="cell-ul" data-list="outcomes"><li>—</li></ul>
       </div>
 
-      <!-- 5. ANALYSIS -->
+      <!-- 6. ANALYSIS -->
       <h2 class="sec">Analysis</h2>
-      <div class="pane analysis-box">
-        <ul class="cell-ul" data-list="analysis.points"><li>—</li></ul>
+      <div class="analysis">
+        <div class="a">
+          <div class="lbl">Impact on Attendees</div>
+          <p class="cell-para" data-field="analysis.attendees" data-multiline="true">—</p>
+        </div>
+        <div class="a">
+          <div class="lbl">Impact on Schools</div>
+          <p class="cell-para" data-field="analysis.schools" data-multiline="true">—</p>
+        </div>
+        <div class="a">
+          <div class="lbl">Impact on Volunteers</div>
+          <p class="cell-para" data-field="analysis.volunteers" data-multiline="true">—</p>
+        </div>
       </div>
 
-      <!-- 6. RELEVANCE -->
+      <!-- 7. RELEVANCE -->
       <h2 class="sec">Relevance of the Event</h2>
-      <table class="grid full relevance-grid">
+      <table class="grid full">
         <colgroup>
           <col class="c-lab"><col class="c-val">
         </colgroup>
         <tbody>
           <tr>
-            <th>Institutional Alignment</th>
-            <td><p class="cell-para" data-field="relevance.institutional_alignment" data-multiline="true">—</p></td>
+            <th>With reference to Graduate Attributes</th>
+            <td><p class="cell-para" data-field="relevance.graduate_attributes" data-multiline="true">—</p></td>
           </tr>
           <tr>
-            <th>Graduate Attributes &amp; SDGs</th>
-            <td><p class="cell-para" data-field="relevance.graduate_attributes" data-multiline="true">—</p></td>
+            <th>Support to Value Systems (SDGs / Social Commitment)</th>
+            <td><p class="cell-para" data-field="relevance.sdg" data-multiline="true">—</p></td>
           </tr>
         </tbody>
       </table>
@@ -227,35 +243,43 @@
       <h2 class="sec">Attachments (Annexures)</h2>
 
       <div class="ann">Annexure A. Photographs</div>
-      <div class="grid-2 annexure-grid" data-grid="annexures.photos">
-        <figure class="card"><div class="ph">Awaiting attachment</div><figcaption>—</figcaption></figure>
+      <div class="grid-2" data-grid="annexures.photos">
+        <figure class="card"><div class="ph">Image</div><figcaption>—</figcaption></figure>
       </div>
 
       <div class="break"></div>
-      <div class="ann">Annexure B. Brochure Pages</div>
-      <div class="grid-2 annexure-grid" data-grid="annexures.brochure_pages">
-        <figure class="card"><div class="ph">Awaiting attachment</div><figcaption>—</figcaption></figure>
+      <div class="ann">Annexure B. Brochure (4 pages)</div>
+      <div class="grid-2" data-grid="annexures.brochure_pages">
+        <figure class="card"><div class="ph">Image</div><figcaption>—</figcaption></figure>
       </div>
 
       <div class="break"></div>
-      <div class="ann">Annexure C. Communication</div>
-      <div class="grid-2 annexure-grid" data-grid="annexures.communication.files">
-        <figure class="card"><div class="ph">Awaiting attachment</div><figcaption>—</figcaption></figure>
-      </div>
+      <div class="ann">Annexure C. Communication with Institution</div>
+      <table class="grid" style="margin-bottom:4mm;">
+        <colgroup><col class="c-lab"><col class="c-val"></colgroup>
+        <tbody>
+          <tr><th>Subject</th><td data-field="annexures.communication.subject">—</td></tr>
+          <tr><th>Date</th><td data-field="annexures.communication.date">—</td></tr>
+        </tbody>
+      </table>
+      <table class="vol">
+        <thead><tr><th>Sl No</th><th>Reg No</th><th>Name</th><th>Class</th><th>Role</th></tr></thead>
+        <tbody data-rows="annexures.communication.volunteer_list"><tr><td colspan="5" style="text-align:center;">—</td></tr></tbody>
+      </table>
 
       <div class="break"></div>
       <div class="ann">Annexure D. Worksheets / Activities</div>
-      <div class="grid-2 annexure-grid" data-grid="annexures.worksheets">
-        <figure class="card"><div class="ph">Awaiting attachment</div><figcaption>—</figcaption></figure>
+      <div class="grid-2" data-grid="annexures.worksheets">
+        <figure class="card"><div class="ph">Image</div><figcaption>—</figcaption></figure>
       </div>
 
       <div class="break"></div>
       <div class="ann">Annexure E. Evaluation Sheet</div>
-      <figure class="card single-asset" data-single="annexures.evaluation_sheet"><div class="ph">Awaiting attachment</div><figcaption>—</figcaption></figure>
+      <figure class="card" data-src="annexures.evaluation_sheet"><div class="ph">Image</div><figcaption>—</figcaption></figure>
 
       <div class="break"></div>
       <div class="ann">Annexure F. Feedback Form</div>
-      <figure class="card single-asset" data-single="annexures.feedback_form"><div class="ph">Awaiting attachment</div><figcaption>—</figcaption></figure>
+      <figure class="card" data-src="annexures.feedback_form"><div class="ph">Image</div><figcaption>—</figcaption></figure>
 
     </div>
 
@@ -272,105 +296,35 @@
   /* ---------- Hydration ---------- */
   function hydrateReport(data = {}) {
     const root = document.querySelector('.sheet'); if (!root) return;
-    const txt = (sel, v) => {
-      const el = root.querySelector(sel);
-      if (el) {
-        const value = (v ?? '—') === '' ? '—' : v;
-        el.textContent = value === undefined ? '—' : value;
-      }
-    };
+    const txt = (sel, v) => { const el = root.querySelector(sel); if (el) el.textContent = (v ?? '—') === '' ? '—' : v; };
     const list = (sel, arr) => {
-      const ul = root.querySelector(sel);
-      if (!ul) return;
-      const items = Array.isArray(arr) ? arr.filter(x => x !== undefined && x !== null && String(x).trim() !== '') : [];
-      ul.innerHTML = '';
-      (items.length ? items : ['—']).forEach(x => {
-        const li = document.createElement('li');
-        li.textContent = x;
-        ul.appendChild(li);
-      });
+      const ul = root.querySelector(sel); if (!ul) return;
+      ul.innerHTML = ''; (arr && arr.length ? arr : ['—']).forEach(x => { const li = document.createElement('li'); li.textContent = x; ul.appendChild(li); });
     };
-
-    const AWAITING = 'Awaiting attachment';
-
-    const makeFigure = () => {
-      const figure = document.createElement('figure');
-      figure.className = 'card';
-      const ph = document.createElement('div');
-      ph.className = 'ph';
-      ph.textContent = AWAITING;
-      const cap = document.createElement('figcaption');
-      cap.textContent = '—';
-      figure.appendChild(ph);
-      figure.appendChild(cap);
-      return figure;
-    };
-
-    const renderAsset = (figure, item) => {
-      if (!figure) return;
-      const ph = figure.querySelector('.ph');
-      const cap = figure.querySelector('figcaption');
-      figure.classList.remove('needs-extract');
-      figure.querySelectorAll('.extract-note').forEach(note => note.remove());
-
-      const hasItem = item && (item.src || item.file || item.caption || item.requires_extraction);
-      if (!hasItem) {
-        if (ph) {
-          ph.innerHTML = '';
-          ph.textContent = AWAITING;
-        }
-        if (cap) cap.textContent = '—';
-        return;
-      }
-
-      const src = item.src || item.file || '';
-      if (ph) {
-        ph.innerHTML = '';
-        if (src) {
-          const img = document.createElement('img');
-          img.src = src;
-          img.alt = item.caption || 'Attachment image';
-          img.style.maxWidth = '100%';
-          img.style.maxHeight = '100%';
-          ph.appendChild(img);
-        } else {
-          ph.textContent = item.requires_extraction ? 'Images will be extracted' : AWAITING;
-        }
-      }
-      if (cap) {
-        cap.textContent = item.caption && item.caption.trim() ? item.caption : '—';
-      }
-      if (item.requires_extraction) {
-        figure.classList.add('needs-extract');
-        const note = document.createElement('div');
-        note.className = 'extract-note';
-        note.textContent = 'Images will be extracted from this file.';
-        figure.appendChild(note);
-      }
-    };
-
     const grid = (sel, items) => {
-      const wrap = root.querySelector(sel);
-      if (!wrap) return;
+      const wrap = root.querySelector(sel); if (!wrap) return;
       wrap.innerHTML = '';
-      const listItems = Array.isArray(items) ? items : [];
-      if (!listItems.length) {
-        const fallback = makeFigure();
-        renderAsset(fallback, null);
-        wrap.appendChild(fallback);
-        return;
-      }
-      listItems.forEach(entry => {
-        const fig = makeFigure();
-        renderAsset(fig, entry);
-        wrap.appendChild(fig);
+      (items || []).forEach(it => {
+        const f = document.createElement('figure'); f.className='card';
+        const ph = document.createElement('div'); ph.className='ph';
+        if (it && it.src){ const img=document.createElement('img'); img.src=it.src; img.alt=it.caption||'Image'; img.style.maxWidth='100%'; img.style.maxHeight='100%'; ph.appendChild(img); }
+        else { ph.textContent='Image'; }
+        const cap=document.createElement('figcaption'); cap.textContent = it && it.caption ? it.caption : '—';
+        f.appendChild(ph); f.appendChild(cap); wrap.appendChild(f);
       });
+      if (!items || !items.length) wrap.innerHTML = '<figure class="card"><div class="ph">Image</div><figcaption>—</figcaption></figure>';
     };
-
-    const single = (sel, item) => {
-      const fig = root.querySelector(sel);
-      if (!fig) return;
-      renderAsset(fig, item || null);
+    const rows = (sel, rs) => {
+      const tb = root.querySelector(sel); if (!tb) return;
+      tb.innerHTML = '';
+      (rs || []).forEach((r,i) => {
+        const tr=document.createElement('tr');
+        ['sl','reg','name','class_','role'].forEach(k=>{
+          const td=document.createElement('td'); td.textContent = (k==='sl'? (r?.sl ?? i+1) : (r?.[k] ?? '—')); tr.appendChild(td);
+        });
+        tb.appendChild(tr);
+      });
+      if (!rs || !rs.length) tb.innerHTML = '<tr><td colspan="5" style="text-align:center;">—</td></tr>';
     };
 
     /* Map all fields */
@@ -392,28 +346,37 @@
 
     txt('[data-field="summary"]', data?.summary);
     list('[data-list="activities"]', data?.activities);
+    list('[data-list="social_relevance"]', data?.social_relevance);
     list('[data-list="outcomes"]', data?.outcomes);
 
-    const analysisItems = Array.isArray(data?.analysis?.points)
-      ? data.analysis.points.filter(x => x && String(x).trim() !== '')
-      : [];
-    const analysisFallback = data?.analysis?.text && String(data.analysis.text).trim()
-      ? [data.analysis.text]
-      : [];
-    list('[data-list="analysis.points"]', analysisItems.length ? analysisItems : analysisFallback);
+    txt('[data-field="analysis.attendees"]', data?.analysis?.attendees);
+    txt('[data-field="analysis.schools"]', data?.analysis?.schools);
+    txt('[data-field="analysis.volunteers"]', data?.analysis?.volunteers);
 
-    txt('[data-field="relevance.institutional_alignment"]', data?.relevance?.institutional_alignment);
     txt('[data-field="relevance.graduate_attributes"]', data?.relevance?.graduate_attributes);
+    txt('[data-field="relevance.sdg"]', data?.relevance?.sdg);
 
     list('[data-list="suggestions"]', data?.suggestions);
     txt('[data-field="suggestions_date"]', data?.suggestions_date);
 
     grid('[data-grid="annexures.photos"]', data?.annexures?.photos);
     grid('[data-grid="annexures.brochure_pages"]', data?.annexures?.brochure_pages);
-    grid('[data-grid="annexures.communication.files"]', data?.annexures?.communication?.files);
+    txt('[data-field="annexures.communication.subject"]', data?.annexures?.communication?.subject);
+    txt('[data-field="annexures.communication.date"]', data?.annexures?.communication?.date);
+    rows('[data-rows="annexures.communication.volunteer_list"]', data?.annexures?.communication?.volunteer_list);
     grid('[data-grid="annexures.worksheets"]', data?.annexures?.worksheets);
-    single('[data-single="annexures.evaluation_sheet"]', data?.annexures?.evaluation_sheet);
-    single('[data-single="annexures.feedback_form"]', data?.annexures?.feedback_form);
+    (function single(sel, item){
+      const host=document.querySelector(sel); if(!host) return; const ph=host.querySelector('.ph'); const cap=host.querySelector('figcaption');
+      ph.innerHTML=''; cap.textContent = item && item.caption ? item.caption : '—';
+      if (item && item.src){ const img=document.createElement('img'); img.src=item.src; img.alt=cap.textContent||'Image'; img.style.maxWidth='100%'; img.style.maxHeight='100%'; ph.appendChild(img); }
+      else { ph.textContent='Image'; }
+    })('[data-src="annexures.evaluation_sheet"]', data?.annexures?.evaluation_sheet);
+    (function single(sel, item){
+      const host=document.querySelector(sel); if(!host) return; const ph=host.querySelector('.ph'); const cap=host.querySelector('figcaption');
+      ph.innerHTML=''; cap.textContent = item && item.caption ? item.caption : '—';
+      if (item && item.src){ const img=document.createElement('img'); img.src=item.src; img.alt=cap.textContent||'Image'; img.style.maxWidth='100%'; img.style.maxHeight='100%'; ph.appendChild(img); }
+      else { ph.textContent='Image'; }
+    })('[data-src="annexures.feedback_form"]', data?.annexures?.feedback_form);
   }
 
   (function init(){
