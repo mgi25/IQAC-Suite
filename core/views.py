@@ -106,11 +106,24 @@ def _get_available_dashboards_for_user(user):
     under the "dashboard:" branch (e.g. "dashboard:admin").
     """
     try:
-        # From SidebarPermission
-        items = SidebarPermission.get_allowed_items(user)
-        keys = set()
         choice_map = dict(DashboardAssignment.DASHBOARD_CHOICES)
 
+        # 0) If the user has an explicit per-user SidebarPermission, and it contains
+        #    dashboard entries, treat those as authoritative (override role defaults).
+        keys = set()
+        user_perm = SidebarPermission.objects.filter(user=user, role__in=["", None]).first()
+        if user_perm and user_perm.items:
+            for it in user_perm.items:
+                if isinstance(it, str) and it.startswith("dashboard:"):
+                    key = it.split(":", 1)[1]
+                    if key in choice_map:
+                        keys.add(key)
+        if keys:
+            return sorted(keys)
+
+        # 1) Otherwise, fallback to union of allowed nav items (user + roles)
+        #    and explicit DashboardAssignment rows.
+        items = SidebarPermission.get_allowed_items(user)
         if items == "ALL":
             keys.update(choice_map.keys())
         else:
@@ -120,7 +133,7 @@ def _get_available_dashboards_for_user(user):
                     if key in choice_map:
                         keys.add(key)
 
-        # From explicit DashboardAssignment rows
+        # From explicit DashboardAssignment rows (user + role-level)
         for dash_key, _ in DashboardAssignment.get_user_dashboards(user):
             keys.add(dash_key)
 
@@ -2539,8 +2552,50 @@ def admin_sidebar_permissions(request):
             redirect_url += f"&role={org_role_id}"
         return redirect(redirect_url)
 
-    # Build available/assigned lists
+    # Build available/assigned lists (direct-only by default for admin UI)
     assigned_set = set(permission.items) if permission else set()
+    include_effective = (request.GET.get("effective") or "").lower() in ("1", "true", "yes")
+
+    if include_effective:
+        # When viewing a specific user, union in role-based sidebar items and dashboards,
+        # but if the user has an explicit dashboard:* in their items, treat it as an override
+        # and avoid pulling dashboards from roles.
+        selected_user = request.GET.get("user")
+        if selected_user:
+            try:
+                from .models import RoleAssignment as _RoleAssignment, DashboardAssignment as _DashboardAssignment
+                from django.contrib.auth.models import User as _User
+                user_dash_override = any(isinstance(i, str) and i.startswith("dashboard:") for i in (permission.items if permission else []))
+                role_ids = list(_RoleAssignment.objects.filter(user_id=selected_user).values_list("role_id", flat=True))
+                if role_ids:
+                    role_keys = [f"orgrole:{rid}" for rid in role_ids]
+                    for rp in SidebarPermission.objects.filter(user__isnull=True, role__in=role_keys):
+                        items = rp.items or []
+                        if user_dash_override:
+                            items = [i for i in items if not (isinstance(i, str) and i.startswith("dashboard:"))]
+                        assigned_set.update(items)
+                # Add dashboards mapped as dashboard:<key> unless user override exists
+                if not user_dash_override:
+                    uobj = _User.objects.filter(id=selected_user).first()
+                    if uobj:
+                        for dash_key, _ in _DashboardAssignment.get_user_dashboards(uobj):
+                            assigned_set.add(f"dashboard:{dash_key}")
+            except Exception:
+                pass
+
+        # When viewing a role, also include dashboards assigned to that org role
+        selected_role_id = (request.GET.get("role") or request.GET.get("org_role") or "").strip()
+        if selected_role_id and selected_role_id.isdigit():
+            try:
+                from .models import OrganizationRole as _OrganizationRole, DashboardAssignment as _DashboardAssignment
+                role_obj = _OrganizationRole.objects.filter(id=selected_role_id).select_related("organization").first()
+                if role_obj:
+                    role_name = (role_obj.name or "").lower()
+                    for dash in _DashboardAssignment.objects.filter(user__isnull=True, role=role_name, is_active=True).values_list("dashboard", flat=True):
+                        assigned_set.add(f"dashboard:{dash}")
+            except Exception:
+                pass
+
     assigned_permissions = build_assigned_tree(assigned_set, nav_items)
     available_permissions = build_available_tree(assigned_set, nav_items)
 
@@ -2693,6 +2748,10 @@ def api_save_sidebar_permissions(request):
                 "error": "Specify exactly one of users or role",
             })
 
+        # De-duplicate while preserving order
+        seen = set()
+        assignments = [x for x in assignments if not (x in seen or seen.add(x))]
+
         # Validate IDs
         invalid_ids = [i for i in assignments if i not in SIDEBAR_ITEM_IDS]
         if invalid_ids:
@@ -2700,6 +2759,13 @@ def api_save_sidebar_permissions(request):
                 "success": False,
                 "error": f"Unknown sidebar item(s): {', '.join(invalid_ids)}",
             })
+
+        # Enforce exclusive dashboard selection; keep only the last dashboard:* if multiple provided
+        dash_ids = [i for i in assignments if isinstance(i, str) and i.startswith("dashboard:")]
+        if len(dash_ids) > 1:
+            keep = dash_ids[-1]
+            assignments = [i for i in assignments if not (isinstance(i, str) and i.startswith("dashboard:"))]
+            assignments.append(keep)
 
         # Persist
         if users:
@@ -2757,7 +2823,9 @@ def api_get_dashboard_assignments(request):
             user__isnull=True, role=role, is_active=True
         ).values_list('dashboard', flat=True))
     
-    return JsonResponse({'assignments': assignments})
+    resp = JsonResponse({'assignments': assignments})
+    resp['Cache-Control'] = 'no-store'
+    return resp
 
 
 @login_required
@@ -2769,22 +2837,61 @@ def api_get_sidebar_permissions(request):
     
     user_id = request.GET.get('user')
     role = (request.GET.get('role') or '').strip()
+    effective_flag = (request.GET.get('effective') or '').lower()
+    direct_only = effective_flag in ('0', 'false', 'no')
     
     assignments = []
-    
+
     if user_id:
         permission = SidebarPermission.objects.filter(user_id=user_id).first()
-        if permission:
-            assignments = permission.items
+        if direct_only:
+            assignments = sorted(permission.items or []) if permission else []
+        else:
+            items_set = set()
+            user_dash_override = False
+            if permission:
+                items = permission.items or []
+                items_set.update(items)
+                user_dash_override = any(isinstance(i, str) and i.startswith("dashboard:"))
+
+            from .models import RoleAssignment as _RoleAssignment, DashboardAssignment as _DashboardAssignment
+            role_ids = list(_RoleAssignment.objects.filter(user_id=user_id).values_list("role_id", flat=True))
+            if role_ids:
+                role_keys = [f"orgrole:{rid}" for rid in role_ids]
+                for rp in SidebarPermission.objects.filter(user__isnull=True, role__in=role_keys):
+                    items = rp.items or []
+                    if user_dash_override:
+                        items = [i for i in items if not (isinstance(i, str) and i.startswith("dashboard:"))]
+                    items_set.update(items)
+            if not user_dash_override:
+                # include user and role dashboard assignments
+                u = User.objects.filter(id=user_id).first()
+                if u:
+                    for dash_key, _ in _DashboardAssignment.get_user_dashboards(u):
+                        items_set.add(f"dashboard:{dash_key}")
+            assignments = sorted(items_set)
     elif role:
         role_key = f"orgrole:{role}" if role.isdigit() else role.lower()
-        permission = SidebarPermission.objects.filter(
-            user__isnull=True, role__iexact=role_key
-        ).first()
-        if permission:
-            assignments = permission.items
-    
-    return JsonResponse({'assignments': assignments})
+        permission = SidebarPermission.objects.filter(user__isnull=True, role__iexact=role_key).first()
+        if direct_only:
+            assignments = sorted(permission.items or []) if permission else []
+        else:
+            items_set = set(permission.items or []) if permission else set()
+            # Also include dashboards assigned to this role (using role name)
+            try:
+                if role.isdigit():
+                    from .models import OrganizationRole as _OrganizationRole, DashboardAssignment as _DashboardAssignment
+                    r = _OrganizationRole.objects.filter(id=role).first()
+                    if r:
+                        for dash in _DashboardAssignment.objects.filter(user__isnull=True, role=(r.name or '').lower(), is_active=True).values_list('dashboard', flat=True):
+                            items_set.add(f"dashboard:{dash}")
+            except Exception:
+                pass
+            assignments = sorted(items_set)
+
+    resp = JsonResponse({'assignments': assignments})
+    resp['Cache-Control'] = 'no-store'
+    return resp
 
 
 @login_required
@@ -2827,10 +2934,12 @@ def api_my_sidebar(request):
     except Exception:
         pass
 
-    return JsonResponse({
+    resp = JsonResponse({
         'unrestricted_nav': unrestricted,
         'allowed_nav_items': allowed,
     })
+    resp['Cache-Control'] = 'no-store'
+    return resp
 
 
 @login_required
