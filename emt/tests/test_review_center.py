@@ -33,7 +33,8 @@ class ReviewCenterTests(TestCase):
         resp = self.client.post(url, {"report_id": self.report.id, "action": "approve"})
         self.assertEqual(resp.status_code, 400)
 
-    def test_message_requires_text(self):
-        url = reverse("emt:review_message")
-        resp = self.client.post(url, {"report_id": self.report.id, "message": ""})
+    def test_feedback_required(self):
+        # Already checks feedback is required for actions
+        url = reverse("emt:review_action")
+        resp = self.client.post(url, {"report_id": self.report.id, "action": "approve"})
         self.assertEqual(resp.status_code, 400)

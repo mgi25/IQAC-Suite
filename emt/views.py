@@ -118,6 +118,24 @@ def _reports_for_user(request):
 def review_center(request):
     stage = _user_role_stage(request)
     reports = _reports_for_user(request).order_by("-updated_at")
+    # Master/Detail: if a report_id is requested via XHR, return compact JSON for detail pane
+    report_id = request.GET.get("report_id")
+    if report_id and request.headers.get("X-Requested-With"):
+        r = get_object_or_404(reports, id=report_id)
+        can_decide = stage != EventReport.ReviewStage.USER and r.review_stage != EventReport.ReviewStage.FINALIZED
+        data = {
+            "id": r.id,
+            "title": r.proposal.event_title if r.proposal else "",
+            "org": getattr(getattr(r.proposal, "organization", None), "name", ""),
+            "submitted_by": getattr(getattr(r.proposal, "submitted_by", None), "get_full_name", lambda: "")() or getattr(getattr(r.proposal, "submitted_by", None), "username", ""),
+            "stage_display": r.get_review_stage_display(),
+            "event_dates": f"{getattr(r.proposal, 'event_start_date', '')} — {getattr(r.proposal, 'event_end_date', '')}",
+            "event_type": r.actual_event_type,
+            "participants": r.num_participants,
+            "summary": r.summary,
+            "can_decide": can_decide,
+        }
+        return HttpResponse(json.dumps(data), content_type="application/json")
     context = {
         "stage": stage,
         "reports": reports,
@@ -166,10 +184,12 @@ def review_action(request):
     if action == "approve":
         report.iqac_feedback = (report.iqac_feedback + "\n\n" if report.iqac_feedback else "") + feedback
         report.review_stage = next_on_approve
+        # TODO: Notify next role holder(s) (e.g., HOD or UIQAC) that a report is ready for review
     else:
         # reject
         report.iqac_feedback = (report.iqac_feedback + "\n\n" if report.iqac_feedback else "") + f"REJECTED: {feedback}"
         report.review_stage = next_on_reject
+        # TODO: Notify submitter to rework the report
 
     report.save(update_fields=["session_feedback", "iqac_feedback", "review_stage", "updated_at"])
     return JsonResponse({"ok": True, "stage": report.review_stage})

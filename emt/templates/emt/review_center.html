@@ -6,81 +6,43 @@
   <h1 class="page-title">Review Center</h1>
   <p class="page-subtitle">Stage: {{ stage|title }}</p>
 
-  <div class="cards-grid">
-    {% for r in reports %}
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="card-title">{{ r.proposal.event_title }}</div>
-          <div class="card-subtitle">{{ r.proposal.organization.name|default:'—' }} · by {{ r.proposal.submitted_by.get_full_name|default:r.proposal.submitted_by.username }}</div>
-        </div>
-        <div class="badge" style="background:#1e60b1;color:#fff;">{{ r.get_review_stage_display }}</div>
+  <div class="master-detail">
+    <aside class="list-pane" id="reportList">
+      {% if reports %}
+        {% for r in reports %}
+        <button class="list-item" data-id="{{ r.id }}">
+          <div class="li-title">{{ r.proposal.event_title|default:'Untitled' }}</div>
+          <div class="li-sub">{{ r.proposal.organization.name|default:'—' }} · {{ r.proposal.event_start_date }}{% if r.proposal.event_end_date %} — {{ r.proposal.event_end_date }}{% endif %}</div>
+          <span class="li-badge">{{ r.get_review_stage_display }}</span>
+        </button>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">No reports found for your stage.</div>
+      {% endif %}
+    </aside>
+
+    <section class="detail-pane" id="detailPane">
+      <div class="detail-empty">
+        Select a report from the list to review.
       </div>
-      <div class="card-body">
-        <div class="two-col">
-          <div>
-            <div><b>Event Dates:</b> {{ r.proposal.event_start_date }} — {{ r.proposal.event_end_date }}</div>
-            <div><b>Type:</b> {{ r.actual_event_type|default:'—' }}</div>
-            <div><b>Participants:</b> {{ r.num_participants|default:'—' }}</div>
-          </div>
-          <div>
-            <div><b>Summary:</b> {{ r.summary|default:'—'|truncatechars:200 }}</div>
-          </div>
-        </div>
-      </div>
-      <div class="card-section">
-        <h3 class="section-title">Communication</h3>
-        <div id="thread-{{ r.id }}" class="thread">
-          {% include 'emt/partials/review_messages.html' with report=r %}
-        </div>
-        <form class="thread-form" data-report="{{ r.id }}">
-          {% csrf_token %}
-          <input type="hidden" name="report_id" value="{{ r.id }}" />
-          <textarea name="message" rows="2" class="ultra-input" placeholder="Write a message…" required></textarea>
-          <button type="submit" class="btn btn-primary">Post</button>
-        </form>
-      </div>
-      <div class="card-section">
-        <h3 class="section-title">Review Decision</h3>
-        <form class="action-form" data-report="{{ r.id }}">
-          {% csrf_token %}
-          <input type="hidden" name="report_id" value="{{ r.id }}" />
-          <textarea name="feedback" rows="3" class="ultra-input" placeholder="Provide clear feedback (required)" required></textarea>
-          <div class="actions">
-            {% if stage != 'user' and r.review_stage != 'finalized' %}
-            <button type="submit" name="action" value="approve" class="btn btn-success">Approve</button>
-            <button type="submit" name="action" value="reject" class="btn btn-danger">Reject</button>
-            {% else %}
-            <div class="note">You can view and comment on this report. Decisions are disabled at this stage.</div>
-            {% endif %}
-          </div>
-        </form>
-      </div>
-    </div>
-    {% empty %}
-    <div class="empty-state">No reports found for your stage.</div>
-    {% endfor %}
+    </section>
   </div>
 </div>
 <style>
 .page-container{padding:20px}
 .page-title{font-size:24px;margin:0 0 6px;color:#1e60b1}
 .page-subtitle{color:#555;margin:0 0 16px}
-.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px}
-.card{background:#fff;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.06);overflow:hidden;display:flex;flex-direction:column}
-.card-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #eef2f7}
-.card-title{font-size:16px;font-weight:600}
-.card-subtitle{font-size:12px;color:#666}
-.badge{padding:6px 10px;border-radius:10px;font-size:12px}
-.card-body{padding:12px 16px}
-.two-col{display:grid;grid-template-columns:1fr;gap:10px}
-@media(min-width:720px){.two-col{grid-template-columns:1fr 1fr}}
-.card-section{padding:12px 16px;border-top:1px solid #eef2f7}
+.master-detail{display:grid;grid-template-columns:320px 1fr;gap:16px;min-height:60vh}
+@media(max-width:900px){.master-detail{grid-template-columns:1fr}}
+.list-pane{background:#fff;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.06);padding:8px;display:flex;flex-direction:column;gap:6px}
+.list-item{display:block;text-align:left;width:100%;padding:10px 12px;border-radius:12px;border:1px solid #e6eefc;background:#f9fbff;position:relative}
+.list-item:hover{background:#f0f6ff}
+.li-title{font-weight:600;color:#1e2a3a}
+.li-sub{font-size:12px;color:#5b6b7b;margin-top:2px}
+.li-badge{position:absolute;right:10px;top:10px;background:#1e60b1;color:#fff;border-radius:10px;padding:2px 8px;font-size:11px}
+.detail-pane{background:#fff;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.06);padding:16px}
+.detail-empty{color:#666}
 .section-title{font-size:14px;margin:0 0 8px;color:#1e60b1}
-.thread{max-height:180px;overflow:auto;background:#f9fbff;border:1px solid #e6eefc;border-radius:10px;padding:8px}
-.thread-item{margin:6px 0;padding:8px;background:#fff;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
-.thread-meta{font-size:12px;color:#6b7280;margin-bottom:4px}
-.thread-text{font-size:14px;color:#111}
 .ultra-input{width:100%;padding:10px;border-radius:10px;border:1px solid #d5d9e2}
 .actions{display:flex;gap:8px;margin-top:8px}
 .btn{padding:8px 12px;border-radius:10px;border:none;cursor:pointer}
@@ -92,40 +54,86 @@
 </style>
 <script>
 (function(){
-  async function post(url, form){
-    const fd = new FormData(form);
-    const r = await fetch(url, {method:'POST', body: fd, headers:{'X-Requested-With':'fetch'}});
-    return await r.json();
-  }
-  document.querySelectorAll('.thread-form').forEach(f=>{
-    f.addEventListener('submit', async (e)=>{
+  const list = document.getElementById('reportList');
+  const detail = document.getElementById('detailPane');
+
+  function renderDetail(data){
+    if(!data){
+      detail.innerHTML = '<div class="detail-empty">Select a report from the list to review.</div>';
+      return;
+    }
+    const canDecide = data.can_decide;
+    detail.innerHTML = `
+      <div class="header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div>
+          <div class="card-title">${data.title ?? 'Untitled'}</div>
+          <div class="card-subtitle">${data.org ?? '—'} · by ${data.submitted_by ?? '—'}</div>
+        </div>
+        <span class="li-badge">${data.stage_display}</span>
+      </div>
+      <div class="two-col" style="display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:12px;">
+        <div>
+          <div><b>Event Dates:</b> ${data.event_dates}</div>
+          <div><b>Type:</b> ${data.event_type ?? '—'}</div>
+          <div><b>Participants:</b> ${data.participants ?? '—'}</div>
+        </div>
+        <div>
+          <div><b>Summary:</b> ${data.summary ?? '—'}</div>
+        </div>
+      </div>
+      <div class="card-section">
+        <h3 class="section-title">Review Decision</h3>
+        <form class="action-form">
+          <input type="hidden" name="report_id" value="${data.id}" />
+          <textarea name="feedback" rows="3" class="ultra-input" placeholder="Provide clear feedback (required)" required></textarea>
+          <div class="actions">
+            ${canDecide ? `
+              <button type="submit" name="action" value="approve" class="btn btn-success">Approve</button>
+              <button type="submit" name="action" value="reject" class="btn btn-danger">Reject</button>
+            ` : `<div class="note">You can view this report. Decisions are disabled at this stage.</div>`}
+          </div>
+        </form>
+      </div>
+    `;
+
+    detail.querySelector('.action-form')?.addEventListener('submit', async (e)=>{
       e.preventDefault();
-      const res = await post('{% url "emt:review_message" %}', f);
-      if(res.ok){
-        const id = f.dataset.report;
-        document.getElementById('thread-'+id).innerHTML = res.html;
-        f.reset();
-      }else{ alert(res.error || 'Failed'); }
-    });
-  });
-  document.querySelectorAll('.action-form').forEach(f=>{
-    f.addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      const btn = e.submitter; // which button
-      if(!btn){ return; }
-      const action = btn.value;
-      const fd = new FormData(f);
-      fd.append('action', action);
-      const r = await fetch('{% url "emt:review_action" %}', {method:'POST', body: fd, headers:{'X-Requested-With':'fetch'}});
+      const btn = e.submitter;
+      if(!btn) return;
+      const fd = new FormData(e.currentTarget);
+      fd.append('action', btn.value);
+      const r = await fetch('{% url "emt:review_action" %}', {method:'POST', body: fd, headers:{'X-Requested-With':'fetch', 'X-CSRFToken': getCsrf()}});
       const res = await r.json();
       if(res.ok){
-        // Simple reload to refresh stages & lists
+        // After successful action, refresh page to update list/states
         location.reload();
       } else {
         alert(res.error || 'Action failed');
       }
     });
+  }
+
+  function getCsrf(){
+    const m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? m[1] : '';
+  }
+
+  list?.addEventListener('click', async (e)=>{
+    const btn = e.target.closest('.list-item');
+    if(!btn) return;
+    const id = btn.dataset.id;
+    // Fetch compact JSON for detail
+    const r = await fetch(`{% url 'emt:review_center' %}?report_id=${id}`, {headers:{'X-Requested-With':'fetch'}});
+    const html = await r.text();
+    try{
+      const data = JSON.parse(html);
+      renderDetail(data);
+    }catch(_){
+      // Fallback: if server didn't return JSON, render empty
+      renderDetail(null);
+    }
   });
+
 })();
 </script>
 {% endblock %}
