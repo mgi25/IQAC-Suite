@@ -34,7 +34,41 @@ class ReviewCenterTests(TestCase):
         self.assertEqual(resp.status_code, 400)
 
     def test_feedback_required(self):
-        # Already checks feedback is required for actions
         url = reverse("emt:review_action")
         resp = self.client.post(url, {"report_id": self.report.id, "action": "approve"})
         self.assertEqual(resp.status_code, 400)
+
+    def test_approve_reject_flow_denied_for_submitter(self):
+        # Submitter (user stage) cannot approve/reject; expect 403 when valid payload but unauthorized stage
+        url = reverse("emt:review_action")
+        resp = self.client.post(
+            url,
+            {
+                "report_id": self.report.id,
+                "action": "approve",
+                "feedback": "Looks good",
+            },
+        )
+        self.assertEqual(resp.status_code, 403)
+
+    def test_superuser_can_approve(self):
+        # Promote existing user to superuser and attempt approval at USER stage
+        self.user.is_superuser = True
+        self.user.is_staff = True
+        self.user.save(update_fields=["is_superuser", "is_staff"])
+        url = reverse("emt:review_action")
+        resp = self.client.post(
+            url,
+            {
+                "report_id": self.report.id,
+                "action": "approve",
+                "feedback": "Advancing as superuser",
+            },
+        )
+        self.assertEqual(resp.status_code, 200, resp.content)
+        self.report.refresh_from_db()
+        # After superuser approval from USER stage we jump to HOD
+        self.assertEqual(self.report.review_stage, EventReport.ReviewStage.HOD)
+
+    # NOTE: Role-based positive path (e.g., DIQAC/HOD/UIQAC) would require constructing role assignments.
+    # This can be added when role factories/utilities exist in tests.

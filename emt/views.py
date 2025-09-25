@@ -21,8 +21,12 @@ from django.core.exceptions import ValidationError
 from django.core.validators import EmailValidator, URLValidator
 from django.db.models import Q, Sum
 from django.forms import modelformset_factory
-from django.http import (HttpResponse, HttpResponseNotAllowed, JsonResponse,
-                         StreamingHttpResponse)
+from django.http import (
+    HttpResponse,
+    HttpResponseNotAllowed,
+    JsonResponse,
+    StreamingHttpResponse,
+)
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -33,9 +37,16 @@ from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods, require_POST
 
-from core.models import (SDG_GOALS, Class, Organization,
-                         OrganizationMembership, OrganizationType, Report,
-                         SDGGoal)
+from core.models import (
+    SDG_GOALS,
+    Class,
+    Organization,
+    OrganizationMembership,
+    OrganizationType,
+    Report,
+    SDGGoal,
+    ActivityLog,
+)
 from emt.utils import (ATTENDANCE_HEADERS,
                        auto_approve_non_optional_duplicates,
                        build_approval_chain,
@@ -122,7 +133,11 @@ def review_center(request):
     report_id = request.GET.get("report_id")
     if report_id and request.headers.get("X-Requested-With"):
         r = get_object_or_404(reports, id=report_id)
-        can_decide = stage != EventReport.ReviewStage.USER and r.review_stage != EventReport.ReviewStage.FINALIZED
+        # superuser shortcut: allow acting unless finalized
+        if request.user.is_superuser:
+            can_decide = r.review_stage != EventReport.ReviewStage.FINALIZED
+        else:
+            can_decide = stage != EventReport.ReviewStage.USER and r.review_stage != EventReport.ReviewStage.FINALIZED
         data = {
             "id": r.id,
             "title": r.proposal.event_title if r.proposal else "",
@@ -181,18 +196,82 @@ def review_action(request):
         return JsonResponse({"ok": False, "error": "Not permitted for this stage"}, status=403)
 
     report.session_feedback = feedback
-    if action == "approve":
-        report.iqac_feedback = (report.iqac_feedback + "\n\n" if report.iqac_feedback else "") + feedback
-        report.review_stage = next_on_approve
-        # TODO: Notify next role holder(s) (e.g., HOD or UIQAC) that a report is ready for review
-    else:
-        # reject
-        report.iqac_feedback = (report.iqac_feedback + "\n\n" if report.iqac_feedback else "") + f"REJECTED: {feedback}"
-        report.review_stage = next_on_reject
-        # TODO: Notify submitter to rework the report
+    # Build a human readable stage mapping for logs / notifications
+    stage_label = {
+        EventReport.ReviewStage.DIQAC: "Department IQAC",
+        EventReport.ReviewStage.HOD: "Head of Department",
+        EventReport.ReviewStage.UIQAC: "University IQAC",
+        EventReport.ReviewStage.FINALIZED: "Finalized",
+        EventReport.ReviewStage.USER: "Submitter",
+    }
 
-    report.save(update_fields=["session_feedback", "iqac_feedback", "review_stage", "updated_at"])
-    return JsonResponse({"ok": True, "stage": report.review_stage})
+    if action == "approve":
+        report.iqac_feedback = (
+            (report.iqac_feedback + "\n\n") if report.iqac_feedback else ""
+        ) + feedback
+        report.review_stage = next_on_approve
+        action_desc = f"Approved and moved to {stage_label.get(next_on_approve, next_on_approve)}"
+        log_action = "report_approved"
+    else:  # reject
+        report.iqac_feedback = (
+            (report.iqac_feedback + "\n\n") if report.iqac_feedback else ""
+        ) + f"REJECTED: {feedback}"
+        report.review_stage = next_on_reject
+        action_desc = "Rejected and sent back to submitter"
+        log_action = "report_rejected"
+
+    report.save(
+        update_fields=[
+            "session_feedback",
+            "iqac_feedback",
+            "review_stage",
+            "updated_at",
+        ]
+    )
+
+    # Activity log for auditing
+    try:
+        ActivityLog.objects.create(
+            user=request.user,
+            action=log_action,
+            description=f"{action_desc}: {report.proposal.event_title}",
+            metadata={
+                "report_id": report.id,
+                "proposal_id": report.proposal_id,
+                "new_stage": report.review_stage,
+                "action": action,
+            },
+        )
+    except Exception:  # pragma: no cover
+        logger.exception("Failed to create ActivityLog for review action")
+
+    # Lightweight notification strategy: mutate proposal status for submitter visibility on reject
+    # Only change proposal status on final rejection back to user; do not override existing status otherwise.
+    proposal = report.proposal
+    if action == "reject":
+        # Provide a status change to surface in notifications CP if model uses status field.
+        try:
+            if hasattr(proposal, "status"):
+                # Set to a generic 'UNDER_REVIEW' -> 'SUBMITTED' cycle or 'REJECTED' if defined
+                rejected_value = None
+                if hasattr(proposal.__class__, "Status"):
+                    for choice, _ in proposal.__class__.Status.choices:  # type: ignore
+                        if choice.lower() == "rejected":
+                            rejected_value = choice
+                            break
+                if rejected_value:
+                    proposal.status = rejected_value
+                    proposal.save(update_fields=["status", "updated_at"]) if hasattr(proposal, "updated_at") else proposal.save(update_fields=["status"])
+        except Exception:  # pragma: no cover
+            logger.exception("Failed to update proposal status on rejection")
+
+    return JsonResponse(
+        {
+            "ok": True,
+            "stage": report.review_stage,
+            "message": action_desc,
+        }
+    )
 
 
 @login_required
@@ -4095,22 +4174,40 @@ def save_ai_report(request):
 @login_required
 def ai_report_progress(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id)
-    report = EventReport.objects.filter(proposal=proposal).first()
 
-    def clean_text(value):
-        if value is None:
-            return ""
-        if isinstance(value, (int, float)):
-            return str(value)
-        return str(value).strip()
+    # Superuser override: can always act (unless finalized) and we pick a transition
+    if request.user.is_superuser:
+        if report.review_stage == EventReport.ReviewStage.FINALIZED:
+            return JsonResponse({"ok": False, "error": "Finalized reports cannot be modified"}, status=403)
+        allowed = True
+        # Mirror existing compressed transitions (USER/DIQAC -> HOD, HOD -> UIQAC, UIQAC -> FINALIZED)
+        if report.review_stage in [EventReport.ReviewStage.USER, EventReport.ReviewStage.DIQAC]:
+            next_on_approve = EventReport.ReviewStage.HOD
+        elif report.review_stage == EventReport.ReviewStage.HOD:
+            next_on_approve = EventReport.ReviewStage.UIQAC
+        elif report.review_stage == EventReport.ReviewStage.UIQAC:
+            next_on_approve = EventReport.ReviewStage.FINALIZED
+        else:  # fallback – should not happen
+            next_on_approve = report.review_stage
+        next_on_reject = EventReport.ReviewStage.USER
+    else:
+        # Original role-based logic
+        if stage == EventReport.ReviewStage.DIQAC and report.review_stage in [EventReport.ReviewStage.USER, EventReport.ReviewStage.DIQAC]:
+            allowed = True
+            next_on_approve = EventReport.ReviewStage.HOD
+            next_on_reject = EventReport.ReviewStage.USER
+        elif stage == EventReport.ReviewStage.HOD and report.review_stage in [EventReport.ReviewStage.DIQAC, EventReport.ReviewStage.HOD]:
+            allowed = True
+            next_on_approve = EventReport.ReviewStage.UIQAC
+            next_on_reject = EventReport.ReviewStage.USER
+        elif stage == EventReport.ReviewStage.UIQAC and report.review_stage in [EventReport.ReviewStage.HOD, EventReport.ReviewStage.UIQAC]:
+            allowed = True
+            next_on_approve = EventReport.ReviewStage.FINALIZED
+            next_on_reject = EventReport.ReviewStage.USER
+        else:
+            allowed = False
 
-    def report_value(attr):
-        if not report:
-            return None
-        return getattr(report, attr, None)
-
-    def to_list(value):
-        if not value:
+    # Submitter cannot approve/reject if not allowed (and not superuser)
             return []
         text = str(value)
         if "\n" in text or "\r" in text:

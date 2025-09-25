@@ -62,7 +62,7 @@
       detail.innerHTML = '<div class="detail-empty">Select a report from the list to review.</div>';
       return;
     }
-    const canDecide = data.can_decide;
+  const canDecide = data.can_decide;
     detail.innerHTML = `
       <div class="header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
         <div>
@@ -87,10 +87,9 @@
           <input type="hidden" name="report_id" value="${data.id}" />
           <textarea name="feedback" rows="3" class="ultra-input" placeholder="Provide clear feedback (required)" required></textarea>
           <div class="actions">
-            ${canDecide ? `
-              <button type="submit" name="action" value="approve" class="btn btn-success">Approve</button>
-              <button type="submit" name="action" value="reject" class="btn btn-danger">Reject</button>
-            ` : `<div class="note">You can view this report. Decisions are disabled at this stage.</div>`}
+            <button type="submit" name="action" value="approve" class="btn btn-success" ${canDecide ? '' : 'disabled title="Not allowed at this stage" style="opacity:.55;cursor:not-allowed"'}>Approve</button>
+            <button type="submit" name="action" value="reject" class="btn btn-danger" ${canDecide ? '' : 'disabled title="Not allowed at this stage" style="opacity:.55;cursor:not-allowed"'}>Reject</button>
+            ${canDecide ? '' : '<div class="note">(Read-only stage)</div>'}
           </div>
         </form>
       </div>
