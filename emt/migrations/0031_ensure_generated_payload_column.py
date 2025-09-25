@@ -1,4 +1,4 @@
-from django.db import migrations, models
+from django.db import migrations
 
 
 def ensure_generated_payload_column(apps, schema_editor):
@@ -16,8 +16,7 @@ def ensure_generated_payload_column(apps, schema_editor):
     if column_name in existing_columns:
         return
 
-    field = models.JSONField(blank=True, default=dict)
-    field.set_attributes_from_name(column_name)
+    field = EventReport._meta.get_field(column_name)
     schema_editor.add_field(EventReport, field)
 
 
