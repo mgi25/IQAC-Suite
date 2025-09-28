@@ -134,7 +134,7 @@ def review_center(request):
     if report_id and request.headers.get("X-Requested-With"):
         r = get_object_or_404(reports, id=report_id)
         # superuser shortcut: allow acting unless finalized
-        if request.user.is_superuser:
+        if request.user.is_superuser or request.user.is_staff:
             can_decide = r.review_stage != EventReport.ReviewStage.FINALIZED
         else:
             can_decide = stage != EventReport.ReviewStage.USER and r.review_stage != EventReport.ReviewStage.FINALIZED
@@ -4175,8 +4175,8 @@ def save_ai_report(request):
 def ai_report_progress(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id)
 
-    # Superuser override: can always act (unless finalized) and we pick a transition
-    if request.user.is_superuser:
+    # Admin override: superuser or staff can act (unless finalized) and we pick a transition
+    if request.user.is_superuser or request.user.is_staff:
         if report.review_stage == EventReport.ReviewStage.FINALIZED:
             return JsonResponse({"ok": False, "error": "Finalized reports cannot be modified"}, status=403)
         allowed = True

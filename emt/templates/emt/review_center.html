@@ -62,7 +62,7 @@
       detail.innerHTML = '<div class="detail-empty">Select a report from the list to review.</div>';
       return;
     }
-  const canDecide = data.can_decide;
+    const canDecide = data.can_decide; // server already accounts for superuser/staff
     detail.innerHTML = `
       <div class="header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
         <div>

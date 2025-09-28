@@ -70,5 +70,23 @@ class ReviewCenterTests(TestCase):
         # After superuser approval from USER stage we jump to HOD
         self.assertEqual(self.report.review_stage, EventReport.ReviewStage.HOD)
 
+    def test_staff_can_approve(self):
+        # Staff (admin) but not superuser can also approve at any stage except finalized
+        self.user.is_staff = True
+        self.user.is_superuser = False
+        self.user.save(update_fields=["is_staff", "is_superuser"])
+        url = reverse("emt:review_action")
+        resp = self.client.post(
+            url,
+            {
+                "report_id": self.report.id,
+                "action": "approve",
+                "feedback": "Advancing as staff",
+            },
+        )
+        self.assertEqual(resp.status_code, 200, resp.content)
+        self.report.refresh_from_db()
+        self.assertEqual(self.report.review_stage, EventReport.ReviewStage.HOD)
+
     # NOTE: Role-based positive path (e.g., DIQAC/HOD/UIQAC) would require constructing role assignments.
     # This can be added when role factories/utilities exist in tests.
