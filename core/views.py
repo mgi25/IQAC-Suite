@@ -801,6 +801,10 @@ def dashboard(request):
     # ---- defaults (avoid UnboundLocalError) ----
     my_events = EventProposal.objects.none()
     other_events = EventProposal.objects.none()
+    base_my_events = EventProposal.objects.none()
+    base_other_events = EventProposal.objects.none()
+    base_my_events = EventProposal.objects.none()
+    base_other_events = EventProposal.objects.none()
     upcoming_events_count = 0
     organized_events_count = 0
     this_week_events = 0
@@ -1210,20 +1214,35 @@ def _render_faculty_dashboard(request):
     calendar_events = []
     org_count = 0
     mentee_count = 0
+    base_my_events = EventProposal.objects.none()
+    base_other_events = EventProposal.objects.none()
 
     # ---- common: events for calendar ----
     from datetime import timedelta
     
     try:
-        # Limit to finalized events for calendar highlighting consistency
-        my_events = EventProposal.objects.filter(
-            Q(submitted_by=user) | Q(faculty_incharges=user),
-            status__in=[EventProposal.Status.FINALIZED]
-        ).distinct().order_by('-event_start_date')[:25]
+        # Keep base querysets unsliced for KPI calculations and reuse for display lists.
+        base_my_events = (
+            EventProposal.objects.filter(
+                Q(submitted_by=user) | Q(faculty_incharges=user),
+                status__in=[EventProposal.Status.FINALIZED],
+            )
+            .distinct()
+        )
+        base_other_events = (
+            EventProposal.objects.filter(status=EventProposal.Status.FINALIZED)
+            .exclude(Q(submitted_by=user) | Q(faculty_incharges=user))
+            .distinct()
+        )
 
-        other_events = EventProposal.objects.exclude(
-            Q(submitted_by=user) | Q(faculty_incharges=user)
-        ).filter(status=EventProposal.Status.FINALIZED).order_by('-event_start_date')[:25]
+        # Prepare display querysets (slice only when needed for UI rendering)
+        my_events = (
+            base_my_events.select_related("organization", "objectives")
+            .order_by("-event_start_date", "-event_end_date", "-created_at")[:25]
+        )
+        other_events = base_other_events.order_by(
+            "-event_start_date", "-event_end_date", "-created_at"
+        )[:25]
 
         # Serialize minimal fields used by template/JS
         calendar_events = []
@@ -1242,15 +1261,18 @@ def _render_faculty_dashboard(request):
             })
         
         # KPI calculations
-        upcoming_events_count = my_events.filter(
-            start_date__gte=timezone.now().date()
+        today = timezone.localdate()
+        week_end = today + timedelta(days=7)
+
+        upcoming_events_count = base_my_events.filter(
+            event_start_date__gte=today
         ).count()
-        
-        organized_events_count = my_events.count()
-        
-        this_week_events = my_events.filter(
-            start_date__gte=timezone.now().date(),
-            start_date__lte=timezone.now().date() + timedelta(days=7)
+
+        organized_events_count = base_my_events.count()
+
+        this_week_events = base_my_events.filter(
+            event_start_date__gte=today,
+            event_start_date__lte=week_end,
         ).count()
 
     except Exception as e:
@@ -1263,12 +1285,10 @@ def _render_faculty_dashboard(request):
         my_classes = Class.objects.filter(teacher=user, is_active=True)
         classes_count = my_classes.count()
         mentee_count = my_students.count()
-        
+
         # Calculate students who participated in events
         students_participated = my_students.filter(
-            user__in=EventProposal.objects.filter(
-                Q(submitted_by=user) | Q(faculty_incharges=user)
-            ).values_list('participants__user', flat=True)
+            user__in=base_my_events.values_list("participants__user", flat=True)
         ).distinct().count()
 
     except Exception as e:
@@ -1286,15 +1306,34 @@ def _render_faculty_dashboard(request):
 
     # ---- user proposals for API ----
     try:
-        user_proposals = list(my_events.values(
-            'id', 'title', 'status', 'start_date', 'end_date', 
-            'organization__name', 'description'
-        ))
-        for proposal in user_proposals:
-            if proposal['start_date']:
-                proposal['start_date'] = proposal['start_date'].isoformat()
-            if proposal['end_date']:
-                proposal['end_date'] = proposal['end_date'].isoformat()
+        user_proposals = []
+        for event in my_events:
+            description = ""
+            objectives = getattr(event, "objectives", None)
+            if objectives and getattr(objectives, "content", "").strip():
+                description = objectives.content.strip()
+            elif getattr(event, "pos_pso", "").strip():
+                description = event.pos_pso.strip()
+            elif getattr(event, "committees", "").strip():
+                description = event.committees.strip()
+
+            user_proposals.append(
+                {
+                    "id": event.id,
+                    "title": event.event_title,
+                    "status": event.status,
+                    "start_date": event.event_start_date.isoformat()
+                    if event.event_start_date
+                    else None,
+                    "end_date": event.event_end_date.isoformat()
+                    if event.event_end_date
+                    else None,
+                    "organization__name": event.organization.name
+                    if event.organization
+                    else "",
+                    "description": description,
+                }
+            )
     except Exception as e:
         print(f"Proposals serialization error: {e}")
         user_proposals = []
@@ -1385,19 +1424,43 @@ def _render_student_dashboard(request):
 
     # ---- user proposals for API ----
     try:
-        user_events = EventProposal.objects.filter(
-            Q(submitted_by=user) | Q(participants__user=user)
-        ).distinct()[:10]
-        
-        user_proposals = list(user_events.values(
-            'id', 'title', 'status', 'start_date', 'end_date',
-            'organization__name', 'description'
-        ))
-        for proposal in user_proposals:
-            if proposal['start_date']:
-                proposal['start_date'] = proposal['start_date'].isoformat()
-            if proposal['end_date']:
-                proposal['end_date'] = proposal['end_date'].isoformat()
+        user_events = (
+            EventProposal.objects.filter(
+                Q(submitted_by=user) | Q(participants__user=user)
+            )
+            .distinct()
+            .select_related("organization", "objectives")
+            .order_by("-event_start_date", "-event_end_date", "-created_at")[:10]
+        )
+
+        user_proposals = []
+        for event in user_events:
+            description = ""
+            objectives = getattr(event, "objectives", None)
+            if objectives and getattr(objectives, "content", "").strip():
+                description = objectives.content.strip()
+            elif getattr(event, "pos_pso", "").strip():
+                description = event.pos_pso.strip()
+            elif getattr(event, "committees", "").strip():
+                description = event.committees.strip()
+
+            user_proposals.append(
+                {
+                    "id": event.id,
+                    "title": event.event_title,
+                    "status": event.status,
+                    "start_date": event.event_start_date.isoformat()
+                    if event.event_start_date
+                    else None,
+                    "end_date": event.event_end_date.isoformat()
+                    if event.event_end_date
+                    else None,
+                    "organization__name": event.organization.name
+                    if event.organization
+                    else "",
+                    "description": description,
+                }
+            )
     except Exception as e:
         print(f"Student proposals error: {e}")
         user_proposals = []
