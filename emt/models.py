@@ -601,6 +601,13 @@ class EventReport(models.Model):
         choices=Status.choices,
         default=Status.DRAFT,
     )
+    review_stage = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.DRAFT,
+        editable=False,
+        help_text="Internal field to track the latest review stage for the report.",
+    )
     location = models.CharField(max_length=200, blank=True)
     blog_link = models.URLField(blank=True)
     actual_event_type = models.CharField(max_length=200, blank=True)
