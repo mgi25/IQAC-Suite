@@ -1598,8 +1598,17 @@ def autosave_event_report(request):
     # Apply only the submitted fields to the existing instance
     for name in form.fields.keys():
         if name in data:
+            cleaned_value = form.cleaned_data.get(name)
+            if name == "report_signed_date" and cleaned_value in (None, ""):
+                # Leave the existing value intact when autosave payload omits a date.
+                # The model field does not accept null values, so attempting to set
+                # ``None`` triggers an integrity error which in turn breaks flows like
+                # opening the attendance modal from a fresh report. Skipping assignment
+                # preserves either the default or any previously saved date while still
+                # allowing the client to update it once a real value is provided.
+                continue
             try:
-                setattr(report, name, form.cleaned_data.get(name))
+                setattr(report, name, cleaned_value)
             except Exception:
                 pass
     if summary_content is not None:

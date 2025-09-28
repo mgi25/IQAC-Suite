@@ -152,3 +152,21 @@ class AutosaveEventReportTests(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(resp.json().get("success"))
+
+    def test_autosave_ignores_blank_report_signed_date(self):
+        url = reverse("emt:autosave_event_report")
+        payload = {
+            "proposal_id": self.proposal.id,
+            "report_signed_date": "",
+        }
+
+        resp = self.client.post(
+            url, data=json.dumps(payload), content_type="application/json"
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data.get("success"))
+
+        report = EventReport.objects.get(id=data["report_id"])
+        self.assertIsNotNone(report.report_signed_date)
