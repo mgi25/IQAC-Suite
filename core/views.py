@@ -17,8 +17,9 @@ from django import forms
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
-from django.db import models, transaction
+from django.db import models, transaction, close_old_connections
 from django.db.models.functions import TruncDate
+from django.db.utils import InterfaceError, OperationalError
 from django.utils import timezone
 import json
 import logging
@@ -731,10 +732,28 @@ def dashboard(request):
                 return redirect("select_dashboard", dashboard_key=key)
 
     # 2) Role / domain detection (fallback for users without assignments)
-    roles = (
+    roles_qs = (
         RoleAssignment.objects.filter(user=user)
         .select_related("role", "organization", "organization__org_type")
     )
+    try:
+        roles = list(roles_qs)
+    except (InterfaceError, OperationalError):
+        logger.warning(
+            "dashboard(): detected closed DB connection while loading role assignments; retrying",
+            exc_info=True,
+        )
+        close_old_connections()
+        try:
+            roles = list(
+                RoleAssignment.objects.filter(user=user)
+                .select_related("role", "organization", "organization__org_type")
+            )
+        except (InterfaceError, OperationalError):
+            logger.exception(
+                "dashboard(): unable to recover role assignments after resetting DB connections",
+            )
+            roles = []
 
     if user.is_superuser:
         return redirect("admin_dashboard")
