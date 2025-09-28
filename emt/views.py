@@ -1,3 +1,4 @@
+import copy
 import csv
 import json
 import logging
@@ -1560,6 +1561,10 @@ def autosave_event_report(request):
         logger.debug("autosave_event_report invalid json: %s", raw)
         return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
 
+    # Preserve the original payload so we can persist it without being mutated
+    # by the transformations that follow (e.g., flattening list fields).
+    payload_snapshot = copy.deepcopy(data)
+
     proposal_id = data.get("proposal_id")
     report_id = data.get("report_id")
 
@@ -1617,6 +1622,8 @@ def autosave_event_report(request):
         report.outcomes = outcomes_content
     if analysis_content is not None and hasattr(report, "analysis"):
         report.analysis = analysis_content
+    if payload_snapshot:
+        report.generated_payload = payload_snapshot
     report.save()
 
     _save_activities(proposal, data)
