@@ -88,6 +88,24 @@ class AttendanceDataViewTests(TestCase):
         self.assertIn("CSE", data["students"])
         self.assertListEqual(sorted(data["students"]["CSE"]), ["Bob", "Carol"])
 
+    def test_skips_unmatched_department_names_in_target_audience(self):
+        proposal = EventProposal.objects.create(
+            submitted_by=self.user,
+            event_title="Dept Audience",
+            target_audience="Data Science Department, Computer Science",
+        )
+        report = EventReport.objects.create(proposal=proposal)
+
+        url = reverse("emt:attendance_data", args=[report.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        self.assertEqual(data["rows"], [])
+        self.assertEqual(data["counts"], {"total": 0, "present": 0, "absent": 0, "volunteers": 0})
+        self.assertEqual(data["students"], {})
+        self.assertEqual(data["faculty"], {})
+
     def test_includes_faculty_incharges_when_no_rows(self):
         org_type = OrganizationType.objects.create(name="Dept of Arts")
         org = Organization.objects.create(name="Fine Arts", org_type=org_type)
