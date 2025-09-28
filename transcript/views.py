@@ -1,4 +1,5 @@
 import base64
+import importlib.util
 import io
 import json
 import logging
@@ -12,7 +13,10 @@ from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.template.loader import get_template, render_to_string
 from django.urls import reverse
-from xhtml2pdf import pisa
+if importlib.util.find_spec("xhtml2pdf") is not None:
+    from xhtml2pdf import pisa  # type: ignore
+else:  # pragma: no cover - optional dependency
+    pisa = None
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +39,11 @@ def render_pdf_from_html(html: str) -> bytes:
 
     if HTML is not None:
         return HTML(string=html).write_pdf()
+
+    if pisa is None:
+        raise PDFGenerationError(
+            "xhtml2pdf is not installed; install it or enable WeasyPrint for PDF output."
+        )
 
     pdf_buffer = io.BytesIO()
     pisa_status = pisa.CreatePDF(html, dest=pdf_buffer)
