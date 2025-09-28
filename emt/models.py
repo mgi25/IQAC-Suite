@@ -585,8 +585,21 @@ class CDLTaskAssignment(models.Model):
 class EventReport(models.Model):
     """Stores the post-event report, linked to the original proposal."""
 
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        SUBMITTED = "submitted", "Submitted"
+        UNDER_REVIEW = "under_review", "Under Review"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+        FINALIZED = "finalized", "Finalized"
+
     proposal = models.OneToOneField(
         EventProposal, on_delete=models.CASCADE, related_name="event_report"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.DRAFT,
     )
     location = models.CharField(max_length=200, blank=True)
     blog_link = models.URLField(blank=True)
