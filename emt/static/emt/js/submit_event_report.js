@@ -3138,11 +3138,21 @@ function setupAttendanceLink() {
                     else if (path.startsWith('/emt/')) prefix = '/emt';
                     window.AUTOSAVE_URL = `${prefix}/autosave-event-report/`;
                 }
-                const result = (window.ReportAutosaveManager && window.ReportAutosaveManager.manualSave)
-                    ? await window.ReportAutosaveManager.manualSave()
-                    : null;
 
-                const reportId = result?.report_id || window.REPORT_ID;
+                let reportId = window.REPORT_ID;
+                let result = null;
+                if (window.ReportAutosaveManager && window.ReportAutosaveManager.manualSave) {
+                    try {
+                        result = await window.ReportAutosaveManager.manualSave();
+                    } catch (autosaveError) {
+                        console.error('Autosave failed before opening attendance; continuing when possible.', autosaveError);
+                    }
+                }
+
+                if (result?.report_id) {
+                    reportId = result.report_id;
+                }
+
                 if (reportId) {
                     // Respect site prefix (/suite or /emt) when building the URL
                     const path = window.location.pathname || '';
@@ -3162,8 +3172,8 @@ function setupAttendanceLink() {
                     alert('Unable to prepare attendance. Please try saving once.');
                 }
             } catch (e) {
-                console.error('Failed to autosave before opening attendance:', e);
-                alert('Save failed. Please fix any errors and try again.');
+                console.error('Unexpected error while preparing attendance:', e);
+                alert('Unable to open attendance page. Please try again.');
             } finally {
                 hideLoadingOverlay();
             }
