@@ -24,6 +24,69 @@ function fetchWithOverlay(url, options = {}, text = 'Loading...') {
     return fetch(url, options).finally(() => hideLoadingOverlay());
 }
 
+function inferProposalId() {
+    try {
+        const form = document.getElementById('report-form');
+        if (form && form.dataset && form.dataset.proposalId) {
+            return form.dataset.proposalId;
+        }
+    } catch (e) { /* ignore */ }
+
+    if (window.PROPOSAL_ID) {
+        return String(window.PROPOSAL_ID);
+    }
+
+    try {
+        const path = window.location.pathname || '';
+        const match = path.match(/\/(?:admin\/)?(?:suite|emt)\/report\/submit\/(\d+)\/?/i);
+        if (match && match[1]) {
+            return match[1];
+        }
+    } catch (e) { /* ignore */ }
+
+    return '';
+}
+
+function ensureReportIdForAttendance() {
+    const result = { proposalId: '', reportId: '' };
+
+    try {
+        const form = document.getElementById('report-form');
+        if (form && form.dataset) {
+            if (form.dataset.proposalId) {
+                result.proposalId = form.dataset.proposalId;
+            }
+            if (form.dataset.reportId) {
+                result.reportId = form.dataset.reportId;
+            }
+        }
+    } catch (e) { /* ignore */ }
+
+    if (!result.proposalId) {
+        result.proposalId = inferProposalId();
+    }
+
+    if (result.proposalId) {
+        const proposalStr = String(result.proposalId);
+        if (!window.PROPOSAL_ID || String(window.PROPOSAL_ID) !== proposalStr) {
+            window.PROPOSAL_ID = proposalStr;
+        }
+    }
+
+    if (!result.reportId && window.REPORT_ID) {
+        result.reportId = String(window.REPORT_ID);
+    }
+
+    if (result.reportId) {
+        const reportStr = String(result.reportId);
+        if (!window.REPORT_ID || String(window.REPORT_ID) !== reportStr) {
+            window.REPORT_ID = reportStr;
+        }
+    }
+
+    return result;
+}
+
 document.addEventListener('DOMContentLoaded', function(){
         const reportFormElement = document.getElementById('report-form');
     const iqacContinueButton = document.querySelector('[data-preview-continue="iqac"]');
@@ -53,6 +116,7 @@ document.addEventListener('DOMContentLoaded', function(){
         }
         return;
     }
+        ensureReportIdForAttendance();
         // Central init (single DOMContentLoaded listener)
         const sectionState = {}; // fieldName -> value snapshot
     const urlParams = new URLSearchParams(window.location.search || '');
@@ -3095,6 +3159,7 @@ function setupDynamicActivities() {
 }
 
 function setupAttendanceLink() {
+    ensureReportIdForAttendance();
     const attendanceField = $('#attendance-modern');
     const participantFields = $('#num-participants-modern, #total-participants-modern');
     const fields = attendanceField.add(participantFields);
