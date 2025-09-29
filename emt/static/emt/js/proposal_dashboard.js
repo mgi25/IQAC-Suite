@@ -3391,15 +3391,45 @@ function getWhyThisEventForm() {
 
         const targetAudienceField = $('#target-audience-modern');
         const hiddenTargetAudienceField = $('#django-basic-info [name="target_audience"]');
-        const targetAudienceValue = targetAudienceField.length ? targetAudienceField.val() : '';
+        const hiddenTargetAudienceValue = hiddenTargetAudienceField.length ? hiddenTargetAudienceField.val() : '';
+        const selectedStudents = targetAudienceField.length ? targetAudienceField.data('selectedStudents') || [] : [];
+        const selectedFaculty = targetAudienceField.length ? targetAudienceField.data('selectedFaculty') || [] : [];
+        const selectedUsers = targetAudienceField.length ? targetAudienceField.data('selectedUsers') || [] : [];
+
+        let targetAudienceValue = targetAudienceField.length ? targetAudienceField.val() : '';
+        let hasVisibleValue = typeof targetAudienceValue === 'string' && targetAudienceValue.trim().length > 0;
+        const hasHiddenValue = typeof hiddenTargetAudienceValue === 'string' && hiddenTargetAudienceValue.trim().length > 0;
+        const hasSelectionData = selectedStudents.length > 0 || selectedFaculty.length > 0 || selectedUsers.length > 0;
+        const shouldRehydrateVisible =
+            targetAudienceField.length && !hasVisibleValue && (hasHiddenValue || hasSelectionData);
+        let rehydratedFromHidden = false;
+
+        if (shouldRehydrateVisible && hasHiddenValue) {
+            targetAudienceField
+                .val(hiddenTargetAudienceValue)
+                .trigger('input')
+                .trigger('change');
+            targetAudienceValue = hiddenTargetAudienceValue;
+            hasVisibleValue = true;
+            rehydratedFromHidden = true;
+        }
+
+        const hasAudience = hasVisibleValue || hasHiddenValue || hasSelectionData;
 
         logAudienceAction('validate-basic-info', {
             visibleValue: targetAudienceValue,
-            hiddenValue: hiddenTargetAudienceField.length ? hiddenTargetAudienceField.val() : undefined
+            hiddenValue: hiddenTargetAudienceValue,
+            selectedStudentCount: selectedStudents.length,
+            selectedFacultyCount: selectedFaculty.length,
+            selectedUserCount: selectedUsers.length,
+            hasVisibleValue,
+            hasHiddenValue,
+            hasSelectionData,
+            hasAudience,
+            rehydratedFromHidden
         });
 
         if (targetAudienceField.length) {
-            const hasAudience = Boolean(targetAudienceValue && targetAudienceValue.trim());
             if (!hasAudience) {
                 showFieldError(targetAudienceField, 'Target Audience is required');
                 isValid = false;
