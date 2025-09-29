@@ -3130,35 +3130,10 @@ function setupAttendanceLink() {
             // No report yet: trigger an autosave to create it, then redirect
             try {
                 showLoadingOverlay('Preparing attendance...');
-                // Fallback: if autosave URL isn't injected, infer it from current path
-                if (!window.AUTOSAVE_URL) {
-                    const path = window.location.pathname || '';
-                    let prefix = '';
-                    if (path.startsWith('/suite/')) prefix = '/suite';
-                    else if (path.startsWith('/emt/')) prefix = '/emt';
-                    window.AUTOSAVE_URL = `${prefix}/autosave-event-report/`;
-                }
-
-                let reportId = window.REPORT_ID;
-                let result = null;
-                if (window.ReportAutosaveManager && window.ReportAutosaveManager.manualSave) {
-                    try {
-                        result = await window.ReportAutosaveManager.manualSave();
-                    } catch (autosaveError) {
-                        console.error('Autosave failed before opening attendance; continuing when possible.', autosaveError);
-                    }
-                }
-
-                if (result?.report_id) {
-                    reportId = result.report_id;
-                }
+                const reportId = await ensureReportIdForAttendance();
 
                 if (reportId) {
-                    // Respect site prefix (/suite or /emt) when building the URL
-                    const path = window.location.pathname || '';
-                    let prefix = '';
-                    if (path.startsWith('/suite/')) prefix = '/suite';
-                    else if (path.startsWith('/emt/')) prefix = '/emt';
+                    const prefix = inferSitePrefix();
                     const attendanceUrl = `${prefix}/reports/${reportId}/attendance/upload/`;
                     fields.each((_, f) => {
                         const jq = $(f);
@@ -3178,6 +3153,87 @@ function setupAttendanceLink() {
                 hideLoadingOverlay();
             }
         });
+}
+
+function inferSitePrefix() {
+    const path = window.location.pathname || '';
+    if (path.startsWith('/suite/')) return '/suite';
+    if (path.startsWith('/emt/')) return '/emt';
+    return '';
+}
+
+function inferProposalId() {
+    if (window.PROPOSAL_ID) {
+        const value = String(window.PROPOSAL_ID).trim();
+        if (value) return value;
+    }
+    const path = window.location.pathname || '';
+    const match = path.match(/\/(?:suite|emt)\/report\/submit\/(\d+)\/?/);
+    return match && match[1] ? match[1] : '';
+}
+
+async function ensureReportIdForAttendance() {
+    let reportId = String(window.REPORT_ID || '').trim();
+    if (reportId) {
+        return reportId;
+    }
+
+    if (window.ReportAutosaveManager && window.ReportAutosaveManager.manualSave) {
+        try {
+            const result = await window.ReportAutosaveManager.manualSave();
+            const autosaveId = result?.report_id || result?.reportId;
+            if (autosaveId) {
+                reportId = String(autosaveId);
+                window.REPORT_ID = reportId;
+                return reportId;
+            }
+        } catch (autosaveError) {
+            console.error('Autosave failed before opening attendance; attempting fallback.', autosaveError);
+        }
+    }
+
+    const proposalId = inferProposalId();
+    if (!proposalId) {
+        return '';
+    }
+
+    if (!window.AUTOSAVE_URL) {
+        window.AUTOSAVE_URL = `${inferSitePrefix()}/autosave-event-report/`;
+    }
+
+    const payload = { proposal_id: proposalId };
+    if (window.REPORT_ID) {
+        payload.report_id = window.REPORT_ID;
+    }
+
+    try {
+        const response = await fetch(window.AUTOSAVE_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            console.error('Attendance autosave fallback failed with status:', response.status);
+            return '';
+        }
+
+        const data = await response.json().catch(() => null);
+        const fallbackId = data?.report_id || data?.reportId;
+        if (data?.success && fallbackId) {
+            reportId = String(fallbackId);
+            window.REPORT_ID = reportId;
+            return reportId;
+        }
+    } catch (error) {
+        console.error('Attendance autosave fallback encountered an error:', error);
+    }
+
+    return String(window.REPORT_ID || '').trim();
 }
 
 function setupGAEditorLink() {
