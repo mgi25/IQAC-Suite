@@ -35,8 +35,8 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods, require_POST
 
 from core.models import (SDG_GOALS, Class, Organization,
-                         OrganizationMembership, OrganizationType, Report,
-                         SDGGoal)
+                         OrganizationMembership, OrganizationType,
+                         RoleAssignment, Report, SDGGoal)
 from emt.utils import (ATTENDANCE_HEADERS,
                        auto_approve_non_optional_duplicates,
                        build_approval_chain,
@@ -3588,6 +3588,19 @@ def attendance_data(request, report_id):
         _register_faculty_lookup(membership.user, organization_name)
         if membership.user_id and organization_name:
             membership_org_by_user.setdefault(membership.user_id, organization_name)
+
+    role_assignment_qs = (
+        RoleAssignment.objects.filter(role__name__icontains="faculty")
+        .select_related("user__profile", "organization", "role")
+        .order_by("id")
+    )
+    for assignment in role_assignment_qs:
+        organization_name = (
+            assignment.organization.name if assignment.organization else ""
+        )
+        _register_faculty_lookup(assignment.user, organization_name)
+        if assignment.user_id and organization_name:
+            membership_org_by_user.setdefault(assignment.user_id, organization_name)
 
     for faculty_user in proposal.faculty_incharges.all().select_related("profile"):
         organization_name = membership_org_by_user.get(faculty_user.id, "")

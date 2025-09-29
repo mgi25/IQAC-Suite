@@ -3,7 +3,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from core.models import (Class, Organization, OrganizationMembership,
-                         OrganizationType)
+                         OrganizationRole, OrganizationType, RoleAssignment)
 from emt.models import AttendanceRow, EventProposal, EventReport, Student
 
 
@@ -340,6 +340,39 @@ class AttendanceDataViewTests(TestCase):
         self.assertIn("Humanities", data["faculty"])
         self.assertIn("Henry Faculty", data["faculty"]["Humanities"])
 
+    def test_target_audience_faculty_name_uses_role_assignment_details(self):
+        org_type = OrganizationType.objects.create(name="Dept Science")
+        org = Organization.objects.create(name="Applied Science", org_type=org_type)
+        role = OrganizationRole.objects.create(organization=org, name="Faculty Advisor")
+        faculty_user = User.objects.create_user(
+            "advisor",
+            password="pass",
+            first_name="Irene",
+            last_name="Advisor",
+        )
+        RoleAssignment.objects.create(user=faculty_user, organization=org, role=role)
+
+        proposal = EventProposal.objects.create(
+            submitted_by=self.user,
+            event_title="Faculty Audience Role",
+            target_audience="Irene Advisor",
+        )
+        report = EventReport.objects.create(proposal=proposal)
+
+        url = reverse("emt:attendance_data", args=[report.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        self.assertEqual(len(data["rows"]), 1)
+        row = data["rows"][0]
+        self.assertEqual(row["category"], "faculty")
+        self.assertEqual(row["affiliation"], "Applied Science")
+        self.assertEqual(row["student_class"], "Applied Science")
+        self.assertEqual(row["full_name"], "Irene Advisor")
+        self.assertIn("Applied Science", data["faculty"])
+        self.assertIn("Irene Advisor", data["faculty"]["Applied Science"])
+
     def test_target_audience_faculty_name_retained_with_existing_rows(self):
         org_type = OrganizationType.objects.create(name="Dept Social")
         org = Organization.objects.create(name="Social Sciences", org_type=org_type)
@@ -372,3 +405,36 @@ class AttendanceDataViewTests(TestCase):
         self.assertEqual(row["affiliation"], "Social Sciences")
         self.assertIn("Social Sciences", data["faculty"])
         self.assertIn("Henry Faculty", data["faculty"]["Social Sciences"])
+
+    def test_faculty_incharges_without_membership_use_role_assignment(self):
+        org_type = OrganizationType.objects.create(name="Dept Language")
+        org = Organization.objects.create(name="Languages", org_type=org_type)
+        role = OrganizationRole.objects.create(organization=org, name="Faculty")
+        faculty_user = User.objects.create_user(
+            "languagefac",
+            password="pass",
+            first_name="Laura",
+            last_name="Faculty",
+        )
+        RoleAssignment.objects.create(user=faculty_user, organization=org, role=role)
+
+        proposal = EventProposal.objects.create(
+            submitted_by=self.user,
+            event_title="Faculty Incharge Audience",
+        )
+        proposal.faculty_incharges.add(faculty_user)
+        report = EventReport.objects.create(proposal=proposal)
+
+        url = reverse("emt:attendance_data", args=[report.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        faculty_rows = [r for r in data["rows"] if r["category"] == "faculty"]
+        self.assertEqual(len(faculty_rows), 1)
+        row = faculty_rows[0]
+        self.assertEqual(row["full_name"], "Laura Faculty")
+        self.assertEqual(row["affiliation"], "Languages")
+        self.assertEqual(row["student_class"], "Languages")
+        self.assertIn("Languages", data["faculty"])
+        self.assertIn("Laura Faculty", data["faculty"]["Languages"])
