@@ -125,6 +125,10 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+# Allow embedding pages within iframes on the same origin (needed for Review Center)
+# Default is 'DENY' which blocks our internal preview iframe.
+X_FRAME_OPTIONS = "SAMEORIGIN"
+
 # ──────────────────────────────────────────────────────────────────────────────
 # URLS / TEMPLATES / WSGI
 # ──────────────────────────────────────────────────────────────────────────────

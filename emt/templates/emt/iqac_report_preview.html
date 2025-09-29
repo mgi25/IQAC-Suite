@@ -3,6 +3,16 @@
 
 {% block extra_css %}
 <style>
+  /* Reviewer mode: hide editing/submit controls when body has .review-mode */
+  .review-mode .controls,
+  .review-mode .submit-report-actions,
+  .review-mode .top-toolbar .toolbar,
+  .review-mode [data-preview-continue],
+  .review-mode #btn-back { display: none !important; }
+  /* Also hide global site chrome when embedded in reviewer iframe */
+  .review-mode .top-utility-bar,
+  .review-mode .left-control-panel { display: none !important; }
+  .review-mode .command-center-layout { padding: 0 !important; }
   @page {
     size: A4;
     margin: 20mm 18mm 22mm;
@@ -1381,6 +1391,10 @@
 
     document.addEventListener('DOMContentLoaded', function () {
       document.body.classList.add('iqac-report-preview');
+      var flag = document.getElementById('review-mode-flag');
+      if (flag && flag.getAttribute('data-review-mode') === 'true') {
+        document.body.classList.add('review-mode');
+      }
       init();
 
       const generateBtn = document.getElementById('generate-ai-report');
@@ -1399,4 +1413,5 @@
     });
   })();
 </script>
+<div id="review-mode-flag" data-review-mode="{{ review_mode|yesno:'true,false' }}" hidden></div>
 {% endblock %}

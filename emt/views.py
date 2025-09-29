@@ -35,6 +35,7 @@ from django.utils.formats import date_format
 from django.utils.timezone import now
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_http_methods, require_POST
 
 from core.models import (
@@ -84,6 +85,103 @@ if api_key:
 #  Review Center (Single Page Workflow)
 # ────────────────────────────────────────────────────────────────
 
+def _build_report_initial_data(report: EventReport) -> dict:
+    """Builds the initial_data structure used by iqac_report_preview.html from persisted models.
+    Keeps preview and PDF export consistent.
+    """
+    proposal = report.proposal
+
+    def _text(v):
+        if v is None:
+            return ""
+        return str(v)
+
+    def _date(d):
+        try:
+            return date_format(d, "d M Y") if d else ""
+        except Exception:
+            return str(d) if d else ""
+
+    def _listify(v):
+        if not v:
+            return []
+        if isinstance(v, (list, tuple, set)):
+            return [str(x).strip() for x in v if str(x).strip()]
+        import re as _re
+        raw = str(v)
+        parts = _re.split(r"[\r\n;,]+", raw)
+        return [_re.sub(r"^[\-*•\u2022]+\s*", "", p.strip()) for p in parts if p and p.strip()]
+
+    start = _date(proposal.event_start_date)
+    end = _date(proposal.event_end_date)
+    if start and end:
+        event_schedule = start if start == end else f"{start} – {end}"
+    else:
+        event_schedule = start or end or _text(getattr(proposal, "event_datetime", ""))
+
+    return {
+        "event": {
+            "title": _text(proposal.event_title),
+            "department": _text(getattr(proposal.organization, "name", "")),
+            "location": _text(report.location),
+            "no_of_activities": _text(proposal.num_activities or ""),
+            "date": event_schedule,
+            "venue": _text(proposal.venue),
+            "academic_year": _text(proposal.academic_year),
+            "event_type_focus": _text(proposal.event_focus_type),
+            "blog_link": _text(report.blog_link),
+        },
+        "participants": {
+            "target_audience": _text(proposal.target_audience),
+            "external_agencies_speakers": _text(report.actual_speakers),
+            "external_contacts": _text(report.external_contact_details),
+            "organising_committee": {
+                "event_coordinators": _listify(report.organizing_committee),
+                "student_volunteers_count": _text(report.num_student_volunteers),
+            },
+            "attendees_count": _text(report.num_participants),
+        },
+        "narrative": {
+            "summary_overall_event": _text(report.summary),
+            "social_relevance": _listify(report.impact_assessment),
+            "outcomes": _listify(report.outcomes),
+        },
+        "analysis": {
+            "impact_attendees": _text(report.impact_on_stakeholders),
+            "impact_schools": _text(report.analysis),
+            "impact_volunteers": _text(report.lessons_learned),
+        },
+        "mapping": {
+            "pos_psos": _text(report.pos_pso_mapping or proposal.pos_pso),
+            "graduate_attributes_or_needs": _text(report.needs_grad_attr_mapping),
+            "contemporary_requirements": _text(report.contemporary_requirements),
+            "value_systems": _text(report.sdg_value_systems_mapping),
+            "sdg_goal_numbers": [f"SDG {g.id}: {g.name}" for g in proposal.sdg_goals.all().order_by("id")],
+            "courses": [],
+        },
+        "metrics": {"naac_tags": []},
+        "iqac": {
+            "iqac_suggestions": _listify(report.iqac_feedback),
+            "iqac_review_date": _date(report.report_signed_date),
+            "sign_head_coordinator": _text(
+                proposal.submitted_by.get_full_name() or proposal.submitted_by.username
+            ) if proposal.submitted_by_id else "",
+            "sign_faculty_coordinator": ", ".join([
+                u.get_full_name() or u.username for u in proposal.faculty_incharges.all().order_by("id")
+            ]),
+            "sign_iqac": "",
+        },
+        "attachments": {"checklist": {}},
+        "annexures": {
+            "photos": [],
+            "brochure_pages": [],
+            "communication": {"subject": "", "date": "", "volunteers": []},
+            "worksheets": [],
+            "evaluation_sheet": None,
+            "feedback_form": None,
+        },
+    }
+
 def _user_role_stage(request):
     """Derive the review stage for the current user.
     Returns one of EventReport.ReviewStage values.
@@ -104,6 +202,30 @@ def _user_role_stage(request):
     elif "iqac" in role_blob:
         stage = EventReport.ReviewStage.DIQAC
     return stage
+
+
+def _is_admin_override(user) -> bool:
+    """Return True if the user should be treated as an admin override.
+    Conditions:
+    - is_superuser or is_staff
+    - OR any assigned role/profile role contains the word 'admin' (case-insensitive)
+    """
+    if getattr(user, "is_superuser", False) or getattr(user, "is_staff", False):
+        return True
+    roles_lower = []
+    try:
+        if hasattr(user, "role_assignments"):
+            roles_lower.extend([
+                (ra.role.name.lower() if ra.role else "")
+                for ra in user.role_assignments.all()
+            ])
+        prof_role = getattr(getattr(user, "profile", None), "role", "")
+        if prof_role:
+            roles_lower.append(prof_role.lower())
+    except Exception:
+        pass
+    blob = " ".join(roles_lower)
+    return "admin" in blob
 
 
 def _reports_for_user(request):
@@ -128,16 +250,29 @@ def _reports_for_user(request):
 @login_required
 def review_center(request):
     stage = _user_role_stage(request)
-    reports = _reports_for_user(request).order_by("-updated_at")
+    admin_override = _is_admin_override(request.user)
+    if admin_override:
+        reports = EventReport.objects.select_related("proposal", "proposal__organization", "proposal__submitted_by").exclude(review_stage=EventReport.ReviewStage.FINALIZED).order_by("-updated_at")
+        stage_label = "Admin"
+    else:
+        reports = _reports_for_user(request).order_by("-updated_at")
+        stage_label = stage
     # Master/Detail: if a report_id is requested via XHR, return compact JSON for detail pane
     report_id = request.GET.get("report_id")
     if report_id and request.headers.get("X-Requested-With"):
         r = get_object_or_404(reports, id=report_id)
-        # superuser shortcut: allow acting unless finalized
-        if request.user.is_superuser or request.user.is_staff:
+        # Determine if the user can decide on this report, mirroring review_action
+        if _is_admin_override(request.user):
             can_decide = r.review_stage != EventReport.ReviewStage.FINALIZED
         else:
-            can_decide = stage != EventReport.ReviewStage.USER and r.review_stage != EventReport.ReviewStage.FINALIZED
+            if stage == EventReport.ReviewStage.DIQAC:
+                can_decide = r.review_stage in [EventReport.ReviewStage.USER, EventReport.ReviewStage.DIQAC]
+            elif stage == EventReport.ReviewStage.HOD:
+                can_decide = r.review_stage in [EventReport.ReviewStage.DIQAC, EventReport.ReviewStage.HOD]
+            elif stage == EventReport.ReviewStage.UIQAC:
+                can_decide = r.review_stage in [EventReport.ReviewStage.HOD, EventReport.ReviewStage.UIQAC]
+            else:
+                can_decide = False
         data = {
             "id": r.id,
             "title": r.proposal.event_title if r.proposal else "",
@@ -153,6 +288,7 @@ def review_center(request):
         return HttpResponse(json.dumps(data), content_type="application/json")
     context = {
         "stage": stage,
+        "stage_label": stage_label,
         "reports": reports,
     }
     return render(request, "emt/review_center.html", context)
@@ -173,24 +309,39 @@ def review_action(request):
     report = get_object_or_404(EventReport, id=report_id)
     stage = _user_role_stage(request)
 
-    # Only allow acting if the user's stage matches the report's current ownership flow
+    # Determine permissions and transitions
     allowed = False
-    next_stage = report.review_stage
-    if stage == EventReport.ReviewStage.DIQAC and report.review_stage in [EventReport.ReviewStage.USER, EventReport.ReviewStage.DIQAC]:
+    # Admin override: treat staff/superuser and role 'admin' users as admins (unless finalized)
+    if _is_admin_override(request.user):
+        if report.review_stage == EventReport.ReviewStage.FINALIZED:
+            return JsonResponse({"ok": False, "error": "Finalized reports cannot be modified"}, status=403)
         allowed = True
-        next_on_approve = EventReport.ReviewStage.HOD
-        next_on_reject = EventReport.ReviewStage.USER
-    elif stage == EventReport.ReviewStage.HOD and report.review_stage in [EventReport.ReviewStage.DIQAC, EventReport.ReviewStage.HOD]:
-        allowed = True
-        next_on_approve = EventReport.ReviewStage.UIQAC
-        next_on_reject = EventReport.ReviewStage.USER
-    elif stage == EventReport.ReviewStage.UIQAC and report.review_stage in [EventReport.ReviewStage.HOD, EventReport.ReviewStage.UIQAC]:
-        allowed = True
-        next_on_approve = EventReport.ReviewStage.FINALIZED
+        # Compressed transitions: USER/DIQAC -> HOD, HOD -> UIQAC, UIQAC -> FINALIZED
+        if report.review_stage in [EventReport.ReviewStage.USER, EventReport.ReviewStage.DIQAC]:
+            next_on_approve = EventReport.ReviewStage.HOD
+        elif report.review_stage == EventReport.ReviewStage.HOD:
+            next_on_approve = EventReport.ReviewStage.UIQAC
+        elif report.review_stage == EventReport.ReviewStage.UIQAC:
+            next_on_approve = EventReport.ReviewStage.FINALIZED
+        else:
+            next_on_approve = report.review_stage
         next_on_reject = EventReport.ReviewStage.USER
     else:
-        # Submitter cannot approve/reject; only view & comment
-        allowed = False
+        # Role-based path
+        if stage == EventReport.ReviewStage.DIQAC and report.review_stage in [EventReport.ReviewStage.USER, EventReport.ReviewStage.DIQAC]:
+            allowed = True
+            next_on_approve = EventReport.ReviewStage.HOD
+            next_on_reject = EventReport.ReviewStage.USER
+        elif stage == EventReport.ReviewStage.HOD and report.review_stage in [EventReport.ReviewStage.DIQAC, EventReport.ReviewStage.HOD]:
+            allowed = True
+            next_on_approve = EventReport.ReviewStage.UIQAC
+            next_on_reject = EventReport.ReviewStage.USER
+        elif stage == EventReport.ReviewStage.UIQAC and report.review_stage in [EventReport.ReviewStage.HOD, EventReport.ReviewStage.UIQAC]:
+            allowed = True
+            next_on_approve = EventReport.ReviewStage.FINALIZED
+            next_on_reject = EventReport.ReviewStage.USER
+        else:
+            allowed = False
 
     if not allowed:
         return JsonResponse({"ok": False, "error": "Not permitted for this stage"}, status=403)
@@ -1741,6 +1892,70 @@ def download_pdf(request, proposal_id):
     buffer.close()
     response.write(pdf)
 
+    return response
+
+
+@login_required
+def download_report_pdf(request, report_id: int):
+    """Download a simplified PDF of a report by its id, for Review Center."""
+    report = get_object_or_404(EventReport.objects.select_related("proposal"), id=report_id)
+    proposal = report.proposal
+
+    response = HttpResponse(content_type="application/pdf")
+    safe_title = (proposal.event_title or f"report-{report_id}").replace("\n", " ")
+    response["Content-Disposition"] = f'attachment; filename="{safe_title}_report.pdf"'
+
+    from io import BytesIO
+    from reportlab.pdfgen import canvas
+
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer)
+    data = _build_report_initial_data(report)
+    # Header
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(72, 800, "Event Report")
+    p.setFont("Helvetica", 11)
+    p.drawString(72, 782, f"Title: {data['event']['title']}")
+    p.drawString(72, 766, f"Department: {data['event']['department']}")
+    p.drawString(72, 750, f"Date: {data['event']['date']}")
+    p.drawString(72, 734, f"Venue: {data['event']['venue']}")
+    p.drawString(72, 718, f"Generated on: {timezone.now().strftime('%Y-%m-%d')}")
+
+    # Narrative sections
+    y = 700
+    def _wrap(text: str, width=90):
+        import textwrap
+        return textwrap.wrap(text or "", width=width)
+
+    def _draw_paragraph(label: str, text: str, yy: int) -> int:
+        nonlocal p
+        p.setFont("Helvetica-Bold", 11)
+        p.drawString(72, yy, label)
+        yy -= 14
+        p.setFont("Helvetica", 10)
+        for line in _wrap(text, 95):
+            p.drawString(72, yy, line)
+            yy -= 14
+            if yy < 60:
+                p.showPage(); yy = 800
+        return yy - 8
+
+    y = _draw_paragraph("Summary:", data["narrative"]["summary_overall_event"], y)
+    y = _draw_paragraph("Outcomes:", "; ".join(data["narrative"]["outcomes"]), y)
+    y = _draw_paragraph("Social Relevance:", "; ".join(data["narrative"]["social_relevance"]), y)
+    y = _draw_paragraph("Impact on Attendees:", data["analysis"]["impact_attendees"], y)
+    y = _draw_paragraph("Lessons Learned:", data["analysis"]["impact_volunteers"], y)
+
+    # IQAC Suggestions
+    suggestions = data["iqac"]["iqac_suggestions"]
+    if suggestions:
+        y = _draw_paragraph("IQAC Suggestions:", "; ".join(suggestions), y)
+    p.showPage()
+    p.save()
+
+    pdf = buffer.getvalue()
+    buffer.close()
+    response.write(pdf)
     return response
 
 
@@ -3306,6 +3521,33 @@ def preview_event_report(request, proposal_id):
         else "emt/report_preview.html"
     )
     return render(request, template_name, context)
+
+
+@login_required
+@xframe_options_sameorigin
+def review_full_report(request, report_id: int):
+    """Render a full-page readonly IQAC preview for reviewers using persisted data.
+
+    This lets reviewers see the complete two-page style report and, at the end,
+    provide mandatory feedback to approve/reject. It reuses the iqac_report_preview
+    template by passing initial_report_data assembled from saved Proposal/EventReport.
+    """
+    report = get_object_or_404(EventReport.objects.select_related("proposal", "proposal__organization"), id=report_id)
+    proposal = report.proposal
+
+    initial_data = _build_report_initial_data(report)
+
+    context = {
+        "proposal": proposal,
+        "report": report,
+        "initial_report_data": json.dumps(initial_data, ensure_ascii=False),
+        # Enable a footer form in template for approve/reject when linked from Review Center
+        "review_action_url": reverse("emt:review_action"),
+        "show_iqac": True,
+        "review_mode": True,
+    }
+    # Reuse the IQAC preview template (it shows a full-page A4 style view)
+    return render(request, "emt/iqac_report_preview.html", context)
 
 
 @login_required

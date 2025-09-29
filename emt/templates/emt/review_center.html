@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-container">
   <h1 class="page-title">Review Center</h1>
-  <p class="page-subtitle">Stage: {{ stage|title }}</p>
+  <p class="page-subtitle">Stage: {{ stage_label|default:stage|title }}</p>
 
   <div class="master-detail">
     <aside class="list-pane" id="reportList">
@@ -71,15 +71,11 @@
         </div>
         <span class="li-badge">${data.stage_display}</span>
       </div>
-      <div class="two-col" style="display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:12px;">
-        <div>
-          <div><b>Event Dates:</b> ${data.event_dates}</div>
-          <div><b>Type:</b> ${data.event_type ?? '—'}</div>
-          <div><b>Participants:</b> ${data.participants ?? '—'}</div>
-        </div>
-        <div>
-          <div><b>Summary:</b> ${data.summary ?? '—'}</div>
-        </div>
+      <div class="preview-toolbar" style="display:flex;align-items:center;gap:8px;margin:8px 0 6px;">
+        <a class="btn btn-primary" id="openInNewTab" target="_blank" rel="noopener">Open full preview</a>
+      </div>
+      <div style="margin:0 0 12px; height:70vh; border:1px solid #e6eefc; border-radius:10px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,.06)">
+        <iframe id="fullPreviewFrame" src="" style="width:100%; height:100%; border:0; background:#fff"></iframe>
       </div>
       <div class="card-section">
         <h3 class="section-title">Review Decision</h3>
@@ -95,7 +91,15 @@
       </div>
     `;
 
-    detail.querySelector('.action-form')?.addEventListener('submit', async (e)=>{
+  // Set iframe src using a reversed base URL to avoid hardcoding prefixes
+  const frame = detail.querySelector('#fullPreviewFrame');
+  const base = "{% url 'emt:review_full_report' 0 %}"; // e.g. /suite/suite/review/full/0/
+  const src = base.replace(/0\/$/, `${data.id}/`);
+  if (frame) frame.src = src;
+  const openBtn = detail.querySelector('#openInNewTab');
+  if (openBtn) openBtn.href = src;
+
+  detail.querySelector('.action-form')?.addEventListener('submit', async (e)=>{
       e.preventDefault();
       const btn = e.submitter;
       if(!btn) return;
@@ -110,6 +114,7 @@
         alert(res.error || 'Action failed');
       }
     });
+
   }
 
   function getCsrf(){
