@@ -521,6 +521,9 @@ $(document).ready(function() {
         if (!numActivitiesInput || numActivitiesInput.dataset.listenerAttached) return;
         const container = document.getElementById('dynamic-activities-section');
 
+        const djangoNumActivitiesField = document.querySelector('#django-basic-info [name="num_activities"]');
+        let isSyncingActivitiesCount = false;
+
         function reindexActivityRows() {
             const rows = container.querySelectorAll('.activity-row');
             rows.forEach((row, idx) => {
@@ -540,12 +543,20 @@ $(document).ready(function() {
                     dateLabel.textContent = `${num}. Activity Date`;
                 }
             });
-            // Update the visible count and dispatch events so hidden Django field syncs and autosave can trigger
-            numActivitiesInput.value = rows.length;
-            try {
-                numActivitiesInput.dispatchEvent(new Event('input', { bubbles: true }));
-                numActivitiesInput.dispatchEvent(new Event('change', { bubbles: true }));
-            } catch (e) { /* noop */ }
+            // Update the visible count and keep the hidden Django field in sync so autosave notices the change
+            const newCount = String(rows.length);
+            const currentCount = numActivitiesInput.value;
+            if (currentCount !== newCount) {
+                isSyncingActivitiesCount = true;
+                numActivitiesInput.value = newCount;
+                isSyncingActivitiesCount = false;
+            }
+            if (djangoNumActivitiesField && djangoNumActivitiesField.value !== newCount) {
+                djangoNumActivitiesField.value = newCount;
+                try {
+                    djangoNumActivitiesField.dispatchEvent(new Event('change', { bubbles: true }));
+                } catch (e) { /* noop */ }
+            }
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 // Reinitialize so new rows are tracked by the autosave manager
                 window.AutosaveManager.reinitialize();
@@ -613,7 +624,8 @@ $(document).ready(function() {
             }
         });
 
-    numActivitiesInput.addEventListener('input', () => {
+        numActivitiesInput.addEventListener('input', () => {
+            if (isSyncingActivitiesCount) return;
             const count = parseInt(numActivitiesInput.value, 10);
             render(count);
         });
