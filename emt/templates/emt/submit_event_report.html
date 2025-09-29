@@ -101,7 +101,11 @@
             </div>
         {% endif %}
 
-        <form method="post" enctype="multipart/form-data" id="report-form" autocomplete="off" action="{% url 'emt:submit_event_report' proposal.id %}" data-preview-url="{% url 'emt:preview_event_report' proposal.id %}">
+        <form method="post" enctype="multipart/form-data" id="report-form" autocomplete="off"
+              action="{% url 'emt:submit_event_report' proposal.id %}"
+              data-preview-url="{% url 'emt:preview_event_report' proposal.id %}"
+              data-proposal-id="{{ proposal.id }}"
+              {% if report %}data-report-id="{{ report.id }}"{% endif %}>
             {% csrf_token %}
             <textarea name="event_summary" hidden>{{ event_summary.content|default_if_none:'' }}</textarea>
             <textarea name="event_outcomes" hidden>{{ event_outcomes.content|default_if_none:'' }}</textarea>
