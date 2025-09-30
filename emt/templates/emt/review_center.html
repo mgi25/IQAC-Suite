@@ -150,12 +150,29 @@
 .card-title{ font-size:20px; font-weight:800; color:var(--rc-ink); }
 .card-subtitle{ font-size:13px; color:var(--rc-muted); }
 
+/* Improved detail header alignment */
+.detail-header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:10px;
+}
+.header-left{ min-width:0; }
+.card-title-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.header-actions{ display:flex; align-items:center; gap:10px; }
+.detail-header .li-badge{ position:static; padding:3px 10px; }
+
 /* “Open full preview” aligned neatly under title */
 .preview-toolbar{
   display:flex;
   align-items:center;
   gap:10px;
-  margin:8px 0 12px;
+  margin:0 0 12px; /* merged button into header-actions above */
 }
 
 /* Buttons consistent with base theme */
@@ -213,15 +230,17 @@ body::-webkit-scrollbar{ display: none; width: 0; height: 0; }
     }
     const canDecide = data.can_decide; // server already accounts for superuser/staff
     detail.innerHTML = `
-      <div class="header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <div>
-          <div class="card-title">${data.title ?? 'Untitled'}</div>
+      <div class="detail-header">
+        <div class="header-left">
+          <div class="card-title-row">
+            <div class="card-title">${data.title ?? 'Untitled'}</div>
+            <span class="li-badge">${data.stage_display}</span>
+          </div>
           <div class="card-subtitle">${data.org ?? '—'} · by ${data.submitted_by ?? '—'}</div>
         </div>
-        <span class="li-badge">${data.stage_display}</span>
-      </div>
-      <div class="preview-toolbar" style="display:flex;align-items:center;gap:8px;margin:8px 0 6px;">
-        <a class="btn btn-primary" id="openInNewTab" target="_blank" rel="noopener">Open full preview</a>
+        <div class="header-actions">
+          <a class="btn btn-primary" id="openInNewTab" target="_blank" rel="noopener">Open full preview</a>
+        </div>
       </div>
       <div style="margin:0 0 12px; height:78vh; border:0; border-radius:0; overflow:hidden; box-shadow:none">
         <iframe id="fullPreviewFrame" src="" style="width:100%; height:100%; border:0; background:#fff"></iframe>
@@ -243,10 +262,12 @@ body::-webkit-scrollbar{ display: none; width: 0; height: 0; }
   // Set iframe src using a reversed base URL to avoid hardcoding prefixes
   const frame = detail.querySelector('#fullPreviewFrame');
   const base = "{% url 'emt:review_full_report' 0 %}"; // e.g. /suite/suite/review/full/0/
-  const src = base.replace(/0\/$/, `${data.id}/`) + '?embed=1';
-  if (frame) frame.src = src;
+  const basePath = base.replace(/0\/?$/, `${data.id}/`);
+  const iframeUrl = `${basePath}?embed=1&fit=width`;
+  if (frame) frame.src = iframeUrl;
   const openBtn = detail.querySelector('#openInNewTab');
-  if (openBtn) openBtn.href = src.replace('?embed=1','');
+  // For standalone view keep the PDF-like effect; no embed/fit query needed
+  if (openBtn) openBtn.href = basePath;
 
   detail.querySelector('.action-form')?.addEventListener('submit', async (e)=>{
       e.preventDefault();
