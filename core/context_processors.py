@@ -75,11 +75,11 @@ def sidebar_permissions(request):
 
     # Anonymous users: nothing and restricted
     if not request.user.is_authenticated:
-        return {"allowed_nav_items": [], "unrestricted_nav": False, "is_english_faculty": False}
+        return {"allowed_nav_items": [], "unrestricted_nav": False, "is_english_faculty": False, "is_reviewer": False}
 
     # Superusers: unrestricted; keep allowed_nav_items as [] for backward compat
     if request.user.is_superuser:
-        return {"allowed_nav_items": [], "unrestricted_nav": True, "is_english_faculty": False}
+        return {"allowed_nav_items": [], "unrestricted_nav": True, "is_english_faculty": False, "is_reviewer": True}
 
     # Pre-compute English Faculty heuristic for conditional UI
     def _is_english_faculty_user(u):
@@ -107,6 +107,24 @@ def sidebar_permissions(request):
         expanded.update({item.split(":", 1)[1] for item in ids if ":" in item})
         return sorted(expanded)
 
+    # Reviewer role heuristic: any role or profile containing HOD/IQAC/admin
+    def _is_reviewer(u):
+        try:
+            names = []
+            ras = RoleAssignment.objects.select_related("role").filter(user=u, role__isnull=False)
+            names.extend([(ra.role.name or "").lower() for ra in ras])
+            prof_role = getattr(getattr(u, "profile", None), "role", "") or ""
+            if prof_role:
+                names.append(prof_role.lower())
+            blob = " ".join(names)
+            return (
+                "hod" in blob
+                or "iqac" in blob
+                or "admin" in blob
+            )
+        except Exception:
+            return False
+
     # 1) User-specific override
     user_perm = SidebarPermission.objects.filter(
         user=request.user, role__in=["", None]
@@ -124,6 +142,7 @@ def sidebar_permissions(request):
             "allowed_nav_items": _expand_with_parents(user_perm.items),
             "unrestricted_nav": False,
             "is_english_faculty": _english_flag,
+            "is_reviewer": _is_reviewer(request.user),
         }
 
     # 2) Merge permissions from all assigned organization roles
@@ -180,6 +199,7 @@ def sidebar_permissions(request):
             "allowed_nav_items": _expand_with_parents(sorted(role_items)),
             "unrestricted_nav": False,
             "is_english_faculty": _english_flag,
+            "is_reviewer": _is_reviewer(request.user),
         }
 
     try:
@@ -189,4 +209,4 @@ def sidebar_permissions(request):
         )
     except Exception:
         pass
-    return {"allowed_nav_items": [], "unrestricted_nav": False, "is_english_faculty": _english_flag}
+    return {"allowed_nav_items": [], "unrestricted_nav": False, "is_english_faculty": _english_flag, "is_reviewer": _is_reviewer(request.user)}

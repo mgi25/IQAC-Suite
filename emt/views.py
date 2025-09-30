@@ -21,8 +21,12 @@ from django.core.exceptions import ValidationError
 from django.core.validators import EmailValidator, URLValidator
 from django.db.models import Q, Sum
 from django.forms import modelformset_factory
-from django.http import (HttpResponse, HttpResponseNotAllowed, JsonResponse,
-                         StreamingHttpResponse)
+from django.http import (
+    HttpResponse,
+    HttpResponseNotAllowed,
+    JsonResponse,
+    StreamingHttpResponse,
+)
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -31,11 +35,20 @@ from django.utils.formats import date_format
 from django.utils.timezone import now
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_http_methods, require_POST
 
-from core.models import (SDG_GOALS, Class, Organization,
-                         OrganizationMembership, OrganizationType, Report,
-                         SDGGoal)
+from core.models import (
+    SDG_GOALS,
+    Class,
+    Organization,
+    OrganizationMembership,
+    OrganizationType,
+    Report,
+    SDGGoal,
+    ActivityLog,
+)
+from core.utils_email import send_notification, resolve_role_emails
 from emt.utils import (ATTENDANCE_HEADERS,
                        auto_approve_non_optional_duplicates,
                        build_approval_chain,
@@ -69,6 +82,399 @@ if api_key:
     genai.configure(api_key=api_key)
 
 
+# ────────────────────────────────────────────────────────────────
+#  Review Center (Single Page Workflow)
+# ────────────────────────────────────────────────────────────────
+
+def _build_report_initial_data(report: EventReport) -> dict:
+    """Builds the initial_data structure used by iqac_report_preview.html from persisted models.
+    Keeps preview and PDF export consistent.
+    """
+    proposal = report.proposal
+
+    def _text(v):
+        if v is None:
+            return ""
+        return str(v)
+
+    def _date(d):
+        try:
+            return date_format(d, "d M Y") if d else ""
+        except Exception:
+            return str(d) if d else ""
+
+    def _listify(v):
+        if not v:
+            return []
+        if isinstance(v, (list, tuple, set)):
+            return [str(x).strip() for x in v if str(x).strip()]
+        import re as _re
+        raw = str(v)
+        parts = _re.split(r"[\r\n;,]+", raw)
+        return [_re.sub(r"^[\-*•\u2022]+\s*", "", p.strip()) for p in parts if p and p.strip()]
+
+    start = _date(proposal.event_start_date)
+    end = _date(proposal.event_end_date)
+    if start and end:
+        event_schedule = start if start == end else f"{start} – {end}"
+    else:
+        event_schedule = start or end or _text(getattr(proposal, "event_datetime", ""))
+
+    return {
+        "event": {
+            "title": _text(proposal.event_title),
+            "department": _text(getattr(proposal.organization, "name", "")),
+            "location": _text(report.location),
+            "no_of_activities": _text(proposal.num_activities or ""),
+            "date": event_schedule,
+            "venue": _text(proposal.venue),
+            "academic_year": _text(proposal.academic_year),
+            "event_type_focus": _text(proposal.event_focus_type),
+            "blog_link": _text(report.blog_link),
+        },
+        "participants": {
+            "target_audience": _text(proposal.target_audience),
+            "external_agencies_speakers": _text(report.actual_speakers),
+            "external_contacts": _text(report.external_contact_details),
+            "organising_committee": {
+                "event_coordinators": _listify(report.organizing_committee),
+                "student_volunteers_count": _text(report.num_student_volunteers),
+            },
+            "attendees_count": _text(report.num_participants),
+        },
+        "narrative": {
+            "summary_overall_event": _text(report.summary),
+            "social_relevance": _listify(report.impact_assessment),
+            "outcomes": _listify(report.outcomes),
+        },
+        "analysis": {
+            "impact_attendees": _text(report.impact_on_stakeholders),
+            "impact_schools": _text(report.analysis),
+            "impact_volunteers": _text(report.lessons_learned),
+        },
+        "mapping": {
+            "pos_psos": _text(report.pos_pso_mapping or proposal.pos_pso),
+            "graduate_attributes_or_needs": _text(report.needs_grad_attr_mapping),
+            "contemporary_requirements": _text(report.contemporary_requirements),
+            "value_systems": _text(report.sdg_value_systems_mapping),
+            "sdg_goal_numbers": [f"SDG {g.id}: {g.name}" for g in proposal.sdg_goals.all().order_by("id")],
+            "courses": [],
+        },
+        "metrics": {"naac_tags": []},
+        "iqac": {
+            "iqac_suggestions": _listify(report.iqac_feedback),
+            "iqac_review_date": _date(report.report_signed_date),
+            "sign_head_coordinator": _text(
+                proposal.submitted_by.get_full_name() or proposal.submitted_by.username
+            ) if proposal.submitted_by_id else "",
+            "sign_faculty_coordinator": ", ".join([
+                u.get_full_name() or u.username for u in proposal.faculty_incharges.all().order_by("id")
+            ]),
+            "sign_iqac": "",
+        },
+        "attachments": {"checklist": {}},
+        "annexures": {
+            "photos": [],
+            "brochure_pages": [],
+            "communication": {"subject": "", "date": "", "volunteers": []},
+            "worksheets": [],
+            "evaluation_sheet": None,
+            "feedback_form": None,
+        },
+    }
+
+def _user_role_stage(request):
+    """Derive the review stage for the current user.
+    Returns one of EventReport.ReviewStage values.
+    """
+    # Default to USER
+    stage = EventReport.ReviewStage.USER
+    roles_lower = [
+        (ra.role.name.lower() if ra.role else "") for ra in getattr(request.user, "role_assignments", []).all()
+    ] if hasattr(request.user, "role_assignments") else []
+    prof_role = getattr(getattr(request.user, "profile", None), "role", "")
+    if prof_role:
+        roles_lower.append(prof_role.lower())
+    role_blob = " ".join(roles_lower)
+    if "hod" in role_blob or "head" in role_blob:
+        stage = EventReport.ReviewStage.HOD
+    if "iqac" in role_blob and ("university" in role_blob or "coord" in role_blob or "admin" in role_blob):
+        stage = EventReport.ReviewStage.UIQAC
+    elif "iqac" in role_blob:
+        stage = EventReport.ReviewStage.DIQAC
+    return stage
+
+
+def _is_admin_override(user) -> bool:
+    """Return True if the user should be treated as an admin override.
+    Conditions:
+    - is_superuser or is_staff
+    - OR any assigned role/profile role contains the word 'admin' (case-insensitive)
+    """
+    if getattr(user, "is_superuser", False) or getattr(user, "is_staff", False):
+        return True
+    roles_lower = []
+    try:
+        if hasattr(user, "role_assignments"):
+            roles_lower.extend([
+                (ra.role.name.lower() if ra.role else "")
+                for ra in user.role_assignments.all()
+            ])
+        prof_role = getattr(getattr(user, "profile", None), "role", "")
+        if prof_role:
+            roles_lower.append(prof_role.lower())
+    except Exception:
+        pass
+    blob = " ".join(roles_lower)
+    return "admin" in blob
+
+
+def _reports_for_user(request):
+    stage = _user_role_stage(request)
+    user = request.user
+    qs = EventReport.objects.select_related("proposal", "proposal__organization", "proposal__submitted_by")
+    if stage == EventReport.ReviewStage.USER:
+        return qs.filter(proposal__submitted_by=user)
+    if stage == EventReport.ReviewStage.DIQAC:
+        # Department IQAC: restrict to user's organizations
+        org_ids = list(user.role_assignments.exclude(organization__isnull=True).values_list("organization_id", flat=True)) if hasattr(user, "role_assignments") else []
+        return qs.filter(proposal__organization_id__in=org_ids).exclude(review_stage=EventReport.ReviewStage.FINALIZED)
+    if stage == EventReport.ReviewStage.HOD:
+        org_ids = list(user.role_assignments.exclude(organization__isnull=True).values_list("organization_id", flat=True)) if hasattr(user, "role_assignments") else []
+        return qs.filter(proposal__organization_id__in=org_ids).exclude(review_stage=EventReport.ReviewStage.FINALIZED)
+    if stage == EventReport.ReviewStage.UIQAC:
+        # University IQAC: see all non-finalized
+        return qs.exclude(review_stage=EventReport.ReviewStage.FINALIZED)
+    return qs.none()
+
+
+@login_required
+def review_center(request):
+    stage = _user_role_stage(request)
+    admin_override = _is_admin_override(request.user)
+    # Gate access: submitters (USER stage) should not access Review Center unless admin override
+    if not admin_override and stage == EventReport.ReviewStage.USER:
+        return HttpResponse(status=403)
+    if admin_override:
+        reports = EventReport.objects.select_related("proposal", "proposal__organization", "proposal__submitted_by").exclude(review_stage=EventReport.ReviewStage.FINALIZED).order_by("-updated_at")
+        stage_label = "Admin"
+    else:
+        reports = _reports_for_user(request).order_by("-updated_at")
+        stage_label = stage
+    # Master/Detail: if a report_id is requested via XHR, return compact JSON for detail pane
+    report_id = request.GET.get("report_id")
+    if report_id and request.headers.get("X-Requested-With"):
+        r = get_object_or_404(reports, id=report_id)
+        # Determine if the user can decide on this report, mirroring review_action
+        if _is_admin_override(request.user):
+            can_decide = r.review_stage != EventReport.ReviewStage.FINALIZED
+        else:
+            if stage == EventReport.ReviewStage.DIQAC:
+                can_decide = r.review_stage in [EventReport.ReviewStage.USER, EventReport.ReviewStage.DIQAC]
+            elif stage == EventReport.ReviewStage.HOD:
+                can_decide = r.review_stage in [EventReport.ReviewStage.DIQAC, EventReport.ReviewStage.HOD]
+            elif stage == EventReport.ReviewStage.UIQAC:
+                can_decide = r.review_stage in [EventReport.ReviewStage.HOD, EventReport.ReviewStage.UIQAC]
+            else:
+                can_decide = False
+        data = {
+            "id": r.id,
+            "title": r.proposal.event_title if r.proposal else "",
+            "org": getattr(getattr(r.proposal, "organization", None), "name", ""),
+            "submitted_by": getattr(getattr(r.proposal, "submitted_by", None), "get_full_name", lambda: "")() or getattr(getattr(r.proposal, "submitted_by", None), "username", ""),
+            "stage_display": r.get_review_stage_display(),
+            "event_dates": f"{getattr(r.proposal, 'event_start_date', '')} — {getattr(r.proposal, 'event_end_date', '')}",
+            "event_type": r.actual_event_type,
+            "participants": r.num_participants,
+            "summary": r.summary,
+            "can_decide": can_decide,
+        }
+        return HttpResponse(json.dumps(data), content_type="application/json")
+    context = {
+        "stage": stage,
+        "stage_label": stage_label,
+        "reports": reports,
+    }
+    return render(request, "emt/review_center.html", context)
+
+
+@login_required
+@require_POST
+def review_action(request):
+    """Approve/Reject an EventReport with mandatory feedback and stage transitions."""
+    report_id = request.POST.get("report_id")
+    action = request.POST.get("action")  # approve|reject
+    feedback = (request.POST.get("feedback") or "").strip()
+    if not report_id or action not in {"approve", "reject"}:
+        return JsonResponse({"ok": False, "error": "Invalid request"}, status=400)
+    if not feedback:
+        return JsonResponse({"ok": False, "error": "Feedback is required"}, status=400)
+
+    report = get_object_or_404(EventReport, id=report_id)
+    stage = _user_role_stage(request)
+
+    # Determine permissions and transitions
+    allowed = False
+    # Admin override: treat staff/superuser and role 'admin' users as admins (unless finalized)
+    if _is_admin_override(request.user):
+        if report.review_stage == EventReport.ReviewStage.FINALIZED:
+            return JsonResponse({"ok": False, "error": "Finalized reports cannot be modified"}, status=403)
+        allowed = True
+        # Compressed transitions: USER/DIQAC -> HOD, HOD -> UIQAC, UIQAC -> FINALIZED
+        if report.review_stage in [EventReport.ReviewStage.USER, EventReport.ReviewStage.DIQAC]:
+            next_on_approve = EventReport.ReviewStage.HOD
+        elif report.review_stage == EventReport.ReviewStage.HOD:
+            next_on_approve = EventReport.ReviewStage.UIQAC
+        elif report.review_stage == EventReport.ReviewStage.UIQAC:
+            next_on_approve = EventReport.ReviewStage.FINALIZED
+        else:
+            next_on_approve = report.review_stage
+        next_on_reject = EventReport.ReviewStage.USER
+    else:
+        # Role-based path
+        if stage == EventReport.ReviewStage.DIQAC and report.review_stage in [EventReport.ReviewStage.USER, EventReport.ReviewStage.DIQAC]:
+            allowed = True
+            next_on_approve = EventReport.ReviewStage.HOD
+            next_on_reject = EventReport.ReviewStage.USER
+        elif stage == EventReport.ReviewStage.HOD and report.review_stage in [EventReport.ReviewStage.DIQAC, EventReport.ReviewStage.HOD]:
+            allowed = True
+            next_on_approve = EventReport.ReviewStage.UIQAC
+            next_on_reject = EventReport.ReviewStage.USER
+        elif stage == EventReport.ReviewStage.UIQAC and report.review_stage in [EventReport.ReviewStage.HOD, EventReport.ReviewStage.UIQAC]:
+            allowed = True
+            next_on_approve = EventReport.ReviewStage.FINALIZED
+            next_on_reject = EventReport.ReviewStage.USER
+        else:
+            allowed = False
+
+    if not allowed:
+        return JsonResponse({"ok": False, "error": "Not permitted for this stage"}, status=403)
+
+    report.session_feedback = feedback
+    # Build a human readable stage mapping for logs / notifications
+    stage_label = {
+        EventReport.ReviewStage.DIQAC: "Department IQAC",
+        EventReport.ReviewStage.HOD: "Head of Department",
+        EventReport.ReviewStage.UIQAC: "University IQAC",
+        EventReport.ReviewStage.FINALIZED: "Finalized",
+        EventReport.ReviewStage.USER: "Submitter",
+    }
+
+    if action == "approve":
+        report.iqac_feedback = (
+            (report.iqac_feedback + "\n\n") if report.iqac_feedback else ""
+        ) + feedback
+        report.review_stage = next_on_approve
+        action_desc = f"Approved and moved to {stage_label.get(next_on_approve, next_on_approve)}"
+        log_action = "report_approved"
+    else:  # reject
+        report.iqac_feedback = (
+            (report.iqac_feedback + "\n\n") if report.iqac_feedback else ""
+        ) + f"REJECTED: {feedback}"
+        report.review_stage = next_on_reject
+        action_desc = "Rejected and sent back to submitter"
+        log_action = "report_rejected"
+
+    report.save(
+        update_fields=[
+            "session_feedback",
+            "iqac_feedback",
+            "review_stage",
+            "updated_at",
+        ]
+    )
+
+    # Activity log for auditing
+    try:
+        ActivityLog.objects.create(
+            user=request.user,
+            action=log_action,
+            description=f"{action_desc}: {report.proposal.event_title}",
+            metadata={
+                "report_id": report.id,
+                "proposal_id": report.proposal_id,
+                "new_stage": report.review_stage,
+                "action": action,
+            },
+        )
+    except Exception:  # pragma: no cover
+        logger.exception("Failed to create ActivityLog for review action")
+
+    # Lightweight notification strategy: mutate proposal status for submitter visibility on reject
+    # Only change proposal status on final rejection back to user; do not override existing status otherwise.
+    proposal = report.proposal
+    if action == "reject":
+        # Provide a status change to surface in notifications CP if model uses status field.
+        try:
+            if hasattr(proposal, "status"):
+                # Set to a generic 'UNDER_REVIEW' -> 'SUBMITTED' cycle or 'REJECTED' if defined
+                rejected_value = None
+                if hasattr(proposal.__class__, "Status"):
+                    for choice, _ in proposal.__class__.Status.choices:  # type: ignore
+                        if choice.lower() == "rejected":
+                            rejected_value = choice
+                            break
+                if rejected_value:
+                    proposal.status = rejected_value
+                    proposal.save(update_fields=["status", "updated_at"]) if hasattr(proposal, "updated_at") else proposal.save(update_fields=["status"])
+        except Exception:  # pragma: no cover
+            logger.exception("Failed to update proposal status on rejection")
+
+    # Email notifications
+    try:
+        subj_prefix = f"[IQAC Review] {report.proposal.event_title}"
+        if action == "approve":
+            if report.review_stage == EventReport.ReviewStage.HOD:
+                # Notify HOD for next action
+                emails = resolve_role_emails(report.proposal.organization, "hod")
+                body = f"The report '{report.proposal.event_title}' is ready for your review.\n\nFeedback: {feedback}"
+                send_notification(f"{subj_prefix} → HOD review", body, emails)
+            elif report.review_stage == EventReport.ReviewStage.UIQAC:
+                emails = resolve_role_emails(report.proposal.organization, "iqac")
+                body = f"The report '{report.proposal.event_title}' advanced to University IQAC stage.\n\nFeedback so far: {feedback}"
+                send_notification(f"{subj_prefix} → UIQAC review", body, emails)
+            elif report.review_stage == EventReport.ReviewStage.FINALIZED:
+                # Notify submitter
+                submitter_email = getattr(report.proposal.submitted_by, "email", "")
+                if submitter_email:
+                    body = f"Your report '{report.proposal.event_title}' has been finalized.\n\nReviewer note: {feedback}"
+                    send_notification(f"{subj_prefix} finalized", body, submitter_email)
+        else:  # reject
+            submitter_email = getattr(report.proposal.submitted_by, "email", "")
+            if submitter_email:
+                body = f"Your report '{report.proposal.event_title}' was sent back with feedback:\n\n{feedback}"
+                send_notification(f"{subj_prefix} – Changes Requested", body, submitter_email)
+    except Exception:
+        logger.exception("Failed to send review action notifications")
+
+    return JsonResponse(
+        {
+            "ok": True,
+            "stage": report.review_stage,
+            "message": action_desc,
+        }
+    )
+
+
+@login_required
+@require_POST
+def review_message(request):
+    """Post a message to the report communication thread."""
+    from .models import EventReportMessage
+
+    report_id = request.POST.get("report_id")
+    message = (request.POST.get("message") or "").strip()
+    if not report_id or not message:
+        return JsonResponse({"ok": False, "error": "Message required"}, status=400)
+    report = get_object_or_404(EventReport, id=report_id)
+    # Access control: user should at least be in viewable set
+    if not _reports_for_user(request).filter(id=report.id).exists():
+        return JsonResponse({"ok": False, "error": "Not permitted"}, status=403)
+    EventReportMessage.objects.create(report=report, sender=request.user, message=message)
+    html = render_to_string("emt/partials/review_messages.html", {"report": report}, request=request)
+    return JsonResponse({"ok": True, "html": html})
+
+
 @login_required
 def submit_request_view(request):
     if request.method == "POST":
@@ -87,6 +493,18 @@ def submit_request_view(request):
             media_file=media_file,
         )
         messages.success(request, "Your media request has been submitted.")
+        # Optional email notification to CDL team
+        try:
+            cdl_to = getattr(settings, "CDL_NOTIF_EMAIL", "")
+            if cdl_to:
+                subj = f"[CDL] New {media_type} request: {title}"
+                body = (
+                    f"{request.user.get_full_name() or request.user.username} submitted a {media_type} request "
+                    f"for {event_date}.\n\n{description}"
+                )
+                send_notification(subj, body, cdl_to)
+        except Exception:
+            logger.exception("Failed to send CDL request notification")
         return redirect("cdl_dashboard")
 
     return render(request, "emt/cdl_submit_request.html")
@@ -539,6 +957,18 @@ def submit_proposal(request, pk=None):
         )
         if is_final:
             build_approval_chain(proposal)
+            # Notifications: submitter and DIQAC
+            try:
+                subj = f"[IQAC] Proposal submitted: {proposal.event_title}"
+                submitter_email = getattr(proposal.submitted_by, "email", "")
+                if submitter_email:
+                    send_notification(subj, "Your proposal was submitted and is under review.", submitter_email)
+                diqac_emails = resolve_role_emails(proposal.organization, "iqac") or resolve_role_emails(proposal.organization, "diqac")
+                if diqac_emails:
+                    body = f"A new proposal has been submitted in {proposal.organization.name if proposal.organization else 'an organization'}: {proposal.event_title}."
+                    send_notification(subj, body, diqac_emails)
+            except Exception:
+                logger.exception("Failed to send submission notifications")
             messages.success(
                 request,
                 f"Proposal '{proposal.event_title}' submitted.",
@@ -591,6 +1021,18 @@ def review_proposal(request, proposal_id):
         proposal.submitted_at = timezone.now()
         proposal.save()
         build_approval_chain(proposal)
+        # Notifications: submitter and DIQAC
+        try:
+            subj = f"[IQAC] Proposal submitted: {proposal.event_title}"
+            submitter_email = getattr(proposal.submitted_by, "email", "")
+            if submitter_email:
+                send_notification(subj, "Your proposal was submitted and is under review.", submitter_email)
+            diqac_emails = resolve_role_emails(proposal.organization, "iqac") or resolve_role_emails(proposal.organization, "diqac")
+            if diqac_emails:
+                body = f"A new proposal has been submitted in {proposal.organization.name if proposal.organization else 'an organization'}: {proposal.event_title}."
+                send_notification(subj, body, diqac_emails)
+        except Exception:
+            logger.exception("Failed to send submission notifications")
         messages.success(
             request,
             f"Proposal '{proposal.event_title}' submitted.",
@@ -1517,6 +1959,70 @@ def download_pdf(request, proposal_id):
     buffer.close()
     response.write(pdf)
 
+    return response
+
+
+@login_required
+def download_report_pdf(request, report_id: int):
+    """Download a simplified PDF of a report by its id, for Review Center."""
+    report = get_object_or_404(EventReport.objects.select_related("proposal"), id=report_id)
+    proposal = report.proposal
+
+    response = HttpResponse(content_type="application/pdf")
+    safe_title = (proposal.event_title or f"report-{report_id}").replace("\n", " ")
+    response["Content-Disposition"] = f'attachment; filename="{safe_title}_report.pdf"'
+
+    from io import BytesIO
+    from reportlab.pdfgen import canvas
+
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer)
+    data = _build_report_initial_data(report)
+    # Header
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(72, 800, "Event Report")
+    p.setFont("Helvetica", 11)
+    p.drawString(72, 782, f"Title: {data['event']['title']}")
+    p.drawString(72, 766, f"Department: {data['event']['department']}")
+    p.drawString(72, 750, f"Date: {data['event']['date']}")
+    p.drawString(72, 734, f"Venue: {data['event']['venue']}")
+    p.drawString(72, 718, f"Generated on: {timezone.now().strftime('%Y-%m-%d')}")
+
+    # Narrative sections
+    y = 700
+    def _wrap(text: str, width=90):
+        import textwrap
+        return textwrap.wrap(text or "", width=width)
+
+    def _draw_paragraph(label: str, text: str, yy: int) -> int:
+        nonlocal p
+        p.setFont("Helvetica-Bold", 11)
+        p.drawString(72, yy, label)
+        yy -= 14
+        p.setFont("Helvetica", 10)
+        for line in _wrap(text, 95):
+            p.drawString(72, yy, line)
+            yy -= 14
+            if yy < 60:
+                p.showPage(); yy = 800
+        return yy - 8
+
+    y = _draw_paragraph("Summary:", data["narrative"]["summary_overall_event"], y)
+    y = _draw_paragraph("Outcomes:", "; ".join(data["narrative"]["outcomes"]), y)
+    y = _draw_paragraph("Social Relevance:", "; ".join(data["narrative"]["social_relevance"]), y)
+    y = _draw_paragraph("Impact on Attendees:", data["analysis"]["impact_attendees"], y)
+    y = _draw_paragraph("Lessons Learned:", data["analysis"]["impact_volunteers"], y)
+
+    # IQAC Suggestions
+    suggestions = data["iqac"]["iqac_suggestions"]
+    if suggestions:
+        y = _draw_paragraph("IQAC Suggestions:", "; ".join(suggestions), y)
+    p.showPage()
+    p.save()
+
+    pdf = buffer.getvalue()
+    buffer.close()
+    response.write(pdf)
     return response
 
 
@@ -3085,6 +3591,43 @@ def preview_event_report(request, proposal_id):
 
 
 @login_required
+@xframe_options_sameorigin
+def review_full_report(request, report_id: int):
+    """Render a full-page readonly IQAC preview for reviewers using persisted data.
+
+    This lets reviewers see the complete two-page style report and, at the end,
+    provide mandatory feedback to approve/reject. It reuses the iqac_report_preview
+    template by passing initial_report_data assembled from saved Proposal/EventReport.
+    """
+    # Gate access: Only reviewers/admins can view full review page
+    stage = _user_role_stage(request)
+    admin_override = _is_admin_override(request.user)
+    if not admin_override and stage == EventReport.ReviewStage.USER:
+        return HttpResponse(status=403)
+
+    report = get_object_or_404(EventReport.objects.select_related("proposal", "proposal__organization"), id=report_id)
+    proposal = report.proposal
+
+    initial_data = _build_report_initial_data(report)
+
+    context = {
+        "proposal": proposal,
+        "report": report,
+        "initial_report_data": json.dumps(initial_data, ensure_ascii=False),
+        # Enable a footer form in template for approve/reject when linked from Review Center
+        "review_action_url": reverse("emt:review_action"),
+        "show_iqac": True,
+        "review_mode": True,
+        "generated_on": timezone.localdate(),
+    }
+    # Default to IQAC print-style view; allow switching to simplified view via ?style=simple
+    template = "emt/iqac_report_preview.html"
+    if request.GET.get("style") == "simple":
+        template = "emt/review_simple_report.html"
+    return render(request, template, context)
+
+
+@login_required
 def download_audience_csv(request, proposal_id):
     """Provide CSV templates for marking attendance separately for students and faculty."""
     proposal = get_object_or_404(
@@ -3949,111 +4492,12 @@ def save_ai_report(request):
 
 @login_required
 def ai_report_progress(request, proposal_id):
-    proposal = get_object_or_404(EventProposal, id=proposal_id)
-    report = EventReport.objects.filter(proposal=proposal).first()
-
-    def clean_text(value):
-        if value is None:
-            return ""
-        if isinstance(value, (int, float)):
-            return str(value)
-        return str(value).strip()
-
-    def report_value(attr):
-        if not report:
-            return None
-        return getattr(report, attr, None)
-
-    def to_list(value):
-        if not value:
-            return []
-        text = str(value)
-        if "\n" in text or "\r" in text:
-            raw_items = re.split(r"[\r\n]+", text)
-        else:
-            raw_items = re.split(r",|;", text)
-        cleaned = []
-        for item in raw_items:
-            stripped = item.strip()
-            stripped = re.sub(r"^[-*•\u2022]+\s*", "", stripped)
-            if stripped:
-                cleaned.append(stripped)
-        return cleaned
-
-    event_schedule = ""
-    if proposal.event_start_date and proposal.event_end_date:
-        start = date_format(proposal.event_start_date, "d M Y")
-        end = date_format(proposal.event_end_date, "d M Y")
-        if proposal.event_start_date == proposal.event_end_date:
-            event_schedule = start
-        else:
-            event_schedule = f"{start} – {end}"
-    elif proposal.event_start_date:
-        start = date_format(proposal.event_start_date, "d M Y")
-        if proposal.event_end_date and proposal.event_end_date != proposal.event_start_date:
-            end = date_format(proposal.event_end_date, "d M Y")
-            event_schedule = f"{start} – {end}"
-        else:
-            event_schedule = start
-    elif proposal.event_datetime:
-        event_schedule = date_format(proposal.event_datetime, "d M Y, H:i")
-
-    initial_data = {
-        "event_info": {
-            "department": clean_text(proposal.organization) if proposal.organization else "",
-            "location": clean_text(report_value("location")),
-            "title": clean_text(proposal.event_title),
-            "activities_count": clean_text(proposal.num_activities) if proposal.num_activities is not None else "",
-            "datetime": event_schedule,
-            "venue": clean_text(proposal.venue),
-            "academic_year": clean_text(proposal.academic_year),
-            "focus": clean_text(proposal.event_focus_type),
-        },
-        "participants": {
-            "target_audience": clean_text(proposal.target_audience),
-            "external_agencies": clean_text(report_value("actual_speakers")),
-            "external_contacts": clean_text(report_value("external_contact_details")),
-            "organising_committee": to_list(report_value("organizing_committee")),
-            "student_volunteers": clean_text(report_value("num_student_volunteers")),
-            "participants_count": clean_text(report_value("num_participants")),
-        },
-        "summary": clean_text(report_value("summary")),
-        "activities": to_list(report_value("notable_moments")),
-        "social_relevance": to_list(report_value("impact_assessment")),
-        "outcomes": to_list(report_value("outcomes")),
-        "analysis": {
-            "attendees": clean_text(report_value("impact_on_stakeholders")),
-            "schools": clean_text(report_value("analysis")),
-            "volunteers": clean_text(report_value("lessons_learned")),
-        },
-        "relevance": {
-            "graduate_attributes": clean_text(report_value("pos_pso_mapping")),
-            "sdg": clean_text(report_value("sdg_value_systems_mapping")),
-        },
-        "suggestions": to_list(report_value("iqac_feedback")),
-        "suggestions_date": date_format(report_value("report_signed_date"), "d M Y")
-        if report_value("report_signed_date")
-        else "",
-        "annexures": {
-            "photos": [],
-            "brochure_pages": [],
-            "communication": {
-                "subject": "",
-                "date": "",
-                "volunteer_list": [],
-            },
-            "worksheets": [],
-            "evaluation_sheet": None,
-            "feedback_form": None,
-        },
-    }
-
-    context = {
-        "proposal": proposal,
-        "report": report,
-        "initial_report_data": json.dumps(initial_data, ensure_ascii=False),
-    }
-    return render(request, "emt/ai_report_progress.html", context)
+    """Return minimal AI report generation status to avoid errors in legacy routes."""
+    report = EventReport.objects.filter(proposal_id=proposal_id).select_related("proposal").first()
+    if not report:
+        return JsonResponse({"status": "none", "summary": ""})
+    status = "finished" if (report.summary or "").strip() else "in_progress"
+    return JsonResponse({"status": status, "summary": report.summary or ""})
 
 
 @csrf_exempt

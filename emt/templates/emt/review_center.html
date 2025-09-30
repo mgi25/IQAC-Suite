@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Review{% endblock %}
+{% block content %}
+<div class="page-container">
+  <h1 class="page-title">Review Center</h1>
+  <p class="page-subtitle">Stage: {{ stage_label|default:stage|title }}</p>
+
+  <div class="master-detail">
+    <aside class="list-pane" id="reportList">
+      {% if reports %}
+        {% for r in reports %}
+        <button class="list-item" data-id="{{ r.id }}">
+          <div class="li-title">{{ r.proposal.event_title|default:'Untitled' }}</div>
+          <div class="li-sub">{{ r.proposal.organization.name|default:'—' }} · {{ r.proposal.event_start_date }}{% if r.proposal.event_end_date %} — {{ r.proposal.event_end_date }}{% endif %}</div>
+          <span class="li-badge">{{ r.get_review_stage_display }}</span>
+        </button>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">No reports found for your stage.</div>
+      {% endif %}
+    </aside>
+
+    <section class="detail-pane" id="detailPane">
+      <div class="detail-empty">
+        Select a report from the list to review.
+      </div>
+    </section>
+  </div>
+</div>
+<style>
+.page-container{padding:20px}
+.page-title{font-size:24px;margin:0 0 6px;color:#1e60b1}
+.page-subtitle{color:#555;margin:0 0 16px}
+.master-detail{display:grid;grid-template-columns:320px 1fr;gap:16px;min-height:60vh}
+@media(max-width:900px){.master-detail{grid-template-columns:1fr}}
+.list-pane{background:#fff;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.06);padding:8px;display:flex;flex-direction:column;gap:6px}
+.list-item{display:block;text-align:left;width:100%;padding:10px 12px;border-radius:12px;border:1px solid #e6eefc;background:#f9fbff;position:relative}
+.list-item:hover{background:#f0f6ff}
+.li-title{font-weight:600;color:#1e2a3a}
+.li-sub{font-size:12px;color:#5b6b7b;margin-top:2px}
+.li-badge{position:absolute;right:10px;top:10px;background:#1e60b1;color:#fff;border-radius:10px;padding:2px 8px;font-size:11px}
+.detail-pane{background:#fff;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.06);padding:16px}
+.detail-empty{color:#666}
+.section-title{font-size:14px;margin:0 0 8px;color:#1e60b1}
+.ultra-input{width:100%;padding:10px;border-radius:10px;border:1px solid #d5d9e2}
+.actions{display:flex;gap:8px;margin-top:8px}
+.btn{padding:8px 12px;border-radius:10px;border:none;cursor:pointer}
+.btn-primary{background:#1e60b1;color:#fff}
+.btn-success{background:#1e9b50;color:#fff}
+.btn-danger{background:#d64545;color:#fff}
+.note{color:#666}
+.empty-state{padding:24px;text-align:center;color:#666;background:#fff;border-radius:12px}
+</style>
+<script>
+(function(){
+  const list = document.getElementById('reportList');
+  const detail = document.getElementById('detailPane');
+
+  function renderDetail(data){
+    if(!data){
+      detail.innerHTML = '<div class="detail-empty">Select a report from the list to review.</div>';
+      return;
+    }
+    const canDecide = data.can_decide; // server already accounts for superuser/staff
+    detail.innerHTML = `
+      <div class="header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div>
+          <div class="card-title">${data.title ?? 'Untitled'}</div>
+          <div class="card-subtitle">${data.org ?? '—'} · by ${data.submitted_by ?? '—'}</div>
+        </div>
+        <span class="li-badge">${data.stage_display}</span>
+      </div>
+      <div class="preview-toolbar" style="display:flex;align-items:center;gap:8px;margin:8px 0 6px;">
+        <a class="btn btn-primary" id="openInNewTab" target="_blank" rel="noopener">Open full preview</a>
+      </div>
+      <div style="margin:0 0 12px; height:78vh; border:0; border-radius:0; overflow:hidden; box-shadow:none">
+        <iframe id="fullPreviewFrame" src="" style="width:100%; height:100%; border:0; background:#fff"></iframe>
+      </div>
+      <div class="card-section">
+        <h3 class="section-title">Review Decision</h3>
+        <form class="action-form">
+          <input type="hidden" name="report_id" value="${data.id}" />
+          <textarea name="feedback" rows="3" class="ultra-input" placeholder="Provide clear feedback (required)" required></textarea>
+          <div class="actions">
+            <button type="submit" name="action" value="approve" class="btn btn-success" ${canDecide ? '' : 'disabled title="Not allowed at this stage" style="opacity:.55;cursor:not-allowed"'}>Approve</button>
+            <button type="submit" name="action" value="reject" class="btn btn-danger" ${canDecide ? '' : 'disabled title="Not allowed at this stage" style="opacity:.55;cursor:not-allowed"'}>Reject</button>
+            ${canDecide ? '' : '<div class="note">(Read-only stage)</div>'}
+          </div>
+        </form>
+      </div>
+    `;
+
+  // Set iframe src using a reversed base URL to avoid hardcoding prefixes
+  const frame = detail.querySelector('#fullPreviewFrame');
+  const base = "{% url 'emt:review_full_report' 0 %}"; // e.g. /suite/suite/review/full/0/
+  const src = base.replace(/0\/$/, `${data.id}/`) + '?embed=1';
+  if (frame) frame.src = src;
+  const openBtn = detail.querySelector('#openInNewTab');
+  if (openBtn) openBtn.href = src.replace('?embed=1','');
+
+  detail.querySelector('.action-form')?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const btn = e.submitter;
+      if(!btn) return;
+      const fd = new FormData(e.currentTarget);
+      fd.append('action', btn.value);
+      const r = await fetch('{% url "emt:review_action" %}', {method:'POST', body: fd, headers:{'X-Requested-With':'fetch', 'X-CSRFToken': getCsrf()}});
+      const res = await r.json();
+      if(res.ok){
+        // After successful action, refresh page to update list/states
+        location.reload();
+      } else {
+        alert(res.error || 'Action failed');
+      }
+    });
+
+  }
+
+  function getCsrf(){
+    const m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? m[1] : '';
+  }
+
+  list?.addEventListener('click', async (e)=>{
+    const btn = e.target.closest('.list-item');
+    if(!btn) return;
+    const id = btn.dataset.id;
+    // Fetch compact JSON for detail
+    const r = await fetch(`{% url 'emt:review_center' %}?report_id=${id}`, {headers:{'X-Requested-With':'fetch'}});
+    const html = await r.text();
+    try{
+      const data = JSON.parse(html);
+      renderDetail(data);
+    }catch(_){
+      // Fallback: if server didn't return JSON, render empty
+      renderDetail(null);
+    }
+  });
+
+})();
+</script>
+{% endblock %}

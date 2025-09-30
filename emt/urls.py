@@ -82,6 +82,12 @@ urlpatterns = [
         "report-success/<int:proposal_id>/", views.report_success, name="report_success"
     ),
     path("download/pdf/<int:proposal_id>/", views.download_pdf, name="download_pdf"),
+    # Reviewer download by report id
+    path(
+        "download/report-pdf/<int:report_id>/",
+        views.download_report_pdf,
+        name="download_report_pdf",
+    ),
     path("download/word/<int:proposal_id>/", views.download_word, name="download_word"),
     path(
         "download/audience-csv/<int:proposal_id>/",
@@ -167,6 +173,12 @@ urlpatterns = [
         views.preview_event_report,
         name="preview_event_report",
     ),
+    # Reviewer full-page preview (readonly) for a specific report
+    path(
+        "suite/review/full/<int:report_id>/",
+        views.review_full_report,
+        name="review_full_report",
+    ),
     path(
         "report/submit/<int:proposal_id>/",
         views.submit_event_report,
@@ -229,4 +241,8 @@ urlpatterns = [
         name="api_organization_types",
     ),
     path("api/outcomes/<int:org_id>/", views.api_outcomes, name="api_outcomes"),
+    # Single Review page and APIs
+    path("suite/review/", views.review_center, name="review_center"),
+    path("suite/review/action/", views.review_action, name="review_action"),
+    path("suite/review/message/", views.review_message, name="review_message"),
 ]
