@@ -1,5 +1,28 @@
 let loadingCount = 0;
 
+function detectSitePrefix(path = window.location?.pathname || '') {
+    if (!path) return '';
+
+    const normalize = (candidate) => {
+        if (!candidate) return '';
+        if (candidate === '/suite' || candidate.startsWith('/suite/')) return '/suite';
+        if (candidate === '/emt' || candidate.startsWith('/emt/')) return '/emt';
+        return '';
+    };
+
+    // Direct matches
+    let prefix = normalize(path);
+    if (prefix) return prefix;
+
+    // Allow embedded paths such as /core/impersonate/.../suite/...
+    const suiteIdx = path.indexOf('/suite/');
+    if (suiteIdx !== -1) return '/suite';
+    const emtIdx = path.indexOf('/emt/');
+    if (emtIdx !== -1) return '/emt';
+
+    return '';
+}
+
 function showLoadingOverlay(text = 'Loading...') {
     const overlay = document.getElementById('loadingOverlay');
     if (!overlay) return;
@@ -236,10 +259,7 @@ document.addEventListener('DOMContentLoaded', function(){
       if (window.AUTOSAVE_URL) {
           return;
       }
-      const path = window.location.pathname || '';
-      let prefix = '';
-      if (path.startsWith('/suite/')) prefix = '/suite';
-      else if (path.startsWith('/emt/')) prefix = '/emt';
+      const prefix = detectSitePrefix();
       window.AUTOSAVE_URL = `${prefix}/autosave-event-report/`;
   }
 
@@ -3197,10 +3217,7 @@ function setupAttendanceLink() {
                 showLoadingOverlay('Preparing attendance...');
                 // Fallback: if autosave URL isn't injected, infer it from current path
                 if (!window.AUTOSAVE_URL) {
-                    const path = window.location.pathname || '';
-                    let prefix = '';
-                    if (path.startsWith('/suite/')) prefix = '/suite';
-                    else if (path.startsWith('/emt/')) prefix = '/emt';
+                    const prefix = detectSitePrefix();
                     window.AUTOSAVE_URL = `${prefix}/autosave-event-report/`;
                 }
 
@@ -3220,10 +3237,7 @@ function setupAttendanceLink() {
 
                 if (reportId) {
                     // Respect site prefix (/suite or /emt) when building the URL
-                    const path = window.location.pathname || '';
-                    let prefix = '';
-                    if (path.startsWith('/suite/')) prefix = '/suite';
-                    else if (path.startsWith('/emt/')) prefix = '/emt';
+                    const prefix = detectSitePrefix();
                     const attendanceUrl = `${prefix}/reports/${reportId}/attendance/upload/`;
                     fields.each((_, f) => {
                         const jq = $(f);
@@ -3261,10 +3275,7 @@ function setupGAEditorLink() {
                 return;
             }
             // Respect site prefix (/suite or /emt)
-            const path = window.location.pathname || '';
-            let prefix = '';
-            if (path.startsWith('/suite/')) prefix = '/suite';
-            else if (path.startsWith('/emt/')) prefix = '/emt';
+            const prefix = detectSitePrefix();
             const url = `${prefix}/reports/${reportId}/graduate-attributes/edit/?from=ga`;
             window.location.href = url;
         } catch (e) {
@@ -3294,10 +3305,7 @@ function initializeAutosaveIndicators() {
 
         const reportId = data?.reportId || e.originalEvent?.detail?.reportId || e.detail?.reportId;
         if (reportId) {
-            const path = window.location.pathname || '';
-            let prefix = '';
-            if (path.startsWith('/suite/')) prefix = '/suite';
-            else if (path.startsWith('/emt/')) prefix = '/emt';
+            const prefix = detectSitePrefix();
             const attendanceUrl = `${prefix}/reports/${reportId}/attendance/upload/`;
             $('#attendance-modern, #num-participants-modern, #total-participants-modern')
                 .attr('data-attendance-url', attendanceUrl)
