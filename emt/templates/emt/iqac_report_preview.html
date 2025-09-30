@@ -13,6 +13,63 @@
   .review-mode .top-utility-bar,
   .review-mode .left-control-panel { display: none !important; }
   .review-mode .command-center-layout { padding: 0 !important; }
+  /* Review full-screen feel: remove grey backgrounds/margins/shadows. Keep A4 width (no stretch) and center. */
+  body.command-center-layout.review-mode,
+  body.command-center-layout.iqac-report-preview.review-mode {
+    background: #fff !important;
+  }
+  .review-mode .preview-shell {
+    padding: 12px 0 !important;
+    align-items: center !important;
+    gap: 12px !important;
+  }
+  .review-mode main#report,
+  .review-mode .paper {
+    width: 210mm !important;
+    min-height: auto !important;
+    box-shadow: none !important;
+    margin: 0 auto !important;
+    border-radius: 0 !important;
+    padding: 20mm 18mm 22mm !important; /* retain print padding */
+    border: 1px solid #c8d3e1; /* subtle page border in review mode */
+  }
+  .review-mode .annexure-host {
+    width: 210mm !important;
+    margin: 0 auto !important;
+    padding: 0 0 12mm !important;
+  }
+  .review-mode .annexure-host .paper {
+    width: 210mm !important;
+  }
+  /* Embed-fit: scale pages to fit iframe viewport (right review pane) */
+  .embed-fit .preview-shell {
+    padding: 0 !important;
+    gap: 0 !important;
+    width: 210mm; /* base width for scaling */
+    transform-origin: top center;
+    transform: scale(var(--fit-scale, 1));
+  }
+  .embed-fit body.command-center-layout.review-mode { background: transparent !important; }
+  .embed-fit body.command-center-layout { overflow: hidden !important; height: 100vh !important; }
+  /* Soften inner borders while keeping the content boxes visible */
+  .review-mode .section-table,
+  .review-mode .section-table th,
+  .review-mode .section-table td,
+  .review-mode .grid-table,
+  .review-mode .grid-table th,
+  .review-mode .grid-table td,
+  .review-mode .checklist,
+  .review-mode .checklist th,
+  .review-mode .checklist td,
+  .review-mode .pane,
+  .review-mode .sdg-row,
+  .review-mode .analysis-card,
+  .review-mode .annexure-card,
+  .review-mode .media-frame,
+  .review-mode .signature-line {
+    border-color: #c8d3e1 !important; /* light gray-blue */
+    border-width: 0.5pt !important;
+  }
   @page {
     size: A4;
     margin: 20mm 18mm 22mm;
@@ -1411,6 +1468,23 @@
         }
       }
     });
+
+    // Scale-to-fit logic for embedded iframe view (?embed=1)
+    function mmToPx(mm){ return Math.round(mm * 96 / 25.4); }
+    function applyFitScale(){
+      const params = new URLSearchParams(window.location.search);
+      if (!params.has('embed')) return;
+      document.body.classList.add('embed-fit');
+      // Compute scale based on first page
+      const pageW = mmToPx(210);
+      const pageH = mmToPx(297);
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const scale = Math.min(vw / pageW, vh / pageH);
+      document.documentElement.style.setProperty('--fit-scale', scale);
+    }
+    window.addEventListener('resize', applyFitScale);
+    applyFitScale();
   })();
 </script>
 <div id="review-mode-flag" data-review-mode="{{ review_mode|yesno:'true,false' }}" hidden></div>

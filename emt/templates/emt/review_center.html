@@ -74,7 +74,7 @@
       <div class="preview-toolbar" style="display:flex;align-items:center;gap:8px;margin:8px 0 6px;">
         <a class="btn btn-primary" id="openInNewTab" target="_blank" rel="noopener">Open full preview</a>
       </div>
-      <div style="margin:0 0 12px; height:70vh; border:1px solid #e6eefc; border-radius:10px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,.06)">
+      <div style="margin:0 0 12px; height:78vh; border:0; border-radius:0; overflow:hidden; box-shadow:none">
         <iframe id="fullPreviewFrame" src="" style="width:100%; height:100%; border:0; background:#fff"></iframe>
       </div>
       <div class="card-section">
@@ -94,10 +94,10 @@
   // Set iframe src using a reversed base URL to avoid hardcoding prefixes
   const frame = detail.querySelector('#fullPreviewFrame');
   const base = "{% url 'emt:review_full_report' 0 %}"; // e.g. /suite/suite/review/full/0/
-  const src = base.replace(/0\/$/, `${data.id}/`);
+  const src = base.replace(/0\/$/, `${data.id}/`) + '?embed=1';
   if (frame) frame.src = src;
   const openBtn = detail.querySelector('#openInNewTab');
-  if (openBtn) openBtn.href = src;
+  if (openBtn) openBtn.href = src.replace('?embed=1','');
 
   detail.querySelector('.action-form')?.addEventListener('submit', async (e)=>{
       e.preventDefault();
