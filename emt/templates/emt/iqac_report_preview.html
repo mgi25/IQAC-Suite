@@ -5,7 +5,7 @@
 <style>
   /* PDF-like full preview: black background + centered white paper */
   body.command-center-layout.review-mode.preview-mode {
-    background:#000 !important;
+    background:#111827 !important; /* softer near-black (tailwind slate-900) */
     min-height:100vh;
     display:flex;
     justify-content:center;
@@ -35,7 +35,7 @@
   body.command-center-layout.review-mode,
   body.command-center-layout.iqac-report-preview.review-mode { background:#fff !important; }
   body.command-center-layout.review-mode.preview-mode,
-  body.command-center-layout.iqac-report-preview.review-mode.preview-mode { background:#000 !important; }
+  body.command-center-layout.iqac-report-preview.review-mode.preview-mode { background:#111827 !important; }
   .review-mode .preview-shell {
     padding: 12px 0 !important;
     align-items: center !important;
@@ -67,8 +67,24 @@
     transform-origin: top center;
     transform: scale(var(--fit-scale, 1));
   }
+  /* In iframe embed, use transparent background so iframe's own background shows */
   .embed-fit body.command-center-layout.review-mode { background: transparent !important; }
+  body.embed-fit.command-center-layout.review-mode { background: transparent !important; }
   .embed-fit body.command-center-layout { overflow: hidden !important; height: 100vh !important; }
+  body.embed-fit.command-center-layout { overflow: hidden !important; height: 100vh !important; }
+  body.embed-fit.command-center-layout.fit-width { overflow: auto !important; }
+  /* When explicitly fitting width, stop scaling and expand to 100% */
+  body.embed-fit.fit-width .preview-shell {
+    padding: 0 !important;
+    gap: 0 !important;
+    width: 100% !important;
+    transform: none !important;
+    align-items: stretch !important;
+  }
+  body.embed-fit.fit-width main#report,
+  body.embed-fit.fit-width .paper,
+  body.embed-fit.fit-width .annexure-host { width: 100% !important; margin: 0 !important; }
+  body.embed-fit.fit-width .annexure-host .paper { width: 100% !important; }
   /* Soften inner borders while keeping the content boxes visible */
   .review-mode .section-table,
   .review-mode .section-table th,
@@ -1498,12 +1514,25 @@
       const params = new URLSearchParams(window.location.search);
       if (!params.has('embed')) return;
       document.body.classList.add('embed-fit');
-      // Compute scale based on first page
+      const fit = params.get('fit');
+      if (fit === 'width') {
+        document.body.classList.add('fit-width');
+      } else if (fit === 'height') {
+        document.body.classList.add('fit-height');
+      }
+      // Compute scale based on requested fit mode
       const pageW = mmToPx(210);
       const pageH = mmToPx(297);
       const vw = window.innerWidth;
       const vh = window.innerHeight;
-      const scale = Math.min(vw / pageW, vh / pageH);
+      let scale;
+      if (fit === 'width') {
+        scale = vw / pageW;
+      } else if (fit === 'height') {
+        scale = vh / pageH;
+      } else {
+        scale = Math.min(vw / pageW, vh / pageH);
+      }
       document.documentElement.style.setProperty('--fit-scale', scale);
     }
     window.addEventListener('resize', applyFitScale);

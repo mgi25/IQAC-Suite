@@ -5,7 +5,7 @@
 <style>
   /* PDF-like full preview: black background + centered white paper */
   body.command-center-layout.review-mode.preview-mode{
-    background:#000 !important;
+    background:#111827 !important; /* softer near-black */
     min-height:100vh;
     display:flex;
     justify-content:center;
@@ -14,6 +14,13 @@
     overflow-y:auto;
   }
   .report-container{ background:#fff; box-shadow:0 0 20px rgba(0,0,0,0.7); margin:auto; }
+  /* Embedded scaling (fit=width|height) similar to IQAC preview */
+  .embed-fit .simple-wrapper{ padding:0 !important; }
+  .embed-fit body.command-center-layout.review-mode { background: transparent !important; }
+  body.embed-fit.command-center-layout { overflow:hidden !important; height:100vh !important; }
+  body.embed-fit.command-center-layout.fit-width { overflow:auto !important; }
+  body.embed-fit.fit-width .simple-wrapper { width:100% !important; }
+  body.embed-fit.fit-width .paper { width:100% !important; margin:0 !important; border-left:0; border-right:0; }
   /* Hide global chrome in review mode */
   .review-mode .top-utility-bar,
   .review-mode .left-control-panel { display: none !important; }
@@ -192,6 +199,13 @@
     const params = new URLSearchParams(window.location.search);
     if(!params.has('embed')){
       document.body.classList.add('preview-mode');
+    }
+    // Embedded fit logic
+    if(params.has('embed')){
+      document.body.classList.add('embed-fit');
+      const fit = params.get('fit');
+      if (fit === 'width') document.body.classList.add('fit-width');
+      if (fit === 'height') document.body.classList.add('fit-height');
     }
     let data = {};
     try { data = JSON.parse(document.getElementById('initial-report-data').textContent || '{}'); } catch(_){}
