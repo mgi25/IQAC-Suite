@@ -3,6 +3,23 @@
 
 {% block extra_css %}
 <style>
+  /* PDF-like full preview: black background + centered white paper */
+  body.command-center-layout.review-mode.preview-mode {
+    background:#000 !important;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:flex-start;
+    padding:40px 0; /* top/bottom margin like a PDF viewer */
+    overflow-y:auto;
+  }
+  /* White document container with shadow */
+  .report-container{
+    background:#fff;
+    box-shadow:0 0 20px rgba(0,0,0,0.7);
+    margin:auto;
+  }
+
   /* Reviewer mode: hide editing/submit controls when body has .review-mode */
   .review-mode .controls,
   .review-mode .submit-report-actions,
@@ -14,10 +31,11 @@
   .review-mode .left-control-panel { display: none !important; }
   .review-mode .command-center-layout { padding: 0 !important; }
   /* Review full-screen feel: remove grey backgrounds/margins/shadows. Keep A4 width (no stretch) and center. */
+  /* Default review-mode background is white; overridden to black when .preview-mode is present */
   body.command-center-layout.review-mode,
-  body.command-center-layout.iqac-report-preview.review-mode {
-    background: #fff !important;
-  }
+  body.command-center-layout.iqac-report-preview.review-mode { background:#fff !important; }
+  body.command-center-layout.review-mode.preview-mode,
+  body.command-center-layout.iqac-report-preview.review-mode.preview-mode { background:#000 !important; }
   .review-mode .preview-shell {
     padding: 12px 0 !important;
     align-items: center !important;
@@ -601,7 +619,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="preview-shell">
+<div class="preview-shell report-container">
   <div class="control-row">
     <span class="status-pill" id="status-pill">Preparing content…</span>
     <div class="controls">
@@ -1451,6 +1469,11 @@
       var flag = document.getElementById('review-mode-flag');
       if (flag && flag.getAttribute('data-review-mode') === 'true') {
         document.body.classList.add('review-mode');
+      }
+      // Auto-enable PDF-like preview mode on full preview pages, but skip when embedded (?embed=1)
+      var params = new URLSearchParams(window.location.search);
+      if (!params.has('embed')) {
+        document.body.classList.add('preview-mode');
       }
       init();
 
