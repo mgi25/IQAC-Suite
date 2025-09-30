@@ -3,6 +3,17 @@
 
 {% block extra_css %}
 <style>
+  /* PDF-like full preview: black background + centered white paper */
+  body.command-center-layout.review-mode.preview-mode{
+    background:#000 !important;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:flex-start;
+    padding:40px 0;
+    overflow-y:auto;
+  }
+  .report-container{ background:#fff; box-shadow:0 0 20px rgba(0,0,0,0.7); margin:auto; }
   /* Hide global chrome in review mode */
   .review-mode .top-utility-bar,
   .review-mode .left-control-panel { display: none !important; }
@@ -52,7 +63,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="simple-wrapper">
+<div class="simple-wrapper report-container">
   <article class="paper">
     <div class="page-content" id="page-1">
       <header>
@@ -177,6 +188,10 @@
     const flag = document.getElementById('review-mode-flag');
     if(flag && flag.getAttribute('data-review-mode') === 'true'){
       document.body.classList.add('review-mode');
+    }
+    const params = new URLSearchParams(window.location.search);
+    if(!params.has('embed')){
+      document.body.classList.add('preview-mode');
     }
     let data = {};
     try { data = JSON.parse(document.getElementById('initial-report-data').textContent || '{}'); } catch(_){}
