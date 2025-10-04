@@ -1,5 +1,5 @@
 import json
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -10,11 +10,13 @@ from django.test import Client, TestCase
 from django.urls import reverse
 
 from core.models import (SDG_GOALS, ApprovalFlowConfig, ApprovalFlowTemplate,
-                         Organization, OrganizationMembership,
+                         DashboardAssignment, Organization,
+                         OrganizationMembership,
                          OrganizationRole, OrganizationType, Program,
                          ProgramOutcome, ProgramSpecificOutcome,
                          RoleAssignment, SDGGoal)
 from emt.forms import EventProposalForm
+from django.utils import timezone
 from emt.models import (ApprovalStep, EventExpectedOutcomes, EventNeedAnalysis,
                         EventObjectives, EventProposal, IncomeDetail, Student,
                         TentativeFlow)
@@ -696,6 +698,104 @@ class EventApprovalsNavTests(TestCase):
         self._set_role("student")
         resp = self.client.get(reverse("dashboard"))
         self.assertNotContains(resp, "Event Approvals")
+
+
+class DashboardSerializationTests(TestCase):
+    def setUp(self):
+        self.ot = OrganizationType.objects.create(name="Dept")
+        self.org = Organization.objects.create(name="Science", org_type=self.ot)
+        self.faculty_role = OrganizationRole.objects.create(
+            organization=self.org, name="Faculty"
+        )
+        self.student_role = OrganizationRole.objects.create(
+            organization=self.org, name="Student"
+        )
+        self.faculty = User.objects.create_user("faculty_serial", password="pass")
+        self.student = User.objects.create_user("student_serial", password="pass")
+
+        RoleAssignment.objects.create(
+            user=self.faculty, role=self.faculty_role, organization=self.org
+        )
+        RoleAssignment.objects.create(
+            user=self.student, role=self.student_role, organization=self.org
+        )
+
+        DashboardAssignment.objects.create(user=self.faculty, dashboard="faculty")
+        DashboardAssignment.objects.create(user=self.student, dashboard="student")
+
+        self.student_profile = Student.objects.create(
+            user=self.student, mentor=self.faculty
+        )
+
+    def test_faculty_dashboard_serializes_event_fields(self):
+        start = timezone.localdate() + timedelta(days=2)
+        end = start + timedelta(days=1)
+        proposal = EventProposal.objects.create(
+            submitted_by=self.faculty,
+            organization=self.org,
+            status=EventProposal.Status.FINALIZED,
+            event_title="Research Expo",
+            event_start_date=start,
+            event_end_date=end,
+        )
+        proposal.faculty_incharges.add(self.faculty)
+        EventObjectives.objects.create(proposal=proposal, content="Objectives text")
+
+        self.client.force_login(self.faculty)
+        resp = self.client.get(
+            reverse("select_dashboard", kwargs={"dashboard_key": "faculty"})
+        )
+        self.assertEqual(resp.status_code, 200)
+
+        user_proposals = resp.context["user_proposals"]
+        self.assertEqual(len(user_proposals), 1)
+        self.assertEqual(user_proposals[0]["title"], proposal.event_title)
+        self.assertEqual(
+            user_proposals[0]["start_date"], proposal.event_start_date.isoformat()
+        )
+        self.assertEqual(
+            user_proposals[0]["end_date"], proposal.event_end_date.isoformat()
+        )
+        self.assertIn("Objectives text", user_proposals[0]["description"])
+        self.assertEqual(resp.context["upcoming_events_count"], 1)
+
+    def test_student_dashboard_serializes_event_fields(self):
+        start = timezone.localdate()
+        end = start + timedelta(days=1)
+        proposal = EventProposal.objects.create(
+            submitted_by=self.faculty,
+            organization=self.org,
+            status=EventProposal.Status.FINALIZED,
+            event_title="Innovation Fair",
+            event_start_date=start,
+            event_end_date=end,
+        )
+        EventObjectives.objects.create(
+            proposal=proposal, content="Student centric description"
+        )
+        proposal.participants.add(self.student_profile)
+
+        self.client.force_login(self.student)
+        resp = self.client.get(
+            reverse("select_dashboard", kwargs={"dashboard_key": "student"})
+        )
+        self.assertEqual(resp.status_code, 200)
+
+        user_proposals = resp.context["user_proposals"]
+        self.assertEqual(len(user_proposals), 1)
+        self.assertEqual(user_proposals[0]["title"], proposal.event_title)
+        self.assertEqual(
+            user_proposals[0]["start_date"], proposal.event_start_date.isoformat()
+        )
+        self.assertEqual(
+            user_proposals[0]["end_date"], proposal.event_end_date.isoformat()
+        )
+        self.assertIn("Student centric description", user_proposals[0]["description"])
+
+        calendar_events = resp.context["calendar_events"]
+        self.assertTrue(
+            any(event["title"] == proposal.event_title for event in calendar_events)
+        )
 
 
 class ApprovalLogicTests(TestCase):

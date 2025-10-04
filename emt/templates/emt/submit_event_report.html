@@ -70,6 +70,15 @@
                     </div>
                 </a>
             </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link disabled" data-section="attachments" data-order="7">
+                    <span class="nav-number">7</span>
+                    <div class="nav-content">
+                        <div class="nav-item-title">Attachments &amp; Evidence</div>
+                        <div class="nav-item-subtitle">Upload photos, certificates, supporting files</div>
+                    </div>
+                </a>
+            </li>
         </ul>
     </nav>
 
@@ -92,7 +101,11 @@
             </div>
         {% endif %}
 
-        <form method="post" enctype="multipart/form-data" id="report-form" autocomplete="off" action="{% url 'emt:submit_event_report' proposal.id %}" data-preview-url="{% url 'emt:preview_event_report' proposal.id %}">
+        <form method="post" enctype="multipart/form-data" id="report-form" autocomplete="off"
+              action="{% url 'emt:submit_event_report' proposal.id %}"
+              data-preview-url="{% url 'emt:preview_event_report' proposal.id %}"
+              data-proposal-id="{{ proposal.id }}"
+              {% if report %}data-report-id="{{ report.id }}"{% endif %}>
             {% csrf_token %}
             <textarea name="event_summary" hidden>{{ event_summary.content|default_if_none:'' }}</textarea>
             <textarea name="event_outcomes" hidden>{{ event_outcomes.content|default_if_none:'' }}</textarea>
@@ -294,6 +307,65 @@
                 <div class="submit-help-text">Complete all sections, then choose &ldquo;Review &amp; Submit&rdquo; to open the review page. Final submission happens from that screen.</div>
             </div>
 
+            <template id="attachments-section-template">
+                <div class="form-section-header">
+                    <h3>Supporting Attachments</h3>
+                    <p class="section-subtitle">Share photos, certificates, reports, or any other evidence that documents the event.</p>
+                </div>
+
+                <div class="form-row full-width">
+                    <div class="attachment-guidelines">
+                        <h4>Helpful guidance</h4>
+                        <ul>
+                            <li>Upload high-quality images that clearly capture the highlights of your event.</li>
+                            <li>Include certificates, reports, brochures, or press coverage as supporting documents.</li>
+                            <li>Use the caption field to briefly describe what each attachment represents.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                {% if formset.non_form_errors %}
+                    <div class="form-row full-width">
+                        <div class="field-error">
+                            {% for error in formset.non_form_errors %}
+                                {{ error }}<br>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <div class="visually-hidden">
+                    {{ formset.management_form }}
+                </div>
+
+                <div id="attachment-list" class="attachment-grid">
+                    {% for form in formset.forms %}
+                        {% include 'emt/partials/attachment_block.html' %}
+                    {% empty %}
+                        <div class="attachment-empty">No attachment slots available.</div>
+                    {% endfor %}
+                </div>
+
+                <div class="attachment-actions">
+                    <button type="button" id="add-attachment-btn" class="btn-draft-section">
+                        <span class="btn-icon">+</span>
+                        Add another attachment
+                    </button>
+                    <p class="attachment-hint">Accepted formats: JPG, PNG, PDF (up to 10&nbsp;MB per file).</p>
+                </div>
+
+                <template id="attachment-template">
+                    {% include 'emt/partials/attachment_block.html' with form=formset.empty_form %}
+                </template>
+
+                <div class="form-row full-width">
+                    <div class="save-section-container">
+                        <button type="button" class="btn-save-section">Save &amp; Continue</button>
+                        <div class="save-help-text">Attachments are saved when you continue to the preview page.</div>
+                    </div>
+                </div>
+            </template>
+
             <div style="display: none;" id="django-forms">
                 <!-- Include all remaining Django form fields that aren't shown in the UI -->
                 {% for field in form %}
@@ -345,6 +417,13 @@
         #outcomeModal.sdg-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 1000; }
         #outcomeModal.sdg-modal.show { display: block; }
     </style>
+</div>
+
+<div id="imgModal" class="attachment-modal" role="dialog" aria-modal="true" aria-label="Attachment preview">
+    <div class="attachment-modal-content">
+        <button type="button" class="close-btn" aria-label="Close preview">&times;</button>
+        <img id="imgModalImg" src="" alt="Attachment preview image">
+    </div>
 </div>
 
 <div id="loadingOverlay" class="loading-overlay">

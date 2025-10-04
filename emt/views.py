@@ -1,3 +1,4 @@
+import copy
 import csv
 import json
 import logging
@@ -38,6 +39,9 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_http_methods, require_POST
 
+from core.models import (SDG_GOALS, Class, Organization,
+                         OrganizationMembership, OrganizationType,
+                         RoleAssignment, Report, SDGGoal)
 from core.models import (
     SDG_GOALS,
     Class,
@@ -2134,6 +2138,10 @@ def autosave_event_report(request):
         logger.debug("autosave_event_report invalid json: %s", raw)
         return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
 
+    # Preserve the original payload so we can persist it without being mutated
+    # by the transformations that follow (e.g., flattening list fields).
+    payload_snapshot = copy.deepcopy(data)
+
     proposal_id = data.get("proposal_id")
     report_id = data.get("report_id")
 
@@ -2172,8 +2180,17 @@ def autosave_event_report(request):
     # Apply only the submitted fields to the existing instance
     for name in form.fields.keys():
         if name in data:
+            cleaned_value = form.cleaned_data.get(name)
+            if name == "report_signed_date" and cleaned_value in (None, ""):
+                # Leave the existing value intact when autosave payload omits a date.
+                # The model field does not accept null values, so attempting to set
+                # ``None`` triggers an integrity error which in turn breaks flows like
+                # opening the attendance modal from a fresh report. Skipping assignment
+                # preserves either the default or any previously saved date while still
+                # allowing the client to update it once a real value is provided.
+                continue
             try:
-                setattr(report, name, form.cleaned_data.get(name))
+                setattr(report, name, cleaned_value)
             except Exception:
                 pass
     if summary_content is not None:
@@ -2182,6 +2199,8 @@ def autosave_event_report(request):
         report.outcomes = outcomes_content
     if analysis_content is not None and hasattr(report, "analysis"):
         report.analysis = analysis_content
+    if payload_snapshot:
+        report.generated_payload = payload_snapshot
     report.save()
 
     _save_activities(proposal, data)
@@ -3555,7 +3574,13 @@ def preview_event_report(request, proposal_id):
     annexure_photos = []
     if report:
         for attachment in report.attachments.all():
-            file_url = getattr(attachment.file, "url", "")
+            file_field = getattr(attachment, "file", None)
+            if not file_field:
+                continue
+            try:
+                file_url = file_field.url
+            except ValueError:
+                continue
             if not file_url:
                 continue
             lower_url = file_url.lower()
@@ -4122,9 +4147,78 @@ def attendance_data(request, report_id):
         if name_norm:
             existing_names.add(name_norm)
 
+    def _normalise_lookup(value: str) -> str:
+        """Return a lookup friendly token ignoring whitespace and punctuation."""
+
+        return re.sub(r"[^a-z0-9]", "", (value or "").lower())
+
     names = [
         n.strip() for n in (proposal.target_audience or "").split(",") if n.strip()
     ]
+
+    def _build_faculty_entry(user, organization_name: str = "") -> dict[str, str]:
+        profile = getattr(user, "profile", None)
+        reg_no = (getattr(profile, "register_no", "") or user.username or "").strip()
+        full_name = (user.get_full_name() or user.username or "").strip()
+        return {
+            "registration_no": reg_no,
+            "full_name": full_name,
+            "organization": (organization_name or "").strip(),
+        }
+
+    faculty_lookup: dict[str, dict[str, str]] = {}
+
+    def _register_faculty_lookup(user, organization_name: str = "") -> None:
+        if not user:
+            return
+        entry = _build_faculty_entry(user, organization_name)
+        lookup_values = {
+            entry["registration_no"],
+            entry["full_name"],
+            user.username,
+            f"{user.first_name} {user.last_name}".strip(),
+        }
+        for value in list(lookup_values):
+            if value:
+                lookup_values.add(value.replace(" ", ""))
+        for value in lookup_values:
+            token = _normalise_lookup(value)
+            if token:
+                existing = faculty_lookup.get(token)
+                if existing and existing.get("organization") and not entry["organization"]:
+                    continue
+                faculty_lookup[token] = entry
+
+    membership_qs = (
+        OrganizationMembership.objects.filter(role="faculty")
+        .select_related("user__profile", "organization")
+        .order_by("id")
+    )
+    membership_org_by_user: dict[int, str] = {}
+    for membership in membership_qs:
+        organization_name = (
+            membership.organization.name if membership.organization else ""
+        )
+        _register_faculty_lookup(membership.user, organization_name)
+        if membership.user_id and organization_name:
+            membership_org_by_user.setdefault(membership.user_id, organization_name)
+
+    role_assignment_qs = (
+        RoleAssignment.objects.filter(role__name__icontains="faculty")
+        .select_related("user__profile", "organization", "role")
+        .order_by("id")
+    )
+    for assignment in role_assignment_qs:
+        organization_name = (
+            assignment.organization.name if assignment.organization else ""
+        )
+        _register_faculty_lookup(assignment.user, organization_name)
+        if assignment.user_id and organization_name:
+            membership_org_by_user.setdefault(assignment.user_id, organization_name)
+
+    for faculty_user in proposal.faculty_incharges.all().select_related("profile"):
+        organization_name = membership_org_by_user.get(faculty_user.id, "")
+        _register_faculty_lookup(faculty_user, organization_name)
     if names:
         students = {
             (s.user.get_full_name() or s.user.username).strip().lower(): s
@@ -4202,17 +4296,34 @@ def attendance_data(request, report_id):
                 add_rows_for_class(cls_obj)
                 continue
 
-            add_row_if_missing(
-                {
-                    "registration_no": "",
-                    "full_name": name,
-                    "student_class": "",
-                    "absent": False,
-                    "volunteer": False,
-                    "category": AttendanceRow.Category.EXTERNAL,
-                    "affiliation": "",
-                }
-            )
+            faculty_entry = None
+            lookup_candidates = filter(None, [name, class_name, org_name])
+            for candidate in lookup_candidates:
+                token = _normalise_lookup(candidate)
+                if not token:
+                    continue
+                faculty_entry = faculty_lookup.get(token)
+                if faculty_entry:
+                    break
+
+            if faculty_entry:
+                add_row_if_missing(
+                    {
+                        "registration_no": faculty_entry["registration_no"],
+                        "full_name": faculty_entry["full_name"],
+                        "student_class": faculty_entry["organization"],
+                        "absent": False,
+                        "volunteer": False,
+                        "category": AttendanceRow.Category.FACULTY,
+                        "affiliation": faculty_entry["organization"],
+                    }
+                )
+                continue
+
+            # Skip adding placeholder "guest" rows for unmatched audience entries.
+            # These are often department names (e.g. "Data Science") that should
+            # not appear as attendees until a CSV upload provides concrete data.
+            continue
 
     faculty_users = list(proposal.faculty_incharges.all().select_related("profile"))
     for user in faculty_users:

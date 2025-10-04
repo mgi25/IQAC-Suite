@@ -1,0 +1,60 @@
+{% with prefix=form.prefix %}
+<div class="attachment-block" data-form-prefix="{{ prefix }}">
+    {% for hidden in form.hidden_fields %}
+        {{ hidden }}
+    {% endfor %}
+    <div class="attachment-card">
+        <div class="attach-upload"
+             {% if file_url %}
+                 data-file-url="{{ file_url }}"
+                 data-preview-type="{{ preview_type }}"
+             {% endif %}>
+            {% if file_url %}
+                {% if preview_type == 'image' %}
+                    <img src="{{ file_url }}" alt="Attachment preview">
+                    <span class="attach-text">Click to preview</span>
+                {% else %}
+                    <div class="attach-file">
+                        <span class="attach-file-name">{{ file_name|default:"Attachment" }}</span>
+                        <span class="attach-text">Click to download</span>
+                    </div>
+                {% endif %}
+            {% else %}
+                <span class="attach-add">+</span>
+                <span class="attach-text">Add file</span>
+            {% endif %}
+        </div>
+        <button type="button" class="attach-remove" title="Remove attachment">
+            <span aria-hidden="true">&times;</span>
+        </button>
+        {{ form.file }}
+        <div class="attachment-meta">
+            <label class="attachment-label" for="{{ prefix }}-caption-input">Caption (optional)</label>
+            <input
+                type="text"
+                id="{{ prefix }}-caption-input"
+                name="{{ prefix }}-caption"
+                class="attachment-caption attach-caption-input"
+                placeholder="Describe what this attachment shows"
+                value="{{ form.initial.caption|default:form.instance.caption|default_if_none:'' }}"
+            >
+            {% if form.errors.caption %}
+                <div class="field-error">{{ form.errors.caption.0 }}</div>
+            {% endif %}
+            {% if form.errors.file %}
+                <div class="field-error">{{ form.errors.file.0 }}</div>
+            {% endif %}
+            {% if form.non_field_errors %}
+                <div class="field-error">
+                    {% for error in form.non_field_errors %}
+                        {{ error }}{% if not forloop.last %}<br>{% endif %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        <div class="visually-hidden">
+            {{ form.DELETE }}
+        </div>
+    </div>
+</div>
+{% endwith %}

@@ -279,6 +279,111 @@ console.log(JSON.stringify({
         self.assertEqual(out["att"], attendance_url)
         self.assertEqual(out["part"], attendance_url)
 
+    def test_attendance_identifiers_populate_on_admin_route(self):
+        report = EventReport.objects.create(proposal=self.proposal)
+
+        response = self.client.get(
+            reverse("emt:submit_event_report", args=[self.proposal.id])
+        )
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        self.assertIn(
+            f'data-proposal-id="{self.proposal.id}"',
+            html,
+        )
+        self.assertIn(
+            f'data-report-id="{report.id}"',
+            html,
+        )
+
+        import subprocess
+        import tempfile
+        from pathlib import Path
+
+        submit_js = (
+            Path(__file__).resolve().parents[1]
+            / "static"
+            / "emt"
+            / "js"
+            / "submit_event_report.js"
+        )
+
+        node_script = """
+const fs = require('fs');
+const vm = require('vm');
+const src = fs.readFileSync('__SUBMIT_JS__', 'utf8');
+function extract(name){
+  const start = src.indexOf('function ' + name);
+  if(start === -1) throw new Error('not found: ' + name);
+  let idx = src.indexOf('{', start);
+  let depth = 1;
+  idx++;
+  while(idx < src.length && depth > 0){
+    const ch = src[idx];
+    if(ch === '{') depth++;
+    else if(ch === '}') depth--;
+    idx++;
+  }
+  return src.slice(start, idx);
+}
+const inferCode = extract('function inferProposalId');
+const ensureCode = extract('function ensureReportIdForAttendance');
+const context = {
+  window: {
+    location: { pathname: '__ADMIN_PATH__' },
+    PROPOSAL_ID: '',
+    REPORT_ID: ''
+  },
+  document: {
+    getElementById: (id) => {
+      if (id === 'report-form') {
+        return {
+          dataset: {
+            proposalId: '__PROPOSAL_ID__',
+            reportId: '__REPORT_ID__'
+          }
+        };
+      }
+      return null;
+    }
+  },
+  console: console
+};
+context.window.document = context.document;
+context.globalThis = context;
+context.output = null;
+vm.createContext(context);
+vm.runInContext(`${inferCode}\n${ensureCode}\noutput = ensureReportIdForAttendance();`, context);
+console.log(JSON.stringify({
+  proposal: context.output.proposalId,
+  report: context.output.reportId,
+  windowProposal: context.window.PROPOSAL_ID,
+  windowReport: context.window.REPORT_ID
+}));
+"""
+
+        node_script = node_script.replace("__SUBMIT_JS__", str(submit_js))
+        node_script = node_script.replace(
+            "__ADMIN_PATH__",
+            f"/admin/emt/report/submit/{self.proposal.id}/",
+        )
+        node_script = node_script.replace("__PROPOSAL_ID__", str(self.proposal.id))
+        node_script = node_script.replace("__REPORT_ID__", str(report.id))
+
+        with tempfile.TemporaryDirectory() as tmp:
+            script_path = Path(tmp) / "check.js"
+            script_path.write_text(node_script)
+            result = subprocess.run(
+                ["node", str(script_path)], capture_output=True, text=True
+            )
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        payload = json.loads(result.stdout.strip())
+        self.assertEqual(payload["proposal"], str(self.proposal.id))
+        self.assertEqual(payload["report"], str(report.id))
+        self.assertEqual(payload["windowProposal"], str(self.proposal.id))
+        self.assertEqual(payload["windowReport"], str(report.id))
+
     def test_autosave_indicator_present(self):
         response = self.client.get(
             reverse("emt:submit_event_report", args=[self.proposal.id])
