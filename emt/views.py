@@ -1652,11 +1652,34 @@ def proposal_status_detail(request, proposal_id):
 
 @login_required
 def pending_reports(request):
-    proposals = EventProposal.objects.filter(
+    # Base: proposals approved/finalized that still need an initial report
+    base_qs = EventProposal.objects.filter(
         submitted_by=request.user,
         status__in=["approved", "finalized"],
         report_generated=False,
     ).select_related("report_assigned_to")
+
+    # Additionally include proposals with an existing EventReport that was sent back (review_stage=USER)
+    sent_back_reports = (
+        EventReport.objects.select_related("proposal", "proposal__report_assigned_to")
+        .filter(proposal__submitted_by=request.user, review_stage=EventReport.ReviewStage.USER)
+    )
+
+    # Merge unique proposals and annotate sent_back flag for template rendering
+    proposals_by_id = {p.id: p for p in base_qs}
+    for r in sent_back_reports:
+        p = r.proposal
+        if p is None:
+            continue
+        proposals_by_id[p.id] = p
+        try:
+            setattr(p, "sent_back", True)
+            # Optionally surface last feedback snippet (not displayed by default template)
+            setattr(p, "last_feedback", (r.session_feedback or r.iqac_feedback or "").strip())
+        except Exception:
+            pass
+
+    proposals = list(proposals_by_id.values())
     return render(request, "emt/pending_reports.html", {"proposals": proposals})
 
 
