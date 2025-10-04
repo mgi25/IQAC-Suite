@@ -4,6 +4,8 @@ import path from 'path';
 
 const dashboardPath = path.join(__dirname, '..', 'emt', 'static', 'emt', 'js', 'proposal_dashboard.js');
 const dashboardSource = fs.readFileSync(dashboardPath, 'utf8');
+const jqueryPath = path.join(__dirname, '..', 'node_modules', 'jquery', 'dist', 'jquery.min.js');
+const jquerySource = fs.readFileSync(jqueryPath, 'utf8');
 
 const extractFunctionSource = (startToken: string, endToken: string) => {
   const startIndex = dashboardSource.indexOf(startToken);
@@ -15,6 +17,7 @@ const extractFunctionSource = (startToken: string, endToken: string) => {
 };
 
 const applySource = extractFunctionSource('function applyTargetAudienceSelection', 'function setupAudienceModal');
+const collectSource = extractFunctionSource('function collectBasicInfo()', 'function setupWhyThisEventAI');
 const saveSource = extractFunctionSource('function saveCurrentSection()', 'function getNextSection');
 
 test('saveCurrentSection advances after autosave with long audience summary', async ({ page }) => {
@@ -32,9 +35,9 @@ test('saveCurrentSection advances after autosave with long audience summary', as
     </div>
   `);
 
-  await page.addScriptTag({ url: 'https://code.jquery.com/jquery-3.6.0.min.js' });
+  await page.addScriptTag({ content: jquerySource });
 
-  await page.evaluate(({ applySource, saveSource, longNames }) => {
+  await page.evaluate(({ applySource, collectSource, saveSource, longNames }) => {
     window.notifications = [];
     window.$ = window.jQuery;
     window.currentExpandedCard = 'basic-info';
@@ -60,6 +63,7 @@ test('saveCurrentSection advances after autosave with long audience summary', as
     window.clearTimeout = () => {};
 
     eval(`${applySource}\nwindow.applyTargetAudienceSelection = applyTargetAudienceSelection;`);
+    eval(`${collectSource}\nwindow.collectBasicInfo = collectBasicInfo;`);
     eval(`${saveSource}\nwindow.saveCurrentSection = saveCurrentSection;`);
 
     window.applyTargetAudienceSelection({
@@ -68,8 +72,10 @@ test('saveCurrentSection advances after autosave with long audience summary', as
       userSelected: []
     });
 
+    window.basicInfoSnapshot = window.collectBasicInfo();
+
     window.saveCurrentSection();
-  }, { applySource, saveSource, longNames });
+  }, { applySource, collectSource, saveSource, longNames });
 
   await page.waitForFunction(() => window.sectionCompleted === 'basic-info');
   await page.waitForFunction(() => window.openedSection === 'why-this-event');
@@ -92,11 +98,14 @@ test('saveCurrentSection advances after autosave with long audience summary', as
       notifications: window.notifications,
       audienceLog: window.lastAudienceLog,
       classIds: (document.getElementById('target-audience-class-ids') as HTMLInputElement).value,
+      basicInfoAudience: window.basicInfoSnapshot?.audience ?? null,
     };
   });
 
   expect(results.summaryLength).toBeLessThanOrEqual(200);
   expect(results.summaryValue).toContain('+');
+  expect(results.basicInfoAudience).toBe(results.summaryValue);
+  expect(results.basicInfoAudience?.length ?? 0).toBeLessThanOrEqual(200);
   expect(results.fullAudienceAttr).toBe(results.fullAudienceData);
   expect(results.modernFullAudience).toContain('Student 1');
   expect(results.manualSaveCalls).toBe(1);

@@ -2980,14 +2980,22 @@ function getWhyThisEventForm() {
     }
 
     function collectBasicInfo() {
-        const getVal = (modernSelector, djangoName) => {
+        const getVal = (modernSelector, djangoName, options = {}) => {
+            const { preferDjango = false } = options;
             const modern = $(modernSelector);
-            if (modern.length && modern.val()) return modern.val();
-            return $(`#django-basic-info [name="${djangoName}"]`).val() || '';
+            const djangoField = $(`#django-basic-info [name="${djangoName}"]`);
+            const modernVal = modern.length ? modern.val() : '';
+            const djangoVal = djangoField.length ? djangoField.val() : '';
+
+            if (preferDjango) {
+                return djangoVal || modernVal || '';
+            }
+
+            return modernVal || djangoVal || '';
         };
         return {
             title: getVal('#event-title-modern', 'event_title'),
-            audience: getVal('#target-audience-modern', 'target_audience'),
+            audience: getVal('#target-audience-modern', 'target_audience', { preferDjango: true }),
             focus: getVal('#event-focus-type-modern', 'event_focus_type'),
             venue: getVal('#venue-modern', 'venue')
         };
