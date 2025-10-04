@@ -60,6 +60,7 @@ from emt.utils import (ATTENDANCE_HEADERS,
                        parse_attendance_csv, skip_all_downstream_optionals,
                        unlock_optionals_after)
 from suite.ai_client import AIError, chat
+from transcript.models import get_active_academic_year
 
 from .forms import (NAME_PATTERN, CDLSupportForm, EventProposalForm,
                     EventReportAttachmentForm, EventReportForm,
@@ -1106,6 +1107,9 @@ def autosave_proposal(request):
             else:
                 errors["organization"] = ["Organization not found"]
 
+    active_year = get_active_academic_year()
+    selected_academic_year = active_year.year if active_year else ""
+
     proposal = None
     if pid := data.get("proposal_id"):
         proposal = EventProposal.objects.filter(
@@ -1133,7 +1137,17 @@ def autosave_proposal(request):
             )
         return JsonResponse({"success": True, "proposal_id": proposal.id})
 
-    form = EventProposalForm(data, instance=proposal, user=request.user)
+    if proposal and proposal.academic_year:
+        data["academic_year"] = proposal.academic_year
+    elif selected_academic_year:
+        data["academic_year"] = selected_academic_year
+
+    form = EventProposalForm(
+        data,
+        instance=proposal,
+        user=request.user,
+        selected_academic_year=selected_academic_year,
+    )
     faculty_ids = data.get("faculty_incharges") or []
     if faculty_ids:
         form.fields["faculty_incharges"].queryset = User.objects.filter(
