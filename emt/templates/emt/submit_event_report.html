@@ -146,14 +146,6 @@
                             </div>
                         </div>
 
-                        <div class="form-row">
-                            <div class="input-group">
-                                <label for="venue-modern">Venue *</label>
-                                <input type="text" id="venue-modern" name="venue_detail" class="proposal-input" value="{{ proposal.venue|default:'' }}">
-                                <div class="help-text">Venue from proposal (editable)</div>
-                            </div>
-                        </div>
-
                         <!-- Schedule & Academic Information Section -->
                         <div class="form-section-header">
                             <h3>Schedule & Academic Information</h3>
@@ -181,11 +173,11 @@
                             </div>
                             <div class="input-group">
                                 <label for="event-type-modern">Event Type *</label>
-                                <input type="text" id="event-type-modern" name="actual_event_type" class="proposal-input" value="{{ form.actual_event_type.value|default:proposal.event_focus_type }}" readonly>
+                                <input type="text" id="event-type-modern" name="actual_event_type" class="proposal-input" value="{{ form.actual_event_type.value|default:proposal.event_focus_type }}">
                                 {% if form.actual_event_type.errors %}
                                     <div class="field-error">{{ form.actual_event_type.errors.0 }}</div>
                                 {% endif %}
-                                <div class="help-text">Event type from proposal (not editable)</div>
+                                <div class="help-text">Event type from proposal (editable)</div>
                             </div>
                         </div>
 
@@ -476,6 +468,7 @@
             title: "{{ proposal.event_title|default:''|escapejs }}",
             target_audience: "{{ proposal.target_audience|default:''|escapejs }}",
             event_focus_type: "{{ proposal.event_focus_type|default:''|escapejs }}",
+            actual_event_type: "{{ report.actual_event_type|default:''|escapejs }}",
             student_coordinators: "{{ proposal.student_coordinators|default:''|escapejs }}",
             proposer: "{{ proposal.submitted_by.get_full_name|default:''|escapejs }}",
             faculty_incharges: {{ faculty_names_json|default:'[]'|safe }},
