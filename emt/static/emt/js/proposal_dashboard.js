@@ -207,29 +207,8 @@ $(document).ready(function() {
     }
 
     function enablePreviouslyVisitedSections() {
-        // Always enable basic-info section
-        $(`.proposal-nav .nav-link[data-section="basic-info"]`).removeClass('disabled');
-        
-        // Enable any sections that have been completed or are in progress
-        Object.keys(sectionProgress).forEach(section => {
-            if (sectionProgress[section] === true || sectionProgress[section] === 'in-progress') {
-                $(`.proposal-nav .nav-link[data-section="${section}"]`).removeClass('disabled');
-            }
-        });
-        
-        // Enable the next section ONLY if the previous section is completed.
-        // Do NOT auto-unlock based on "optional" status. Optional sections can be skipped,
-        // but navigation must remain strictly sequential: a section becomes available
-        // only when the immediate previous section was completed.
-        const sectionOrder = ['basic-info', 'why-this-event', 'schedule', 'speakers', 'expenses', 'income', 'cdl-support'];
-        for (let i = 0; i < sectionOrder.length - 1; i++) {
-            const currentSection = sectionOrder[i];
-            const nextSection = sectionOrder[i + 1];
-
-            if (sectionProgress[currentSection] === true) {
-                $(`.proposal-nav .nav-link[data-section="${nextSection}"]`).removeClass('disabled');
-            }
-        }
+        // Allow free navigation across sections regardless of completion state
+        $('.proposal-nav .nav-link').removeClass('disabled');
     }
 
     function checkForExistingErrors() {
@@ -2764,8 +2743,20 @@ function getWhyThisEventForm() {
         }
 
         // Always validate before saving
-        if (!validateCurrentSection()) {
-            showNotification('Please complete all required fields before saving.', 'error');
+        const sectionIsValid = validateCurrentSection();
+
+        if (!sectionIsValid) {
+            markSectionInProgress(currentExpandedCard);
+            showNotification('Section has pending issues. You can continue, but resolve them before final submission.', 'warning');
+
+            const nextSection = getNextSection(currentExpandedCard);
+            if (nextSection) {
+                const nextLink = $(`.proposal-nav .nav-link[data-section="${nextSection}"]`);
+                nextLink.removeClass('disabled');
+                setTimeout(() => {
+                    openFormPanel(nextSection);
+                }, 300);
+            }
             return;
         }
 
@@ -3488,10 +3479,9 @@ function getWhyThisEventForm() {
     }
     
     function initializeNavigationState() {
-        // Reset all sections to disabled state except basic-info
-        $('.proposal-nav .nav-link').addClass('disabled').removeClass('completed in-progress');
-        $('.proposal-nav .nav-link[data-section="basic-info"]').removeClass('disabled');
-        
+        // Reset navigation without enforcing sequential restrictions
+        $('.proposal-nav .nav-link').removeClass('disabled completed in-progress');
+
         // Reset section progress
         Object.keys(sectionProgress).forEach(section => {
             sectionProgress[section] = false;
