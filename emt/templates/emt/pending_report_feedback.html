@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Feedback – {{ proposal.event_title }}{% endblock %}
+{% block content %}
+<div class="feedback-page">
+  <div class="fp-header">
+    <h1 class="fp-title">Report Feedback</h1>
+    <p class="fp-sub">Event: <strong>{{ proposal.event_title|default:'(Untitled Event)' }}</strong></p>
+  </div>
+
+  {% if not report %}
+    <div class="fp-empty">No report has been created yet for this proposal.</div>
+  {% else %}
+    {% if not iqac_chunks and not latest_feedback %}
+      <div class="fp-empty">No feedback available yet.</div>
+    {% else %}
+      <div class="fp-section">
+        <h2 class="fp-h2">Consolidated Feedback</h2>
+        <div class="fp-feedback-list">
+          {% for block in iqac_chunks %}
+            <article class="fp-block">
+              <p>{{ block|linebreaksbr }}</p>
+            </article>
+          {% endfor %}
+          {% if latest_feedback %}
+            <article class="fp-block fp-latest">
+              <div class="fp-latest-label">Latest</div>
+              <p>{{ latest_feedback|linebreaksbr }}</p>
+            </article>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+  {% endif %}
+
+  <div class="fp-actions">
+    <a href="{% url 'emt:pending_reports' %}" class="fp-btn">← Back to Pending Reports</a>
+    {% if report %}
+      <a href="{% url 'emt:submit_event_report' proposal.id %}" class="fp-btn primary">Open Report Editor</a>
+    {% endif %}
+  </div>
+</div>
+<style>
+.feedback-page{max-width:880px;margin:0 auto;padding:32px 24px 48px;font-family:var(--font-sans,Inter,system-ui,sans-serif)}
+.fp-header{margin-bottom:24px}
+.fp-title{margin:0;font-size:28px;line-height:1.15;font-weight:800;color:#1e293b}
+.fp-sub{margin:6px 0 0;color:#475569;font-size:14px}
+.fp-empty{background:#f1f5f9;border:1px solid #e2e8f0;padding:18px 20px;border-radius:10px;color:#475569;font-size:14px}
+.fp-section{margin-top:8px}
+.fp-h2{margin:0 0 14px;font-size:18px;font-weight:700;color:#1e293b;letter-spacing:.3px}
+.fp-feedback-list{display:flex;flex-direction:column;gap:16px}
+.fp-block{background:#ffffff;border:1px solid #e2e8f0;padding:14px 16px;border-radius:10px;box-shadow:0 2px 4px rgba(15,23,42,.04);font-size:14px;line-height:1.45;color:#1f2937;white-space:pre-wrap;word-break:break-word}
+.fp-block p{margin:0}
+.fp-block.fp-latest{border-color:#1e60b1;box-shadow:0 2px 6px rgba(30,96,177,.15)}
+.fp-latest-label{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;background:#1e60b1;color:#fff;padding:2px 6px;border-radius:6px;margin:0 0 8px}
+.fp-actions{margin-top:32px;display:flex;gap:12px}
+.fp-btn{display:inline-flex;align-items:center;gap:6px;background:#f1f5f9;border:1px solid #e2e8f0;color:#1e293b;text-decoration:none;padding:10px 16px;border-radius:8px;font-size:14px;font-weight:600}
+.fp-btn:hover{background:#e2e8f0}
+.fp-btn.primary{background:#1e60b1;border-color:#1e60b1;color:#fff}
+.fp-btn.primary:hover{background:#184c8a}
+@media (max-width:640px){.feedback-page{padding:24px 16px}.fp-title{font-size:24px}}
+</style>
+{% endblock %}
