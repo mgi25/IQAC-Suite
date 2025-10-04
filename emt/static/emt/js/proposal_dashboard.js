@@ -28,6 +28,7 @@ $(document).ready(function() {
     };
     const optionalSections = ['speakers', 'expenses', 'income', 'cdl-support'];
     let firstErrorField = null;
+    let lastValidationIssues = [];
     let scheduleTableBody = null;
     let scheduleHiddenField = null;
     const autoFillEnabled = new URLSearchParams(window.location.search).has('autofill');
@@ -2842,6 +2843,7 @@ function getWhyThisEventForm() {
         const sectionIsValid = validateCurrentSection();
 
         if (!sectionIsValid) {
+            logValidationIssues(currentExpandedCard, lastValidationIssues);
             markSectionInProgress(currentExpandedCard);
             showNotification('Section has pending issues. You can continue, but resolve them before final submission.', 'warning');
 
@@ -3672,6 +3674,7 @@ function getWhyThisEventForm() {
     }
 
     function clearValidationErrors() {
+        lastValidationIssues = [];
         $('.has-error').removeClass('has-error');
         $('.animate-shake').removeClass('animate-shake');
         $('.error-message').remove();
@@ -3700,9 +3703,8 @@ function getWhyThisEventForm() {
                     : targetField.val(),
             } : {};
 
-            if (window.DEBUG) {
-                console.warn(message, fieldData);
-            }
+            lastValidationIssues.push({ message, field: fieldData });
+            console.warn(message, fieldData);
             if (!firstErrorField) {
                 firstErrorField = field;
             }
@@ -3720,9 +3722,40 @@ function getWhyThisEventForm() {
             td.append(err);
         }
         err.text(message);
+        const fieldData = {
+            id: field.attr('id'),
+            name: field.attr('name'),
+            value: typeof field.val === 'function' ? field.val() : undefined,
+        };
+        lastValidationIssues.push({ message, field: fieldData });
+        console.warn(message, fieldData);
         if (!firstErrorField) {
             firstErrorField = field;
         }
+    }
+
+    function logValidationIssues(sectionName, issues = []) {
+        if (!issues.length) return;
+        let sectionLabel = sectionName;
+        if (sectionName) {
+            const navLink = $(`.proposal-nav .nav-link[data-section="${sectionName}"]`).first();
+            if (navLink.length) {
+                sectionLabel = navLink.text().trim() || sectionName;
+            }
+        }
+        const groupLabel = sectionLabel
+            ? `Validation issues in ${sectionLabel}`
+            : 'Validation issues';
+        console.group(groupLabel);
+        issues.forEach((issue, index) => {
+            const prefix = `#${index + 1}: ${issue.message}`;
+            if (issue.field && Object.keys(issue.field).length) {
+                console.warn(prefix, issue.field);
+            } else {
+                console.warn(prefix);
+            }
+        });
+        console.groupEnd();
     }
 
     function handleAutosaveErrors(errorData) {
@@ -3824,6 +3857,14 @@ function getWhyThisEventForm() {
         } else {
             // Suppress generic autosave failure toast here; dedicated autosave indicator handles this.
         }
+
+        if (nonFieldMessages.length) {
+            nonFieldMessages.forEach(message => {
+                lastValidationIssues.push({ message, field: {} });
+            });
+        }
+        const sectionSlug = errorData?.section || currentExpandedCard;
+        logValidationIssues(sectionSlug, lastValidationIssues);
     }
 
     // ===== ADD ANIMATIONS CSS - PRESERVED =====
