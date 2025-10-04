@@ -51,7 +51,9 @@
                     </div>
                   </td>
                   <td class="iqac-td-status">
-                    {% if proposal.report_assigned_to %}
+                    {% if proposal.sent_back %}
+                      <span class="iqac-status-badge assigned" style="background:#fee2e2;color:#991b1b;border-color:#fecaca">Sent back with feedback</span>
+                    {% elif proposal.report_assigned_to %}
                       <span class="iqac-status-badge assigned">Assigned to {{ proposal.report_assigned_to.get_full_name }}</span>
                     {% else %}
                       <span class="iqac-status-badge">Submitted by you</span>

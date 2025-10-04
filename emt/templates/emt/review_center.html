@@ -27,6 +27,13 @@
       </div>
     </section>
   </div>
+  <!-- Toast notifications -->
+  <div id="toastHost" class="toast-host" aria-live="polite" aria-atomic="true"></div>
+  <!-- Global Loading Overlay -->
+  <div id="spinnerOverlay" class="spinner-overlay" hidden>
+    <div class="spinner"></div>
+    <div class="spinner-text">Loading…</div>
+  </div>
 </div>
 <style>
 /* Uses global theme tokens when available; falls back otherwise */
@@ -107,6 +114,7 @@
   transition:background .15s, box-shadow .15s, transform .03s, border-color .15s;
   cursor:pointer;
 }
+.list-item.selected{ outline:2px solid var(--rc-primary); background:#eef4ff; }
 .list-item + .list-item{ margin-top:10px; }
 .list-item:hover{
   background:#f6f9ff;          /* subtle hover highlight */
@@ -198,7 +206,9 @@
   border-radius:10px;
   border:1px solid var(--rc-border);
   font-size:14px;
+  caret-color:auto; color:#111;
 }
+.ultra-input:focus{ border-color:var(--rc-primary); box-shadow:0 0 0 3px rgba(30,96,177,.15); outline:none; }
 .actions{ display:flex; gap:10px; margin-top:10px; }
 
 /* Embedded preview area */
@@ -217,11 +227,36 @@ body{ -ms-overflow-style: none; scrollbar-width: none; }
 body::-webkit-scrollbar{ display: none; width: 0; height: 0; }
 .list-pane{ -ms-overflow-style: none; scrollbar-width: none; }
 .list-pane::-webkit-scrollbar{ display: none; width: 0; height: 0; }
+
+/* Loading overlay + toasts */
+.spinner-overlay{position:fixed;inset:0;background:rgba(255,255,255,.78);backdrop-filter:saturate(120%) blur(1px);display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:center;z-index:9999}
+.spinner{width:42px;height:42px;border:4px solid #cfe0ff;border-top-color:#1e60b1;border-radius:50%;animation:spin 1s linear infinite}
+.spinner-text{font-weight:700;color:#1e2a3a}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast-host{position:fixed;right:16px;bottom:16px;z-index:10000}
+.toast{background:#1e60b1;color:#fff;padding:10px 12px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.12);margin-top:8px;opacity:.98}
+.toast.success{background:#16a34a}
+.toast.error{background:#dc2626}
 </style>
 <script>
 (function(){
   const list = document.getElementById('reportList');
   const detail = document.getElementById('detailPane');
+  const spinner = document.getElementById('spinnerOverlay');
+  const toastHost = document.getElementById('toastHost');
+  let pollTimer = null;
+
+  function showSpinner(){ if(spinner) spinner.hidden = false; }
+  function hideSpinner(){ if(spinner) spinner.hidden = true; }
+  function showToast(msg, kind='info', ttl=2600){
+    if(!toastHost) return;
+    const el = document.createElement('div');
+    el.className = `toast ${kind==='success'?'success':kind==='error'?'error':''}`;
+    el.textContent = msg;
+    toastHost.appendChild(el);
+    setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .2s'; }, ttl-200);
+    setTimeout(()=>{ el.remove(); }, ttl);
+  }
 
   function renderDetail(data){
     if(!data){
@@ -259,6 +294,9 @@ body::-webkit-scrollbar{ display: none; width: 0; height: 0; }
       </div>
     `;
 
+  // Focus feedback box to show caret immediately
+  detail.querySelector('textarea.ultra-input')?.focus({preventScroll:true});
+
   // Set iframe src using a reversed base URL to avoid hardcoding prefixes
   const frame = detail.querySelector('#fullPreviewFrame');
   const base = "{% url 'emt:review_full_report' 0 %}"; // e.g. /suite/suite/review/full/0/
@@ -269,19 +307,37 @@ body::-webkit-scrollbar{ display: none; width: 0; height: 0; }
   // For standalone view keep the PDF-like effect; no embed/fit query needed
   if (openBtn) openBtn.href = basePath;
 
+  // Hide spinner when iframe completes or reports height
+  if(frame){
+    const done = ()=>hideSpinner();
+    frame.addEventListener('load', done, {once:true});
+    setTimeout(done, 4000);
+  }
+
   detail.querySelector('.action-form')?.addEventListener('submit', async (e)=>{
       e.preventDefault();
       const btn = e.submitter;
       if(!btn) return;
       const fd = new FormData(e.currentTarget);
       fd.append('action', btn.value);
+      // Disable controls while submitting
+      e.currentTarget.querySelectorAll('button, textarea, input').forEach(el => el.disabled = true);
+      showSpinner();
       const r = await fetch('{% url "emt:review_action" %}', {method:'POST', body: fd, headers:{'X-Requested-With':'fetch', 'X-CSRFToken': getCsrf()}});
       const res = await r.json();
+      hideSpinner();
       if(res.ok){
-        // After successful action, refresh page to update list/states
-        location.reload();
+        const id = String(fd.get('report_id'));
+        const li = list?.querySelector(`.list-item[data-id="${CSS.escape(id)}"]`);
+        if(li) li.remove();
+        const action = String(fd.get('action'));
+        const msg = action === 'reject' ? 'Report rejected. Feedback sent to submitter.' : (res.message || 'Report moved to next stage.');
+        detail.innerHTML = `<div class="detail-empty">${msg}</div>`;
+        showToast(msg, 'success');
       } else {
-        alert(res.error || 'Action failed');
+        showToast(res.error || 'Action failed', 'error');
+        // Re-enable controls on failure
+        e.currentTarget.querySelectorAll('button, textarea, input').forEach(el => el.disabled = false);
       }
     });
 
@@ -296,17 +352,63 @@ body::-webkit-scrollbar{ display: none; width: 0; height: 0; }
     const btn = e.target.closest('.list-item');
     if(!btn) return;
     const id = btn.dataset.id;
+    // Highlight selected list item
+    list.querySelectorAll('.list-item.selected').forEach(n => n.classList.remove('selected'));
+    btn.classList.add('selected');
     // Fetch compact JSON for detail
+    showSpinner();
     const r = await fetch(`{% url 'emt:review_center' %}?report_id=${id}`, {headers:{'X-Requested-With':'fetch'}});
     const html = await r.text();
     try{
       const data = JSON.parse(html);
       renderDetail(data);
+      // spinner hides on iframe load/postMessage
     }catch(_){
       // Fallback: if server didn't return JSON, render empty
       renderDetail(null);
+      hideSpinner();
     }
   });
+
+  // Receive height from iframe (embedded preview) to eliminate inner scrollbars
+  window.addEventListener('message', (ev) => {
+    const data = ev && ev.data;
+    if(!data || data.kind !== 'iqacPreviewSize') return;
+    const frame = detail.querySelector('#fullPreviewFrame');
+    if(frame){ frame.style.height = Math.max(320, Number(data.height) || 0) + 'px'; }
+    hideSpinner();
+  });
+
+  // Poll the list periodically for resubmissions/new items
+  async function pollList(){
+    try{
+      const r = await fetch(`{% url 'emt:review_center' %}?list=1`, {headers:{'X-Requested-With':'fetch'}});
+      if(!r.ok) return;
+      const items = await r.json();
+      const currentIds = new Set(Array.from(list.querySelectorAll('.list-item')).map(n => n.dataset.id));
+      const desiredIds = new Set(items.map(x => String(x.id)));
+      // Add new cards
+      items.forEach(item => {
+        const id = String(item.id);
+        if(!currentIds.has(id)){
+          const node = document.createElement('button');
+          node.className = 'list-item';
+          node.setAttribute('data-id', id);
+          node.innerHTML = `
+            <div class="li-title">${item.title || 'Untitled'}</div>
+            <div class="li-sub">${item.org || '—'}</div>
+            <span class="li-badge">${item.stage_display || ''}</span>`;
+          list.appendChild(node);
+          showToast('New report ready for review.', 'success', 2000);
+        }
+      });
+      // Remove stale cards
+      Array.from(list.querySelectorAll('.list-item')).forEach(node => {
+        if(!desiredIds.has(node.dataset.id)) node.remove();
+      });
+    }catch(_){ /* ignore */ }
+  }
+  pollTimer = setInterval(pollList, 15000);
 
 })();
 </script>
