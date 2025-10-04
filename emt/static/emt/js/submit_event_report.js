@@ -656,8 +656,16 @@ $(document).on('click', '#ai-sdg-implementation', function(){
   }
 
   const actualLocationField = $('#actual-location-modern');
-  if (actualLocationField.length && actualLocationField.val().trim() === '' && window.PROPOSAL_DATA && window.PROPOSAL_DATA.venue) {
-      actualLocationField.val(window.PROPOSAL_DATA.venue);
+  if (actualLocationField.length) {
+      const existingLocation = (window.PROPOSAL_DATA && window.PROPOSAL_DATA.actual_location)
+          || window.REPORT_LOCATION
+          || '';
+      if ((!actualLocationField.val() || actualLocationField.val().trim() === '') && existingLocation) {
+          actualLocationField.val(existingLocation);
+      } else if ((!actualLocationField.val() || actualLocationField.val().trim() === '')
+          && window.PROPOSAL_DATA && window.PROPOSAL_DATA.venue) {
+          actualLocationField.val(window.PROPOSAL_DATA.venue);
+      }
   }
 
   const eventTypeField = $('#event-type-modern');
