@@ -1680,7 +1680,52 @@ def pending_reports(request):
             pass
 
     proposals = list(proposals_by_id.values())
+    # Ensure every proposal has last_feedback attribute to simplify template logic
+    for p in proposals:
+        if not hasattr(p, "last_feedback"):
+            setattr(p, "last_feedback", "")
     return render(request, "emt/pending_reports.html", {"proposals": proposals})
+
+
+@login_required
+def pending_report_feedback(request, proposal_id: int):
+    """Display full feedback history for a proposal's event report to the submitter (or assigned faculty).
+
+    Shows concatenated iqac_feedback plus the latest session_feedback.
+    """
+    proposal = get_object_or_404(EventProposal, id=proposal_id)
+    # Permission: submitter or faculty incharges (or superuser/staff)
+    if not (
+        request.user == proposal.submitted_by
+        or request.user.is_superuser
+        or request.user.is_staff
+        or proposal.faculty_incharges.filter(id=request.user.id).exists()
+    ):
+        return HttpResponse(status=403)
+
+    report = EventReport.objects.filter(proposal=proposal).first()
+    iqac_feedback = (report.iqac_feedback or "") if report else ""
+    session_feedback = (report.session_feedback or "") if report else ""
+    # Build structured sections for template (split by blank lines)
+    def _split_chunks(txt: str):
+        import re
+        raw = (txt or "").strip()
+        if not raw:
+            return []
+        parts = re.split(r"\n{2,}", raw)
+        return [p.strip() for p in parts if p.strip()]
+
+    iqac_chunks = _split_chunks(iqac_feedback)
+    latest_feedback = session_feedback.strip() if session_feedback.strip() and session_feedback not in iqac_feedback else ""
+
+    context = {
+        "proposal": proposal,
+        "report": report,
+        "iqac_feedback": iqac_feedback,
+        "iqac_chunks": iqac_chunks,
+        "latest_feedback": latest_feedback,
+    }
+    return render(request, "emt/pending_report_feedback.html", context)
 
 
 @login_required

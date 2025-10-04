@@ -69,6 +69,7 @@ urlpatterns = [
         name="autosave_event_report",
     ),
     path("pending-reports/", views.pending_reports, name="pending_reports"),
+    path("pending-reports/<int:proposal_id>/feedback/", views.pending_report_feedback, name="pending_report_feedback"),
     path("report-generation/", views.report_form, name="report_form"),
     path(
         "report-generation/pdf/", views.generate_report_pdf, name="generate_report_pdf"
