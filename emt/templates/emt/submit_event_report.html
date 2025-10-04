@@ -173,7 +173,7 @@
                             </div>
                             <div class="input-group">
                                 <label for="event-type-modern">Event Type *</label>
-                                <input type="text" id="event-type-modern" name="actual_event_type" class="proposal-input" value="{{ form.actual_event_type.value|default:proposal.event_focus_type }}">
+                                <input type="text" id="event-type-modern" name="actual_event_type" class="proposal-input" value="{{ prefill_event_type }}">
                                 {% if form.actual_event_type.errors %}
                                     <div class="field-error">{{ form.actual_event_type.errors.0 }}</div>
                                 {% endif %}
@@ -189,7 +189,7 @@
                         <div class="form-row">
                             <div class="input-group">
                                 <label for="actual-location-modern">Actual Event Location</label>
-                                <input type="text" id="actual-location-modern" name="location" class="proposal-input" value="{{ form.location.value|default:proposal.venue|default:'' }}" placeholder="Enter the actual venue where event was held">
+                                <input type="text" id="actual-location-modern" name="location" class="proposal-input" value="{{ prefill_location }}" placeholder="Enter the actual venue where event was held">
                                 <div class="help-text">Specify the actual venue (if different from proposed venue)</div>
                                 {% if form.location.errors %}
                                     <div class="field-error">{{ form.location.errors.0 }}</div>
@@ -442,7 +442,8 @@
         window.PROPOSAL_ID = "{{ proposal.id|default:''|escapejs }}";
         window.REPORT_STATUS = "{{ report.status|default:'draft'|escapejs }}";
         window.CAN_AUTOSAVE = {{ can_autosave|yesno:"true,false" }};
-        window.REPORT_ACTUAL_EVENT_TYPE = "{{ form.actual_event_type.value|default:''|escapejs }}";
+        window.REPORT_ACTUAL_EVENT_TYPE = "{{ prefill_event_type|default:''|escapejs }}";
+        window.REPORT_LOCATION = "{{ prefill_location|default:''|escapejs }}";
         window.AUTOSAVE_URL = "{% url 'emt:autosave_event_report' %}";
         window.AUTOSAVE_CSRF = "{{ csrf_token }}";
     window.API_ORGANIZATIONS = "#"; // TODO: Add API URLs (not used on this page)
@@ -464,11 +465,12 @@
     window.REPORT_GA_MAPPING = "{{ report.needs_grad_attr_mapping|default:''|escapejs }}";
         window.PROPOSAL_DATA = {
             department: "{{ proposal.organization.name|default:''|escapejs }}",
-            venue: "{{ proposal.venue|default:''|escapejs }}",
+            venue: "{{ prefill_venue|default:''|escapejs }}",
             title: "{{ proposal.event_title|default:''|escapejs }}",
             target_audience: "{{ proposal.target_audience|default:''|escapejs }}",
             event_focus_type: "{{ proposal.event_focus_type|default:''|escapejs }}",
-            actual_event_type: "{{ report.actual_event_type|default:''|escapejs }}",
+            actual_event_type: "{{ prefill_event_type|default:''|escapejs }}",
+            actual_location: "{{ prefill_location|default:''|escapejs }}",
             student_coordinators: "{{ proposal.student_coordinators|default:''|escapejs }}",
             proposer: "{{ proposal.submitted_by.get_full_name|default:''|escapejs }}",
             faculty_incharges: {{ faculty_names_json|default:'[]'|safe }},

@@ -2864,6 +2864,28 @@ def submit_event_report(request, proposal_id):
         "external": external_count,
     }
 
+    def _first_non_empty(*values):
+        for value in values:
+            if isinstance(value, str) and value.strip():
+                return value
+            if value not in (None, "", [], {}):
+                return value
+        return ""
+
+    event_type_prefill = _first_non_empty(
+        form["actual_event_type"].value() if form else None,
+        getattr(report, "actual_event_type", None),
+        proposal.event_focus_type,
+    )
+
+    location_prefill = _first_non_empty(
+        form["location"].value() if form else None,
+        getattr(report, "location", None),
+        proposal.venue,
+    )
+
+    venue_prefill = _first_non_empty(proposal.venue, location_prefill)
+
     # Prepare SDG goal data for modal and proposal prefill
     sdg_goals_list = [
         {"id": goal.id, "title": goal.name} for goal in SDGGoal.objects.all()
@@ -2893,6 +2915,9 @@ def submit_event_report(request, proposal_id):
         "attendance_counts_json": json.dumps(attendance_counts),
         "faculty_names_json": json.dumps(faculty_names),
         "volunteer_names_json": json.dumps(volunteer_names),
+        "prefill_event_type": event_type_prefill,
+        "prefill_location": location_prefill,
+        "prefill_venue": venue_prefill,
     }
     context["can_autosave"] = (
         proposal.submitted_by == request.user
