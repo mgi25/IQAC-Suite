@@ -239,48 +239,30 @@ $(document).ready(function() {
     }
 
     function setupFormHandling() {
-        // Allow navigation with proper validation
+        // Allow navigation between sections without blocking on validation
         $('.proposal-nav .nav-link').on('click', function(e) {
             e.preventDefault();
-            const section = $(this).data('section');
-
             const $this = $(this);
-
-            // Prevent navigation to disabled sections
-            if ($this.hasClass('disabled')) {
-                const order = parseInt($this.data('order'));
-                if (order === 2) {
-                    showNotification('Please complete and save the Basic Info section first.', 'info');
-                } else {
-                    showNotification('Please complete the previous sections first.', 'info');
-                }
-                return;
-            }
+            const section = $this.data('section');
+            if (!section) return;
 
             const currentOrder = parseInt($(`.proposal-nav .nav-link[data-section="${currentExpandedCard}"]`).data('order')) || 0;
             const targetOrder = parseInt($this.data('order')) || 0;
-            
+
             // Always allow navigation to basic-info
             if (section === 'basic-info') {
                 activateSection(section);
                 return;
             }
-            
-            // Check if target section is enabled (not disabled)
-            if (!$this.hasClass('disabled')) {
-                // If moving forward to a new section and current section exists, validate it first
-                if (targetOrder > currentOrder && currentExpandedCard && 
-                    !sectionProgress[currentExpandedCard] && currentExpandedCard !== 'basic-info') {
-                    if (!validateCurrentSection()) {
-                        showNotification('Please complete all required fields in the current section first.', 'error');
-                        return;
-                    }
-                    // Mark current section as in-progress if not completed yet
-                    markSectionInProgress(currentExpandedCard);
-                }
 
-                activateSection(section);
+            if (targetOrder > currentOrder && currentExpandedCard &&
+                !sectionProgress[currentExpandedCard] && currentExpandedCard !== 'basic-info') {
+                // Mark current section as in-progress if not completed yet
+                markSectionInProgress(currentExpandedCard);
             }
+
+            $this.removeClass('disabled');
+            activateSection(section);
         });
         
         $(document).on('click', '.btn-save-section', function(e) {
