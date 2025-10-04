@@ -1060,11 +1060,90 @@ $(document).ready(function() {
         const names = studentNames.concat(facultyNames, userNames);
         const displayValue = names.join(', ');
 
+        const buildSummary = (items, limit = 200) => {
+            const cleanItems = items.filter(Boolean);
+            if (!cleanItems.length) {
+                return { summary: '', truncated: false, hiddenCount: 0, displayedCount: 0 };
+            }
+
+            const included = [];
+            let currentLength = 0;
+
+            for (let i = 0; i < cleanItems.length; i += 1) {
+                const name = cleanItems[i];
+                const separatorLength = included.length ? 2 : 0;
+                const additionLength = separatorLength + name.length;
+                if (currentLength + additionLength > limit) {
+                    break;
+                }
+                included.push(name);
+                currentLength += additionLength;
+            }
+
+            let displayedCount = included.length;
+            let hiddenCount = cleanItems.length - displayedCount;
+            let summary = included.join(', ');
+            let truncated = hiddenCount > 0;
+
+            if (hiddenCount > 0) {
+                let base = summary;
+                let moreText = base.length ? ` +${hiddenCount} more` : `+${hiddenCount} more`;
+
+                while (included.length && base.length + moreText.length > limit) {
+                    included.pop();
+                    displayedCount = included.length;
+                    hiddenCount = cleanItems.length - displayedCount;
+                    base = included.join(', ');
+                    moreText = base.length ? ` +${hiddenCount} more` : `+${hiddenCount} more`;
+                }
+
+                if (!included.length) {
+                    const firstName = cleanItems[0] || '';
+                    displayedCount = Math.min(cleanItems.length, firstName ? 1 : 0);
+                    hiddenCount = cleanItems.length - displayedCount;
+                    const moreSuffix = hiddenCount > 0 ? ` +${hiddenCount} more` : '';
+                    const availableForName = Math.max(0, limit - moreSuffix.length);
+                    const truncatedFirst = firstName.slice(0, availableForName);
+
+                    if (truncatedFirst) {
+                        summary = `${truncatedFirst}${moreSuffix}`;
+                        truncated = truncated || truncatedFirst.length < firstName.length || Boolean(moreSuffix);
+                    } else if (moreSuffix) {
+                        summary = moreSuffix.trim();
+                        displayedCount = 0;
+                        hiddenCount = cleanItems.length;
+                    } else {
+                        summary = '';
+                        truncated = truncated || firstName.length > limit;
+                    }
+                } else {
+                    base = included.join(', ');
+                    hiddenCount = cleanItems.length - included.length;
+                    const moreSuffix = hiddenCount > 0 ? ` +${hiddenCount} more` : '';
+                    summary = `${base}${moreSuffix}`;
+                    displayedCount = included.length;
+                }
+
+                if (summary.length > limit) {
+                    summary = summary.slice(0, limit);
+                }
+            }
+
+            hiddenCount = Math.max(cleanItems.length - displayedCount, 0);
+            truncated = truncated || summary.length < cleanItems.join(', ').length;
+
+            return { summary, truncated, hiddenCount, displayedCount };
+        };
+
+        const { summary, truncated, hiddenCount, displayedCount } = buildSummary(names);
+
         audienceField
             .val(displayValue)
             .data('selectedStudents', [...selectedStudents])
             .data('selectedFaculty', [...selectedFaculty])
             .data('selectedUsers', [...userSelected])
+            .data('fullAudience', displayValue)
+            .attr('data-full-audience', displayValue)
             .trigger('change')
             .trigger('input');
 
@@ -1081,18 +1160,35 @@ $(document).ready(function() {
                 .trigger('input');
         }
 
-        if (djangoAudienceField.length && djangoAudienceField.val() !== displayValue) {
-            djangoAudienceField.val(displayValue).trigger('change');
-        } else if (djangoAudienceField.length) {
-            djangoAudienceField.trigger('change');
+        if (djangoAudienceField.length) {
+            const previous = djangoAudienceField.val();
+            if (previous !== summary) {
+                djangoAudienceField.val(summary).trigger('change');
+            } else {
+                djangoAudienceField.trigger('change');
+            }
+            djangoAudienceField
+                .data('fullAudience', displayValue)
+                .attr('data-full-audience', displayValue);
+        }
+
+        if (truncated && typeof showNotification === 'function') {
+            const warningMessage = hiddenCount > 0
+                ? `Showing the first ${displayedCount} audience${displayedCount === 1 ? '' : 's'}. +${hiddenCount} more saved for editing.`
+                : 'Target audience list shortened for display.';
+            showNotification(warningMessage, 'warning');
         }
 
         logAudienceAction('selection-applied', {
             names,
+            summary,
             classIds,
             studentCount: selectedStudents.length,
             facultyCount: selectedFaculty.length,
-            userCount: userSelected.length
+            userCount: userSelected.length,
+            truncated,
+            hiddenCount,
+            displayedCount
         });
     }
 
