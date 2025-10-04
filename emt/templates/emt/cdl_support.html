@@ -210,6 +210,25 @@
     window.PROPOSAL_ID = "{{ proposal.id|default:'' }}";
     window.AUTOSAVE_URL = "{% url 'emt:autosave_proposal' %}";
     window.AUTOSAVE_CSRF = "{{ csrf_token }}";
+    // Ensure the CSRF hidden input is updated from cookie just before submit
+    (function(){
+      function getCookieCSRF(){
+        try{
+          const name = 'csrftoken=';
+          const part = document.cookie.split('; ').find(p=>p.startsWith(name));
+          if(part) return decodeURIComponent(part.slice(name.length));
+        }catch(e){}
+        return null;
+      }
+      const form = document.getElementById('cdl-form');
+      if(form){
+        form.addEventListener('submit', function(){
+          const inp = form.querySelector('input[name="csrfmiddlewaretoken"]');
+          const c = getCookieCSRF();
+          if(inp && c){ inp.value = c; }
+        });
+      }
+    })();
 
     // CDL Auto-fill test data
     const CDL_AUTO_FILL_DATA = {

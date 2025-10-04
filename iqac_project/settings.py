@@ -125,6 +125,10 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+# Allow embedding pages within iframes on the same origin (needed for Review Center)
+# Default is 'DENY' which blocks our internal preview iframe.
+X_FRAME_OPTIONS = "SAMEORIGIN"
+
 # ──────────────────────────────────────────────────────────────────────────────
 # URLS / TEMPLATES / WSGI
 # ──────────────────────────────────────────────────────────────────────────────
@@ -317,3 +321,22 @@ else:
     # fallback for local/dev or if you want to be permissive temporarily
     # ALLOWED_HOSTS.append("iqac-suite.onrender.com")   # <-- you can hardcode your URL too
     pass
+
+# ──────────────────────────────────────────────────────────────────────────────
+# EMAIL (SMTP) CONFIGURATION
+# ──────────────────────────────────────────────────────────────────────────────
+# Use env to enable/disable notifications globally
+EMAIL_NOTIFICATIONS_ENABLED = _env("EMAIL_NOTIFICATIONS_ENABLED", default="true").lower() == "true"
+
+# Backend and SMTP server settings
+EMAIL_BACKEND = _env("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = _env("EMAIL_HOST", default="smtp.gmail.com")
+EMAIL_PORT = int(_env("EMAIL_PORT", default="587"))
+EMAIL_USE_TLS = _env("EMAIL_USE_TLS", default="true").lower() == "true"
+EMAIL_USE_SSL = _env("EMAIL_USE_SSL", default="false").lower() == "true"
+EMAIL_HOST_USER = _env("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = _env("EMAIL_HOST_PASSWORD", default="")
+DEFAULT_FROM_EMAIL = _env("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER or "noreply@iqac.local")
+
+# Optional addresses for module notifications
+CDL_NOTIF_EMAIL = _env("CDL_NOTIF_EMAIL", default="")

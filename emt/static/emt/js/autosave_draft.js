@@ -9,6 +9,24 @@ window.AutosaveManager = (function() {
     let saveSeq = 0;
     let lastHandledSeq = 0;
 
+    // Always read the freshest CSRF value to avoid mismatches when the token
+    // rotates after a login or in another tab. Prefer cookie, then <meta>,
+    // then any hidden input on the page, finally fall back to window.AUTOSAVE_CSRF.
+    function getCSRFToken() {
+        try {
+            const name = 'csrftoken=';
+            const parts = document.cookie.split('; ').filter(p => p.startsWith(name));
+            if (parts.length) {
+                return decodeURIComponent(parts[0].slice(name.length));
+            }
+        } catch { /* ignore */ }
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        if (meta && meta.content) return meta.content;
+        const input = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (input && input.value) return input.value;
+        return window.AUTOSAVE_CSRF || '';
+    }
+
     // Unique key for this page's local storage scoped per-user
     const pageKey = `proposal_draft_${window.USER_ID}_${window.location.pathname}_new`;
     const legacyPageKey = `proposal_draft_${window.location.pathname}_new`;
@@ -181,7 +199,7 @@ window.AutosaveManager = (function() {
 
     document.dispatchEvent(new Event('autosave:start'));
 
-        const headers = { 'X-CSRFToken': window.AUTOSAVE_CSRF };
+        const headers = { 'X-CSRFToken': getCSRFToken() };
         const options = {
             method: 'POST',
             headers,
@@ -353,7 +371,12 @@ window.AutosaveManager = (function() {
 
     const formEl = document.querySelector('form');
     if (formEl) {
-        formEl.addEventListener('submit', clearLocal);
+        formEl.addEventListener('submit', () => {
+            // Sync hidden input with freshest cookie token just before submit
+            const csrfInput = formEl.querySelector('input[name="csrfmiddlewaretoken"]');
+            if (csrfInput) csrfInput.value = getCSRFToken();
+            clearLocal();
+        });
     }
 
     // Expose helpers globally for legacy code
@@ -395,7 +418,7 @@ async function autosave() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': window.AUTOSAVE_CSRF,
+                'X-CSRFToken': (typeof getCSRFToken === 'function' ? getCSRFToken() : (window.AUTOSAVE_CSRF || '')),
             },
             credentials: 'same-origin',
             body: JSON.stringify(payload),

@@ -1,0 +1,415 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Review{% endblock %}
+{% block content %}
+<div class="page-container">
+  <h1 class="page-title">Review Center</h1>
+  <p class="page-subtitle">Stage: {{ stage_label|default:stage|title }}</p>
+
+  <div class="master-detail">
+    <aside class="list-pane" id="reportList">
+      {% if reports %}
+        {% for r in reports %}
+        <button class="list-item" data-id="{{ r.id }}">
+          <div class="li-title">{{ r.proposal.event_title|default:'Untitled' }}</div>
+          <div class="li-sub">{{ r.proposal.organization.name|default:'—' }} · {{ r.proposal.event_start_date }}{% if r.proposal.event_end_date %} — {{ r.proposal.event_end_date }}{% endif %}</div>
+          <span class="li-badge">{{ r.get_review_stage_display }}</span>
+        </button>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">No reports found for your stage.</div>
+      {% endif %}
+    </aside>
+
+    <section class="detail-pane" id="detailPane">
+      <div class="detail-empty">
+        Select a report from the list to review.
+      </div>
+    </section>
+  </div>
+  <!-- Toast notifications -->
+  <div id="toastHost" class="toast-host" aria-live="polite" aria-atomic="true"></div>
+  <!-- Global Loading Overlay -->
+  <div id="spinnerOverlay" class="spinner-overlay" hidden>
+    <div class="spinner"></div>
+    <div class="spinner-text">Loading…</div>
+  </div>
+</div>
+<style>
+/* Uses global theme tokens when available; falls back otherwise */
+:root{
+  --rc-ink: var(--ink, #0f172a);
+  --rc-muted: var(--muted, #667085);
+  --rc-border: var(--border, #e5e7eb);
+  --rc-card: var(--card, #ffffff);
+  --rc-primary: var(--primary, #1e60b1);
+  --rc-primary-700: var(--primary-700, #184c8a);
+  --rc-shadow: 0 6px 18px rgba(16,24,40,.06);
+}
+
+/* 1) Full-width content area */
+.page-container{
+  width:100%;
+  max-width:100%;
+  padding:20px 24px 16px;
+  margin:0;
+  font-family: var(--font-sans, Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", sans-serif);
+  box-sizing:border-box;
+}
+
+/* 2) Centered header styling */
+.page-title{
+  text-align:center;
+  font-size:24px;           /* page title size */
+  line-height:1.2;
+  margin:0;
+  color:var(--rc-ink);
+  font-weight:800;
+  letter-spacing:.2px;
+}
+.page-subtitle{
+  text-align:center;
+  color:var(--rc-muted);
+  margin:6px 0 20px;        /* spacing below title */
+  font-size:14px;           /* subtitle size */
+}
+
+/* 3) Two‑column layout (left: list, right: preview) */
+.master-detail{
+  display:grid;
+  grid-template-columns: clamp(320px, 28vw, 460px) 1fr; /* left slightly wider, right expands */
+  gap:24px;
+  align-items:start;
+}
+
+/* 6) Responsive behavior */
+@media (max-width:1200px){
+  .master-detail{ grid-template-columns: clamp(300px, 32vw, 420px) 1fr; }
+}
+@media (max-width:980px){
+  .master-detail{ grid-template-columns: 1fr; }
+}
+
+/* Left: Event list */
+.list-pane{
+  background:var(--rc-card);
+  border-radius:14px;
+  border:1px solid var(--rc-border);
+  box-shadow:var(--rc-shadow);
+  padding:12px;
+  height:calc(100vh - 240px);  /* scrollable list */
+  overflow:auto;
+}
+.list-item{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  text-align:left;
+  width:100%;
+  padding:14px 16px;           /* consistent padding */
+  border-radius:12px;
+  border:1px solid #e8edf7;    /* clean border */
+  background:#ffffff;          /* cleaner cards */
+  position:relative;
+  transition:background .15s, box-shadow .15s, transform .03s, border-color .15s;
+  cursor:pointer;
+}
+.list-item.selected{ outline:2px solid var(--rc-primary); background:#eef4ff; }
+.list-item + .list-item{ margin-top:10px; }
+.list-item:hover{
+  background:#f6f9ff;          /* subtle hover highlight */
+  border-color:#d9e3f8;
+  box-shadow:0 2px 8px rgba(16,24,40,.06);
+}
+.li-title{
+  font-weight:700;
+  font-size:16px;              /* slightly larger */
+  color:#111827;
+}
+.li-sub{
+  font-size:13px;
+  color:var(--rc-muted);
+  margin-top:0;
+}
+.li-badge{
+  position:absolute;
+  right:12px;
+  top:12px;
+  background:var(--rc-primary);
+  color:#fff;
+  border-radius:999px;
+  padding:2px 10px;
+  font-size:11px;
+  font-weight:700;
+}
+
+/* Right: Event details / preview */
+.detail-pane{
+  background:var(--rc-card);
+  border-radius:14px;
+  border:1px solid var(--rc-border);
+  box-shadow:var(--rc-shadow);
+  padding:18px 18px 16px;
+  min-height:calc(100vh - 240px);
+  box-sizing:border-box;
+}
+.detail-empty{ color:var(--rc-muted); font-size:14px; }
+
+.card-title{ font-size:20px; font-weight:800; color:var(--rc-ink); }
+.card-subtitle{ font-size:13px; color:var(--rc-muted); }
+
+/* Improved detail header alignment */
+.detail-header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:10px;
+}
+.header-left{ min-width:0; }
+.card-title-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.header-actions{ display:flex; align-items:center; gap:10px; }
+.detail-header .li-badge{ position:static; padding:3px 10px; }
+
+/* “Open full preview” aligned neatly under title */
+.preview-toolbar{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:0 0 12px; /* merged button into header-actions above */
+}
+
+/* Buttons consistent with base theme */
+.btn{
+  padding:10px 14px;
+  border-radius:10px;
+  border:1px solid transparent;
+  cursor:pointer;
+  font-weight:600;
+  font-size:14px;
+}
+.btn-primary{ background:var(--rc-primary); color:#fff; }
+.btn-primary:hover{ background:var(--rc-primary-700); }
+.btn-success{ background:#16a34a; color:#fff; }
+.btn-success:hover{ background:#15803d; }
+.btn-danger{ background:#dc2626; color:#fff; }
+.btn-danger:hover{ background:#b91c1c; }
+
+/* Inputs */
+.ultra-input{
+  width:100%;
+  padding:12px;
+  border-radius:10px;
+  border:1px solid var(--rc-border);
+  font-size:14px;
+  caret-color:auto; color:#111;
+}
+.ultra-input:focus{ border-color:var(--rc-primary); box-shadow:0 0 0 3px rgba(30,96,177,.15); outline:none; }
+.actions{ display:flex; gap:10px; margin-top:10px; }
+
+/* Embedded preview area */
+#fullPreviewFrame{ background:#fff; }
+
+/* Stack behavior tweaks */
+@media (max-width:980px){
+  .page-container{ padding:16px; }
+  .list-pane{ height:auto; max-height:50vh; }
+  .detail-pane{ min-height:auto; }
+}
+
+/* Hide scrollbars (keep scrolling functional) */
+html, body { overscroll-behavior: contain; }
+body{ -ms-overflow-style: none; scrollbar-width: none; }
+body::-webkit-scrollbar{ display: none; width: 0; height: 0; }
+.list-pane{ -ms-overflow-style: none; scrollbar-width: none; }
+.list-pane::-webkit-scrollbar{ display: none; width: 0; height: 0; }
+
+/* Loading overlay + toasts */
+.spinner-overlay{position:fixed;inset:0;background:rgba(255,255,255,.78);backdrop-filter:saturate(120%) blur(1px);display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:center;z-index:9999}
+.spinner{width:42px;height:42px;border:4px solid #cfe0ff;border-top-color:#1e60b1;border-radius:50%;animation:spin 1s linear infinite}
+.spinner-text{font-weight:700;color:#1e2a3a}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast-host{position:fixed;right:16px;bottom:16px;z-index:10000}
+.toast{background:#1e60b1;color:#fff;padding:10px 12px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.12);margin-top:8px;opacity:.98}
+.toast.success{background:#16a34a}
+.toast.error{background:#dc2626}
+</style>
+<script>
+(function(){
+  const list = document.getElementById('reportList');
+  const detail = document.getElementById('detailPane');
+  const spinner = document.getElementById('spinnerOverlay');
+  const toastHost = document.getElementById('toastHost');
+  let pollTimer = null;
+
+  function showSpinner(){ if(spinner) spinner.hidden = false; }
+  function hideSpinner(){ if(spinner) spinner.hidden = true; }
+  function showToast(msg, kind='info', ttl=2600){
+    if(!toastHost) return;
+    const el = document.createElement('div');
+    el.className = `toast ${kind==='success'?'success':kind==='error'?'error':''}`;
+    el.textContent = msg;
+    toastHost.appendChild(el);
+    setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .2s'; }, ttl-200);
+    setTimeout(()=>{ el.remove(); }, ttl);
+  }
+
+  function renderDetail(data){
+    if(!data){
+      detail.innerHTML = '<div class="detail-empty">Select a report from the list to review.</div>';
+      return;
+    }
+    const canDecide = data.can_decide; // server already accounts for superuser/staff
+    detail.innerHTML = `
+      <div class="detail-header">
+        <div class="header-left">
+          <div class="card-title-row">
+            <div class="card-title">${data.title ?? 'Untitled'}</div>
+            <span class="li-badge">${data.stage_display}</span>
+          </div>
+          <div class="card-subtitle">${data.org ?? '—'} · by ${data.submitted_by ?? '—'}</div>
+        </div>
+        <div class="header-actions">
+          <a class="btn btn-primary" id="openInNewTab" target="_blank" rel="noopener">Open full preview</a>
+        </div>
+      </div>
+      <div style="margin:0 0 12px; height:78vh; border:0; border-radius:0; overflow:hidden; box-shadow:none">
+        <iframe id="fullPreviewFrame" src="" style="width:100%; height:100%; border:0; background:#fff"></iframe>
+      </div>
+      <div class="card-section">
+        <h3 class="section-title">Review Decision</h3>
+        <form class="action-form">
+          <input type="hidden" name="report_id" value="${data.id}" />
+          <textarea name="feedback" rows="3" class="ultra-input" placeholder="Provide clear feedback (required)" required></textarea>
+          <div class="actions">
+            <button type="submit" name="action" value="approve" class="btn btn-success" ${canDecide ? '' : 'disabled title="Not allowed at this stage" style="opacity:.55;cursor:not-allowed"'}>Approve</button>
+            <button type="submit" name="action" value="reject" class="btn btn-danger" ${canDecide ? '' : 'disabled title="Not allowed at this stage" style="opacity:.55;cursor:not-allowed"'}>Reject</button>
+            ${canDecide ? '' : '<div class="note">(Read-only stage)</div>'}
+          </div>
+        </form>
+      </div>
+    `;
+
+  // Focus feedback box to show caret immediately
+  detail.querySelector('textarea.ultra-input')?.focus({preventScroll:true});
+
+  // Set iframe src using a reversed base URL to avoid hardcoding prefixes
+  const frame = detail.querySelector('#fullPreviewFrame');
+  const base = "{% url 'emt:review_full_report' 0 %}"; // e.g. /suite/suite/review/full/0/
+  const basePath = base.replace(/0\/?$/, `${data.id}/`);
+  const iframeUrl = `${basePath}?embed=1&fit=width`;
+  if (frame) frame.src = iframeUrl;
+  const openBtn = detail.querySelector('#openInNewTab');
+  // For standalone view keep the PDF-like effect; no embed/fit query needed
+  if (openBtn) openBtn.href = basePath;
+
+  // Hide spinner when iframe completes or reports height
+  if(frame){
+    const done = ()=>hideSpinner();
+    frame.addEventListener('load', done, {once:true});
+    setTimeout(done, 4000);
+  }
+
+  detail.querySelector('.action-form')?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const btn = e.submitter;
+      if(!btn) return;
+      const fd = new FormData(e.currentTarget);
+      fd.append('action', btn.value);
+      // Disable controls while submitting
+      e.currentTarget.querySelectorAll('button, textarea, input').forEach(el => el.disabled = true);
+      showSpinner();
+      const r = await fetch('{% url "emt:review_action" %}', {method:'POST', body: fd, headers:{'X-Requested-With':'fetch', 'X-CSRFToken': getCsrf()}});
+      const res = await r.json();
+      hideSpinner();
+      if(res.ok){
+        const id = String(fd.get('report_id'));
+        const li = list?.querySelector(`.list-item[data-id="${CSS.escape(id)}"]`);
+        if(li) li.remove();
+        const action = String(fd.get('action'));
+        const msg = action === 'reject' ? 'Report rejected. Feedback sent to submitter.' : (res.message || 'Report moved to next stage.');
+        detail.innerHTML = `<div class="detail-empty">${msg}</div>`;
+        showToast(msg, 'success');
+      } else {
+        showToast(res.error || 'Action failed', 'error');
+        // Re-enable controls on failure
+        e.currentTarget.querySelectorAll('button, textarea, input').forEach(el => el.disabled = false);
+      }
+    });
+
+  }
+
+  function getCsrf(){
+    const m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? m[1] : '';
+  }
+
+  list?.addEventListener('click', async (e)=>{
+    const btn = e.target.closest('.list-item');
+    if(!btn) return;
+    const id = btn.dataset.id;
+    // Highlight selected list item
+    list.querySelectorAll('.list-item.selected').forEach(n => n.classList.remove('selected'));
+    btn.classList.add('selected');
+    // Fetch compact JSON for detail
+    showSpinner();
+    const r = await fetch(`{% url 'emt:review_center' %}?report_id=${id}`, {headers:{'X-Requested-With':'fetch'}});
+    const html = await r.text();
+    try{
+      const data = JSON.parse(html);
+      renderDetail(data);
+      // spinner hides on iframe load/postMessage
+    }catch(_){
+      // Fallback: if server didn't return JSON, render empty
+      renderDetail(null);
+      hideSpinner();
+    }
+  });
+
+  // Receive height from iframe (embedded preview) to eliminate inner scrollbars
+  window.addEventListener('message', (ev) => {
+    const data = ev && ev.data;
+    if(!data || data.kind !== 'iqacPreviewSize') return;
+    const frame = detail.querySelector('#fullPreviewFrame');
+    if(frame){ frame.style.height = Math.max(320, Number(data.height) || 0) + 'px'; }
+    hideSpinner();
+  });
+
+  // Poll the list periodically for resubmissions/new items
+  async function pollList(){
+    try{
+      const r = await fetch(`{% url 'emt:review_center' %}?list=1`, {headers:{'X-Requested-With':'fetch'}});
+      if(!r.ok) return;
+      const items = await r.json();
+      const currentIds = new Set(Array.from(list.querySelectorAll('.list-item')).map(n => n.dataset.id));
+      const desiredIds = new Set(items.map(x => String(x.id)));
+      // Add new cards
+      items.forEach(item => {
+        const id = String(item.id);
+        if(!currentIds.has(id)){
+          const node = document.createElement('button');
+          node.className = 'list-item';
+          node.setAttribute('data-id', id);
+          node.innerHTML = `
+            <div class="li-title">${item.title || 'Untitled'}</div>
+            <div class="li-sub">${item.org || '—'}</div>
+            <span class="li-badge">${item.stage_display || ''}</span>`;
+          list.appendChild(node);
+          showToast('New report ready for review.', 'success', 2000);
+        }
+      });
+      // Remove stale cards
+      Array.from(list.querySelectorAll('.list-item')).forEach(node => {
+        if(!desiredIds.has(node.dataset.id)) node.remove();
+      });
+    }catch(_){ /* ignore */ }
+  }
+  pollTimer = setInterval(pollList, 15000);
+
+})();
+</script>
+{% endblock %}

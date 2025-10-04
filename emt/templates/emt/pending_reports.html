@@ -29,6 +29,7 @@
                 <th class="iqac-th-icon"></th>
                 <th class="iqac-th-title">Event Title</th>
                 <th class="iqac-th-status">Status</th>
+                <th class="iqac-th-status">Feedback</th>
                 <th class="iqac-th-actions">Actions</th>
               </tr>
             </thead>
@@ -51,10 +52,19 @@
                     </div>
                   </td>
                   <td class="iqac-td-status">
-                    {% if proposal.report_assigned_to %}
+                    {% if proposal.sent_back %}
+                      <span class="iqac-status-badge assigned" style="background:#fee2e2;color:#991b1b;border-color:#fecaca">Sent back with feedback</span>
+                    {% elif proposal.report_assigned_to %}
                       <span class="iqac-status-badge assigned">Assigned to {{ proposal.report_assigned_to.get_full_name }}</span>
                     {% else %}
                       <span class="iqac-status-badge">Submitted by you</span>
+                    {% endif %}
+                  </td>
+                  <td class="iqac-td-status">
+                    {% if proposal.sent_back %}
+                      <a href="{% url 'emt:pending_report_feedback' proposal.id %}" class="iqac-view-feedback-btn">View Feedback</a>
+                    {% else %}
+                      <span class="iqac-feedback-empty">—</span>
                     {% endif %}
                   </td>
                   <td class="iqac-td-actions">
@@ -125,4 +135,9 @@
 </div>
 
 <script src="{% static 'emt/js/pending_reports_assignment.js' %}"></script>
+<style>
+.iqac-feedback-empty{color:#9ca3af;font-size:12px}
+.iqac-view-feedback-btn{display:inline-flex;align-items:center;gap:4px;background:#f1f5f9;border:1px solid #dce3ea;padding:6px 10px;border-radius:6px;font-size:12px;font-weight:600;color:#1e3a5f;text-decoration:none;line-height:1}
+.iqac-view-feedback-btn:hover{background:#e2e8f0;border-color:#c8d2dc}
+</style>
 {% endblock %}

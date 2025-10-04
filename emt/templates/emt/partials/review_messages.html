@@ -1,0 +1,8 @@
+{% for m in report.messages.all %}
+  <div class="thread-item">
+    <div class="thread-meta">{{ m.sender.get_full_name|default:m.sender.username }} • {{ m.created_at|date:'d M Y, H:i' }}</div>
+    <div class="thread-text">{{ m.message|linebreaksbr }}</div>
+  </div>
+{% empty %}
+  <div class="thread-item"><div class="thread-text">No messages yet.</div></div>
+{% endfor %}

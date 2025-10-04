@@ -640,6 +640,16 @@ class EventReport(models.Model):
     contemporary_requirements = models.TextField(blank=True)
     sdg_value_systems_mapping = models.TextField(blank=True)
     iqac_feedback = models.TextField(blank=True)
+    # Session-based review feedback (latest feedback message provided during approve/reject)
+    session_feedback = models.TextField(blank=True, help_text="Latest review feedback for current session")
+    class ReviewStage(models.TextChoices):
+        USER = "user", "With Submitter"
+        DIQAC = "diqac", "D-IQAC Coordinator"
+        HOD = "hod", "Head of Department"
+        UIQAC = "uiqac", "University IQAC Coordinator"
+        FINALIZED = "finalized", "Finalized"
+    # Current review stage for the report
+    review_stage = models.CharField(max_length=20, choices=ReviewStage.choices, default=ReviewStage.USER)
     report_signed_date = models.DateField(default=timezone.now)
     beneficiaries_details = models.TextField(blank=True)
     # Optional notes about attendance to avoid integrity errors if left empty
@@ -666,6 +676,21 @@ class EventReport(models.Model):
 
     def __str__(self):
         return f"Report for {self.proposal.event_title}"
+
+
+class EventReportMessage(models.Model):
+    """Threaded communication for an EventReport across roles."""
+
+    report = models.ForeignKey(EventReport, on_delete=models.CASCADE, related_name="messages")
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"Msg:{self.report_id} by {self.sender_id} @ {self.created_at:%Y-%m-%d %H:%M}"
 
 
 class EventReportAttachment(models.Model):

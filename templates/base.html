@@ -186,6 +186,12 @@
           </a>
           {% endif %}
 
+          {% if unrestricted_nav or is_reviewer %}
+          <a href="{% url 'emt:review_center' %}" class="nav-sublink {% if request.resolver_match.url_name == 'review_center' %}active{% endif %}">
+            <i class="fas fa-check-double"></i> Review
+          </a>
+          {% endif %}
+
           {% if unrestricted_nav or 'my_approvals' in allowed_nav_items or 'events:my_approvals' in allowed_nav_items %}
           <a href="{% url 'emt:my_approvals' %}" class="nav-sublink {% if request.resolver_match.url_name == 'my_approvals' %}active{% endif %}">
             <i class="fas fa-check-circle"></i> Event Approvals

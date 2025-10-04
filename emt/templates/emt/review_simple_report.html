@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+  /* PDF-like full preview: black background + centered white paper */
+  body.command-center-layout.review-mode.preview-mode{
+    background:#111827 !important; /* softer near-black */
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:flex-start;
+    padding:40px 0;
+    overflow-y:auto;
+  }
+  .report-container{ background:#fff; box-shadow:0 0 20px rgba(0,0,0,0.7); margin:auto; }
+  /* Embedded scaling (fit=width|height) similar to IQAC preview */
+  .embed-fit .simple-wrapper{ padding:0 !important; }
+  .embed-fit body.command-center-layout.review-mode { background: transparent !important; }
+  body.embed-fit.command-center-layout { overflow:hidden !important; height:100vh !important; }
+  body.embed-fit.command-center-layout.fit-width { overflow:auto !important; }
+  body.embed-fit.fit-width .simple-wrapper { width:100% !important; }
+  body.embed-fit.fit-width .paper { width:100% !important; margin:0 !important; border-left:0; border-right:0; }
+  /* Hide global chrome in review mode */
+  .review-mode .top-utility-bar,
+  .review-mode .left-control-panel { display: none !important; }
+  .review-mode .command-center-layout { padding: 0 !important; }
+
+  @page { size: A4; margin: 18mm; }
+
+  body.command-center-layout.review-mode,
+  body.command-center-layout.iqac-simple.review-mode { background: #fff; }
+
+  .simple-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+  }
+
+  .paper {
+    width: 210mm;
+    min-height: 297mm;
+    background: #fff;
+    border: 1px solid #c8d3e1; /* page border */
+    padding: 18mm; /* matches @page margin visually */
+    box-sizing: border-box;
+  }
+
+  .paper + .paper { margin-top: 12px; }
+
+  .doc-title { margin: 0 0 10px; font-size: 20pt; font-weight: 700; }
+  .meta { margin: 0 0 12px; padding: 0; list-style: none; }
+  .meta li { margin: 2px 0; }
+  .section { margin: 10mm 0 0; }
+  .section h2 { margin: 0 0 6px; font-size: 13pt; font-weight: 700; }
+  .section p { margin: 0 0 10px; text-align: justify; line-height: 1.45; }
+  .section ul { margin: 0 0 8px 18px; }
+
+  /* Screen pagination helpers */
+  .page-content { min-height: 261mm; /* 297 - top+bottom paddings (approx) */ }
+
+  @media print {
+    .simple-wrapper { padding: 0; }
+    .paper { border: none; margin: 0; box-shadow: none; page-break-after: always; }
+    .paper:last-child { page-break-after: auto; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="simple-wrapper report-container">
+  <article class="paper">
+    <div class="page-content" id="page-1">
+      <header>
+        <h1 class="doc-title">Event Report</h1>
+        <ul class="meta">
+          <li><strong>Title:</strong> <span data-field="event.title">—</span></li>
+          <li><strong>Department:</strong> <span data-field="event.department">—</span></li>
+          <li><strong>Date:</strong> <span data-field="event.date">—</span></li>
+          <li><strong>Venue:</strong> <span data-field="event.venue">—</span></li>
+          <li><strong>Generated on:</strong> {% if generated_on %}{{ generated_on|date:"Y-m-d" }}{% else %}{% now "Y-m-d" %}{% endif %}</li>
+        </ul>
+      </header>
+
+      <section class="section" data-block>
+        <h2>Summary:</h2>
+        <p data-field="narrative.summary_overall_event">—</p>
+      </section>
+
+      <section class="section" data-block>
+        <h2>Social Relevance</h2>
+        <ul data-list="narrative.social_relevance"><li>—</li></ul>
+      </section>
+
+      <section class="section" data-block>
+        <h2>Outcomes</h2>
+        <ul data-list="narrative.outcomes"><li>—</li></ul>
+      </section>
+
+      <section class="section" data-block>
+        <h2>Analysis</h2>
+        <p data-field="analysis.impact_attendees">—</p>
+        <p data-field="analysis.impact_schools">—</p>
+        <p data-field="analysis.impact_volunteers">—</p>
+      </section>
+
+    </div>
+  </article>
+</div>
+
+<script type="application/json" id="initial-report-data">{{ initial_report_data|default:"{}"|safe }}</script>
+<script>
+(function(){
+  function get(obj, path){
+    if(!obj || !path) return undefined;
+    return path.split('.').reduce((acc,k)=>acc && acc[k], obj);
+  }
+  function toArray(v){
+    if(!v && v!==0) return [];
+    if(Array.isArray(v)) return v.map(x=>String(x).trim()).filter(Boolean);
+    return String(v).split(/[\n;,]+/).map(s=>s.trim()).filter(Boolean);
+  }
+  function setText(sel, value){
+    document.querySelectorAll(sel).forEach(n=>{ n.textContent = (value==null || String(value).trim()==='') ? '—' : String(value); });
+  }
+  function setList(sel, values){
+    const list = toArray(values);
+    document.querySelectorAll(sel).forEach(ul=>{
+      ul.innerHTML = '';
+      if(!list.length){ const li=document.createElement('li'); li.textContent='—'; ul.appendChild(li); return; }
+      list.forEach(v=>{ const li=document.createElement('li'); li.textContent=String(v); ul.appendChild(li); });
+    });
+  }
+
+  function render(data){
+    const fields = [
+      ['[data-field="event.title"]','event.title'],
+      ['[data-field="event.department"]','event.department'],
+      ['[data-field="event.date"]','event.date'],
+      ['[data-field="event.venue"]','event.venue'],
+      ['[data-field="narrative.summary_overall_event"]','narrative.summary_overall_event'],
+      ['[data-field="analysis.impact_attendees"]','analysis.impact_attendees'],
+      ['[data-field="analysis.impact_schools"]','analysis.impact_schools'],
+      ['[data-field="analysis.impact_volunteers"]','analysis.impact_volunteers']
+    ];
+    fields.forEach(([sel,path])=> setText(sel, get(data,path)) );
+    setList('[data-list="narrative.social_relevance"]', get(data,'narrative.social_relevance'));
+    setList('[data-list="narrative.outcomes"]', get(data,'narrative.outcomes'));
+  }
+
+  // Simple A4 pagination: move section blocks into new pages when they overflow usable height
+  function paginate(){
+    const firstPage = document.getElementById('page-1');
+    if(!firstPage) return;
+    const wrapper = document.querySelector('.simple-wrapper');
+    const usable = mmToPx(297) - 2*mmToPx(18); // paper height minus vertical padding
+    let currentPaper = firstPage.closest('.paper');
+    let currentContent = firstPage;
+
+    const blocks = Array.from(document.querySelectorAll('[data-block]'));
+    let newPaper = null, newContent = null;
+
+    function ensureRoom(block){
+      const need = block.getBoundingClientRect().height;
+      const used = currentContent.getBoundingClientRect().height;
+      if(used + need <= usable - 10) return; // 10px safety
+      // create new page
+      newPaper = document.createElement('article');
+      newPaper.className = 'paper';
+      newContent = document.createElement('div');
+      newContent.className = 'page-content';
+      newPaper.appendChild(newContent);
+      wrapper.appendChild(newPaper);
+      currentPaper = newPaper;
+      currentContent = newContent;
+    }
+
+    blocks.forEach(block=>{
+      ensureRoom(block);
+      if(block.parentElement !== currentContent){
+        currentContent.appendChild(block);
+      }
+    });
+  }
+
+  function mmToPx(mm){
+    // Approximate: 96dpi, 1in = 25.4mm => px = mm * 96 / 25.4
+    return Math.round(mm * 96 / 25.4);
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    document.body.classList.add('iqac-simple');
+    const flag = document.getElementById('review-mode-flag');
+    if(flag && flag.getAttribute('data-review-mode') === 'true'){
+      document.body.classList.add('review-mode');
+    }
+    const params = new URLSearchParams(window.location.search);
+    if(!params.has('embed')){
+      document.body.classList.add('preview-mode');
+    }
+    // Embedded fit logic
+    if(params.has('embed')){
+      document.body.classList.add('embed-fit');
+      const fit = params.get('fit');
+      if (fit === 'width') document.body.classList.add('fit-width');
+      if (fit === 'height') document.body.classList.add('fit-height');
+    }
+    let data = {};
+    try { data = JSON.parse(document.getElementById('initial-report-data').textContent || '{}'); } catch(_){}
+    render(data);
+    // run after render so heights are accurate
+    setTimeout(paginate, 0);
+  });
+})();
+</script>
+<div id="review-mode-flag" data-review-mode="{{ review_mode|yesno:'true,false' }}" hidden></div>
+{% endblock %}
