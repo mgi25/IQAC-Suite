@@ -106,337 +106,7 @@
     (currentView === 'performance' ? loadPerformance() : loadContribution()).then(syncHeights);
   }));
 
-  // Calendar
-  let calRef = new Date();
-  let currentCategory = 'all';
-  let privateTasksKey = 'ems.privateTasks';
-  let eventIndexByDate = new Map();
-  // Track selected date (YYYY-MM-DD) for persistent highlight
-  let selectedDateStr = null;
-  let DASHBOARD_EVENTS = [];
-
-  function fmt2(n) { return n.toString().padStart(2, "0"); }
-function isSame(d1, d2) {
-  return d1.getFullYear() === d2.getFullYear() &&
-         d1.getMonth() === d2.getMonth() &&
-         d1.getDate() === d2.getDate();
-}
-
-  function buildCalendar() {
-  const headTitle = document.getElementById("calTitle");
-  const grid = document.getElementById("calGrid");
-  if (!grid || !headTitle) return;
-
-  headTitle.textContent = calRef.toLocaleString(undefined, { month: "long", year: "numeric" });
-
-  const first = new Date(calRef.getFullYear(), calRef.getMonth(), 1);
-  const last  = new Date(calRef.getFullYear(), calRef.getMonth() + 1, 0);
-  const startIdx = first.getDay();
-
-  const cells = [];
-  for (let i = 0; i < startIdx; i++) cells.push({ text: "", date: null });
-  for (let d = 1; d <= last.getDate(); d++) {
-    const dt = new Date(calRef.getFullYear(), calRef.getMonth(), d);
-    const iso = `${dt.getFullYear()}-${fmt2(dt.getMonth() + 1)}-${fmt2(dt.getDate())}`;
-    cells.push({ text: d, date: iso });
-  }
-
-  grid.innerHTML = cells.map(c => {
-    if (!c.date) return `<div class="day muted"></div>`;
-    const hasEvent = eventIndexByDate.has(c.date);
-    const today = isSame(new Date(c.date), new Date());
-    const classes = ["day"]; if (today) classes.push("today"); if (hasEvent) classes.push("has-event"); if (selectedDateStr === c.date) classes.push('selected');
-    return `
-      <div class="${classes.join(' ')}" data-date="${c.date}">
-        ${c.text}
-      </div>
-    `;
-  }).join("");
-
-  grid.querySelectorAll(".day[data-date]").forEach(el => {
-    const iso = el.dataset.date;
-    const [y,m,d] = iso.split('-').map(Number);
-    const dateObj = new Date(y, m - 1, d);
-    el.addEventListener("click", () => {
-      // Set selection and update highlight
-      selectedDateStr = iso;
-      grid.querySelectorAll('.day.selected').forEach(x=>x.classList.remove('selected'));
-      el.classList.add('selected');
-      // Show details panel and list below calendar
-      showEventDetails(dateObj);
-      renderDayEvents(iso);
-    });
-  });
-}
-
-function renderDayEvents(date) {
-  const wrap = document.getElementById("upcomingWrap");
-  const events = eventIndexByDate.get(date) || [];
-  if (events.length === 0) {
-    wrap.innerHTML = `<div class="empty">No events on ${date}.</div>`;
-    return;
-  }
-
-  wrap.innerHTML = events.map(ev => `
-    <article class="list-item">
-      <div class="bullet"><i class="fa-solid fa-calendar"></i></div>
-      <div class="list-body">
-        <h4><a href="/events/${ev.id}/">${ev.title}</a></h4>
-        <p class="muted">${ev.date}</p>
-      </div>
-    </article>
-  `).join("");
-}
-
-  function openDay(day){
-    const yyyy = day.getFullYear(), mm = String(day.getMonth()+1).padStart(2,'0'), dd = String(day.getDate()).padStart(2,'0');
-    const dateStr = `${yyyy}-${mm}-${dd}`;
-    const list = $('#upcomingWrap'); if (!list) return;
-    const items = (window.DASHBOARD_EVENTS||[]).filter(e => e.date === dateStr && (e.status||'').toLowerCase()==='finalized');
-    list.innerHTML = items.length
-      ? items.map(e => {
-          const viewBtn = e.view_url ? `<a class="chip-btn" href="${e.view_url}"><i class="fa-regular fa-eye"></i> View</a>` : '';
-          const addBtn = !e.past && e.gcal_url ? `<a class="chip-btn" target="_blank" rel="noopener" href="${e.gcal_url}"><i class="fa-regular fa-calendar-plus"></i> Add to Google Calendar</a>` : '';
-          return `<div class="u-item"><div>${e.title}</div><div style="display:flex;gap:8px;">${viewBtn}${addBtn}</div></div>`;
-        }).join('')
-      : `<div class="empty">No events for ${day.toLocaleDateString()}</div>`;
-  }
-
-  function onDayClick(day){
-    const yyyy = day.getFullYear(), mm = String(day.getMonth()+1).padStart(2,'0'), dd = String(day.getDate()).padStart(2,'0');
-    const dateStr = `${yyyy}-${mm}-${dd}`;
-    
-    if (currentCategory === 'private'){
-      // Show confirmation modal first
-      showPrivateCalendarConfirmation(day);
-      return;
-    }
-    
-    if (currentCategory === 'faculty'){
-      // If there are meetings on this date, show details; else open meeting form
-      const hasItems = eventIndexByDate.has(dateStr);
-      if (hasItems){
-        showEventDetails(day);
-        openDay(day);
-      } else {
-        showFacultyMeetingForm(day);
-      }
-      return;
-    }
-    
-    // Show event details and highlight in event viewer
-    showEventDetails(day);
-    openDay(day);
-  }
-
-  function showPrivateCalendarConfirmation(day) {
-    const modal = $('#confirmationModal');
-    modal.style.display = 'flex';
-    
-    $('#cancelConfirm').onclick = () => {
-      modal.style.display = 'none';
-      showEventDetails(day);
-      openDay(day);
-    };
-    
-    $('#confirmOpen').onclick = () => {
-      modal.style.display = 'none';
-      const yyyy = day.getFullYear(), mm = String(day.getMonth()+1).padStart(2,'0'), dd = String(day.getDate()).padStart(2,'0');
-      const dateStr = `${yyyy}-${mm}-${dd}`;
-      const ymd = `${yyyy}${mm}${dd}`;
-      const url = `https://www.google.com/calendar/render?action=TEMPLATE&dates=${ymd}/${ymd}&sf=true&output=xml`;
-      window.open(url, '_blank', 'noopener');
-      
-      const tasks = new Set(JSON.parse(localStorage.getItem(privateTasksKey)||'[]'));
-      tasks.add(dateStr);
-      localStorage.setItem(privateTasksKey, JSON.stringify(Array.from(tasks)));
-      buildCalendar();
-      showEventDetails(day);
-      openDay(day);
-    };
-  }
-
-  function showFacultyMeetingForm(day) {
-    const modal = $('#facultyMeetingModal');
-    const form = $('#facultyMeetingForm');
-    
-    // Set default date
-    const yyyy = day.getFullYear(), mm = String(day.getMonth()+1).padStart(2,'0'), dd = String(day.getDate()).padStart(2,'0');
-    $('#meetingDate').value = `${yyyy}-${mm}-${dd}`;
-    
-    modal.style.display = 'flex';
-    
-    // Load dynamic data
-    loadPlaces('#meetingPlace');
-    loadPeople('#meetingParticipants');
-    
-    // Handle form submission
-    form.onsubmit = async (e) => {
-      e.preventDefault();
-      await submitFacultyMeeting(form, modal);
-    };
-    
-    // Handle close events
-    $('#closeFacultyModal').onclick = () => modal.style.display = 'none';
-    $('#cancelMeeting').onclick = () => modal.style.display = 'none';
-  }
-
-  async function submitFacultyMeeting(form, modal) {
-    const formData = new FormData(form);
-    const title = $('#meetingTitle').value;
-    const date = $('#meetingDate').value;
-    const time = $('#meetingTime').value;
-    const place = $('#meetingPlace').value;
-    const notes = $('#meetingNotes').value;
-    
-    // Collect selected participant display names (keep as array)
-    const participants = Array.from($('#meetingParticipants').selectedOptions).map(opt => opt.text);
-    
-    try {
-      // Get user's organizations
-      const orgRes = await fetch('/api/event-contribution-data?org=all', {
-        headers:{'X-Requested-With':'XMLHttpRequest', 'Accept': 'application/json'},
-        credentials: 'same-origin'
-      });
-      let orgData;
-      try {
-        orgData = await orgRes.json();
-      } catch (e) {
-        const txt = await orgRes.text();
-        if (orgRes.status === 403 && /csrf|forbidden/i.test(txt)) {
-          throw new Error('CSRF or permission issue while loading organizations. Please refresh and try again.');
-        }
-        if (orgRes.redirected || /<title>Log in/i.test(txt)) {
-          throw new Error('Session expired. Please log in again.');
-        }
-        throw new Error('Failed to load organizations (non-JSON response).');
-      }
-      const orgs = orgData.organizations || [];
-      
-      let orgId = orgs[0]?.id;
-      if (orgs.length > 1) {
-        const msg = 'Choose organization:\n' + orgs.map((o,i)=>`${i+1}. ${o.name}`).join('\n');
-        const sel = parseInt(prompt(msg)||'1', 10);
-        if (!isNaN(sel) && orgs[sel-1]) orgId = orgs[sel-1].id;
-      }
-      
-      if (!orgId) throw new Error('No organization selected');
-      
-      const when = new Date(`${date}T${time}`).toISOString();
-      
-      const response = await fetch('/api/calendar/faculty/create/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-          'X-CSRFToken': getCsrfToken()
-        },
-        credentials: 'same-origin',
-        body: JSON.stringify({
-          title,
-          organization_id: orgId,
-          scheduled_at: when,
-          place,
-          // Send as array; backend will ", ".join()
-          participants: participants,
-          description: notes
-        })
-      });
-      
-      // Try to parse JSON safely; handle HTML/redirect responses
-      const ct = (response.headers.get('content-type') || '').toLowerCase();
-      if (response.ok && ct.includes('application/json')) {
-        const data = await response.json();
-        if (!data.success) throw new Error(data.error || 'Unknown error');
-        modal.style.display = 'none';
-        form.reset();
-        await loadCalendarData();
-        showSuccessMessage('Meeting scheduled successfully!');
-      } else {
-        // Non-JSON or error status
-        if (ct.includes('application/json')) {
-          const error = await response.json();
-          throw new Error(error.error || 'Failed to create meeting');
-        } else {
-          const text = await response.text();
-          if (response.status === 403 && /csrf/i.test(text)) {
-            throw new Error('CSRF validation failed. Please refresh the page and try again.');
-          }
-          if (response.redirected || /<title>Log in/i.test(text)) {
-            throw new Error('Session expired. Please log in again.');
-          }
-          throw new Error('Server returned a non-JSON response. Please try again.');
-        }
-      }
-    } catch (ex) {
-      alert(`Error: ${ex.message}`);
-    }
-  }
-
-  // Minimal CSRF cookie reader compatible with Django
-  function getCsrfToken() {
-    const name = 'csrftoken=';
-    const cookies = document.cookie ? document.cookie.split(';') : [];
-    for (let c of cookies) {
-      c = c.trim();
-      if (c.startsWith(name)) return decodeURIComponent(c.substring(name.length));
-    }
-    return '';
-  }
-
-  function showEventDetails(day) {
-    const yyyy = day.getFullYear(), mm = String(day.getMonth()+1).padStart(2,'0'), dd = String(day.getDate()).padStart(2,'0');
-    const dateStr = `${yyyy}-${mm}-${dd}`;
-    const content = $('#eventDetailsContent');
-    const clearBtn = $('#clearEventDetails');
-    
-    if (!content) return;
-    
-    const source = (Array.isArray(DASHBOARD_EVENTS) && DASHBOARD_EVENTS.length)
-      ? DASHBOARD_EVENTS
-      : (window.DASHBOARD_EVENTS || []);
-  const events = source.filter(e => e.date === dateStr && (e.status||'').toLowerCase()==='finalized');
-
-  // Removed ICS export; keep only Google Calendar
-    if (events.length > 0) {
-      content.innerHTML = events.map(e => `
-        <div class="event-detail-item">
-          <div class="row">
-            <h4>${e.title}</h4>
-            <div class="actions">
-              ${e.view_url ? `<a class="chip-btn" href="${e.view_url}"><i class="fa-regular fa-eye"></i> View Details</a>` : ''}
-              ${!e.past && e.gcal_url ? `<a class="chip-btn" target="_blank" href="${e.gcal_url}"><i class="fa-regular fa-calendar-plus"></i> Google</a>` : ''}
-            </div>
-          </div>
-          <div class="event-detail-meta">
-            <i class="fa-regular fa-clock"></i> ${e.datetime ? new Date(e.datetime).toLocaleString() : 'All day'}
-            ${e.venue ? `<br><i class="fa-solid fa-location-dot"></i> ${e.venue}` : ''}
-          </div>
-        </div>
-      `).join('');
-      clearBtn.style.display = 'inline-flex';
-    } else {
-      content.innerHTML = `<div class="empty">No events for ${day.toLocaleDateString()}</div>`;
-      clearBtn.style.display = 'none';
-    }
-  }
-
-  document.getElementById("calPrev")?.addEventListener("click", () => {
-  calRef = new Date(calRef.getFullYear(), calRef.getMonth() - 1, 1);
-  buildCalendar();
-  renderMonthEvents();
-});
-document.getElementById("calNext")?.addEventListener("click", () => {
-  calRef = new Date(calRef.getFullYear(), calRef.getMonth() + 1, 1);
-  buildCalendar();
-  renderMonthEvents();
-});
-
-// Init
-document.addEventListener("DOMContentLoaded", () => {
-  loadCalendarData();
-});
+  // Calendar: delegate to shared module (CalendarModule)
 
   // Add event scope passthrough - now opens modal instead
   $('#addEventBtn')?.addEventListener('click', (e) => {
@@ -562,12 +232,11 @@ async function loadCalendarData() {
     const j = await res.json();
     DASHBOARD_EVENTS = j.items || [];
 
-    // Index by date (finalized only for markers)
+    // Index by date using the canonical CalendarModule events (no forced 'finalized' filter)
     eventIndexByDate = new Map();
-    DASHBOARD_EVENTS.forEach(e => {
+    const canonical = (window.CalendarModule && typeof CalendarModule.getEvents === 'function') ? CalendarModule.getEvents() : DASHBOARD_EVENTS;
+    (canonical || []).forEach(e => {
       if (!e.date) return;
-      const status = (e.status||'').toLowerCase();
-      if (status !== 'finalized') return;
       const list = eventIndexByDate.get(e.date) || [];
       list.push(e);
       eventIndexByDate.set(e.date, list);
@@ -585,9 +254,12 @@ function renderMonthEvents() {
   const thisMonth = calRef.getMonth();
   const thisYear  = calRef.getFullYear();
 
-  const events = DASHBOARD_EVENTS.filter(e => {
+  // Use the CalendarModule's events to determine what's in this month (keeps behavior identical to admin)
+  const canonical = (window.CalendarModule && typeof CalendarModule.getEvents === 'function') ? CalendarModule.getEvents() : DASHBOARD_EVENTS;
+  const events = (canonical || []).filter(e => {
+    if (!e.date) return false;
     const d = new Date(e.date);
-    return d.getMonth() === thisMonth && d.getFullYear() === thisYear && (e.status||'').toLowerCase()==='finalized';
+    return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
   });
 
   if (events.length === 0) {
@@ -704,7 +376,16 @@ wrap.innerHTML = events.map(ev => `
     loadPerformance();
     loadAndShowProposals();
     // loadRecentEvents(); // intentionally not auto-prepending to keep the section focused
-    loadCalendarData();
+    // Initialize shared calendar module (same behavior as admin)
+    try{
+      if (window.CalendarModule && typeof CalendarModule.init === 'function'){
+        // Match admin behaviour: include multi-day / end-dated events
+        CalendarModule.init({ endpoint: '/api/calendar/?category=all', inlineEventsElementId: 'calendarEventsJson', showOnlyStartDate: false });
+      } else {
+        // fallback to legacy data load if CalendarModule is not available
+        loadCalendarData();
+      }
+    }catch(ex){ console.error('CalendarModule init failed', ex); loadCalendarData(); }
     renderHeatmap();
     requestAnimationFrame(()=>{ syncHeights(); });
   });
