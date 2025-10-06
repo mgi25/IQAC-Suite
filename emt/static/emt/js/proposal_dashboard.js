@@ -1138,13 +1138,16 @@ $(document).ready(function() {
 
         const { summary, truncated, hiddenCount, displayedCount } = buildSummary(names);
 
+        const visibleValue = summary || displayValue;
+
         audienceField
-            .val(displayValue)
+            .val(visibleValue)
             .data('selectedStudents', [...selectedStudents])
             .data('selectedFaculty', [...selectedFaculty])
             .data('selectedUsers', [...userSelected])
             .data('fullAudience', displayValue)
             .attr('data-full-audience', displayValue)
+            .attr('title', displayValue)
             .trigger('change')
             .trigger('input');
 
@@ -1183,6 +1186,7 @@ $(document).ready(function() {
         logAudienceAction('selection-applied', {
             names,
             summary,
+            visibleValue,
             classIds,
             studentCount: selectedStudents.length,
             facultyCount: selectedFaculty.length,
