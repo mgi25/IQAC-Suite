@@ -7,7 +7,9 @@ from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
-from .models import ActivityLog, Profile, RoleAssignment
+from .models import ActivityLog, Profile, RoleAssignment, SidebarModule
+from functools import lru_cache
+from core import navigation
 
 logger = logging.getLogger(__name__)
 
@@ -147,3 +149,24 @@ def log_user_logout(sender, request, user, **kwargs):
             ip_address=ip,
             metadata={"user_agent": ua},
         )
+
+
+# ───────────────────────────────
+# SidebarModule cache invalidation
+# ───────────────────────────────
+
+def _clear_nav_cache():  # pragma: no cover - simple utility
+    try:
+        navigation.get_nav_items.cache_clear()
+    except Exception:
+        pass
+
+
+@receiver(post_save, sender=SidebarModule)
+def sidebar_module_saved(sender, instance, **kwargs):  # pragma: no cover - simple
+    _clear_nav_cache()
+
+
+@receiver(post_delete, sender=SidebarModule)
+def sidebar_module_deleted(sender, instance, **kwargs):  # pragma: no cover - simple
+    _clear_nav_cache()
