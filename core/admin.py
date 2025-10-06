@@ -9,6 +9,7 @@ from django.views.decorators.http import require_POST
 
 from .models import (CDLCommunicationThread, CDLMessage, CDLRequest,
                      CertificateBatch, CertificateEntry, SDGGoal,
+                     SidebarModule,
                      log_impersonation_start)
 
 
@@ -61,3 +62,10 @@ admin.site.register(CDLCommunicationThread)
 admin.site.register(CDLMessage)
 admin.site.register(CertificateBatch)
 admin.site.register(CertificateEntry)
+@admin.register(SidebarModule)
+class SidebarModuleAdmin(admin.ModelAdmin):
+    list_display = ("key", "label", "parent", "order", "is_active", "updated_at")
+    list_filter = ("is_active", "parent")
+    search_fields = ("key", "label")
+    ordering = ("parent__id", "order", "key")
+    autocomplete_fields = ("parent",)

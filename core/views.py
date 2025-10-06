@@ -2490,7 +2490,7 @@ def admin_sidebar_permissions(request):
     from django.urls import reverse
     from django.contrib import messages
     from .models import OrganizationType, OrganizationRole, RoleAssignment, SidebarPermission
-    from core.navigation import NAV_ITEMS, SIDEBAR_ITEM_IDS
+    from core.navigation import get_nav_items, get_sidebar_item_ids
     import logging
     logger = logging.getLogger(__name__)
 
@@ -2514,7 +2514,13 @@ def admin_sidebar_permissions(request):
     users = users_qs
 
     # Top-level nav items (hierarchical!)
-    nav_items = NAV_ITEMS
+    # Ensure DB seed exists (idempotent)
+    try:
+        from .models import SidebarModule
+        SidebarModule.ensure_seed_data()
+    except Exception:
+        pass
+    nav_items = get_nav_items()
 
     # Utility: build assigned tree
     def build_assigned_tree(assigned_ids, items):
@@ -2581,7 +2587,7 @@ def admin_sidebar_permissions(request):
         except Exception:
             assigned_items = []
 
-        invalid_ids = [i for i in assigned_items if i not in SIDEBAR_ITEM_IDS]
+        invalid_ids = [i for i in assigned_items if i not in get_sidebar_item_ids()]
         if invalid_ids:
             messages.error(request, f"Unknown sidebar item(s): {', '.join(invalid_ids)}")
             return redirect(reverse("admin_sidebar_permissions"))
@@ -2810,7 +2816,7 @@ def api_save_sidebar_permissions(request):
     """API endpoint to save sidebar permissions"""
     from .models import SidebarPermission
     from django.http import JsonResponse
-    from core.navigation import SIDEBAR_ITEM_IDS
+    from core.navigation import get_sidebar_item_ids
     import json
 
     try:
@@ -2835,7 +2841,7 @@ def api_save_sidebar_permissions(request):
         assignments = [x for x in assignments if not (x in seen or seen.add(x))]
 
         # Validate IDs
-        invalid_ids = [i for i in assignments if i not in SIDEBAR_ITEM_IDS]
+        invalid_ids = [i for i in assignments if i not in get_sidebar_item_ids()]
         if invalid_ids:
             return JsonResponse({
                 "success": False,
@@ -2934,7 +2940,7 @@ def api_get_sidebar_permissions(request):
             if permission:
                 items = permission.items or []
                 items_set.update(items)
-                user_dash_override = any(isinstance(i, str) and i.startswith("dashboard:"))
+                user_dash_override = any(isinstance(i, str) and i.startswith("dashboard:" ) for i in items)
 
             from .models import RoleAssignment as _RoleAssignment, DashboardAssignment as _DashboardAssignment
             role_ids = list(_RoleAssignment.objects.filter(user_id=user_id).values_list("role_id", flat=True))

@@ -952,7 +952,7 @@ class SidebarPermission(models.Model):
         - Otherwise, combine role + user-specific assignments.
         - Expands children → parents (so parent is always shown if child assigned).
         """
-        from core.navigation import NAV_ITEMS
+        from core.navigation import get_nav_items
 
         # Admin users see everything
         if user.is_superuser:
@@ -1005,7 +1005,92 @@ class SidebarPermission(models.Model):
                     expanded.add(item.split(":", 1)[1])
             return expanded
 
-        return sorted(expand_with_parents(allowed, NAV_ITEMS))
+        nav_items = get_nav_items()
+        return sorted(expand_with_parents(allowed, nav_items))
+
+
+class SidebarModule(models.Model):
+    """Dynamic definition of sidebar/navigation items.
+
+    This enables admin to add/remove/relabel sidebar modules without
+    editing code. A tree is represented by parent foreign key. Only
+    *leaf* nodes are assignable in permissions (mirrors existing logic).
+
+    Fields:
+      key: unique string id (e.g. 'events:submit_proposal'). Parent keys
+           should be simple (no colon) by convention but not enforced.
+      label: human readable title.
+      parent: optional parent module.
+      order: integer ordering within siblings.
+      is_active: soft delete / visibility toggle.
+    """
+    key = models.CharField(max_length=100, unique=True)
+    label = models.CharField(max_length=120)
+    parent = models.ForeignKey('self', null=True, blank=True, related_name='children', on_delete=models.CASCADE)
+    order = models.PositiveIntegerField(default=0, db_index=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['parent__id', 'order', 'key']
+
+    def __str__(self):  # pragma: no cover - trivial
+        return self.label or self.key
+
+    @classmethod
+    def as_nav_tree(cls):
+        """Return active modules as hierarchical list like legacy NAV_ITEMS.
+
+        Output format:
+          [{id, label, children?:[...]}, ...]
+        Parents appear even if they currently have no active children (can be filtered upstream).
+        """
+        nodes = list(cls.objects.filter(is_active=True).values('id', 'key', 'label', 'parent_id', 'order'))
+        by_parent = {}
+        for n in nodes:
+            by_parent.setdefault(n['parent_id'], []).append(n)
+        for lst in by_parent.values():
+            lst.sort(key=lambda x: (x['order'], x['label']))
+
+        def build(pid):
+            out = []
+            for n in by_parent.get(pid, []):
+                children = build(n['id'])
+                item = {'id': n['key'], 'label': n['label']}
+                if children:
+                    item['children'] = children
+                out.append(item)
+            return out
+        return build(None)
+
+    @classmethod
+    def ensure_seed_data(cls):
+        """Seed DB with current static NAV_ITEMS if empty (idempotent)."""
+        from core.navigation import NAV_ITEMS as STATIC
+        if cls.objects.exists():
+            # Ensure any newly added static items are backfilled without touching existing labels/order
+            existing_keys = set(cls.objects.values_list('key', flat=True))
+            def walk(items, parent=None):
+                for idx, it in enumerate(items):
+                    key = it['id']
+                    label = it['label']
+                    if key not in existing_keys:
+                        cls.objects.create(key=key, label=label, parent=parent, order=idx)
+                        existing_keys.add(key)
+                    # Recurse
+                    for ch in it.get('children') or []:
+                        walk([ch] if isinstance(ch, dict) else ch, cls.objects.filter(key=key).first())
+            walk(STATIC)
+            return
+        def ingest(items, parent=None, order=0):
+            for idx, it in enumerate(items):
+                key = it['id']
+                label = it['label']
+                m = cls.objects.create(key=key, label=label, parent=parent, order=idx)
+                for child in it.get('children') or []:
+                    ingest([child] if isinstance(child, dict) else child, m)
+        ingest(STATIC)
 
 
 class DashboardAssignment(models.Model):
