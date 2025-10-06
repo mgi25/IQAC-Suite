@@ -91,3 +91,70 @@ class BulkUploadClassActivationTests(TestCase):
 
         cls.refresh_from_db()
         self.assertTrue(cls.is_active)
+
+
+class AdminUserEditFormsetTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser("admin", "admin@example.com", "pass")
+        self.client.force_login(self.admin)
+        # create a target user
+        self.user = User.objects.create_user("tuser", password="pw")
+
+    def test_post_all_deleted_role_forms_allowed(self):
+        # Load edit page to get management form values
+        url = reverse('admin_user_edit', args=[self.user.id])
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        # Extract TOTAL_FORMS and construct POST where any existing forms are marked DELETE
+        # For simplicity, post with zero total forms which should be acceptable
+        post = {
+            'first_name': 'T', 'last_name': 'User', 'email': 't@example.com',
+            'roles-TOTAL_FORMS': '0', 'roles-INITIAL_FORMS': '0', 'roles-MIN_NUM_FORMS': '0', 'roles-MAX_NUM_FORMS': '1000'
+        }
+        # The exact prefix may vary; try common prefixes by inspecting rendered management form
+        # Fallback: submit using the keys from the response content (search for name="-TOTAL_FORMS")
+        import re
+        m = re.search(r'name="(?P<prefix>[^\"]+-TOTAL_FORMS)" value="(?P<val>\d+)"', resp.content.decode('utf-8'))
+        if m:
+            full = m.group('prefix')
+            prefix = full[: -len('-TOTAL_FORMS')]
+            post = {'first_name': 'T', 'last_name': 'User', 'email': 't@example.com'}
+            post[f'{prefix}-TOTAL_FORMS'] = '0'
+            post[f'{prefix}-INITIAL_FORMS'] = '0'
+            post[f'{prefix}-MIN_NUM_FORMS'] = '0'
+            post[f'{prefix}-MAX_NUM_FORMS'] = '1000'
+
+        resp2 = self.client.post(url, data=post)
+        # Should redirect on success
+        self.assertIn(resp2.status_code, (302, 303))
+
+
+class NotificationsAPITests(TestCase):
+    def setUp(self):
+        from django.utils import timezone
+        from emt.models import EventProposal
+        self.admin = User.objects.create_superuser("admin2", "a2@example.com", "pw")
+        self.client.force_login(self.admin)
+        # create two proposals with different updated_at
+        self.p1 = EventProposal.objects.create(submitted_by=self.admin, event_title='One', status=EventProposal.Status.SUBMITTED)
+        self.p2 = EventProposal.objects.create(submitted_by=self.admin, event_title='Two', status=EventProposal.Status.REJECTED)
+        # ensure p2 is newer
+        from django.db import connection
+        self.p1.updated_at = timezone.now() - timezone.timedelta(hours=2)
+        self.p1.save()
+        self.p2.updated_at = timezone.now()
+        self.p2.save()
+
+    def test_api_returns_newest_first_and_no_duplicates(self):
+        url = reverse('api_get_notifications')
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn('notifications', data)
+        notifs = data['notifications']
+        # newest (p2) should be first
+        self.assertGreaterEqual(len(notifs), 2)
+        self.assertEqual(notifs[0]['title'], 'Two')
+        # ids should be unique
+        ids = [n.get('id') for n in notifs]
+        self.assertEqual(len(ids), len(set(ids)))

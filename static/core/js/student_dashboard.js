@@ -74,237 +74,28 @@
       try {
         const res = await fetch('/api/user/events-data/', { headers: {'X-Requested-With': 'XMLHttpRequest'} });
         const j = await res.json();
-        
+
         const actionsCard = document.querySelector('#cardActions .list');
-        if (actionsCard && j.events) {
+        if (actionsCard && Array.isArray(j.events)) {
           if (j.events.length > 0) {
             actionsCard.innerHTML = j.events.slice(0, 5).map(event => `
               <article class="list-item">
                 <div class="bullet"><i class="fa-solid fa-circle-check"></i></div>
                 <div class="list-body">
                   <h4>${event.title}</h4>
-                  <p>${event.description} - ${event.created_at}</p>
-                  <small>Status: ${event.status}</small>
+                  <p>${event.description || ''} - ${event.created_at || ''}</p>
+                  <small>Status: ${event.status || ''}</small>
                 </div>
               </article>
             `).join('');
           } else {
-            actionsCard.innerHTML = '<div class="empty">No recent activity.</div>';
+            actionsCard.innerHTML = '<div class="empty">No recent activity</div>';
           }
         }
-      } catch (error) {
-        console.error('Failed to load recent activity:', error);
+      } catch (ex) {
+        console.error('Failed to fetch recent activity', ex);
       }
     }
-  
-    async function loadContribution(){
-      try{
-        const res = await fetch('/api/student/contributions/', { headers:{'X-Requested-With':'XMLHttpRequest'} });
-        const j = await res.json();
-        
-        // Render GitHub-style contribution heatmap
-        renderGitHubStyleHeatmap(j.contributions);
-      }catch{
-        renderDonut(['Events','Roles','Leadership','Other'], [55,25,15,5]);
-      }
-    }
-
-    function renderGitHubStyleHeatmap(contributions) {
-      const wrap = $('#heatmapContainer'); 
-      if (!wrap || !contributions) return;
-      
-      const cols = 53, rows = 7;
-      const grid = document.createElement('div'); 
-      grid.className = 'hm-grid';
-      
-      // Create contribution map for quick lookup
-      const contribMap = {};
-      contributions.forEach(c => {
-        contribMap[c.date] = c.level;
-      });
-      
-      // Calculate start date (52 weeks ago)
-      const today = new Date();
-      const startDate = new Date(today);
-      startDate.setDate(today.getDate() - (52 * 7));
-      
-      let currentDate = new Date(startDate);
-      
-      for (let c = 0; c < cols; c++) {
-        const col = document.createElement('div'); 
-        col.className = 'hm-col';
-        
-        for (let r = 0; r < rows; r++) {
-          const cell = document.createElement('div'); 
-          cell.className = 'hm-cell';
-          
-          const dateStr = currentDate.toISOString().split('T')[0];
-          const level = contribMap[dateStr] || 0;
-          
-          if (level > 0) {
-            cell.classList.add(`l${level}`);
-            cell.title = `${dateStr}: ${level} contribution${level > 1 ? 's' : ''}`;
-          } else {
-            cell.title = `${dateStr}: No contributions`;
-          }
-          
-          col.appendChild(cell);
-          currentDate.setDate(currentDate.getDate() + 1);
-        }
-        grid.appendChild(col);
-      }
-      
-      wrap.innerHTML = '';
-      wrap.appendChild(grid);
-      fitHeatmap();
-    }
-  
-    $$('.seg-btn').forEach(b=>b.addEventListener('click',e=>{
-      $$('.seg-btn').forEach(x=>x.classList.remove('active'));
-      e.currentTarget.classList.add('active');
-      const v = e.currentTarget.dataset.view;
-      $('#perfTitle').textContent = v==='performance' ? 'Graduate Attributes' : 'Contribution';
-      (v==='performance'? loadPerformance(): loadContribution()).then(syncHeights);
-    }));
-  
-  // Calendar
-  let calRef = new Date();
-  let currentCategory = 'all';
-  let privateTasksKey = 'ems.privateTasks';
-  let eventIndexByDate = new Map();
-  let selectedDateStr = null;
-    const fmt2 = v => String(v).padStart(2,'0');
-    const isSame = (a,b)=>a.getFullYear()==b.getFullYear()&&a.getMonth()==b.getMonth()&&a.getDate()==b.getDate();
-  
-  function buildCalendar(){
-      const headTitle = $('#calTitle'), grid = $('#calGrid');
-      if(!grid||!headTitle) return;
-      headTitle.textContent = calRef.toLocaleString(undefined,{month:'long', year:'numeric'});
-  
-      const first = new Date(calRef.getFullYear(), calRef.getMonth(), 1);
-      const last  = new Date(calRef.getFullYear(), calRef.getMonth()+1, 0);
-      const startIdx = first.getDay();
-      const prevLast = new Date(calRef.getFullYear(), calRef.getMonth(), 0).getDate();
-  
-      const cells=[];
-      for(let i=startIdx-1;i>=0;i--){ cells.push({text: prevLast - i, date:null, muted:true}); }
-      for(let d=1; d<=last.getDate(); d++){
-        const dt = new Date(calRef.getFullYear(), calRef.getMonth(), d);
-        cells.push({text:d, date:dt, muted:false});
-      }
-      while(cells.length % 7 !== 0){ cells.push({text: cells.length%7+1, date:null, muted:true}); }
-  
-      const eventDates = new Set(eventIndexByDate.keys());
-      const privateTasks = new Set(JSON.parse(localStorage.getItem(privateTasksKey)||'[]'));
-      grid.innerHTML = cells.map(c=>{
-        const today = c.date && isSame(c.date, new Date());
-        const iso = c.date ? `${c.date.getFullYear()}-${fmt2(c.date.getMonth()+1)}-${fmt2(c.date.getDate())}` : '';
-        const hasEvent = iso && (eventDates.has(iso) || (currentCategory==='private' && privateTasks.has(iso)));
-        const selected = iso && selectedDateStr === iso ? ' selected' : '';
-        return `<div class="day${c.muted?' muted':''}${today?' today':''}${hasEvent?' has-event':''}${selected}" data-date="${iso}" tabindex="0" role="button">${c.text}</div>`;
-      }).join('');
-  
-      grid.querySelectorAll('.day[data-date]').forEach(el=>{
-        const date = new Date(el.dataset.date);
-        el.addEventListener('click', ()=> {
-          selectedDateStr = el.dataset.date;
-          grid.querySelectorAll('.day.selected').forEach(x=>x.classList.remove('selected'));
-          el.classList.add('selected');
-          onDayClick(date);
-        });
-      });
-    }
-  
-    function openDay(day){
-      const yyyy=day.getFullYear(), mm=String(day.getMonth()+1).padStart(2,'0'), dd=String(day.getDate()).padStart(2,'0');
-      const dateStr = `${yyyy}-${mm}-${dd}`;
-      const list = $('#upcomingWrap'); if(!list) return;
-      const items = (window.DASHBOARD_EVENTS||[]).filter(e => e.date === dateStr && (e.status||'').toLowerCase()==='finalized');
-      list.innerHTML = items.length
-        ? items.map(e => {
-            const viewBtn = e.view_url ? `<a class="chip-btn" href="${e.view_url}"><i class="fa-regular fa-eye"></i> View</a>` : '';
-            const addBtn = !e.past && e.gcal_url ? `<a class="chip-btn" target="_blank" rel="noopener" href="${e.gcal_url}"><i class="fa-regular fa-calendar-plus"></i> Add to Google</a>` : '';
-            return `<div class="u-item"><div>${e.title}</div><div style="display:flex;gap:8px;">${viewBtn}${addBtn}</div></div>`;
-          }).join('')
-        : `<div class="empty">No events for ${day.toLocaleDateString()}</div>`;
-    }
-
-    function onDayClick(day){
-      const yyyy=day.getFullYear(), mm=String(day.getMonth()+1).padStart(2,'0'), dd=String(day.getDate()).padStart(2,'0');
-      const dateStr = `${yyyy}-${mm}-${dd}`;
-      if (currentCategory === 'private'){
-        // Show confirmation modal first
-        showPrivateCalendarConfirmation(day);
-        return;
-      }
-      // Show event details and highlight in event viewer
-      showEventDetails(day);
-      openDay(day);
-    }
-
-    function showPrivateCalendarConfirmation(day) {
-      const modal = $('#confirmationModal');
-      modal.style.display = 'flex';
-      
-      $('#cancelConfirm').onclick = () => {
-        modal.style.display = 'none';
-        showEventDetails(day);
-        openDay(day);
-      };
-      
-      $('#confirmOpen').onclick = () => {
-        modal.style.display = 'none';
-        const yyyy = day.getFullYear(), mm = String(day.getMonth()+1).padStart(2,'0'), dd = String(day.getDate()).padStart(2,'0');
-        const dateStr = `${yyyy}-${mm}-${dd}`;
-        const ymd = `${yyyy}${mm}${dd}`;
-        const url = `https://www.google.com/calendar/render?action=TEMPLATE&dates=${ymd}/${ymd}&sf=true&output=xml`;
-        window.open(url, '_blank', 'noopener');
-        
-        const tasks = new Set(JSON.parse(localStorage.getItem(privateTasksKey)||'[]'));
-        tasks.add(dateStr);
-        localStorage.setItem(privateTasksKey, JSON.stringify(Array.from(tasks)));
-        buildCalendar();
-        showEventDetails(day);
-        openDay(day);
-      };
-    }
-
-    function showEventDetails(day) {
-      const yyyy = day.getFullYear(), mm = String(day.getMonth()+1).padStart(2,'0'), dd = String(day.getDate()).padStart(2,'0');
-      const dateStr = `${yyyy}-${mm}-${dd}`;
-      const content = $('#eventDetailsContent');
-      const clearBtn = $('#clearEventDetails');
-      
-      if (!content) return;
-      
-      const events = (window.DASHBOARD_EVENTS||[]).filter(e => e.date === dateStr && (e.status||'').toLowerCase()==='finalized');
-
-  // Removed ICS export; only Google Calendar supported
-      if (events.length > 0) {
-        content.innerHTML = events.map(e => `
-          <div class="event-detail-item">
-            <div class="row">
-              <h4>${e.title}</h4>
-              <div class="actions">
-                ${e.view_url ? `<a class="chip-btn" href="${e.view_url}"><i class="fa-regular fa-eye"></i> View Details</a>` : ''}
-                ${!e.past && e.gcal_url ? `<a class="chip-btn" target="_blank" href="${e.gcal_url}"><i class="fa-regular fa-calendar-plus"></i> Google</a>` : ''}
-              </div>
-            </div>
-            <div class="event-detail-meta">
-              <i class="fa-regular fa-clock"></i> ${e.datetime ? new Date(e.datetime).toLocaleString() : 'All day'}
-              ${e.venue ? `<br><i class="fa-solid fa-location-dot"></i> ${e.venue}` : ''}
-            </div>
-          </div>
-        `).join('');
-        clearBtn.style.display = 'inline-flex';
-      } else {
-        content.innerHTML = `<div class="empty">No events for ${day.toLocaleDateString()}</div>`;
-        clearBtn.style.display = 'none';
-      }
-    }
-  
-    $('#calPrev')?.addEventListener('click', ()=>{ calRef = new Date(calRef.getFullYear(), calRef.getMonth()-1, 1); buildCalendar(); syncHeights(); });
-    $('#calNext')?.addEventListener('click', ()=>{ calRef = new Date(calRef.getFullYear(), calRef.getMonth()+1, 1); buildCalendar(); syncHeights(); });
 
     // Add event button - now opens modal instead
     $('#addEventBtn')?.addEventListener('click', (e) => {
@@ -351,26 +142,7 @@
       }
     }
 
-  // No visibility dropdown on student; default to 'all'
-  currentCategory = 'all';
-
-    async function loadCalendarData(){
-      try{
-        const res = await fetch(`/api/calendar/?category=${encodeURIComponent(currentCategory)}`, { headers:{'X-Requested-With':'XMLHttpRequest'} });
-        const j = await res.json();
-        window.DASHBOARD_EVENTS = j.items || [];
-        eventIndexByDate = new Map();
-        (window.DASHBOARD_EVENTS||[]).forEach(e=>{
-          if (!e.date) return;
-          const status = (e.status||'').toLowerCase();
-          if (status !== 'finalized') return; // finalized-only markers
-          const list = eventIndexByDate.get(e.date) || [];
-          list.push(e);
-          eventIndexByDate.set(e.date, list);
-        });
-      }catch{ window.DASHBOARD_EVENTS = []; eventIndexByDate = new Map(); }
-  buildCalendar();
-    }
+  // No visibility dropdown on student; calendar handled by shared CalendarModule
   
     // Heatmap
     function renderHeatmap(){
@@ -462,7 +234,13 @@
     document.addEventListener('DOMContentLoaded', ()=>{
       loadPerformance();
       loadRecentActivity();
-      loadCalendarData();
+      // Initialize shared calendar module (uses same endpoint as admin)
+      try{
+        if (window.CalendarModule && typeof CalendarModule.init === 'function'){
+            // Show multi-day events like admin calendar (do not filter to start-only)
+            CalendarModule.init({ endpoint: '/api/calendar/?category=all', inlineEventsElementId: 'calendarEventsJson', showOnlyStartDate: false });
+          }
+      }catch(ex){ console.error('CalendarModule init failed', ex); }
       // Heatmap will be populated by contributions API with event-date aggregation
       // Fallback visual if API fails is handled inside loadContribution
       loadContribution();
