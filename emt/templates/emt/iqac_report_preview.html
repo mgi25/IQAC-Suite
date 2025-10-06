@@ -105,36 +105,50 @@
     border-width: 0.5pt !important;
   }
   @page {
-    size: A4;
-    margin: 20mm 18mm 22mm;
+    size: A4 portrait;
+    margin: 25mm;
   }
 
   body.command-center-layout {
-    background: #f4f4f4;
-    font-family: "Times New Roman", Times, serif;
-    font-size: 12pt;
-    line-height: 1.45;
-    color: #000;
+    background: #e6e6e6;
+    font-family: "Times New Roman", "Georgia", serif;
+    font-size: 11pt;
+    line-height: 1.55;
+    color: #111;
   }
 
   body.command-center-layout.iqac-report-preview {
-    background: #f4f4f4;
+    background: #e6e6e6;
   }
 
   .preview-shell {
     display: flex;
     flex-direction: column;
-    gap: 12px;
     align-items: center;
+    gap: 16px;
     padding: 24px;
   }
 
-  .control-row {
+  .control-row,
+  .submit-report-actions {
     width: 210mm;
     display: flex;
-    justify-content: flex-end;
     align-items: center;
-    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .control-row {
+    gap: 10px;
+  }
+
+  .status-pill {
+    margin-right: auto;
+    padding: 4px 12px;
+    border: 0.9px solid #111;
+    border-radius: 14px;
+    font-size: 10.5pt;
+    background: #f3f3f3;
+    letter-spacing: 0.02em;
   }
 
   .controls {
@@ -142,33 +156,21 @@
     gap: 8px;
   }
 
-  .status-pill {
-    margin-left: auto;
-    padding: 4px 10px;
-    border: 0.6pt solid #000;
-    border-radius: 12px;
-    font-size: 11pt;
-    background: #f0f0f0;
-  }
-
   .controls button,
   .controls .control-button {
-    font-family: "Times New Roman", Times, serif;
-    font-size: 12pt;
-    padding: 4px 16px;
-    border: 0.6pt solid #000;
+    font-family: "Times New Roman", "Georgia", serif;
+    font-size: 11pt;
+    padding: 5px 18px;
+    border: 0.9px solid #111;
     background: #fafafa;
-    cursor: pointer;
-  }
-
-  .controls .control-button {
-    text-decoration: none;
+    color: #111;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 28px;
-    line-height: 1.2;
-    color: #000;
+    min-height: 30px;
+    text-decoration: none;
+    letter-spacing: 0.01em;
+    cursor: pointer;
   }
 
   .controls .control-button.primary {
@@ -177,22 +179,23 @@
     color: #fff;
   }
 
-  .controls .control-button.primary:hover {
+  .controls .control-button.primary:hover,
+  .controls .control-button.primary:focus {
     background: #244a82;
     border-color: #244a82;
     color: #fff;
   }
 
   .controls .control-button[aria-disabled="true"] {
-    background: #bfc7d3;
-    border-color: #bfc7d3;
+    background: #c5ccd8;
+    border-color: #c5ccd8;
     color: #f5f5f5;
     cursor: not-allowed;
   }
 
   .controls button:focus,
   .controls .control-button:focus {
-    outline: 1pt dotted #000;
+    outline: 1pt dotted #111;
     outline-offset: 2px;
   }
 
@@ -202,9 +205,6 @@
   }
 
   .submit-report-actions {
-    width: 210mm;
-    display: flex;
-    justify-content: flex-end;
     margin: 12px 0 32px;
   }
 
@@ -213,12 +213,13 @@
   }
 
   .submit-report-actions .submit-report-button {
-    font-family: "Times New Roman", Times, serif;
-    font-size: 12pt;
-    padding: 6px 20px;
-    border: 0.6pt solid #2c5aa0;
+    font-family: "Times New Roman", "Georgia", serif;
+    font-size: 11pt;
+    padding: 6px 24px;
+    border: 0.9px solid #2c5aa0;
     background: #2c5aa0;
     color: #fff;
+    letter-spacing: 0.02em;
     cursor: pointer;
   }
 
@@ -229,343 +230,279 @@
     color: #fff;
   }
 
-  main#report,
   .paper {
     width: 210mm;
-    min-height: 297mm;
     background: #fff;
-    padding: 20mm 18mm 22mm;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
+    padding: 25mm;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
+    color: #111;
   }
 
-  main#report {
-    min-height: 297mm;
+  p {
+    margin: 0 0 6pt;
   }
 
-  .report-header {
+  .report-title-block {
     text-align: center;
   }
 
-  .hdr-line {
+  .report-title-block .line {
     margin: 0;
   }
 
-  .hdr-upper {
-    text-transform: uppercase;
+  .report-title-block .university {
+    font-size: 13.8pt;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
-  .hdr-italic {
+  .report-title-block .campus {
+    font-size: 10.3pt;
     font-style: italic;
+    letter-spacing: 0.02em;
+    margin-top: 2pt;
   }
 
-  .hdr-event,
-  .hdr-title {
-    text-transform: uppercase;
+  .report-title-block .cell-name,
+  .report-title-block .report-name,
+  .report-title-block .event-title {
     font-weight: 700;
+    text-transform: uppercase;
     letter-spacing: 0.04em;
   }
 
-  .header-rule {
+  .report-title-block .cell-name,
+  .report-title-block .report-name {
+    font-size: 12pt;
+  }
+
+  .report-title-block .event-title {
+    font-size: 12pt;
+    margin-top: 4pt;
+  }
+
+  .title-rule {
     border: none;
-    border-top: 0.6pt solid #000;
-    margin: 10mm 0 7mm;
+    border-top: 0.9px solid #111;
+    margin: 14pt 0;
   }
 
-  .section-block {
-    margin-bottom: 9mm;
+  .report-section {
+    margin-top: 12pt;
   }
 
-  .section-title {
-    text-transform: uppercase;
+  .report-section:first-of-type {
+    margin-top: 0;
+  }
+
+  .report-section h2 {
+    font-size: 11pt;
     font-weight: 700;
-    letter-spacing: 0.08em;
-    margin: 0 0 3mm;
-  }
-
-  .section-table {
-    width: 100%;
-    border: 0.6pt solid #000;
-    border-collapse: collapse;
-    table-layout: fixed;
-    background: #fff;
-  }
-
-  .section-table th,
-  .section-table td {
-    border: 0.6pt solid #000;
-    padding: 6px 8px;
-    vertical-align: top;
-  }
-
-  .section-table th {
-    text-align: left;
-  }
-
-  .section-cap {
-    background: #f3f3f3;
-    padding: 8px 0;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    text-align: center;
+    letter-spacing: 0.03em;
+    margin: 12pt 0 6pt;
   }
 
-  .section-table .col-lbl {
-    width: 31%;
-    background: #f7f7f7;
-  }
-
-  .section-table .col-val {
-    width: 69%;
-  }
-
-  .pane {
-    border: 0.6pt solid #000;
-    padding: 10px 12px;
-    background: #fff;
-  }
-
-  .cell-para {
-    margin: 0;
-    white-space: pre-wrap;
-    text-align: justify;
-    text-justify: inter-word;
-  }
-
-  .cell-ul {
-    margin: 0;
-    padding-left: 18px;
-  }
-
-  .cell-ul[data-empty="true"] {
-    list-style: none;
-    padding-left: 0;
-  }
-
-  .analysis-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 14px;
-  }
-
-  @media print, (max-width: 960px) {
-    .analysis-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  .analysis-card {
-    border: 0.6pt solid #000;
-    padding: 10px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-height: 48mm;
-    background: #fff;
-  }
-
-  .card-cap {
-    text-transform: uppercase;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    margin-bottom: 2px;
-  }
-
-  .sdg-row {
-    border: 0.6pt solid #000;
-    padding: 10px 12px;
-    display: flex;
-    gap: 12px;
-    margin-top: 6mm;
-    background: #fff;
-  }
-
-  .sdg-label {
-    width: 31%;
-    text-transform: uppercase;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-  }
-
-  .sdg-values {
-    flex: 1;
-  }
-
-  .sdg-list {
-    margin: 0;
-    padding-left: 18px;
-  }
-
-  .sdg-list li {
-    display: inline-block;
-    margin-right: 8px;
+  .report-section:first-of-type h2 {
+    margin-top: 0;
   }
 
   .grid-table {
     width: 100%;
-    border: 0.6pt solid #000;
     border-collapse: collapse;
+    border: 0.9px solid #111;
     table-layout: fixed;
-    margin-top: 6mm;
     background: #fff;
+  }
+
+  .grid-table col.col-label {
+    width: 32%;
+  }
+
+  .grid-table col.col-value {
+    width: 68%;
   }
 
   .grid-table th,
   .grid-table td {
-    border: 0.6pt solid #000;
-    padding: 6px 8px;
-    vertical-align: top;
+    border: 0.9px solid #111;
+    padding: 8px 10px;
+    vertical-align: middle;
   }
 
   .grid-table th {
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  .chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 6mm;
-  }
-
-  .chip {
-    border: 0.6pt solid #000;
-    padding: 2px 6px;
-    font-size: 10.5pt;
-    border-radius: 2px;
-  }
-
-  .chip.placeholder {
-    font-style: italic;
-    color: #555;
-  }
-
-  .review-date {
-    margin-top: 4mm;
     font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    background: #f6f6f6;
   }
 
-  .checklist {
-    width: 100%;
-    border: 0.6pt solid #000;
-    border-collapse: collapse;
-    table-layout: fixed;
-    background: #fff;
+  .grid-table td {
+    text-align: left;
   }
 
-  .checklist col.c-tick {
-    width: 12mm;
-  }
-
-  .checklist th,
-  .checklist td {
-    border: 0.6pt solid #000;
-    padding: 6px 8px;
-    vertical-align: top;
-  }
-
-  .checklist td:first-child {
+  .grid-table td[data-placeholder="true"] {
+    color: #555;
     text-align: center;
   }
 
-  .tick {
-    font-size: 12pt;
+  .grid-table td[data-multiline="true"] {
+    text-align: justify;
+  }
+
+  .grid-table td[data-multiline="true"] p {
+    margin: 0 0 6pt;
+  }
+
+  .stacked-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .stacked-lines .subheading {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .stacked-lines .subline {
+    display: flex;
+    gap: 4px;
+  }
+
+  .paper-box,
+  .box {
+    border: 0.9px solid #111;
+    padding: 10px 12px;
+    background: #fff;
+  }
+
+  .paragraph-box {
+    min-height: 120px;
+  }
+
+  .paragraph-box[data-placeholder="true"] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #555;
+    text-align: center;
+  }
+
+  .paragraph-box p {
+    margin: 0 0 6pt;
+    text-align: justify;
+  }
+
+  .paragraph-box ul {
+    margin: 0 0 6pt;
+  }
+
+  .bullets {
+    list-style: disc;
+    padding-left: 20px;
+    margin: 0 0 8pt;
+  }
+
+  .bullets li {
+    margin-bottom: 4pt;
+    text-align: justify;
+  }
+
+  .bullets[data-empty="true"] {
+    list-style: none;
+    padding-left: 0;
+  }
+
+  .bullets[data-empty="true"] li {
+    text-align: center;
+    color: #555;
+  }
+
+  .analysis-box {
+    padding: 12px 14px;
+  }
+
+  .analysis-box .bullets {
+    margin-bottom: 0;
+  }
+
+  .analysis-box .bullets li strong {
+    font-weight: 700;
+  }
+
+  .date-line {
+    margin-top: 10pt;
+    font-weight: 700;
+  }
+
+  .date-line span:first-child {
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
   }
 
   .signatures {
     display: flex;
-    gap: 6mm;
-    margin-top: 12mm;
+    gap: 28px;
+    margin-top: 24pt;
   }
 
-  .signature-block {
+  .signatures .sig {
     flex: 1;
     text-align: center;
   }
 
-  .signature-line {
-    border-top: 0.6pt solid #000;
-    min-height: 28mm;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    padding: 6px;
+  .signatures .line {
+    border-bottom: 0.9px solid #111;
+    height: 0;
+    margin: 0 18px 8px;
   }
 
-  .sign-caption {
-    margin-top: 4px;
-    text-transform: uppercase;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-  }
-
-  .annexure-host {
-    width: 210mm;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .annexure-host .paper {
-    width: 210mm;
-  }
-
-  .annexure-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 6mm;
-  }
-
-  .annexure-card {
-    border: 0.6pt solid #000;
-    padding: 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    background: #fff;
-  }
-
-  .annexure-card figcaption {
-    text-align: center;
-    font-style: italic;
+  .signatures .name {
     font-size: 11pt;
+    min-height: 14pt;
+  }
+
+  .signatures .label {
+    font-size: 10pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .report-footer {
+    margin-top: 28pt;
+  }
+
+  .report-footer hr {
+    border: none;
+    border-top: 0.9px solid #111;
     margin: 0;
   }
 
-  .annexure-card.placeholder .media-frame {
-    color: #555;
-    font-style: italic;
+  .report-footer p {
+    font-size: 9.8pt;
+    margin: 6pt 0 0;
+    text-align: center;
+    letter-spacing: 0.02em;
   }
 
-  .media-frame {
-    border: 0.6pt solid #000;
-    min-height: 48mm;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px;
-    background: #fff;
-  }
-
-  .media-frame img {
-    max-width: 100%;
-    max-height: 100%;
-    display: block;
+  .page-break-before {
+    page-break-before: always;
+    break-before: page;
   }
 
   table,
   tr,
   td,
-  th {
-    break-inside: avoid;
+  th,
+  ul,
+  ol,
+  li,
+  p {
     page-break-inside: avoid;
-  }
-
-  .page-break {
-    break-before: page;
   }
 
   .hidden {
@@ -576,15 +513,15 @@
   .edit-textarea {
     width: 100%;
     box-sizing: border-box;
-    font-family: "Times New Roman", Times, serif;
-    font-size: 12pt;
-    line-height: 1.45;
-    border: 0.6pt solid #7a7a7a;
-    padding: 2mm;
+    font-family: "Times New Roman", "Georgia", serif;
+    font-size: 11pt;
+    line-height: 1.55;
+    border: 0.9px solid #666;
+    padding: 6px 8px;
   }
 
   .edit-textarea {
-    min-height: 24mm;
+    min-height: 84px;
     resize: vertical;
   }
 
@@ -594,41 +531,19 @@
     }
 
     .top-utility-bar,
-    .left-control-panel {
-      display: none !important;
-    }
-
+    .left-control-panel,
     .control-row,
-    .status-pill,
-    .controls,
-    .preview-shell > .control-row {
+    .submit-report-actions {
       display: none !important;
     }
 
-    main#report,
+    .preview-shell {
+      padding: 0;
+    }
+
     .paper {
       box-shadow: none;
       margin: 0;
-    }
-
-    .print-footer {
-      position: fixed;
-      left: 18mm;
-      right: 18mm;
-      bottom: 10mm;
-      display: flex;
-      justify-content: space-between;
-      font-size: 10pt;
-    }
-
-    .print-footer .page-count::after {
-      content: "Page " counter(page) " of " counter(pages);
-    }
-  }
-
-  @media screen {
-    .print-footer {
-      display: none;
     }
   }
 </style>
@@ -656,292 +571,180 @@
     </div>
   </div>
 
-  <main id="report" class="paper">
-    <header class="report-header">
-      <p class="hdr-line hdr-upper">CHRIST (DEEMED TO BE UNIVERSITY)</p>
-      <p class="hdr-line hdr-italic">Pune Lavasa Campus – 'The Hub of Analytics'</p>
-      <p class="hdr-line hdr-upper">Internal Quality Assurance Cell (IQAC)</p>
-      <p class="hdr-line hdr-event" data-field="event.title">—</p>
-      <p class="hdr-line hdr-title">Activity Report</p>
+  <main id="iqac-report-page" class="paper">
+    <header class="report-title-block">
+      <p class="line university">CHRIST (DEEMED TO BE UNIVERSITY)</p>
+      <p class="line campus">Pune Lavasa Campus – &lsquo;The Hub of Analytics&rsquo;</p>
+      <p class="line cell-name">INTERNAL QUALITY ASSURANCE CELL (IQAC)</p>
+      <p class="line event-title" data-field="event_info.event_title" data-hide-blank="true">—</p>
+      <p class="line report-name">ACTIVITY REPORT</p>
     </header>
 
-    <hr class="header-rule">
+    <hr class="title-rule">
 
-    <section class="section-block">
-      <table class="section-table">
+    <section class="report-section" id="event-information">
+      <h2>EVENT INFORMATION</h2>
+      <table class="grid-table full-width">
         <colgroup>
-          <col class="col-lbl">
-          <col class="col-val">
+          <col class="col-label">
+          <col class="col-value">
         </colgroup>
-        <thead>
-          <tr><th class="section-cap" colspan="2">EVENT INFORMATION</th></tr>
-        </thead>
         <tbody>
-          <tr><th>Department</th><td data-field="event.department">—</td></tr>
-          <tr><th>Location</th><td data-field="event.location">—</td></tr>
-          <tr><th>Event Title</th><td data-field="event.title">—</td></tr>
-          <tr><th>No of Activities</th><td data-field="event.no_of_activities">—</td></tr>
-          <tr><th>Date and Time</th><td data-field="event.date">—</td></tr>
-          <tr><th>Venue</th><td data-field="event.venue">—</td></tr>
-          <tr><th>Academic Year</th><td data-field="event.academic_year">—</td></tr>
-          <tr><th>Event Type (Focus)</th><td data-field="event.event_type_focus">—</td></tr>
-          <tr><th>Blog Link</th><td><a data-field="event.blog_link" data-kind="link">—</a></td></tr>
+          <tr>
+            <th>Department</th>
+            <td data-field="event_info.department">—</td>
+          </tr>
+          <tr>
+            <th>Location</th>
+            <td data-field="event_info.location">—</td>
+          </tr>
+          <tr>
+            <th>Event Title</th>
+            <td data-field="event_info.event_title">—</td>
+          </tr>
+          <tr>
+            <th>No of Activities</th>
+            <td data-field="event_info.activities_count">—</td>
+          </tr>
+          <tr>
+            <th>Date and Time</th>
+            <td data-field="event_info.datetime">—</td>
+          </tr>
+          <tr>
+            <th>Venue</th>
+            <td data-field="event_info.venue">—</td>
+          </tr>
+          <tr>
+            <th>Academic Year</th>
+            <td data-field="event_info.academic_year">—</td>
+          </tr>
+          <tr>
+            <th>Event Type (Focus)</th>
+            <td data-field="event_info.focus">—</td>
+          </tr>
         </tbody>
       </table>
     </section>
 
-    <section class="section-block">
-      <table class="section-table">
+    <section class="report-section" id="participants-information">
+      <h2>PARTICIPANTS INFORMATION</h2>
+      <table class="grid-table full-width">
         <colgroup>
-          <col class="col-lbl">
-          <col class="col-val">
+          <col class="col-label">
+          <col class="col-value">
         </colgroup>
-        <thead>
-          <tr><th class="section-cap" colspan="2">PARTICIPANTS INFORMATION</th></tr>
-        </thead>
         <tbody>
-          <tr><th>Target Audience</th><td data-field="participants.target_audience">—</td></tr>
-          <tr><th>Details of any External Agencies, Speakers, Guests with Affiliation</th><td data-field="participants.external_agencies_speakers">—</td></tr>
-          <tr><th>Website / Contact of External Members</th><td data-field="participants.external_contacts">—</td></tr>
+          <tr>
+            <th>Target Audience</th>
+            <td data-field="participants.target_audience">—</td>
+          </tr>
+          <tr>
+            <th>Details of any External Agencies, Speakers, Guests with Affiliation</th>
+            <td data-field="participants.external_agencies">—</td>
+          </tr>
+          <tr>
+            <th>Website / Contact of External Members</th>
+            <td data-field="participants.external_contacts">—</td>
+          </tr>
           <tr>
             <th>Organising Committee Details</th>
             <td>
-              <div class="pane" style="padding: 8px;">
-                <div><strong>Event Coordinators:</strong></div>
-                <ul class="cell-ul" data-list="participants.organising_committee.event_coordinators">
+              <div class="stacked-lines">
+                <div class="subheading">Event Coordinators:</div>
+                <ul class="bullets" data-list="participants.organising_committee" data-empty="true">
                   <li>—</li>
                 </ul>
-                <div style="margin-top: 6px;">
-                  <strong>No of Student Volunteers:</strong>
-                  <span data-field="participants.organising_committee.student_volunteers_count">—</span>
+                <div class="subline">
+                  <span class="subheading">No of Student Volunteers:</span>
+                  <span data-field="participants.student_volunteers">—</span>
                 </div>
               </div>
             </td>
           </tr>
-          <tr><th>No of Attendees / Participants</th><td data-field="participants.attendees_count">—</td></tr>
+          <tr>
+            <th>No of Attendees / Participants</th>
+            <td data-field="participants.participants_count">—</td>
+          </tr>
         </tbody>
       </table>
     </section>
 
-    <section class="section-block">
-      <h2 class="section-title">Summary of the Overall Event</h2>
-      <div class="pane">
-        <p class="cell-para" data-field="narrative.summary_overall_event" data-edit="textarea">—</p>
-      </div>
+    <section class="report-section page-break-before" id="summary">
+      <h2>SUMMARY OF THE OVERALL EVENT</h2>
+      <div class="paper-box paragraph-box" data-field="summary" data-multiline="true" data-edit="textarea">—</div>
     </section>
 
-    <section class="section-block">
-      <h2 class="section-title">Social Relevance</h2>
-      <ul class="cell-ul" data-list="narrative.social_relevance" data-empty="true">
+    <section class="report-section page-break-before" id="outcomes">
+      <h2>OUTCOMES OF THE EVENT</h2>
+      <ul class="bullets" data-list="outcomes" data-empty="true">
         <li>—</li>
       </ul>
     </section>
 
-    <section class="section-block">
-      <h2 class="section-title">Outcomes of the Event</h2>
-      <ul class="cell-ul" data-list="narrative.outcomes" data-empty="true">
-        <li>—</li>
-      </ul>
-    </section>
-
-    <section class="section-block">
-      <h2 class="section-title">Analysis</h2>
-      <div class="analysis-grid">
-        <div class="analysis-card">
-          <div class="card-cap">Impact on Attendees</div>
-          <p class="cell-para" data-field="analysis.impact_attendees" data-edit="textarea">—</p>
-        </div>
-        <div class="analysis-card">
-          <div class="card-cap">Impact on Schools / Departments</div>
-          <p class="cell-para" data-field="analysis.impact_schools" data-edit="textarea">—</p>
-        </div>
-        <div class="analysis-card">
-          <div class="card-cap">Impact on Volunteers</div>
-          <p class="cell-para" data-field="analysis.impact_volunteers" data-edit="textarea">—</p>
-        </div>
+    <section class="report-section" id="analysis">
+      <h2>ANALYSIS</h2>
+      <div class="box analysis-box">
+        <ul class="bullets" id="analysis-list">
+          <li><strong>Impact on the Attendees:</strong> —</li>
+          <li><strong>Impact on Schools:</strong> —</li>
+          <li><strong>Impact on Volunteers:</strong> —</li>
+        </ul>
       </div>
     </section>
 
-    <section class="section-block">
-      <h2 class="section-title">Relevance / Academic Mapping</h2>
-      <table class="section-table">
+    <section class="report-section page-break-before" id="relevance">
+      <h2>RELEVANCE OF THE EVENT</h2>
+      <table class="grid-table full-width">
         <colgroup>
-          <col class="col-lbl">
-          <col class="col-val">
+          <col class="col-label">
+          <col class="col-value">
         </colgroup>
         <tbody>
-          <tr><th>POS / PSOs</th><td><p class="cell-para" data-field="mapping.pos_psos" data-edit="textarea">—</p></td></tr>
-          <tr><th>Graduate Attributes / Needs</th><td><p class="cell-para" data-field="mapping.graduate_attributes_or_needs" data-edit="textarea">—</p></td></tr>
-          <tr><th>Contemporary Requirements</th><td><p class="cell-para" data-field="mapping.contemporary_requirements" data-edit="textarea">—</p></td></tr>
-          <tr><th>Value Systems</th><td><p class="cell-para" data-field="mapping.value_systems" data-edit="textarea">—</p></td></tr>
-        </tbody>
-      </table>
-      <div class="sdg-row">
-        <div class="sdg-label">SDG Goal Numbers</div>
-        <div class="sdg-values">
-          <ul class="cell-ul sdg-list" data-list="mapping.sdg_goal_numbers" data-empty="true">
-            <li>—</li>
-          </ul>
-        </div>
-      </div>
-      <table class="grid-table course-table" style="margin-top: 6mm;">
-        <colgroup>
-          <col class="col-code" style="width: 18%;">
-          <col class="col-name" style="width: 36%;">
-          <col class="col-type" style="width: 22%;">
-          <col class="col-note" style="width: 24%;">
-        </colgroup>
-        <thead>
           <tr>
-            <th>Course Code</th>
-            <th>Course Name</th>
-            <th>Mapping Type</th>
-            <th>Note</th>
+            <th>With reference to Graduate Attributes</th>
+            <td data-field="relevance.graduate_attributes" data-multiline="true">—</td>
           </tr>
-        </thead>
-        <tbody data-rows="mapping.courses" data-row-type="courses">
-          <tr><td colspan="4" style="text-align: center;">—</td></tr>
-        </tbody>
-      </table>
-      <div class="chips" data-chips="metrics.naac_tags">
-        <span class="chip placeholder">—</span>
-      </div>
-    </section>
-
-    <section class="section-block">
-      <h2 class="section-title">Suggestions for Improvement / Feedback from IQAC</h2>
-      <ul class="cell-ul" data-list="iqac.iqac_suggestions" data-empty="true">
-        <li>—</li>
-      </ul>
-      <div class="review-date">Date: <span data-field="iqac.iqac_review_date">—</span></div>
-    </section>
-
-    <section class="signatures">
-      <div class="signature-block">
-        <div class="signature-line"><span data-field="iqac.sign_head_coordinator">—</span></div>
-        <div class="sign-caption">Head / Coordinator</div>
-      </div>
-      <div class="signature-block">
-        <div class="signature-line"><span data-field="iqac.sign_faculty_coordinator">—</span></div>
-        <div class="sign-caption">Faculty Coordinator / Organiser</div>
-      </div>
-      <div class="signature-block">
-        <div class="signature-line"><span data-field="iqac.sign_iqac">—</span></div>
-        <div class="sign-caption">IQAC</div>
-      </div>
-    </section>
-
-    <section class="section-block" style="margin-top: 12mm;">
-      <h2 class="section-title">Attachments Checklist</h2>
-      <table class="checklist">
-        <colgroup>
-          <col class="c-tick">
-          <col>
-        </colgroup>
-        <tbody data-checklist>
-          <tr><td><span class="tick">▢</span></td><td>Facing Sheet</td></tr>
-          <tr><td><span class="tick">▢</span></td><td>Summary &amp; Outcomes Sheet</td></tr>
-          <tr><td><span class="tick">▢</span></td><td>Suggestions Sheet</td></tr>
-          <tr><td><span class="tick">▢</span></td><td>Department Seal &amp; Signature on Each Page</td></tr>
-          <tr><td><span class="tick">▢</span></td><td>Detailed Report / Blog Printout</td></tr>
-          <tr><td><span class="tick">▢</span></td><td>Participant List</td></tr>
-          <tr><td><span class="tick">▢</span></td><td>Feedback Forms</td></tr>
-          <tr><td><span class="tick">▢</span></td><td>Photographs</td></tr>
+          <tr>
+            <th>Support to Value Systems (Cross Cutting Issues such as Gender, Environmental aspects, SDGs, Social Commitment, etc)</th>
+            <td data-field="relevance.sdg" data-multiline="true">—</td>
+          </tr>
         </tbody>
       </table>
     </section>
+
+    <section class="report-section" id="suggestions">
+      <h2>SUGGESTIONS FOR IMPROVEMENT / FEEDBACK FROM IQAC</h2>
+      <div class="box">
+        <ul class="bullets" data-list="suggestions" data-empty="true">
+          <li>—</li>
+        </ul>
+      </div>
+      <div class="date-line"><span>Date:&nbsp;</span><span data-field="suggestions_date">—</span></div>
+
+      <div class="signatures">
+        <div class="sig">
+          <div class="line"></div>
+          <div class="name" data-field="signatures.head">—</div>
+          <div class="label">HEAD / COORDINATOR</div>
+        </div>
+        <div class="sig">
+          <div class="line"></div>
+          <div class="name" data-field="signatures.faculty">—</div>
+          <div class="label">FACULTY COORDINATOR / ORGANISER</div>
+        </div>
+        <div class="sig">
+          <div class="line"></div>
+          <div class="name" data-field="signatures.iqac">—</div>
+          <div class="label">IQAC</div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="report-footer">
+      <hr>
+      <p>CHRIST (Deemed to be University), Pune Lavasa Campus – &ldquo;The Hub of Analytics&rdquo;</p>
+    </footer>
   </main>
-
-  <section id="annexures" class="annexure-host">
-    <article class="paper page-break">
-      <section class="section-block">
-        <h2 class="section-title">Annexure A. Photographs</h2>
-        <div class="annexure-grid" data-grid="annexures.photos">
-          <figure class="annexure-card placeholder"><div class="media-frame">—</div><figcaption>—</figcaption></figure>
-        </div>
-      </section>
-    </article>
-
-    <article class="paper page-break">
-      <section class="section-block">
-        <h2 class="section-title">Annexure B. Brochure</h2>
-        <div class="annexure-grid" data-grid="annexures.brochure_pages">
-          <figure class="annexure-card placeholder"><div class="media-frame">—</div><figcaption>—</figcaption></figure>
-        </div>
-      </section>
-    </article>
-
-    <article class="paper page-break">
-      <section class="section-block">
-        <h2 class="section-title">Annexure C. Communication with Institution</h2>
-        <table class="section-table">
-          <colgroup>
-            <col class="col-lbl">
-            <col class="col-val">
-          </colgroup>
-          <tbody>
-            <tr><th>Subject</th><td data-field="annexures.communication.subject">—</td></tr>
-            <tr><th>Date</th><td data-field="annexures.communication.date">—</td></tr>
-          </tbody>
-        </table>
-        <table class="grid-table volunteer-table" style="margin-top: 6mm;">
-          <colgroup>
-            <col style="width: 10%;">
-            <col style="width: 20%;">
-            <col style="width: 30%;">
-            <col style="width: 20%;">
-            <col style="width: 20%;">
-          </colgroup>
-          <thead>
-            <tr>
-              <th>Sl No</th>
-              <th>Reg No</th>
-              <th>Name</th>
-              <th>Class</th>
-              <th>Role</th>
-            </tr>
-          </thead>
-          <tbody data-rows="annexures.communication.volunteers" data-row-type="volunteers">
-            <tr><td colspan="5" style="text-align: center;">—</td></tr>
-          </tbody>
-        </table>
-      </section>
-    </article>
-
-    <article class="paper page-break">
-      <section class="section-block">
-        <h2 class="section-title">Annexure D. Worksheets / Activities</h2>
-        <div class="annexure-grid" data-grid="annexures.worksheets">
-          <figure class="annexure-card placeholder"><div class="media-frame">—</div><figcaption>—</figcaption></figure>
-        </div>
-      </section>
-    </article>
-
-    <article class="paper page-break">
-      <section class="section-block">
-        <h2 class="section-title">Annexure E. Evaluation Sheet</h2>
-        <figure class="annexure-card" data-single="annexures.evaluation_sheet">
-          <div class="media-frame">—</div>
-          <figcaption>—</figcaption>
-        </figure>
-      </section>
-    </article>
-
-    <article class="paper page-break">
-      <section class="section-block">
-        <h2 class="section-title">Annexure F. Feedback Form</h2>
-        <figure class="annexure-card" data-single="annexures.feedback_form">
-          <div class="media-frame">—</div>
-          <figcaption>—</figcaption>
-        </figure>
-      </section>
-    </article>
-  </section>
-
-  <footer class="print-footer">
-    <div>CHRIST (Deemed to be University), Pune Lavasa Campus – 30 Valor Court, Pune 412112, Maharashtra</div>
-    <div class="page-count"></div>
-  </footer>
 
   <div class="submit-report-actions">
     <form method="post" action="{% url 'emt:ai_report_submit' proposal.id %}">
@@ -961,31 +764,8 @@
 
     const editState = {
       fields: [],
-      lists: [],
-      chips: []
+      lists: []
     };
-
-    const CHECKLIST_LABELS = {
-      facing_sheet_present: 'Facing Sheet',
-      summary_outcomes_sheet_present: 'Summary & Outcomes Sheet',
-      suggestions_sheet_present: 'Suggestions Sheet',
-      department_seal_sign_each_page: 'Department Seal & Signature on Each Page',
-      detailed_report_or_blog_printout_present: 'Detailed Report / Blog Printout',
-      participant_list_present: 'Participant List',
-      feedback_forms_present: 'Feedback Forms',
-      photos_present: 'Photographs'
-    };
-
-    const CHECKLIST_ORDER = [
-      'facing_sheet_present',
-      'summary_outcomes_sheet_present',
-      'suggestions_sheet_present',
-      'department_seal_sign_each_page',
-      'detailed_report_or_blog_printout_present',
-      'participant_list_present',
-      'feedback_forms_present',
-      'photos_present'
-    ];
 
     function isBlank(value) {
       if (value === null || value === undefined) return true;
@@ -995,7 +775,7 @@
     }
 
     function toArray(value) {
-      if (!value && value !== 0) return [];
+      if (value === null || value === undefined) return [];
       if (Array.isArray(value)) {
         return value
           .map(item => (typeof item === 'string' ? item.trim() : item))
@@ -1049,303 +829,213 @@
     }
 
     function displayValue(value) {
-      if (value === null || value === undefined) return '—';
-      const str = String(value).trim();
-      return str === '' ? '—' : str;
+      return isBlank(value) ? '—' : String(value).trim();
+    }
+
+    function renderMultiline(node, rawValue) {
+      const text = Array.isArray(rawValue)
+        ? rawValue.map(item => String(item ?? '')).join('\n')
+        : String(rawValue ?? '');
+      const lines = text.replace(/\r/g, '').split('\n');
+      let listEl = null;
+      let appended = false;
+      lines.forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed) {
+          listEl = null;
+          return;
+        }
+        const bulletMatch = trimmed.match(/^[•·\-–]\s*(.+)$/);
+        if (bulletMatch) {
+          if (!listEl) {
+            listEl = document.createElement('ul');
+            listEl.className = 'bullets';
+            node.appendChild(listEl);
+          }
+          const li = document.createElement('li');
+          li.textContent = bulletMatch[1];
+          listEl.appendChild(li);
+        } else {
+          listEl = null;
+          const p = document.createElement('p');
+          p.textContent = trimmed;
+          node.appendChild(p);
+        }
+        appended = true;
+      });
+      return appended;
     }
 
     function setText(selector, value) {
       const nodes = resolveNodes(selector);
-      if (!nodes.length) return;
-      const content = displayValue(value);
       nodes.forEach(node => {
+        if (!node) return;
         const hideBlank = node.dataset && node.dataset.hideBlank === 'true';
-        const isPlaceholder = content === '—';
-        const finalContent = hideBlank && isPlaceholder ? '' : content;
-
-        if (node.dataset && node.dataset.kind === 'link' && node.tagName === 'A') {
-          node.textContent = finalContent;
-          if (isPlaceholder) {
-            node.removeAttribute('href');
+        const isMultiline = node.dataset && node.dataset.multiline === 'true';
+        const hasValue = !isBlank(value);
+        if (isMultiline) {
+          node.innerHTML = '';
+          const appended = hasValue ? renderMultiline(node, value) : false;
+          if (!appended) {
+            node.textContent = '—';
+            node.setAttribute('data-placeholder', 'true');
           } else {
-            node.setAttribute('href', String(value));
-            node.setAttribute('target', '_blank');
-            node.setAttribute('rel', 'noopener');
+            node.setAttribute('data-placeholder', 'false');
+          }
+          if (hideBlank) {
+            node.style.display = appended ? '' : 'none';
           }
         } else {
-          node.textContent = finalContent;
-        }
-
-        if (hideBlank) {
-          node.style.display = finalContent ? '' : 'none';
+          const content = displayValue(value);
+          node.textContent = content;
+          node.setAttribute('data-placeholder', content === '—' ? 'true' : 'false');
+          if (hideBlank) {
+            node.style.display = content === '—' ? 'none' : '';
+          }
         }
       });
     }
 
     function setList(selector, arr) {
       const nodes = resolveNodes(selector);
-      if (!nodes.length) return;
-      const values = toArray(arr);
-
       nodes.forEach(node => {
         if (!node) return;
-        const isList = node.tagName === 'UL' || node.tagName === 'OL';
-        const items = values.length ? values.map(item => String(item)) : ['—'];
-
-        node.innerHTML = '';
-
-        if (isList) {
-          items.forEach(text => {
-            const li = document.createElement('li');
-            li.textContent = text;
-            node.appendChild(li);
-          });
-          node.setAttribute('data-empty', items.length === 1 && items[0] === '—' ? 'true' : 'false');
-        } else {
-          node.textContent = items.join(', ');
-        }
-      });
-    }
-
-    function setChips(selector, arr) {
-      const nodes = resolveNodes(selector);
-      nodes.forEach(node => {
         const values = toArray(arr);
-        node.innerHTML = '';
-        if (!values.length) {
-          const chip = document.createElement('span');
-          chip.className = 'chip placeholder';
-          chip.textContent = '—';
-          node.appendChild(chip);
-          return;
-        }
-        values.forEach(item => {
-          const span = document.createElement('span');
-          span.className = 'chip';
-          span.textContent = String(item);
-          node.appendChild(span);
-        });
-      });
-    }
-
-    function normalizeMediaItem(item) {
-      if (!item) return null;
-      if (typeof item === 'string') {
-        return { src: item, caption: '' };
-      }
-      if (typeof item === 'object') {
-        return {
-          src: item.src || item.url || '',
-          caption: item.caption || item.title || ''
-        };
-      }
-      return null;
-    }
-
-    function setGrid(selector, items) {
-      const nodes = resolveNodes(selector);
-      nodes.forEach(node => {
-        node.innerHTML = '';
-        const list = Array.isArray(items)
-          ? items.map(normalizeMediaItem).filter(entry => entry && entry.src)
-          : [];
-        if (!list.length) {
-          const figure = document.createElement('figure');
-          figure.className = 'annexure-card placeholder';
-          const frame = document.createElement('div');
-          frame.className = 'media-frame';
-          frame.textContent = '—';
-          const caption = document.createElement('figcaption');
-          caption.textContent = '—';
-          figure.appendChild(frame);
-          figure.appendChild(caption);
-          node.appendChild(figure);
-          return;
-        }
-        list.forEach(entry => {
-          const figure = document.createElement('figure');
-          figure.className = 'annexure-card';
-          const frame = document.createElement('div');
-          frame.className = 'media-frame';
-          const img = document.createElement('img');
-          img.src = entry.src;
-          img.alt = entry.caption || 'Annexure Image';
-          frame.appendChild(img);
-          const caption = document.createElement('figcaption');
-          caption.textContent = displayValue(entry.caption);
-          figure.appendChild(frame);
-          figure.appendChild(caption);
-          node.appendChild(figure);
-        });
-      });
-    }
-
-    function setRows(selector, rows) {
-      const nodes = resolveNodes(selector);
-      nodes.forEach(node => {
-        const type = node.getAttribute('data-row-type') || '';
-        node.innerHTML = '';
-        const list = Array.isArray(rows)
-          ? rows.filter(entry => entry && !(typeof entry === 'string' && isBlank(entry)))
-          : [];
-        if (!list.length) {
-          const table = node.closest('table');
-          const colCount = table ? (table.querySelectorAll('col').length || table.querySelectorAll('th').length || 1) : 1;
-          const tr = document.createElement('tr');
-          const td = document.createElement('td');
-          td.colSpan = colCount;
-          td.textContent = '—';
-          td.style.textAlign = 'center';
-          tr.appendChild(td);
-          node.appendChild(tr);
-          return;
-        }
-        if (type === 'volunteers') {
-          list.forEach((row, index) => {
-            const tr = document.createElement('tr');
-            const sl = row.sl ?? row.sl_no ?? row.serial ?? row.index ?? index + 1;
-            const reg = row.reg ?? row.reg_no ?? row.registration_number ?? row.id ?? '';
-            const name = row.name ?? row.full_name ?? row.participant ?? '';
-            const className = row.class ?? row.class_ ?? row.program ?? row.section ?? '';
-            const role = row.role ?? row.responsibility ?? row.duty ?? '';
-            [sl, reg, name, className, role].forEach(value => {
-              const td = document.createElement('td');
-              td.textContent = displayValue(value);
-              tr.appendChild(td);
+        if (node.tagName === 'UL' || node.tagName === 'OL') {
+          node.innerHTML = '';
+          if (!values.length) {
+            const li = document.createElement('li');
+            li.textContent = '—';
+            node.appendChild(li);
+            node.setAttribute('data-empty', 'true');
+          } else {
+            values.forEach(item => {
+              const li = document.createElement('li');
+              li.textContent = String(item);
+              node.appendChild(li);
             });
-            node.appendChild(tr);
-          });
-        } else if (type === 'courses') {
-          list.forEach(row => {
-            const tr = document.createElement('tr');
-            const code = row.course_code ?? row.code ?? '';
-            const name = row.course_name ?? row.name ?? '';
-            const mappingType = row.mapping_type ?? row.type ?? '';
-            const note = row.note ?? row.remark ?? row.remarks ?? '';
-            [code, name, mappingType, note].forEach(value => {
-              const td = document.createElement('td');
-              td.textContent = displayValue(value);
-              tr.appendChild(td);
-            });
-            node.appendChild(tr);
-          });
+            node.setAttribute('data-empty', 'false');
+          }
         } else {
-          list.forEach(row => {
-            const tr = document.createElement('tr');
-            const td = document.createElement('td');
-            td.textContent = displayValue(row);
-            tr.appendChild(td);
-            node.appendChild(tr);
-          });
+          node.textContent = values.length ? values.join(', ') : '—';
         }
       });
     }
 
-    function setSingle(selector, item) {
-      const nodes = resolveNodes(selector);
-      nodes.forEach(node => {
-        const entry = normalizeMediaItem(item);
-        const frame = node.querySelector('.media-frame');
-        const caption = node.querySelector('figcaption');
-        if (!frame) return;
-        frame.innerHTML = '';
-        if (entry && entry.src) {
-          const img = document.createElement('img');
-          img.src = entry.src;
-          img.alt = entry.caption || 'Annexure Image';
-          frame.appendChild(img);
-        } else {
-          frame.textContent = '—';
-        }
-        if (caption) {
-          caption.textContent = displayValue(entry && entry.caption ? entry.caption : '');
-        }
-      });
-    }
+    function normalizeData(raw) {
+      const source = raw && typeof raw === 'object' ? raw : {};
+      const eventSource = source.event_info || source.event || {};
+      const participantsSource = source.participants || source.participants_info || {};
+      const committeeSource = participantsSource.organising_committee || {};
+      const committeeData = (!Array.isArray(committeeSource) && typeof committeeSource === 'object') ? committeeSource : {};
+      const narrativeSource = source.narrative || {};
+      const analysisSource = source.analysis || {};
+      const mappingSource = source.mapping || {};
+      const relevanceSource = source.relevance || {};
+      const iqacSource = source.iqac || {};
+      const suggestionsSource = source.suggestions || {};
 
-    function populateChecklist(data) {
-      const tbody = document.querySelector('[data-checklist]');
-      if (!tbody) return;
-      const keys = [...CHECKLIST_ORDER];
-      if (data && typeof data === 'object') {
-        Object.keys(data).forEach(key => {
-          if (!keys.includes(key)) keys.push(key);
-        });
+      let committeeEntries = committeeData.event_coordinators ?? participantsSource.event_coordinators ?? [];
+      if (Array.isArray(committeeSource)) {
+        committeeEntries = committeeSource;
       }
-      tbody.innerHTML = '';
-      keys.forEach(key => {
-        const tr = document.createElement('tr');
-        const tickCell = document.createElement('td');
-        const tick = document.createElement('span');
-        tick.className = 'tick';
-        const value = data && typeof data === 'object' && Object.prototype.hasOwnProperty.call(data, key) ? data[key] : false;
-        tick.textContent = value ? '☑' : '▢';
-        tickCell.appendChild(tick);
-        const labelCell = document.createElement('td');
-        const label = CHECKLIST_LABELS[key] || key.replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-        labelCell.textContent = label;
-        tr.appendChild(tickCell);
-        tr.appendChild(labelCell);
-        tbody.appendChild(tr);
+
+      return {
+        event_info: {
+          department: eventSource.department ?? '',
+          location: eventSource.location ?? '',
+          event_title: eventSource.event_title ?? eventSource.title ?? '',
+          activities_count: eventSource.activities_count ?? eventSource.no_of_activities ?? '',
+          datetime: eventSource.datetime ?? eventSource.date_time ?? eventSource.date ?? '',
+          venue: eventSource.venue ?? '',
+          academic_year: eventSource.academic_year ?? '',
+          focus: eventSource.focus ?? eventSource.event_type_focus ?? '',
+        },
+        participants: {
+          target_audience: participantsSource.target_audience ?? '',
+          external_agencies: participantsSource.external_agencies ?? participantsSource.external_agencies_speakers ?? '',
+          external_contacts: participantsSource.external_contacts ?? '',
+          organising_committee: toArray(committeeEntries),
+          student_volunteers: participantsSource.student_volunteers ?? committeeData.student_volunteers_count ?? participantsSource.student_volunteers_count ?? '',
+          participants_count: participantsSource.participants_count ?? participantsSource.attendees_count ?? '',
+        },
+        summary: source.summary ?? narrativeSource.summary ?? narrativeSource.summary_overall_event ?? '',
+        outcomes: toArray(source.outcomes ?? narrativeSource.outcomes),
+        analysis: {
+          attendees: analysisSource.attendees ?? analysisSource.impact_attendees ?? '',
+          schools: analysisSource.schools ?? analysisSource.impact_schools ?? '',
+          volunteers: analysisSource.volunteers ?? analysisSource.impact_volunteers ?? '',
+        },
+        relevance: {
+          graduate_attributes: relevanceSource.graduate_attributes ?? mappingSource.graduate_attributes_or_needs ?? mappingSource.pos_psos ?? '',
+          sdg: relevanceSource.sdg ?? relevanceSource.value_systems ?? mappingSource.value_systems ?? '',
+        },
+        suggestions: toArray(source.suggestions ?? iqacSource.iqac_suggestions ?? suggestionsSource.list),
+        suggestions_date: source.suggestions_date ?? iqacSource.iqac_review_date ?? '',
+        signatures: {
+          head: source.signatures?.head ?? iqacSource.sign_head_coordinator ?? '',
+          faculty: source.signatures?.faculty ?? iqacSource.sign_faculty_coordinator ?? '',
+          iqac: source.signatures?.iqac ?? iqacSource.sign_iqac ?? '',
+        },
+      };
+    }
+
+    function renderAnalysis(data) {
+      const root = document.getElementById('iqac-report-page');
+      if (!root) return;
+      const list = root.querySelector('#analysis-list');
+      if (!list) return;
+      const items = [
+        { label: 'Impact on the Attendees', key: 'attendees' },
+        { label: 'Impact on Schools', key: 'schools' },
+        { label: 'Impact on Volunteers', key: 'volunteers' },
+      ];
+      list.innerHTML = '';
+      items.forEach(({ label, key }) => {
+        const li = document.createElement('li');
+        const strong = document.createElement('strong');
+        strong.textContent = label + ': ';
+        li.appendChild(strong);
+        const span = document.createElement('span');
+        span.setAttribute('data-field', `analysis.${key}`);
+        span.dataset.edit = 'textarea';
+        span.textContent = displayValue(getValue(data, `analysis.${key}`));
+        li.appendChild(span);
+        list.appendChild(li);
       });
     }
 
     function populateReport(data) {
       const fieldMap = [
-        { selector: '[data-field="event.title"]', path: 'event.title' },
-        { selector: '[data-field="event.department"]', path: 'event.department' },
-        { selector: '[data-field="event.location"]', path: 'event.location' },
-        { selector: '[data-field="event.no_of_activities"]', path: 'event.no_of_activities' },
-        { selector: '[data-field="event.date"]', path: 'event.date' },
-        { selector: '[data-field="event.venue"]', path: 'event.venue' },
-        { selector: '[data-field="event.academic_year"]', path: 'event.academic_year' },
-        { selector: '[data-field="event.event_type_focus"]', path: 'event.event_type_focus' },
-        { selector: '[data-field="event.blog_link"]', path: 'event.blog_link' },
+        { selector: '[data-field="event_info.event_title"]', path: 'event_info.event_title' },
+        { selector: '[data-field="event_info.department"]', path: 'event_info.department' },
+        { selector: '[data-field="event_info.location"]', path: 'event_info.location' },
+        { selector: '[data-field="event_info.activities_count"]', path: 'event_info.activities_count' },
+        { selector: '[data-field="event_info.datetime"]', path: 'event_info.datetime' },
+        { selector: '[data-field="event_info.venue"]', path: 'event_info.venue' },
+        { selector: '[data-field="event_info.academic_year"]', path: 'event_info.academic_year' },
+        { selector: '[data-field="event_info.focus"]', path: 'event_info.focus' },
         { selector: '[data-field="participants.target_audience"]', path: 'participants.target_audience' },
-        { selector: '[data-field="participants.external_agencies_speakers"]', path: 'participants.external_agencies_speakers' },
+        { selector: '[data-field="participants.external_agencies"]', path: 'participants.external_agencies' },
         { selector: '[data-field="participants.external_contacts"]', path: 'participants.external_contacts' },
-        { selector: '[data-field="participants.organising_committee.student_volunteers_count"]', path: 'participants.organising_committee.student_volunteers_count' },
-        { selector: '[data-field="participants.attendees_count"]', path: 'participants.attendees_count' },
-        { selector: '[data-field="narrative.summary_overall_event"]', path: 'narrative.summary_overall_event' },
-        { selector: '[data-field="analysis.impact_attendees"]', path: 'analysis.impact_attendees' },
-        { selector: '[data-field="analysis.impact_schools"]', path: 'analysis.impact_schools' },
-        { selector: '[data-field="analysis.impact_volunteers"]', path: 'analysis.impact_volunteers' },
-        { selector: '[data-field="mapping.pos_psos"]', path: 'mapping.pos_psos' },
-        { selector: '[data-field="mapping.graduate_attributes_or_needs"]', path: 'mapping.graduate_attributes_or_needs' },
-        { selector: '[data-field="mapping.contemporary_requirements"]', path: 'mapping.contemporary_requirements' },
-        { selector: '[data-field="mapping.value_systems"]', path: 'mapping.value_systems' },
-        { selector: '[data-field="iqac.iqac_review_date"]', path: 'iqac.iqac_review_date' },
-        { selector: '[data-field="iqac.sign_head_coordinator"]', path: 'iqac.sign_head_coordinator' },
-        { selector: '[data-field="iqac.sign_faculty_coordinator"]', path: 'iqac.sign_faculty_coordinator' },
-        { selector: '[data-field="iqac.sign_iqac"]', path: 'iqac.sign_iqac' },
-        { selector: '[data-field="annexures.communication.subject"]', path: 'annexures.communication.subject' },
-        { selector: '[data-field="annexures.communication.date"]', path: 'annexures.communication.date' }
+        { selector: '[data-field="participants.student_volunteers"]', path: 'participants.student_volunteers' },
+        { selector: '[data-field="participants.participants_count"]', path: 'participants.participants_count' },
+        { selector: '[data-field="summary"]', path: 'summary' },
+        { selector: '[data-field="relevance.graduate_attributes"]', path: 'relevance.graduate_attributes' },
+        { selector: '[data-field="relevance.sdg"]', path: 'relevance.sdg' },
+        { selector: '[data-field="suggestions_date"]', path: 'suggestions_date' },
+        { selector: '[data-field="signatures.head"]', path: 'signatures.head' },
+        { selector: '[data-field="signatures.faculty"]', path: 'signatures.faculty' },
+        { selector: '[data-field="signatures.iqac"]', path: 'signatures.iqac' }
       ];
 
       fieldMap.forEach(item => setText(item.selector, getValue(data, item.path)));
 
-      setList('[data-list="participants.organising_committee.event_coordinators"]', getValue(data, 'participants.organising_committee.event_coordinators'));
-      setList('[data-list="narrative.social_relevance"]', getValue(data, 'narrative.social_relevance'));
-      setList('[data-list="narrative.outcomes"]', getValue(data, 'narrative.outcomes'));
-      setList('[data-list="mapping.sdg_goal_numbers"]', getValue(data, 'mapping.sdg_goal_numbers'));
-      setList('[data-list="iqac.iqac_suggestions"]', getValue(data, 'iqac.iqac_suggestions'));
+      setList('[data-list="participants.organising_committee"]', getValue(data, 'participants.organising_committee'));
+      setList('[data-list="outcomes"]', getValue(data, 'outcomes'));
+      setList('[data-list="suggestions"]', getValue(data, 'suggestions'));
 
-      const courseRows = getValue(data, 'mapping.courses');
-      setRows('[data-rows="mapping.courses"]', Array.isArray(courseRows) ? courseRows.filter(Boolean) : []);
-
-      const volunteers = getValue(data, 'annexures.communication.volunteers');
-      setRows('[data-rows="annexures.communication.volunteers"]', Array.isArray(volunteers) ? volunteers.filter(Boolean) : []);
-
-      setChips('[data-chips="metrics.naac_tags"]', getValue(data, 'metrics.naac_tags'));
-
-      populateChecklist(getValue(data, 'attachments.checklist'));
-
-      const annexures = data && typeof data === 'object' ? data.annexures || {} : {};
-      setGrid('[data-grid="annexures.photos"]', annexures.photos);
-      setGrid('[data-grid="annexures.brochure_pages"]', annexures.brochure_pages);
-      setGrid('[data-grid="annexures.worksheets"]', annexures.worksheets);
-      setSingle('[data-single="annexures.evaluation_sheet"]', annexures.evaluation_sheet);
-      setSingle('[data-single="annexures.feedback_form"]', annexures.feedback_form);
+      renderAnalysis(data);
     }
 
     function renderReport() {
@@ -1358,15 +1048,13 @@
       if (state.mode === 'edit') return;
       editState.fields = [];
       editState.lists = [];
-      editState.chips = [];
       document.querySelectorAll('[data-field]').forEach(node => {
         const path = node.getAttribute('data-field');
-        if (!path) return;
-        if (node.dataset.editing === 'true') return;
+        if (!path || node.dataset.editing === 'true') return;
         if (node.dataset && node.dataset.hideBlank === 'true') {
           node.style.display = '';
         }
-        const multiline = node.dataset.edit === 'textarea';
+        const multiline = node.dataset.edit === 'textarea' || node.dataset.multiline === 'true';
         const input = multiline ? document.createElement('textarea') : document.createElement('input');
         input.className = multiline ? 'edit-textarea' : 'edit-input';
         if (!multiline) input.type = 'text';
@@ -1383,8 +1071,7 @@
       });
       document.querySelectorAll('[data-list]').forEach(node => {
         const path = node.getAttribute('data-list');
-        if (!path) return;
-        if (node.dataset.editing === 'true') return;
+        if (!path || node.dataset.editing === 'true') return;
         const textarea = document.createElement('textarea');
         textarea.className = 'edit-textarea';
         textarea.value = toArray(getValue(state.data, path)).join('\n');
@@ -1393,24 +1080,15 @@
         node.appendChild(textarea);
         editState.lists.push({ node, path, textarea });
       });
-      document.querySelectorAll('[data-chips]').forEach(node => {
-        const path = node.getAttribute('data-chips');
-        if (!path) return;
-        if (node.dataset.editing === 'true') return;
-        const textarea = document.createElement('textarea');
-        textarea.className = 'edit-textarea';
-        textarea.value = toArray(getValue(state.data, path)).join('\n');
-        node.dataset.editing = 'true';
-        node.innerHTML = '';
-        node.appendChild(textarea);
-        editState.chips.push({ node, path, textarea });
-      });
       state.mode = 'edit';
     }
 
     function exitEdit() {
       editState.fields.forEach(entry => {
-        const value = entry.input.value.trim();
+        const rawValue = entry.input.value || '';
+        const value = entry.multiline
+          ? rawValue.replace(/\r/g, '\n').trim()
+          : rawValue.trim();
         setValue(state.data, entry.path, value);
         entry.node.removeAttribute('data-editing');
         entry.node.innerHTML = '';
@@ -1422,16 +1100,8 @@
         entry.node.removeAttribute('data-editing');
         entry.node.innerHTML = '';
       });
-      editState.chips.forEach(entry => {
-        const raw = entry.textarea.value.replace(/\r/g, '\n');
-        const items = toArray(raw);
-        setValue(state.data, entry.path, items);
-        entry.node.removeAttribute('data-editing');
-        entry.node.innerHTML = '';
-      });
       editState.fields = [];
       editState.lists = [];
-      editState.chips = [];
       state.mode = 'preview';
       renderReport();
     }
@@ -1472,10 +1142,7 @@
           console.warn('Unable to parse initial report data', err);
         }
       }
-      if (!data || typeof data !== 'object') {
-        data = {};
-      }
-      state.data = data;
+      state.data = normalizeData(data);
       renderReport();
       attachEvents();
     }

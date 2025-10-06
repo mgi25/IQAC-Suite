@@ -1,0 +1,26 @@
+{% load static %}
+{% with file_field=form.instance.file %}
+    {% if file_field %}
+        {% with file_url=file_field.url %}
+            {% with file_name=file_field.name|default:file_url %}
+                {% with lower_name=file_name|lower %}
+                    {% if lower_name|slice:"-4:" == '.png' or lower_name|slice:"-4:" == '.jpg' or lower_name|slice:"-5:" == '.jpeg' or lower_name|slice:"-4:" == '.gif' or lower_name|slice:"-5:" == '.webp' %}
+                        {% with preview_type='image' %}
+                            {% include 'emt/partials/attachment_block_inner.html' %}
+                        {% endwith %}
+                    {% else %}
+                        {% with preview_type='file' %}
+                            {% include 'emt/partials/attachment_block_inner.html' %}
+                        {% endwith %}
+                    {% endif %}
+                {% endwith %}
+            {% endwith %}
+        {% endwith %}
+    {% else %}
+        {% with file_url='' file_name='' lower_name='' %}
+            {% with preview_type='file' %}
+                {% include 'emt/partials/attachment_block_inner.html' %}
+            {% endwith %}
+        {% endwith %}
+    {% endif %}
+{% endwith %}

@@ -1,5 +1,28 @@
 let loadingCount = 0;
 
+function detectSitePrefix(path = window.location?.pathname || '') {
+    if (!path) return '';
+
+    const normalize = (candidate) => {
+        if (!candidate) return '';
+        if (candidate === '/suite' || candidate.startsWith('/suite/')) return '/suite';
+        if (candidate === '/emt' || candidate.startsWith('/emt/')) return '/emt';
+        return '';
+    };
+
+    // Direct matches
+    let prefix = normalize(path);
+    if (prefix) return prefix;
+
+    // Allow embedded paths such as /core/impersonate/.../suite/...
+    const suiteIdx = path.indexOf('/suite/');
+    if (suiteIdx !== -1) return '/suite';
+    const emtIdx = path.indexOf('/emt/');
+    if (emtIdx !== -1) return '/emt';
+
+    return '';
+}
+
 function showLoadingOverlay(text = 'Loading...') {
     const overlay = document.getElementById('loadingOverlay');
     if (!overlay) return;
@@ -22,6 +45,69 @@ function fetchWithOverlay(url, options = {}, text = 'Loading...') {
     // Small helper to wrap fetch calls with the overlay lifecycle
     showLoadingOverlay(text);
     return fetch(url, options).finally(() => hideLoadingOverlay());
+}
+
+function inferProposalId() {
+    try {
+        const form = document.getElementById('report-form');
+        if (form && form.dataset && form.dataset.proposalId) {
+            return form.dataset.proposalId;
+        }
+    } catch (e) { /* ignore */ }
+
+    if (window.PROPOSAL_ID) {
+        return String(window.PROPOSAL_ID);
+    }
+
+    try {
+        const path = window.location.pathname || '';
+        const match = path.match(/\/(?:admin\/)?(?:suite|emt)\/report\/submit\/(\d+)\/?/i);
+        if (match && match[1]) {
+            return match[1];
+        }
+    } catch (e) { /* ignore */ }
+
+    return '';
+}
+
+function ensureReportIdForAttendance() {
+    const result = { proposalId: '', reportId: '' };
+
+    try {
+        const form = document.getElementById('report-form');
+        if (form && form.dataset) {
+            if (form.dataset.proposalId) {
+                result.proposalId = form.dataset.proposalId;
+            }
+            if (form.dataset.reportId) {
+                result.reportId = form.dataset.reportId;
+            }
+        }
+    } catch (e) { /* ignore */ }
+
+    if (!result.proposalId) {
+        result.proposalId = inferProposalId();
+    }
+
+    if (result.proposalId) {
+        const proposalStr = String(result.proposalId);
+        if (!window.PROPOSAL_ID || String(window.PROPOSAL_ID) !== proposalStr) {
+            window.PROPOSAL_ID = proposalStr;
+        }
+    }
+
+    if (!result.reportId && window.REPORT_ID) {
+        result.reportId = String(window.REPORT_ID);
+    }
+
+    if (result.reportId) {
+        const reportStr = String(result.reportId);
+        if (!window.REPORT_ID || String(window.REPORT_ID) !== reportStr) {
+            window.REPORT_ID = reportStr;
+        }
+    }
+
+    return result;
 }
 
 document.addEventListener('DOMContentLoaded', function(){
@@ -53,6 +139,7 @@ document.addEventListener('DOMContentLoaded', function(){
         }
         return;
     }
+        ensureReportIdForAttendance();
         // Central init (single DOMContentLoaded listener)
         const sectionState = {}; // fieldName -> value snapshot
     const urlParams = new URLSearchParams(window.location.search || '');
@@ -77,21 +164,57 @@ document.addEventListener('DOMContentLoaded', function(){
      SUBMIT EVENT REPORT PAGE INLINE JAVASCRIPT
      Moved from submit_event_report.html template
      =========================================== */
-  
+
   // Global variables for form management
   if (typeof window.REPORT_ID === 'undefined') {
     console.log('Event Report Form initializing...');
   }
-  
-  let currentSection = 'event-information';
+
+  const DEFAULT_SECTION_SEQUENCE = [
+      'event-information',
+      'participants-information',
+      'event-summary',
+      'event-outcomes',
+      'analysis',
+      'event-relevance',
+      'attachments'
+  ];
+  const navLinks = Array.from(document.querySelectorAll('.nav-link[data-section]'));
+  const derivedSectionOrder = navLinks
+      .map((link, index) => {
+          const rawOrder = parseInt(link.dataset.order, 10);
+          const order = Number.isFinite(rawOrder) ? rawOrder : (index + 1);
+          return { section: link.dataset.section, order, index };
+      })
+      .sort((a, b) => {
+          if (a.order === b.order) {
+              return a.index - b.index;
+          }
+          return a.order - b.order;
+      })
+      .map(item => item.section)
+      .filter(Boolean);
+  const SECTION_SEQUENCE = derivedSectionOrder.length ? derivedSectionOrder : DEFAULT_SECTION_SEQUENCE;
+  const FIRST_SECTION = SECTION_SEQUENCE.includes('event-information')
+      ? 'event-information'
+      : (SECTION_SEQUENCE[0] || 'event-information');
+
+  let currentSection = FIRST_SECTION;
+  let saveAndContinueInFlight = false;
   let sectionProgress = {
       'event-information': false,
       'participants-information': false,
       'event-summary': false,
       'event-outcomes': false,
       'analysis': false,
-      'event-relevance': false
+      'event-relevance': false,
+      'attachments': false
   };
+  SECTION_SEQUENCE.forEach(section => {
+      if (!sectionProgress.hasOwnProperty(section)) {
+          sectionProgress[section] = false;
+      }
+  });
 
   // Persist progress per proposal to survive page reloads or navigation to GA editor
   const LS_PROGRESS_KEY = `event_report_progress_${window.PROPOSAL_ID || ''}`;
@@ -136,10 +259,7 @@ document.addEventListener('DOMContentLoaded', function(){
       if (window.AUTOSAVE_URL) {
           return;
       }
-      const path = window.location.pathname || '';
-      let prefix = '';
-      if (path.startsWith('/suite/')) prefix = '/suite';
-      else if (path.startsWith('/emt/')) prefix = '/emt';
+      const prefix = detectSitePrefix();
       window.AUTOSAVE_URL = `${prefix}/autosave-event-report/`;
   }
 
@@ -263,14 +383,17 @@ document.addEventListener('DOMContentLoaded', function(){
               localStorage.removeItem(LS_PROGRESS_KEY);
           } catch (e) {}
           // Clear any UI state
+          Object.keys(sectionProgress).forEach(key => {
+              sectionProgress[key] = false;
+          });
           document.querySelectorAll('.nav-link').forEach(link => {
               link.classList.remove('completed', 'active');
-              if (link.dataset.section !== 'event-information') {
+              if (link.dataset.section !== FIRST_SECTION) {
                   link.classList.add('disabled');
               }
           });
           // Ensure first section is active and content is loaded
-          activateSection('event-information');
+          activateSection(FIRST_SECTION);
           // Hide final submit
           const submitSection = document.querySelector('.submit-section');
           if (submitSection) submitSection.classList.add('hidden');
@@ -594,12 +717,32 @@ $(document).on('click', '#ai-sdg-implementation', function(){
     // Global Save & Continue: explicitly exclude GA editor, SDG select, SDG save, and Outcome save buttons
     $(document).on('click', '.btn-save-section:not(.btn-ga-editor):not(.btn-sdg-select):not(.btn-sdg-save):not(.btn-outcome-save)', function(e) {
       e.preventDefault();
+
+      if (saveAndContinueInFlight) {
+          return;
+      }
+
       if (!validateCurrentSection()) {
           showNotification('Please fill in all required fields', 'error');
           return;
       }
 
-      autosaveThen(() => {
+      const $btn = $(this);
+      const wasDisabled = $btn.prop('disabled');
+
+      saveAndContinueInFlight = true;
+      if (!wasDisabled) {
+          $btn.prop('disabled', true);
+      }
+
+      const resetInFlightState = () => {
+          saveAndContinueInFlight = false;
+          if (!wasDisabled) {
+              $btn.prop('disabled', false);
+          }
+      };
+
+      const savePromise = autosaveThen(() => {
           markSectionComplete(currentSection);
           const nextSection = getNextSection(currentSection);
 
@@ -613,6 +756,20 @@ $(document).on('click', '#ai-sdg-implementation', function(){
           showNotification('All sections completed! Review your report.', 'success');
           return submitForPreview();
       });
+
+      savePromise
+          .then((submitted) => {
+              if (!submitted) {
+                  resetInFlightState();
+              }
+              return submitted;
+          })
+          .catch((err) => {
+              resetInFlightState();
+              throw err;
+          });
+
+      return savePromise;
   });
 
     $(document).on('click', '#review-report-btn', function(e) {
@@ -678,11 +835,18 @@ $(document).on('click', '#ai-sdg-implementation', function(){
           case 'event-relevance':
               content = getEventRelevanceContent();
               break;
+          case 'attachments':
+              content = getAttachmentsContent();
+              break;
           default:
               content = getEventInformationContent();
       }
-      
+
       $('.form-grid').html(content);
+
+      if (sectionName === 'attachments') {
+          setTimeout(() => initAttachments(), 50);
+      }
 
       if (sectionName === 'participants-information') {
           // Defer population until after the new DOM elements are attached, with retries
@@ -737,28 +901,34 @@ $(document).on('click', '#ai-sdg-implementation', function(){
               title: 'Outcomes of the Event', 
               subtitle: 'Post-event evaluation and achievements' 
           },
-          'analysis': { 
-              title: 'Analysis', 
-              subtitle: 'Detailed analysis and insights (minimum 500 words)' 
+          'analysis': {
+              title: 'Analysis',
+              subtitle: 'Detailed analysis and insights (minimum 500 words)'
           },
-          'event-relevance': { 
-              title: 'Relevance of the Event', 
-              subtitle: 'Program outcomes, graduate attributes, SDGs mapping' 
+          'event-relevance': {
+              title: 'Relevance of the Event',
+              subtitle: 'Program outcomes, graduate attributes, SDGs mapping'
           },
-          'suggestions': { 
-              title: 'Suggestions for Improvements', 
-              subtitle: 'IQAC coordinator feedback and recommendations' 
+          'attachments': {
+              title: 'Attachments & Evidence',
+              subtitle: 'Upload photos, certificates, and other supporting files'
+          },
+          'suggestions': {
+              title: 'Suggestions for Improvements',
+              subtitle: 'IQAC coordinator feedback and recommendations'
           }
       };
       return sections[section] || { title: 'Section', subtitle: 'Complete this section' };
   }
   
     function getNextSection(current) {
-            // Order must exactly match existing nav/link + sectionProgress keys.
-            // Removed 'suggestions' (no nav item defined) which previously blocked final submission.
-            const order = ['event-information', 'participants-information', 'event-summary', 'event-outcomes', 'analysis', 'event-relevance'];
-      const currentIndex = order.indexOf(current);
-      return currentIndex < order.length - 1 ? order[currentIndex + 1] : null;
+        const currentIndex = SECTION_SEQUENCE.indexOf(current);
+        if (currentIndex === -1) {
+            return null;
+        }
+        return currentIndex < SECTION_SEQUENCE.length - 1
+            ? SECTION_SEQUENCE[currentIndex + 1]
+            : null;
   }
 
         // getPreviousSection removed; navbar permits free navigation to unlocked sections
@@ -776,6 +946,8 @@ $(document).on('click', '#ai-sdg-implementation', function(){
           return validateAnalysis();
       } else if (currentSection === 'event-relevance') {
           return validateEventRelevance();
+      } else if (currentSection === 'attachments') {
+          return validateAttachments();
       }
       // Add other section validations as needed
       return true;
@@ -887,7 +1059,7 @@ $(document).on('click', '#ai-sdg-implementation', function(){
           { id: '#contemporary-requirements-modern', name: 'Contemporary Requirements' },
           { id: '#sdg-implementation-modern', name: 'SDG Implementation' }
       ];
-      
+
       requiredFields.forEach(function(field) {
           const element = $(field.id);
           if (field.id !== '#graduate-attributes-modern') {
@@ -910,10 +1082,14 @@ $(document).on('click', '#ai-sdg-implementation', function(){
               }
           }
       });
-      
+
       return isValid;
   }
-  
+
+  function validateAttachments() {
+      return true;
+  }
+
   function markSectionComplete(sectionName) {
       sectionProgress[sectionName] = true;
       $(`.nav-link[data-section="${sectionName}"]`).addClass('completed');
@@ -925,7 +1101,7 @@ $(document).on('click', '#ai-sdg-implementation', function(){
   }
 
   function allSectionsCompleted(){
-      return Object.values(sectionProgress).every(Boolean);
+      return SECTION_SEQUENCE.every(section => Boolean(sectionProgress[section]));
   }
 
   function enableFinalSubmission(){
@@ -1450,14 +1626,27 @@ $(document).on('click', '#ai-sdg-implementation', function(){
 
           <!-- Save Section -->
           <div class="form-row full-width">
-              <div class="save-section-container">
-                  <button type="button" class="btn-save-section">Save & Continue</button>
-                  <div class="save-help-text">Complete this section to unlock the next one</div>
-              </div>
+          <div class="save-section-container">
+              <button type="button" class="btn-save-section">Save & Continue</button>
+              <div class="save-help-text">Complete this section to unlock the next one</div>
           </div>
-      `;
+      </div>
+  `;
+}
+
+  function getAttachmentsContent() {
+      const tpl = document.getElementById('attachments-section-template');
+      if (!tpl) {
+          return `
+              <div class="form-row full-width">
+                  <div class="help-text">Attachments section unavailable. Please reload the page.</div>
+              </div>
+          `;
+      }
+
+      return tpl.innerHTML.trim();
   }
-  
+
   // Form submission validation
   $('#report-form').on('submit', function(e) {
       // Validate current and ensure all sections complete before final submit
@@ -2594,54 +2783,112 @@ function initAttachments(){
   const totalInput = document.querySelector('input[name$="-TOTAL_FORMS"]');
   if(!list || !addBtn || !template || !totalInput) return;
 
+  const placeholderMarkup = '<span class="attach-add">+</span><span class="attach-text">Add file</span>';
+
+  function setPlaceholder(upload){
+    upload.innerHTML = placeholderMarkup;
+    delete upload.dataset.fileUrl;
+    delete upload.dataset.previewType;
+  }
+
   function bind(block){
     const upload = block.querySelector('.attach-upload');
     const fileInput = block.querySelector('.file-input');
     const removeBtn = block.querySelector('.attach-remove');
-    upload.addEventListener('click', () => {
-      const img = upload.querySelector('img');
-      if(img){
-        openImageModal(img.src);
-      } else {
-        fileInput.click();
+    const deleteToggle = block.querySelector('input[name$="-DELETE"]');
+    if(!upload || !fileInput || !removeBtn) return;
+
+    const ensureRemovePlacement = () => {
+      if (!upload.contains(removeBtn)) {
+        upload.appendChild(removeBtn);
       }
+    };
+
+    const toggleRemoveVisibility = (visible) => {
+      removeBtn.style.display = visible ? 'flex' : 'none';
+    };
+
+    upload.addEventListener('click', () => {
+      const fileUrl = upload.dataset.fileUrl;
+      const previewType = upload.dataset.previewType;
+      if (fileUrl) {
+        if (previewType === 'image') {
+          openImageModal(fileUrl);
+        } else {
+          try {
+            window.open(fileUrl, '_blank', 'noopener');
+          } catch (_) {}
+        }
+        return;
+      }
+      fileInput.click();
     });
+
     fileInput.addEventListener('change', () => {
       if(fileInput.files && fileInput.files[0]){
-        const url = URL.createObjectURL(fileInput.files[0]);
-        upload.innerHTML = `<img src="${url}">`;
-        upload.appendChild(removeBtn);
-        removeBtn.style.display = 'flex';
+        const file = fileInput.files[0];
+        const isImage = file.type && file.type.startsWith('image/');
+        const objectUrl = URL.createObjectURL(file);
+        if(isImage){
+          upload.innerHTML = `<img src="${objectUrl}" alt="Attachment preview">`;
+          upload.dataset.previewType = 'image';
+        } else {
+          const safeName = escapeHtml(file.name || 'Attachment');
+          upload.innerHTML = `<div class="attach-file"><span class="attach-file-name">${safeName}</span><span class="attach-text">Click to download</span></div>`;
+          upload.dataset.previewType = 'file';
+        }
+        upload.dataset.fileUrl = objectUrl;
+        ensureRemovePlacement();
+        toggleRemoveVisibility(true);
+        if (deleteToggle) deleteToggle.checked = false;
+        if (window.ReportAutosaveManager) {
+          ReportAutosaveManager.reinitialize();
+        }
+      } else if (!upload.dataset.fileUrl) {
+        setPlaceholder(upload);
+        toggleRemoveVisibility(false);
       }
     });
+
     removeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       fileInput.value = '';
-      upload.innerHTML = '<span class="attach-add">+</span>';
-      removeBtn.style.display = 'none';
-      const del = block.querySelector('input[name$="-DELETE"]');
-      if(del) del.checked = true;
+      if (deleteToggle) deleteToggle.checked = true;
+      setPlaceholder(upload);
+      toggleRemoveVisibility(false);
       if (window.ReportAutosaveManager) {
         ReportAutosaveManager.reinitialize();
       }
     });
+
+    if (upload.dataset.fileUrl) {
+      ensureRemovePlacement();
+      toggleRemoveVisibility(true);
+    } else {
+      if (!upload.innerHTML.trim()) {
+        setPlaceholder(upload);
+      }
+      toggleRemoveVisibility(false);
+    }
   }
 
   list.querySelectorAll('.attachment-block').forEach(bind);
 
   addBtn.addEventListener('click', () => {
-    const idx = +totalInput.value;
+    const idx = parseInt(totalInput.value, 10) || 0;
     const html = template.innerHTML.replace(/__prefix__/g, idx);
     const temp = document.createElement('div');
     temp.innerHTML = html.trim();
     const block = temp.firstElementChild;
+    if(!block) return;
     list.appendChild(block);
-    totalInput.value = idx + 1;
+    totalInput.value = String(idx + 1);
     bind(block);
     if (window.ReportAutosaveManager) {
       ReportAutosaveManager.reinitialize();
     }
-    block.querySelector('.file-input').click();
+    const input = block.querySelector('.file-input');
+    if (input) input.click();
   });
 }
 
@@ -2932,6 +3179,7 @@ function setupDynamicActivities() {
 }
 
 function setupAttendanceLink() {
+    ensureReportIdForAttendance();
     const attendanceField = $('#attendance-modern');
     const participantFields = $('#num-participants-modern, #total-participants-modern');
     const fields = attendanceField.add(participantFields);
@@ -2969,23 +3217,27 @@ function setupAttendanceLink() {
                 showLoadingOverlay('Preparing attendance...');
                 // Fallback: if autosave URL isn't injected, infer it from current path
                 if (!window.AUTOSAVE_URL) {
-                    const path = window.location.pathname || '';
-                    let prefix = '';
-                    if (path.startsWith('/suite/')) prefix = '/suite';
-                    else if (path.startsWith('/emt/')) prefix = '/emt';
+                    const prefix = detectSitePrefix();
                     window.AUTOSAVE_URL = `${prefix}/autosave-event-report/`;
                 }
-                const result = (window.ReportAutosaveManager && window.ReportAutosaveManager.manualSave)
-                    ? await window.ReportAutosaveManager.manualSave()
-                    : null;
 
-                const reportId = result?.report_id || window.REPORT_ID;
+                let reportId = window.REPORT_ID;
+                let result = null;
+                if (window.ReportAutosaveManager && window.ReportAutosaveManager.manualSave) {
+                    try {
+                        result = await window.ReportAutosaveManager.manualSave();
+                    } catch (autosaveError) {
+                        console.error('Autosave failed before opening attendance; continuing when possible.', autosaveError);
+                    }
+                }
+
+                if (result?.report_id) {
+                    reportId = result.report_id;
+                }
+
                 if (reportId) {
                     // Respect site prefix (/suite or /emt) when building the URL
-                    const path = window.location.pathname || '';
-                    let prefix = '';
-                    if (path.startsWith('/suite/')) prefix = '/suite';
-                    else if (path.startsWith('/emt/')) prefix = '/emt';
+                    const prefix = detectSitePrefix();
                     const attendanceUrl = `${prefix}/reports/${reportId}/attendance/upload/`;
                     fields.each((_, f) => {
                         const jq = $(f);
@@ -2999,8 +3251,8 @@ function setupAttendanceLink() {
                     alert('Unable to prepare attendance. Please try saving once.');
                 }
             } catch (e) {
-                console.error('Failed to autosave before opening attendance:', e);
-                alert('Save failed. Please fix any errors and try again.');
+                console.error('Unexpected error while preparing attendance:', e);
+                alert('Unable to open attendance page. Please try again.');
             } finally {
                 hideLoadingOverlay();
             }
@@ -3023,10 +3275,7 @@ function setupGAEditorLink() {
                 return;
             }
             // Respect site prefix (/suite or /emt)
-            const path = window.location.pathname || '';
-            let prefix = '';
-            if (path.startsWith('/suite/')) prefix = '/suite';
-            else if (path.startsWith('/emt/')) prefix = '/emt';
+            const prefix = detectSitePrefix();
             const url = `${prefix}/reports/${reportId}/graduate-attributes/edit/?from=ga`;
             window.location.href = url;
         } catch (e) {
@@ -3056,10 +3305,7 @@ function initializeAutosaveIndicators() {
 
         const reportId = data?.reportId || e.originalEvent?.detail?.reportId || e.detail?.reportId;
         if (reportId) {
-            const path = window.location.pathname || '';
-            let prefix = '';
-            if (path.startsWith('/suite/')) prefix = '/suite';
-            else if (path.startsWith('/emt/')) prefix = '/emt';
+            const prefix = detectSitePrefix();
             const attendanceUrl = `${prefix}/reports/${reportId}/attendance/upload/`;
             $('#attendance-modern, #num-participants-modern, #total-participants-modern')
                 .attr('data-attendance-url', attendanceUrl)

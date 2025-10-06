@@ -239,48 +239,30 @@ $(document).ready(function() {
     }
 
     function setupFormHandling() {
-        // Allow navigation with proper validation
+        // Allow navigation between sections without blocking on validation
         $('.proposal-nav .nav-link').on('click', function(e) {
             e.preventDefault();
-            const section = $(this).data('section');
-
             const $this = $(this);
-
-            // Prevent navigation to disabled sections
-            if ($this.hasClass('disabled')) {
-                const order = parseInt($this.data('order'));
-                if (order === 2) {
-                    showNotification('Please complete and save the Basic Info section first.', 'info');
-                } else {
-                    showNotification('Please complete the previous sections first.', 'info');
-                }
-                return;
-            }
+            const section = $this.data('section');
+            if (!section) return;
 
             const currentOrder = parseInt($(`.proposal-nav .nav-link[data-section="${currentExpandedCard}"]`).data('order')) || 0;
             const targetOrder = parseInt($this.data('order')) || 0;
-            
+
             // Always allow navigation to basic-info
             if (section === 'basic-info') {
                 activateSection(section);
                 return;
             }
-            
-            // Check if target section is enabled (not disabled)
-            if (!$this.hasClass('disabled')) {
-                // If moving forward to a new section and current section exists, validate it first
-                if (targetOrder > currentOrder && currentExpandedCard && 
-                    !sectionProgress[currentExpandedCard] && currentExpandedCard !== 'basic-info') {
-                    if (!validateCurrentSection()) {
-                        showNotification('Please complete all required fields in the current section first.', 'error');
-                        return;
-                    }
-                    // Mark current section as in-progress if not completed yet
-                    markSectionInProgress(currentExpandedCard);
-                }
 
-                activateSection(section);
+            if (targetOrder > currentOrder && currentExpandedCard &&
+                !sectionProgress[currentExpandedCard] && currentExpandedCard !== 'basic-info') {
+                // Mark current section as in-progress if not completed yet
+                markSectionInProgress(currentExpandedCard);
             }
+
+            $this.removeClass('disabled');
+            activateSection(section);
         });
         
         $(document).on('click', '.btn-save-section', function(e) {
@@ -521,6 +503,9 @@ $(document).ready(function() {
         if (!numActivitiesInput || numActivitiesInput.dataset.listenerAttached) return;
         const container = document.getElementById('dynamic-activities-section');
 
+        const djangoNumActivitiesField = document.querySelector('#django-basic-info [name="num_activities"]');
+        let isSyncingActivitiesCount = false;
+
         function reindexActivityRows() {
             const rows = container.querySelectorAll('.activity-row');
             rows.forEach((row, idx) => {
@@ -540,12 +525,20 @@ $(document).ready(function() {
                     dateLabel.textContent = `${num}. Activity Date`;
                 }
             });
-            // Update the visible count and dispatch events so hidden Django field syncs and autosave can trigger
-            numActivitiesInput.value = rows.length;
-            try {
-                numActivitiesInput.dispatchEvent(new Event('input', { bubbles: true }));
-                numActivitiesInput.dispatchEvent(new Event('change', { bubbles: true }));
-            } catch (e) { /* noop */ }
+            // Update the visible count and keep the hidden Django field in sync so autosave notices the change
+            const newCount = String(rows.length);
+            const currentCount = numActivitiesInput.value;
+            if (currentCount !== newCount) {
+                isSyncingActivitiesCount = true;
+                numActivitiesInput.value = newCount;
+                isSyncingActivitiesCount = false;
+            }
+            if (djangoNumActivitiesField && djangoNumActivitiesField.value !== newCount) {
+                djangoNumActivitiesField.value = newCount;
+                try {
+                    djangoNumActivitiesField.dispatchEvent(new Event('change', { bubbles: true }));
+                } catch (e) { /* noop */ }
+            }
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 // Reinitialize so new rows are tracked by the autosave manager
                 window.AutosaveManager.reinitialize();
@@ -613,7 +606,8 @@ $(document).ready(function() {
             }
         });
 
-    numActivitiesInput.addEventListener('input', () => {
+        numActivitiesInput.addEventListener('input', () => {
+            if (isSyncingActivitiesCount) return;
             const count = parseInt(numActivitiesInput.value, 10);
             render(count);
         });
@@ -1055,6 +1049,74 @@ $(document).ready(function() {
         });
     }
 
+    function logAudienceAction(action, extra = {}) {
+        const audienceField = $('#target-audience-modern');
+        const djangoAudienceField = $('#django-basic-info [name="target_audience"]');
+        const classIdsField = $('#target-audience-class-ids');
+        console.log(`[Audience] ${action}`, {
+            ...extra,
+            displayValue: audienceField.length ? audienceField.val() : undefined,
+            hiddenValue: djangoAudienceField.length ? djangoAudienceField.val() : undefined,
+            classIds: classIdsField.length ? classIdsField.val() : undefined
+        });
+    }
+
+    function applyTargetAudienceSelection({ selectedStudents = [], selectedFaculty = [], userSelected = [] }) {
+        const audienceField = $('#target-audience-modern');
+        const classIdsField = $('#target-audience-class-ids');
+        const djangoAudienceField = $('#django-basic-info [name="target_audience"]');
+
+        if (!audienceField.length) {
+            logAudienceAction('selection-skipped-no-field', {
+                selectedStudents: selectedStudents.length,
+                selectedFaculty: selectedFaculty.length,
+                userSelected: userSelected.length
+            });
+            return;
+        }
+
+        const studentNames = selectedStudents.map(it => it?.name).filter(Boolean);
+        const facultyNames = selectedFaculty.map(it => it?.name).filter(Boolean);
+        const userNames = userSelected.map(it => it?.name).filter(Boolean);
+        const names = studentNames.concat(facultyNames, userNames);
+        const displayValue = names.join(', ');
+
+        audienceField
+            .val(displayValue)
+            .data('selectedStudents', [...selectedStudents])
+            .data('selectedFaculty', [...selectedFaculty])
+            .data('selectedUsers', [...userSelected])
+            .trigger('change')
+            .trigger('input');
+
+        clearFieldError(audienceField);
+
+        const classIds = selectedStudents
+            .filter(it => /^\d+$/.test(String(it?.id ?? '')))
+            .map(it => String(it.id));
+
+        if (classIdsField.length) {
+            classIdsField
+                .val(classIds.join(','))
+                .trigger('change')
+                .trigger('input');
+        }
+
+        if (djangoAudienceField.length && djangoAudienceField.val() !== displayValue) {
+            djangoAudienceField.val(displayValue).trigger('change');
+        } else if (djangoAudienceField.length) {
+            djangoAudienceField.trigger('change');
+        }
+
+        logAudienceAction('selection-applied', {
+            names,
+            classIds,
+            studentCount: selectedStudents.length,
+            facultyCount: selectedFaculty.length,
+            userCount: userSelected.length
+        });
+    }
+
     function setupAudienceModal() {
         const audienceField = $('#target-audience-modern');
         const djangoOrgSelect = $('#django-basic-info [name="organization"]');
@@ -1066,6 +1128,12 @@ $(document).ready(function() {
         $(document).off('click', '#target-audience-modern').on('click', '#target-audience-modern', openAudienceModal);
 
         $('#audienceCancel').off('click').on('click', () => modal.removeClass('show'));
+
+        logAudienceAction('setup-modal-listeners', {
+            hasAudienceField: audienceField.length > 0,
+            hasOrgSelect: djangoOrgSelect.length > 0,
+            hasModal: modal.length > 0
+        });
     }
 
     function openAudienceModal() {
@@ -1089,6 +1157,14 @@ $(document).ready(function() {
         let selectedFaculty = [...storedFaculty];
         let currentType = null;
         let userSelected = [...storedUsers];
+
+        logAudienceAction('open-modal', {
+            orgId: djangoOrgSelect.val(),
+            preselected,
+            storedStudentCount: storedStudents.length,
+            storedFacultyCount: storedFaculty.length,
+            storedUserCount: storedUsers.length
+        });
 
         container.html(`
             <div id="audienceStep1">
@@ -1436,20 +1512,16 @@ $(document).ready(function() {
         }
 
         $('#audienceConfirm').off('click').on('click', () => {
-            const groupNames = selectedStudents.concat(selectedFaculty).map(it => it.name);
-            const userNames = userSelected.map(u => u.name);
-            const names = groupNames.concat(userNames);
-            audienceField
-                .val(names.join(', '))
-                .data('selectedStudents', [...selectedStudents])
-                .data('selectedFaculty', [...selectedFaculty])
-                .data('selectedUsers', [...userSelected])
-                .trigger('change')
-                .trigger('input');
-            classIdsField
-                .val(selectedStudents.filter(it => /^\d+$/.test(it.id)).map(it => it.id).join(','))
-                .trigger('change')
-                .trigger('input');
+            logAudienceAction('confirm-click', {
+                selectedStudentCount: selectedStudents.length,
+                selectedFacultyCount: selectedFaculty.length,
+                userSelectionCount: userSelected.length
+            });
+            applyTargetAudienceSelection({
+                selectedStudents: [...selectedStudents],
+                selectedFaculty: [...selectedFaculty],
+                userSelected: [...userSelected]
+            });
             modal.removeClass('show');
         });
     }
@@ -3299,6 +3371,55 @@ function getWhyThisEventForm() {
             }
         }
 
+        const targetAudienceField = $('#target-audience-modern');
+        const hiddenTargetAudienceField = $('#django-basic-info [name="target_audience"]');
+        const hiddenTargetAudienceValue = hiddenTargetAudienceField.length ? hiddenTargetAudienceField.val() : '';
+        const selectedStudents = targetAudienceField.length ? targetAudienceField.data('selectedStudents') || [] : [];
+        const selectedFaculty = targetAudienceField.length ? targetAudienceField.data('selectedFaculty') || [] : [];
+        const selectedUsers = targetAudienceField.length ? targetAudienceField.data('selectedUsers') || [] : [];
+
+        let targetAudienceValue = targetAudienceField.length ? targetAudienceField.val() : '';
+        let hasVisibleValue = typeof targetAudienceValue === 'string' && targetAudienceValue.trim().length > 0;
+        const hasHiddenValue = typeof hiddenTargetAudienceValue === 'string' && hiddenTargetAudienceValue.trim().length > 0;
+        const hasSelectionData = selectedStudents.length > 0 || selectedFaculty.length > 0 || selectedUsers.length > 0;
+        const shouldRehydrateVisible =
+            targetAudienceField.length && !hasVisibleValue && (hasHiddenValue || hasSelectionData);
+        let rehydratedFromHidden = false;
+
+        if (shouldRehydrateVisible && hasHiddenValue) {
+            targetAudienceField
+                .val(hiddenTargetAudienceValue)
+                .trigger('input')
+                .trigger('change');
+            targetAudienceValue = hiddenTargetAudienceValue;
+            hasVisibleValue = true;
+            rehydratedFromHidden = true;
+        }
+
+        const hasAudience = hasVisibleValue || hasHiddenValue || hasSelectionData;
+
+        logAudienceAction('validate-basic-info', {
+            visibleValue: targetAudienceValue,
+            hiddenValue: hiddenTargetAudienceValue,
+            selectedStudentCount: selectedStudents.length,
+            selectedFacultyCount: selectedFaculty.length,
+            selectedUserCount: selectedUsers.length,
+            hasVisibleValue,
+            hasHiddenValue,
+            hasSelectionData,
+            hasAudience,
+            rehydratedFromHidden
+        });
+
+        if (targetAudienceField.length) {
+            if (!hasAudience) {
+                showFieldError(targetAudienceField, 'Target Audience is required');
+                isValid = false;
+            } else {
+                clearFieldError(targetAudienceField);
+            }
+        }
+
         $('#form-panel-content input[required], #form-panel-content textarea[required], #form-panel-content select[required]').each(function() {
             const $field = $(this);
             const fieldInfo = {
@@ -3312,6 +3433,7 @@ function getWhyThisEventForm() {
             if (
                 fieldInfo.id === 'faculty-select' ||
                 fieldInfo.id === 'event-focus-type-modern' ||
+                fieldInfo.id === 'target-audience-modern' ||
                 $field.closest('.org-specific-field').length ||
                 (fieldInfo.id && fieldInfo.id.startsWith('org-type'))
             ) return;
@@ -3328,6 +3450,8 @@ function getWhyThisEventForm() {
                 const fieldName = $field.closest('.input-group').find('label').text().replace(' *', '');
                 showFieldError($field, `${fieldName} is required`);
                 isValid = false;
+            } else {
+                clearFieldError($field);
             }
         });
 
