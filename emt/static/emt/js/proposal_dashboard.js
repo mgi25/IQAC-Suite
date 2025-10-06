@@ -156,6 +156,20 @@ $(document).ready(function() {
         });
     }
 
+    async function waitForElement(selectorOrGetter, options = {}) {
+        try {
+            const element = await waitForCondition(() => {
+                const el = typeof selectorOrGetter === 'function'
+                    ? selectorOrGetter()
+                    : document.querySelector(selectorOrGetter);
+                return el || null;
+            }, options);
+            return element || null;
+        } catch (err) {
+            return null;
+        }
+    }
+
     async function ensureTomSelect(selectorOrGetter, options = {}) {
         try {
             const element = await waitForCondition(() => {
@@ -183,6 +197,19 @@ $(document).ready(function() {
         }
     }
 
+    function resolveStudentsApi() {
+        if (typeof window.API_STUDENTS === 'string' && window.API_STUDENTS) {
+            return window.API_STUDENTS;
+        }
+        if (typeof window.API_FACULTY === 'string' && window.API_FACULTY) {
+            return window.API_FACULTY.replace(/faculty\/?$/, 'students/');
+        }
+        if (typeof window.API_ORGANIZATIONS === 'string' && window.API_ORGANIZATIONS) {
+            return window.API_ORGANIZATIONS.replace(/organizations\/?$/, 'students/');
+        }
+        return null;
+    }
+
     async function buildAudienceSelection(orgs) {
         if (!Array.isArray(orgs) || !orgs.length) {
             return null;
@@ -194,6 +221,7 @@ $(document).ready(function() {
         const classIds = new Set();
         const facultyIds = new Set();
         const userIds = new Set();
+        const studentsApi = resolveStudentsApi();
 
         for (const org of orgs) {
             const orgId = org?.id;
@@ -236,6 +264,21 @@ $(document).ready(function() {
                         if (facultyId && label && !facultyIds.has(facultyId)) {
                             facultyIds.add(facultyId);
                             selectedFaculty.push({ id: facultyId, name: label });
+                        }
+                    });
+                }
+            }
+
+            if (studentsApi) {
+                const studentParams = new URLSearchParams({ org_id: orgId, q: '' });
+                const studentsData = await fetchJson(`${studentsApi}?${studentParams.toString()}`);
+                if (Array.isArray(studentsData)) {
+                    studentsData.forEach(student => {
+                        const studentId = student?.id != null ? String(student.id) : null;
+                        const label = student?.text || student?.name || '';
+                        if (studentId && label && !userIds.has(studentId)) {
+                            userIds.add(studentId);
+                            userSelected.push({ id: studentId, name: label });
                         }
                     });
                 }
@@ -2364,6 +2407,7 @@ function getWhyThisEventForm() {
         });
         scheduleHiddenField.value = lines.length ? lines.join('\n') : '';
         scheduleHiddenField.dispatchEvent(new Event('input', { bubbles: true }));
+        scheduleHiddenField.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
     function setupScheduleSection() {
@@ -3494,16 +3538,18 @@ function getWhyThisEventForm() {
                 { time: `${today}T10:30`, activity: 'Data Science Workshop' },
                 { time: `${today}T13:30`, activity: 'AI Panel Discussion' }
             ];
-            if (!scheduleTableBody || !scheduleHiddenField) {
-                scheduleTableBody = document.getElementById('schedule-rows');
-                scheduleHiddenField = document.getElementById('schedule-modern');
+            if (!scheduleTableBody) {
+                scheduleTableBody = await waitForElement('#schedule-rows', { timeout: 5000 });
+            }
+            if (!scheduleHiddenField) {
+                scheduleHiddenField = await waitForElement('#schedule-modern', { timeout: 5000 });
             }
             if (scheduleTableBody && scheduleHiddenField) {
                 scheduleTableBody.innerHTML = '';
                 entries.forEach(entry => addRow(entry.time, entry.activity));
                 serializeSchedule();
             } else {
-                const scheduleField = document.getElementById('schedule-modern');
+                const scheduleField = await waitForElement('#schedule-modern', { timeout: 2000 });
                 if (scheduleField) {
                     scheduleField.value = entries.map(entry => `${entry.time}||${entry.activity}`).join('\n');
                     dispatchInputEvents(scheduleField);
@@ -3512,14 +3558,22 @@ function getWhyThisEventForm() {
         }
 
         if (section === 'speakers') {
-            const addBtn = document.getElementById('add-speaker-btn');
-            if (addBtn) {
-                addBtn.click();
-                try {
-                    await waitForCondition(() => document.getElementById('speaker_full_name_0'), { timeout: 3000 });
-                } catch (err) {
-                    // Proceed even if the field isn't ready in time.
+            await waitForElement('#speakers-list', { timeout: 5000 });
+            let firstSpeakerField = document.getElementById('speaker_full_name_0');
+            if (!firstSpeakerField) {
+                const addBtn = await waitForElement('#add-speaker-btn', { timeout: 2000 });
+                if (addBtn) {
+                    addBtn.click();
+                    try {
+                        await waitForCondition(() => document.getElementById('speaker_full_name_0'), { timeout: 4000 });
+                    } catch (err) {
+                        // Proceed even if the field isn't ready in time.
+                    }
                 }
+                firstSpeakerField = document.getElementById('speaker_full_name_0');
+            }
+
+            if (firstSpeakerField) {
                 const idx = 0;
                 const speakerData = {
                     name: getRandom(AUTO_FILL_DATA.speakerNames),
@@ -3543,14 +3597,22 @@ function getWhyThisEventForm() {
         }
 
         if (section === 'expenses') {
-            const addBtn = document.getElementById('add-expense-btn');
-            if (addBtn) {
-                addBtn.click();
-                try {
-                    await waitForCondition(() => document.getElementById('expense_particulars_0'), { timeout: 2000 });
-                } catch (err) {
-                    // Ignore timeout; we'll fill what is available.
+            await waitForElement('#expense-rows', { timeout: 5000 });
+            let particularsField = document.getElementById('expense_particulars_0');
+            if (!particularsField) {
+                const addBtn = await waitForElement('#add-expense-btn', { timeout: 2000 });
+                if (addBtn) {
+                    addBtn.click();
+                    try {
+                        await waitForCondition(() => document.getElementById('expense_particulars_0'), { timeout: 3000 });
+                    } catch (err) {
+                        // Ignore timeout; we'll fill what is available.
+                    }
                 }
+                particularsField = document.getElementById('expense_particulars_0');
+            }
+
+            if (particularsField) {
                 setFieldValue('expense_sl_no_0', '1');
                 setFieldValue('expense_particulars_0', getRandom(AUTO_FILL_DATA.expenseItems));
                 setFieldValue('expense_amount_0', '1000');
@@ -3558,14 +3620,22 @@ function getWhyThisEventForm() {
         }
 
         if (section === 'income') {
-            const addBtn = document.getElementById('add-income-btn');
-            if (addBtn) {
-                addBtn.click();
-                try {
-                    await waitForCondition(() => document.getElementById('income_particulars_0'), { timeout: 2000 });
-                } catch (err) {
-                    // Ignore timeout; fill what we can.
+            await waitForElement('#income-rows', { timeout: 5000 });
+            let incomeField = document.getElementById('income_particulars_0');
+            if (!incomeField) {
+                const addBtn = await waitForElement('#add-income-btn', { timeout: 2000 });
+                if (addBtn) {
+                    addBtn.click();
+                    try {
+                        await waitForCondition(() => document.getElementById('income_particulars_0'), { timeout: 3000 });
+                    } catch (err) {
+                        // Ignore timeout; fill what we can.
+                    }
                 }
+                incomeField = document.getElementById('income_particulars_0');
+            }
+
+            if (incomeField) {
                 setFieldValue('income_sl_no_0', '1');
                 setFieldValue('income_particulars_0', getRandom(AUTO_FILL_DATA.incomeItems));
                 setFieldValue('income_participants_0', '50');
