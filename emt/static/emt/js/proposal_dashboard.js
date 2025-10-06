@@ -34,6 +34,10 @@ $(document).ready(function() {
     const autoFillEnabled = new URLSearchParams(window.location.search).has('autofill');
     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
     const originalFormAction = $('#proposal-form').attr('action') || '';
+    let isAutofilling = false;
+    const SECTION_AUTOFILL_ORDER = ['basic-info', 'why-this-event', 'schedule', 'speakers', 'expenses', 'income'];
+
+    const delay = (ms = 200) => new Promise(resolve => setTimeout(resolve, ms));
 
     // Demo data used for rapid prototyping. Remove once real data is wired.
     const AUTO_FILL_DATA = {
@@ -76,7 +80,38 @@ $(document).ready(function() {
             'Researcher focusing on emerging technologies.'
         ],
         expenseItems: ['Venue Setup', 'Refreshments', 'Equipment Rental'],
-        incomeItems: ['Registration Fees', 'Sponsorship', 'Donations']
+        incomeItems: ['Registration Fees', 'Sponsorship', 'Donations'],
+        targetAudienceOptions: [
+            {
+                selectedStudents: [
+                    { id: '101', name: 'B.Tech CSE - III Year' },
+                    { id: '102', name: 'B.Tech IT - III Year' }
+                ],
+                selectedFaculty: [
+                    { id: '201', name: 'Department of Computer Science Faculty' }
+                ],
+                userSelected: []
+            },
+            {
+                selectedStudents: [
+                    { id: '301', name: 'MBA Batch 2024' }
+                ],
+                selectedFaculty: [],
+                userSelected: [
+                    { id: '9001', name: 'Industry Mentor Group' }
+                ]
+            },
+            {
+                selectedStudents: [
+                    { id: '401', name: 'BBA Final Year' },
+                    { id: '402', name: 'B.Com Honors' }
+                ],
+                selectedFaculty: [
+                    { id: '203', name: 'School of Management Faculty' }
+                ],
+                userSelected: []
+            }
+        ]
     };
 
     const getRandom = arr => arr[Math.floor(Math.random() * arr.length)];
@@ -198,7 +233,11 @@ $(document).ready(function() {
             updateCdlNavLink(window.PROPOSAL_ID);
         }
 
-        $('#autofill-btn').on('click', () => autofillTestData(currentExpandedCard));
+        $('#autofill-btn').on('click', () => {
+            autofillAllSections().catch(err => {
+                console.error('Autofill failed', err);
+            });
+        });
         resetBtn.on('click', resetProposalDraft);
         if (!$('.form-errors-banner').length) {
             setTimeout(() => {
@@ -3065,14 +3104,52 @@ function getWhyThisEventForm() {
         updateSubmitButton();
     }
 
+    async function loadAndFillSection(section) {
+        if (!SECTION_AUTOFILL_ORDER.includes(section)) {
+            return;
+        }
+
+        if (currentExpandedCard !== section) {
+            activateSection(section);
+            await delay(450);
+        } else {
+            await delay(200);
+        }
+
+        autofillTestData(section);
+        await delay(300);
+    }
+
+    async function autofillAllSections() {
+        if (isAutofilling) return;
+        isAutofilling = true;
+
+        const autofillBtn = $('#autofill-btn');
+        const originalLabel = autofillBtn.text();
+        autofillBtn.prop('disabled', true).text('Auto-Filling...');
+
+        const originalSection = currentExpandedCard || 'basic-info';
+
+        try {
+            for (const section of SECTION_AUTOFILL_ORDER) {
+                await loadAndFillSection(section);
+            }
+        } finally {
+            if (originalSection && originalSection !== currentExpandedCard) {
+                activateSection(originalSection);
+                await delay(350);
+            }
+            autofillBtn.prop('disabled', false).text(originalLabel);
+            isAutofilling = false;
+        }
+    }
+
     function autofillTestData(section) {
         const today = new Date().toISOString().split('T')[0];
 
         if (section === 'basic-info') {
             const fields = {
                 'event-title-modern': getRandom(AUTO_FILL_DATA.titles),
-                'target-audience-modern': getRandom(AUTO_FILL_DATA.audiences),
-                'target-audience-class-ids': '1',
                 'venue-modern': getRandom(AUTO_FILL_DATA.venues),
                 'event-focus-type-modern': getRandom(AUTO_FILL_DATA.focusTypes),
                 'event-start-date': today,
@@ -3090,6 +3167,11 @@ function getWhyThisEventForm() {
                 el.dispatchEvent(new Event('input', { bubbles: true }));
                 el.dispatchEvent(new Event('change', { bubbles: true }));
             });
+
+            const audienceOption = getRandom(AUTO_FILL_DATA.targetAudienceOptions || []);
+            if (audienceOption) {
+                applyTargetAudienceSelection(audienceOption);
+            }
 
             // Fill dynamic activity once rendered
             setTimeout(() => {
