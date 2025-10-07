@@ -8,6 +8,8 @@ window.AutosaveManager = (function() {
     // Sequence tracking to prevent out-of-order responses from overriding newer state
     let saveSeq = 0;
     let lastHandledSeq = 0;
+    let isRestoringDynamic = false;
+    const pendingDynamicRestores = new Map();
 
     // Always read the freshest CSRF value to avoid mismatches when the token
     // rotates after a login or in another tab. Prefer cookie, then <meta>,
@@ -132,7 +134,7 @@ window.AutosaveManager = (function() {
         });
 
         // Serialize speaker groups
-        const speakerEls = document.querySelectorAll('.speaker-item');
+        const speakerEls = document.querySelectorAll('.speaker-item, .speaker-form-container');
         if (speakerEls.length) {
             const speakers = Array.from(speakerEls).map(sp => ({
                 name: sp.querySelector("input[name*='full_name']")?.value.trim() || '',
@@ -283,10 +285,150 @@ window.AutosaveManager = (function() {
         field.dataset.autosaveBound = 'true';
     }
 
+    function restoreDynamicRows(addBtn, container, rowSelector, required) {
+        if (!addBtn || !container) return;
+        let existing = container.querySelectorAll(rowSelector).length;
+        if (existing >= required) return;
+        isRestoringDynamic = true;
+        try {
+            while (existing < required) {
+                addBtn.click();
+                existing += 1;
+            }
+        } finally {
+            isRestoringDynamic = false;
+        }
+    }
+
+    function queueDynamicRestore(addButtonId, containerSelector, rowSelector, required) {
+        const addBtn = document.getElementById(addButtonId);
+        if (!addBtn) return;
+
+        const attr = 'data-listener-attached';
+        const existing = pendingDynamicRestores.get(addButtonId);
+        if (existing) {
+            existing.required = Math.max(existing.required, required);
+            existing.containerSelector = containerSelector;
+            existing.rowSelector = rowSelector;
+            if (existing.button === addBtn) {
+                return;
+            }
+            existing.observer?.disconnect();
+            pendingDynamicRestores.delete(addButtonId);
+        }
+
+        const observer = new MutationObserver(() => {
+            const entry = pendingDynamicRestores.get(addButtonId);
+            const btn = document.getElementById(addButtonId);
+            if (!entry || !btn) {
+                return;
+            }
+            if (btn.getAttribute(attr) === 'true' || btn.dataset.listenerAttached === 'true') {
+                observer.disconnect();
+                pendingDynamicRestores.delete(addButtonId);
+                const container = document.querySelector(entry.containerSelector);
+                if (!container) {
+                    setTimeout(() => reinitialize(), 0);
+                    return;
+                }
+                restoreDynamicRows(btn, container, entry.rowSelector, entry.required);
+                setTimeout(() => reinitialize(), 0);
+            }
+        });
+
+        observer.observe(addBtn, { attributes: true, attributeFilter: [attr] });
+        pendingDynamicRestores.set(addButtonId, {
+            observer,
+            required,
+            containerSelector,
+            rowSelector,
+            button: addBtn
+        });
+    }
+
+    function ensureDynamicFieldGroups(saved) {
+        const dynamicGroups = [
+            {
+                regex: /^expense_.+_(\d+)$/,
+                addButtonId: 'add-expense-btn',
+                containerSelector: '#expense-rows',
+                rowSelector: '.expense-form-container'
+            },
+            {
+                regex: /^income_.+_(\d+)$/,
+                addButtonId: 'add-income-btn',
+                containerSelector: '#income-rows',
+                rowSelector: '.income-form-container'
+            },
+            {
+                regex: /^speaker_.+_(\d+)$/,
+                addButtonId: 'add-speaker-btn',
+                containerSelector: '#speakers-list',
+                rowSelector: '.speaker-form-container'
+            }
+        ];
+
+        dynamicGroups.forEach(group => {
+            const { regex, addButtonId, containerSelector, rowSelector } = group;
+            const keys = Object.keys(saved);
+            let maxIndex = -1;
+            keys.forEach(key => {
+                const match = key.match(regex);
+                if (!match) return;
+                const idx = parseInt(match[1], 10);
+                if (!Number.isNaN(idx)) {
+                    maxIndex = Math.max(maxIndex, idx);
+                }
+            });
+
+            if (maxIndex < 0) {
+                const pending = pendingDynamicRestores.get(addButtonId);
+                if (pending) {
+                    pending.observer?.disconnect();
+                    pendingDynamicRestores.delete(addButtonId);
+                }
+                return;
+            }
+
+            const required = maxIndex + 1;
+            const addBtn = document.getElementById(addButtonId);
+            const container = document.querySelector(containerSelector);
+            if (!addBtn || !container) {
+                return;
+            }
+
+            let existing = container.querySelectorAll(rowSelector).length;
+            if (existing >= required) {
+                const pending = pendingDynamicRestores.get(addButtonId);
+                if (pending) {
+                    pending.observer?.disconnect();
+                    pendingDynamicRestores.delete(addButtonId);
+                }
+                return;
+            }
+
+            if (addBtn.dataset.listenerAttached === 'true') {
+                const pending = pendingDynamicRestores.get(addButtonId);
+                if (pending) {
+                    pending.observer?.disconnect();
+                    pendingDynamicRestores.delete(addButtonId);
+                }
+                restoreDynamicRows(addBtn, container, rowSelector, required);
+            } else {
+                queueDynamicRestore(addButtonId, containerSelector, rowSelector, required);
+            }
+        });
+    }
+
     function reinitialize() {
+        if (isRestoringDynamic) {
+            return;
+        }
         migrateLegacyDraft();
-        fields = Array.from(document.querySelectorAll('input[name], textarea[name], select[name]'));
         const saved = getSavedData();
+
+        ensureDynamicFieldGroups(saved);
+        fields = Array.from(document.querySelectorAll('input[name], textarea[name], select[name]'));
 
         fields.forEach(f => {
             if (f.closest('.speaker-item')) {
