@@ -36,6 +36,11 @@ class RoleAssignmentForm(forms.ModelForm):
         )
         # Remove the implicit blank option from the role dropdown
         self.fields["role"].empty_label = "Select Role"
+        # Make fields not required at the form level so that forms marked
+        # for deletion do not fail per-field validation. The formset's
+        # clean() will enforce requiredness for non-deleted forms.
+        self.fields["organization"].required = False
+        self.fields["role"].required = False
 
 
 class RegistrationForm(forms.Form):

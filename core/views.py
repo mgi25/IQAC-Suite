@@ -323,11 +323,18 @@ class RoleAssignmentFormSet(forms.BaseInlineFormSet):
     def clean(self):
         super().clean()
         seen = set()
-        for form in self.forms:
-            if form.cleaned_data.get("DELETE"):
-                continue
+        active_forms = [f for f in self.forms if not f.cleaned_data.get("DELETE")]
+
+        # If there are no active (non-deleted) forms, that's allowed.
+        if not active_forms:
+            return
+
+        for form in active_forms:
             role = form.cleaned_data.get("role")
             org = form.cleaned_data.get("organization")
+            # Enforce that both role and organization are provided for active forms
+            if not role or not org:
+                raise forms.ValidationError("Please select both organization and role for each assignment.")
             key = (role, org)
             if key in seen:
                 raise forms.ValidationError(
@@ -2063,7 +2070,28 @@ def admin_user_edit(request, user_id):
     )
     next_url = safe_next(request, fallback="admin_user_management")
     if request.method == "POST":
-        formset = RoleFormSet(request.POST, instance=user)
+        # Sanitize POST so that any form marked for deletion has its role/organization
+        # cleared before formset validation. This avoids per-field validation errors
+        # when a client hides/deletes a card via JS but leaves submitted values.
+        post = request.POST.copy()
+        # Find formset prefix from management form key (e.g. <prefix>-TOTAL_FORMS)
+        prefix = None
+        for k in post.keys():
+            if k.endswith('-TOTAL_FORMS'):
+                prefix = k[: -len('-TOTAL_FORMS')]
+                break
+        if prefix:
+            try:
+                total = int(post.get(f"{prefix}-TOTAL_FORMS") or 0)
+            except ValueError:
+                total = 0
+            for i in range(total):
+                del_key = f"{prefix}-{i}-DELETE"
+                if post.get(del_key):
+                    # clear submitted fields for deleted forms
+                    post[f"{prefix}-{i}-role"] = ''
+                    post[f"{prefix}-{i}-organization"] = ''
+        formset = RoleFormSet(post, instance=user)
         user.first_name = request.POST.get("first_name", "").strip()
         user.last_name = request.POST.get("last_name", "").strip()
         user.email = request.POST.get("email", "").strip()
@@ -2490,7 +2518,7 @@ def admin_sidebar_permissions(request):
     from django.urls import reverse
     from django.contrib import messages
     from .models import OrganizationType, OrganizationRole, RoleAssignment, SidebarPermission
-    from core.navigation import NAV_ITEMS, SIDEBAR_ITEM_IDS
+    from core.navigation import get_nav_items, get_sidebar_item_ids
     import logging
     logger = logging.getLogger(__name__)
 
@@ -2514,7 +2542,13 @@ def admin_sidebar_permissions(request):
     users = users_qs
 
     # Top-level nav items (hierarchical!)
-    nav_items = NAV_ITEMS
+    # Ensure DB seed exists (idempotent)
+    try:
+        from .models import SidebarModule
+        SidebarModule.ensure_seed_data()
+    except Exception:
+        pass
+    nav_items = get_nav_items()
 
     # Utility: build assigned tree
     def build_assigned_tree(assigned_ids, items):
@@ -2581,7 +2615,7 @@ def admin_sidebar_permissions(request):
         except Exception:
             assigned_items = []
 
-        invalid_ids = [i for i in assigned_items if i not in SIDEBAR_ITEM_IDS]
+        invalid_ids = [i for i in assigned_items if i not in get_sidebar_item_ids()]
         if invalid_ids:
             messages.error(request, f"Unknown sidebar item(s): {', '.join(invalid_ids)}")
             return redirect(reverse("admin_sidebar_permissions"))
@@ -2810,7 +2844,7 @@ def api_save_sidebar_permissions(request):
     """API endpoint to save sidebar permissions"""
     from .models import SidebarPermission
     from django.http import JsonResponse
-    from core.navigation import SIDEBAR_ITEM_IDS
+    from core.navigation import get_sidebar_item_ids
     import json
 
     try:
@@ -2835,7 +2869,7 @@ def api_save_sidebar_permissions(request):
         assignments = [x for x in assignments if not (x in seen or seen.add(x))]
 
         # Validate IDs
-        invalid_ids = [i for i in assignments if i not in SIDEBAR_ITEM_IDS]
+        invalid_ids = [i for i in assignments if i not in get_sidebar_item_ids()]
         if invalid_ids:
             return JsonResponse({
                 "success": False,
@@ -2934,7 +2968,7 @@ def api_get_sidebar_permissions(request):
             if permission:
                 items = permission.items or []
                 items_set.update(items)
-                user_dash_override = any(isinstance(i, str) and i.startswith("dashboard:"))
+                user_dash_override = any(isinstance(i, str) and i.startswith("dashboard:" ) for i in items)
 
             from .models import RoleAssignment as _RoleAssignment, DashboardAssignment as _DashboardAssignment
             role_ids = list(_RoleAssignment.objects.filter(user_id=user_id).values_list("role_id", flat=True))
@@ -2972,6 +3006,65 @@ def api_get_sidebar_permissions(request):
             assignments = sorted(items_set)
 
     resp = JsonResponse({'assignments': assignments})
+    resp['Cache-Control'] = 'no-store'
+    return resp
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def api_get_nav_tree(request):
+    """Return the canonical navigation tree (NAV_ITEMS) as JSON.
+
+    This allows admin UIs to fetch the authoritative sidebar structure at
+    runtime and keep the Available/Assigned lists in sync with the
+    navigation configuration in core.navigation.
+    """
+    from core.navigation import NAV_ITEMS
+    from django.http import JsonResponse
+
+    resp = JsonResponse({'nav_items': NAV_ITEMS})
+    resp['Cache-Control'] = 'no-store'
+    return resp
+
+
+@login_required
+def api_get_notifications(request):
+    """Return JSON notifications for the current user (newest-first).
+
+    Supports optional ?since=<iso8601> to fetch only newer items.
+    """
+    from django.http import JsonResponse
+    from django.utils.dateparse import parse_datetime
+    from django.utils import timezone
+    # Reuse context processor logic to build notifications
+    data = notifications(request)
+    notifs = data.get('notifications', [])
+
+    since = request.GET.get('since')
+    if since:
+        try:
+            dt = parse_datetime(since)
+            if dt is not None:
+                # ensure timezone-aware
+                if timezone.is_naive(dt):
+                    dt = timezone.make_aware(dt)
+                notifs = [n for n in notifs if n.get('created_at') and n.get('created_at') > dt]
+        except Exception:
+            pass
+
+    # Serialize datetimes to ISO format
+    out = []
+    for n in notifs:
+        nn = n.copy()
+        ca = nn.get('created_at')
+        if ca:
+            try:
+                nn['created_at'] = ca.isoformat()
+            except Exception:
+                nn['created_at'] = str(ca)
+        out.append(nn)
+
+    resp = JsonResponse({'notifications': out})
     resp['Cache-Control'] = 'no-store'
     return resp
 
@@ -5800,8 +5893,16 @@ def stop_impersonation(request):
         if 'original_user_id' in request.session:
             del request.session['original_user_id']
         messages.success(request, 'Stopped impersonation')
-
-    return redirect('admin_dashboard')
+    # After stopping impersonation we want the admin to land back in the
+    # Django admin UI (/admin/) so it's obvious they've returned to their
+    # admin account. Use the namespaced admin index if available.
+    # Redirect back to the internal admin dashboard page so admins return
+    # to the app's admin landing rather than the Django admin index.
+    try:
+        dashboard_url = reverse('admin_dashboard')
+    except Exception:
+        dashboard_url = '/core-admin/dashboard/'
+    return redirect(dashboard_url)
 
 @login_required
 def admin_impersonate_user(request, user_id):

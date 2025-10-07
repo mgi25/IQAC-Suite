@@ -129,9 +129,16 @@
               <i class="fas fa-user"></i> My Profile
             </a>
             
+            {# When impersonating, change Logout -> Stop Impersonation and call the stop_impersonation URL #}
+            {% if request.is_impersonating %}
+            <a href="{% url 'stop_impersonation' %}" class="dropdown-item impersonation-stop-link" id="impersonationStopLink">
+              <i class="fas fa-user-secret"></i> Stop Impersonation
+            </a>
+            {% else %}
             <a href="{% url 'logout' %}" class="dropdown-item">
               <i class="fas fa-sign-out-alt"></i> Logout
             </a>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -447,6 +454,31 @@
           if (notificationBtn) notificationBtn.setAttribute('aria-expanded', false);
         }
       });
+
+      // Back/forward navigation handling when impersonating: prompt the admin
+      // to stop impersonation rather than unintentionally logging out or
+      // creating session confusion. We listen for the popstate event which
+      // fires on back/forward navigation and show a confirmation.
+      if ({{ request.is_impersonating|yesno:'true,false' }}) {
+        window.addEventListener('popstate', function(e){
+          // Show a browser-native confirm for simplicity and reliability.
+          var stop = confirm('You are currently impersonating a user. Do you want to stop impersonation and return to your admin account?');
+          if (stop) {
+            // Redirect to the stop impersonation endpoint which will clear
+            // the impersonation session and redirect to the admin index.
+            window.location.href = '{% url "stop_impersonation" %}';
+          } else {
+            // If they don't want to stop, push state so they remain on the page
+            // and prevent the navigation from completing confusingly.
+            history.pushState(null, document.title, location.href);
+          }
+        });
+
+        // Ensure current history entry exists so popstate will fire on back
+        // (some browsers require an explicit pushState to create history entries)
+        try { history.replaceState(null, document.title, location.href); } catch (e) {}
+        try { history.pushState(null, document.title, location.href); } catch (e) {}
+      }
     });
   </script>
 
