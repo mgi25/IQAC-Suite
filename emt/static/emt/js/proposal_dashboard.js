@@ -440,7 +440,9 @@ $(document).ready(function() {
 
     function activateSection(section) {
         if (currentExpandedCard === section) return;
-        
+
+        persistCurrentSectionState();
+
         $('.proposal-nav .nav-link').removeClass('active');
         $(`.proposal-nav .nav-link[data-section="${section}"]`).addClass('active');
         loadFormContent(section);
@@ -453,6 +455,27 @@ $(document).ready(function() {
         
         // Remove disabled class from current section
         $(`.proposal-nav .nav-link[data-section="${section}"]`).removeClass('disabled');
+    }
+
+    function persistCurrentSectionState() {
+        if (!currentExpandedCard) return;
+
+        switch (currentExpandedCard) {
+            case 'schedule':
+                serializeSchedule();
+                break;
+            case 'speakers':
+                serializeSpeakers();
+                break;
+            case 'expenses':
+                serializeExpenses();
+                break;
+            case 'income':
+                serializeIncome();
+                break;
+            default:
+                break;
+        }
     }
 
     // Basic helper to open a section and ensure the form panel is visible
@@ -3747,6 +3770,8 @@ function getWhyThisEventForm() {
             setFieldValueById(`speaker_linkedin_url_${idx}`, profile.linkedin);
             setFieldValueById(`speaker_detailed_profile_${idx}`, profile.bio);
         });
+
+        serializeSpeakers();
     }
 
     async function fillExpensesSection() {
@@ -3778,6 +3803,8 @@ function getWhyThisEventForm() {
             setFieldValueById(`expense_particulars_${idx}`, expense.particulars);
             setFieldValueById(`expense_amount_${idx}`, expense.amount);
         });
+
+        serializeExpenses();
     }
 
     async function fillIncomeSection() {
@@ -3811,6 +3838,8 @@ function getWhyThisEventForm() {
             setFieldValueById(`income_rate_${idx}`, income.rate);
             setFieldValueById(`income_amount_${idx}`, income.amount);
         });
+
+        serializeIncome();
     }
 
     function selectRandomSdgGoal() {
