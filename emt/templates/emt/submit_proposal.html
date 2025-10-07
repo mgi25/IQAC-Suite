@@ -273,7 +273,7 @@
             </div>
 
             <div style="display: none;" id="django-forms">
-                <div id="django-basic-info">
+                <div id="django-basic-info" data-activities="{{ activities_json|default:'[]'|escapejs }}">
                     {{ form.organization_type.label_tag }}
                     {{ form.organization_type }}
                     {{ form.organization.label_tag }}
