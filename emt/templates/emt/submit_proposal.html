@@ -112,6 +112,10 @@
             <textarea id="id_objectives" name="objectives" class="proposal-input" hidden>{{ objectives.content|default_if_none:'' }}</textarea>
             <textarea id="id_learning_outcomes" name="outcomes" class="proposal-input" hidden>{{ outcomes.content|default_if_none:'' }}</textarea>
             <textarea name="flow" class="proposal-input" hidden>{{ flow.content|default_if_none:'' }}</textarea>
+            <textarea id="activities-data" name="activities_serialized" class="proposal-input" hidden>{{ activities_json|safe }}</textarea>
+            <textarea id="speakers-data" name="speakers_serialized" class="proposal-input" hidden>{{ speakers_json|safe }}</textarea>
+            <textarea id="expenses-data" name="expenses_serialized" class="proposal-input" hidden>{{ expenses_json|safe }}</textarea>
+            <textarea id="income-data" name="income_serialized" class="proposal-input" hidden>{{ income_json|default:'[]'|safe }}</textarea>
 
             <div class="form-panel" id="form-panel">
                 <div class="form-panel-content" id="form-panel-content">
