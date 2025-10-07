@@ -461,6 +461,9 @@ $(document).ready(function() {
         if (!currentExpandedCard) return;
 
         switch (currentExpandedCard) {
+            case 'basic-info':
+                serializeBasicInfoSection();
+                break;
             case 'schedule':
                 serializeSchedule();
                 break;
@@ -751,6 +754,12 @@ $(document).ready(function() {
             }
         }
 
+        function captureActivitySeedsFromDom() {
+            const serialized = serializeBasicInfoSection();
+            activitySeeds = serialized.length ? serialized.map(item => ({ ...item })) : [];
+            return activitySeeds;
+        }
+
         function render(count) {
             if (!container) return;
             container.innerHTML = '';
@@ -795,6 +804,7 @@ $(document).ready(function() {
                     }
                 }
                 reindexActivityRows();
+                captureActivitySeedsFromDom();
             }
         }
 
@@ -804,7 +814,20 @@ $(document).ready(function() {
                 if (row) {
                     row.remove();
                     reindexActivityRows();
+                    captureActivitySeedsFromDom();
                 }
+            }
+        });
+
+        container.addEventListener('input', (e) => {
+            if (e.target.matches('input[id^="activity_name_"], input[id^="activity_date_"]')) {
+                captureActivitySeedsFromDom();
+            }
+        });
+
+        container.addEventListener('change', (e) => {
+            if (e.target.matches('input[id^="activity_name_"], input[id^="activity_date_"]')) {
+                captureActivitySeedsFromDom();
             }
         });
 
@@ -836,6 +859,22 @@ $(document).ready(function() {
             }
             if (savedCount > 0) render(savedCount);
         }
+    }
+
+    function serializeBasicInfoSection() {
+        const container = document.getElementById('dynamic-activities-section');
+        const activities = [];
+        if (container) {
+            container.querySelectorAll('.activity-row').forEach((row) => {
+                const name = row.querySelector('input[id^="activity_name_"]')?.value.trim() || '';
+                const date = row.querySelector('input[id^="activity_date_"]')?.value.trim() || '';
+                if (name || date) {
+                    activities.push({ name, date });
+                }
+            });
+        }
+        window.EXISTING_ACTIVITIES = activities;
+        return activities;
     }
     
     // The rest of the file uses your original, working functions.
