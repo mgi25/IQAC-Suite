@@ -8,6 +8,7 @@ window.AutosaveManager = (function() {
     // Sequence tracking to prevent out-of-order responses from overriding newer state
     let saveSeq = 0;
     let lastHandledSeq = 0;
+    let isRestoringDynamic = false;
 
     // Always read the freshest CSRF value to avoid mismatches when the token
     // rotates after a login or in another tab. Prefer cookie, then <meta>,
@@ -283,10 +284,77 @@ window.AutosaveManager = (function() {
         field.dataset.autosaveBound = 'true';
     }
 
+    function ensureDynamicFieldGroups(saved) {
+        const dynamicGroups = [
+            {
+                regex: /^expense_[^_]+_(\d+)$/,
+                addButtonId: 'add-expense-btn',
+                containerSelector: '#expense-rows',
+                rowSelector: '.expense-form-container'
+            },
+            {
+                regex: /^income_[^_]+_(\d+)$/,
+                addButtonId: 'add-income-btn',
+                containerSelector: '#income-rows',
+                rowSelector: '.income-form-container'
+            }
+        ];
+
+        dynamicGroups.forEach(group => {
+            const { regex, addButtonId, containerSelector, rowSelector } = group;
+            const keys = Object.keys(saved);
+            let maxIndex = -1;
+            keys.forEach(key => {
+                const match = key.match(regex);
+                if (!match) return;
+                const idx = parseInt(match[1], 10);
+                if (!Number.isNaN(idx)) {
+                    maxIndex = Math.max(maxIndex, idx);
+                }
+            });
+
+            if (maxIndex < 0) {
+                return;
+            }
+
+            const addBtn = document.getElementById(addButtonId);
+            const container = document.querySelector(containerSelector);
+            if (!addBtn || !container) {
+                return;
+            }
+
+            const required = maxIndex + 1;
+            let existing = container.querySelectorAll(rowSelector).length;
+            if (existing >= required) {
+                return;
+            }
+
+            // Ensure the section scripts finished wiring up the add button before we trigger it.
+            if (addBtn.dataset.listenerAttached !== 'true') {
+                return;
+            }
+
+            isRestoringDynamic = true;
+            try {
+                while (existing < required) {
+                    addBtn.click();
+                    existing += 1;
+                }
+            } finally {
+                isRestoringDynamic = false;
+            }
+        });
+    }
+
     function reinitialize() {
+        if (isRestoringDynamic) {
+            return;
+        }
         migrateLegacyDraft();
-        fields = Array.from(document.querySelectorAll('input[name], textarea[name], select[name]'));
         const saved = getSavedData();
+
+        ensureDynamicFieldGroups(saved);
+        fields = Array.from(document.querySelectorAll('input[name], textarea[name], select[name]'));
 
         fields.forEach(f => {
             if (f.closest('.speaker-item')) {
