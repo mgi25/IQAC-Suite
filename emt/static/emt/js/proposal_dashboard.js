@@ -2291,6 +2291,8 @@ function getWhyThisEventForm() {
             addRow();
             serializeSchedule();
         });
+        addRowBtn.dataset.listenerAttached = 'true';
+        scheduleTableBody.dataset.initialized = 'true';
     }
 
     function getSpeakersForm() {
@@ -2602,6 +2604,15 @@ function getWhyThisEventForm() {
             }
             showEmptyState();
         }
+
+        const addSpeakerBtnEl = document.getElementById('add-speaker-btn');
+        if (addSpeakerBtnEl) {
+            addSpeakerBtnEl.dataset.listenerAttached = 'true';
+        }
+        const containerEl = container.get(0);
+        if (containerEl) {
+            containerEl.dataset.initialized = 'true';
+        }
     }
 
     function setupExpensesSection() {
@@ -2696,6 +2707,15 @@ function getWhyThisEventForm() {
             showEmptyState();
         } else {
             showEmptyState();
+        }
+
+        const addExpenseBtnEl = document.getElementById('add-expense-btn');
+        if (addExpenseBtnEl) {
+            addExpenseBtnEl.dataset.listenerAttached = 'true';
+        }
+        const containerEl = container.get(0);
+        if (containerEl) {
+            containerEl.dataset.initialized = 'true';
         }
     }
 
@@ -2846,6 +2866,15 @@ function getWhyThisEventForm() {
             showEmptyState();
         } else {
             showEmptyState();
+        }
+
+        const addIncomeBtnEl = document.getElementById('add-income-btn');
+        if (addIncomeBtnEl) {
+            addIncomeBtnEl.dataset.listenerAttached = 'true';
+        }
+        const containerEl = container.get(0);
+        if (containerEl) {
+            containerEl.dataset.initialized = 'true';
         }
     }
 
@@ -3414,59 +3443,122 @@ function getWhyThisEventForm() {
         facultyTom.addItem(option.id);
     }
 
-    function fillActivityPlan(today) {
+    async function selectStudentCoordinatorByName(name) {
+        if (!name) return;
+        let tom = null;
+        try {
+            tom = await waitForTomSelect('#student-coordinators-modern', { timeout: 2000, interval: 100 });
+        } catch (err) {
+            tom = $('#student-coordinators-modern')[0]?.tomselect || null;
+        }
+
+        const selectEl = document.getElementById('student-coordinators-modern');
+        if (!tom && !selectEl) return;
+
+        const trimmedName = String(name).trim();
+        if (!trimmedName) return;
+
+        if (tom) {
+            const optionId = `autofill-${trimmedName.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'student'}`;
+            const valueKey = tom.settings.valueField || 'value';
+            const optionValue = valueKey === 'text' ? trimmedName : optionId;
+            if (!tom.options[optionValue]) {
+                tom.addOption({ id: optionId, text: trimmedName, [valueKey]: optionValue });
+            }
+            const current = tom.getValue();
+            const values = Array.isArray(current) ? current : (current ? [current] : []);
+            if (!values.includes(optionValue)) {
+                tom.addItem(optionValue);
+            }
+            tom.refreshOptions(false);
+        } else {
+            const existingOption = Array.from(selectEl.options || []).find(opt => opt.value === trimmedName || opt.text === trimmedName);
+            if (!existingOption) {
+                const option = new Option(trimmedName, trimmedName, true, true);
+                selectEl.appendChild(option);
+            } else {
+                existingOption.selected = true;
+            }
+            try {
+                selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+            } catch (e) { /* noop */ }
+        }
+    }
+
+    async function fillActivityPlan(today) {
         const plan = AUTO_FILL_DATA.activityPlan || [];
         if (!plan.length) return;
         const numInput = document.getElementById('num-activities-modern');
         if (!numInput) return;
+
+        try {
+            await waitForCondition(() => numInput.dataset.listenerAttached === 'true', { timeout: 2000, interval: 75 });
+        } catch (err) { /* continue even if listener flag not found */ }
+
         setFieldValue(numInput, String(plan.length));
         try {
             numInput.dispatchEvent(new Event('input', { bubbles: true }));
         } catch (e) { /* noop */ }
 
-        setTimeout(() => {
-            plan.forEach((activity, idx) => {
-                const index = idx + 1;
-                setFieldValueById(`activity_name_${index}`, activity.name);
-                const dateId = `activity_date_${index}`;
-                const dateEl = document.getElementById(dateId);
-                if (dateEl) {
-                    const dateValue = addDaysToDate(today, activity.daysFromStart || 0);
-                    setFieldValue(dateEl, dateValue);
-                }
-            });
-        }, 200);
+        try {
+            await waitForCondition(() => {
+                return plan.every((_, idx) => document.getElementById(`activity_name_${idx + 1}`));
+            }, { timeout: 2000, interval: 75 });
+        } catch (err) {
+            // If rows failed to render in time, continue and attempt to fill whatever exists
+        }
+
+        plan.forEach((activity, idx) => {
+            const index = idx + 1;
+            setFieldValueById(`activity_name_${index}`, activity.name);
+            const dateId = `activity_date_${index}`;
+            const dateEl = document.getElementById(dateId);
+            if (dateEl) {
+                const dateValue = addDaysToDate(today, activity.daysFromStart || 0);
+                setFieldValue(dateEl, dateValue);
+            }
+        });
     }
 
-    function fillScheduleSection(today) {
+    async function fillScheduleSection(today) {
         const rows = AUTO_FILL_DATA.scheduleRows || [];
         if (!rows.length) return;
         const addRowBtn = document.getElementById('add-row-btn');
         if (!addRowBtn) return;
 
-        scheduleTableBody = scheduleTableBody || document.getElementById('schedule-rows');
-        scheduleHiddenField = scheduleHiddenField || document.getElementById('schedule-modern');
+        scheduleTableBody = document.getElementById('schedule-rows');
+        scheduleHiddenField = document.getElementById('schedule-modern');
         if (!scheduleTableBody) return;
+
+        try {
+            await waitForCondition(() => addRowBtn.dataset.listenerAttached === 'true' && scheduleTableBody.dataset.initialized === 'true', { timeout: 2000, interval: 75 });
+        } catch (err) { /* proceed regardless */ }
 
         scheduleTableBody.innerHTML = '';
         rows.forEach(() => addRowBtn.click());
 
-        setTimeout(() => {
-            const scheduleRows = scheduleTableBody.querySelectorAll('.schedule-row');
-            rows.forEach((row, idx) => {
-                const rowEl = scheduleRows[idx];
-                if (!rowEl) return;
-                const timeInput = rowEl.querySelector('.time-input');
-                const activityInput = rowEl.querySelector('.activity-input');
-                if (timeInput) {
-                    setFieldValue(timeInput, `${today}T${row.time}`);
-                }
-                if (activityInput) {
-                    setFieldValue(activityInput, row.activity);
-                }
-            });
-            serializeSchedule();
-        }, 200);
+        try {
+            await waitForCondition(() => {
+                return scheduleTableBody.querySelectorAll('.schedule-row').length >= rows.length;
+            }, { timeout: 2000, interval: 75 });
+        } catch (err) {
+            // proceed even if rows did not fully render in allotted time
+        }
+
+        const scheduleRows = scheduleTableBody.querySelectorAll('.schedule-row');
+        rows.forEach((row, idx) => {
+            const rowEl = scheduleRows[idx];
+            if (!rowEl) return;
+            const timeInput = rowEl.querySelector('.time-input');
+            const activityInput = rowEl.querySelector('.activity-input');
+            if (timeInput) {
+                setFieldValue(timeInput, `${today}T${row.time}`);
+            }
+            if (activityInput) {
+                setFieldValue(activityInput, row.activity);
+            }
+        });
+        serializeSchedule();
     }
 
     async function fillSpeakersSection() {
@@ -3474,6 +3566,10 @@ function getWhyThisEventForm() {
         if (!profiles.length) return;
         const addBtn = document.getElementById('add-speaker-btn');
         if (!addBtn) return;
+
+        try {
+            await waitForCondition(() => addBtn.dataset.listenerAttached === 'true', { timeout: 2000, interval: 75 });
+        } catch (err) { /* continue even if listener not flagged */ }
 
         const container = document.getElementById('speakers-list');
         const existing = container ? container.querySelectorAll('.speaker-form-container').length : 0;
@@ -3496,11 +3592,15 @@ function getWhyThisEventForm() {
         });
     }
 
-    function fillExpensesSection() {
+    async function fillExpensesSection() {
         const expenses = AUTO_FILL_DATA.expenseRows || [];
         if (!expenses.length) return;
         const addBtn = document.getElementById('add-expense-btn');
         if (!addBtn) return;
+
+        try {
+            await waitForCondition(() => addBtn.dataset.listenerAttached === 'true', { timeout: 2000, interval: 75 });
+        } catch (err) { /* continue even if listener flag missing */ }
 
         const container = $('#expense-rows');
         const existing = container.children('.expense-form-container').length;
@@ -3508,20 +3608,30 @@ function getWhyThisEventForm() {
             addBtn.click();
         }
 
-        setTimeout(() => {
-            expenses.forEach((expense, idx) => {
-                setFieldValueById(`expense_sl_no_${idx}`, expense.sl);
-                setFieldValueById(`expense_particulars_${idx}`, expense.particulars);
-                setFieldValueById(`expense_amount_${idx}`, expense.amount);
-            });
-        }, 150);
+        try {
+            await waitForCondition(() => {
+                return expenses.every((_, idx) => document.getElementById(`expense_particulars_${idx}`));
+            }, { timeout: 2000, interval: 75 });
+        } catch (err) {
+            // continue with whatever rows rendered
+        }
+
+        expenses.forEach((expense, idx) => {
+            setFieldValueById(`expense_sl_no_${idx}`, expense.sl);
+            setFieldValueById(`expense_particulars_${idx}`, expense.particulars);
+            setFieldValueById(`expense_amount_${idx}`, expense.amount);
+        });
     }
 
-    function fillIncomeSection() {
+    async function fillIncomeSection() {
         const incomes = AUTO_FILL_DATA.incomeRows || [];
         if (!incomes.length) return;
         const addBtn = document.getElementById('add-income-btn');
         if (!addBtn) return;
+
+        try {
+            await waitForCondition(() => addBtn.dataset.listenerAttached === 'true', { timeout: 2000, interval: 75 });
+        } catch (err) { /* proceed regardless */ }
 
         const container = $('#income-rows');
         const existing = container.children('.income-form-container').length;
@@ -3529,15 +3639,21 @@ function getWhyThisEventForm() {
             addBtn.click();
         }
 
-        setTimeout(() => {
-            incomes.forEach((income, idx) => {
-                setFieldValueById(`income_sl_no_${idx}`, income.sl);
-                setFieldValueById(`income_particulars_${idx}`, income.particulars);
-                setFieldValueById(`income_participants_${idx}`, income.participants);
-                setFieldValueById(`income_rate_${idx}`, income.rate);
-                setFieldValueById(`income_amount_${idx}`, income.amount);
-            });
-        }, 150);
+        try {
+            await waitForCondition(() => {
+                return incomes.every((_, idx) => document.getElementById(`income_particulars_${idx}`));
+            }, { timeout: 2000, interval: 75 });
+        } catch (err) {
+            // proceed regardless
+        }
+
+        incomes.forEach((income, idx) => {
+            setFieldValueById(`income_sl_no_${idx}`, income.sl);
+            setFieldValueById(`income_particulars_${idx}`, income.particulars);
+            setFieldValueById(`income_participants_${idx}`, income.participants);
+            setFieldValueById(`income_rate_${idx}`, income.rate);
+            setFieldValueById(`income_amount_${idx}`, income.amount);
+        });
     }
 
     function selectRandomSdgGoal() {
@@ -3618,15 +3734,20 @@ function getWhyThisEventForm() {
             }
 
             selectRandomSdgGoal();
-            fillActivityPlan(today);
+            await fillActivityPlan(today);
 
             await autofillTargetAudienceFromBackend(orgMeta);
             await selectFacultyInchargeByEmail('alenjinmgi@gmail.com');
+            await selectStudentCoordinatorByName('Alen Jin Shibu');
 
             const sc = document.getElementById('student-coordinators-modern');
-            if (sc && !sc.options.length) {
-                sc.appendChild(new Option('Data Science Student Lead', '1', true, true));
-                sc.dispatchEvent(new Event('change', { bubbles: true }));
+            const scTom = sc?.tomselect;
+            const currentCoordinators = scTom ? scTom.getValue() : Array.from(sc?.selectedOptions || []).map(opt => opt.value);
+            if (sc && (!currentCoordinators || (Array.isArray(currentCoordinators) && !currentCoordinators.length))) {
+                if (!scTom && !sc.options.length) {
+                    sc.appendChild(new Option('Data Science Student Lead', '1', true, true));
+                    sc.dispatchEvent(new Event('change', { bubbles: true }));
+                }
             }
         }
 
@@ -3637,7 +3758,7 @@ function getWhyThisEventForm() {
         }
 
         if (section === 'schedule') {
-            fillScheduleSection(today);
+            await fillScheduleSection(today);
         }
 
         if (section === 'speakers') {
@@ -3645,11 +3766,11 @@ function getWhyThisEventForm() {
         }
 
         if (section === 'expenses') {
-            fillExpensesSection();
+            await fillExpensesSection();
         }
 
         if (section === 'income') {
-            fillIncomeSection();
+            await fillIncomeSection();
         }
     }
 
