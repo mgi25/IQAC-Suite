@@ -3375,7 +3375,17 @@ function getWhyThisEventForm() {
                     djangoField = $(`[name="${baseName}"]`);
                 }
                 if (djangoField.length) {
-                    djangoField.val($(this).val());
+                    const newVal = $(this).val();
+                    djangoField.each(function() {
+                        const $field = $(this);
+                        const currentVal = $field.val();
+                        if (currentVal !== newVal) {
+                            $field.val(newVal);
+                        }
+                        // Trigger events so autosave listeners pick up the change.
+                        $field.trigger('input');
+                        $field.trigger('change');
+                    });
                 }
             }
             clearFieldError($(this));
