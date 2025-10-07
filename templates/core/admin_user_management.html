@@ -341,6 +341,155 @@
                     return text;
                 };
 
+                const exportColumnMeta = [
+                    {
+                        index: 0,
+                        title: 'S.NO',
+                        widthCap: 4,
+                        align: 'right',
+                        pdfWidth: 40,
+                        value: (row) => {
+                            const sNo = row && row.s_no != null ? row.s_no : '';
+                            if (typeof sNo === 'string') {
+                                return stripHtml(sNo);
+                            }
+                            return sNo !== undefined && sNo !== null ? String(sNo) : '';
+                        },
+                        bodyFormatter: (data) => stripHtml(data)
+                    },
+                    {
+                        index: 1,
+                        title: 'Name',
+                        widthCap: 30,
+                        align: 'left',
+                        pdfWidth: 200,
+                        value: (row) => cleanNameOnly(row && row.name != null ? row.name : ''),
+                        bodyFormatter: (data) => cleanNameOnly(data)
+                    },
+                    {
+                        index: 2,
+                        title: 'Email',
+                        widthCap: 40,
+                        align: 'left',
+                        pdfWidth: 280,
+                        value: (row) => stripHtml(row && row.email != null ? row.email : ''),
+                        bodyFormatter: (data) => stripHtml(data)
+                    },
+                    {
+                        index: 3,
+                        title: 'Roles',
+                        widthCap: 30,
+                        align: 'left',
+                        pdfWidth: 130,
+                        value: (row) => stripHtml(row && row.roles != null ? row.roles : ''),
+                        bodyFormatter: (data) => stripHtml(data)
+                    },
+                    {
+                        index: 4,
+                        title: 'Organization',
+                        widthCap: 36,
+                        align: 'left',
+                        pdfWidth: 220,
+                        value: (row) => stripHtml(row && row.organization != null ? row.organization : ''),
+                        bodyFormatter: (data) => stripHtml(data)
+                    },
+                    {
+                        index: 5,
+                        title: 'Date Joined',
+                        widthCap: 22,
+                        align: 'center',
+                        pdfWidth: 120,
+                        value: (row) => stripHtml(row && row.date_joined != null ? row.date_joined : ''),
+                        bodyFormatter: (data) => stripHtml(data)
+                    },
+                    {
+                        index: 6,
+                        title: 'Status',
+                        widthCap: 14,
+                        align: 'left',
+                        pdfWidth: 160,
+                        value: (row) => stripHtml(row && row.status != null ? row.status : ''),
+                        bodyFormatter: (data) => stripHtml(data)
+                    }
+                ];
+
+                const exportColumnMetaMap = exportColumnMeta.reduce((acc, col) => {
+                    acc[col.index] = col;
+                    return acc;
+                }, {});
+
+                const formatExportBody = (data, columnIndex) => {
+                    const meta = exportColumnMetaMap[columnIndex];
+                    if (meta && typeof meta.bodyFormatter === 'function') {
+                        return meta.bodyFormatter(data);
+                    }
+                    return stripHtml(data);
+                };
+
+                const shouldIncludeColumnForExport = (node) => {
+                    const $node = $(node);
+                    return $node.length && $node.is(':visible') && !$node.hasClass('dt-export-ignore');
+                };
+
+                const getVisibleExportColumns = () => {
+                    if (!this.table) {
+                        return exportColumnMeta;
+                    }
+                    return exportColumnMeta.filter(col => this.table.column(col.index).visible());
+                };
+
+                const prepareExportStructures = (rows) => {
+                    const columnsForExport = getVisibleExportColumns();
+                    if (!columnsForExport.length) {
+                        return null;
+                    }
+                    const header = columnsForExport.map(col => col.title);
+                    const body = rows.map(row => columnsForExport.map(col => col.value(row)));
+                    return { columnsForExport, header, body };
+                };
+
+                const fetchAllRowsForExport = () => {
+                    const filters = this.collectFilters();
+                    const data = {
+                        start: 0,
+                        length: 2147483647,
+                        draw: Date.now(),
+                    };
+
+                    if (filters.q) data.q = filters.q;
+                    if (filters.status) data.status = filters.status;
+                    if (filters.roleName) data.role_name = filters.roleName;
+                    if (filters.orgTypes && filters.orgTypes.length) data['org_type[]'] = filters.orgTypes;
+                    if (filters.organizations && filters.organizations.length) data['organization[]'] = filters.organizations;
+                    if (filters.roles && filters.roles.length) data['role[]'] = filters.roles;
+
+                    return $.ajax({
+                        url: this.apiUrl,
+                        method: 'GET',
+                        dataType: 'json',
+                        data,
+                    });
+                };
+
+                const withCustomExportData = (dt, dataset, runExport) => {
+                    if (!dataset) return;
+                    const originalExportData = dt.buttons.exportData;
+                    dt.buttons.exportData = function () {
+                        return {
+                            header: dataset.header,
+                            body: dataset.body,
+                            footer: [],
+                        };
+                    };
+                    try {
+                        runExport();
+                    } finally {
+                        dt.buttons.exportData = originalExportData;
+                    }
+                };
+
+                const manager = this;
+
                 this.table = $('#usersTable').DataTable({
                     searching: false, // disable global search box
                     processing: true,
@@ -365,7 +514,7 @@
                         { data: 'organization', name: 'organization', orderable: false, searchable: false },
                         { data: 'date_joined', name: 'date_joined' },
                         { data: 'status', name: 'status', orderable: false, searchable: false },
-                        { data: 'action', name: 'action', orderable: false, searchable: false }
+                        { data: 'action', name: 'action', orderable: false, searchable: false, className: 'dt-actions dt-export-ignore text-start' }
                     ],
                     // remove the filter box and keep buttons on the right like before
                     dom: '<"dt-toolbar d-flex justify-content-between align-items-center flex-wrap mb-3"<"dt-left"l><"dt-right"B>>rtip',
@@ -381,38 +530,28 @@
                     buttons: [
                         {
                             text: 'Copy',
-                            action: function (e, dt, button, config) {
-                                const settings = dt.settings()[0];
-                                const oldStart = settings._iDisplayStart;
+                            action: function (e, dt) {
+                                manager.showOverlay();
+                                fetchAllRowsForExport()
+                                    .done((json) => {
+                                        const rows = (json && Array.isArray(json.data)) ? json.data : [];
+                                        const dataset = prepareExportStructures(rows);
+                                        if (!dataset) {
+                                            return;
+                                        }
 
-                                dt.one('preXhr', function (e, s, data) {
-                                    data.start = 0;
-                                    data.length = 2147483647; // fetch all filtered rows
-                                });
+                                        const { columnsForExport, header, body } = dataset;
 
-                                dt.one('xhr', function () {
-                                    try {
-                                        const headers = ['S.NO', 'Name', 'Email', 'Roles', 'Organization', 'Date Joined', 'Status'];
-                                        const dataArr = dt.rows({ search: 'applied' }).data().toArray();
-
-                                        const processed = dataArr.map(r => [
-                                            (r && r.s_no != null) ? (typeof r.s_no === 'string' ? stripHtml(r.s_no) : String(r.s_no)) : '',
-                                            cleanNameOnly(r && r.name != null ? r.name : ''),
-                                            stripHtml(r && r.email != null ? r.email : ''),
-                                            stripHtml(r && r.roles != null ? r.roles : ''),
-                                            stripHtml(r && r.organization != null ? r.organization : ''),
-                                            stripHtml(r && r.date_joined != null ? r.date_joined : ''),
-                                            stripHtml(r && r.status != null ? r.status : '')
-                                        ]);
-
-                                        const caps = [4, 30, 40, 30, 36, 22, 14];
-                                        const widths = headers.map((h, i) => {
+                                        const widths = header.map((h, i) => {
                                             let maxLen = h.length;
-                                            for (const row of processed) {
+                                            for (const row of body) {
                                                 const cell = (row[i] || '').toString();
-                                                if (cell.length > maxLen) maxLen = cell.length;
+                                                if (cell.length > maxLen) {
+                                                    maxLen = cell.length;
+                                                }
                                             }
-                                            return Math.min(maxLen, caps[i]);
+                                            const targetWidth = Math.min(maxLen, columnsForExport[i].widthCap);
+                                            return Math.max(1, targetWidth);
                                         });
 
                                         const padRight = (str, len) => (str || '').toString().padEnd(len, ' ');
@@ -429,23 +568,20 @@
                                             if (str.length <= len) return str;
                                             return str.slice(0, Math.max(0, len - 1)) + '…';
                                         };
+                                        const formatForAlign = (value, width, align) => {
+                                            const truncated = trunc(value, width);
+                                            if (align === 'right') return padLeft(truncated, width);
+                                            if (align === 'center') return padCenter(truncated, width);
+                                            return padRight(truncated, width);
+                                        };
 
                                         const sep = '  ';
-                                        const headerLine = headers.map((h, i) => {
-                                            if (i === 0) return padLeft(h, widths[i]);
-                                            if (i === 5) return padCenter(h, widths[i]);
-                                            return padRight(h, widths[i]);
-                                        }).join(sep);
-                                        const divider = headers.map((_, i) => '-'.repeat(widths[i])).join(sep);
+                                        const headerLine = header.map((h, i) => formatForAlign(h, widths[i], columnsForExport[i].align)).join(sep);
+                                        const divider = widths.map((w) => '-'.repeat(w)).join(sep);
 
                                         const lines = ['CHRIST University - Central Command Center', headerLine, divider];
-                                        for (const row of processed) {
-                                            const aligned = row.map((cell, i) => {
-                                                const c = trunc(cell, widths[i]);
-                                                if (i === 0) return padLeft(c, widths[i]);
-                                                if (i === 5) return padCenter(c, widths[i]);
-                                                return padRight(c, widths[i]);
-                                            }).join(sep);
+                                        for (const row of body) {
+                                            const aligned = row.map((cell, i) => formatForAlign(cell, widths[i], columnsForExport[i].align)).join(sep);
                                             lines.push(aligned);
                                         }
 
@@ -469,60 +605,51 @@
                                             return ok;
                                         };
                                         copyText(text);
-                                    } finally {
-                                        dt.one('preXhr', function (e, s, data) { data.start = oldStart; });
-                                        setTimeout(function () {
-                                            dt.ajax.reload(function () {
-                                                dt.page(Math.floor(oldStart / dt.page.len())).draw('page');
-                                            }, false);
-                                        }, 0);
-                                    }
-                                });
-
-                                dt.ajax.reload();
+                                    })
+                                    .fail(() => {
+                                        console.error('Failed to fetch data for copy export');
+                                        alert('Unable to fetch all rows for export. Please try again.');
+                                    })
+                                    .always(() => {
+                                        manager.hideOverlay();
+                                    });
                             }
                         },
                         {
                             extend: 'excelHtml5',
                             text: 'Excel',
                             exportOptions: {
-                                // Exclude the last 'Action' column from export
-                                columns: [0, 1, 2, 3, 4, 5, 6],
+                                columns: function (idx, data, node) {
+                                    return shouldIncludeColumnForExport(node);
+                                },
                                 format: {
                                     body: function (data, row, column, node) {
-                                        if (column === 1) { // Name column
-                                            return cleanNameOnly(data);
-                                        }
-                                        return stripHtml(data);
+                                        return formatExportBody(data, column);
                                     }
                                 }
                             },
                             action: function (e, dt, button, config) {
-                                const self = this;
-                                const settings = dt.settings()[0];
-                                const oldStart = settings._iDisplayStart;
+                                const buttonApi = this;
+                                manager.showOverlay();
+                                fetchAllRowsForExport()
+                                    .done((json) => {
+                                        const rows = (json && Array.isArray(json.data)) ? json.data : [];
+                                        const dataset = prepareExportStructures(rows);
+                                        if (!dataset) {
+                                            return;
+                                        }
 
-                                dt.one('preXhr', function (e, s, data) {
-                                    data.start = 0;
-                                    data.length = 2147483647; // fetch all filtered rows
-                                });
-
-                                dt.one('xhr', function () {
-                                    $.fn.dataTable.ext.buttons.excelHtml5.action.call(self, e, dt, button, config);
-
-                                    // Restore original paging
-                                    dt.one('preXhr', function (e, s, data) {
-                                        data.start = oldStart;
+                                        withCustomExportData(dt, dataset, () => {
+                                            $.fn.dataTable.ext.buttons.excelHtml5.action.call(buttonApi, e, dt, button, config);
+                                        });
+                                    })
+                                    .fail(() => {
+                                        console.error('Failed to fetch data for Excel export');
+                                        alert('Unable to fetch all rows for export. Please try again.');
+                                    })
+                                    .always(() => {
+                                        manager.hideOverlay();
                                     });
-
-                                    setTimeout(function () {
-                                        dt.ajax.reload(function () {
-                                            dt.page(Math.floor(oldStart / dt.page.len())).draw('page');
-                                        }, false);
-                                    }, 0);
-                                });
-
-                                dt.ajax.reload();
                             }
                         },
                         {
@@ -532,14 +659,12 @@
                             pageSize: 'A3',
                             title: 'CHRIST University - Central Command Center',
                             exportOptions: {
-                                // Exclude the last 'Action' column from export
-                                columns: [0, 1, 2, 3, 4, 5, 6],
+                                columns: function (idx, data, node) {
+                                    return shouldIncludeColumnForExport(node);
+                                },
                                 format: {
                                     body: function (data, row, column, node) {
-                                        if (column === 1) { // Name column
-                                            return cleanNameOnly(data);
-                                        }
-                                        return stripHtml(data);
+                                        return formatExportBody(data, column);
                                     }
                                 }
                             },
@@ -572,9 +697,16 @@
                                     if (doc.content[i].table) { tableNode = doc.content[i]; break; }
                                 }
                                 if (tableNode && tableNode.table && tableNode.table.body && tableNode.table.body.length) {
-                                    // widths for: S.NO, Name, Email, Roles, Organization, Date Joined, Status (A3 landscape)
-                                    // Reduce Roles, increase Status per request
-                                    tableNode.table.widths = [40, 200, 280, 130, 220, 120, 160];
+                                    var body = tableNode.table.body;
+                                    var header = body[0];
+                                    var visibleColumns = getVisibleExportColumns();
+
+                                    if (visibleColumns.length === header.length) {
+                                        tableNode.table.widths = visibleColumns.map(function (col) {
+                                            return col.pdfWidth || '*';
+                                        });
+                                    }
+
                                     tableNode.layout = {
                                         hLineWidth: function (i, node) { return i === 0 || i === node.table.body.length ? 1 : 0.5; },
                                         vLineWidth: function () { return 0.5; },
@@ -586,9 +718,6 @@
                                         paddingBottom: function () { return 4; }
                                     };
 
-                                    // Center-align S.NO, Date Joined, Status columns for neatness
-                                    var body = tableNode.table.body;
-                                    var header = body[0];
                                     function ensureObj(cell) {
                                         if (cell == null) return { text: '' };
                                         if (typeof cell === 'string') return { text: cell };
@@ -596,53 +725,50 @@
                                         return cell; // already an object
                                     }
 
-                                    // Header alignments
-                                    header[0] = ensureObj(header[0]); header[0].alignment = 'center';
-                                    header[5] = ensureObj(header[5]); header[5].alignment = 'center';
-                                    header[6] = ensureObj(header[6]); header[6].alignment = 'center';
+                                    visibleColumns.forEach(function (col, idx) {
+                                        header[idx] = ensureObj(header[idx]);
+                                        if (col.index === 0 || col.index === 5 || col.index === 6) {
+                                            header[idx].alignment = 'center';
+                                        }
+                                    });
 
-                                    // Row alignments
                                     for (var r = 1; r < body.length; r++) {
-                                        body[r][0] = ensureObj(body[r][0]);
-                                        body[r][0].alignment = 'center';
-
-                                        body[r][5] = ensureObj(body[r][5]);
-                                        body[r][5].alignment = 'center';
-
-                                        body[r][6] = ensureObj(body[r][6]);
-                                        body[r][6].alignment = 'left';
-                                        // allow wrapping to avoid cropping on smaller screens/printers
+                                        visibleColumns.forEach(function (col, idx) {
+                                            body[r][idx] = ensureObj(body[r][idx]);
+                                            if (col.index === 0 || col.index === 5) {
+                                                body[r][idx].alignment = 'center';
+                                            } else if (col.index === 6) {
+                                                body[r][idx].alignment = 'left';
+                                            }
+                                        });
                                     }
+
                                     // Add a bit of extra right margin to the table
                                     tableNode.margin = [0, 0, 10, 0];
                                 }
                             },
                             action: function (e, dt, button, config) {
-                                const self = this;
-                                const settings = dt.settings()[0];
-                                const oldStart = settings._iDisplayStart;
+                                const buttonApi = this;
+                                manager.showOverlay();
+                                fetchAllRowsForExport()
+                                    .done((json) => {
+                                        const rows = (json && Array.isArray(json.data)) ? json.data : [];
+                                        const dataset = prepareExportStructures(rows);
+                                        if (!dataset) {
+                                            return;
+                                        }
 
-                                dt.one('preXhr', function (e, s, data) {
-                                    data.start = 0;
-                                    data.length = 2147483647; // fetch all filtered rows
-                                });
-
-                                dt.one('xhr', function () {
-                                    $.fn.dataTable.ext.buttons.pdfHtml5.action.call(self, e, dt, button, config);
-
-                                    // Restore original paging
-                                    dt.one('preXhr', function (e, s, data) {
-                                        data.start = oldStart;
+                                        withCustomExportData(dt, dataset, () => {
+                                            $.fn.dataTable.ext.buttons.pdfHtml5.action.call(buttonApi, e, dt, button, config);
+                                        });
+                                    })
+                                    .fail(() => {
+                                        console.error('Failed to fetch data for PDF export');
+                                        alert('Unable to fetch all rows for export. Please try again.');
+                                    })
+                                    .always(() => {
+                                        manager.hideOverlay();
                                     });
-
-                                    setTimeout(function () {
-                                        dt.ajax.reload(function () {
-                                            dt.page(Math.floor(oldStart / dt.page.len())).draw('page');
-                                        }, false);
-                                    }, 0);
-                                });
-
-                                dt.ajax.reload();
                             }
                         },
                         {
@@ -650,11 +776,12 @@
                             text: 'Print',
                             title: 'CHRIST University - Central Command Center',
                             exportOptions: {
-                                columns: [0, 1, 2, 3, 4, 5, 6],
+                                columns: function (idx, data, node) {
+                                    return shouldIncludeColumnForExport(node);
+                                },
                                 format: {
                                     body: function (data, row, column, node) {
-                                        if (column === 1) { return cleanNameOnly(data); }
-                                        return stripHtml(data);
+                                        return formatExportBody(data, column);
                                     }
                                 }
                             },
@@ -684,37 +811,42 @@
                                 head.appendChild(style);
                             },
                             action: function (e, dt, button, config) {
-                                const self = this;
-                                const settings = dt.settings()[0];
-                                const oldStart = settings._iDisplayStart;
+                                const buttonApi = this;
+                                manager.showOverlay();
+                                fetchAllRowsForExport()
+                                    .done((json) => {
+                                        const rows = (json && Array.isArray(json.data)) ? json.data : [];
+                                        const dataset = prepareExportStructures(rows);
+                                        if (!dataset) {
+                                            return;
+                                        }
 
-                                dt.one('preXhr', function (e, s, data) {
-                                    data.start = 0;
-                                    data.length = 2147483647; // all filtered rows
-                                });
-
-                                dt.one('xhr', function () {
-                                    $.fn.dataTable.ext.buttons.print.action.call(self, e, dt, button, config);
-
-                                    // Restore original paging
-                                    dt.one('preXhr', function (e, s, data) {
-                                        data.start = oldStart;
+                                        withCustomExportData(dt, dataset, () => {
+                                            $.fn.dataTable.ext.buttons.print.action.call(buttonApi, e, dt, button, config);
+                                        });
+                                    })
+                                    .fail(() => {
+                                        console.error('Failed to fetch data for print export');
+                                        alert('Unable to fetch all rows for export. Please try again.');
+                                    })
+                                    .always(() => {
+                                        manager.hideOverlay();
                                     });
-
-                                    setTimeout(function () {
-                                        dt.ajax.reload(function () {
-                                            dt.page(Math.floor(oldStart / dt.page.len())).draw('page');
-                                        }, false);
-                                    }, 0);
-                                });
-
-                                dt.ajax.reload();
                             }
                         },
                         'colvis'
                     ],
                     language: { search: "_INPUT_", searchPlaceholder: "Search table..." },
                     initComplete: () => {
+                        // Ensure export-ignore class is present on the action column header
+                        const actionHeader = this.table.column('action:name').header();
+                        if (actionHeader) {
+                            if (actionHeader.classList) {
+                                actionHeader.classList.add('dt-export-ignore');
+                            } else {
+                                $(actionHeader).addClass('dt-export-ignore');
+                            }
+                        }
                         // Apply filters from URL after the table is fully initialized
                         this.applyFiltersFromURL();
                     }
