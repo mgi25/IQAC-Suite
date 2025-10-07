@@ -198,6 +198,31 @@ body {
   background-color: var(--status-generated-bg);
 }
 
+.reports-table tbody .loading-row td {
+  text-align: center;
+  color: var(--primary-text);
+}
+
+.reports-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+}
+
+.reports-loading .spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(18, 88, 195, 0.3);
+  border-top-color: var(--primary-dark-blue);
+  animation: reports-spin 0.8s linear infinite;
+}
+
+@keyframes reports-spin {
+  to { transform: rotate(360deg); }
+}
+
 
 /* --- Action Buttons --- */
 .report-action-btn {

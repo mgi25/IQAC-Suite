@@ -2009,42 +2009,163 @@ def download_pdf(request, proposal_id):
     proposal = get_object_or_404(EventProposal, id=proposal_id)
     report = get_object_or_404(EventReport, proposal=proposal)
 
-    # Simplified PDF generation - replace with actual PDF creation logic
     response = HttpResponse(content_type="application/pdf")
+    safe_title = (proposal.event_title or "event-report").replace("\n", " ")
     response["Content-Disposition"] = (
-        f'attachment; filename="{proposal.event_title}_report.pdf"'
+        f'attachment; filename="{safe_title}_report.pdf"'
     )
 
-    # Create a simple PDF (using reportlab as example)
+    from html import escape
     from io import BytesIO
 
-    from reportlab.pdfgen import canvas
+    from reportlab.lib import colors
+    from reportlab.lib.enums import TA_CENTER
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import inch
+    from reportlab.platypus import (
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+        Table,
+        TableStyle,
+    )
 
     buffer = BytesIO()
-    p = canvas.Canvas(buffer)
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=0.75 * inch,
+        rightMargin=0.75 * inch,
+        topMargin=1 * inch,
+        bottomMargin=0.75 * inch,
+    )
 
-    # Add content to PDF
-    p.drawString(100, 800, f"Event Report: {proposal.event_title}")
-    if proposal.event_datetime:
-        event_date = proposal.event_datetime.strftime("%Y-%m-%d")
-    elif proposal.event_start_date:
-        event_date = proposal.event_start_date.strftime("%Y-%m-%d")
-    else:
-        event_date = "N/A"
-    p.drawString(100, 780, f"Date: {event_date}")
-    p.drawString(100, 760, f"Generated on: {timezone.now().strftime('%Y-%m-%d')}")
-    p.drawString(100, 740, "Report Content:")
-    report_text = report.ai_generated_report or report.summary or ""
-    preview = report_text[:500] + ("..." if len(report_text) > 500 else "")
-    p.drawString(100, 720, preview or "No content available.")
+    styles = getSampleStyleSheet()
+    styles.add(
+        ParagraphStyle(
+            name="CenteredTitle",
+            parent=styles["Heading1"],
+            alignment=TA_CENTER,
+            spaceAfter=12,
+        )
+    )
+    styles.add(
+        ParagraphStyle(
+            name="SectionHeading",
+            parent=styles["Heading2"],
+            fontSize=14,
+            leading=18,
+            spaceBefore=18,
+            spaceAfter=8,
+        )
+    )
+    styles.add(
+        ParagraphStyle(
+            name="BodyTextTight",
+            parent=styles["BodyText"],
+            leading=14,
+            spaceAfter=10,
+        )
+    )
+    styles.add(
+        ParagraphStyle(
+            name="Muted",
+            parent=styles["BodyText"],
+            textColor=colors.grey,
+            leading=12,
+            spaceAfter=8,
+        )
+    )
 
-    p.showPage()
-    p.save()
+    def _paragraph(text: str | None):
+        if not text or not str(text).strip():
+            return Paragraph("Not provided.", styles["Muted"])
+        html = escape(str(text)).replace("\n", "<br/>")
+        return Paragraph(html, styles["BodyTextTight"])
 
+    def _bullet_paragraph(items: list[str] | None):
+        if not items:
+            return Paragraph("Not provided.", styles["Muted"])
+        cleaned = [escape(str(item)) for item in items if str(item).strip()]
+        if not cleaned:
+            return Paragraph("Not provided.", styles["Muted"])
+        html = "<br/>".join(f"• {item}" for item in cleaned)
+        return Paragraph(html, styles["BodyTextTight"])
+
+    data = _build_report_initial_data(report)
+
+    elements = [
+        Paragraph("Event Report", styles["CenteredTitle"]),
+        Paragraph(escape(data["event"]["title"]) or "Untitled Event", styles["Heading2"]),
+        Spacer(1, 12),
+    ]
+
+    meta_rows = [
+        ["Organization", data["event"]["department"] or "-"],
+        ["Event Schedule", data["event"]["date"] or "-"],
+        ["Venue", data["event"]["venue"] or "-"],
+        ["Generated On", timezone.now().strftime("%d %b %Y")],
+    ]
+
+    if data["participants"]["attendees_count"]:
+        meta_rows.append(["Total Participants", data["participants"]["attendees_count"]])
+    if data["participants"]["organising_committee"]["student_volunteers_count"]:
+        meta_rows.append([
+            "Student Volunteers",
+            data["participants"]["organising_committee"]["student_volunteers_count"],
+        ])
+
+    meta_table = Table(meta_rows, colWidths=[1.8 * inch, doc.width - 1.8 * inch])
+    meta_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (0, -1), colors.whitesmoke),
+                ("LINEABOVE", (0, 0), (-1, 0), 0.5, colors.lightgrey),
+                ("LINEBELOW", (0, -1), (-1, -1), 0.5, colors.lightgrey),
+                ("LINEBEFORE", (0, 0), (0, -1), 0.5, colors.lightgrey),
+                ("LINEAFTER", (-1, 0), (-1, -1), 0.5, colors.lightgrey),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 10),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ]
+        )
+    )
+    elements.append(meta_table)
+
+    def _section(title: str, content):
+        elements.append(Paragraph(title, styles["SectionHeading"]))
+        if isinstance(content, list):
+            elements.append(_bullet_paragraph(content))
+        else:
+            elements.append(_paragraph(content))
+
+    narrative = data.get("narrative", {})
+    analysis = data.get("analysis", {})
+    mapping = data.get("mapping", {})
+    iqac = data.get("iqac", {})
+
+    primary_narrative = report.ai_generated_report or report.summary
+    if primary_narrative:
+        _section("Narrative Overview", primary_narrative)
+
+    _section("Event Summary", narrative.get("summary_overall_event"))
+    _section("Key Outcomes", narrative.get("outcomes", []))
+    _section("Social Relevance", narrative.get("social_relevance", []))
+    _section("Impact on Stakeholders", analysis.get("impact_attendees"))
+    _section("Lessons Learned", analysis.get("impact_volunteers"))
+    _section("POS/PSO Mapping", mapping.get("pos_psos"))
+    _section("Contemporary Requirements", mapping.get("contemporary_requirements"))
+    _section("IQAC Suggestions", iqac.get("iqac_suggestions", []))
+
+    doc.build(elements)
     pdf = buffer.getvalue()
     buffer.close()
     response.write(pdf)
-
     return response
 
 

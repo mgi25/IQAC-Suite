@@ -91,6 +91,7 @@ urlpatterns = [
     path("core-admin/event-proposal/<int:proposal_id>/action/", views.event_proposal_action, name="event_proposal_action"),
     path("core-admin/proposal/<int:proposal_id>/detail/", views.admin_proposal_detail, name="admin_proposal_detail"),
     path("core-admin/reports/", views.admin_reports_view, name="admin_reports"),
+    path("core-admin/api/reports/", views.admin_reports_api, name="admin_reports_api"),
     path("core-admin/reports/<int:report_id>/approve/", views.admin_reports_approve, name="admin_reports_approve"),
     path("core-admin/reports/<int:report_id>/reject/", views.admin_reports_reject, name="admin_reports_reject"),
     path("core-admin/history/", views.admin_history, name="admin_history"),
