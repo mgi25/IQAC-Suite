@@ -66,6 +66,7 @@ from .forms import (NAME_PATTERN, CDLSupportForm, EventProposalForm,
                     EventReportAttachmentForm, EventReportForm,
                     ExpectedOutcomesForm, ExpenseDetailForm, NeedAnalysisForm,
                     ObjectivesForm, SpeakerProfileForm, TentativeFlowForm)
+from .normalizers import normalize_decimal, normalize_int
 from .models import (ApprovalStep, AttendanceRow, EventActivity,
                      EventExpectedOutcomes, EventNeedAnalysis, EventObjectives,
                      EventProposal, EventReport, EventReportAttachment,
@@ -851,14 +852,23 @@ def _save_expenses(proposal, data, entries=None):
         for entry in entries:
             particulars = entry.get("particulars", "")
             amount = entry.get("amount", "")
-            if particulars and amount:
-                sl_no = entry.get("sl_no") or 0
-                ExpenseDetail.objects.create(
-                    proposal=proposal,
-                    sl_no=sl_no or 0,
-                    particulars=particulars,
-                    amount=amount,
-                )
+            if not particulars or not amount:
+                continue
+            try:
+                amount_val = normalize_decimal(amount)
+            except ValueError:
+                logger.warning("Skipping expense entry with invalid amount: %s", amount)
+                continue
+            try:
+                sl_no_val = normalize_int(entry.get("sl_no"))
+            except ValueError:
+                sl_no_val = None
+            ExpenseDetail.objects.create(
+                proposal=proposal,
+                sl_no=sl_no_val or 0,
+                particulars=particulars.strip(),
+                amount=amount_val,
+            )
         return
 
     pattern = re.compile(r"^expense_(?:sl_no|particulars|amount)_(\d+)$")
@@ -871,14 +881,25 @@ def _save_expenses(proposal, data, entries=None):
     for index in indices:
         particulars = data.get(f"expense_particulars_{index}")
         amount = data.get(f"expense_amount_{index}")
-        if particulars and amount:
-            sl_no = data.get(f"expense_sl_no_{index}") or 0
-            ExpenseDetail.objects.create(
-                proposal=proposal,
-                sl_no=sl_no or 0,
-                particulars=particulars,
-                amount=amount,
+        if not particulars or not amount:
+            continue
+        try:
+            amount_val = normalize_decimal(amount)
+        except ValueError:
+            logger.warning(
+                "Skipping expense row %s due to invalid amount: %s", index, amount
             )
+            continue
+        try:
+            sl_no_val = normalize_int(data.get(f"expense_sl_no_{index}"))
+        except ValueError:
+            sl_no_val = None
+        ExpenseDetail.objects.create(
+            proposal=proposal,
+            sl_no=sl_no_val or 0,
+            particulars=particulars.strip(),
+            amount=amount_val,
+        )
 
 
 def _save_income(proposal, data, entries=None):
@@ -887,16 +908,33 @@ def _save_income(proposal, data, entries=None):
         for entry in entries:
             particulars = entry.get("particulars", "")
             amount = entry.get("amount", "")
-            if particulars and amount:
-                sl_no = entry.get("sl_no") or 0
-                IncomeDetail.objects.create(
-                    proposal=proposal,
-                    sl_no=sl_no or 0,
-                    particulars=particulars,
-                    participants=entry.get("participants") or 0,
-                    rate=entry.get("rate") or 0,
-                    amount=amount,
-                )
+            if not particulars or not amount:
+                continue
+            try:
+                amount_val = normalize_decimal(amount)
+            except ValueError:
+                logger.warning("Skipping income entry with invalid amount: %s", amount)
+                continue
+            try:
+                rate_val = normalize_decimal(entry.get("rate")) or 0
+            except ValueError:
+                rate_val = 0
+            try:
+                participants_val = normalize_int(entry.get("participants")) or 0
+            except ValueError:
+                participants_val = 0
+            try:
+                sl_no_val = normalize_int(entry.get("sl_no"))
+            except ValueError:
+                sl_no_val = None
+            IncomeDetail.objects.create(
+                proposal=proposal,
+                sl_no=sl_no_val or 0,
+                particulars=particulars.strip(),
+                participants=participants_val,
+                rate=rate_val,
+                amount=amount_val,
+            )
         return
 
     pattern = re.compile(
@@ -913,17 +951,35 @@ def _save_income(proposal, data, entries=None):
         participants = data.get(f"income_participants_{index}")
         rate = data.get(f"income_rate_{index}")
         amount = data.get(f"income_amount_{index}")
-        # Allow saving when only particulars and amount are provided
-        if particulars and amount:
-            sl_no = data.get(f"income_sl_no_{index}") or 0
-            IncomeDetail.objects.create(
-                proposal=proposal,
-                sl_no=sl_no or 0,
-                particulars=particulars,
-                participants=participants or 0,
-                rate=rate or 0,
-                amount=amount,
+        if not particulars or not amount:
+            continue
+        try:
+            amount_val = normalize_decimal(amount)
+        except ValueError:
+            logger.warning(
+                "Skipping income row %s due to invalid amount: %s", index, amount
             )
+            continue
+        try:
+            rate_val = normalize_decimal(rate) or 0
+        except ValueError:
+            rate_val = 0
+        try:
+            participants_val = normalize_int(participants) or 0
+        except ValueError:
+            participants_val = 0
+        try:
+            sl_no_val = normalize_int(data.get(f"income_sl_no_{index}"))
+        except ValueError:
+            sl_no_val = None
+        IncomeDetail.objects.create(
+            proposal=proposal,
+            sl_no=sl_no_val or 0,
+            particulars=particulars.strip(),
+            participants=participants_val,
+            rate=rate_val,
+            amount=amount_val,
+        )
 
 
 # ──────────────────────────────

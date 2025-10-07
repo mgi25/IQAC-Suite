@@ -239,6 +239,75 @@ class ProposalReviewFlowTests(TestCase):
         self.assertContains(resp4, "Venue")
         self.assertContains(resp4, "Ticket")
 
+    def test_autofill_values_persist_to_review(self):
+        resp = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(self._payload()),
+            content_type="application/json",
+        )
+        pid = resp.json()["proposal_id"]
+
+        speaker_payload = {
+            "form-TOTAL_FORMS": "1",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+            "form-0-id": "",
+            "form-0-full_name": "Dr. 47 @ Example+Team",
+            "form-0-designation": "Lead R&D @ Lab:India",
+            "form-0-affiliation": "Innovation & Co.",
+            "form-0-contact_email": "auto@example.com",
+            "form-0-contact_number": "+91 98765 43210",
+            "form-0-linkedin_url": "",
+            "form-0-detailed_profile": "Seasoned innovator",
+            "form-0-DELETE": "",
+        }
+        resp = self.client.post(
+            reverse("emt:submit_speaker_profile", args=[pid]), speaker_payload
+        )
+        self.assertEqual(resp.status_code, 302)
+
+        expense_payload = {
+            "form-TOTAL_FORMS": "1",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+            "form-0-id": "",
+            "form-0-sl_no": "1",
+            "form-0-particulars": "Auditorium Booking",
+            "form-0-amount": "₹ 1,500/-",
+            "form-0-DELETE": "",
+        }
+        resp = self.client.post(
+            reverse("emt:submit_expense_details", args=[pid]), expense_payload
+        )
+        self.assertEqual(resp.status_code, 302)
+
+        income_payload = {
+            **self._payload(),
+            "review_submit": "1",
+            "income_sl_no_0": "1",
+            "income_particulars_0": "Ticketed Entry",
+            "income_participants_0": "150 attendees",
+            "income_rate_0": "₹ 250.00",
+            "income_amount_0": "₹ 37,500.00",
+        }
+        resp = self.client.post(
+            reverse("emt:submit_proposal_with_pk", args=[pid]), income_payload
+        )
+        self.assertEqual(resp.status_code, 302)
+
+        review = self.client.get(reverse("emt:review_proposal", args=[pid]))
+        self.assertContains(review, "Dr. 47 @ Example+Team")
+        self.assertContains(review, "Lead R&D @ Lab:India")
+        self.assertContains(review, "98765 43210")
+        self.assertContains(review, "Auditorium Booking")
+        self.assertContains(review, "1500")
+        self.assertContains(review, "Ticketed Entry")
+        self.assertContains(review, "150")
+        self.assertContains(review, "250")
+        self.assertContains(review, "37500")
+
     def test_review_displays_all_sections(self):
         resp = self.client.post(
             reverse("emt:autosave_proposal"),

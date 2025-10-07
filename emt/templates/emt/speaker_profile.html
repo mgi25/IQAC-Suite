@@ -18,19 +18,77 @@
     <form method="post" enctype="multipart/form-data">
       {% csrf_token %}
       {{ formset.management_form }}
+      {% if formset.non_form_errors %}
+        <div class="form-errors">
+          <ul>
+            {% for error in formset.non_form_errors %}
+              <li>{{ error }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
       <div class="section">
         <h3>Speaker Profiles</h3>
         {% for form in formset %}
           <div class="section speaker-form">
             <h4>Speaker {{ forloop.counter }}</h4>
+            {% if form.non_field_errors %}
+              <div class="form-errors">
+                <ul>
+                  {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            {% endif %}
             <div class="input-group">{{ form.full_name.label_tag }} {{ form.full_name.as_widget(attrs={'class': 'proposal-input'}) }}</div>
+            {% if form.full_name.errors %}
+              <div class="field-errors">
+                {% for error in form.full_name.errors %}<div>{{ error }}</div>{% endfor %}
+              </div>
+            {% endif %}
             <div class="input-group">{{ form.designation.label_tag }} {{ form.designation.as_widget(attrs={'class': 'proposal-input'}) }}</div>
+            {% if form.designation.errors %}
+              <div class="field-errors">
+                {% for error in form.designation.errors %}<div>{{ error }}</div>{% endfor %}
+              </div>
+            {% endif %}
             <div class="input-group">{{ form.affiliation.label_tag }} {{ form.affiliation.as_widget(attrs={'class': 'proposal-input'}) }}</div>
+            {% if form.affiliation.errors %}
+              <div class="field-errors">
+                {% for error in form.affiliation.errors %}<div>{{ error }}</div>{% endfor %}
+              </div>
+            {% endif %}
             <div class="input-group">{{ form.contact_email.label_tag }} {{ form.contact_email.as_widget(attrs={'class': 'proposal-input'}) }}</div>
+            {% if form.contact_email.errors %}
+              <div class="field-errors">
+                {% for error in form.contact_email.errors %}<div>{{ error }}</div>{% endfor %}
+              </div>
+            {% endif %}
             <div class="input-group">{{ form.contact_number.label_tag }} {{ form.contact_number.as_widget(attrs={'class': 'proposal-input'}) }}</div>
+            {% if form.contact_number.errors %}
+              <div class="field-errors">
+                {% for error in form.contact_number.errors %}<div>{{ error }}</div>{% endfor %}
+              </div>
+            {% endif %}
             <div class="input-group">{{ form.linkedin_url.label_tag }} {{ form.linkedin_url.as_widget(attrs={'class': 'proposal-input'}) }}</div>
+            {% if form.linkedin_url.errors %}
+              <div class="field-errors">
+                {% for error in form.linkedin_url.errors %}<div>{{ error }}</div>{% endfor %}
+              </div>
+            {% endif %}
             <div class="input-group">{{ form.photo.label_tag }} {{ form.photo.as_widget(attrs={'class': 'proposal-input'}) }}<img class="linkedin-photo" style="max-width:100px; display:none;"/></div>
+            {% if form.photo.errors %}
+              <div class="field-errors">
+                {% for error in form.photo.errors %}<div>{{ error }}</div>{% endfor %}
+              </div>
+            {% endif %}
             <div class="input-group">{{ form.detailed_profile.label_tag }} {{ form.detailed_profile.as_widget(attrs={'class': 'proposal-input'}) }}</div>
+            {% if form.detailed_profile.errors %}
+              <div class="field-errors">
+                {% for error in form.detailed_profile.errors %}<div>{{ error }}</div>{% endfor %}
+              </div>
+            {% endif %}
             {% if form.DELETE %}
               <div class="input-group">{{ form.DELETE.as_widget(attrs={'class': 'proposal-input'}) }} Remove this speaker</div>
             {% endif %}

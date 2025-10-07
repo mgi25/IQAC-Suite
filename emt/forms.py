@@ -11,12 +11,13 @@ from .models import (CDLCertificateRecipient, CDLMessage, CDLSupport,
                      EventExpectedOutcomes, EventNeedAnalysis, EventObjectives,
                      EventProposal, EventReport, EventReportAttachment,
                      ExpenseDetail, SpeakerProfile, TentativeFlow)
+from .normalizers import normalize_decimal
 
-# Reusable validator to ensure names contain only letters and basic punctuation
-NAME_PATTERN = r"^[A-Za-z .'-]+$"
+# Reusable validator to ensure names accept autofill-friendly punctuation
+NAME_PATTERN = r"^[\w\s.,'()&/@+\-:]+$"
 name_validator = RegexValidator(
     NAME_PATTERN,
-    "Only letters and standard punctuation (.'- and spaces) are allowed.",
+    "Only letters, numbers, and punctuation .,'()&/@+-: with spaces are allowed.",
 )
 
 
@@ -307,6 +308,7 @@ class SpeakerProfileForm(forms.ModelForm):
     full_name = forms.CharField(
         validators=[name_validator],
         widget=forms.TextInput(attrs={"pattern": NAME_PATTERN}),
+        strip=True,
     )
 
     class Meta:
@@ -340,9 +342,21 @@ class SpeakerProfileForm(forms.ModelForm):
 
 
 class ExpenseDetailForm(forms.ModelForm):
+    amount = forms.CharField()
+
     class Meta:
         model = ExpenseDetail
         fields = ["sl_no", "particulars", "amount"]
+
+    def clean_amount(self):
+        raw = self.cleaned_data.get("amount")
+        try:
+            value = normalize_decimal(raw)
+        except ValueError:
+            raise forms.ValidationError("Enter a valid amount (numbers only).")
+        if value is None:
+            raise forms.ValidationError("This field is required.")
+        return value
 
 
 class EventReportForm(forms.ModelForm):
