@@ -31,6 +31,9 @@ $(document).ready(function() {
     let lastValidationIssues = [];
     let scheduleTableBody = null;
     let scheduleHiddenField = null;
+    let speakersHiddenField = null;
+    let expensesHiddenField = null;
+    let incomeHiddenField = null;
     const autoFillEnabled = new URLSearchParams(window.location.search).has('autofill');
     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
     const originalFormAction = $('#proposal-form').attr('action') || '';
@@ -38,6 +41,59 @@ $(document).ready(function() {
     const SECTION_AUTOFILL_ORDER = ['basic-info', 'why-this-event', 'schedule', 'speakers', 'expenses', 'income'];
 
     const delay = (ms = 200) => new Promise(resolve => setTimeout(resolve, ms));
+
+    const cleanFieldValue = (value) => {
+        if (value === undefined || value === null) return '';
+        return String(value).trim();
+    };
+
+    const parseSerializedArray = (raw) => {
+        if (!raw) return [];
+        try {
+            const text = typeof raw === 'string' ? raw.trim() : String(raw || '').trim();
+            if (!text) return [];
+            const parsed = JSON.parse(text);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (err) {
+            console.warn('Failed to parse serialized section payload', err);
+            return [];
+        }
+    };
+
+    const readSerializedField = (field) => {
+        if (!field) return [];
+        if (Object.prototype.hasOwnProperty.call(field, 'value')) {
+            return parseSerializedArray(field.value);
+        }
+        return parseSerializedArray(field.textContent);
+    };
+
+    const writeSerializedField = (field, items) => {
+        if (!field) return;
+        const payload = (Array.isArray(items) && items.length)
+            ? JSON.stringify(items)
+            : '[]';
+        if (Object.prototype.hasOwnProperty.call(field, 'value')) {
+            if (field.value !== payload) {
+                field.value = payload;
+            }
+        } else if (field.textContent !== payload) {
+            field.textContent = payload;
+        }
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
+    const getStoredSectionData = (fieldId, fallback = []) => {
+        const field = document.getElementById(fieldId);
+        const stored = readSerializedField(field);
+        if (stored.length) {
+            return stored;
+        }
+        if (Array.isArray(fallback) && fallback.length) {
+            return fallback;
+        }
+        return [];
+    };
 
     // Demo data used for rapid prototyping. Remove once real data is wired.
     const AUTO_FILL_DATA = {
@@ -2319,6 +2375,29 @@ function getWhyThisEventForm() {
         `;
     }
 
+    function serializeSpeakers() {
+        speakersHiddenField = speakersHiddenField || document.getElementById('speakers-data');
+        if (!speakersHiddenField) return;
+        const items = [];
+        $('#speakers-list .speaker-form-container').each(function() {
+            const form = $(this);
+            const record = {
+                full_name: cleanFieldValue(form.find("input[id^='speaker_full_name_']").val()),
+                designation: cleanFieldValue(form.find("input[id^='speaker_designation_']").val()),
+                affiliation: cleanFieldValue(form.find("input[id^='speaker_affiliation_']").val()),
+                contact_email: cleanFieldValue(form.find("input[id^='speaker_contact_email_']").val()),
+                contact_number: cleanFieldValue(form.find("input[id^='speaker_contact_number_']").val()),
+                linkedin_url: cleanFieldValue(form.find("input[id^='speaker_linkedin_url_']").val()),
+                detailed_profile: cleanFieldValue(form.find("textarea[id^='speaker_detailed_profile_']").val()),
+            };
+            const hasAny = Object.values(record).some(val => val !== '');
+            if (hasAny) {
+                items.push(record);
+            }
+        });
+        writeSerializedField(speakersHiddenField, items);
+    }
+
     function getExpensesForm() {
         return `
             <div class="expenses-section">
@@ -2346,6 +2425,7 @@ function getWhyThisEventForm() {
     function setupSpeakersSection() {
         const container = $('#speakers-list');
         let index = 0;
+        speakersHiddenField = document.getElementById('speakers-data');
 
         function addSpeakerForm() {
             const html = `
@@ -2358,7 +2438,7 @@ function getWhyThisEventForm() {
                                 <span class="sr-only">Remove speaker</span>
                             </button>
                         </div>
-                        
+
                         <div class="speaker-form-content">
                             <div class="speaker-form-grid">
                                 <div class="input-group">
@@ -2398,7 +2478,7 @@ function getWhyThisEventForm() {
                                     <div class="help-text">Upload headshot (JPG, PNG)</div>
                                 </div>
                             </div>
-                            
+
                             <div class="input-group bio-section">
                                 <label for="speaker_detailed_profile_${index}">Brief Profile / Bio *</label>
                                 <textarea id="speaker_detailed_profile_${index}" name="speaker_detailed_profile_${index}" rows="4" required placeholder="Brief description of speaker's expertise, background, and qualifications..."></textarea>
@@ -2409,10 +2489,16 @@ function getWhyThisEventForm() {
                 </div>
             `;
             container.append(html);
+            const newForm = container.children('.speaker-form-container').last();
+            newForm.find('input, textarea').on('input change', () => {
+                serializeSpeakers();
+            });
             index++;
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
             }
+            serializeSpeakers();
+            return newForm;
         }
 
         function updateSpeakerHeaders() {
@@ -2449,6 +2535,7 @@ function getWhyThisEventForm() {
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
             }
+            serializeSpeakers();
         }
 
         function showEmptyState() {
@@ -2463,6 +2550,7 @@ function getWhyThisEventForm() {
             } else {
                 container.find('.speakers-empty-state').remove();
             }
+            serializeSpeakers();
         }
 
         $('#add-speaker-btn').on('click', function() {
@@ -2551,18 +2639,19 @@ function getWhyThisEventForm() {
             }
         });
 
-        if (window.EXISTING_SPEAKERS && window.EXISTING_SPEAKERS.length) {
+        const initialSpeakers = getStoredSectionData('speakers-data', window.EXISTING_SPEAKERS || []);
+        if (initialSpeakers.length) {
             container.empty();
-            window.EXISTING_SPEAKERS.forEach(sp => {
+            initialSpeakers.forEach(sp => {
                 addSpeakerForm();
                 const idx = index - 1;
-                $(`#speaker_full_name_${idx}`).val(sp.full_name);
-                $(`#speaker_designation_${idx}`).val(sp.designation);
-                $(`#speaker_affiliation_${idx}`).val(sp.affiliation);
-                $(`#speaker_contact_email_${idx}`).val(sp.contact_email);
-                $(`#speaker_contact_number_${idx}`).val(sp.contact_number);
-                $(`#speaker_linkedin_url_${idx}`).val(sp.linkedin_url);
-                $(`#speaker_detailed_profile_${idx}`).val(sp.detailed_profile);
+                $(`#speaker_full_name_${idx}`).val(cleanFieldValue(sp.full_name));
+                $(`#speaker_designation_${idx}`).val(cleanFieldValue(sp.designation));
+                $(`#speaker_affiliation_${idx}`).val(cleanFieldValue(sp.affiliation));
+                $(`#speaker_contact_email_${idx}`).val(cleanFieldValue(sp.contact_email));
+                $(`#speaker_contact_number_${idx}`).val(cleanFieldValue(sp.contact_number));
+                $(`#speaker_linkedin_url_${idx}`).val(cleanFieldValue(sp.linkedin_url));
+                $(`#speaker_detailed_profile_${idx}`).val(cleanFieldValue(sp.detailed_profile));
             });
             showEmptyState();
         } else {
@@ -2615,6 +2704,24 @@ function getWhyThisEventForm() {
         }
     }
 
+    function serializeExpenses() {
+        expensesHiddenField = expensesHiddenField || document.getElementById('expenses-data');
+        if (!expensesHiddenField) return;
+        const items = [];
+        $('#expense-rows .expense-form-container').each(function() {
+            const form = $(this);
+            const record = {
+                sl_no: cleanFieldValue(form.find("input[id^='expense_sl_no_']").val()),
+                particulars: cleanFieldValue(form.find("input[id^='expense_particulars_']").val()),
+                amount: cleanFieldValue(form.find("input[id^='expense_amount_']").val()),
+            };
+            if (Object.values(record).some(val => val !== '')) {
+                items.push(record);
+            }
+        });
+        writeSerializedField(expensesHiddenField, items);
+    }
+
     function setupExpensesSection() {
         const container = $('#expense-rows');
         let index = 0;
@@ -2653,10 +2760,15 @@ function getWhyThisEventForm() {
                 </div>
             `;
             container.append(html);
+            const newRow = container.children('.expense-form-container').last();
+            newRow.find('input').on('input change', () => {
+                serializeExpenses();
+            });
             index++;
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
             }
+            serializeExpenses();
         }
 
         function updateExpenseHeaders() {
@@ -2665,6 +2777,7 @@ function getWhyThisEventForm() {
                 $(this).attr('data-index', i);
                 $(this).find('.remove-expense-btn').attr('data-index', i);
             });
+            serializeExpenses();
         }
 
         function showEmptyState() {
@@ -2679,6 +2792,7 @@ function getWhyThisEventForm() {
             } else {
                 container.find('.expenses-empty-state').remove();
             }
+            serializeExpenses();
         }
 
         $('#add-expense-btn').on('click', function() {
@@ -2693,22 +2807,25 @@ function getWhyThisEventForm() {
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
             }
+            serializeExpenses();
         });
 
-        if (window.EXISTING_EXPENSES && window.EXISTING_EXPENSES.length) {
+        const initialExpenses = getStoredSectionData('expenses-data', window.EXISTING_EXPENSES || []);
+        if (initialExpenses.length) {
             container.empty();
-            window.EXISTING_EXPENSES.forEach(ex => {
+            initialExpenses.forEach(ex => {
                 addExpenseRow();
                 const idx = index - 1;
-                $(`#expense_sl_no_${idx}`).val(ex.sl_no);
-                $(`#expense_particulars_${idx}`).val(ex.particulars);
-                $(`#expense_amount_${idx}`).val(ex.amount);
+                $(`#expense_sl_no_${idx}`).val(cleanFieldValue(ex.sl_no));
+                $(`#expense_particulars_${idx}`).val(cleanFieldValue(ex.particulars));
+                $(`#expense_amount_${idx}`).val(cleanFieldValue(ex.amount));
             });
             showEmptyState();
         } else {
             showEmptyState();
         }
 
+        expensesHiddenField = document.getElementById('expenses-data');
         const addExpenseBtnEl = document.getElementById('add-expense-btn');
         if (addExpenseBtnEl) {
             addExpenseBtnEl.dataset.listenerAttached = 'true';
@@ -2742,6 +2859,26 @@ function getWhyThisEventForm() {
                 </div>
             </div>
         `;
+    }
+
+    function serializeIncome() {
+        incomeHiddenField = incomeHiddenField || document.getElementById('income-data');
+        if (!incomeHiddenField) return;
+        const items = [];
+        $('#income-rows .income-form-container').each(function() {
+            const form = $(this);
+            const record = {
+                sl_no: cleanFieldValue(form.find("input[id^='income_sl_no_']").val()),
+                particulars: cleanFieldValue(form.find("input[id^='income_particulars_']").val()),
+                participants: cleanFieldValue(form.find("input[id^='income_participants_']").val()),
+                rate: cleanFieldValue(form.find("input[id^='income_rate_']").val()),
+                amount: cleanFieldValue(form.find("input[id^='income_amount_']").val()),
+            };
+            if (Object.values(record).some(val => val !== '')) {
+                items.push(record);
+            }
+        });
+        writeSerializedField(incomeHiddenField, items);
     }
 
     function setupIncomeSection() {
@@ -2792,28 +2929,34 @@ function getWhyThisEventForm() {
                 </div>
             `;
             container.append(html);
-            
+
             // Auto-calculate amount when participants and rate change
             const participantsInput = $(`#income_participants_${index}`);
             const rateInput = $(`#income_rate_${index}`);
             const amountInput = $(`#income_amount_${index}`);
-            
+
             function calculateAmount() {
                 const participants = parseFloat(participantsInput.val()) || 0;
                 const rate = parseFloat(rateInput.val()) || 0;
                 const calculatedAmount = participants * rate;
                 if (calculatedAmount > 0) {
                     amountInput.val(calculatedAmount.toFixed(2));
+                    serializeIncome();
                 }
             }
-            
+
             participantsInput.on('input change', calculateAmount);
             rateInput.on('input change', calculateAmount);
-            
+            $(`#income_sl_no_${index}, #income_particulars_${index}, #income_amount_${index}`).on('input change', () => {
+                serializeIncome();
+            });
+            amountInput.on('input change', () => serializeIncome());
+
             index++;
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
             }
+            serializeIncome();
         }
 
         function updateIncomeHeaders() {
@@ -2822,6 +2965,7 @@ function getWhyThisEventForm() {
                 $(this).attr('data-index', i);
                 $(this).find('.remove-income-btn').attr('data-index', i);
             });
+            serializeIncome();
         }
 
         function showEmptyState() {
@@ -2835,6 +2979,7 @@ function getWhyThisEventForm() {
             } else {
                 container.find('.income-empty-state').remove();
             }
+            serializeIncome();
         }
 
         $('#add-income-btn').on('click', function() {
@@ -2849,25 +2994,28 @@ function getWhyThisEventForm() {
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
             }
+            serializeIncome();
         });
 
         // Load existing income data if available
-        if (window.EXISTING_INCOME && window.EXISTING_INCOME.length) {
+        const initialIncome = getStoredSectionData('income-data', window.EXISTING_INCOME || []);
+        if (initialIncome.length) {
             container.empty();
-            window.EXISTING_INCOME.forEach(inc => {
+            initialIncome.forEach(inc => {
                 addIncomeRow();
                 const idx = index - 1;
-                $(`#income_sl_no_${idx}`).val(inc.sl_no);
-                $(`#income_particulars_${idx}`).val(inc.particulars);
-                $(`#income_participants_${idx}`).val(inc.participants);
-                $(`#income_rate_${idx}`).val(inc.rate);
-                $(`#income_amount_${idx}`).val(inc.amount);
+                $(`#income_sl_no_${idx}`).val(cleanFieldValue(inc.sl_no));
+                $(`#income_particulars_${idx}`).val(cleanFieldValue(inc.particulars));
+                $(`#income_participants_${idx}`).val(cleanFieldValue(inc.participants));
+                $(`#income_rate_${idx}`).val(cleanFieldValue(inc.rate));
+                $(`#income_amount_${idx}`).val(cleanFieldValue(inc.amount));
             });
             showEmptyState();
         } else {
             showEmptyState();
         }
 
+        incomeHiddenField = document.getElementById('income-data');
         const addIncomeBtnEl = document.getElementById('add-income-btn');
         if (addIncomeBtnEl) {
             addIncomeBtnEl.dataset.listenerAttached = 'true';
@@ -3002,6 +3150,15 @@ function getWhyThisEventForm() {
 
         if (currentExpandedCard === 'schedule') {
             serializeSchedule();
+        }
+        if (currentExpandedCard === 'speakers') {
+            serializeSpeakers();
+        }
+        if (currentExpandedCard === 'expenses') {
+            serializeExpenses();
+        }
+        if (currentExpandedCard === 'income') {
+            serializeIncome();
         }
 
         // Always validate before saving
