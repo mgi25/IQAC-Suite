@@ -72,14 +72,9 @@ class EventReportWorkflowTests(TestCase):
             ai_generated_report="Comprehensive AI content",
             summary="Fallback summary",
         )
-        with patch("reportlab.pdfgen.canvas.Canvas") as mock_canvas:
-            canvas_instance = mock_canvas.return_value
-            canvas_instance.drawString.return_value = None
-            canvas_instance.showPage.return_value = None
-            canvas_instance.save.return_value = None
-            response = self.client.get(
-                reverse("emt:download_pdf", args=[self.proposal.id])
-            )
+        response = self.client.get(
+            reverse("emt:download_pdf", args=[self.proposal.id])
+        )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "application/pdf")
         self.assertIn(self.proposal.event_title, response["Content-Disposition"])
@@ -111,12 +106,7 @@ class EventReportWorkflowTests(TestCase):
         self.assertEqual(view_response.status_code, 200)
         self.assertContains(view_response, "Detailed AI write-up")
 
-        with patch("reportlab.pdfgen.canvas.Canvas") as mock_canvas:
-            canvas_instance = mock_canvas.return_value
-            canvas_instance.drawString.return_value = None
-            canvas_instance.showPage.return_value = None
-            canvas_instance.save.return_value = None
-            download_response = self.client.get(download_url)
+        download_response = self.client.get(download_url)
         self.assertEqual(download_response.status_code, 200)
 
     def test_submit_event_report_prefills_existing_text(self):
@@ -143,12 +133,7 @@ class EventReportWorkflowTests(TestCase):
         self.assertContains(response, "AI generated narrative")
         download_url = reverse("emt:download_pdf", args=[self.proposal.id])
         self.assertContains(response, download_url)
-        with patch("reportlab.pdfgen.canvas.Canvas") as mock_canvas:
-            canvas_instance = mock_canvas.return_value
-            canvas_instance.drawString.return_value = None
-            canvas_instance.showPage.return_value = None
-            canvas_instance.save.return_value = None
-            download_response = self.client.get(download_url)
+        download_response = self.client.get(download_url)
         self.assertEqual(download_response.status_code, 200)
 
     def test_view_report_falls_back_to_summary(self):

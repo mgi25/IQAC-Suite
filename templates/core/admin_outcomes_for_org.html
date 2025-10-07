@@ -36,7 +36,7 @@
                     placeholder="Enter Programme Outcome description…"></textarea>
 
           <div class="btn-row">
-            <button id="btnAddPO" class="btn btn--primary">
+            <button id="btnAddPO" type="button" class="btn btn--primary">
               <i class="fas fa-plus"></i> Add PO
             </button>
           </div>
@@ -60,7 +60,7 @@
                     placeholder="Enter Programme Specific Outcome description…"></textarea>
 
           <div class="btn-row">
-            <button id="btnAddPSO" class="btn btn--primary">
+            <button id="btnAddPSO" type="button" class="btn btn--primary">
               <i class="fas fa-plus"></i> Add PSO
             </button>
           </div>
@@ -125,12 +125,16 @@
 /* Inputs & buttons */
 .outcome-input{
   width:100%;border:1px solid var(--border);border-radius:8px;padding:10px;background:#fff;resize:vertical;
+  color:#0f172a;caret-color:#1e60b1;font-size:1rem;line-height:1.5;
 }
 .outcome-input:focus{border-color:#1e60b1;box-shadow:0 0 0 3px rgba(30,96,177,.12);outline:none}
 .btn-row{display:flex;gap:10px;align-items:center}
 .btn{display:inline-flex;align-items:center;gap:8px;border-radius:8px;padding:8px 14px;border:1px solid transparent;cursor:pointer;font-weight:700}
 .btn--primary{background:#1e60b1;color:#fff;border-color:#1e60b1}
 .btn--primary:hover{background:#184c8c;border-color:#184c8c}
+.btn.is-loading{opacity:.85;pointer-events:none}
+.btn.is-loading .spinner{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.6);border-top-color:#fff;display:inline-block;animation:btn-spin .7s linear infinite}
+@keyframes btn-spin{to{transform:rotate(360deg)}}
 /* IMPORTANT: do NOT make buttons full-width */
 .btn, .btn-row .btn{width:auto}
 
@@ -158,6 +162,7 @@
     btnAddPO:document.getElementById('btnAddPO'),
     btnAddPSO:document.getElementById('btnAddPSO'),
   };
+  const btnOriginalHtml={};
 
   function getCsrf(){
     const el=document.querySelector('[name=csrfmiddlewaretoken]');
@@ -167,6 +172,25 @@
   }
   function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 
+  function setAddLoading(kind, isLoading){
+    const btn = kind==='PO' ? els.btnAddPO : els.btnAddPSO;
+    const ta  = kind==='PO' ? els.newPO   : els.newPSO;
+    if(!btn) return;
+    if(!btnOriginalHtml[kind]) btnOriginalHtml[kind] = btn.innerHTML;
+    btn.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+    if(isLoading){
+      btn.disabled = true;
+      btn.classList.add('is-loading');
+      btn.innerHTML = '<span class="spinner" aria-hidden="true"></span><span>Saving…</span>';
+      if(ta) ta.setAttribute('disabled','disabled');
+    } else {
+      btn.disabled = false;
+      btn.classList.remove('is-loading');
+      btn.innerHTML = btnOriginalHtml[kind];
+      if(ta) ta.removeAttribute('disabled');
+    }
+  }
+
   async function loadAll(){
     if(!orgId) return;
     els.posList.innerHTML='<div class="list__empty">Loading…</div>';
@@ -175,13 +199,28 @@
     try{
       const progRes=await fetch(`/core/api/programs/${orgId}/`);
       if(!progRes.ok) throw new Error('Programs load failed');
-      const programs=await progRes.json();
-      if(!programs?.length){
-        els.posList.innerHTML='<div class="list__empty">No programmes found.</div>';
-        els.psoList.innerHTML='<div class="list__empty">No programmes found.</div>';
+      let programs=await progRes.json();
+      if(!Array.isArray(programs)) programs=[];
+
+      if(!programs.length){
+        els.posList.innerHTML='<div class="list__empty">Creating default programme…</div>';
+        els.psoList.innerHTML='<div class="list__empty">Creating default programme…</div>';
+        const created = await ensureProgram();
+        if(created){
+          programs=[created];
+        } else {
+          els.posList.innerHTML='<div class="list__empty">No programmes found. Please create a programme first.</div>';
+          els.psoList.innerHTML='<div class="list__empty">No programmes found. Please create a programme first.</div>';
+          return;
+        }
+      }
+
+      currentProgramId=programs[0]?.id || null;
+      if(!currentProgramId){
+        els.posList.innerHTML='<div class="list__empty">Programme unavailable.</div>';
+        els.psoList.innerHTML='<div class="list__empty">Programme unavailable.</div>';
         return;
       }
-      currentProgramId=programs[0].id;
       await Promise.all([loadOutcomes('PO'), loadOutcomes('PSO')]);
     }catch{
       els.posList.innerHTML='<div class="list__empty">Error loading.</div>';
@@ -190,12 +229,44 @@
   }
 
   async function loadOutcomes(kind){
-    if(!currentProgramId) return;
-    const archived=els.arch?.checked ? '&archived=1' : '';
-    const res=await fetch(`/core/api/program-outcomes/${currentProgramId}/?type=${kind}${archived}`);
-    if(!res.ok) return;
-    const data=await res.json();
-    render(kind, Array.isArray(data)?data:[]);
+    if(!currentProgramId) return false;
+    const wrap = kind==='PO' ? els.posList : els.psoList;
+    if(wrap) wrap.innerHTML='<div class="list__empty">Refreshing…</div>';
+    try{
+      const archived=els.arch?.checked ? '&archived=1' : '';
+      const res=await fetch(`/core/api/program-outcomes/${currentProgramId}/?type=${kind}${archived}`);
+      if(!res.ok) throw new Error('Failed to load outcomes');
+      const data=await res.json();
+      render(kind, Array.isArray(data)?data:[]);
+      return true;
+    }catch(err){
+      console.error(err);
+      if(wrap) wrap.innerHTML='<div class="list__empty">Unable to load outcomes.</div>';
+      return false;
+    }
+  }
+
+  async function ensureProgram(){
+    if(!orgId) return null;
+    try{
+      const res = await fetch('/core/api/create-program/',{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'X-CSRFToken':getCsrf(),
+          'X-Requested-With':'XMLHttpRequest'
+        },
+        body: JSON.stringify({ organization_id: orgId })
+      });
+      const json = await res.json().catch(()=>null);
+      if(res.ok && json?.success && json.program){
+        return json.program;
+      }
+      if(json?.error) console.warn('create-program error:', json.error);
+    }catch(err){
+      console.error('Failed to create default programme', err);
+    }
+    return null;
   }
 
   function render(kind, items){
@@ -262,23 +333,44 @@
     if(!currentProgramId) return;
     const ta = kind==='PO' ? els.newPO : els.newPSO;
     const v = (ta.value||'').trim(); if(!v) { ta.focus(); return; }
-
-    const url = (kind==='PO')
-      ? `/api/programs/${currentProgramId}/pos/`
-      : `/api/programs/${currentProgramId}/psos/`;
-
-    const r=await fetch(url,{
-      method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
-      body: JSON.stringify({ description: v })
-    });
-    const j=await r.json();
-    if(j?.success){ ta.value=''; loadOutcomes(kind); }
+    let shouldRefocus=false;
+    setAddLoading(kind, true);
+    try{
+      const r = await fetch('/core/api/manage-program-outcomes/',{
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrf(),
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ program_id: currentProgramId, type: kind, description: v })
+      });
+      const j = await r.json().catch(()=>({ success: false, error: 'Invalid JSON' }));
+      if (r.ok && j && j.success){
+        ta.value = '';
+        const refreshed = await loadOutcomes(kind);
+        if(!refreshed){
+          alert('Saved, but unable to refresh the list. Please reload the page.');
+        }
+        shouldRefocus = true;
+      } else {
+        const msg = (j && j.error) ? j.error : `Failed to add ${kind}`;
+        alert(msg);
+      }
+    }catch(err){
+      console.error('Add outcome failed', err);
+      alert('Network error: could not add outcome');
+    }finally{
+      setAddLoading(kind, false);
+      if(shouldRefocus && ta && !ta.hasAttribute('disabled')) ta.focus();
+    }
   }
 
   // events
   els.arch?.addEventListener('change', loadAll);
-  els.btnAddPO?.addEventListener('click', ()=>addOutcome('PO'));
-  els.btnAddPSO?.addEventListener('click', ()=>addOutcome('PSO'));
+  els.btnAddPO?.addEventListener('click', e=>{ e.preventDefault(); addOutcome('PO'); });
+  els.btnAddPSO?.addEventListener('click', e=>{ e.preventDefault(); addOutcome('PSO'); });
 
   document.addEventListener('DOMContentLoaded', loadAll);
   if(document.readyState!=='loading') loadAll();

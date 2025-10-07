@@ -11,15 +11,15 @@
 
 <!-- Search and Filter Bar -->
 <div class="search-filter-container">
-    <input type="text" class="search-input" placeholder="Search by title, user or organisation">
-    <select class="status-filter">
+    <input type="text" id="reportSearch" class="search-input" placeholder="Search by title, user or organisation">
+    <select id="reportStatusFilter" class="status-filter">
         <option value="">All Status</option>
         <option value="approved">Approved</option>
         <option value="submitted">Pending</option>
         <option value="rejected">Rejected</option>
         <option value="generated">Generated</option>
     </select>
-    <button class="filter-btn">Filter</button>
+    <button type="button" id="reportFilterButton" class="filter-btn">Filter</button>
 </div>
 <div class="reports-table-wrap">
     <table class="reports-table">
@@ -35,7 +35,7 @@
                 <th>Action</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody id="reportsTableBody" data-empty-text="No reports found.">
             {% for report in reports %}
             <tr>
                 <td>{{ forloop.counter }}</td>
@@ -119,4 +119,5 @@
         </tbody>
     </table>
 </div>
+<script src="{% static 'core/js/admin_reports.js' %}"></script>
 {% endblock %}
