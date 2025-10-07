@@ -2291,6 +2291,8 @@ function getWhyThisEventForm() {
             addRow();
             serializeSchedule();
         });
+        addRowBtn.dataset.listenerAttached = 'true';
+        scheduleTableBody.dataset.initialized = 'true';
     }
 
     function getSpeakersForm() {
@@ -2602,6 +2604,15 @@ function getWhyThisEventForm() {
             }
             showEmptyState();
         }
+
+        const addSpeakerBtnEl = document.getElementById('add-speaker-btn');
+        if (addSpeakerBtnEl) {
+            addSpeakerBtnEl.dataset.listenerAttached = 'true';
+        }
+        const containerEl = container.get(0);
+        if (containerEl) {
+            containerEl.dataset.initialized = 'true';
+        }
     }
 
     function setupExpensesSection() {
@@ -2696,6 +2707,15 @@ function getWhyThisEventForm() {
             showEmptyState();
         } else {
             showEmptyState();
+        }
+
+        const addExpenseBtnEl = document.getElementById('add-expense-btn');
+        if (addExpenseBtnEl) {
+            addExpenseBtnEl.dataset.listenerAttached = 'true';
+        }
+        const containerEl = container.get(0);
+        if (containerEl) {
+            containerEl.dataset.initialized = 'true';
         }
     }
 
@@ -2846,6 +2866,15 @@ function getWhyThisEventForm() {
             showEmptyState();
         } else {
             showEmptyState();
+        }
+
+        const addIncomeBtnEl = document.getElementById('add-income-btn');
+        if (addIncomeBtnEl) {
+            addIncomeBtnEl.dataset.listenerAttached = 'true';
+        }
+        const containerEl = container.get(0);
+        if (containerEl) {
+            containerEl.dataset.initialized = 'true';
         }
     }
 
@@ -3461,6 +3490,11 @@ function getWhyThisEventForm() {
         if (!plan.length) return;
         const numInput = document.getElementById('num-activities-modern');
         if (!numInput) return;
+
+        try {
+            await waitForCondition(() => numInput.dataset.listenerAttached === 'true', { timeout: 2000, interval: 75 });
+        } catch (err) { /* continue even if listener flag not found */ }
+
         setFieldValue(numInput, String(plan.length));
         try {
             numInput.dispatchEvent(new Event('input', { bubbles: true }));
@@ -3496,6 +3530,10 @@ function getWhyThisEventForm() {
         scheduleHiddenField = document.getElementById('schedule-modern');
         if (!scheduleTableBody) return;
 
+        try {
+            await waitForCondition(() => addRowBtn.dataset.listenerAttached === 'true' && scheduleTableBody.dataset.initialized === 'true', { timeout: 2000, interval: 75 });
+        } catch (err) { /* proceed regardless */ }
+
         scheduleTableBody.innerHTML = '';
         rows.forEach(() => addRowBtn.click());
 
@@ -3529,6 +3567,10 @@ function getWhyThisEventForm() {
         const addBtn = document.getElementById('add-speaker-btn');
         if (!addBtn) return;
 
+        try {
+            await waitForCondition(() => addBtn.dataset.listenerAttached === 'true', { timeout: 2000, interval: 75 });
+        } catch (err) { /* continue even if listener not flagged */ }
+
         const container = document.getElementById('speakers-list');
         const existing = container ? container.querySelectorAll('.speaker-form-container').length : 0;
         for (let i = existing; i < profiles.length; i += 1) {
@@ -3556,6 +3598,10 @@ function getWhyThisEventForm() {
         const addBtn = document.getElementById('add-expense-btn');
         if (!addBtn) return;
 
+        try {
+            await waitForCondition(() => addBtn.dataset.listenerAttached === 'true', { timeout: 2000, interval: 75 });
+        } catch (err) { /* continue even if listener flag missing */ }
+
         const container = $('#expense-rows');
         const existing = container.children('.expense-form-container').length;
         for (let i = existing; i < expenses.length; i += 1) {
@@ -3582,6 +3628,10 @@ function getWhyThisEventForm() {
         if (!incomes.length) return;
         const addBtn = document.getElementById('add-income-btn');
         if (!addBtn) return;
+
+        try {
+            await waitForCondition(() => addBtn.dataset.listenerAttached === 'true', { timeout: 2000, interval: 75 });
+        } catch (err) { /* proceed regardless */ }
 
         const container = $('#income-rows');
         const existing = container.children('.income-form-container').length;
