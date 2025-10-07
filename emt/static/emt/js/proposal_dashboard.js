@@ -695,6 +695,17 @@ $(document).ready(function() {
         const container = document.getElementById('dynamic-activities-section');
 
         const djangoNumActivitiesField = document.querySelector('#django-basic-info [name="num_activities"]');
+        const djangoBasicInfoEl = document.getElementById('django-basic-info');
+        let activitySeeds = normalizeActivitiesSeed(window.EXISTING_ACTIVITIES);
+        if ((!activitySeeds || !activitySeeds.length) && djangoBasicInfoEl) {
+            const datasetSeed = normalizeActivitiesSeed(djangoBasicInfoEl.dataset.activities || '');
+            if (datasetSeed.length) {
+                activitySeeds = datasetSeed;
+            }
+        }
+        if (activitySeeds && activitySeeds.length) {
+            window.EXISTING_ACTIVITIES = activitySeeds;
+        }
         let isSyncingActivitiesCount = false;
 
         function reindexActivityRows() {
@@ -761,8 +772,8 @@ $(document).ready(function() {
                 }
                 container.innerHTML = html;
                 enhanceProposalInputs();
-                if (window.EXISTING_ACTIVITIES && window.EXISTING_ACTIVITIES.length) {
-                    window.EXISTING_ACTIVITIES.forEach((act, idx) => {
+                if (activitySeeds && activitySeeds.length) {
+                    activitySeeds.slice(0, count).forEach((act, idx) => {
                         const index = idx + 1;
                         $(`#activity_name_${index}`).val(act.name);
                         $(`#activity_date_${index}`).val(act.date);
@@ -803,9 +814,9 @@ $(document).ready(function() {
             render(count);
         });
         numActivitiesInput.dataset.listenerAttached = 'true';
-        if (window.EXISTING_ACTIVITIES && window.EXISTING_ACTIVITIES.length) {
-            numActivitiesInput.value = window.EXISTING_ACTIVITIES.length;
-            render(window.EXISTING_ACTIVITIES.length);
+        if (activitySeeds && activitySeeds.length) {
+            numActivitiesInput.value = activitySeeds.length;
+            render(activitySeeds.length);
         } else {
             // Try draft-backed count if input is empty
             let savedCount = parseInt(numActivitiesInput.value, 10);
@@ -2023,7 +2034,42 @@ $(document).ready(function() {
     function capitalizeFirst(str) {
         return str.charAt(0).toUpperCase() + str.slice(1);
     }
-    
+
+    function normalizeActivitiesSeed(raw) {
+        if (!raw) return [];
+        let items = raw;
+        if (typeof raw === 'string') {
+            try {
+                const trimmed = raw.trim();
+                if (!trimmed) {
+                    return [];
+                }
+                items = JSON.parse(trimmed);
+            } catch (err) {
+                console.warn('Failed to parse activity seed payload', err);
+                return [];
+            }
+        }
+        if (!Array.isArray(items)) {
+            return [];
+        }
+        return items
+            .map((item) => {
+                const name = typeof item?.name === 'string' ? item.name.trim() : '';
+                let date = typeof item?.date === 'string' ? item.date.trim() : '';
+                if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+                    const parsed = new Date(date);
+                    if (!Number.isNaN(parsed.valueOf())) {
+                        const month = String(parsed.getMonth() + 1).padStart(2, '0');
+                        const day = String(parsed.getDate()).padStart(2, '0');
+                        date = `${parsed.getFullYear()}-${month}-${day}`;
+                    }
+                }
+                return { name, date };
+            })
+            .filter((item) => item.name || item.date);
+    }
+
     // ===== FORM TEMPLATE FUNCTIONS - PRESERVED =====
     function getBasicInfoForm() {
         // Return the actual basic info form HTML content
