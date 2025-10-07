@@ -13,10 +13,10 @@ from .models import (CDLCertificateRecipient, CDLMessage, CDLSupport,
                      ExpenseDetail, SpeakerProfile, TentativeFlow)
 
 # Reusable validator to ensure names contain only letters and basic punctuation
-NAME_PATTERN = r"^[A-Za-z .'-]+$"
+NAME_PATTERN = r"^[A-Za-z0-9 .,'()&/-]+$"
 name_validator = RegexValidator(
     NAME_PATTERN,
-    "Only letters and standard punctuation (.'- and spaces) are allowed.",
+    "Only letters, numbers, and basic punctuation (.,'()&/- and spaces) are allowed.",
 )
 
 

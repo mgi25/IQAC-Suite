@@ -22,15 +22,48 @@
     <form method="post">
       {% csrf_token %}
       {{ formset.management_form }}
+      {% if formset.non_form_errors %}
+        <div class="form-errors">
+          <ul>
+            {% for error in formset.non_form_errors %}
+              <li>{{ error }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
 
       <div class="section">
         <h3>Expense List</h3>
         {% for form in formset %}
           <div class="section expense-form">
             <h4>Expense {{ forloop.counter }}</h4>
+            {% if form.non_field_errors %}
+              <div class="form-errors">
+                <ul>
+                  {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            {% endif %}
             <div class="input-group">{{ form.sl_no.label_tag }} {{ form.sl_no.as_widget(attrs={'class': 'proposal-input'}) }}</div>
+            {% if form.sl_no.errors %}
+              <div class="field-errors">
+                {% for error in form.sl_no.errors %}<div>{{ error }}</div>{% endfor %}
+              </div>
+            {% endif %}
             <div class="input-group">{{ form.particulars.label_tag }} {{ form.particulars.as_widget(attrs={'class': 'proposal-input'}) }}</div>
+            {% if form.particulars.errors %}
+              <div class="field-errors">
+                {% for error in form.particulars.errors %}<div>{{ error }}</div>{% endfor %}
+              </div>
+            {% endif %}
             <div class="input-group">{{ form.amount.label_tag }} {{ form.amount.as_widget(attrs={'class': 'proposal-input'}) }}</div>
+            {% if form.amount.errors %}
+              <div class="field-errors">
+                {% for error in form.amount.errors %}<div>{{ error }}</div>{% endfor %}
+              </div>
+            {% endif %}
             {% if form.DELETE %}
               <div class="input-group">{{ form.DELETE.as_widget(attrs={'class': 'proposal-input'}) }} Remove this expense</div>
             {% endif %}
