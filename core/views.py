@@ -4008,6 +4008,141 @@ def admin_reports_view(request):
 
 @login_required
 @admin_required
+@require_GET
+def admin_reports_api(request):
+    """Return filtered report data for the admin reports table."""
+
+    search_term = request.GET.get("search", "").strip()
+    status_filter = (request.GET.get("status", "") or "").strip().lower()
+
+    reports_qs = (
+        Report.objects.select_related("organization", "submitted_by")
+        .all()
+    )
+    event_reports_qs = (
+        EventReport.objects.select_related(
+            "proposal__organization",
+            "proposal__submitted_by",
+        )
+        .all()
+    )
+
+    if search_term:
+        reports_qs = reports_qs.filter(
+            Q(title__icontains=search_term)
+            | Q(description__icontains=search_term)
+            | Q(organization__name__icontains=search_term)
+            | Q(submitted_by__first_name__icontains=search_term)
+            | Q(submitted_by__last_name__icontains=search_term)
+            | Q(submitted_by__username__icontains=search_term)
+        )
+        event_reports_qs = event_reports_qs.filter(
+            Q(proposal__event_title__icontains=search_term)
+            | Q(proposal__organization__name__icontains=search_term)
+            | Q(proposal__submitted_by__first_name__icontains=search_term)
+            | Q(proposal__submitted_by__last_name__icontains=search_term)
+            | Q(proposal__submitted_by__username__icontains=search_term)
+        )
+
+    if status_filter:
+        if status_filter == "generated":
+            reports_qs = reports_qs.none()
+        else:
+            reports_qs = reports_qs.filter(status=status_filter)
+            event_statuses = {choice[0] for choice in EventReport.Status.choices}
+            if status_filter in event_statuses:
+                event_reports_qs = event_reports_qs.filter(status=status_filter)
+            else:
+                event_reports_qs = event_reports_qs.none()
+
+    results = []
+    status_class_map = {
+        "approved": "status-approved",
+        "submitted": "status-pending",
+        "rejected": "status-rejected",
+        "draft": "status-pending",
+        "under_review": "status-pending",
+        "finalized": "status-approved",
+    }
+
+    def _user_display(user):
+        if not user:
+            return "-"
+        full = user.get_full_name()
+        return full or user.username
+
+    for report in reports_qs:
+        created = timezone.localtime(report.created_at)
+        results.append(
+            {
+                "id": report.id,
+                "title": report.title or "-",
+                "type": report.get_report_type_display(),
+                "organization": getattr(report.organization, "name", "-") or "-",
+                "submitted_by": _user_display(report.submitted_by),
+                "created_at": created.isoformat(),
+                "created_at_display": created.strftime("%Y-%m-%d %H:%M"),
+                "status": report.status,
+                "status_label": report.get_status_display(),
+                "status_class": status_class_map.get(report.status, "status-pending"),
+                "is_generated": False,
+                "file_url": report.file.url if getattr(report.file, "url", None) else None,
+                "view_url": None,
+                "pdf_url": None,
+                "approve_url": reverse("admin_reports_approve", args=[report.id])
+                if report.status == "submitted"
+                else None,
+                "reject_url": reverse("admin_reports_reject", args=[report.id])
+                if report.status == "submitted"
+                else None,
+                "proposal_id": None,
+            }
+        )
+
+    for event_report in event_reports_qs:
+        proposal = event_report.proposal
+        created = timezone.localtime(event_report.created_at)
+        view_url = None
+        pdf_url = None
+        if proposal:
+            try:
+                view_url = reverse("emt:view_report", args=[event_report.id])
+            except Exception:
+                view_url = None
+            try:
+                pdf_url = reverse("emt:download_pdf", args=[proposal.id])
+            except Exception:
+                pdf_url = None
+
+        results.append(
+            {
+                "id": event_report.id,
+                "title": getattr(proposal, "event_title", "Event Report") or "Event Report",
+                "type": "Event Report",
+                "organization": getattr(getattr(proposal, "organization", None), "name", "-") or "-",
+                "submitted_by": _user_display(getattr(proposal, "submitted_by", None)),
+                "created_at": created.isoformat(),
+                "created_at_display": created.strftime("%Y-%m-%d %H:%M"),
+                "status": event_report.status,
+                "status_label": "Generated",
+                "status_class": "status-generated",
+                "is_generated": True,
+                "file_url": None,
+                "view_url": view_url,
+                "pdf_url": pdf_url,
+                "approve_url": None,
+                "reject_url": None,
+                "proposal_id": proposal.id if proposal else None,
+            }
+        )
+
+    results.sort(key=lambda item: item["created_at"], reverse=True)
+
+    return JsonResponse({"results": results})
+
+
+@login_required
+@admin_required
 def admin_reports_approve(request, report_id: int):
     """Approve a core Report and redirect back to the reports list.
 
