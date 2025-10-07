@@ -41,80 +41,171 @@ $(document).ready(function() {
 
     // Demo data used for rapid prototyping. Remove once real data is wired.
     const AUTO_FILL_DATA = {
-        titles: ['AI Workshop', 'Tech Symposium', 'Innovation Summit'],
-        audiences: ['All Students', 'CSE Students', 'Faculty Members'],
-        venues: ['Main Auditorium', 'Conference Hall A', 'Online Platform'],
-        focusTypes: ['Workshop', 'Seminar', 'Training'],
+        titles: [
+            'Data Science & AI Collaboration Summit',
+            'Intelligent Systems Innovation Day',
+            'Analytics for Social Impact Workshop'
+        ],
+        venues: ['Innovation Lab', 'Tech Collaboration Hub', 'Virtual Intelligence Studio'],
+        focusTypes: ['Interdisciplinary Workshop', 'Research Colloquium', 'Hands-on Bootcamp'],
         objectives: [
-            '• Learn about emerging technologies\n• Encourage innovation\n• Foster collaboration',
-            '• Understand basics\n• Gain hands-on experience',
-            '• Explore research trends\n• Build industry connections'
+            '• Build collaboration between Data Science and Computer Science teams\n• Share successful interdisciplinary project case studies\n• Identify new avenues for student industry engagement',
+            '• Provide hands-on exposure to cutting-edge analytics tools\n• Encourage joint problem-solving across departments\n• Prepare participants for collaborative capstone projects',
+            '• Strengthen cross-functional research pipelines\n• Develop mentor networks for student innovators\n• Align departmental initiatives with institutional IQAC goals'
         ],
         outcomes: [
-            'Participants will understand fundamentals',
-            'Improved networking amongst attendees',
-            'Creation of follow-up projects'
+            'Participants document a roadmap for Data Science and Computer Science collaborations.',
+            'Inter-department mentor groups formed to support ongoing analytics initiatives.',
+            'Prototype ideas shortlisted for institutional funding and external showcases.'
         ],
         need: [
-            'To bridge the gap between theory and practice',
-            'Demand for skills in industry',
-            'Enhance student exposure to experts'
+            'To unify Data Science and Computer Science initiatives under a single collaborative program.',
+            'To ensure students gain industry-ready exposure by working with both analytics and engineering mentors.',
+            'To accelerate interdisciplinary research outputs aligned with institutional strategic plans.'
         ],
         schedule: [
-            '09:00 AM - Registration\n10:00 AM - Inauguration\n11:00 AM - Keynote Session',
-            '10:00 AM - Welcome\n10:30 AM - Talk 1\n12:00 PM - Lunch'
+            '09:00 AM - Welcome & Orientation\n11:00 AM - Joint Data Lab\n14:00 PM - Innovation Showcase',
+            '10:00 AM - Strategy Briefing\n12:30 PM - Faculty Roundtable\n15:00 PM - Project Pitch Session'
         ],
-        speakerNames: ['Dr. Jane Smith', 'Prof. John Doe', 'Ms. Alice Johnson'],
-        designations: ['Professor', 'Senior Analyst', 'Researcher'],
-        affiliations: ['XYZ University', 'Tech Corp', 'Research Lab'],
-        emails: ['jane@example.com', 'john@example.com', 'alice@example.com'],
+        speakerNames: ['Dr. Kavya Menon', 'Prof. Arun Pillai', 'Ms. Neha Ramesh'],
+        designations: ['Head of Data Science', 'Professor of Computer Science', 'Industry Mentor'],
+        affiliations: ['Department of Data Science', 'School of Computer Science', 'AI Innovation Hub'],
+        emails: ['kavya.menon@example.edu', 'arun.pillai@example.edu', 'neha.ramesh@example.com'],
         phones: ['9876543210', '9123456780', '9988776655'],
         linkedins: [
-            'https://linkedin.com/in/jane',
-            'https://linkedin.com/in/john',
-            'https://linkedin.com/in/alice'
+            'https://www.linkedin.com/in/kavyamenon',
+            'https://www.linkedin.com/in/arunpillai',
+            'https://www.linkedin.com/in/neharamesh'
         ],
         bios: [
-            'Expert in AI and ML with 10 years of experience.',
-            'Data science enthusiast and keynote speaker.',
-            'Researcher focusing on emerging technologies.'
+            'Researcher focusing on applied machine learning, leading collaborative projects across CS and Data Science.',
+            'Specialist in distributed systems and AI integration with extensive industry collaboration experience.',
+            'Innovation strategist mentoring analytics-driven startups and academic hackathons.'
         ],
-        expenseItems: ['Venue Setup', 'Refreshments', 'Equipment Rental'],
-        incomeItems: ['Registration Fees', 'Sponsorship', 'Donations'],
-        targetAudienceOptions: [
+        expenseItems: ['Collaboration Lab Setup', 'Expert Honorarium', 'Workshop Materials & Logistics'],
+        incomeItems: ['Registration Fees', 'Department Funding Support', 'Industry Sponsorship'],
+        scheduleRows: [
+            { time: '09:00', activity: 'Welcome & Collaboration Roadmap' },
+            { time: '11:00', activity: 'Hands-on Data Lab with CS & DS Teams' },
+            { time: '14:00', activity: 'Innovation Showcase & Feedback' }
+        ],
+        speakerProfiles: [
             {
-                selectedStudents: [
-                    { id: '101', name: 'B.Tech CSE - III Year' },
-                    { id: '102', name: 'B.Tech IT - III Year' }
-                ],
-                selectedFaculty: [
-                    { id: '201', name: 'Department of Computer Science Faculty' }
-                ],
-                userSelected: []
+                full_name: 'Dr. Kavya Menon',
+                designation: 'Head of Data Science',
+                affiliation: 'Department of Data Science',
+                email: 'kavya.menon@example.edu',
+                phone: '9876543210',
+                linkedin: 'https://www.linkedin.com/in/kavyamenon',
+                bio: 'Researcher focusing on applied machine learning, leading collaborative projects across CS and Data Science.'
             },
             {
-                selectedStudents: [
-                    { id: '301', name: 'MBA Batch 2024' }
-                ],
-                selectedFaculty: [],
-                userSelected: [
-                    { id: '9001', name: 'Industry Mentor Group' }
-                ]
-            },
-            {
-                selectedStudents: [
-                    { id: '401', name: 'BBA Final Year' },
-                    { id: '402', name: 'B.Com Honors' }
-                ],
-                selectedFaculty: [
-                    { id: '203', name: 'School of Management Faculty' }
-                ],
-                userSelected: []
+                full_name: 'Prof. Arun Pillai',
+                designation: 'Professor of Computer Science',
+                affiliation: 'School of Computer Science',
+                email: 'arun.pillai@example.edu',
+                phone: '9123456780',
+                linkedin: 'https://www.linkedin.com/in/arunpillai',
+                bio: 'Specialist in distributed systems and AI integration with extensive industry collaboration experience.'
             }
+        ],
+        expenseRows: [
+            { sl: '1', particulars: 'Collaboration Lab Setup', amount: '15000' },
+            { sl: '2', particulars: 'Expert Honorarium', amount: '12000' },
+            { sl: '3', particulars: 'Workshop Materials & Logistics', amount: '8000' }
+        ],
+        incomeRows: [
+            { sl: '1', particulars: 'Registration Fees', participants: '80', rate: '250', amount: '20000' },
+            { sl: '2', particulars: 'Department Funding Support', participants: '1', rate: '15000', amount: '15000' }
+        ],
+        activityPlan: [
+            { name: 'Orientation & Goals with Faculty Incharge', daysFromStart: 0 },
+            { name: 'Joint Coding Sprint', daysFromStart: 0 },
+            { name: 'Industry Collaboration Meeting', daysFromStart: 1 }
         ]
     };
 
     const getRandom = arr => arr[Math.floor(Math.random() * arr.length)];
+
+    const setFieldValue = (element, value) => {
+        if (!element) return;
+        element.value = value;
+        try {
+            element.dispatchEvent(new Event('input', { bubbles: true }));
+        } catch (e) { /* noop */ }
+        try {
+            element.dispatchEvent(new Event('change', { bubbles: true }));
+        } catch (e) { /* noop */ }
+    };
+
+    const setFieldValueById = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) {
+            setFieldValue(el, value);
+        }
+    };
+
+    const waitForCondition = (conditionFn, { timeout = 4000, interval = 100 } = {}) => new Promise((resolve, reject) => {
+        const start = Date.now();
+        (function check() {
+            let result = null;
+            try {
+                result = conditionFn();
+            } catch (err) {
+                result = null;
+            }
+            if (result) {
+                resolve(result);
+                return;
+            }
+            if (Date.now() - start >= timeout) {
+                reject(new Error('Timeout waiting for condition'));
+                return;
+            }
+            setTimeout(check, interval);
+        })();
+    });
+
+    const waitForTomSelect = (selector, options = {}) =>
+        waitForCondition(() => $(selector)[0]?.tomselect, options).then(() => $(selector)[0].tomselect);
+
+    const safeFetchJson = async (url) => {
+        if (!url) return null;
+        try {
+            const resp = await fetch(url, { credentials: 'same-origin' });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            return await resp.json();
+        } catch (err) {
+            console.warn('safeFetchJson failed', url, err);
+            return null;
+        }
+    };
+
+    const findTomSelectOptionValue = (tom, text) => {
+        if (!tom || !text) return null;
+        const target = text.toLowerCase().trim();
+        return Object.keys(tom.options || {}).find(value => {
+            const optionText = (tom.options[value]?.text || '').toLowerCase().trim();
+            return optionText === target;
+        }) || null;
+    };
+
+    const addDaysToDate = (dateStr, days = 0) => {
+        if (!dateStr) return dateStr;
+        const parts = dateStr.split('-').map(part => parseInt(part, 10));
+        if (parts.length !== 3 || parts.some(num => Number.isNaN(num))) {
+            return dateStr;
+        }
+        const [year, month, day] = parts;
+        const base = new Date(year, month - 1, day);
+        if (Number.isFinite(days)) {
+            base.setDate(base.getDate() + days);
+        }
+        const yyyy = base.getFullYear();
+        const mm = String(base.getMonth() + 1).padStart(2, '0');
+        const dd = String(base.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    };
 
     function updateCdlNavLink(proposalId) {
         if (!proposalId) return;
@@ -416,7 +507,9 @@ $(document).ready(function() {
                 }
             }
             if (autoFillEnabled) {
-                autofillTestData(section);
+                Promise.resolve(autofillTestData(section)).catch(err => {
+                    console.error('Autofill (query) failed', err);
+                });
             }
             if (section === 'schedule') {
                 populateTable();
@@ -3116,8 +3209,357 @@ function getWhyThisEventForm() {
             await delay(200);
         }
 
-        autofillTestData(section);
+        await autofillTestData(section);
         await delay(300);
+    }
+
+    async function fetchOrganizationOption(name, typeLabel = '') {
+        if (!name || !window.API_ORGANIZATIONS) return null;
+        const params = new URLSearchParams({ q: name });
+        if (typeLabel) {
+            params.append('org_type', typeLabel);
+        }
+        const data = await safeFetchJson(`${window.API_ORGANIZATIONS}?${params.toString()}`);
+        if (!Array.isArray(data) || !data.length) return null;
+        const lower = name.toLowerCase().trim();
+        return data.find(opt => (opt.text || '').toLowerCase().trim() === lower) || data[0] || null;
+    }
+
+    async function ensureOrganizationSelection() {
+        const orgTypeTom = $('#org-type-modern-input')[0]?.tomselect;
+        if (orgTypeTom) {
+            let desiredValue = findTomSelectOptionValue(orgTypeTom, 'Department');
+            if (!desiredValue) {
+                const values = Object.keys(orgTypeTom.options || {});
+                desiredValue = values.length ? values[0] : null;
+            }
+            if (desiredValue) {
+                orgTypeTom.setValue(desiredValue);
+            }
+        }
+
+        let orgTom = null;
+        try {
+            orgTom = await waitForTomSelect('#org-modern-select', { timeout: 5000, interval: 100 });
+        } catch (err) {
+            orgTom = null;
+        }
+
+        let primaryOrgOption = null;
+        try {
+            primaryOrgOption = await fetchOrganizationOption('Data Science', 'Department');
+        } catch (err) {
+            primaryOrgOption = null;
+        }
+        const primaryId = primaryOrgOption ? String(primaryOrgOption.id) : 'data-science';
+        const primaryText = primaryOrgOption?.text || 'Data Science';
+
+        if (orgTom) {
+            if (!orgTom.options[primaryId]) {
+                orgTom.addOption({ id: primaryId, text: primaryText });
+            } else if (primaryOrgOption?.text) {
+                orgTom.updateOption(primaryId, { id: primaryId, text: primaryOrgOption.text });
+            }
+            orgTom.setValue(primaryId);
+        } else {
+            const orgField = $('#django-basic-info [name="organization"]');
+            if (orgField.length) {
+                orgField.val(primaryId).trigger('change');
+            }
+        }
+
+        const committeeTom = $('#committees-collaborations-modern')[0]?.tomselect;
+        let committeeOption = null;
+        try {
+            committeeOption = await fetchOrganizationOption('Computer Science');
+        } catch (err) {
+            committeeOption = null;
+        }
+        const committeeId = committeeOption ? String(committeeOption.id) : 'computer-science';
+        const committeeText = committeeOption?.text || 'Computer Science';
+        if (committeeTom) {
+            if (!committeeTom.options[committeeId]) {
+                committeeTom.addOption({ id: committeeId, text: committeeText });
+            }
+            const currentValues = new Set(committeeTom.getValue());
+            if (!currentValues.has(committeeId)) {
+                committeeTom.addItem(committeeId);
+            }
+        } else {
+            const namesField = $('#django-basic-info [name="committees_collaborations"]');
+            if (namesField.length) {
+                const names = new Set((namesField.val() || '').split(',').map(s => s.trim()).filter(Boolean));
+                names.add(committeeText);
+                namesField.val(Array.from(names).join(', ')).trigger('change');
+            }
+            const idsField = $('#committees-collaborations-ids');
+            if (idsField.length) {
+                const ids = new Set((idsField.val() || '').split(',').map(s => s.trim()).filter(Boolean));
+                ids.add(committeeId);
+                idsField.val(Array.from(ids).join(',')).trigger('change');
+            }
+        }
+
+        const primaryOrgId = $('#django-basic-info [name="organization"]').val() || primaryId;
+        const primaryOrgName = orgTom?.options?.[primaryOrgId]?.text || primaryText;
+        const committeeIds = committeeTom
+            ? committeeTom.getValue()
+            : (($('#committees-collaborations-ids').val() || '').split(',').map(s => s.trim()).filter(Boolean));
+        const committeeNames = committeeTom
+            ? committeeIds.map(id => committeeTom.options[id]?.text || committeeText)
+            : (($('#django-basic-info [name="committees_collaborations"]').val() || '').split(',').map(s => s.trim()).filter(Boolean));
+
+        return { primaryOrgId, primaryOrgName, committeeIds, committeeNames };
+    }
+
+    async function autofillTargetAudienceFromBackend(orgMeta) {
+        if (!orgMeta) return;
+        const { primaryOrgId, primaryOrgName, committeeIds = [], committeeNames = [] } = orgMeta;
+        const orgInfos = [];
+        if (primaryOrgId) {
+            orgInfos.push({ id: primaryOrgId, name: primaryOrgName || 'Data Science' });
+        }
+        committeeIds.forEach((id, idx) => {
+            if (!id) return;
+            orgInfos.push({ id, name: committeeNames[idx] || committeeNames[0] || 'Computer Science' });
+        });
+        if (!orgInfos.length) return;
+
+        const selectedStudents = [];
+        const userSelected = [];
+        for (const org of orgInfos) {
+            const orgId = String(org.id || '').trim();
+            if (!/^[0-9]+$/.test(orgId)) {
+                continue;
+            }
+            const url = `${window.API_CLASSES_BASE}${orgId}/`;
+            const data = await safeFetchJson(url);
+            if (data?.success && Array.isArray(data.classes)) {
+                data.classes.forEach(cls => {
+                    const classId = String(cls.id);
+                    selectedStudents.push({ id: classId, name: `${cls.name} (${org.name})` });
+                    (cls.students || []).forEach(student => {
+                        if (student?.id && student?.name) {
+                            userSelected.push({ id: `stu-${student.id}`, name: student.name });
+                        }
+                    });
+                });
+            }
+        }
+
+        const dedupe = (items) => {
+            const seen = new Set();
+            return items.filter(item => {
+                const key = `${item.id}|${item.name}`;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+        };
+
+        if (!selectedStudents.length) {
+            const fallback = orgInfos
+                .map((info, idx) => ({ id: `org-${idx + 1}`, name: info.name }))
+                .filter(item => item.name);
+            if (fallback.length) {
+                applyTargetAudienceSelection({ selectedStudents: fallback, selectedFaculty: [], userSelected: [] });
+            }
+            return;
+        }
+
+        applyTargetAudienceSelection({
+            selectedStudents: dedupe(selectedStudents),
+            selectedFaculty: [],
+            userSelected: dedupe(userSelected)
+        });
+    }
+
+    async function selectFacultyInchargeByEmail(email) {
+        if (!email) return;
+        const facultyTom = $('#faculty-select')[0]?.tomselect;
+        if (!facultyTom) return;
+
+        let orgId = $('#django-basic-info [name="organization"]').val();
+        if (!orgId) {
+            try {
+                await waitForCondition(() => $('#django-basic-info [name="organization"]').val(), { timeout: 3000, interval: 150 });
+                orgId = $('#django-basic-info [name="organization"]').val();
+            } catch (err) {
+                orgId = $('#django-basic-info [name="organization"]').val();
+            }
+        }
+
+        let option = null;
+        if (orgId && /^[0-9]+$/.test(String(orgId))) {
+            const url = `${window.API_FACULTY}?org_id=${orgId}&q=${encodeURIComponent(email)}`;
+            const results = await safeFetchJson(url);
+            if (Array.isArray(results) && results.length) {
+                const lowerEmail = email.toLowerCase();
+                const preferred = results.find(item => (item.text || '').toLowerCase().includes(lowerEmail) || (item.name || '').toLowerCase().includes('alen'));
+                const selected = preferred || results[0];
+                option = { id: String(selected.id), text: selected.text || `${selected.name} (${email})` };
+            }
+        }
+
+        if (!option) {
+            option = { id: email, text: `Alen Jinmgi (${email})` };
+        }
+
+        if (!facultyTom.options[option.id]) {
+            facultyTom.addOption(option);
+        } else {
+            facultyTom.updateOption(option.id, option);
+        }
+        facultyTom.clear();
+        facultyTom.addItem(option.id);
+    }
+
+    function fillActivityPlan(today) {
+        const plan = AUTO_FILL_DATA.activityPlan || [];
+        if (!plan.length) return;
+        const numInput = document.getElementById('num-activities-modern');
+        if (!numInput) return;
+        setFieldValue(numInput, String(plan.length));
+        try {
+            numInput.dispatchEvent(new Event('input', { bubbles: true }));
+        } catch (e) { /* noop */ }
+
+        setTimeout(() => {
+            plan.forEach((activity, idx) => {
+                const index = idx + 1;
+                setFieldValueById(`activity_name_${index}`, activity.name);
+                const dateId = `activity_date_${index}`;
+                const dateEl = document.getElementById(dateId);
+                if (dateEl) {
+                    const dateValue = addDaysToDate(today, activity.daysFromStart || 0);
+                    setFieldValue(dateEl, dateValue);
+                }
+            });
+        }, 200);
+    }
+
+    function fillScheduleSection(today) {
+        const rows = AUTO_FILL_DATA.scheduleRows || [];
+        if (!rows.length) return;
+        const addRowBtn = document.getElementById('add-row-btn');
+        if (!addRowBtn) return;
+
+        scheduleTableBody = scheduleTableBody || document.getElementById('schedule-rows');
+        scheduleHiddenField = scheduleHiddenField || document.getElementById('schedule-modern');
+        if (!scheduleTableBody) return;
+
+        scheduleTableBody.innerHTML = '';
+        rows.forEach(() => addRowBtn.click());
+
+        setTimeout(() => {
+            const scheduleRows = scheduleTableBody.querySelectorAll('.schedule-row');
+            rows.forEach((row, idx) => {
+                const rowEl = scheduleRows[idx];
+                if (!rowEl) return;
+                const timeInput = rowEl.querySelector('.time-input');
+                const activityInput = rowEl.querySelector('.activity-input');
+                if (timeInput) {
+                    setFieldValue(timeInput, `${today}T${row.time}`);
+                }
+                if (activityInput) {
+                    setFieldValue(activityInput, row.activity);
+                }
+            });
+            serializeSchedule();
+        }, 200);
+    }
+
+    async function fillSpeakersSection() {
+        const profiles = AUTO_FILL_DATA.speakerProfiles || [];
+        if (!profiles.length) return;
+        const addBtn = document.getElementById('add-speaker-btn');
+        if (!addBtn) return;
+
+        const container = document.getElementById('speakers-list');
+        const existing = container ? container.querySelectorAll('.speaker-form-container').length : 0;
+        for (let i = existing; i < profiles.length; i += 1) {
+            addBtn.click();
+        }
+
+        try {
+            await waitForCondition(() => document.getElementById('speaker_full_name_0'), { timeout: 2000, interval: 100 });
+        } catch (err) { /* ignore timeout */ }
+
+        profiles.forEach((profile, idx) => {
+            setFieldValueById(`speaker_full_name_${idx}`, profile.full_name);
+            setFieldValueById(`speaker_designation_${idx}`, profile.designation);
+            setFieldValueById(`speaker_affiliation_${idx}`, profile.affiliation);
+            setFieldValueById(`speaker_contact_email_${idx}`, profile.email);
+            setFieldValueById(`speaker_contact_number_${idx}`, profile.phone);
+            setFieldValueById(`speaker_linkedin_url_${idx}`, profile.linkedin);
+            setFieldValueById(`speaker_detailed_profile_${idx}`, profile.bio);
+        });
+    }
+
+    function fillExpensesSection() {
+        const expenses = AUTO_FILL_DATA.expenseRows || [];
+        if (!expenses.length) return;
+        const addBtn = document.getElementById('add-expense-btn');
+        if (!addBtn) return;
+
+        const container = $('#expense-rows');
+        const existing = container.children('.expense-form-container').length;
+        for (let i = existing; i < expenses.length; i += 1) {
+            addBtn.click();
+        }
+
+        setTimeout(() => {
+            expenses.forEach((expense, idx) => {
+                setFieldValueById(`expense_sl_no_${idx}`, expense.sl);
+                setFieldValueById(`expense_particulars_${idx}`, expense.particulars);
+                setFieldValueById(`expense_amount_${idx}`, expense.amount);
+            });
+        }, 150);
+    }
+
+    function fillIncomeSection() {
+        const incomes = AUTO_FILL_DATA.incomeRows || [];
+        if (!incomes.length) return;
+        const addBtn = document.getElementById('add-income-btn');
+        if (!addBtn) return;
+
+        const container = $('#income-rows');
+        const existing = container.children('.income-form-container').length;
+        for (let i = existing; i < incomes.length; i += 1) {
+            addBtn.click();
+        }
+
+        setTimeout(() => {
+            incomes.forEach((income, idx) => {
+                setFieldValueById(`income_sl_no_${idx}`, income.sl);
+                setFieldValueById(`income_particulars_${idx}`, income.particulars);
+                setFieldValueById(`income_participants_${idx}`, income.participants);
+                setFieldValueById(`income_rate_${idx}`, income.rate);
+                setFieldValueById(`income_amount_${idx}`, income.amount);
+            });
+        }, 150);
+    }
+
+    function selectRandomSdgGoal() {
+        const sdgInput = document.getElementById('sdg-goals-modern');
+        const goals = Array.isArray(window.SDG_GOALS) ? window.SDG_GOALS : [];
+        if (!sdgInput || !goals.length) return;
+        const goal = goals[Math.floor(Math.random() * goals.length)];
+        setFieldValue(sdgInput, goal.name);
+
+        const hidden = $('#django-basic-info [name="sdg_goals"]');
+        if (hidden.length) {
+            hidden.each(function() {
+                const checkbox = $(this);
+                checkbox.prop('checked', checkbox.val() === String(goal.id));
+            });
+            hidden.first().trigger('change');
+        }
+
+        $('#sdgOptions input[type=checkbox]').each(function() {
+            const cb = $(this);
+            cb.prop('checked', cb.val() === String(goal.id));
+        });
     }
 
     async function autofillAllSections() {
@@ -3144,129 +3586,70 @@ function getWhyThisEventForm() {
         }
     }
 
-    function autofillTestData(section) {
+    async function autofillTestData(section) {
         const today = new Date().toISOString().split('T')[0];
 
         if (section === 'basic-info') {
+            const orgMeta = await ensureOrganizationSelection().catch(err => {
+                console.warn('autofill: failed to ensure organization selection', err);
+                return null;
+            });
+
+            const now = new Date();
+            const academicYear = now.getMonth() >= 6
+                ? `${now.getFullYear()}-${now.getFullYear() + 1}`
+                : `${now.getFullYear() - 1}-${now.getFullYear()}`;
+
             const fields = {
                 'event-title-modern': getRandom(AUTO_FILL_DATA.titles),
                 'venue-modern': getRandom(AUTO_FILL_DATA.venues),
                 'event-focus-type-modern': getRandom(AUTO_FILL_DATA.focusTypes),
                 'event-start-date': today,
-                'event-end-date': today,
-                'academic-year-modern': '2024-2025',
-                'pos-pso-modern': 'PO1, PSO2',
-                'sdg-goals-modern': 'Goal 4',
-                'num-activities-modern': '1'
+                'event-end-date': addDaysToDate(today, 1),
+                'academic-year-modern': academicYear,
+                'pos-pso-modern': 'PO1, PSO2 & PSO3'
             };
 
-            Object.entries(fields).forEach(([id, value]) => {
-                const el = document.getElementById(id);
-                if (!el) return;
-                el.value = value;
-                el.dispatchEvent(new Event('input', { bubbles: true }));
-                el.dispatchEvent(new Event('change', { bubbles: true }));
-            });
+            Object.entries(fields).forEach(([id, value]) => setFieldValueById(id, value));
 
-            const audienceOption = getRandom(AUTO_FILL_DATA.targetAudienceOptions || []);
-            if (audienceOption) {
-                applyTargetAudienceSelection(audienceOption);
+            const djangoAcademicYear = $('#django-basic-info [name="academic_year"]');
+            if (djangoAcademicYear.length) {
+                djangoAcademicYear.val(academicYear).trigger('change');
             }
 
-            // Fill dynamic activity once rendered
-            setTimeout(() => {
-                const actName = document.getElementById('activity_name_1');
-                const actDate = document.getElementById('activity_date_1');
-                if (actName) actName.value = 'Intro Session';
-                if (actDate) actDate.value = today;
-            }, 150);
+            selectRandomSdgGoal();
+            fillActivityPlan(today);
+
+            await autofillTargetAudienceFromBackend(orgMeta);
+            await selectFacultyInchargeByEmail('alenjinmgi@gmail.com');
 
             const sc = document.getElementById('student-coordinators-modern');
             if (sc && !sc.options.length) {
-                sc.appendChild(new Option('Demo Student', '1', true, true));
+                sc.appendChild(new Option('Data Science Student Lead', '1', true, true));
                 sc.dispatchEvent(new Event('change', { bubbles: true }));
             }
         }
 
         if (section === 'why-this-event') {
-            const need = document.getElementById('need-analysis-modern');
-            const obj = document.getElementById('objectives-modern');
-            const out = document.getElementById('outcomes-modern');
-            if (need) {
-                need.value = getRandom(AUTO_FILL_DATA.need);
-                need.dispatchEvent(new Event('input', { bubbles: true }));
-                need.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-            if (obj) {
-                obj.value = getRandom(AUTO_FILL_DATA.objectives);
-                obj.dispatchEvent(new Event('input', { bubbles: true }));
-                obj.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-            if (out) {
-                out.value = getRandom(AUTO_FILL_DATA.outcomes);
-                out.dispatchEvent(new Event('input', { bubbles: true }));
-                out.dispatchEvent(new Event('change', { bubbles: true }));
-            }
+            setFieldValueById('need-analysis-modern', getRandom(AUTO_FILL_DATA.need));
+            setFieldValueById('objectives-modern', getRandom(AUTO_FILL_DATA.objectives));
+            setFieldValueById('outcomes-modern', getRandom(AUTO_FILL_DATA.outcomes));
         }
 
         if (section === 'schedule') {
-            const sched = document.getElementById('schedule-modern');
-            if (sched) {
-                sched.value = getRandom(AUTO_FILL_DATA.schedule);
-                sched.dispatchEvent(new Event('input', { bubbles: true }));
-                sched.dispatchEvent(new Event('change', { bubbles: true }));
-            }
+            fillScheduleSection(today);
         }
 
         if (section === 'speakers') {
-            document.getElementById('add-speaker-btn')?.click();
-            setTimeout(() => {
-                const idx = 0;
-                const name = document.getElementById(`speaker_full_name_${idx}`);
-                const desig = document.getElementById(`speaker_designation_${idx}`);
-                const aff = document.getElementById(`speaker_affiliation_${idx}`);
-                const email = document.getElementById(`speaker_contact_email_${idx}`);
-                const phone = document.getElementById(`speaker_contact_number_${idx}`);
-                const linked = document.getElementById(`speaker_linkedin_url_${idx}`);
-                const bio = document.getElementById(`speaker_detailed_profile_${idx}`);
-                if (name) name.value = getRandom(AUTO_FILL_DATA.speakerNames);
-                if (desig) desig.value = getRandom(AUTO_FILL_DATA.designations);
-                if (aff) aff.value = getRandom(AUTO_FILL_DATA.affiliations);
-                if (email) email.value = getRandom(AUTO_FILL_DATA.emails);
-                if (phone) phone.value = getRandom(AUTO_FILL_DATA.phones);
-                if (linked) linked.value = getRandom(AUTO_FILL_DATA.linkedins);
-                if (bio) bio.value = getRandom(AUTO_FILL_DATA.bios);
-            }, 100);
+            await fillSpeakersSection();
         }
 
         if (section === 'expenses') {
-            document.getElementById('add-expense-btn')?.click();
-            setTimeout(() => {
-                const idx = 0;
-                const sl = document.getElementById(`expense_sl_no_${idx}`);
-                const part = document.getElementById(`expense_particulars_${idx}`);
-                const amt = document.getElementById(`expense_amount_${idx}`);
-                if (sl) sl.value = '1';
-                if (part) part.value = getRandom(AUTO_FILL_DATA.expenseItems);
-                if (amt) amt.value = '1000';
-            }, 100);
+            fillExpensesSection();
         }
 
         if (section === 'income') {
-            document.getElementById('add-income-btn')?.click();
-            setTimeout(() => {
-                const idx = 0;
-                const sl = document.getElementById(`income_sl_no_${idx}`);
-                const part = document.getElementById(`income_particulars_${idx}`);
-                const partCount = document.getElementById(`income_participants_${idx}`);
-                const rate = document.getElementById(`income_rate_${idx}`);
-                const amt = document.getElementById(`income_amount_${idx}`);
-                if (sl) sl.value = '1';
-                if (part) part.value = getRandom(AUTO_FILL_DATA.incomeItems);
-                if (partCount) partCount.value = '50';
-                if (rate) rate.value = '100';
-                if (amt) amt.value = '5000';
-            }, 100);
+            fillIncomeSection();
         }
     }
 
