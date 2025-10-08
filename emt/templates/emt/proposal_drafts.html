@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Proposal Drafts{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{% static 'emt/css/proposal_drafts.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="drafts-container">
+    <div class="drafts-header">
+        <div class="drafts-heading">
+            <h1>Event Proposal Drafts</h1>
+            <p>Save up to {{ draft_limit }} drafts at a time. Continue editing a draft or remove it once it's no longer needed.</p>
+            <p class="drafts-availability">
+                {% if remaining_slots %}
+                    {{ remaining_slots }} draft{{ remaining_slots|pluralize }} available before reaching the limit.
+                {% else %}
+                    You have reached the maximum number of active drafts.
+                {% endif %}
+            </p>
+        </div>
+        <a href="{% url 'emt:start_proposal' %}" class="btn btn-primary create-draft-btn {% if remaining_slots == 0 %}disabled{% endif %}" {% if remaining_slots == 0 %}aria-disabled="true"{% endif %}>
+            <i class="fas fa-plus"></i> Create New Proposal
+        </a>
+    </div>
+
+    {% if drafts %}
+    <div class="draft-list">
+        {% for draft in drafts %}
+        <article class="draft-card">
+            <div class="draft-card-main">
+                <div class="draft-card-title">
+                    <h2>{{ draft.event_title|default:"Untitled Event" }}</h2>
+                    <span class="draft-status">{{ draft.get_status_display }}</span>
+                </div>
+                <dl class="draft-meta">
+                    <div>
+                        <dt>Organization</dt>
+                        <dd>{{ draft.organization.name|default:"Not selected" }}</dd>
+                    </div>
+                    <div>
+                        <dt>Academic Year</dt>
+                        <dd>{{ draft.academic_year|default:"Not set" }}</dd>
+                    </div>
+                    <div>
+                        <dt>Last Updated</dt>
+                        <dd>{{ draft.updated_at|date:"M d, Y h:i A" }}</dd>
+                    </div>
+                </dl>
+            </div>
+            <div class="draft-card-actions">
+                <a href="{% url 'emt:submit_proposal_with_pk' draft.id %}" class="btn btn-secondary">
+                    <i class="fas fa-pen"></i> Continue Editing
+                </a>
+                <form method="post" action="{% url 'emt:delete_proposal_draft' draft.id %}" class="draft-delete-form">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('Remove this draft from your list? Admins will still be able to view it.');">
+                        <i class="fas fa-trash"></i> Remove
+                    </button>
+                </form>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="draft-empty">
+        <div class="empty-icon">
+            <i class="fas fa-inbox"></i>
+        </div>
+        <h2>No drafts yet</h2>
+        <p>Your saved event proposal drafts will appear here for quick access.</p>
+        <a href="{% url 'emt:start_proposal' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Start your first proposal
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

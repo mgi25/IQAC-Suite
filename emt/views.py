@@ -79,6 +79,7 @@ ACADEMIC_COORDINATOR_ROLE = "academic_coordinator"
 
 logger = logging.getLogger(__name__)
 NAME_RE = re.compile(NAME_PATTERN)
+MAX_ACTIVE_DRAFTS = 5
 
 # Configure Gemini API key from environment variable(s)
 # Prefer `GEMINI_API_KEY`; fall back to `GOOGLE_API_KEY`
@@ -927,19 +928,98 @@ def _save_income(proposal, data, entries=None):
 
 
 # ──────────────────────────────
+# PROPOSAL DRAFT MANAGEMENT
+# ──────────────────────────────
+
+
+@login_required
+def start_proposal(request):
+    active_drafts = EventProposal.objects.filter(
+        submitted_by=request.user,
+        status=EventProposal.Status.DRAFT,
+        is_user_deleted=False,
+    ).count()
+
+    if active_drafts >= MAX_ACTIVE_DRAFTS:
+        messages.error(
+            request,
+            f"You can keep up to {MAX_ACTIVE_DRAFTS} drafts. Delete an older draft before creating a new one.",
+        )
+        return redirect("emt:proposal_drafts")
+
+    active_year = get_active_academic_year()
+    academic_year = active_year.year if active_year else ""
+
+    proposal = EventProposal.objects.create(
+        submitted_by=request.user,
+        status=EventProposal.Status.DRAFT,
+        academic_year=academic_year,
+        event_title="Untitled Event",
+    )
+
+    return redirect("emt:submit_proposal_with_pk", pk=proposal.pk)
+
+
+@login_required
+def proposal_drafts(request):
+    drafts_qs = EventProposal.objects.filter(
+        submitted_by=request.user,
+        status=EventProposal.Status.DRAFT,
+        is_user_deleted=False,
+    ).order_by("-updated_at")
+    active_count = drafts_qs.count()
+    drafts = list(drafts_qs[:MAX_ACTIVE_DRAFTS])
+    remaining = max(0, MAX_ACTIVE_DRAFTS - active_count)
+
+    context = {
+        "drafts": drafts,
+        "draft_limit": MAX_ACTIVE_DRAFTS,
+        "active_count": active_count,
+        "remaining_slots": remaining,
+    }
+    return render(request, "emt/proposal_drafts.html", context)
+
+
+@login_required
+@require_POST
+def delete_proposal_draft(request, proposal_id):
+    proposal = get_object_or_404(
+        EventProposal,
+        id=proposal_id,
+        submitted_by=request.user,
+        status=EventProposal.Status.DRAFT,
+        is_user_deleted=False,
+    )
+
+    proposal.is_user_deleted = True
+    proposal.save(update_fields=["is_user_deleted", "updated_at"])
+
+    messages.success(request, "Draft removed. Admins can still review it from their dashboard.")
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return JsonResponse({"success": True})
+
+    return redirect("emt:proposal_drafts")
+
+
+# ──────────────────────────────
 # PROPOSAL STEP 1: Proposal Submission
 # ──────────────────────────────
 @login_required
 @ensure_csrf_cookie
 def submit_proposal(request, pk=None):
-    from transcript.models import get_active_academic_year
-
     active_year = get_active_academic_year()
     selected_academic_year = active_year.year if active_year else ""
 
-    proposal = None
-    if pk:
-        proposal = get_object_or_404(EventProposal, pk=pk, submitted_by=request.user)
+    if not pk:
+        return redirect("emt:start_proposal")
+
+    proposal = get_object_or_404(
+        EventProposal,
+        pk=pk,
+        submitted_by=request.user,
+        is_user_deleted=False,
+    )
 
     next_url = request.GET.get("next")
 
@@ -1133,16 +1213,20 @@ def submit_proposal(request, pk=None):
 @login_required
 @ensure_csrf_cookie
 def review_proposal(request, proposal_id):
-    proposal_qs = EventProposal.objects.select_related(
-        "need_analysis",
-        "objectives",
-        "expected_outcomes",
-        "tentative_flow",
-        "cdl_support",
-    ).prefetch_related(
-        "speakers",
-        "expense_details",
-        "income_details",
+    proposal_qs = (
+        EventProposal.objects.select_related(
+            "need_analysis",
+            "objectives",
+            "expected_outcomes",
+            "tentative_flow",
+            "cdl_support",
+        )
+        .prefetch_related(
+            "speakers",
+            "expense_details",
+            "income_details",
+        )
+        .filter(is_user_deleted=False)
     )
     # Prefetch speaker and expense details for efficient rendering
     proposal = get_object_or_404(
@@ -1253,41 +1337,43 @@ def autosave_proposal(request):
     active_year = get_active_academic_year()
     selected_academic_year = active_year.year if active_year else ""
 
-    proposal = None
+    existing_proposal = None
     if pid := data.get("proposal_id"):
-        proposal = EventProposal.objects.filter(
-            id=pid, submitted_by=request.user
+        existing_proposal = EventProposal.objects.filter(
+            id=pid,
+            submitted_by=request.user,
+            is_user_deleted=False,
         ).first()
 
         # Don't autosave if proposal is already submitted
-        if proposal and proposal.status != "draft":
+        if existing_proposal and existing_proposal.status != "draft":
             return JsonResponse(
                 {"success": False, "error": "Cannot modify submitted proposal"}
             )
 
     # If payload only has text sections, skip full form validation
     text_keys = {"need_analysis", "objectives", "outcomes", "flow"}
-    if proposal and set(data.keys()).issubset(text_keys | {"proposal_id"}):
-        text_errors = _save_text_sections(proposal, data)
+    if existing_proposal and set(data.keys()).issubset(text_keys | {"proposal_id"}):
+        text_errors = _save_text_sections(existing_proposal, data)
         if text_errors:
             logger.debug("autosave_proposal text errors: %s", text_errors)
             return JsonResponse(
                 {
                     "success": False,
-                    "proposal_id": proposal.id,
+                    "proposal_id": existing_proposal.id,
                     "errors": text_errors,
                 }
             )
-        return JsonResponse({"success": True, "proposal_id": proposal.id})
+        return JsonResponse({"success": True, "proposal_id": existing_proposal.id})
 
-    if proposal and proposal.academic_year:
-        data["academic_year"] = proposal.academic_year
+    if existing_proposal and existing_proposal.academic_year:
+        data["academic_year"] = existing_proposal.academic_year
     elif selected_academic_year:
         data["academic_year"] = selected_academic_year
 
     form = EventProposalForm(
         data,
-        instance=proposal,
+        instance=existing_proposal,
         user=request.user,
         selected_academic_year=selected_academic_year,
     )
@@ -1301,12 +1387,34 @@ def autosave_proposal(request):
             role_assignments__role__name=FACULTY_ROLE
         ).distinct()
 
+    creating_new = existing_proposal is None
+
+    if creating_new:
+        active_drafts = EventProposal.objects.filter(
+            submitted_by=request.user,
+            status=EventProposal.Status.DRAFT,
+            is_user_deleted=False,
+        ).count()
+        if active_drafts >= MAX_ACTIVE_DRAFTS:
+            message = (
+                "You have reached the maximum number of saved drafts. "
+                "Delete an existing draft to continue."
+            )
+            return JsonResponse(
+                {
+                    "success": False,
+                    "errors": {"draft_limit": [message]},
+                    "limit": MAX_ACTIVE_DRAFTS,
+                }
+            )
+
     is_valid = form.is_valid()
     if not is_valid:
         logger.debug("autosave_proposal form errors: %s", form.errors)
 
     # Persist any cleaned fields even if the form has validation errors
     proposal = form.instance
+    proposal.is_user_deleted = False
     for field, value in form.cleaned_data.items():
         if isinstance(form.fields.get(field), forms.ModelMultipleChoiceField):
             continue
@@ -1668,12 +1776,16 @@ def reset_proposal_draft(request):
         )
 
     proposal = EventProposal.objects.filter(
-        id=pid, submitted_by=request.user, status="draft"
+        id=pid,
+        submitted_by=request.user,
+        status=EventProposal.Status.DRAFT,
+        is_user_deleted=False,
     ).first()
     if not proposal:
         return JsonResponse({"success": False, "error": "Draft not found"}, status=404)
 
-    proposal.delete()
+    proposal.is_user_deleted = True
+    proposal.save(update_fields=["is_user_deleted", "updated_at"])
     return JsonResponse({"success": True})
 
 
@@ -1683,7 +1795,10 @@ def reset_proposal_draft(request):
 @login_required
 def submit_need_analysis(request, proposal_id):
     proposal = get_object_or_404(
-        EventProposal, id=proposal_id, submitted_by=request.user
+        EventProposal,
+        id=proposal_id,
+        submitted_by=request.user,
+        is_user_deleted=False,
     )
     instance = EventNeedAnalysis.objects.filter(proposal=proposal).first()
     next_url = request.GET.get("next")
@@ -1710,7 +1825,10 @@ def submit_need_analysis(request, proposal_id):
 @login_required
 def submit_objectives(request, proposal_id):
     proposal = get_object_or_404(
-        EventProposal, id=proposal_id, submitted_by=request.user
+        EventProposal,
+        id=proposal_id,
+        submitted_by=request.user,
+        is_user_deleted=False,
     )
     instance = EventObjectives.objects.filter(proposal=proposal).first()
     next_url = request.GET.get("next")
@@ -1735,7 +1853,10 @@ def submit_objectives(request, proposal_id):
 @login_required
 def submit_expected_outcomes(request, proposal_id):
     proposal = get_object_or_404(
-        EventProposal, id=proposal_id, submitted_by=request.user
+        EventProposal,
+        id=proposal_id,
+        submitted_by=request.user,
+        is_user_deleted=False,
     )
     instance = EventExpectedOutcomes.objects.filter(proposal=proposal).first()
     next_url = request.GET.get("next")
@@ -1764,7 +1885,10 @@ def submit_expected_outcomes(request, proposal_id):
 @login_required
 def submit_tentative_flow(request, proposal_id):
     proposal = get_object_or_404(
-        EventProposal, id=proposal_id, submitted_by=request.user
+        EventProposal,
+        id=proposal_id,
+        submitted_by=request.user,
+        is_user_deleted=False,
     )
     instance = TentativeFlow.objects.filter(proposal=proposal).first()
     next_url = request.GET.get("next")
@@ -1794,7 +1918,10 @@ def submit_tentative_flow(request, proposal_id):
 @login_required
 def submit_speaker_profile(request, proposal_id):
     proposal = get_object_or_404(
-        EventProposal, id=proposal_id, submitted_by=request.user
+        EventProposal,
+        id=proposal_id,
+        submitted_by=request.user,
+        is_user_deleted=False,
     )
     # Track wizard progress for breadcrumbs/UI
     request.session["proposal_step"] = "speaker_profile"
@@ -5004,7 +5131,10 @@ def suite_dashboard(request):
     """
     # 1) Get proposals excluding finalized + 2-day-old ones
     user_proposals = (
-        EventProposal.objects.filter(submitted_by=request.user)
+        EventProposal.objects.filter(
+            submitted_by=request.user,
+            is_user_deleted=False,
+        )
         .exclude(status="finalized", updated_at__lt=now() - timedelta(days=2))
         .prefetch_related("approval_steps")
         .order_by("-updated_at")
