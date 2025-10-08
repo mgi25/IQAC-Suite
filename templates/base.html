@@ -181,7 +181,7 @@
               <i class="fas fa-edit"></i>
               <span>Event Proposal</span>
             </div>
-            <a href="{% url 'emt:start_proposal' %}" class="nav-sublink {% if request.resolver_match.url_name in ('start_proposal', 'submit_proposal', 'submit_proposal_with_pk') %}active{% endif %}">
+            <a href="{% url 'emt:start_proposal' %}" class="nav-sublink {% if request.resolver_match.url_name in ['start_proposal', 'submit_proposal', 'submit_proposal_with_pk'] %}active{% endif %}">
               <i class="fas fa-plus-circle"></i> Create New Proposal
             </a>
             <a href="{% url 'emt:proposal_drafts' %}" class="nav-sublink {% if request.resolver_match.url_name == 'proposal_drafts' %}active{% endif %}">
