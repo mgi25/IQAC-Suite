@@ -16,6 +16,8 @@ $(document).ready(function() {
     console.log('Initializing dashboard...');
     addAnimationStyles();
 
+    window.ProposalRealtime = window.ProposalRealtime || {};
+
     let currentExpandedCard = null;
     let sectionProgress = {
         'basic-info': false,
@@ -859,6 +861,46 @@ $(document).ready(function() {
             }
             if (savedCount > 0) render(savedCount);
         }
+
+        window.ProposalRealtime.updateActivities = function(nextActivities) {
+            const normalized = normalizeActivitiesSeed(nextActivities || []);
+            const serializedNext = JSON.stringify(normalized);
+            const serializedCurrent = JSON.stringify(activitySeeds || []);
+            if (serializedNext === serializedCurrent) {
+                return;
+            }
+            activitySeeds = normalized.map(item => ({ ...item }));
+            window.EXISTING_ACTIVITIES = activitySeeds.map(item => ({ ...item }));
+
+            if (document.activeElement && container.contains(document.activeElement)) {
+                return;
+            }
+
+            if (!activitySeeds.length) {
+                container.innerHTML = '';
+                if (!isSyncingActivitiesCount) {
+                    isSyncingActivitiesCount = true;
+                    numActivitiesInput.value = '';
+                    isSyncingActivitiesCount = false;
+                }
+                if (djangoNumActivitiesField) {
+                    djangoNumActivitiesField.value = '';
+                    try {
+                        djangoNumActivitiesField.dispatchEvent(new Event('change', { bubbles: true }));
+                    } catch (e) { /* noop */ }
+                }
+                captureActivitySeedsFromDom();
+                return;
+            }
+
+            const desiredCount = activitySeeds.length;
+            if (String(numActivitiesInput.value) !== String(desiredCount)) {
+                isSyncingActivitiesCount = true;
+                numActivitiesInput.value = String(desiredCount);
+                isSyncingActivitiesCount = false;
+            }
+            render(desiredCount);
+        };
     }
 
     function serializeBasicInfoSection() {
@@ -949,6 +991,70 @@ $(document).ready(function() {
                 tomselect.setValue(initialValues);
             }
         }
+
+        window.ProposalRealtime.updateFacultyIncharges = function(nextFaculty) {
+            const members = Array.isArray(nextFaculty) ? nextFaculty : [];
+            const ids = members.map(member => String(member?.id || ''))
+                .filter(Boolean);
+            const nameMap = {};
+            members.forEach(member => {
+                const first = cleanFieldValue(member?.first_name);
+                const last = cleanFieldValue(member?.last_name);
+                const fallback = cleanFieldValue(member?.full_name || member?.name || member?.display_name);
+                const text = [first, last].filter(Boolean).join(' ') || fallback || String(member.id);
+                nameMap[String(member.id)] = text;
+            });
+
+            const isTyping = tomselect.control_input && document.activeElement === tomselect.control_input;
+            if (isTyping) {
+                return;
+            }
+
+            ids.forEach(id => {
+                const text = nameMap[id] || id;
+                if (!tomselect.options[id]) {
+                    tomselect.addOption({ id, text });
+                } else if (tomselect.options[id].text !== text) {
+                    tomselect.updateOption(id, { id, text });
+                }
+                if (!djangoFacultySelect.find(`option[value="${id}"]`).length) {
+                    djangoFacultySelect.append(new Option(text, id, true, true));
+                }
+            });
+
+            const current = tomselect.getValue();
+            const currentIds = Array.isArray(current)
+                ? current.map(String)
+                : current ? [String(current)] : [];
+            const sortedCurrent = currentIds.slice().sort();
+            const sortedIds = ids.slice().sort();
+
+            if (JSON.stringify(sortedCurrent) !== JSON.stringify(sortedIds)) {
+                tomselect.setValue(ids, true);
+            } else {
+                tomselect.refreshItems();
+            }
+
+            if (!ids.length) {
+                djangoFacultySelect.empty();
+            } else {
+                djangoFacultySelect.find('option').each(function() {
+                    const option = $(this);
+                    if (!ids.includes(option.val())) {
+                        option.remove();
+                    }
+                });
+                ids.forEach(id => {
+                    if (!djangoFacultySelect.find(`option[value="${id}"]`).length) {
+                        const text = nameMap[id] || id;
+                        djangoFacultySelect.append(new Option(text, id, true, true));
+                    }
+                });
+            }
+
+            djangoFacultySelect.val(ids);
+            djangoFacultySelect.trigger('change');
+        };
     }
 
     function setupCommitteesTomSelect() {
@@ -1994,11 +2100,42 @@ $(document).ready(function() {
             input.val(names.join(', '));
             modal.removeClass('show');
         });
+
+        window.ProposalRealtime.updateSdgGoals = function(nextGoals) {
+            const goals = Array.isArray(nextGoals) ? nextGoals : [];
+            const selectedIds = goals.map(goal => String(goal.id));
+            let changed = false;
+
+            hidden.each(function() {
+                const el = $(this);
+                const shouldCheck = selectedIds.includes(el.val());
+                if (el.prop('checked') !== shouldCheck) {
+                    el.prop('checked', shouldCheck);
+                    changed = true;
+                }
+            });
+
+            if (changed && hidden.length) {
+                hidden.first().trigger('change');
+            }
+
+            if (container.length) {
+                container.find('input[type=checkbox]').each(function() {
+                    const cb = $(this);
+                    cb.prop('checked', selectedIds.includes(cb.val()));
+                });
+            }
+
+            const names = goals.map(goal => goal?.name).filter(Boolean);
+            if (input.length && document.activeElement !== input.get(0)) {
+                input.val(names.join(', '));
+            }
+        };
     }
 
     function handleOrgTypeChange(orgType, preserveOrg = false) {
         let normalizedOrgType = orgType ? orgType.toString().toLowerCase().replace(/[^a-z0-9]+/g, '').trim() : '';
-        
+
         // Remove any existing org-specific fields
         $('.org-specific-field').remove();
         
@@ -2810,6 +2947,57 @@ function getWhyThisEventForm() {
         if (containerEl) {
             containerEl.dataset.initialized = 'true';
         }
+
+        window.ProposalRealtime.updateSpeakers = function(nextSpeakers) {
+            const normalize = (items) => {
+                if (!Array.isArray(items)) return [];
+                return items.map(sp => ({
+                    full_name: cleanFieldValue(sp?.full_name),
+                    designation: cleanFieldValue(sp?.designation),
+                    affiliation: cleanFieldValue(sp?.affiliation),
+                    contact_email: cleanFieldValue(sp?.contact_email),
+                    contact_number: cleanFieldValue(sp?.contact_number),
+                    linkedin_url: cleanFieldValue(sp?.linkedin_url),
+                    detailed_profile: cleanFieldValue(sp?.detailed_profile),
+                }));
+            };
+
+            const normalized = normalize(nextSpeakers);
+            const current = normalize(getStoredSectionData('speakers-data', window.EXISTING_SPEAKERS || []));
+            if (JSON.stringify(current) === JSON.stringify(normalized)) {
+                return;
+            }
+
+            window.EXISTING_SPEAKERS = normalized.map(sp => ({ ...sp }));
+
+            const containerNode = container.get(0);
+            if (containerNode && containerNode.contains(document.activeElement)) {
+                return;
+            }
+
+            container.empty();
+            index = 0;
+
+            if (!normalized.length) {
+                addSpeakerForm();
+                showEmptyState();
+                return;
+            }
+
+            normalized.forEach(sp => {
+                addSpeakerForm();
+                const idx = index - 1;
+                $(`#speaker_full_name_${idx}`).val(sp.full_name);
+                $(`#speaker_designation_${idx}`).val(sp.designation);
+                $(`#speaker_affiliation_${idx}`).val(sp.affiliation);
+                $(`#speaker_contact_email_${idx}`).val(sp.contact_email);
+                $(`#speaker_contact_number_${idx}`).val(sp.contact_number);
+                $(`#speaker_linkedin_url_${idx}`).val(sp.linkedin_url);
+                $(`#speaker_detailed_profile_${idx}`).val(sp.detailed_profile);
+            });
+
+            showEmptyState();
+        };
     }
 
     function serializeExpenses() {
@@ -2942,6 +3130,50 @@ function getWhyThisEventForm() {
         if (containerEl) {
             containerEl.dataset.initialized = 'true';
         }
+
+        window.ProposalRealtime.updateExpenses = function(nextExpenses) {
+            const normalize = (items) => {
+                if (!Array.isArray(items)) return [];
+                return items.map(ex => ({
+                    sl_no: cleanFieldValue(ex?.sl_no),
+                    particulars: cleanFieldValue(ex?.particulars),
+                    amount: cleanFieldValue(ex?.amount),
+                }));
+            };
+
+            const normalized = normalize(nextExpenses);
+            const current = normalize(getStoredSectionData('expenses-data', window.EXISTING_EXPENSES || []));
+            if (JSON.stringify(current) === JSON.stringify(normalized)) {
+                return;
+            }
+
+            window.EXISTING_EXPENSES = normalized.map(ex => ({ ...ex }));
+
+            const containerNode = container.get(0);
+            if (containerNode && containerNode.contains(document.activeElement)) {
+                return;
+            }
+
+            container.empty();
+            index = 0;
+
+            if (!normalized.length) {
+                showEmptyState();
+                return;
+            }
+
+            normalized.forEach(ex => {
+                addExpenseRow();
+                const idx = index - 1;
+                $(`#expense_sl_no_${idx}`).val(ex.sl_no);
+                $(`#expense_particulars_${idx}`).val(ex.particulars);
+                $(`#expense_amount_${idx}`).val(ex.amount);
+            });
+
+            updateExpenseHeaders();
+            showEmptyState();
+            serializeExpenses();
+        };
     }
 
     // ===== INCOME SECTION FUNCTIONALITY =====
@@ -3132,6 +3364,54 @@ function getWhyThisEventForm() {
         if (containerEl) {
             containerEl.dataset.initialized = 'true';
         }
+
+        window.ProposalRealtime.updateIncome = function(nextIncome) {
+            const normalize = (items) => {
+                if (!Array.isArray(items)) return [];
+                return items.map(inc => ({
+                    sl_no: cleanFieldValue(inc?.sl_no),
+                    particulars: cleanFieldValue(inc?.particulars),
+                    participants: cleanFieldValue(inc?.participants),
+                    rate: cleanFieldValue(inc?.rate),
+                    amount: cleanFieldValue(inc?.amount),
+                }));
+            };
+
+            const normalized = normalize(nextIncome);
+            const current = normalize(getStoredSectionData('income-data', window.EXISTING_INCOME || []));
+            if (JSON.stringify(current) === JSON.stringify(normalized)) {
+                return;
+            }
+
+            window.EXISTING_INCOME = normalized.map(inc => ({ ...inc }));
+
+            const containerNode = container.get(0);
+            if (containerNode && containerNode.contains(document.activeElement)) {
+                return;
+            }
+
+            container.empty();
+            index = 0;
+
+            if (!normalized.length) {
+                showEmptyState();
+                return;
+            }
+
+            normalized.forEach(inc => {
+                addIncomeRow();
+                const idx = index - 1;
+                $(`#income_sl_no_${idx}`).val(inc.sl_no);
+                $(`#income_particulars_${idx}`).val(inc.particulars);
+                $(`#income_participants_${idx}`).val(inc.participants);
+                $(`#income_rate_${idx}`).val(inc.rate);
+                $(`#income_amount_${idx}`).val(inc.amount);
+            });
+
+            updateIncomeHeaders();
+            showEmptyState();
+            serializeIncome();
+        };
     }
 
     // ===== CDL SUPPORT SECTION FUNCTIONALITY =====
