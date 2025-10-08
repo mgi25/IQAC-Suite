@@ -302,6 +302,15 @@ body.command-center-layout{
   color:#4b5563; font-size:var(--fs-14); font-weight:500; transition:var(--tr);
 }
 .nav-sublink:hover{ background:#fff; color:var(--christ-blue); padding-left:2.25rem; }
+.nav-subgroup{ padding:.35rem 0 .5rem; }
+.nav-sublabel{
+  display:flex; align-items:center; gap:.65rem;
+  padding:.65rem 2rem .35rem;
+  color:#6b7280; font-size:var(--fs-12); font-weight:700;
+  text-transform:uppercase; letter-spacing:0.05em;
+}
+.nav-subgroup .nav-sublink{ padding-left:2.5rem; }
+.nav-subgroup .nav-sublink i{ width:1.25rem; text-align:center; }
 
 /* Collapsed sidebar */
 body.command-center-layout.sidebar-collapsed{ grid-template-columns:4.25rem 1fr; }

@@ -176,9 +176,18 @@
         </div>
         <div class="nav-submenu {% if 'suite' in request.resolver_match.url_name or '/suite/' in request.path or request.resolver_match.namespace == 'emt' %}open{% endif %}">
           {% if unrestricted_nav or 'submit_proposal' in allowed_nav_items or 'events:submit_proposal' in allowed_nav_items %}
-          <a href="/suite/submit/" class="nav-sublink {% if request.resolver_match.url_name == 'submit_proposal' %}active{% endif %}">
-            <i class="fas fa-edit"></i> Event Proposal
-          </a>
+          <div class="nav-subgroup">
+            <div class="nav-sublabel">
+              <i class="fas fa-edit"></i>
+              <span>Event Proposal</span>
+            </div>
+            <a href="{% url 'emt:start_proposal' %}" class="nav-sublink {% if request.resolver_match.url_name in ('start_proposal', 'submit_proposal', 'submit_proposal_with_pk') %}active{% endif %}">
+              <i class="fas fa-plus-circle"></i> Create New Proposal
+            </a>
+            <a href="{% url 'emt:proposal_drafts' %}" class="nav-sublink {% if request.resolver_match.url_name == 'proposal_drafts' %}active{% endif %}">
+              <i class="fas fa-file-alt"></i> Drafts
+            </a>
+          </div>
           {% endif %}
 
           {% if unrestricted_nav or 'pending_reports' in allowed_nav_items or 'events:pending_reports' in allowed_nav_items %}

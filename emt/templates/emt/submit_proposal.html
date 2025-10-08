@@ -384,7 +384,7 @@
         window.AUTOSAVE_URL = "{% url 'emt:autosave_proposal' %}";
         window.AUTOSAVE_CSRF = "{{ csrf_token }}";
         window.RESET_DRAFT_URL = "{% url 'emt:reset_proposal_draft' %}";
-        window.RESET_DRAFT_REDIRECT_URL = "{% url 'emt:submit_proposal' %}";
+        window.RESET_DRAFT_REDIRECT_URL = "{% url 'emt:start_proposal' %}";
         window.PROPOSAL_LIVE_STATE_URL = {% if proposal %}"{% url 'emt:proposal_live_state' proposal.id %}"{% else %}""{% endif %};
         window.PROPOSAL_LAST_UPDATED = {% if proposal and proposal.updated_at %}"{{ proposal.updated_at|date:'c' }}"{% else %}""{% endif %};
         window.API_ORGANIZATIONS = "{% url 'emt:api_organizations' %}";
