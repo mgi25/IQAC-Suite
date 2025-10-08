@@ -366,6 +366,17 @@ def custom_logout(request):
 def my_profile(request):
     """Display user's role-specific profile page with dashboard integration."""
     user = request.user
+    is_impersonating = getattr(request, "is_impersonating", False)
+    from_dashboard_param = request.GET.get('from_dashboard')
+
+    if is_impersonating and from_dashboard_param is not None:
+        clean_query = request.GET.copy()
+        clean_query.pop('from_dashboard', None)
+        remaining = clean_query.urlencode()
+        target = reverse('my_profile')
+        if remaining:
+            target = f"{target}?{remaining}"
+        return redirect(target)
     
     # ---- role / domain detection ----
     roles = RoleAssignment.objects.filter(user=user).select_related('role', 'organization')
@@ -384,7 +395,10 @@ def my_profile(request):
         request.session["role"] = "faculty"
     
     # Determine if this is accessed from dashboard (check for 'from_dashboard' parameter)
-    from_dashboard = request.GET.get('from_dashboard', False)
+    if from_dashboard_param is not None:
+        from_dashboard = str(from_dashboard_param).lower() in ("1", "true", "yes")
+    else:
+        from_dashboard = False
     
     # Base context for all users
     context = {

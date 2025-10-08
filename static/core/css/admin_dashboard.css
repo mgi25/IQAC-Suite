@@ -116,7 +116,8 @@ img{ max-width:100%; display:block; }
 .list-scroll::-webkit-scrollbar-thumb{ background:var(--border); border-radius:3px; }
 .list-scroll::-webkit-scrollbar-thumb:hover{ background:var(--muted); }
 .list-item{
-  display:flex; gap:14px; align-items:flex-start; padding:0px; border-radius:12px;
+  display:flex; gap:13px; align-items:center; padding:6px 0; border-radius:12px;
+  padding-top: 10px;
   border:1px solid var(--border); background:linear-gradient(135deg,#fff 0%, var(--subtle) 100%);
   margin-bottom:12px; transition:.2s ease; position:relative; overflow:hidden;
 }
@@ -129,10 +130,13 @@ img{ max-width:100%; display:block; }
   width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;
   background:linear-gradient(135deg,#eef2ff 0%, #e0e7ff 100%); color:#4f46e5; flex-shrink:0; border:1px solid #e0e7ff; box-shadow:var(--shadow-soft);
 }
+.bullet-number{
+  font-weight:800; font-size:18px; color:#312e81;
+}
 .list-body{ flex:1; min-width:0; }
-.list-body h4{ margin:0 0 6px; font-size:15px; font-weight:700; color:var(--ink); line-height:1.4; }
+.list-body h4{ margin:0 0 4px; font-size:14px; font-weight:700; color:var(--ink); line-height:1.35; }
 .list-body .muted{
-  margin:0; color:var(--muted); font-size:13px; line-height:1.5;
+  margin:0; color:var(--muted); font-size:12.5px; line-height:1.4;
   display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
 }
 .pill{
