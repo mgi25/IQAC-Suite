@@ -59,6 +59,11 @@ OPENROUTER_MODEL = _env("OPENROUTER_MODEL", default="qwen/qwen3.5:free")
 SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-…")
 DEBUG = True
 
+# TOOLBAR: Required for Django Debug Toolbar to display
+INTERNAL_IPS = [
+    "127.0.0.1",
+]
+
 ALLOWED_HOSTS = [
     "127.0.0.1",
     "localhost",
@@ -95,11 +100,16 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.sites",  # ← required by allauth
     "django_extensions",
+
+    # Third-party apps
+    "debug_toolbar",  # TOOLBAR: Added for Django Debug Toolbar
+
     # Allauth for Google login
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
+
     # Your apps
     "core.apps.CoreConfig",
     "emt",
@@ -112,6 +122,7 @@ ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 # ──────────────────────────────────────────────────────────────────────────────
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "debug_toolbar.middleware.DebugToolbarMiddleware",  # TOOLBAR: Added for Django Debug Toolbar
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
