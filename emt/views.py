@@ -831,6 +831,20 @@ def start_proposal(request):
 
 @login_required
 def proposal_drafts(request):
+    base_qs = EventProposal.objects.filter(
+        submitted_by=request.user,
+        status=EventProposal.Status.DRAFT,
+        is_user_deleted=False,
+    ).order_by("-updated_at")
+
+    active_ids = list(base_qs.values_list("id", flat=True))
+
+    if len(active_ids) > MAX_ACTIVE_DRAFTS:
+        EventProposal.objects.filter(id__in=active_ids[MAX_ACTIVE_DRAFTS:]).update(
+            is_user_deleted=True,
+            updated_at=timezone.now(),
+        )
+
     drafts_qs = EventProposal.objects.filter(
         submitted_by=request.user,
         status=EventProposal.Status.DRAFT,
