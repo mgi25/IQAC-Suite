@@ -664,7 +664,15 @@ class CDLRequest(models.Model):
         choices=PosterMode.choices,
         blank=True,
     )
-    # ... (fields left out for brevity) ...
+    poster_organization_name = models.CharField(max_length=255, blank=True)
+    poster_time = models.CharField(max_length=100, blank=True)
+    poster_date = models.CharField(max_length=100, blank=True)
+    poster_venue = models.CharField(max_length=255, blank=True)
+    poster_resource_person = models.CharField(max_length=255, blank=True)
+    poster_resource_designation = models.CharField(max_length=255, blank=True)
+    poster_title = models.CharField(max_length=255, blank=True)
+    poster_summary = models.TextField(blank=True)
+    poster_design_link = models.URLField(blank=True)
     poster_final_approved = models.BooleanField(default=False, db_index=True)
 
     # Other services
@@ -681,7 +689,8 @@ class CDLRequest(models.Model):
         choices=CertificateMode.choices,
         blank=True,
     )
-    # ... (fields left out for brevity) ...
+    certificate_design_link = models.URLField(blank=True)
+    combined_design_link = models.URLField(blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True, db_index=True)
