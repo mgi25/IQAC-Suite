@@ -1,4 +1,4 @@
-{% load static group_filters admin_tags %}
+{% load static group_filters admin_tags nav_tags %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -177,14 +177,16 @@
         <div class="nav-submenu {% if 'suite' in request.resolver_match.url_name or '/suite/' in request.path or request.resolver_match.namespace == 'emt' %}open{% endif %}">
           {% if unrestricted_nav or 'submit_proposal' in allowed_nav_items or 'events:submit_proposal' in allowed_nav_items %}
           {% with request.resolver_match.url_name as current_url %}
-          <div class="nav-subgroup {% if current_url in ('start_proposal', 'submit_proposal', 'submit_proposal_with_pk', 'proposal_drafts') %}open{% endif %}">
-            <button type="button" class="nav-sublabel" aria-expanded="{% if current_url in ('start_proposal', 'submit_proposal', 'submit_proposal_with_pk', 'proposal_drafts') %}true{% else %}false{% endif %}">
+          {% url_in current_url "start_proposal submit_proposal submit_proposal_with_pk proposal_drafts" as proposal_flow_open %}
+          <div class="nav-subgroup {% if proposal_flow_open %}open{% endif %}">
+            <button type="button" class="nav-sublabel" aria-expanded="{% if proposal_flow_open %}true{% else %}false{% endif %}">
               <i class="fas fa-edit"></i>
               <span>Event Proposal</span>
               <i class="fas fa-chevron-right subgroup-expand-icon"></i>
             </button>
             <div class="nav-subgroup-links">
-              <a href="{% url 'emt:start_proposal' %}" class="nav-sublink {% if current_url == 'start_proposal' or current_url == 'submit_proposal' or current_url == 'submit_proposal_with_pk' %}active{% endif %}">
+              {% url_in current_url "start_proposal submit_proposal submit_proposal_with_pk" as create_proposal_active %}
+              <a href="{% url 'emt:start_proposal' %}" class="nav-sublink {% if create_proposal_active %}active{% endif %}">
                 <i class="fas fa-plus-circle"></i> Create New Proposal
               </a>
               <a href="{% url 'emt:proposal_drafts' %}" class="nav-sublink {% if current_url == 'proposal_drafts' %}active{% endif %}">
