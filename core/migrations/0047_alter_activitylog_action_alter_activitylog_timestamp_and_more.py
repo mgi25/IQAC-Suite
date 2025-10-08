@@ -287,6 +287,10 @@ class Migration(migrations.Migration):
             sql="DROP INDEX IF EXISTS core_sidebarpermission_role_f55e9f7e;",
             reverse_sql=migrations.RunSQL.noop,
         ),
+        migrations.RunSQL(
+            sql="DROP INDEX IF EXISTS core_sidebarpermission_role_f55e9f7e_like;",
+            reverse_sql=migrations.RunSQL.noop,
+        ),
         migrations.AlterField(
             model_name="sidebarpermission",
             name="role",
