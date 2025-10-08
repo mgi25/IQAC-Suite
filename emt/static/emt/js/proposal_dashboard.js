@@ -28,57 +28,240 @@ $(document).ready(function() {
     };
     const optionalSections = ['speakers', 'expenses', 'income', 'cdl-support'];
     let firstErrorField = null;
+    let lastValidationIssues = [];
     let scheduleTableBody = null;
     let scheduleHiddenField = null;
+    let speakersHiddenField = null;
+    let expensesHiddenField = null;
+    let incomeHiddenField = null;
     const autoFillEnabled = new URLSearchParams(window.location.search).has('autofill');
     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
     const originalFormAction = $('#proposal-form').attr('action') || '';
+    let isAutofilling = false;
+    const SECTION_AUTOFILL_ORDER = ['basic-info', 'why-this-event', 'schedule', 'speakers', 'expenses', 'income'];
+
+    const delay = (ms = 200) => new Promise(resolve => setTimeout(resolve, ms));
+
+    const cleanFieldValue = (value) => {
+        if (value === undefined || value === null) return '';
+        return String(value).trim();
+    };
+
+    const parseSerializedArray = (raw) => {
+        if (!raw) return [];
+        try {
+            const text = typeof raw === 'string' ? raw.trim() : String(raw || '').trim();
+            if (!text) return [];
+            const parsed = JSON.parse(text);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (err) {
+            console.warn('Failed to parse serialized section payload', err);
+            return [];
+        }
+    };
+
+    const readSerializedField = (field) => {
+        if (!field) return [];
+        if (Object.prototype.hasOwnProperty.call(field, 'value')) {
+            return parseSerializedArray(field.value);
+        }
+        return parseSerializedArray(field.textContent);
+    };
+
+    const writeSerializedField = (field, items) => {
+        if (!field) return;
+        const payload = (Array.isArray(items) && items.length)
+            ? JSON.stringify(items)
+            : '[]';
+        if (Object.prototype.hasOwnProperty.call(field, 'value')) {
+            if (field.value !== payload) {
+                field.value = payload;
+            }
+        } else if (field.textContent !== payload) {
+            field.textContent = payload;
+        }
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
+    const getStoredSectionData = (fieldId, fallback = []) => {
+        const field = document.getElementById(fieldId);
+        const stored = readSerializedField(field);
+        if (stored.length) {
+            return stored;
+        }
+        if (Array.isArray(fallback) && fallback.length) {
+            return fallback;
+        }
+        return [];
+    };
 
     // Demo data used for rapid prototyping. Remove once real data is wired.
     const AUTO_FILL_DATA = {
-        titles: ['AI Workshop', 'Tech Symposium', 'Innovation Summit'],
-        audiences: ['All Students', 'CSE Students', 'Faculty Members'],
-        venues: ['Main Auditorium', 'Conference Hall A', 'Online Platform'],
-        focusTypes: ['Workshop', 'Seminar', 'Training'],
+        titles: [
+            'Data Science & AI Collaboration Summit',
+            'Intelligent Systems Innovation Day',
+            'Analytics for Social Impact Workshop'
+        ],
+        venues: ['Innovation Lab', 'Tech Collaboration Hub', 'Virtual Intelligence Studio'],
+        focusTypes: ['Interdisciplinary Workshop', 'Research Colloquium', 'Hands-on Bootcamp'],
         objectives: [
-            '• Learn about emerging technologies\n• Encourage innovation\n• Foster collaboration',
-            '• Understand basics\n• Gain hands-on experience',
-            '• Explore research trends\n• Build industry connections'
+            '• Build collaboration between Data Science and Computer Science teams\n• Share successful interdisciplinary project case studies\n• Identify new avenues for student industry engagement',
+            '• Provide hands-on exposure to cutting-edge analytics tools\n• Encourage joint problem-solving across departments\n• Prepare participants for collaborative capstone projects',
+            '• Strengthen cross-functional research pipelines\n• Develop mentor networks for student innovators\n• Align departmental initiatives with institutional IQAC goals'
         ],
         outcomes: [
-            'Participants will understand fundamentals',
-            'Improved networking amongst attendees',
-            'Creation of follow-up projects'
+            'Participants document a roadmap for Data Science and Computer Science collaborations.',
+            'Inter-department mentor groups formed to support ongoing analytics initiatives.',
+            'Prototype ideas shortlisted for institutional funding and external showcases.'
         ],
         need: [
-            'To bridge the gap between theory and practice',
-            'Demand for skills in industry',
-            'Enhance student exposure to experts'
+            'To unify Data Science and Computer Science initiatives under a single collaborative program.',
+            'To ensure students gain industry-ready exposure by working with both analytics and engineering mentors.',
+            'To accelerate interdisciplinary research outputs aligned with institutional strategic plans.'
         ],
         schedule: [
-            '09:00 AM - Registration\n10:00 AM - Inauguration\n11:00 AM - Keynote Session',
-            '10:00 AM - Welcome\n10:30 AM - Talk 1\n12:00 PM - Lunch'
+            '09:00 AM - Welcome & Orientation\n11:00 AM - Joint Data Lab\n14:00 PM - Innovation Showcase',
+            '10:00 AM - Strategy Briefing\n12:30 PM - Faculty Roundtable\n15:00 PM - Project Pitch Session'
         ],
-        speakerNames: ['Dr. Jane Smith', 'Prof. John Doe', 'Ms. Alice Johnson'],
-        designations: ['Professor', 'Senior Analyst', 'Researcher'],
-        affiliations: ['XYZ University', 'Tech Corp', 'Research Lab'],
-        emails: ['jane@example.com', 'john@example.com', 'alice@example.com'],
+        speakerNames: ['Dr. Kavya Menon', 'Prof. Arun Pillai', 'Ms. Neha Ramesh'],
+        designations: ['Head of Data Science', 'Professor of Computer Science', 'Industry Mentor'],
+        affiliations: ['Department of Data Science', 'School of Computer Science', 'AI Innovation Hub'],
+        emails: ['kavya.menon@example.edu', 'arun.pillai@example.edu', 'neha.ramesh@example.com'],
         phones: ['9876543210', '9123456780', '9988776655'],
         linkedins: [
-            'https://linkedin.com/in/jane',
-            'https://linkedin.com/in/john',
-            'https://linkedin.com/in/alice'
+            'https://www.linkedin.com/in/kavyamenon',
+            'https://www.linkedin.com/in/arunpillai',
+            'https://www.linkedin.com/in/neharamesh'
         ],
         bios: [
-            'Expert in AI and ML with 10 years of experience.',
-            'Data science enthusiast and keynote speaker.',
-            'Researcher focusing on emerging technologies.'
+            'Researcher focusing on applied machine learning, leading collaborative projects across CS and Data Science.',
+            'Specialist in distributed systems and AI integration with extensive industry collaboration experience.',
+            'Innovation strategist mentoring analytics-driven startups and academic hackathons.'
         ],
-        expenseItems: ['Venue Setup', 'Refreshments', 'Equipment Rental'],
-        incomeItems: ['Registration Fees', 'Sponsorship', 'Donations']
+        expenseItems: ['Collaboration Lab Setup', 'Expert Honorarium', 'Workshop Materials & Logistics'],
+        incomeItems: ['Registration Fees', 'Department Funding Support', 'Industry Sponsorship'],
+        scheduleRows: [
+            { time: '09:00', activity: 'Welcome & Collaboration Roadmap' },
+            { time: '11:00', activity: 'Hands-on Data Lab with CS & DS Teams' },
+            { time: '14:00', activity: 'Innovation Showcase & Feedback' }
+        ],
+        speakerProfiles: [
+            {
+                full_name: 'Dr. Kavya Menon',
+                designation: 'Head of Data Science',
+                affiliation: 'Department of Data Science',
+                email: 'kavya.menon@example.edu',
+                phone: '9876543210',
+                linkedin: 'https://www.linkedin.com/in/kavyamenon',
+                bio: 'Researcher focusing on applied machine learning, leading collaborative projects across CS and Data Science.'
+            },
+            {
+                full_name: 'Prof. Arun Pillai',
+                designation: 'Professor of Computer Science',
+                affiliation: 'School of Computer Science',
+                email: 'arun.pillai@example.edu',
+                phone: '9123456780',
+                linkedin: 'https://www.linkedin.com/in/arunpillai',
+                bio: 'Specialist in distributed systems and AI integration with extensive industry collaboration experience.'
+            }
+        ],
+        expenseRows: [
+            { sl: '1', particulars: 'Collaboration Lab Setup', amount: '15000' },
+            { sl: '2', particulars: 'Expert Honorarium', amount: '12000' },
+            { sl: '3', particulars: 'Workshop Materials & Logistics', amount: '8000' }
+        ],
+        incomeRows: [
+            { sl: '1', particulars: 'Registration Fees', participants: '80', rate: '250', amount: '20000' },
+            { sl: '2', particulars: 'Department Funding Support', participants: '1', rate: '15000', amount: '15000' }
+        ],
+        activityPlan: [
+            { name: 'Orientation & Goals with Faculty Incharge', daysFromStart: 0 },
+            { name: 'Joint Coding Sprint', daysFromStart: 0 },
+            { name: 'Industry Collaboration Meeting', daysFromStart: 1 }
+        ]
     };
 
     const getRandom = arr => arr[Math.floor(Math.random() * arr.length)];
+
+    const setFieldValue = (element, value) => {
+        if (!element) return;
+        element.value = value;
+        try {
+            element.dispatchEvent(new Event('input', { bubbles: true }));
+        } catch (e) { /* noop */ }
+        try {
+            element.dispatchEvent(new Event('change', { bubbles: true }));
+        } catch (e) { /* noop */ }
+    };
+
+    const setFieldValueById = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) {
+            setFieldValue(el, value);
+        }
+    };
+
+    const waitForCondition = (conditionFn, { timeout = 4000, interval = 100 } = {}) => new Promise((resolve, reject) => {
+        const start = Date.now();
+        (function check() {
+            let result = null;
+            try {
+                result = conditionFn();
+            } catch (err) {
+                result = null;
+            }
+            if (result) {
+                resolve(result);
+                return;
+            }
+            if (Date.now() - start >= timeout) {
+                reject(new Error('Timeout waiting for condition'));
+                return;
+            }
+            setTimeout(check, interval);
+        })();
+    });
+
+    const waitForTomSelect = (selector, options = {}) =>
+        waitForCondition(() => $(selector)[0]?.tomselect, options).then(() => $(selector)[0].tomselect);
+
+    const safeFetchJson = async (url) => {
+        if (!url) return null;
+        try {
+            const resp = await fetch(url, { credentials: 'same-origin' });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            return await resp.json();
+        } catch (err) {
+            console.warn('safeFetchJson failed', url, err);
+            return null;
+        }
+    };
+
+    const findTomSelectOptionValue = (tom, text) => {
+        if (!tom || !text) return null;
+        const target = text.toLowerCase().trim();
+        return Object.keys(tom.options || {}).find(value => {
+            const optionText = (tom.options[value]?.text || '').toLowerCase().trim();
+            return optionText === target;
+        }) || null;
+    };
+
+    const addDaysToDate = (dateStr, days = 0) => {
+        if (!dateStr) return dateStr;
+        const parts = dateStr.split('-').map(part => parseInt(part, 10));
+        if (parts.length !== 3 || parts.some(num => Number.isNaN(num))) {
+            return dateStr;
+        }
+        const [year, month, day] = parts;
+        const base = new Date(year, month - 1, day);
+        if (Number.isFinite(days)) {
+            base.setDate(base.getDate() + days);
+        }
+        const yyyy = base.getFullYear();
+        const mm = String(base.getMonth() + 1).padStart(2, '0');
+        const dd = String(base.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    };
 
     function updateCdlNavLink(proposalId) {
         if (!proposalId) return;
@@ -197,7 +380,11 @@ $(document).ready(function() {
             updateCdlNavLink(window.PROPOSAL_ID);
         }
 
-        $('#autofill-btn').on('click', () => autofillTestData(currentExpandedCard));
+        $('#autofill-btn').on('click', () => {
+            autofillAllSections().catch(err => {
+                console.error('Autofill failed', err);
+            });
+        });
         resetBtn.on('click', resetProposalDraft);
         if (!$('.form-errors-banner').length) {
             setTimeout(() => {
@@ -207,29 +394,8 @@ $(document).ready(function() {
     }
 
     function enablePreviouslyVisitedSections() {
-        // Always enable basic-info section
-        $(`.proposal-nav .nav-link[data-section="basic-info"]`).removeClass('disabled');
-        
-        // Enable any sections that have been completed or are in progress
-        Object.keys(sectionProgress).forEach(section => {
-            if (sectionProgress[section] === true || sectionProgress[section] === 'in-progress') {
-                $(`.proposal-nav .nav-link[data-section="${section}"]`).removeClass('disabled');
-            }
-        });
-        
-        // Enable the next section ONLY if the previous section is completed.
-        // Do NOT auto-unlock based on "optional" status. Optional sections can be skipped,
-        // but navigation must remain strictly sequential: a section becomes available
-        // only when the immediate previous section was completed.
-        const sectionOrder = ['basic-info', 'why-this-event', 'schedule', 'speakers', 'expenses', 'income', 'cdl-support'];
-        for (let i = 0; i < sectionOrder.length - 1; i++) {
-            const currentSection = sectionOrder[i];
-            const nextSection = sectionOrder[i + 1];
-
-            if (sectionProgress[currentSection] === true) {
-                $(`.proposal-nav .nav-link[data-section="${nextSection}"]`).removeClass('disabled');
-            }
-        }
+        // Allow free navigation across sections regardless of completion state
+        $('.proposal-nav .nav-link').removeClass('disabled');
     }
 
     function checkForExistingErrors() {
@@ -274,7 +440,9 @@ $(document).ready(function() {
 
     function activateSection(section) {
         if (currentExpandedCard === section) return;
-        
+
+        persistCurrentSectionState();
+
         $('.proposal-nav .nav-link').removeClass('active');
         $(`.proposal-nav .nav-link[data-section="${section}"]`).addClass('active');
         loadFormContent(section);
@@ -287,6 +455,30 @@ $(document).ready(function() {
         
         // Remove disabled class from current section
         $(`.proposal-nav .nav-link[data-section="${section}"]`).removeClass('disabled');
+    }
+
+    function persistCurrentSectionState() {
+        if (!currentExpandedCard) return;
+
+        switch (currentExpandedCard) {
+            case 'basic-info':
+                serializeBasicInfoSection();
+                break;
+            case 'schedule':
+                serializeSchedule();
+                break;
+            case 'speakers':
+                serializeSpeakers();
+                break;
+            case 'expenses':
+                serializeExpenses();
+                break;
+            case 'income':
+                serializeIncome();
+                break;
+            default:
+                break;
+        }
     }
 
     // Basic helper to open a section and ensure the form panel is visible
@@ -397,7 +589,9 @@ $(document).ready(function() {
                 }
             }
             if (autoFillEnabled) {
-                autofillTestData(section);
+                Promise.resolve(autofillTestData(section)).catch(err => {
+                    console.error('Autofill (query) failed', err);
+                });
             }
             if (section === 'schedule') {
                 populateTable();
@@ -504,6 +698,17 @@ $(document).ready(function() {
         const container = document.getElementById('dynamic-activities-section');
 
         const djangoNumActivitiesField = document.querySelector('#django-basic-info [name="num_activities"]');
+        const djangoBasicInfoEl = document.getElementById('django-basic-info');
+        let activitySeeds = normalizeActivitiesSeed(window.EXISTING_ACTIVITIES);
+        if ((!activitySeeds || !activitySeeds.length) && djangoBasicInfoEl) {
+            const datasetSeed = normalizeActivitiesSeed(djangoBasicInfoEl.dataset.activities || '');
+            if (datasetSeed.length) {
+                activitySeeds = datasetSeed;
+            }
+        }
+        if (activitySeeds && activitySeeds.length) {
+            window.EXISTING_ACTIVITIES = activitySeeds;
+        }
         let isSyncingActivitiesCount = false;
 
         function reindexActivityRows() {
@@ -549,6 +754,12 @@ $(document).ready(function() {
             }
         }
 
+        function captureActivitySeedsFromDom() {
+            const serialized = serializeBasicInfoSection();
+            activitySeeds = serialized.length ? serialized.map(item => ({ ...item })) : [];
+            return activitySeeds;
+        }
+
         function render(count) {
             if (!container) return;
             container.innerHTML = '';
@@ -570,8 +781,8 @@ $(document).ready(function() {
                 }
                 container.innerHTML = html;
                 enhanceProposalInputs();
-                if (window.EXISTING_ACTIVITIES && window.EXISTING_ACTIVITIES.length) {
-                    window.EXISTING_ACTIVITIES.forEach((act, idx) => {
+                if (activitySeeds && activitySeeds.length) {
+                    activitySeeds.slice(0, count).forEach((act, idx) => {
                         const index = idx + 1;
                         $(`#activity_name_${index}`).val(act.name);
                         $(`#activity_date_${index}`).val(act.date);
@@ -593,6 +804,7 @@ $(document).ready(function() {
                     }
                 }
                 reindexActivityRows();
+                captureActivitySeedsFromDom();
             }
         }
 
@@ -602,7 +814,20 @@ $(document).ready(function() {
                 if (row) {
                     row.remove();
                     reindexActivityRows();
+                    captureActivitySeedsFromDom();
                 }
+            }
+        });
+
+        container.addEventListener('input', (e) => {
+            if (e.target.matches('input[id^="activity_name_"], input[id^="activity_date_"]')) {
+                captureActivitySeedsFromDom();
+            }
+        });
+
+        container.addEventListener('change', (e) => {
+            if (e.target.matches('input[id^="activity_name_"], input[id^="activity_date_"]')) {
+                captureActivitySeedsFromDom();
             }
         });
 
@@ -612,9 +837,9 @@ $(document).ready(function() {
             render(count);
         });
         numActivitiesInput.dataset.listenerAttached = 'true';
-        if (window.EXISTING_ACTIVITIES && window.EXISTING_ACTIVITIES.length) {
-            numActivitiesInput.value = window.EXISTING_ACTIVITIES.length;
-            render(window.EXISTING_ACTIVITIES.length);
+        if (activitySeeds && activitySeeds.length) {
+            numActivitiesInput.value = activitySeeds.length;
+            render(activitySeeds.length);
         } else {
             // Try draft-backed count if input is empty
             let savedCount = parseInt(numActivitiesInput.value, 10);
@@ -634,6 +859,22 @@ $(document).ready(function() {
             }
             if (savedCount > 0) render(savedCount);
         }
+    }
+
+    function serializeBasicInfoSection() {
+        const container = document.getElementById('dynamic-activities-section');
+        const activities = [];
+        if (container) {
+            container.querySelectorAll('.activity-row').forEach((row) => {
+                const name = row.querySelector('input[id^="activity_name_"]')?.value.trim() || '';
+                const date = row.querySelector('input[id^="activity_date_"]')?.value.trim() || '';
+                if (name || date) {
+                    activities.push({ name, date });
+                }
+            });
+        }
+        window.EXISTING_ACTIVITIES = activities;
+        return activities;
     }
     
     // The rest of the file uses your original, working functions.
@@ -1081,11 +1322,93 @@ $(document).ready(function() {
         const names = studentNames.concat(facultyNames, userNames);
         const displayValue = names.join(', ');
 
+        const buildSummary = (items, limit = 200) => {
+            const cleanItems = items.filter(Boolean);
+            if (!cleanItems.length) {
+                return { summary: '', truncated: false, hiddenCount: 0, displayedCount: 0 };
+            }
+
+            const included = [];
+            let currentLength = 0;
+
+            for (let i = 0; i < cleanItems.length; i += 1) {
+                const name = cleanItems[i];
+                const separatorLength = included.length ? 2 : 0;
+                const additionLength = separatorLength + name.length;
+                if (currentLength + additionLength > limit) {
+                    break;
+                }
+                included.push(name);
+                currentLength += additionLength;
+            }
+
+            let displayedCount = included.length;
+            let hiddenCount = cleanItems.length - displayedCount;
+            let summary = included.join(', ');
+            let truncated = hiddenCount > 0;
+
+            if (hiddenCount > 0) {
+                let base = summary;
+                let moreText = base.length ? ` +${hiddenCount} more` : `+${hiddenCount} more`;
+
+                while (included.length && base.length + moreText.length > limit) {
+                    included.pop();
+                    displayedCount = included.length;
+                    hiddenCount = cleanItems.length - displayedCount;
+                    base = included.join(', ');
+                    moreText = base.length ? ` +${hiddenCount} more` : `+${hiddenCount} more`;
+                }
+
+                if (!included.length) {
+                    const firstName = cleanItems[0] || '';
+                    displayedCount = Math.min(cleanItems.length, firstName ? 1 : 0);
+                    hiddenCount = cleanItems.length - displayedCount;
+                    const moreSuffix = hiddenCount > 0 ? ` +${hiddenCount} more` : '';
+                    const availableForName = Math.max(0, limit - moreSuffix.length);
+                    const truncatedFirst = firstName.slice(0, availableForName);
+
+                    if (truncatedFirst) {
+                        summary = `${truncatedFirst}${moreSuffix}`;
+                        truncated = truncated || truncatedFirst.length < firstName.length || Boolean(moreSuffix);
+                    } else if (moreSuffix) {
+                        summary = moreSuffix.trim();
+                        displayedCount = 0;
+                        hiddenCount = cleanItems.length;
+                    } else {
+                        summary = '';
+                        truncated = truncated || firstName.length > limit;
+                    }
+                } else {
+                    base = included.join(', ');
+                    hiddenCount = cleanItems.length - included.length;
+                    const moreSuffix = hiddenCount > 0 ? ` +${hiddenCount} more` : '';
+                    summary = `${base}${moreSuffix}`;
+                    displayedCount = included.length;
+                }
+
+                if (summary.length > limit) {
+                    summary = summary.slice(0, limit);
+                }
+            }
+
+            hiddenCount = Math.max(cleanItems.length - displayedCount, 0);
+            truncated = truncated || summary.length < cleanItems.join(', ').length;
+
+            return { summary, truncated, hiddenCount, displayedCount };
+        };
+
+        const { summary, truncated, hiddenCount, displayedCount } = buildSummary(names);
+
+        const visibleValue = summary || displayValue;
+
         audienceField
-            .val(displayValue)
+            .val(visibleValue)
             .data('selectedStudents', [...selectedStudents])
             .data('selectedFaculty', [...selectedFaculty])
             .data('selectedUsers', [...userSelected])
+            .data('fullAudience', displayValue)
+            .attr('data-full-audience', displayValue)
+            .attr('title', displayValue)
             .trigger('change')
             .trigger('input');
 
@@ -1102,18 +1425,36 @@ $(document).ready(function() {
                 .trigger('input');
         }
 
-        if (djangoAudienceField.length && djangoAudienceField.val() !== displayValue) {
-            djangoAudienceField.val(displayValue).trigger('change');
-        } else if (djangoAudienceField.length) {
-            djangoAudienceField.trigger('change');
+        if (djangoAudienceField.length) {
+            const previous = djangoAudienceField.val();
+            if (previous !== summary) {
+                djangoAudienceField.val(summary).trigger('change');
+            } else {
+                djangoAudienceField.trigger('change');
+            }
+            djangoAudienceField
+                .data('fullAudience', displayValue)
+                .attr('data-full-audience', displayValue);
+        }
+
+        if (truncated && typeof showNotification === 'function') {
+            const warningMessage = hiddenCount > 0
+                ? `Showing the first ${displayedCount} audience${displayedCount === 1 ? '' : 's'}. +${hiddenCount} more saved for editing.`
+                : 'Target audience list shortened for display.';
+            showNotification(warningMessage, 'warning');
         }
 
         logAudienceAction('selection-applied', {
             names,
+            summary,
+            visibleValue,
             classIds,
             studentCount: selectedStudents.length,
             facultyCount: selectedFaculty.length,
-            userCount: userSelected.length
+            userCount: userSelected.length,
+            truncated,
+            hiddenCount,
+            displayedCount
         });
     }
 
@@ -1732,7 +2073,42 @@ $(document).ready(function() {
     function capitalizeFirst(str) {
         return str.charAt(0).toUpperCase() + str.slice(1);
     }
-    
+
+    function normalizeActivitiesSeed(raw) {
+        if (!raw) return [];
+        let items = raw;
+        if (typeof raw === 'string') {
+            try {
+                const trimmed = raw.trim();
+                if (!trimmed) {
+                    return [];
+                }
+                items = JSON.parse(trimmed);
+            } catch (err) {
+                console.warn('Failed to parse activity seed payload', err);
+                return [];
+            }
+        }
+        if (!Array.isArray(items)) {
+            return [];
+        }
+        return items
+            .map((item) => {
+                const name = typeof item?.name === 'string' ? item.name.trim() : '';
+                let date = typeof item?.date === 'string' ? item.date.trim() : '';
+                if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+                    const parsed = new Date(date);
+                    if (!Number.isNaN(parsed.valueOf())) {
+                        const month = String(parsed.getMonth() + 1).padStart(2, '0');
+                        const day = String(parsed.getDate()).padStart(2, '0');
+                        date = `${parsed.getFullYear()}-${month}-${day}`;
+                    }
+                }
+                return { name, date };
+            })
+            .filter((item) => item.name || item.date);
+    }
+
     // ===== FORM TEMPLATE FUNCTIONS - PRESERVED =====
     function getBasicInfoForm() {
         // Return the actual basic info form HTML content
@@ -2079,6 +2455,8 @@ function getWhyThisEventForm() {
             addRow();
             serializeSchedule();
         });
+        addRowBtn.dataset.listenerAttached = 'true';
+        scheduleTableBody.dataset.initialized = 'true';
     }
 
     function getSpeakersForm() {
@@ -2103,6 +2481,29 @@ function getWhyThisEventForm() {
                 </div>
             </div>
         `;
+    }
+
+    function serializeSpeakers() {
+        speakersHiddenField = speakersHiddenField || document.getElementById('speakers-data');
+        if (!speakersHiddenField) return;
+        const items = [];
+        $('#speakers-list .speaker-form-container').each(function() {
+            const form = $(this);
+            const record = {
+                full_name: cleanFieldValue(form.find("input[id^='speaker_full_name_']").val()),
+                designation: cleanFieldValue(form.find("input[id^='speaker_designation_']").val()),
+                affiliation: cleanFieldValue(form.find("input[id^='speaker_affiliation_']").val()),
+                contact_email: cleanFieldValue(form.find("input[id^='speaker_contact_email_']").val()),
+                contact_number: cleanFieldValue(form.find("input[id^='speaker_contact_number_']").val()),
+                linkedin_url: cleanFieldValue(form.find("input[id^='speaker_linkedin_url_']").val()),
+                detailed_profile: cleanFieldValue(form.find("textarea[id^='speaker_detailed_profile_']").val()),
+            };
+            const hasAny = Object.values(record).some(val => val !== '');
+            if (hasAny) {
+                items.push(record);
+            }
+        });
+        writeSerializedField(speakersHiddenField, items);
     }
 
     function getExpensesForm() {
@@ -2132,6 +2533,7 @@ function getWhyThisEventForm() {
     function setupSpeakersSection() {
         const container = $('#speakers-list');
         let index = 0;
+        speakersHiddenField = document.getElementById('speakers-data');
 
         function addSpeakerForm() {
             const html = `
@@ -2144,7 +2546,7 @@ function getWhyThisEventForm() {
                                 <span class="sr-only">Remove speaker</span>
                             </button>
                         </div>
-                        
+
                         <div class="speaker-form-content">
                             <div class="speaker-form-grid">
                                 <div class="input-group">
@@ -2184,7 +2586,7 @@ function getWhyThisEventForm() {
                                     <div class="help-text">Upload headshot (JPG, PNG)</div>
                                 </div>
                             </div>
-                            
+
                             <div class="input-group bio-section">
                                 <label for="speaker_detailed_profile_${index}">Brief Profile / Bio *</label>
                                 <textarea id="speaker_detailed_profile_${index}" name="speaker_detailed_profile_${index}" rows="4" required placeholder="Brief description of speaker's expertise, background, and qualifications..."></textarea>
@@ -2195,10 +2597,16 @@ function getWhyThisEventForm() {
                 </div>
             `;
             container.append(html);
+            const newForm = container.children('.speaker-form-container').last();
+            newForm.find('input, textarea').on('input change', () => {
+                serializeSpeakers();
+            });
             index++;
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
             }
+            serializeSpeakers();
+            return newForm;
         }
 
         function updateSpeakerHeaders() {
@@ -2235,6 +2643,7 @@ function getWhyThisEventForm() {
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
             }
+            serializeSpeakers();
         }
 
         function showEmptyState() {
@@ -2249,6 +2658,7 @@ function getWhyThisEventForm() {
             } else {
                 container.find('.speakers-empty-state').remove();
             }
+            serializeSpeakers();
         }
 
         $('#add-speaker-btn').on('click', function() {
@@ -2337,18 +2747,19 @@ function getWhyThisEventForm() {
             }
         });
 
-        if (window.EXISTING_SPEAKERS && window.EXISTING_SPEAKERS.length) {
+        const initialSpeakers = getStoredSectionData('speakers-data', window.EXISTING_SPEAKERS || []);
+        if (initialSpeakers.length) {
             container.empty();
-            window.EXISTING_SPEAKERS.forEach(sp => {
+            initialSpeakers.forEach(sp => {
                 addSpeakerForm();
                 const idx = index - 1;
-                $(`#speaker_full_name_${idx}`).val(sp.full_name);
-                $(`#speaker_designation_${idx}`).val(sp.designation);
-                $(`#speaker_affiliation_${idx}`).val(sp.affiliation);
-                $(`#speaker_contact_email_${idx}`).val(sp.contact_email);
-                $(`#speaker_contact_number_${idx}`).val(sp.contact_number);
-                $(`#speaker_linkedin_url_${idx}`).val(sp.linkedin_url);
-                $(`#speaker_detailed_profile_${idx}`).val(sp.detailed_profile);
+                $(`#speaker_full_name_${idx}`).val(cleanFieldValue(sp.full_name));
+                $(`#speaker_designation_${idx}`).val(cleanFieldValue(sp.designation));
+                $(`#speaker_affiliation_${idx}`).val(cleanFieldValue(sp.affiliation));
+                $(`#speaker_contact_email_${idx}`).val(cleanFieldValue(sp.contact_email));
+                $(`#speaker_contact_number_${idx}`).val(cleanFieldValue(sp.contact_number));
+                $(`#speaker_linkedin_url_${idx}`).val(cleanFieldValue(sp.linkedin_url));
+                $(`#speaker_detailed_profile_${idx}`).val(cleanFieldValue(sp.detailed_profile));
             });
             showEmptyState();
         } else {
@@ -2390,6 +2801,33 @@ function getWhyThisEventForm() {
             }
             showEmptyState();
         }
+
+        const addSpeakerBtnEl = document.getElementById('add-speaker-btn');
+        if (addSpeakerBtnEl) {
+            addSpeakerBtnEl.dataset.listenerAttached = 'true';
+        }
+        const containerEl = container.get(0);
+        if (containerEl) {
+            containerEl.dataset.initialized = 'true';
+        }
+    }
+
+    function serializeExpenses() {
+        expensesHiddenField = expensesHiddenField || document.getElementById('expenses-data');
+        if (!expensesHiddenField) return;
+        const items = [];
+        $('#expense-rows .expense-form-container').each(function() {
+            const form = $(this);
+            const record = {
+                sl_no: cleanFieldValue(form.find("input[id^='expense_sl_no_']").val()),
+                particulars: cleanFieldValue(form.find("input[id^='expense_particulars_']").val()),
+                amount: cleanFieldValue(form.find("input[id^='expense_amount_']").val()),
+            };
+            if (Object.values(record).some(val => val !== '')) {
+                items.push(record);
+            }
+        });
+        writeSerializedField(expensesHiddenField, items);
     }
 
     function setupExpensesSection() {
@@ -2430,10 +2868,15 @@ function getWhyThisEventForm() {
                 </div>
             `;
             container.append(html);
+            const newRow = container.children('.expense-form-container').last();
+            newRow.find('input').on('input change', () => {
+                serializeExpenses();
+            });
             index++;
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
             }
+            serializeExpenses();
         }
 
         function updateExpenseHeaders() {
@@ -2442,6 +2885,7 @@ function getWhyThisEventForm() {
                 $(this).attr('data-index', i);
                 $(this).find('.remove-expense-btn').attr('data-index', i);
             });
+            serializeExpenses();
         }
 
         function showEmptyState() {
@@ -2456,6 +2900,7 @@ function getWhyThisEventForm() {
             } else {
                 container.find('.expenses-empty-state').remove();
             }
+            serializeExpenses();
         }
 
         $('#add-expense-btn').on('click', function() {
@@ -2470,20 +2915,32 @@ function getWhyThisEventForm() {
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
             }
+            serializeExpenses();
         });
 
-        if (window.EXISTING_EXPENSES && window.EXISTING_EXPENSES.length) {
+        const initialExpenses = getStoredSectionData('expenses-data', window.EXISTING_EXPENSES || []);
+        if (initialExpenses.length) {
             container.empty();
-            window.EXISTING_EXPENSES.forEach(ex => {
+            initialExpenses.forEach(ex => {
                 addExpenseRow();
                 const idx = index - 1;
-                $(`#expense_sl_no_${idx}`).val(ex.sl_no);
-                $(`#expense_particulars_${idx}`).val(ex.particulars);
-                $(`#expense_amount_${idx}`).val(ex.amount);
+                $(`#expense_sl_no_${idx}`).val(cleanFieldValue(ex.sl_no));
+                $(`#expense_particulars_${idx}`).val(cleanFieldValue(ex.particulars));
+                $(`#expense_amount_${idx}`).val(cleanFieldValue(ex.amount));
             });
             showEmptyState();
         } else {
             showEmptyState();
+        }
+
+        expensesHiddenField = document.getElementById('expenses-data');
+        const addExpenseBtnEl = document.getElementById('add-expense-btn');
+        if (addExpenseBtnEl) {
+            addExpenseBtnEl.dataset.listenerAttached = 'true';
+        }
+        const containerEl = container.get(0);
+        if (containerEl) {
+            containerEl.dataset.initialized = 'true';
         }
     }
 
@@ -2510,6 +2967,26 @@ function getWhyThisEventForm() {
                 </div>
             </div>
         `;
+    }
+
+    function serializeIncome() {
+        incomeHiddenField = incomeHiddenField || document.getElementById('income-data');
+        if (!incomeHiddenField) return;
+        const items = [];
+        $('#income-rows .income-form-container').each(function() {
+            const form = $(this);
+            const record = {
+                sl_no: cleanFieldValue(form.find("input[id^='income_sl_no_']").val()),
+                particulars: cleanFieldValue(form.find("input[id^='income_particulars_']").val()),
+                participants: cleanFieldValue(form.find("input[id^='income_participants_']").val()),
+                rate: cleanFieldValue(form.find("input[id^='income_rate_']").val()),
+                amount: cleanFieldValue(form.find("input[id^='income_amount_']").val()),
+            };
+            if (Object.values(record).some(val => val !== '')) {
+                items.push(record);
+            }
+        });
+        writeSerializedField(incomeHiddenField, items);
     }
 
     function setupIncomeSection() {
@@ -2560,28 +3037,34 @@ function getWhyThisEventForm() {
                 </div>
             `;
             container.append(html);
-            
+
             // Auto-calculate amount when participants and rate change
             const participantsInput = $(`#income_participants_${index}`);
             const rateInput = $(`#income_rate_${index}`);
             const amountInput = $(`#income_amount_${index}`);
-            
+
             function calculateAmount() {
                 const participants = parseFloat(participantsInput.val()) || 0;
                 const rate = parseFloat(rateInput.val()) || 0;
                 const calculatedAmount = participants * rate;
                 if (calculatedAmount > 0) {
                     amountInput.val(calculatedAmount.toFixed(2));
+                    serializeIncome();
                 }
             }
-            
+
             participantsInput.on('input change', calculateAmount);
             rateInput.on('input change', calculateAmount);
-            
+            $(`#income_sl_no_${index}, #income_particulars_${index}, #income_amount_${index}`).on('input change', () => {
+                serializeIncome();
+            });
+            amountInput.on('input change', () => serializeIncome());
+
             index++;
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
             }
+            serializeIncome();
         }
 
         function updateIncomeHeaders() {
@@ -2590,6 +3073,7 @@ function getWhyThisEventForm() {
                 $(this).attr('data-index', i);
                 $(this).find('.remove-income-btn').attr('data-index', i);
             });
+            serializeIncome();
         }
 
         function showEmptyState() {
@@ -2603,6 +3087,7 @@ function getWhyThisEventForm() {
             } else {
                 container.find('.income-empty-state').remove();
             }
+            serializeIncome();
         }
 
         $('#add-income-btn').on('click', function() {
@@ -2617,23 +3102,35 @@ function getWhyThisEventForm() {
             if (window.AutosaveManager && window.AutosaveManager.reinitialize) {
                 window.AutosaveManager.reinitialize();
             }
+            serializeIncome();
         });
 
         // Load existing income data if available
-        if (window.EXISTING_INCOME && window.EXISTING_INCOME.length) {
+        const initialIncome = getStoredSectionData('income-data', window.EXISTING_INCOME || []);
+        if (initialIncome.length) {
             container.empty();
-            window.EXISTING_INCOME.forEach(inc => {
+            initialIncome.forEach(inc => {
                 addIncomeRow();
                 const idx = index - 1;
-                $(`#income_sl_no_${idx}`).val(inc.sl_no);
-                $(`#income_particulars_${idx}`).val(inc.particulars);
-                $(`#income_participants_${idx}`).val(inc.participants);
-                $(`#income_rate_${idx}`).val(inc.rate);
-                $(`#income_amount_${idx}`).val(inc.amount);
+                $(`#income_sl_no_${idx}`).val(cleanFieldValue(inc.sl_no));
+                $(`#income_particulars_${idx}`).val(cleanFieldValue(inc.particulars));
+                $(`#income_participants_${idx}`).val(cleanFieldValue(inc.participants));
+                $(`#income_rate_${idx}`).val(cleanFieldValue(inc.rate));
+                $(`#income_amount_${idx}`).val(cleanFieldValue(inc.amount));
             });
             showEmptyState();
         } else {
             showEmptyState();
+        }
+
+        incomeHiddenField = document.getElementById('income-data');
+        const addIncomeBtnEl = document.getElementById('add-income-btn');
+        if (addIncomeBtnEl) {
+            addIncomeBtnEl.dataset.listenerAttached = 'true';
+        }
+        const containerEl = container.get(0);
+        if (containerEl) {
+            containerEl.dataset.initialized = 'true';
         }
     }
 
@@ -2762,10 +3259,32 @@ function getWhyThisEventForm() {
         if (currentExpandedCard === 'schedule') {
             serializeSchedule();
         }
+        if (currentExpandedCard === 'speakers') {
+            serializeSpeakers();
+        }
+        if (currentExpandedCard === 'expenses') {
+            serializeExpenses();
+        }
+        if (currentExpandedCard === 'income') {
+            serializeIncome();
+        }
 
         // Always validate before saving
-        if (!validateCurrentSection()) {
-            showNotification('Please complete all required fields before saving.', 'error');
+        const sectionIsValid = validateCurrentSection();
+
+        if (!sectionIsValid) {
+            logValidationIssues(currentExpandedCard, lastValidationIssues);
+            markSectionInProgress(currentExpandedCard);
+            showNotification('Section has pending issues. You can continue, but resolve them before final submission.', 'warning');
+
+            const nextSection = getNextSection(currentExpandedCard);
+            if (nextSection) {
+                const nextLink = $(`.proposal-nav .nav-link[data-section="${nextSection}"]`);
+                nextLink.removeClass('disabled');
+                setTimeout(() => {
+                    openFormPanel(nextSection);
+                }, 300);
+            }
             return;
         }
 
@@ -2856,7 +3375,17 @@ function getWhyThisEventForm() {
                     djangoField = $(`[name="${baseName}"]`);
                 }
                 if (djangoField.length) {
-                    djangoField.val($(this).val());
+                    const newVal = $(this).val();
+                    djangoField.each(function() {
+                        const $field = $(this);
+                        const currentVal = $field.val();
+                        if (currentVal !== newVal) {
+                            $field.val(newVal);
+                        }
+                        // Trigger events so autosave listeners pick up the change.
+                        $field.trigger('input');
+                        $field.trigger('change');
+                    });
                 }
             }
             clearFieldError($(this));
@@ -2893,14 +3422,22 @@ function getWhyThisEventForm() {
     }
 
     function collectBasicInfo() {
-        const getVal = (modernSelector, djangoName) => {
+        const getVal = (modernSelector, djangoName, options = {}) => {
+            const { preferDjango = false } = options;
             const modern = $(modernSelector);
-            if (modern.length && modern.val()) return modern.val();
-            return $(`#django-basic-info [name="${djangoName}"]`).val() || '';
+            const djangoField = $(`#django-basic-info [name="${djangoName}"]`);
+            const modernVal = modern.length ? modern.val() : '';
+            const djangoVal = djangoField.length ? djangoField.val() : '';
+
+            if (preferDjango) {
+                return djangoVal || modernVal || '';
+            }
+
+            return modernVal || djangoVal || '';
         };
         return {
             title: getVal('#event-title-modern', 'event_title'),
-            audience: getVal('#target-audience-modern', 'target_audience'),
+            audience: getVal('#target-audience-modern', 'target_audience', { preferDjango: true }),
             focus: getVal('#event-focus-type-modern', 'event_focus_type'),
             venue: getVal('#venue-modern', 'venue')
         };
@@ -2964,126 +3501,557 @@ function getWhyThisEventForm() {
         updateSubmitButton();
     }
 
-    function autofillTestData(section) {
+    async function loadAndFillSection(section) {
+        if (!SECTION_AUTOFILL_ORDER.includes(section)) {
+            return;
+        }
+
+        if (currentExpandedCard !== section) {
+            activateSection(section);
+            await delay(450);
+        } else {
+            await delay(200);
+        }
+
+        await autofillTestData(section);
+        await delay(300);
+    }
+
+    async function fetchOrganizationOption(name, typeLabel = '') {
+        if (!name || !window.API_ORGANIZATIONS) return null;
+        const params = new URLSearchParams({ q: name });
+        if (typeLabel) {
+            params.append('org_type', typeLabel);
+        }
+        const data = await safeFetchJson(`${window.API_ORGANIZATIONS}?${params.toString()}`);
+        if (!Array.isArray(data) || !data.length) return null;
+        const lower = name.toLowerCase().trim();
+        return data.find(opt => (opt.text || '').toLowerCase().trim() === lower) || data[0] || null;
+    }
+
+    async function ensureOrganizationSelection() {
+        const orgTypeTom = $('#org-type-modern-input')[0]?.tomselect;
+        if (orgTypeTom) {
+            let desiredValue = findTomSelectOptionValue(orgTypeTom, 'Department');
+            if (!desiredValue) {
+                const values = Object.keys(orgTypeTom.options || {});
+                desiredValue = values.length ? values[0] : null;
+            }
+            if (desiredValue) {
+                orgTypeTom.setValue(desiredValue);
+            }
+        }
+
+        let orgTom = null;
+        try {
+            orgTom = await waitForTomSelect('#org-modern-select', { timeout: 5000, interval: 100 });
+        } catch (err) {
+            orgTom = null;
+        }
+
+        let primaryOrgOption = null;
+        try {
+            primaryOrgOption = await fetchOrganizationOption('Data Science', 'Department');
+        } catch (err) {
+            primaryOrgOption = null;
+        }
+        const primaryId = primaryOrgOption ? String(primaryOrgOption.id) : 'data-science';
+        const primaryText = primaryOrgOption?.text || 'Data Science';
+
+        if (orgTom) {
+            if (!orgTom.options[primaryId]) {
+                orgTom.addOption({ id: primaryId, text: primaryText });
+            } else if (primaryOrgOption?.text) {
+                orgTom.updateOption(primaryId, { id: primaryId, text: primaryOrgOption.text });
+            }
+            orgTom.setValue(primaryId);
+        } else {
+            const orgField = $('#django-basic-info [name="organization"]');
+            if (orgField.length) {
+                orgField.val(primaryId).trigger('change');
+            }
+        }
+
+        const committeeTom = $('#committees-collaborations-modern')[0]?.tomselect;
+        let committeeOption = null;
+        try {
+            committeeOption = await fetchOrganizationOption('Computer Science');
+        } catch (err) {
+            committeeOption = null;
+        }
+        const committeeId = committeeOption ? String(committeeOption.id) : 'computer-science';
+        const committeeText = committeeOption?.text || 'Computer Science';
+        if (committeeTom) {
+            if (!committeeTom.options[committeeId]) {
+                committeeTom.addOption({ id: committeeId, text: committeeText });
+            }
+            const currentValues = new Set(committeeTom.getValue());
+            if (!currentValues.has(committeeId)) {
+                committeeTom.addItem(committeeId);
+            }
+        } else {
+            const namesField = $('#django-basic-info [name="committees_collaborations"]');
+            if (namesField.length) {
+                const names = new Set((namesField.val() || '').split(',').map(s => s.trim()).filter(Boolean));
+                names.add(committeeText);
+                namesField.val(Array.from(names).join(', ')).trigger('change');
+            }
+            const idsField = $('#committees-collaborations-ids');
+            if (idsField.length) {
+                const ids = new Set((idsField.val() || '').split(',').map(s => s.trim()).filter(Boolean));
+                ids.add(committeeId);
+                idsField.val(Array.from(ids).join(',')).trigger('change');
+            }
+        }
+
+        const primaryOrgId = $('#django-basic-info [name="organization"]').val() || primaryId;
+        const primaryOrgName = orgTom?.options?.[primaryOrgId]?.text || primaryText;
+        const committeeIds = committeeTom
+            ? committeeTom.getValue()
+            : (($('#committees-collaborations-ids').val() || '').split(',').map(s => s.trim()).filter(Boolean));
+        const committeeNames = committeeTom
+            ? committeeIds.map(id => committeeTom.options[id]?.text || committeeText)
+            : (($('#django-basic-info [name="committees_collaborations"]').val() || '').split(',').map(s => s.trim()).filter(Boolean));
+
+        return { primaryOrgId, primaryOrgName, committeeIds, committeeNames };
+    }
+
+    async function autofillTargetAudienceFromBackend(orgMeta) {
+        if (!orgMeta) return;
+        const { primaryOrgId, primaryOrgName, committeeIds = [], committeeNames = [] } = orgMeta;
+        const orgInfos = [];
+        if (primaryOrgId) {
+            orgInfos.push({ id: primaryOrgId, name: primaryOrgName || 'Data Science' });
+        }
+        committeeIds.forEach((id, idx) => {
+            if (!id) return;
+            orgInfos.push({ id, name: committeeNames[idx] || committeeNames[0] || 'Computer Science' });
+        });
+        if (!orgInfos.length) return;
+
+        const selectedStudents = [];
+        const userSelected = [];
+        for (const org of orgInfos) {
+            const orgId = String(org.id || '').trim();
+            if (!/^[0-9]+$/.test(orgId)) {
+                continue;
+            }
+            const url = `${window.API_CLASSES_BASE}${orgId}/`;
+            const data = await safeFetchJson(url);
+            if (data?.success && Array.isArray(data.classes)) {
+                data.classes.forEach(cls => {
+                    const classId = String(cls.id);
+                    selectedStudents.push({ id: classId, name: `${cls.name} (${org.name})` });
+                    (cls.students || []).forEach(student => {
+                        if (student?.id && student?.name) {
+                            userSelected.push({ id: `stu-${student.id}`, name: student.name });
+                        }
+                    });
+                });
+            }
+        }
+
+        const dedupe = (items) => {
+            const seen = new Set();
+            return items.filter(item => {
+                const key = `${item.id}|${item.name}`;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+        };
+
+        if (!selectedStudents.length) {
+            const fallback = orgInfos
+                .map((info, idx) => ({ id: `org-${idx + 1}`, name: info.name }))
+                .filter(item => item.name);
+            if (fallback.length) {
+                applyTargetAudienceSelection({ selectedStudents: fallback, selectedFaculty: [], userSelected: [] });
+            }
+            return;
+        }
+
+        applyTargetAudienceSelection({
+            selectedStudents: dedupe(selectedStudents),
+            selectedFaculty: [],
+            userSelected: dedupe(userSelected)
+        });
+    }
+
+    async function selectFacultyInchargeByEmail(email) {
+        if (!email) return;
+        const facultyTom = $('#faculty-select')[0]?.tomselect;
+        if (!facultyTom) return;
+
+        let orgId = $('#django-basic-info [name="organization"]').val();
+        if (!orgId) {
+            try {
+                await waitForCondition(() => $('#django-basic-info [name="organization"]').val(), { timeout: 3000, interval: 150 });
+                orgId = $('#django-basic-info [name="organization"]').val();
+            } catch (err) {
+                orgId = $('#django-basic-info [name="organization"]').val();
+            }
+        }
+
+        let option = null;
+        if (orgId && /^[0-9]+$/.test(String(orgId))) {
+            const url = `${window.API_FACULTY}?org_id=${orgId}&q=${encodeURIComponent(email)}`;
+            const results = await safeFetchJson(url);
+            if (Array.isArray(results) && results.length) {
+                const lowerEmail = email.toLowerCase();
+                const preferred = results.find(item => (item.text || '').toLowerCase().includes(lowerEmail) || (item.name || '').toLowerCase().includes('alen'));
+                const selected = preferred || results[0];
+                option = { id: String(selected.id), text: selected.text || `${selected.name} (${email})` };
+            }
+        }
+
+        if (!option) {
+            option = { id: email, text: `Alen Jinmgi (${email})` };
+        }
+
+        if (!facultyTom.options[option.id]) {
+            facultyTom.addOption(option);
+        } else {
+            facultyTom.updateOption(option.id, option);
+        }
+        facultyTom.clear();
+        facultyTom.addItem(option.id);
+    }
+
+    async function selectStudentCoordinatorByName(name) {
+        if (!name) return;
+        let tom = null;
+        try {
+            tom = await waitForTomSelect('#student-coordinators-modern', { timeout: 2000, interval: 100 });
+        } catch (err) {
+            tom = $('#student-coordinators-modern')[0]?.tomselect || null;
+        }
+
+        const selectEl = document.getElementById('student-coordinators-modern');
+        if (!tom && !selectEl) return;
+
+        const trimmedName = String(name).trim();
+        if (!trimmedName) return;
+
+        if (tom) {
+            const optionId = `autofill-${trimmedName.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'student'}`;
+            const valueKey = tom.settings.valueField || 'value';
+            const optionValue = valueKey === 'text' ? trimmedName : optionId;
+            if (!tom.options[optionValue]) {
+                tom.addOption({ id: optionId, text: trimmedName, [valueKey]: optionValue });
+            }
+            const current = tom.getValue();
+            const values = Array.isArray(current) ? current : (current ? [current] : []);
+            if (!values.includes(optionValue)) {
+                tom.addItem(optionValue);
+            }
+            tom.refreshOptions(false);
+        } else {
+            const existingOption = Array.from(selectEl.options || []).find(opt => opt.value === trimmedName || opt.text === trimmedName);
+            if (!existingOption) {
+                const option = new Option(trimmedName, trimmedName, true, true);
+                selectEl.appendChild(option);
+            } else {
+                existingOption.selected = true;
+            }
+            try {
+                selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+            } catch (e) { /* noop */ }
+        }
+    }
+
+    async function fillActivityPlan(today) {
+        const plan = AUTO_FILL_DATA.activityPlan || [];
+        if (!plan.length) return;
+        const numInput = document.getElementById('num-activities-modern');
+        if (!numInput) return;
+
+        try {
+            await waitForCondition(() => numInput.dataset.listenerAttached === 'true', { timeout: 2000, interval: 75 });
+        } catch (err) { /* continue even if listener flag not found */ }
+
+        setFieldValue(numInput, String(plan.length));
+        try {
+            numInput.dispatchEvent(new Event('input', { bubbles: true }));
+        } catch (e) { /* noop */ }
+
+        try {
+            await waitForCondition(() => {
+                return plan.every((_, idx) => document.getElementById(`activity_name_${idx + 1}`));
+            }, { timeout: 2000, interval: 75 });
+        } catch (err) {
+            // If rows failed to render in time, continue and attempt to fill whatever exists
+        }
+
+        plan.forEach((activity, idx) => {
+            const index = idx + 1;
+            setFieldValueById(`activity_name_${index}`, activity.name);
+            const dateId = `activity_date_${index}`;
+            const dateEl = document.getElementById(dateId);
+            if (dateEl) {
+                const dateValue = addDaysToDate(today, activity.daysFromStart || 0);
+                setFieldValue(dateEl, dateValue);
+            }
+        });
+    }
+
+    async function fillScheduleSection(today) {
+        const rows = AUTO_FILL_DATA.scheduleRows || [];
+        if (!rows.length) return;
+        const addRowBtn = document.getElementById('add-row-btn');
+        if (!addRowBtn) return;
+
+        scheduleTableBody = document.getElementById('schedule-rows');
+        scheduleHiddenField = document.getElementById('schedule-modern');
+        if (!scheduleTableBody) return;
+
+        try {
+            await waitForCondition(() => addRowBtn.dataset.listenerAttached === 'true' && scheduleTableBody.dataset.initialized === 'true', { timeout: 2000, interval: 75 });
+        } catch (err) { /* proceed regardless */ }
+
+        scheduleTableBody.innerHTML = '';
+        rows.forEach(() => addRowBtn.click());
+
+        try {
+            await waitForCondition(() => {
+                return scheduleTableBody.querySelectorAll('.schedule-row').length >= rows.length;
+            }, { timeout: 2000, interval: 75 });
+        } catch (err) {
+            // proceed even if rows did not fully render in allotted time
+        }
+
+        const scheduleRows = scheduleTableBody.querySelectorAll('.schedule-row');
+        rows.forEach((row, idx) => {
+            const rowEl = scheduleRows[idx];
+            if (!rowEl) return;
+            const timeInput = rowEl.querySelector('.time-input');
+            const activityInput = rowEl.querySelector('.activity-input');
+            if (timeInput) {
+                setFieldValue(timeInput, `${today}T${row.time}`);
+            }
+            if (activityInput) {
+                setFieldValue(activityInput, row.activity);
+            }
+        });
+        serializeSchedule();
+    }
+
+    async function fillSpeakersSection() {
+        const profiles = AUTO_FILL_DATA.speakerProfiles || [];
+        if (!profiles.length) return;
+        const addBtn = document.getElementById('add-speaker-btn');
+        if (!addBtn) return;
+
+        try {
+            await waitForCondition(() => addBtn.dataset.listenerAttached === 'true', { timeout: 2000, interval: 75 });
+        } catch (err) { /* continue even if listener not flagged */ }
+
+        const container = document.getElementById('speakers-list');
+        const existing = container ? container.querySelectorAll('.speaker-form-container').length : 0;
+        for (let i = existing; i < profiles.length; i += 1) {
+            addBtn.click();
+        }
+
+        try {
+            await waitForCondition(() => document.getElementById('speaker_full_name_0'), { timeout: 2000, interval: 100 });
+        } catch (err) { /* ignore timeout */ }
+
+        profiles.forEach((profile, idx) => {
+            setFieldValueById(`speaker_full_name_${idx}`, profile.full_name);
+            setFieldValueById(`speaker_designation_${idx}`, profile.designation);
+            setFieldValueById(`speaker_affiliation_${idx}`, profile.affiliation);
+            setFieldValueById(`speaker_contact_email_${idx}`, profile.email);
+            setFieldValueById(`speaker_contact_number_${idx}`, profile.phone);
+            setFieldValueById(`speaker_linkedin_url_${idx}`, profile.linkedin);
+            setFieldValueById(`speaker_detailed_profile_${idx}`, profile.bio);
+        });
+
+        serializeSpeakers();
+    }
+
+    async function fillExpensesSection() {
+        const expenses = AUTO_FILL_DATA.expenseRows || [];
+        if (!expenses.length) return;
+        const addBtn = document.getElementById('add-expense-btn');
+        if (!addBtn) return;
+
+        try {
+            await waitForCondition(() => addBtn.dataset.listenerAttached === 'true', { timeout: 2000, interval: 75 });
+        } catch (err) { /* continue even if listener flag missing */ }
+
+        const container = $('#expense-rows');
+        const existing = container.children('.expense-form-container').length;
+        for (let i = existing; i < expenses.length; i += 1) {
+            addBtn.click();
+        }
+
+        try {
+            await waitForCondition(() => {
+                return expenses.every((_, idx) => document.getElementById(`expense_particulars_${idx}`));
+            }, { timeout: 2000, interval: 75 });
+        } catch (err) {
+            // continue with whatever rows rendered
+        }
+
+        expenses.forEach((expense, idx) => {
+            setFieldValueById(`expense_sl_no_${idx}`, expense.sl);
+            setFieldValueById(`expense_particulars_${idx}`, expense.particulars);
+            setFieldValueById(`expense_amount_${idx}`, expense.amount);
+        });
+
+        serializeExpenses();
+    }
+
+    async function fillIncomeSection() {
+        const incomes = AUTO_FILL_DATA.incomeRows || [];
+        if (!incomes.length) return;
+        const addBtn = document.getElementById('add-income-btn');
+        if (!addBtn) return;
+
+        try {
+            await waitForCondition(() => addBtn.dataset.listenerAttached === 'true', { timeout: 2000, interval: 75 });
+        } catch (err) { /* proceed regardless */ }
+
+        const container = $('#income-rows');
+        const existing = container.children('.income-form-container').length;
+        for (let i = existing; i < incomes.length; i += 1) {
+            addBtn.click();
+        }
+
+        try {
+            await waitForCondition(() => {
+                return incomes.every((_, idx) => document.getElementById(`income_particulars_${idx}`));
+            }, { timeout: 2000, interval: 75 });
+        } catch (err) {
+            // proceed regardless
+        }
+
+        incomes.forEach((income, idx) => {
+            setFieldValueById(`income_sl_no_${idx}`, income.sl);
+            setFieldValueById(`income_particulars_${idx}`, income.particulars);
+            setFieldValueById(`income_participants_${idx}`, income.participants);
+            setFieldValueById(`income_rate_${idx}`, income.rate);
+            setFieldValueById(`income_amount_${idx}`, income.amount);
+        });
+
+        serializeIncome();
+    }
+
+    function selectRandomSdgGoal() {
+        const sdgInput = document.getElementById('sdg-goals-modern');
+        const goals = Array.isArray(window.SDG_GOALS) ? window.SDG_GOALS : [];
+        if (!sdgInput || !goals.length) return;
+        const goal = goals[Math.floor(Math.random() * goals.length)];
+        setFieldValue(sdgInput, goal.name);
+
+        const hidden = $('#django-basic-info [name="sdg_goals"]');
+        if (hidden.length) {
+            hidden.each(function() {
+                const checkbox = $(this);
+                checkbox.prop('checked', checkbox.val() === String(goal.id));
+            });
+            hidden.first().trigger('change');
+        }
+
+        $('#sdgOptions input[type=checkbox]').each(function() {
+            const cb = $(this);
+            cb.prop('checked', cb.val() === String(goal.id));
+        });
+    }
+
+    async function autofillAllSections() {
+        if (isAutofilling) return;
+        isAutofilling = true;
+
+        const autofillBtn = $('#autofill-btn');
+        const originalLabel = autofillBtn.text();
+        autofillBtn.prop('disabled', true).text('Auto-Filling...');
+
+        const originalSection = currentExpandedCard || 'basic-info';
+
+        try {
+            for (const section of SECTION_AUTOFILL_ORDER) {
+                await loadAndFillSection(section);
+            }
+        } finally {
+            if (originalSection && originalSection !== currentExpandedCard) {
+                activateSection(originalSection);
+                await delay(350);
+            }
+            autofillBtn.prop('disabled', false).text(originalLabel);
+            isAutofilling = false;
+        }
+    }
+
+    async function autofillTestData(section) {
         const today = new Date().toISOString().split('T')[0];
 
         if (section === 'basic-info') {
+            const orgMeta = await ensureOrganizationSelection().catch(err => {
+                console.warn('autofill: failed to ensure organization selection', err);
+                return null;
+            });
+
+            const now = new Date();
+            const academicYear = now.getMonth() >= 6
+                ? `${now.getFullYear()}-${now.getFullYear() + 1}`
+                : `${now.getFullYear() - 1}-${now.getFullYear()}`;
+
             const fields = {
                 'event-title-modern': getRandom(AUTO_FILL_DATA.titles),
-                'target-audience-modern': getRandom(AUTO_FILL_DATA.audiences),
-                'target-audience-class-ids': '1',
                 'venue-modern': getRandom(AUTO_FILL_DATA.venues),
                 'event-focus-type-modern': getRandom(AUTO_FILL_DATA.focusTypes),
                 'event-start-date': today,
-                'event-end-date': today,
-                'academic-year-modern': '2024-2025',
-                'pos-pso-modern': 'PO1, PSO2',
-                'sdg-goals-modern': 'Goal 4',
-                'num-activities-modern': '1'
+                'event-end-date': addDaysToDate(today, 1),
+                'academic-year-modern': academicYear,
+                'pos-pso-modern': 'PO1, PSO2 & PSO3'
             };
 
-            Object.entries(fields).forEach(([id, value]) => {
-                const el = document.getElementById(id);
-                if (!el) return;
-                el.value = value;
-                el.dispatchEvent(new Event('input', { bubbles: true }));
-                el.dispatchEvent(new Event('change', { bubbles: true }));
-            });
+            Object.entries(fields).forEach(([id, value]) => setFieldValueById(id, value));
 
-            // Fill dynamic activity once rendered
-            setTimeout(() => {
-                const actName = document.getElementById('activity_name_1');
-                const actDate = document.getElementById('activity_date_1');
-                if (actName) actName.value = 'Intro Session';
-                if (actDate) actDate.value = today;
-            }, 150);
+            const djangoAcademicYear = $('#django-basic-info [name="academic_year"]');
+            if (djangoAcademicYear.length) {
+                djangoAcademicYear.val(academicYear).trigger('change');
+            }
+
+            selectRandomSdgGoal();
+            await fillActivityPlan(today);
+
+            await autofillTargetAudienceFromBackend(orgMeta);
+            await selectFacultyInchargeByEmail('alenjinmgi@gmail.com');
+            await selectStudentCoordinatorByName('Alen Jin Shibu');
 
             const sc = document.getElementById('student-coordinators-modern');
-            if (sc && !sc.options.length) {
-                sc.appendChild(new Option('Demo Student', '1', true, true));
-                sc.dispatchEvent(new Event('change', { bubbles: true }));
+            const scTom = sc?.tomselect;
+            const currentCoordinators = scTom ? scTom.getValue() : Array.from(sc?.selectedOptions || []).map(opt => opt.value);
+            if (sc && (!currentCoordinators || (Array.isArray(currentCoordinators) && !currentCoordinators.length))) {
+                if (!scTom && !sc.options.length) {
+                    sc.appendChild(new Option('Data Science Student Lead', '1', true, true));
+                    sc.dispatchEvent(new Event('change', { bubbles: true }));
+                }
             }
         }
 
         if (section === 'why-this-event') {
-            const need = document.getElementById('need-analysis-modern');
-            const obj = document.getElementById('objectives-modern');
-            const out = document.getElementById('outcomes-modern');
-            if (need) {
-                need.value = getRandom(AUTO_FILL_DATA.need);
-                need.dispatchEvent(new Event('input', { bubbles: true }));
-                need.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-            if (obj) {
-                obj.value = getRandom(AUTO_FILL_DATA.objectives);
-                obj.dispatchEvent(new Event('input', { bubbles: true }));
-                obj.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-            if (out) {
-                out.value = getRandom(AUTO_FILL_DATA.outcomes);
-                out.dispatchEvent(new Event('input', { bubbles: true }));
-                out.dispatchEvent(new Event('change', { bubbles: true }));
-            }
+            setFieldValueById('need-analysis-modern', getRandom(AUTO_FILL_DATA.need));
+            setFieldValueById('objectives-modern', getRandom(AUTO_FILL_DATA.objectives));
+            setFieldValueById('outcomes-modern', getRandom(AUTO_FILL_DATA.outcomes));
         }
 
         if (section === 'schedule') {
-            const sched = document.getElementById('schedule-modern');
-            if (sched) {
-                sched.value = getRandom(AUTO_FILL_DATA.schedule);
-                sched.dispatchEvent(new Event('input', { bubbles: true }));
-                sched.dispatchEvent(new Event('change', { bubbles: true }));
-            }
+            await fillScheduleSection(today);
         }
 
         if (section === 'speakers') {
-            document.getElementById('add-speaker-btn')?.click();
-            setTimeout(() => {
-                const idx = 0;
-                const name = document.getElementById(`speaker_full_name_${idx}`);
-                const desig = document.getElementById(`speaker_designation_${idx}`);
-                const aff = document.getElementById(`speaker_affiliation_${idx}`);
-                const email = document.getElementById(`speaker_contact_email_${idx}`);
-                const phone = document.getElementById(`speaker_contact_number_${idx}`);
-                const linked = document.getElementById(`speaker_linkedin_url_${idx}`);
-                const bio = document.getElementById(`speaker_detailed_profile_${idx}`);
-                if (name) name.value = getRandom(AUTO_FILL_DATA.speakerNames);
-                if (desig) desig.value = getRandom(AUTO_FILL_DATA.designations);
-                if (aff) aff.value = getRandom(AUTO_FILL_DATA.affiliations);
-                if (email) email.value = getRandom(AUTO_FILL_DATA.emails);
-                if (phone) phone.value = getRandom(AUTO_FILL_DATA.phones);
-                if (linked) linked.value = getRandom(AUTO_FILL_DATA.linkedins);
-                if (bio) bio.value = getRandom(AUTO_FILL_DATA.bios);
-            }, 100);
+            await fillSpeakersSection();
         }
 
         if (section === 'expenses') {
-            document.getElementById('add-expense-btn')?.click();
-            setTimeout(() => {
-                const idx = 0;
-                const sl = document.getElementById(`expense_sl_no_${idx}`);
-                const part = document.getElementById(`expense_particulars_${idx}`);
-                const amt = document.getElementById(`expense_amount_${idx}`);
-                if (sl) sl.value = '1';
-                if (part) part.value = getRandom(AUTO_FILL_DATA.expenseItems);
-                if (amt) amt.value = '1000';
-            }, 100);
+            await fillExpensesSection();
         }
 
         if (section === 'income') {
-            document.getElementById('add-income-btn')?.click();
-            setTimeout(() => {
-                const idx = 0;
-                const sl = document.getElementById(`income_sl_no_${idx}`);
-                const part = document.getElementById(`income_particulars_${idx}`);
-                const partCount = document.getElementById(`income_participants_${idx}`);
-                const rate = document.getElementById(`income_rate_${idx}`);
-                const amt = document.getElementById(`income_amount_${idx}`);
-                if (sl) sl.value = '1';
-                if (part) part.value = getRandom(AUTO_FILL_DATA.incomeItems);
-                if (partCount) partCount.value = '50';
-                if (rate) rate.value = '100';
-                if (amt) amt.value = '5000';
-            }, 100);
+            await fillIncomeSection();
         }
     }
 
@@ -3488,10 +4456,9 @@ function getWhyThisEventForm() {
     }
     
     function initializeNavigationState() {
-        // Reset all sections to disabled state except basic-info
-        $('.proposal-nav .nav-link').addClass('disabled').removeClass('completed in-progress');
-        $('.proposal-nav .nav-link[data-section="basic-info"]').removeClass('disabled');
-        
+        // Reset navigation without enforcing sequential restrictions
+        $('.proposal-nav .nav-link').removeClass('disabled completed in-progress');
+
         // Reset section progress
         Object.keys(sectionProgress).forEach(section => {
             sectionProgress[section] = false;
@@ -3578,6 +4545,7 @@ function getWhyThisEventForm() {
     }
 
     function clearValidationErrors() {
+        lastValidationIssues = [];
         $('.has-error').removeClass('has-error');
         $('.animate-shake').removeClass('animate-shake');
         $('.error-message').remove();
@@ -3606,9 +4574,8 @@ function getWhyThisEventForm() {
                     : targetField.val(),
             } : {};
 
-            if (window.DEBUG) {
-                console.warn(message, fieldData);
-            }
+            lastValidationIssues.push({ message, field: fieldData });
+            console.warn(message, fieldData);
             if (!firstErrorField) {
                 firstErrorField = field;
             }
@@ -3626,9 +4593,40 @@ function getWhyThisEventForm() {
             td.append(err);
         }
         err.text(message);
+        const fieldData = {
+            id: field.attr('id'),
+            name: field.attr('name'),
+            value: typeof field.val === 'function' ? field.val() : undefined,
+        };
+        lastValidationIssues.push({ message, field: fieldData });
+        console.warn(message, fieldData);
         if (!firstErrorField) {
             firstErrorField = field;
         }
+    }
+
+    function logValidationIssues(sectionName, issues = []) {
+        if (!issues.length) return;
+        let sectionLabel = sectionName;
+        if (sectionName) {
+            const navLink = $(`.proposal-nav .nav-link[data-section="${sectionName}"]`).first();
+            if (navLink.length) {
+                sectionLabel = navLink.text().trim() || sectionName;
+            }
+        }
+        const groupLabel = sectionLabel
+            ? `Validation issues in ${sectionLabel}`
+            : 'Validation issues';
+        console.group(groupLabel);
+        issues.forEach((issue, index) => {
+            const prefix = `#${index + 1}: ${issue.message}`;
+            if (issue.field && Object.keys(issue.field).length) {
+                console.warn(prefix, issue.field);
+            } else {
+                console.warn(prefix);
+            }
+        });
+        console.groupEnd();
     }
 
     function handleAutosaveErrors(errorData) {
@@ -3730,6 +4728,14 @@ function getWhyThisEventForm() {
         } else {
             // Suppress generic autosave failure toast here; dedicated autosave indicator handles this.
         }
+
+        if (nonFieldMessages.length) {
+            nonFieldMessages.forEach(message => {
+                lastValidationIssues.push({ message, field: {} });
+            });
+        }
+        const sectionSlug = errorData?.section || currentExpandedCard;
+        logValidationIssues(sectionSlug, lastValidationIssues);
     }
 
     // ===== ADD ANIMATIONS CSS - PRESERVED =====

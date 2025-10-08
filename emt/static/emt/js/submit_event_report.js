@@ -651,9 +651,31 @@ $(document).on('click', '#ai-sdg-implementation', function(){
   });
   
   // Auto-populate actual location with proposal venue if empty
+  if (window.PROPOSAL_DATA && !window.PROPOSAL_DATA.actual_event_type) {
+      window.PROPOSAL_DATA.actual_event_type = window.REPORT_ACTUAL_EVENT_TYPE || window.PROPOSAL_DATA.event_focus_type || '';
+  }
+
   const actualLocationField = $('#actual-location-modern');
-  if (actualLocationField.length && actualLocationField.val().trim() === '' && window.PROPOSAL_DATA && window.PROPOSAL_DATA.venue) {
-      actualLocationField.val(window.PROPOSAL_DATA.venue);
+  if (actualLocationField.length) {
+      const existingLocation = (window.PROPOSAL_DATA && window.PROPOSAL_DATA.actual_location)
+          || window.REPORT_LOCATION
+          || '';
+      if ((!actualLocationField.val() || actualLocationField.val().trim() === '') && existingLocation) {
+          actualLocationField.val(existingLocation);
+      } else if ((!actualLocationField.val() || actualLocationField.val().trim() === '')
+          && window.PROPOSAL_DATA && window.PROPOSAL_DATA.venue) {
+          actualLocationField.val(window.PROPOSAL_DATA.venue);
+      }
+  }
+
+  const eventTypeField = $('#event-type-modern');
+  if (eventTypeField.length) {
+      const proposalEventType = window.PROPOSAL_DATA ? (window.PROPOSAL_DATA.actual_event_type || window.PROPOSAL_DATA.event_focus_type || '') : '';
+      const derivedEventType = window.REPORT_ACTUAL_EVENT_TYPE || proposalEventType;
+      if (!eventTypeField.val() || eventTypeField.val().trim() === '') {
+          eventTypeField.val(derivedEventType);
+      }
+      eventTypeField.prop('readonly', false);
   }
   
   // Debug: Log proposal data
@@ -1169,7 +1191,10 @@ $(document).on('click', '#ai-sdg-implementation', function(){
     // GA inline controls removed; use dedicated editor
 
   function getEventInformationContent() {
-      const eventTypeValue = window.REPORT_ACTUAL_EVENT_TYPE || (window.PROPOSAL_DATA ? window.PROPOSAL_DATA.event_focus_type || '' : '');
+      const eventTypeValue = (sectionState['actual_event_type'] && String(sectionState['actual_event_type']).trim() !== '')
+          ? sectionState['actual_event_type']
+          : window.REPORT_ACTUAL_EVENT_TYPE
+              || (window.PROPOSAL_DATA ? (window.PROPOSAL_DATA.actual_event_type || window.PROPOSAL_DATA.event_focus_type || '') : '');
       return `
           <!-- Organization Information Section -->
           <div class="form-section-header">
@@ -1208,11 +1233,6 @@ $(document).on('click', '#ai-sdg-implementation', function(){
                   <input type="number" id="num-activities-modern" name="num_activities" value="${window.PROPOSAL_DATA ? window.PROPOSAL_DATA.num_activities || 1 : 1}">
                   <div class="help-text">Total activities from proposal (editable)</div>
               </div>
-              <div class="input-group">
-                  <label for="venue-modern">Venue *</label>
-                  <input type="text" id="venue-modern" name="venue_detail" value="${window.PROPOSAL_DATA ? window.PROPOSAL_DATA.venue || '' : ''}">
-                  <div class="help-text">Venue from proposal (editable)</div>
-              </div>
           </div>
 
           <!-- Schedule & Academic Information Section -->
@@ -1242,8 +1262,8 @@ $(document).on('click', '#ai-sdg-implementation', function(){
               </div>
               <div class="input-group">
                   <label for="event-type-modern">Event Type *</label>
-                  <input type="text" id="event-type-modern" name="actual_event_type" value="${eventTypeValue}" readonly>
-                  <div class="help-text">Event type from proposal (not editable)</div>
+                  <input type="text" id="event-type-modern" name="actual_event_type" value="${eventTypeValue}">
+                  <div class="help-text">Event type from proposal (editable)</div>
               </div>
           </div>
 
