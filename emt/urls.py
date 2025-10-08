@@ -10,6 +10,13 @@ app_name = "emt"
 urlpatterns = [
     path("dashboard/", views.suite_dashboard, name="dashboard"),
     path("suite/", views.suite_dashboard, name="iqac_suite_dashboard"),
+    path("suite/proposals/new/", views.start_proposal, name="start_proposal"),
+    path("suite/proposal-drafts/", views.proposal_drafts, name="proposal_drafts"),
+    path(
+        "suite/proposal-drafts/<int:proposal_id>/delete/",
+        views.delete_proposal_draft,
+        name="delete_proposal_draft",
+    ),
     path("submit/", views.submit_proposal, name="submit_proposal"),
     path("submit/<int:pk>/", views.submit_proposal, name="submit_proposal_with_pk"),
     path("cdl/submit/", views.submit_request_view, name="cdl_submit"),
@@ -55,6 +62,11 @@ urlpatterns = [
     ),
     path("review/<int:proposal_id>/", views.review_proposal, name="review_proposal"),
     path("autosave-proposal/", views.autosave_proposal, name="autosave_proposal"),
+    path(
+        "proposal-live-state/<int:proposal_id>/",
+        views.proposal_live_state,
+        name="proposal_live_state",
+    ),
     path(
         "reset-proposal-draft/", views.reset_proposal_draft, name="reset_proposal_draft"
     ),
