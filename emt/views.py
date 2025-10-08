@@ -60,6 +60,7 @@ from emt.utils import (ATTENDANCE_HEADERS,
                        parse_attendance_csv, skip_all_downstream_optionals,
                        unlock_optionals_after)
 from suite.ai_client import AIError, chat
+from transcript.models import get_active_academic_year
 
 from .forms import (NAME_PATTERN, CDLSupportForm, EventProposalForm,
                     EventReportAttachmentForm, EventReportForm,
@@ -898,20 +899,17 @@ def submit_proposal(request, pk=None):
         return redirect("emt:start_proposal")
 
     proposal = get_object_or_404(
-        EventProposal,
+        EventProposal.objects.prefetch_related(
+            "faculty_incharges",
+            "activities",
+            "speakers",
+            "expense_details",
+            "income_details",
+        ),
         pk=pk,
         submitted_by=request.user,
         is_user_deleted=False,
     )
-    proposal = None
-    if pk:
-        proposal = get_object_or_404(
-    EventProposal.objects.prefetch_related(
-        "faculty_incharges", "activities", "speakers", "expense_details", "income_details"
-    ),
-    pk=pk,
-    submitted_by=request.user
-)
 
     next_url = request.GET.get("next")
 
