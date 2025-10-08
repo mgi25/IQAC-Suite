@@ -24,6 +24,13 @@ if settings.DEBUG:
         urlpatterns = [
             path("__debug__/", include(debug_toolbar.urls)),
         ] + urlpatterns
+    try:
+        import debug_toolbar  # noqa: F401
+        urlpatterns = [
+            path('__debug__/', include(debug_toolbar.urls)),
+        ] + urlpatterns
+    except ModuleNotFoundError:
+        pass
 
     # This line enables media file serving (for student photos) in development.
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -102,6 +102,8 @@ INSTALLED_APPS = [
     "django.contrib.sites",  # ← required by allauth
     "django_extensions",
 
+    # Third-party apps (debug_toolbar appended conditionally below)
+
     # Allauth for Google login
     "allauth",
     "allauth.account",
@@ -362,3 +364,19 @@ DEFAULT_FROM_EMAIL = _env("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER or "nore
 
 # Optional addresses for module notifications
 CDL_NOTIF_EMAIL = _env("CDL_NOTIF_EMAIL", default="")
+
+# ──────────────────────────────────────────────────────────────────────────────
+# OPTIONAL: Django Debug Toolbar (only if installed & DEBUG true)
+# ──────────────────────────────────────────────────────────────────────────────
+if DEBUG:
+    try:
+        import debug_toolbar  # noqa: F401
+        if "debug_toolbar" not in INSTALLED_APPS:
+            INSTALLED_APPS.append("debug_toolbar")
+        if "debug_toolbar.middleware.DebugToolbarMiddleware" not in MIDDLEWARE:
+            # Insert early (after security) so it can wrap responses
+            insert_at = 1 if len(MIDDLEWARE) else 0
+            MIDDLEWARE.insert(insert_at, "debug_toolbar.middleware.DebugToolbarMiddleware")
+    except ModuleNotFoundError:
+        # Silently skip if not available; prevents ModuleNotFoundError in prod / minimal envs
+        pass
