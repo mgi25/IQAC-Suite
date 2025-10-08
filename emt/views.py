@@ -34,10 +34,13 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 from django.utils.formats import date_format
 from django.utils.timezone import now
+from django.utils.text import slugify
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_http_methods, require_POST
+from docx import Document
+from io import BytesIO
 
 from core.models import (SDG_GOALS, Class, Organization,
                          OrganizationMembership, OrganizationType,
@@ -2693,11 +2696,88 @@ def download_report_pdf(request, report_id: int):
 
 @login_required
 def download_word(request, proposal_id):
-    # TODO: Implement actual Word generation and return the file
-    return HttpResponse(
-        f"Word download for Proposal {proposal_id}",
+    proposal = get_object_or_404(EventProposal, id=proposal_id)
+    report = get_object_or_404(EventReport, proposal=proposal)
+
+    data = _build_report_initial_data(report)
+
+    document = Document()
+    document.core_properties.title = proposal.event_title or "Event Report"
+    document.add_heading("Event Report", level=0)
+
+    title = data["event"].get("title") or "Untitled Event"
+    document.add_heading(title, level=1)
+
+    info_table = document.add_table(rows=0, cols=2)
+    info_table.style = "Table Grid"
+    info_table.autofit = True
+
+    def add_meta_row(label, value):
+        row_cells = info_table.add_row().cells
+        row_cells[0].text = label
+        row_cells[1].text = value or "-"
+
+    add_meta_row("Organization", data["event"].get("department"))
+    add_meta_row("Event Schedule", data["event"].get("date"))
+    add_meta_row("Venue", data["event"].get("venue"))
+    add_meta_row("Generated On", timezone.now().strftime("%d %b %Y"))
+
+    participants = data.get("participants", {})
+    if participants.get("attendees_count"):
+        add_meta_row("Total Participants", str(participants.get("attendees_count")))
+
+    org_team = participants.get("organising_committee", {})
+    if org_team.get("student_volunteers_count"):
+        add_meta_row(
+            "Student Volunteers",
+            str(org_team.get("student_volunteers_count")),
+        )
+
+    document.add_paragraph()
+
+    sections = [
+        ("Narrative Overview", report.ai_generated_report or report.summary),
+        ("Event Summary", data.get("narrative", {}).get("summary_overall_event")),
+        ("Key Outcomes", data.get("narrative", {}).get("outcomes")),
+        ("Social Relevance", data.get("narrative", {}).get("social_relevance")),
+        ("Impact on Stakeholders", data.get("analysis", {}).get("impact_attendees")),
+        ("Lessons Learned", data.get("analysis", {}).get("impact_volunteers")),
+        ("POS/PSO Mapping", data.get("mapping", {}).get("pos_psos")),
+        ("Contemporary Requirements", data.get("mapping", {}).get("contemporary_requirements")),
+        ("IQAC Suggestions", data.get("iqac", {}).get("iqac_suggestions")),
+    ]
+
+    for heading, content in sections:
+        document.add_heading(heading, level=2)
+        if isinstance(content, (list, tuple)):
+            cleaned_items = [item for item in content if str(item).strip()]
+            if cleaned_items:
+                for item in cleaned_items:
+                    document.add_paragraph(str(item), style="List Bullet")
+            else:
+                document.add_paragraph("Not provided.", style="Intense Quote")
+        else:
+            text = (content or "").strip()
+            if text:
+                for line in text.splitlines():
+                    document.add_paragraph(line)
+            else:
+                document.add_paragraph("Not provided.", style="Intense Quote")
+        document.add_paragraph()
+
+    buffer = BytesIO()
+    document.save(buffer)
+    buffer.seek(0)
+
+    safe_title = slugify(proposal.event_title or "event-report")
+    filename = f"{safe_title or 'event-report'}_report.docx"
+
+    response = HttpResponse(
+        buffer.getvalue(),
         content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
 
 
 # ──────────────────────────────
