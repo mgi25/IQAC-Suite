@@ -7,6 +7,37 @@
   {# Reuse the master-data visual language #}
   <link rel="stylesheet" href="{% static 'core/css/admin_master_data.css' %}?v=3.0">
   <style>
+    /* === Global Enhancements (added) === */
+    /* Typing indicator underline for all inputs & selects */
+    .permissions-page input[type=text],
+    .permissions-page select {
+      position: relative;
+      background-clip: padding-box; /* keep background clean */
+      box-shadow: inset 0 -2px 0 #c9d6e8; /* subtle idle underline */
+      transition: box-shadow .25s ease, border-color .25s ease;
+      caret-color: #1e60b1;
+    }
+    .permissions-page input[type=text]:focus,
+    .permissions-page select:focus {
+      box-shadow: inset 0 -3px 0 #1e60b1, 0 0 0 2px rgba(30,96,177,0.15);
+      border-color: #1e60b1 !important;
+    }
+    .permissions-page input[type=text]::placeholder{color:#8ca2bc;}
+
+    /* Overlay (loading / saving) */
+    .permissions-page .screen-overlay{position:fixed;inset:0;background:rgba(255,255,255,0.85);display:flex;align-items:center;justify-content:center;z-index:2000;backdrop-filter:blur(2px);}
+    .permissions-page .screen-overlay .overlay-card{background:#fff;padding:38px 46px;border-radius:20px;box-shadow:0 8px 40px -6px rgba(11,53,102,.25);display:flex;flex-direction:column;align-items:center;gap:18px;min-width:280px;}
+    .permissions-page .screen-overlay .spinner{width:54px;height:54px;border-radius:50%;border:5px solid #e6edf5;border-top-color:#1e60b1;animation:spn 0.9s linear infinite;}
+    @keyframes spn{to{transform:rotate(360deg)}}
+    .permissions-page .screen-overlay .message{font-weight:700;font-size:16px;color:#1e60b1;letter-spacing:.5px;text-align:center;}
+    .permissions-page .screen-overlay.saving .spinner{border-top-color:#0d7d3e;}
+    .permissions-page .screen-overlay.saving .message{color:#0d7d3e;}
+
+    /* Smooth selection transition */
+    .permissions-page .item{transition:background .25s ease, box-shadow .25s ease, transform .2s ease;}
+    .permissions-page .item.selected{outline:2px solid #1e60b180;}
+  /* Partial folder indicator removed in new logic (entire group hidden if any child assigned) */
+
     /* ----- Page shell (reuses admin_master_data.css primitives) ----- */
     .permissions-page .topbar h1{margin:0;font-size:28px;font-weight:800;color:var(--ink)}
   .permissions-page .controls-container{position:sticky;top:0;z-index:40;background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 16px;box-shadow:var(--shadow)}
@@ -394,21 +425,12 @@
     .permissions-page .item.folder:hover{
       background:linear-gradient(135deg, #f0f4ff 0%, #fafbff 100%);
     }
-    .permissions-page .item.folder.partial{
-      border-left-color:#f59e0b;
-      background:linear-gradient(135deg, #fffbf0 0%, #ffffff 100%);
-    }
-    .permissions-page .item.folder.partial:hover{
-      background:linear-gradient(135deg, #fef3e2 0%, #fffbf0 100%);
-    }
     .permissions-page .item.folder .folder-icon{
       color:var(--primary);
       font-size:16px;
       margin-right:4px;
     }
-    .permissions-page .item.folder.partial .folder-icon{
-      color:#f59e0b;
-    }
+    /* Removed partial folder variants */
 
     /* Children indentation */
     .permissions-page .children{
@@ -631,6 +653,22 @@
     <input type="hidden" name="assigned_order" id="assigned_order" value="[]">
   <input type="hidden" name="role" id="hidden_role" value="{{ selected_org_role|default:selected_role|default:'' }}">
 
+    <!-- Loading / Saving Overlays (hidden by default) -->
+    <div id="loadingOverlay" class="screen-overlay" style="display:none">
+      <div class="overlay-card">
+        <div class="spinner" aria-hidden="true"></div>
+        <div class="message">Loading data…</div>
+        <div style="font-size:12px;color:#5377a3;font-weight:500">Please wait</div>
+      </div>
+    </div>
+    <div id="savingOverlay" class="screen-overlay saving" style="display:none">
+      <div class="overlay-card">
+        <div class="spinner" aria-hidden="true"></div>
+        <div class="message">Saving changes…</div>
+        <div style="font-size:12px;color:#2d6d46;font-weight:500">Applying sidebar updates</div>
+      </div>
+    </div>
+
     <div class="panel-grid">
       <!-- Available -->
       <section class="panel">
@@ -665,13 +703,7 @@
       </section>
     </div>
 
-    <!-- Save bar -->
-    <div class="savebar">
-      <div class="change-indicator" id="changeIndicator">No changes made</div>
-      <button type="submit" id="saveBtnDup" class="btn btn-primary save-btn">
-        <i class="fas fa-save"></i> Save Changes
-      </button>
-    </div>
+    <!-- Change indicator bar removed per latest request -->
   </form>
 </div>
 {% endblock %}
@@ -680,6 +712,9 @@
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     const $ = (sel) => document.querySelector(sel);
+    const showOverlay = (id, show=true)=>{ const el=$('#'+id); if(el) el.style.display = show? 'flex':'none'; };
+    // Show initial loading while we render the tree (in case of big data) – will hide after first render
+    showOverlay('loadingOverlay', true);
     
     // --- User filter ---
     const userFilter = $('#userFilter');
@@ -767,46 +802,27 @@ function mergeTrees(a = [], b = []){
 
 // 🔹 Helper: build available list preserving hierarchy, hiding only assigned items
 function buildAvailableList(originalData, assigned) {
-  // Get all assigned IDs (both standalone and children)
+  // Collect assigned IDs (leaf + parent) for quick lookup
   const assignedIds = new Set();
   assigned.forEach(item => {
-    assignedIds.add(item.id);
-    if (item.children) {
-      item.children.forEach(child => assignedIds.add(child.id));
-    }
+    // We'll add parent id except for special groups we want to keep visible (e.g. dashboard for easy switching)
+    const keepParentVisible = ['dashboard'].includes(item.id);
+    if(!keepParentVisible) assignedIds.add(item.id);
+    if(item.children){ item.children.forEach(c=>assignedIds.add(c.id)); }
   });
 
-  function processItem(item) {
-    // Create a copy to avoid modifying original data
-    const result = { ...item };
-    
-    // If this item itself is assigned (standalone), don't include it
-    if (assignedIds.has(item.id) && (!item.children || item.children.length === 0)) {
-      return null;
+  function process(item){
+    if(item.children && item.children.length){
+      const keepParentVisible = item.id === 'dashboard';
+      const remainingChildren = item.children.filter(c=>!assignedIds.has(c.id));
+      if(assignedIds.has(item.id) && !keepParentVisible) return null; // parent fully assigned and not whitelisted
+      if(remainingChildren.length === 0) return null; // nothing left to offer
+      return {id:item.id,label:item.label,children:remainingChildren};
     }
-    
-    // If it has children, process them recursively
-    if (item.children && item.children.length > 0) {
-      result.children = item.children
-        .map(child => processItem(child))
-        .filter(child => child !== null);
-      
-      // Mark as partial if some but not all children are assigned
-      const totalChildren = item.children.length;
-      const availableChildren = result.children.length;
-      result.isPartial = (availableChildren > 0 && availableChildren < totalChildren);
-      
-      // Always keep parent if it has any available children or is partial
-      return result;
-    }
-    
-    // Leaf item - only include if not assigned
-    return assignedIds.has(item.id) ? null : result;
+    return assignedIds.has(item.id) ? null : {id:item.id,label:item.label};
   }
 
-  return originalData
-    .map(item => processItem(item))
-    .filter(item => item !== null);
+  return originalData.map(process).filter(Boolean);
 }
 
 // Build a full tree so removed items reappear in Available
@@ -832,7 +848,7 @@ let lastSavedLeafIds = null;
     const orgTypeSelect=$('#orgTypeSelect');
   const orgSelect=$('#orgSelect');
     const orgRoleSelect=$('#orgRoleSelect');
-    const changeIndicator=$('#changeIndicator');
+  const changeIndicator=$('#changeIndicator'); // may be null (indicator removed)
 
     const addBtn=$('#addBtn'), removeBtn=$('#removeBtn'),
           moveUpBtn=$('#moveUpBtn'), moveDownBtn=$('#moveDownBtn'),
@@ -974,18 +990,19 @@ function renderPermissionItem(p, isAssigned) {
   const div = document.createElement('div'); 
   div.className = 'item'; 
   div.dataset.id = p.id;
+  // Identify dashboards for single-select rule (heuristic: id or label contains 'dashboard')
+  const isDashboard = /dashboard/i.test(p.label || '') || /dashboard/i.test(p.id || '');
+  if(isDashboard) div.dataset.dashboard = '1';
 
   if (p.children && p.children.length > 0) {
     // ----- Parent (folder with expand/collapse) -----
     div.classList.add('folder');
-    if (p.isPartial) {
-      div.classList.add('partial');
-    }
+    // Partial state deprecated: entire group hidden when a child is assigned.
     
     div.innerHTML = `
       <i class="fas fa-folder folder-icon"></i>
       <div style="flex:1">
-        <div class="name">${p.label}${p.isPartial ? ' <i class="fas fa-circle-half-stroke" style="color:#f59e0b;margin-left:8px;" title="Partially assigned - some child permissions are selected"></i>' : ''}</div>
+        <div class="name">${p.label}</div>
       </div>
       <i class="fas fa-chevron-down toggle-icon" style="color:var(--muted);font-size:12px;margin-left:auto"></i>
       <div class="children" style="display:block"></div>
@@ -1034,6 +1051,14 @@ function renderPermissionItem(p, isAssigned) {
       e.stopPropagation();
       const selected = isAssigned ? selectedAssigned : selectedAvailable;
       if (e.target.checked) {
+        // Enforce single dashboard selection rule in its respective panel
+        if(div.dataset.dashboard === '1'){
+          // Uncheck any other dashboard in the same panel
+            const panel = isAssigned ? '#assignedList' : '#availableList';
+            Array.from(document.querySelectorAll(`${panel} .item[data-dashboard="1"] .chk`)).forEach(chk=>{
+              if(chk!==e.target){ chk.checked=false; chk.dispatchEvent(new Event('change')); }
+            });
+        }
         selected.add(p.id);
         div.classList.add('selected');
       } else {
@@ -1062,6 +1087,8 @@ function collectLeafIds(list) {
 
 // 🔹 On Save → dump only leaf IDs into hidden field
 document.getElementById('permissionsForm').addEventListener('submit', e => {
+  // NOTE: For a user selection this list becomes a full override (whitelist) on backend.
+  // Any role-derived items not present here are suppressed for that user.
   const selectedUsers = Array.from(userSelect.selectedOptions).map(o=>o.value).filter(Boolean);
   if (selectedUsers.length===0 && !(orgRoleSelect && orgRoleSelect.value)) {
     e.preventDefault();
@@ -1095,7 +1122,7 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
             .filter(child => child !== null);
           
           if (nameMatches || filteredChildren.length > 0) {
-            // Return parent with filtered children, preserving partial state
+            // Return parent with filtered children (partial visual state removed in new logic)
             return {
               ...item,
               children: filteredChildren.length > 0 ? filteredChildren : item.children
@@ -1144,8 +1171,10 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
       const originalLeaves = collectLeafIds(assignedData).slice().sort().join(',');
       const currentLeaves = collectLeafIds(assigned).slice().sort().join(',');
       const changed = originalLeaves !== currentLeaves;
-      changeIndicator.textContent = changed ? 'Changes pending…' : 'No changes made';
-      changeIndicator.style.color = changed ? '#b45309' : 'var(--muted)';
+      if(changeIndicator){
+        changeIndicator.textContent = changed ? 'Changes pending…' : 'No changes made';
+        changeIndicator.style.color = changed ? '#b45309' : 'var(--muted)';
+      }
 
       const ab = $('#availableBadge'), bb = $('#assignedBadge');
       if (ab) ab.textContent = availableTotal;
@@ -1196,7 +1225,13 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
                   };
                   assigned.push(assignedParent);
                 }
-                assignedParent.children.push(itemToMove);
+                // If this is a dashboard child, ensure only one stays
+                const isDashboardChild = parent.id === 'dashboard' && /dashboard:/i.test(itemToMove.id);
+                if(isDashboardChild){
+                  assignedParent.children = [itemToMove];
+                } else {
+                  assignedParent.children.push(itemToMove);
+                }
                 break;
               }
             }
@@ -1247,11 +1282,28 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
       
       // Rebuild available list from full tree to reflect changes
       available = buildAvailableList(fullNavTree, assigned);
+      // No special enforcement needed on remove.
       render();
     });
 
     selectAllBtn.addEventListener('click', () => { 
-      flatten(available).forEach(p => selectedAvailable.add(p.id)); 
+      // Clear and repopulate respecting single-dashboard rule
+      selectedAvailable.clear();
+      let dashboardChosen = false;
+      flatten(available).forEach(p => {
+        const isDashboard = /dashboard/i.test(p.label||'') || /dashboard/i.test(p.id||'');
+        if(isDashboard){
+          if(!dashboardChosen){
+            selectedAvailable.add(p.id);
+            dashboardChosen = true;
+          }
+        } else {
+          selectedAvailable.add(p.id);
+        }
+      });
+      if(dashboardChosen){
+        showToast('Only one dashboard selected (rule enforced).');
+      }
       render(); 
     });
     clearBtn.addEventListener('click', () => { 
@@ -1280,7 +1332,7 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
   if(orgSelect) orgSelect.addEventListener('change',()=>{ populateRoles().then(()=> reloadWithFilters()); });
   if(orgRoleSelect) orgRoleSelect.addEventListener('change',()=> reloadWithFilters());
 
-    $('#saveBtnDup')?.addEventListener('click',()=> document.getElementById('permissionsForm').requestSubmit());
+  // Removed duplicate bottom save button.
 
     // --- AJAX submit: apply propagation rules ---
     const formEl = document.getElementById('permissionsForm');
@@ -1311,6 +1363,7 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
         try{
           $('#saveText').textContent = 'Saving…';
           const sp = $('#saveSpinner'); if(sp) sp.style.display = 'inline-block';
+          showOverlay('savingOverlay', true);
           const res = await fetch('{% url "api_save_sidebar_permissions" %}', {
             method: 'POST',
             headers: {
@@ -1325,8 +1378,15 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
           try{
             await postSaveRefetchAndRender();
             showToast('Permissions saved.');
-            // Ensure global sidebar reflects changes without manual reload
-            setTimeout(()=>{ try{ refreshSidebarSnapshot(); }catch(_ee){} }, 200);
+            // Ensure global sidebar reflects changes immediately for current user
+            document.dispatchEvent(new CustomEvent('sidebar:permissions-updated'));
+            // If the edited principal is the active user, perform a safe sidebar refresh w/ 403 handling
+            try {
+              const selUsersNow = Array.from(userSelect.selectedOptions).map(o=>o.value);
+              if(selUsersNow.length===1 && window.USER_ID && String(selUsersNow[0])===String(window.USER_ID)){
+                await refreshSidebarSnapshot();
+              }
+            } catch(_e){}
           }catch(_e){
             // As a fallback, refresh sidebar and reload
             try{ await refreshSidebarSnapshot(); }catch(_ee){}
@@ -1337,19 +1397,30 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
         }finally{
           $('#saveText').textContent = 'Save Changes';
           const sp = $('#saveSpinner'); if(sp) sp.style.display = 'none';
+          showOverlay('savingOverlay', false);
         }
       });
     }
 
-    // Force sidebar refresh in current tab (used as fallback)
+    // Safe sidebar refresh: handles loss of permission (403) then redirects gracefully
     async function refreshSidebarSnapshot(){
-      try{
+      try {
         const r = await fetch('{% url "api_my_sidebar" %}', {headers:{'X-Requested-With':'fetch'}});
-        if(r.ok){
-          // Optionally, trigger a soft reload to rebuild template conditionals
-          window.location.reload();
+        if(r.status === 403){
+          window.location.href = '/';
+          return;
         }
-      }catch(_e){/*noop*/}
+        if(r.ok){
+          const data = await r.json().catch(()=>({allowed_nav_items:[]}));
+          const allowed = data.allowed_nav_items || [];
+          const stillAllowed = allowed.includes('sidebar_permissions') || allowed.includes('settings:sidebar_permissions');
+          if(!stillAllowed){
+            window.location.href = '/';
+          } else {
+            window.location.reload();
+          }
+        }
+      } catch(_e) { /* ignore */ }
     }
 
     // Refetch assignments for current selection (user or role) and rebuild lists
@@ -1464,6 +1535,8 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
     })();
 
     render();
+    // Hide initial loading overlay now that first render is done
+    showOverlay('loadingOverlay', false);
   });
 </script>
 {% endblock %}
