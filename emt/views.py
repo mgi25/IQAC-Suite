@@ -31,7 +31,7 @@ from django.http import (
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
-from django.utils.dateparse import parse_date
+from django.utils.dateparse import parse_date, parse_datetime
 from django.utils.formats import date_format
 from django.utils.timezone import now
 from django.urls import reverse
@@ -1517,6 +1517,139 @@ def autosave_proposal(request):
     if errors:
         response["errors"] = errors
     return JsonResponse(response)
+
+
+@login_required
+def proposal_live_state(request, proposal_id):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+
+    proposal = get_object_or_404(
+        EventProposal.objects.select_related(
+            "need_analysis",
+            "objectives",
+            "expected_outcomes",
+            "tentative_flow",
+            "organization__org_type",
+        ).prefetch_related(
+            "activities",
+            "speakers",
+            "expense_details",
+            "income_details",
+            "sdg_goals",
+            "faculty_incharges",
+        ),
+        pk=proposal_id,
+        submitted_by=request.user,
+    )
+
+    updated_at = proposal.updated_at
+    since_param = request.GET.get("since")
+    if since_param:
+        since_dt = parse_datetime(since_param)
+        if since_dt is not None and timezone.is_naive(since_dt):
+            since_dt = timezone.make_aware(since_dt, timezone.get_current_timezone())
+        if since_dt and updated_at and updated_at <= since_dt:
+            return JsonResponse(
+                {
+                    "changed": False,
+                    "updated_at": updated_at.isoformat() if updated_at else None,
+                }
+            )
+
+    def _serialize_date(value):
+        return value.isoformat() if value else ""
+
+    basic_fields = {
+        "event_title": proposal.event_title or "",
+        "target_audience": proposal.target_audience or "",
+        "event_focus_type": proposal.event_focus_type or "",
+        "venue": proposal.venue or "",
+        "event_start_date": _serialize_date(proposal.event_start_date),
+        "event_end_date": _serialize_date(proposal.event_end_date),
+        "academic_year": proposal.academic_year or "",
+        "num_activities": proposal.num_activities or "",
+        "pos_pso": proposal.pos_pso or "",
+        "student_coordinators": proposal.student_coordinators or "",
+        "committees_collaborations": proposal.committees_collaborations or "",
+    }
+
+    if proposal.organization_id:
+        basic_fields.update(
+            {
+                "organization": str(proposal.organization_id),
+                "organization_name": proposal.organization.name,
+            }
+        )
+        if proposal.organization and proposal.organization.org_type_id:
+            basic_fields.update(
+                {
+                    "organization_type": str(proposal.organization.org_type_id),
+                    "organization_type_name": proposal.organization.org_type.name,
+                }
+            )
+    else:
+        basic_fields.update({"organization": "", "organization_type": ""})
+
+    text_sections = {
+        "need_analysis": getattr(proposal.need_analysis, "content", ""),
+        "objectives": getattr(proposal.objectives, "content", ""),
+        "outcomes": getattr(proposal.expected_outcomes, "content", ""),
+        "flow": getattr(proposal.tentative_flow, "content", ""),
+    }
+
+    activities = [
+        {
+            "name": activity.name,
+            "date": activity.date.isoformat() if activity.date else "",
+        }
+        for activity in proposal.activities.all()
+    ]
+
+    speakers = [_serialize_speaker(speaker) for speaker in proposal.speakers.all()]
+
+    expenses = []
+    for expense in proposal.expense_details.all():
+        expenses.append(
+            {
+                "sl_no": expense.sl_no,
+                "particulars": expense.particulars,
+                "amount": float(expense.amount) if expense.amount is not None else None,
+            }
+        )
+
+    income = []
+    for item in proposal.income_details.all():
+        income.append(
+            {
+                "sl_no": item.sl_no,
+                "particulars": item.particulars,
+                "participants": item.participants,
+                "rate": float(item.rate) if item.rate is not None else None,
+                "amount": float(item.amount) if item.amount is not None else None,
+            }
+        )
+
+    payload = {
+        "fields": basic_fields,
+        "text_sections": text_sections,
+        "activities": activities,
+        "speakers": speakers,
+        "expenses": expenses,
+        "income": income,
+        "sdg_goals": list(proposal.sdg_goals.values("id", "name")),
+        "faculty_incharges": list(
+            proposal.faculty_incharges.values("id", "first_name", "last_name")
+        ),
+    }
+
+    return JsonResponse(
+        {
+            "changed": True,
+            "updated_at": updated_at.isoformat() if updated_at else None,
+            "payload": payload,
+        }
+    )
 
 
 @login_required
