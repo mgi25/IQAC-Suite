@@ -80,7 +80,7 @@
                     </a>
                     <form method="post" action="{% url 'emt:delete_proposal_draft' draft.id %}" class="draft-delete-form">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-danger" onclick="return confirm('Remove this draft from your list? Admins will still be able to view it.');">
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Remove this draft from your list?');">
                             <i class="fas fa-trash"></i>
                             <span>Remove</span>
                         </button>
