@@ -97,3 +97,34 @@ class ProposalDraftManagementTests(TestCase):
             ).count(),
             5,
         )
+
+    def test_proposal_drafts_view_prunes_older_drafts(self):
+        for idx in range(7):
+            self._make_draft(title=f"Draft {idx}")
+
+        response = self.client.get(reverse("emt:proposal_drafts"))
+        self.assertEqual(response.status_code, 200)
+
+        active_titles = list(
+            EventProposal.objects.filter(
+                submitted_by=self.user,
+                status=EventProposal.Status.DRAFT,
+                is_user_deleted=False,
+            )
+            .order_by("-updated_at")
+            .values_list("event_title", flat=True)
+        )
+        self.assertEqual(len(active_titles), 5)
+        self.assertSetEqual(
+            set(active_titles),
+            {f"Draft {idx}" for idx in range(2, 7)},
+        )
+
+        archived_titles = set(
+            EventProposal.objects.filter(
+                submitted_by=self.user,
+                status=EventProposal.Status.DRAFT,
+                is_user_deleted=True,
+            ).values_list("event_title", flat=True)
+        )
+        self.assertSetEqual(archived_titles, {"Draft 0", "Draft 1"})
