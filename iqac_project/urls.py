@@ -17,6 +17,13 @@ urlpatterns = [
 
 # This block enables the Debug Toolbar and media file serving in development.
 if settings.DEBUG:
+    if getattr(settings, "USE_DEBUG_TOOLBAR", False):
+        from importlib import import_module
+
+        debug_toolbar = import_module("debug_toolbar")
+        urlpatterns = [
+            path("__debug__/", include(debug_toolbar.urls)),
+        ] + urlpatterns
     try:
         import debug_toolbar  # noqa: F401
         urlpatterns = [

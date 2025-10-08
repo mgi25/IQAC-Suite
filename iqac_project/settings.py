@@ -1,3 +1,4 @@
+import importlib.util
 import os
 from pathlib import Path
 
@@ -115,6 +116,16 @@ INSTALLED_APPS = [
     "transcript",
 ]
 
+# Allow toggling the debug toolbar without editing settings
+ENABLE_DEBUG_TOOLBAR = (
+    _env("ENABLE_DEBUG_TOOLBAR", default="true").lower() == "true"
+)
+DEBUG_TOOLBAR_AVAILABLE = importlib.util.find_spec("debug_toolbar") is not None
+USE_DEBUG_TOOLBAR = DEBUG and ENABLE_DEBUG_TOOLBAR and DEBUG_TOOLBAR_AVAILABLE
+
+if USE_DEBUG_TOOLBAR:
+    INSTALLED_APPS.append("debug_toolbar")
+
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 # ──────────────────────────────────────────────────────────────────────────────
 # MIDDLEWARE
@@ -133,6 +144,10 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+if USE_DEBUG_TOOLBAR:
+    # Ensure the toolbar middleware runs early, right after security
+    MIDDLEWARE.insert(1, "debug_toolbar.middleware.DebugToolbarMiddleware")
 
 # Allow embedding pages within iframes on the same origin (needed for Review Center)
 # Default is 'DENY' which blocks our internal preview iframe.

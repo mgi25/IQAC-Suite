@@ -60,6 +60,7 @@ from emt.utils import (ATTENDANCE_HEADERS,
                        parse_attendance_csv, skip_all_downstream_optionals,
                        unlock_optionals_after)
 from suite.ai_client import AIError, chat
+from transcript.models import get_active_academic_year
 
 from .forms import (NAME_PATTERN, CDLSupportForm, EventProposalForm,
                     EventReportAttachmentForm, EventReportForm,
@@ -831,6 +832,20 @@ def start_proposal(request):
 
 @login_required
 def proposal_drafts(request):
+    base_qs = EventProposal.objects.filter(
+        submitted_by=request.user,
+        status=EventProposal.Status.DRAFT,
+        is_user_deleted=False,
+    ).order_by("-updated_at")
+
+    active_ids = list(base_qs.values_list("id", flat=True))
+
+    if len(active_ids) > MAX_ACTIVE_DRAFTS:
+        EventProposal.objects.filter(id__in=active_ids[MAX_ACTIVE_DRAFTS:]).update(
+            is_user_deleted=True,
+            updated_at=timezone.now(),
+        )
+
     drafts_qs = EventProposal.objects.filter(
         submitted_by=request.user,
         status=EventProposal.Status.DRAFT,
@@ -884,20 +899,17 @@ def submit_proposal(request, pk=None):
         return redirect("emt:start_proposal")
 
     proposal = get_object_or_404(
-        EventProposal,
+        EventProposal.objects.prefetch_related(
+            "faculty_incharges",
+            "activities",
+            "speakers",
+            "expense_details",
+            "income_details",
+        ),
         pk=pk,
         submitted_by=request.user,
         is_user_deleted=False,
     )
-    proposal = None
-    if pk:
-        proposal = get_object_or_404(
-    EventProposal.objects.prefetch_related(
-        "faculty_incharges", "activities", "speakers", "expense_details", "income_details"
-    ),
-    pk=pk,
-    submitted_by=request.user
-)
 
     next_url = request.GET.get("next")
 
@@ -3275,6 +3287,74 @@ def submit_event_report(request, proposal_id):
         "external": external_count,
     }
 
+    generated_payload = (
+        report.generated_payload
+        if report and isinstance(report.generated_payload, dict)
+        else {}
+    )
+
+    def _coalesce_prefill(key, *fallbacks):
+        """Return the first meaningful value for a report field.
+
+        Preference order:
+        1. Session draft (captures the latest POST even if validation failed)
+        2. Bound form data (covers immediate re-renders on validation errors)
+        3. Autosaved payload stored on the report instance
+        4. Explicit fallbacks passed by the caller (e.g., report/proposal fields)
+        """
+
+        def _normalise_candidate(value):
+            if isinstance(value, (list, tuple)):
+                return value[0] if value else ""
+            return value
+
+        candidates = []
+
+        if draft:
+            draft_value = _normalise_candidate(draft.get(key))
+            if draft_value is not None:
+                candidates.append(draft_value)
+
+        if form and hasattr(form, "data") and key in form.data:
+            form_value = _normalise_candidate(form.data.get(key))
+            if form_value is not None:
+                candidates.append(form_value)
+
+        if generated_payload:
+            payload_value = _normalise_candidate(generated_payload.get(key))
+            if payload_value is not None:
+                candidates.append(payload_value)
+
+        candidates.extend(fallbacks)
+
+        for candidate in candidates:
+            if candidate is None:
+                continue
+            if isinstance(candidate, str):
+                stripped = candidate.strip()
+                if stripped:
+                    return stripped
+                if candidate == "":
+                    return ""
+                continue
+            if isinstance(candidate, (int, float)):
+                return str(candidate)
+            return str(candidate)
+
+        return ""
+
+    prefill_venue = _coalesce_prefill("venue", getattr(proposal, "venue", ""))
+    prefill_location = _coalesce_prefill(
+        "location",
+        getattr(report, "location", None),
+        getattr(proposal, "venue", ""),
+    )
+    prefill_event_type = _coalesce_prefill(
+        "actual_event_type",
+        getattr(report, "actual_event_type", None),
+        getattr(proposal, "event_focus_type", ""),
+    )
+
     # Prepare SDG goal data for modal and proposal prefill
     sdg_goals_list = [
         {"id": goal.id, "title": goal.name} for goal in SDGGoal.objects.all()
@@ -3304,6 +3384,9 @@ def submit_event_report(request, proposal_id):
         "attendance_counts_json": json.dumps(attendance_counts),
         "faculty_names_json": json.dumps(faculty_names),
         "volunteer_names_json": json.dumps(volunteer_names),
+        "prefill_venue": prefill_venue,
+        "prefill_location": prefill_location,
+        "prefill_event_type": prefill_event_type,
     }
     context["can_autosave"] = (
         proposal.submitted_by == request.user
