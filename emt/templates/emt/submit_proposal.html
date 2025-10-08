@@ -385,6 +385,8 @@
         window.AUTOSAVE_CSRF = "{{ csrf_token }}";
         window.RESET_DRAFT_URL = "{% url 'emt:reset_proposal_draft' %}";
         window.RESET_DRAFT_REDIRECT_URL = "{% url 'emt:submit_proposal' %}";
+        window.PROPOSAL_LIVE_STATE_URL = {% if proposal %}"{% url 'emt:proposal_live_state' proposal.id %}"{% else %}""{% endif %};
+        window.PROPOSAL_LAST_UPDATED = {% if proposal and proposal.updated_at %}"{{ proposal.updated_at|date:'c' }}"{% else %}""{% endif %};
         window.API_ORGANIZATIONS = "{% url 'emt:api_organizations' %}";
         window.API_FACULTY = "{% url 'emt:api_faculty' %}";
         window.API_CLASSES_BASE = "{% url 'emt:api_classes' 0 %}".split('0/')[0];
@@ -401,4 +403,5 @@
     </script>
     <script src="{% static 'emt/js/autosave_draft.js' %}"></script>
     <script src="{% static 'emt/js/proposal_dashboard.js' %}"></script>
+    <script src="{% static 'emt/js/proposal_live_sync.js' %}"></script>
 {% endblock %}
