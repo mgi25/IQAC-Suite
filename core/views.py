@@ -2961,28 +2961,38 @@ def api_get_sidebar_permissions(request):
         if direct_only:
             assignments = sorted(permission.items or []) if permission else []
         else:
+            # If user has any direct sidebar permission record, treat it as a full override
             items_set = set()
+            override_all = False
             user_dash_override = False
             if permission:
-                items = permission.items or []
-                items_set.update(items)
-                user_dash_override = any(isinstance(i, str) and i.startswith("dashboard:" ) for i in items)
+                direct_items = permission.items or []
+                items_set.update(direct_items)
+                override_all = True if direct_items else False
+                user_dash_override = any(isinstance(i, str) and i.startswith("dashboard:" ) for i in direct_items)
 
-            from .models import RoleAssignment as _RoleAssignment, DashboardAssignment as _DashboardAssignment
-            role_ids = list(_RoleAssignment.objects.filter(user_id=user_id).values_list("role_id", flat=True))
-            if role_ids:
-                role_keys = [f"orgrole:{rid}" for rid in role_ids]
-                for rp in SidebarPermission.objects.filter(user__isnull=True, role__in=role_keys):
-                    items = rp.items or []
-                    if user_dash_override:
-                        items = [i for i in items if not (isinstance(i, str) and i.startswith("dashboard:"))]
-                    items_set.update(items)
-            if not user_dash_override:
-                # include user and role dashboard assignments
+            if not override_all:
+                # Merge in role-based permissions only when user has no explicit list
+                from .models import RoleAssignment as _RoleAssignment
+                role_ids = list(_RoleAssignment.objects.filter(user_id=user_id).values_list("role_id", flat=True))
+                if role_ids:
+                    role_keys = [f"orgrole:{rid}" for rid in role_ids]
+                    for rp in SidebarPermission.objects.filter(user__isnull=True, role__in=role_keys):
+                        role_items = rp.items or []
+                        items_set.update(role_items)
+                # Merge dashboards from role & user assignments unless overridden in direct list
+                from .models import DashboardAssignment as _DashboardAssignment
                 u = User.objects.filter(id=user_id).first()
                 if u:
                     for dash_key, _ in _DashboardAssignment.get_user_dashboards(u):
                         items_set.add(f"dashboard:{dash_key}")
+            else:
+                # We still need to ensure a single dashboard rule; keep only last if multiple present
+                dash_ids = [i for i in items_set if isinstance(i, str) and i.startswith("dashboard:")]
+                if len(dash_ids) > 1:
+                    keep = dash_ids[-1]
+                    items_set = {i for i in items_set if not (isinstance(i, str) and i.startswith("dashboard:"))}
+                    items_set.add(keep)
             assignments = sorted(items_set)
     elif role:
         role_key = f"orgrole:{role}" if role.isdigit() else role.lower()

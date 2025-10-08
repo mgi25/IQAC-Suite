@@ -17,11 +17,13 @@ urlpatterns = [
 
 # This block enables the Debug Toolbar and media file serving in development.
 if settings.DEBUG:
-    # TOOLBAR: Add Django Debug Toolbar URLs
-    import debug_toolbar
-    urlpatterns = [
-        path('__debug__/', include(debug_toolbar.urls)),
-    ] + urlpatterns
+    try:
+        import debug_toolbar  # noqa: F401
+        urlpatterns = [
+            path('__debug__/', include(debug_toolbar.urls)),
+        ] + urlpatterns
+    except ModuleNotFoundError:
+        pass
 
     # This line enables media file serving (for student photos) in development.
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
