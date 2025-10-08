@@ -114,6 +114,10 @@ class EventProposal(models.Model):
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.DRAFT
     )
+    is_user_deleted = models.BooleanField(
+        default=False,
+        help_text="Hide draft from submitter while retaining it for admin review.",
+    )
 
     class Meta:
         verbose_name = "Event Proposal"

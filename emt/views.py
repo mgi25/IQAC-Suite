@@ -31,7 +31,7 @@ from django.http import (
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
-from django.utils.dateparse import parse_date
+from django.utils.dateparse import parse_date, parse_datetime
 from django.utils.formats import date_format
 from django.utils.timezone import now
 from django.urls import reverse
@@ -60,7 +60,6 @@ from emt.utils import (ATTENDANCE_HEADERS,
                        parse_attendance_csv, skip_all_downstream_optionals,
                        unlock_optionals_after)
 from suite.ai_client import AIError, chat
-from transcript.models import get_active_academic_year
 
 from .forms import (NAME_PATTERN, CDLSupportForm, EventProposalForm,
                     EventReportAttachmentForm, EventReportForm,
@@ -79,6 +78,7 @@ ACADEMIC_COORDINATOR_ROLE = "academic_coordinator"
 
 logger = logging.getLogger(__name__)
 NAME_RE = re.compile(NAME_PATTERN)
+MAX_ACTIVE_DRAFTS = 5
 
 # Configure Gemini API key from environment variable(s)
 # Prefer `GEMINI_API_KEY`; fall back to `GOOGLE_API_KEY`
@@ -517,7 +517,7 @@ def submit_request_view(request):
 
 @login_required
 def my_requests_view(request):
-    requests = MediaRequest.objects.filter(user=request.user).order_by("-created_at")
+    requests = MediaRequest.objects.filter(user=request.user).select_related('user').order_by("-created_at")
     return render(request, "emt/cdl_my_requests.html", {"requests": requests})
 
 
@@ -645,105 +645,7 @@ def _save_activities(proposal, data, form=None):
     return True
 
 
-def _coerce_str(value):
-    if value is None:
-        return ""
-    return str(value).strip()
-
-
-def _deserialize_section_payload(data, key):
-    raw = data.get(key)
-    if raw is None:
-        return None
-    if isinstance(raw, (list, tuple)):
-        parsed = list(raw)
-    else:
-        text = str(raw).strip()
-        if not text:
-            return []
-        try:
-            parsed = json.loads(text)
-        except (TypeError, json.JSONDecodeError):
-            logger.debug("Invalid JSON for %s: %s", key, raw)
-            return []
-    if not isinstance(parsed, list):
-        return []
-    return [item for item in parsed if isinstance(item, dict)]
-
-
-def _deserialize_speaker_entries(data):
-    entries = _deserialize_section_payload(data, "speakers_serialized")
-    if entries is None:
-        return None
-    cleaned = []
-    for entry in entries:
-        cleaned.append(
-            {
-                "full_name": _coerce_str(entry.get("full_name")),
-                "designation": _coerce_str(entry.get("designation")),
-                "affiliation": _coerce_str(entry.get("affiliation")),
-                "contact_email": _coerce_str(entry.get("contact_email")),
-                "contact_number": _coerce_str(entry.get("contact_number")),
-                "linkedin_url": _coerce_str(entry.get("linkedin_url")),
-                "detailed_profile": _coerce_str(entry.get("detailed_profile")),
-            }
-        )
-    return cleaned
-
-
-def _deserialize_expense_entries(data):
-    entries = _deserialize_section_payload(data, "expenses_serialized")
-    if entries is None:
-        return None
-    cleaned = []
-    for entry in entries:
-        cleaned.append(
-            {
-                "sl_no": _coerce_str(entry.get("sl_no")),
-                "particulars": _coerce_str(entry.get("particulars")),
-                "amount": _coerce_str(entry.get("amount")),
-            }
-        )
-    return cleaned
-
-
-def _deserialize_income_entries(data):
-    entries = _deserialize_section_payload(data, "income_serialized")
-    if entries is None:
-        return None
-    cleaned = []
-    for entry in entries:
-        cleaned.append(
-            {
-                "sl_no": _coerce_str(entry.get("sl_no")),
-                "particulars": _coerce_str(entry.get("particulars")),
-                "participants": _coerce_str(entry.get("participants")),
-                "rate": _coerce_str(entry.get("rate")),
-                "amount": _coerce_str(entry.get("amount")),
-            }
-        )
-    return cleaned
-
-
-def _save_speakers(proposal, data, files, entries=None):
-    if entries is not None:
-        proposal.speakers.all().delete()
-        for index, entry in enumerate(entries):
-            full_name = entry.get("full_name", "")
-            if full_name:
-                SpeakerProfile.objects.create(
-                    proposal=proposal,
-                    full_name=full_name,
-                    designation=entry.get("designation", ""),
-                    affiliation=entry.get("affiliation", ""),
-                    contact_email=entry.get("contact_email", ""),
-                    contact_number=entry.get("contact_number", ""),
-                    linkedin_url=entry.get("linkedin_url", ""),
-                    photo=files.get(f"speaker_photo_{index}"),
-                    detailed_profile=entry.get("detailed_profile", ""),
-                )
-        return
-
+def _save_speakers(proposal, data, files):
     pattern = re.compile(
         r"^speaker_(?:full_name|designation|affiliation|contact_email|"
         r"contact_number|linkedin_url|photo|detailed_profile)_(\d+)$"
@@ -845,22 +747,7 @@ def _sync_proposal_from_report(proposal, report, payload: dict):
         proposal.save()
 
 
-def _save_expenses(proposal, data, entries=None):
-    if entries is not None:
-        proposal.expense_details.all().delete()
-        for entry in entries:
-            particulars = entry.get("particulars", "")
-            amount = entry.get("amount", "")
-            if particulars and amount:
-                sl_no = entry.get("sl_no") or 0
-                ExpenseDetail.objects.create(
-                    proposal=proposal,
-                    sl_no=sl_no or 0,
-                    particulars=particulars,
-                    amount=amount,
-                )
-        return
-
+def _save_expenses(proposal, data):
     pattern = re.compile(r"^expense_(?:sl_no|particulars|amount)_(\d+)$")
     indices = sorted(
         {int(m.group(1)) for key in data.keys() if (m := pattern.match(key))}
@@ -881,24 +768,7 @@ def _save_expenses(proposal, data, entries=None):
             )
 
 
-def _save_income(proposal, data, entries=None):
-    if entries is not None:
-        proposal.income_details.all().delete()
-        for entry in entries:
-            particulars = entry.get("particulars", "")
-            amount = entry.get("amount", "")
-            if particulars and amount:
-                sl_no = entry.get("sl_no") or 0
-                IncomeDetail.objects.create(
-                    proposal=proposal,
-                    sl_no=sl_no or 0,
-                    particulars=particulars,
-                    participants=entry.get("participants") or 0,
-                    rate=entry.get("rate") or 0,
-                    amount=amount,
-                )
-        return
-
+def _save_income(proposal, data):
     pattern = re.compile(
         r"^income_(?:sl_no|particulars|participants|rate|amount)_(\d+)$"
     )
@@ -927,19 +797,107 @@ def _save_income(proposal, data, entries=None):
 
 
 # ──────────────────────────────
+# PROPOSAL DRAFT MANAGEMENT
+# ──────────────────────────────
+
+
+@login_required
+def start_proposal(request):
+    active_drafts = EventProposal.objects.filter(
+        submitted_by=request.user,
+        status=EventProposal.Status.DRAFT,
+        is_user_deleted=False,
+    ).count()
+
+    if active_drafts >= MAX_ACTIVE_DRAFTS:
+        messages.error(
+            request,
+            f"You can keep up to {MAX_ACTIVE_DRAFTS} drafts. Delete an older draft before creating a new one.",
+        )
+        return redirect("emt:proposal_drafts")
+
+    active_year = get_active_academic_year()
+    academic_year = active_year.year if active_year else ""
+
+    proposal = EventProposal.objects.create(
+        submitted_by=request.user,
+        status=EventProposal.Status.DRAFT,
+        academic_year=academic_year,
+        event_title="Untitled Event",
+    )
+
+    return redirect("emt:submit_proposal_with_pk", pk=proposal.pk)
+
+
+@login_required
+def proposal_drafts(request):
+    drafts_qs = EventProposal.objects.filter(
+        submitted_by=request.user,
+        status=EventProposal.Status.DRAFT,
+        is_user_deleted=False,
+    ).order_by("-updated_at")
+    active_count = drafts_qs.count()
+    drafts = list(drafts_qs[:MAX_ACTIVE_DRAFTS])
+    remaining = max(0, MAX_ACTIVE_DRAFTS - active_count)
+
+    context = {
+        "drafts": drafts,
+        "draft_limit": MAX_ACTIVE_DRAFTS,
+        "active_count": active_count,
+        "remaining_slots": remaining,
+    }
+    return render(request, "emt/proposal_drafts.html", context)
+
+
+@login_required
+@require_POST
+def delete_proposal_draft(request, proposal_id):
+    proposal = get_object_or_404(
+        EventProposal,
+        id=proposal_id,
+        submitted_by=request.user,
+        status=EventProposal.Status.DRAFT,
+        is_user_deleted=False,
+    )
+
+    proposal.is_user_deleted = True
+    proposal.save(update_fields=["is_user_deleted", "updated_at"])
+
+    messages.success(request, "Draft removed. Admins can still review it from their dashboard.")
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return JsonResponse({"success": True})
+
+    return redirect("emt:proposal_drafts")
+
+
+# ──────────────────────────────
 # PROPOSAL STEP 1: Proposal Submission
 # ──────────────────────────────
 @login_required
 @ensure_csrf_cookie
 def submit_proposal(request, pk=None):
-    from transcript.models import get_active_academic_year
-
     active_year = get_active_academic_year()
     selected_academic_year = active_year.year if active_year else ""
 
+    if not pk:
+        return redirect("emt:start_proposal")
+
+    proposal = get_object_or_404(
+        EventProposal,
+        pk=pk,
+        submitted_by=request.user,
+        is_user_deleted=False,
+    )
     proposal = None
     if pk:
-        proposal = get_object_or_404(EventProposal, pk=pk, submitted_by=request.user)
+        proposal = get_object_or_404(
+    EventProposal.objects.prefetch_related(
+        "faculty_incharges", "activities", "speakers", "expense_details", "income_details"
+    ),
+    pk=pk,
+    submitted_by=request.user
+)
 
     next_url = request.GET.get("next")
 
@@ -951,9 +909,6 @@ def submit_proposal(request, pk=None):
         logger.debug(
             "Faculty IDs from POST: %s", post_data.getlist("faculty_incharges")
         )
-        speaker_entries = _deserialize_speaker_entries(post_data)
-        expense_entries = _deserialize_expense_entries(post_data)
-        income_entries = _deserialize_income_entries(post_data)
         form = EventProposalForm(
             post_data,
             instance=proposal,
@@ -1082,17 +1037,11 @@ def submit_proposal(request, pk=None):
             ctx["form"] = form
             ctx["proposal"] = proposal
             return render(request, "emt/submit_proposal.html", ctx)
-        if speaker_entries is not None:
-            _save_speakers(proposal, request.POST, request.FILES, entries=speaker_entries)
-        elif any(key.startswith("speaker_") for key in request.POST.keys()):
+        if any(key.startswith("speaker_") for key in request.POST.keys()):
             _save_speakers(proposal, request.POST, request.FILES)
-        if expense_entries is not None:
-            _save_expenses(proposal, request.POST, entries=expense_entries)
-        elif any(key.startswith("expense_") for key in request.POST.keys()):
+        if any(key.startswith("expense_") for key in request.POST.keys()):
             _save_expenses(proposal, request.POST)
-        if income_entries is not None:
-            _save_income(proposal, request.POST, entries=income_entries)
-        elif any(key.startswith("income_") for key in request.POST.keys()):
+        if any(key.startswith("income_") for key in request.POST.keys()):
             _save_income(proposal, request.POST)
         logger.debug(
             "Proposal %s saved with faculty %s",
@@ -1133,16 +1082,20 @@ def submit_proposal(request, pk=None):
 @login_required
 @ensure_csrf_cookie
 def review_proposal(request, proposal_id):
-    proposal_qs = EventProposal.objects.select_related(
-        "need_analysis",
-        "objectives",
-        "expected_outcomes",
-        "tentative_flow",
-        "cdl_support",
-    ).prefetch_related(
-        "speakers",
-        "expense_details",
-        "income_details",
+    proposal_qs = (
+        EventProposal.objects.select_related(
+            "need_analysis",
+            "objectives",
+            "expected_outcomes",
+            "tentative_flow",
+            "cdl_support",
+        )
+        .prefetch_related(
+            "speakers",
+            "expense_details",
+            "income_details",
+        )
+        .filter(is_user_deleted=False)
     )
     # Prefetch speaker and expense details for efficient rendering
     proposal = get_object_or_404(
@@ -1228,10 +1181,6 @@ def autosave_proposal(request):
 
     logger.debug("autosave_proposal payload: %s", data)
 
-    speaker_entries = _deserialize_speaker_entries(data)
-    expense_entries = _deserialize_expense_entries(data)
-    income_entries = _deserialize_income_entries(data)
-
     # Replace department logic with generic organization
     org_type_val = data.get("organization_type")
     org_name_val = data.get("organization")
@@ -1253,44 +1202,48 @@ def autosave_proposal(request):
     active_year = get_active_academic_year()
     selected_academic_year = active_year.year if active_year else ""
 
+    existing_proposal = None
     proposal = None
     if pid := data.get("proposal_id"):
-        proposal = EventProposal.objects.filter(
-            id=pid, submitted_by=request.user
+        existing_proposal = EventProposal.objects.filter(
+            id=pid,
+            submitted_by=request.user,
+            is_user_deleted=False,
         ).first()
 
         # Don't autosave if proposal is already submitted
-        if proposal and proposal.status != "draft":
+        if existing_proposal and existing_proposal.status != "draft":
             return JsonResponse(
                 {"success": False, "error": "Cannot modify submitted proposal"}
             )
 
     # If payload only has text sections, skip full form validation
     text_keys = {"need_analysis", "objectives", "outcomes", "flow"}
-    if proposal and set(data.keys()).issubset(text_keys | {"proposal_id"}):
-        text_errors = _save_text_sections(proposal, data)
+    if existing_proposal and set(data.keys()).issubset(text_keys | {"proposal_id"}):
+        text_errors = _save_text_sections(existing_proposal, data)
         if text_errors:
             logger.debug("autosave_proposal text errors: %s", text_errors)
             return JsonResponse(
                 {
                     "success": False,
-                    "proposal_id": proposal.id,
+                    "proposal_id": existing_proposal.id,
                     "errors": text_errors,
                 }
             )
-        return JsonResponse({"success": True, "proposal_id": proposal.id})
+        return JsonResponse({"success": True, "proposal_id": existing_proposal.id})
 
-    if proposal and proposal.academic_year:
-        data["academic_year"] = proposal.academic_year
+    if existing_proposal and existing_proposal.academic_year:
+        data["academic_year"] = existing_proposal.academic_year
     elif selected_academic_year:
         data["academic_year"] = selected_academic_year
 
     form = EventProposalForm(
         data,
-        instance=proposal,
+        instance=existing_proposal,
         user=request.user,
         selected_academic_year=selected_academic_year,
     )
+    form = EventProposalForm(data, instance=proposal, user=request.user)
     faculty_ids = data.get("faculty_incharges") or []
     if faculty_ids:
         form.fields["faculty_incharges"].queryset = User.objects.filter(
@@ -1301,12 +1254,34 @@ def autosave_proposal(request):
             role_assignments__role__name=FACULTY_ROLE
         ).distinct()
 
+    creating_new = existing_proposal is None
+
+    if creating_new:
+        active_drafts = EventProposal.objects.filter(
+            submitted_by=request.user,
+            status=EventProposal.Status.DRAFT,
+            is_user_deleted=False,
+        ).count()
+        if active_drafts >= MAX_ACTIVE_DRAFTS:
+            message = (
+                "You have reached the maximum number of saved drafts. "
+                "Delete an existing draft to continue."
+            )
+            return JsonResponse(
+                {
+                    "success": False,
+                    "errors": {"draft_limit": [message]},
+                    "limit": MAX_ACTIVE_DRAFTS,
+                }
+            )
+
     is_valid = form.is_valid()
     if not is_valid:
         logger.debug("autosave_proposal form errors: %s", form.errors)
 
     # Persist any cleaned fields even if the form has validation errors
     proposal = form.instance
+    proposal.is_user_deleted = False
     for field, value in form.cleaned_data.items():
         if isinstance(form.fields.get(field), forms.ModelMultipleChoiceField):
             continue
@@ -1352,6 +1327,7 @@ def autosave_proposal(request):
 
     # Validate speakers
     sp_errors = {}
+    sp_idx = 0
     sp_fields = [
         "full_name",
         "designation",
@@ -1361,144 +1337,88 @@ def autosave_proposal(request):
     ]
     email_validator = EmailValidator()
     url_validator = URLValidator()
-    if speaker_entries is not None:
-        for idx, entry in enumerate(speaker_entries):
-            missing = {}
-            has_any = any(entry.get(field) for field in sp_fields + ["contact_number", "linkedin_url"])
-            for field in sp_fields:
-                value = entry.get(field)
-                if value:
-                    if field == "full_name" and not NAME_RE.fullmatch(value):
-                        missing[field] = "Enter a valid name (letters, spaces, .'- only)."
-                    elif field == "contact_email":
-                        try:
-                            email_validator(value)
-                        except ValidationError:
-                            missing[field] = "Enter a valid email address."
-                else:
-                    missing[field] = "This field is required."
+    while any(
+        f"speaker_{field}_{sp_idx}" in data
+        for field in sp_fields + ["contact_number", "linkedin_url", "photo"]
+    ):
+        missing = {}
+        has_any = False
+        for field in sp_fields:
+            value = data.get(f"speaker_{field}_{sp_idx}")
+            if value:
+                has_any = True
+                if field == "full_name" and not NAME_RE.fullmatch(value):
+                    missing[field] = "Enter a valid name (letters, spaces, .'- only)."
+                elif field == "contact_email":
+                    try:
+                        email_validator(value)
+                    except ValidationError:
+                        missing[field] = "Enter a valid email address."
+            else:
+                missing[field] = "This field is required."
 
-            linkedin = entry.get("linkedin_url")
-            if linkedin:
-                try:
-                    url_validator(linkedin)
-                except ValidationError:
-                    missing["linkedin_url"] = "Enter a valid URL."
+        linkedin = data.get(f"speaker_linkedin_url_{sp_idx}")
+        if linkedin:
+            try:
+                url_validator(linkedin)
+            except ValidationError:
+                missing["linkedin_url"] = "Enter a valid URL."
 
-            if has_any and missing:
-                sp_errors[idx] = missing
-    else:
-        sp_idx = 0
-        while any(
-            f"speaker_{field}_{sp_idx}" in data
-            for field in sp_fields + ["contact_number", "linkedin_url", "photo"]
-        ):
-            missing = {}
-            has_any = False
-            for field in sp_fields:
-                value = data.get(f"speaker_{field}_{sp_idx}")
-                if value:
-                    has_any = True
-                    if field == "full_name" and not NAME_RE.fullmatch(value):
-                        missing[field] = "Enter a valid name (letters, spaces, .'- only)."
-                    elif field == "contact_email":
-                        try:
-                            email_validator(value)
-                        except ValidationError:
-                            missing[field] = "Enter a valid email address."
-                else:
-                    missing[field] = "This field is required."
-
-            linkedin = data.get(f"speaker_linkedin_url_{sp_idx}")
-            if linkedin:
-                try:
-                    url_validator(linkedin)
-                except ValidationError:
-                    missing["linkedin_url"] = "Enter a valid URL."
-
-            if has_any and missing:
-                sp_errors[sp_idx] = missing
-            sp_idx += 1
+        if has_any and missing:
+            sp_errors[sp_idx] = missing
+        sp_idx += 1
     if sp_errors:
         errors["speakers"] = sp_errors
 
     # Validate expenses
     ex_errors = {}
-    if expense_entries is not None:
-        for idx, entry in enumerate(expense_entries):
-            particulars = entry.get("particulars")
-            amount = entry.get("amount")
-            missing = {}
-            if particulars or amount:
-                if not particulars:
-                    missing["particulars"] = "This field is required."
-                if not amount:
-                    missing["amount"] = "This field is required."
-            if missing:
-                ex_errors[idx] = missing
-    else:
-        ex_idx = 0
-        while any(
-            f"expense_{field}_{ex_idx}" in data
-            for field in ["sl_no", "particulars", "amount"]
-        ):
-            particulars = data.get(f"expense_particulars_{ex_idx}")
-            amount = data.get(f"expense_amount_{ex_idx}")
-            missing = {}
-            if particulars or amount:
-                if not particulars:
-                    missing["particulars"] = "This field is required."
-                if not amount:
-                    missing["amount"] = "This field is required."
-            if missing:
-                ex_errors[ex_idx] = missing
-            ex_idx += 1
+    ex_idx = 0
+    while any(
+        f"expense_{field}_{ex_idx}" in data
+        for field in ["sl_no", "particulars", "amount"]
+    ):
+        particulars = data.get(f"expense_particulars_{ex_idx}")
+        amount = data.get(f"expense_amount_{ex_idx}")
+        missing = {}
+        if particulars or amount:
+            if not particulars:
+                missing["particulars"] = "This field is required."
+            if not amount:
+                missing["amount"] = "This field is required."
+        if missing:
+            ex_errors[ex_idx] = missing
+        ex_idx += 1
     if ex_errors:
         errors["expenses"] = ex_errors
 
     # Validate income
     in_errors = {}
-    if income_entries is not None:
-        for idx, entry in enumerate(income_entries):
-            particulars = entry.get("particulars")
-            participants = entry.get("participants")
-            rate = entry.get("rate")
-            amount = entry.get("amount")
-            missing = {}
-            if any([particulars, participants, rate, amount]):
-                if not particulars:
-                    missing["particulars"] = "This field is required."
-                if not amount:
-                    missing["amount"] = "This field is required."
-            if missing:
-                in_errors[idx] = missing
-    else:
-        in_idx = 0
-        while any(
-            f"income_{field}_{in_idx}" in data
-            for field in ["particulars", "participants", "rate", "amount"]
-        ):
-            particulars = data.get(f"income_particulars_{in_idx}")
-            participants = data.get(f"income_participants_{in_idx}")
-            rate = data.get(f"income_rate_{in_idx}")
-            amount = data.get(f"income_amount_{in_idx}")
-            missing = {}
-            # Only require particulars and amount; participants and rate are optional
-            if any([particulars, participants, rate, amount]):
-                if not particulars:
-                    missing["particulars"] = "This field is required."
-                if not amount:
-                    missing["amount"] = "This field is required."
-            if missing:
-                in_errors[in_idx] = missing
-            in_idx += 1
+    in_idx = 0
+    while any(
+        f"income_{field}_{in_idx}" in data
+        for field in ["particulars", "participants", "rate", "amount"]
+    ):
+        particulars = data.get(f"income_particulars_{in_idx}")
+        participants = data.get(f"income_participants_{in_idx}")
+        rate = data.get(f"income_rate_{in_idx}")
+        amount = data.get(f"income_amount_{in_idx}")
+        missing = {}
+        # Only require particulars and amount; participants and rate are optional
+        if any([particulars, participants, rate, amount]):
+            if not particulars:
+                missing["particulars"] = "This field is required."
+            if not amount:
+                missing["amount"] = "This field is required."
+        if missing:
+            in_errors[in_idx] = missing
+        in_idx += 1
     if in_errors:
         errors["income"] = in_errors
 
     _save_activities(proposal, data)
-    _save_speakers(proposal, data, request.FILES, entries=speaker_entries)
-    _save_expenses(proposal, data, entries=expense_entries)
-    _save_income(proposal, data, entries=income_entries)
+    _save_speakers(proposal, data, request.FILES)
+    _save_expenses(proposal, data)
+    _save_income(proposal, data)
 
     if errors:
         logger.debug("autosave_proposal dynamic errors: %s", errors)
@@ -1520,6 +1440,139 @@ def autosave_proposal(request):
 
 
 @login_required
+def proposal_live_state(request, proposal_id):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+
+    proposal = get_object_or_404(
+        EventProposal.objects.select_related(
+            "need_analysis",
+            "objectives",
+            "expected_outcomes",
+            "tentative_flow",
+            "organization__org_type",
+        ).prefetch_related(
+            "activities",
+            "speakers",
+            "expense_details",
+            "income_details",
+            "sdg_goals",
+            "faculty_incharges",
+        ),
+        pk=proposal_id,
+        submitted_by=request.user,
+    )
+
+    updated_at = proposal.updated_at
+    since_param = request.GET.get("since")
+    if since_param:
+        since_dt = parse_datetime(since_param)
+        if since_dt is not None and timezone.is_naive(since_dt):
+            since_dt = timezone.make_aware(since_dt, timezone.get_current_timezone())
+        if since_dt and updated_at and updated_at <= since_dt:
+            return JsonResponse(
+                {
+                    "changed": False,
+                    "updated_at": updated_at.isoformat() if updated_at else None,
+                }
+            )
+
+    def _serialize_date(value):
+        return value.isoformat() if value else ""
+
+    basic_fields = {
+        "event_title": proposal.event_title or "",
+        "target_audience": proposal.target_audience or "",
+        "event_focus_type": proposal.event_focus_type or "",
+        "venue": proposal.venue or "",
+        "event_start_date": _serialize_date(proposal.event_start_date),
+        "event_end_date": _serialize_date(proposal.event_end_date),
+        "academic_year": proposal.academic_year or "",
+        "num_activities": proposal.num_activities or "",
+        "pos_pso": proposal.pos_pso or "",
+        "student_coordinators": proposal.student_coordinators or "",
+        "committees_collaborations": proposal.committees_collaborations or "",
+    }
+
+    if proposal.organization_id:
+        basic_fields.update(
+            {
+                "organization": str(proposal.organization_id),
+                "organization_name": proposal.organization.name,
+            }
+        )
+        if proposal.organization and proposal.organization.org_type_id:
+            basic_fields.update(
+                {
+                    "organization_type": str(proposal.organization.org_type_id),
+                    "organization_type_name": proposal.organization.org_type.name,
+                }
+            )
+    else:
+        basic_fields.update({"organization": "", "organization_type": ""})
+
+    text_sections = {
+        "need_analysis": getattr(proposal.need_analysis, "content", ""),
+        "objectives": getattr(proposal.objectives, "content", ""),
+        "outcomes": getattr(proposal.expected_outcomes, "content", ""),
+        "flow": getattr(proposal.tentative_flow, "content", ""),
+    }
+
+    activities = [
+        {
+            "name": activity.name,
+            "date": activity.date.isoformat() if activity.date else "",
+        }
+        for activity in proposal.activities.all()
+    ]
+
+    speakers = [_serialize_speaker(speaker) for speaker in proposal.speakers.all()]
+
+    expenses = []
+    for expense in proposal.expense_details.all():
+        expenses.append(
+            {
+                "sl_no": expense.sl_no,
+                "particulars": expense.particulars,
+                "amount": float(expense.amount) if expense.amount is not None else None,
+            }
+        )
+
+    income = []
+    for item in proposal.income_details.all():
+        income.append(
+            {
+                "sl_no": item.sl_no,
+                "particulars": item.particulars,
+                "participants": item.participants,
+                "rate": float(item.rate) if item.rate is not None else None,
+                "amount": float(item.amount) if item.amount is not None else None,
+            }
+        )
+
+    payload = {
+        "fields": basic_fields,
+        "text_sections": text_sections,
+        "activities": activities,
+        "speakers": speakers,
+        "expenses": expenses,
+        "income": income,
+        "sdg_goals": list(proposal.sdg_goals.values("id", "name")),
+        "faculty_incharges": list(
+            proposal.faculty_incharges.values("id", "first_name", "last_name")
+        ),
+    }
+
+    return JsonResponse(
+        {
+            "changed": True,
+            "updated_at": updated_at.isoformat() if updated_at else None,
+            "payload": payload,
+        }
+    )
+
+
+@login_required
 @require_POST
 def reset_proposal_draft(request):
     """Delete the current draft proposal and its related data."""
@@ -1535,12 +1588,16 @@ def reset_proposal_draft(request):
         )
 
     proposal = EventProposal.objects.filter(
-        id=pid, submitted_by=request.user, status="draft"
+        id=pid,
+        submitted_by=request.user,
+        status=EventProposal.Status.DRAFT,
+        is_user_deleted=False,
     ).first()
     if not proposal:
         return JsonResponse({"success": False, "error": "Draft not found"}, status=404)
 
-    proposal.delete()
+    proposal.is_user_deleted = True
+    proposal.save(update_fields=["is_user_deleted", "updated_at"])
     return JsonResponse({"success": True})
 
 
@@ -1550,7 +1607,10 @@ def reset_proposal_draft(request):
 @login_required
 def submit_need_analysis(request, proposal_id):
     proposal = get_object_or_404(
-        EventProposal, id=proposal_id, submitted_by=request.user
+        EventProposal,
+        id=proposal_id,
+        submitted_by=request.user,
+        is_user_deleted=False,
     )
     instance = EventNeedAnalysis.objects.filter(proposal=proposal).first()
     next_url = request.GET.get("next")
@@ -1577,7 +1637,10 @@ def submit_need_analysis(request, proposal_id):
 @login_required
 def submit_objectives(request, proposal_id):
     proposal = get_object_or_404(
-        EventProposal, id=proposal_id, submitted_by=request.user
+        EventProposal,
+        id=proposal_id,
+        submitted_by=request.user,
+        is_user_deleted=False,
     )
     instance = EventObjectives.objects.filter(proposal=proposal).first()
     next_url = request.GET.get("next")
@@ -1602,7 +1665,10 @@ def submit_objectives(request, proposal_id):
 @login_required
 def submit_expected_outcomes(request, proposal_id):
     proposal = get_object_or_404(
-        EventProposal, id=proposal_id, submitted_by=request.user
+        EventProposal,
+        id=proposal_id,
+        submitted_by=request.user,
+        is_user_deleted=False,
     )
     instance = EventExpectedOutcomes.objects.filter(proposal=proposal).first()
     next_url = request.GET.get("next")
@@ -1631,7 +1697,10 @@ def submit_expected_outcomes(request, proposal_id):
 @login_required
 def submit_tentative_flow(request, proposal_id):
     proposal = get_object_or_404(
-        EventProposal, id=proposal_id, submitted_by=request.user
+        EventProposal,
+        id=proposal_id,
+        submitted_by=request.user,
+        is_user_deleted=False,
     )
     instance = TentativeFlow.objects.filter(proposal=proposal).first()
     next_url = request.GET.get("next")
@@ -1661,7 +1730,10 @@ def submit_tentative_flow(request, proposal_id):
 @login_required
 def submit_speaker_profile(request, proposal_id):
     proposal = get_object_or_404(
-        EventProposal, id=proposal_id, submitted_by=request.user
+        EventProposal,
+        id=proposal_id,
+        submitted_by=request.user,
+        is_user_deleted=False,
     )
     # Track wizard progress for breadcrumbs/UI
     request.session["proposal_step"] = "speaker_profile"
@@ -1869,15 +1941,21 @@ def proposal_status_detail(request, proposal_id):
 @login_required
 def pending_reports(request):
     # Base: proposals approved/finalized that still need an initial report
+    # OPTIMIZED: Added organization and submitted_by to select_related
     base_qs = EventProposal.objects.filter(
         submitted_by=request.user,
         status__in=["approved", "finalized"],
         report_generated=False,
-    ).select_related("report_assigned_to")
+    ).select_related("report_assigned_to", "organization", "submitted_by")
 
-    # Additionally include proposals with an existing EventReport that was sent back (review_stage=USER)
+    # OPTIMIZED: Added deeper proposal relations to select_related
     sent_back_reports = (
-        EventReport.objects.select_related("proposal", "proposal__report_assigned_to")
+        EventReport.objects.select_related(
+            "proposal",
+            "proposal__report_assigned_to",
+            "proposal__organization",
+            "proposal__submitted_by",
+        )
         .filter(proposal__submitted_by=request.user, review_stage=EventReport.ReviewStage.USER)
     )
 
@@ -1909,7 +1987,7 @@ def pending_report_feedback(request, proposal_id: int):
 
     Shows concatenated iqac_feedback plus the latest session_feedback.
     """
-    proposal = get_object_or_404(EventProposal, id=proposal_id)
+    proposal = get_object_or_404(EventProposal.objects.prefetch_related('faculty_incharges'), id=proposal_id)
     # Permission: submitter or faculty incharges (or superuser/staff)
     if not (
         request.user == proposal.submitted_by
@@ -3197,28 +3275,6 @@ def submit_event_report(request, proposal_id):
         "external": external_count,
     }
 
-    def _first_non_empty(*values):
-        for value in values:
-            if isinstance(value, str) and value.strip():
-                return value
-            if value not in (None, "", [], {}):
-                return value
-        return ""
-
-    event_type_prefill = _first_non_empty(
-        form["actual_event_type"].value() if form else None,
-        getattr(report, "actual_event_type", None),
-        proposal.event_focus_type,
-    )
-
-    location_prefill = _first_non_empty(
-        form["location"].value() if form else None,
-        getattr(report, "location", None),
-        proposal.venue,
-    )
-
-    venue_prefill = _first_non_empty(proposal.venue, location_prefill)
-
     # Prepare SDG goal data for modal and proposal prefill
     sdg_goals_list = [
         {"id": goal.id, "title": goal.name} for goal in SDGGoal.objects.all()
@@ -3248,9 +3304,6 @@ def submit_event_report(request, proposal_id):
         "attendance_counts_json": json.dumps(attendance_counts),
         "faculty_names_json": json.dumps(faculty_names),
         "volunteer_names_json": json.dumps(volunteer_names),
-        "prefill_event_type": event_type_prefill,
-        "prefill_location": location_prefill,
-        "prefill_venue": venue_prefill,
     }
     context["can_autosave"] = (
         proposal.submitted_by == request.user
@@ -4871,7 +4924,10 @@ def suite_dashboard(request):
     """
     # 1) Get proposals excluding finalized + 2-day-old ones
     user_proposals = (
-        EventProposal.objects.filter(submitted_by=request.user)
+        EventProposal.objects.filter(
+            submitted_by=request.user,
+            is_user_deleted=False,
+        )
         .exclude(status="finalized", updated_at__lt=now() - timedelta(days=2))
         .prefetch_related("approval_steps")
         .order_by("-updated_at")

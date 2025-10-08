@@ -302,6 +302,38 @@ body.command-center-layout{
   color:#4b5563; font-size:var(--fs-14); font-weight:500; transition:var(--tr);
 }
 .nav-sublink:hover{ background:#fff; color:var(--christ-blue); padding-left:2.25rem; }
+.nav-subgroup{ padding:.35rem 0 .5rem; }
+.nav-subgroup .nav-sublabel{
+  display:flex; align-items:center; gap:.75rem;
+  width:100%;
+  background:none;
+  border:0;
+  padding:.6rem 1.5rem .45rem 2rem;
+  color:#6b7280; font-size:var(--fs-12); font-weight:700;
+  text-transform:uppercase; letter-spacing:0.05em;
+  cursor:pointer;
+  text-align:left;
+}
+.nav-subgroup .nav-sublabel:hover,
+.nav-subgroup .nav-sublabel:focus-visible{
+  background:var(--gray-100);
+  outline:none;
+}
+.nav-subgroup .subgroup-expand-icon{
+  margin-left:auto;
+  font-size:.8em;
+  transition:transform .25s;
+}
+.nav-subgroup .nav-subgroup-links{
+  display:none;
+  flex-direction:column;
+  padding-top:.1rem;
+}
+.nav-subgroup.open .nav-subgroup-links{ display:flex; }
+.nav-subgroup.open .nav-sublabel{ background:var(--gray-075); }
+.nav-subgroup.open .subgroup-expand-icon{ transform:rotate(90deg); }
+.nav-subgroup .nav-sublink{ padding-left:2.5rem; }
+.nav-subgroup .nav-sublink i{ width:1.25rem; text-align:center; }
 
 /* Collapsed sidebar */
 body.command-center-layout.sidebar-collapsed{ grid-template-columns:4.25rem 1fr; }

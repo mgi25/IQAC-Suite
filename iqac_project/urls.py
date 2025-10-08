@@ -15,6 +15,13 @@ urlpatterns = [
     path("transcript/", include("transcript.urls")),  # transcript module
 ]
 
-# This line enables media file serving (for student photos) in development.
+# This block enables the Debug Toolbar and media file serving in development.
 if settings.DEBUG:
+    # TOOLBAR: Add Django Debug Toolbar URLs
+    import debug_toolbar
+    urlpatterns = [
+        path('__debug__/', include(debug_toolbar.urls)),
+    ] + urlpatterns
+
+    # This line enables media file serving (for student photos) in development.
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -1,5 +1,3 @@
-
-
 import os
 import shutil
 from datetime import timedelta, datetime
@@ -366,17 +364,6 @@ def custom_logout(request):
 def my_profile(request):
     """Display user's role-specific profile page with dashboard integration."""
     user = request.user
-    is_impersonating = getattr(request, "is_impersonating", False)
-    from_dashboard_param = request.GET.get('from_dashboard')
-
-    if is_impersonating and from_dashboard_param is not None:
-        clean_query = request.GET.copy()
-        clean_query.pop('from_dashboard', None)
-        remaining = clean_query.urlencode()
-        target = reverse('my_profile')
-        if remaining:
-            target = f"{target}?{remaining}"
-        return redirect(target)
     
     # ---- role / domain detection ----
     roles = RoleAssignment.objects.filter(user=user).select_related('role', 'organization')
@@ -395,10 +382,7 @@ def my_profile(request):
         request.session["role"] = "faculty"
     
     # Determine if this is accessed from dashboard (check for 'from_dashboard' parameter)
-    if from_dashboard_param is not None:
-        from_dashboard = str(from_dashboard_param).lower() in ("1", "true", "yes")
-    else:
-        from_dashboard = False
+    from_dashboard = request.GET.get('from_dashboard', False)
     
     # Base context for all users
     context = {
@@ -428,8 +412,8 @@ def my_profile(request):
         
         # Student-specific achievements and organizations
         participated_events = EventProposal.objects.filter(
-            Q(participants__user=user) | Q(submitted_by=user)
-        ).distinct()
+        Q(participants__user=user) | Q(submitted_by=user)
+        ).select_related('organization').distinct()
         
         user_org_ids = list(roles.filter(organization__isnull=False).values_list('organization_id', flat=True))
         user_organizations = Organization.objects.filter(id__in=user_org_ids)
@@ -450,7 +434,7 @@ def my_profile(request):
         # Faculty-specific data
         my_students = Student.objects.filter(mentor=user)
         my_classes = Class.objects.filter(teacher=user, is_active=True)
-        organized_events = EventProposal.objects.filter(submitted_by=user)
+        organized_events = EventProposal.objects.filter(submitted_by=user).select_related('organization')
         
         context.update({
             'my_students': my_students,
@@ -837,7 +821,7 @@ def dashboard(request):
 
     # ---- data (wrapped for safety) ----
     try:
-        finalized_events = EventProposal.objects.filter(status="finalized").distinct()
+        finalized_events = EventProposal.objects.filter(status="finalized").select_related('organization').distinct()
 
         if is_student:
             my_events = (
@@ -911,8 +895,8 @@ def dashboard(request):
 
         # Build calendar events including both single datetime and start-date based events
         all_events = finalized_events.filter(
-            Q(event_datetime_isnull=False) | Q(event_start_date_isnull=False)
-        ).select_related("organization", "submitted_by")
+        Q(event_datetime__isnull=False) | Q(event_start_date__isnull=False)
+        ).select_related("organization", "submitted_by").prefetch_related('faculty_incharges')
 
         calendar_events = []
         for e in all_events:
@@ -2178,7 +2162,7 @@ def admin_user_deactivate(request, user_id):
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_event_proposals(request):
-    proposals = EventProposal.objects.all().order_by("-created_at")
+    proposals = EventProposal.objects.select_related('submitted_by', 'organization__org_type').all().order_by("-created_at")
     q = request.GET.get("q", "").strip()
     status = request.GET.get("status", "").strip()
     if q:
@@ -4013,7 +3997,7 @@ from emt.models import EventReport
 def admin_reports_view(request):
     try:
         # Use Report instead of SubmittedReport here:
-        submitted_reports = Report.objects.all()
+        submitted_reports = Report.objects.select_related('submitted_by', 'organization').all()
 
         generated_reports = EventReport.objects.select_related('proposal').all()
 
