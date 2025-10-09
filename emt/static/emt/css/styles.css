@@ -118,19 +118,19 @@
   }
   
   .nav-link.disabled {
-    color: #cbd5e1;
+    color: #94a3b8;
     cursor: not-allowed;
-    opacity: 0.5;
+    pointer-events: none;
   }
-  
+
   .nav-link.disabled .nav-number {
-    background: #f1f5f9;
-    color: #cbd5e1;
+    background: #e2e8f0;
+    color: #94a3b8;
   }
-  
+
   .nav-link.disabled .nav-item-title,
   .nav-link.disabled .nav-item-subtitle {
-    opacity: 0.6;
+    color: #94a3b8;
   }
   
   .nav-number {
