@@ -34,20 +34,23 @@
 
   .proposal-layout {
     display: flex;
+    align-items: flex-start;
+    gap: 2rem;
     min-height: 100vh;
     background: #f8fafc;
   }
-  
+
   /* ---- Left Nav ---- */
   .proposal-nav {
     width: 280px;
     background: var(--white);
     border-right: 1px solid var(--border-color);
     padding: 2rem 0;
-    position: fixed;
-    height: 100vh;
+    position: sticky;
+    top: calc(var(--topbar-h, 3.75rem) + 1.5rem);
+    max-height: calc(100vh - (var(--topbar-h, 3.75rem) + 1.5rem));
     overflow-y: auto;
-    z-index: 100;
+    flex-shrink: 0;
   }
   
   .nav-header {
@@ -206,12 +209,11 @@
   /* ---- Main Content ---- */
   .proposal-content {
     flex: 1;
-    margin-left: 280px;
     padding: 1.25rem 2rem;
-    max-width: calc(100% - 280px);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    min-width: 0;
   }
   
   .content-header { margin-bottom: 1rem; }
@@ -722,14 +724,21 @@
   
   /* ---- Responsive ---- */
   @media (max-width: 1024px) {
-    .proposal-nav { width: 260px; }
-    .proposal-content { margin-left: 260px; padding: 1.25rem 1.5rem; max-width: calc(100% - 260px); }
+    .proposal-layout { flex-direction: column; }
+    .proposal-nav {
+      position: relative;
+      top: auto;
+      max-height: none;
+      width: 100%;
+      border-right: none;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .proposal-content { padding: 1.25rem 1.5rem; }
     .proposal-content .form-row { grid-template-columns: 1fr; gap: 1rem; }
   }
-  
+
   @media (max-width: 768px) {
-    .proposal-nav { position: relative; width: 100%; height: auto; }
-    .proposal-content { margin-left: 0; padding: 1rem; max-width: 100%; }
+    .proposal-content { padding: 1rem; }
     .nav-link { padding: .75rem 1rem; }
     .speaker-form-content, .expense-form-content, .income-form-content, .cdl-service-content { padding: 1rem; }
     .speaker-form-grid, .expense-form-grid, .income-form-grid, .cdl-form-grid { grid-template-columns: 1fr; gap: 1rem; }
