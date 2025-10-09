@@ -840,11 +840,16 @@ def proposal_drafts(request):
 
     active_ids = list(base_qs.values_list("id", flat=True))
 
-    if len(active_ids) > MAX_ACTIVE_DRAFTS:
-        EventProposal.objects.filter(id__in=active_ids[MAX_ACTIVE_DRAFTS:]).update(
-            is_user_deleted=True,
-            updated_at=timezone.now(),
-        )
+    if active_ids:
+        # Retain only the most recently updated draft for the user and hide the rest.
+        ids_to_keep = {active_ids[0]}
+        ids_to_archive = [draft_id for draft_id in active_ids if draft_id not in ids_to_keep]
+
+        if ids_to_archive:
+            EventProposal.objects.filter(id__in=ids_to_archive).update(
+                is_user_deleted=True,
+                updated_at=timezone.now(),
+            )
 
     drafts_qs = EventProposal.objects.filter(
         submitted_by=request.user,
