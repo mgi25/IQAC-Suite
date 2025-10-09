@@ -179,7 +179,7 @@ document.addEventListener('DOMContentLoaded', function(){
       'event-relevance',
       'attachments'
   ];
-  const navLinks = Array.from(document.querySelectorAll('.nav-link[data-section]'));
+  const navLinks = Array.from(document.querySelectorAll('.proposal-nav .nav-link[data-section]'));
   const derivedSectionOrder = navLinks
       .map((link, index) => {
           const rawOrder = parseInt(link.dataset.order, 10);
@@ -236,7 +236,7 @@ document.addEventListener('DOMContentLoaded', function(){
                   Object.entries(sectionProgress).forEach(([sec, done]) => {
                       if (done) {
                           enableSection(sec);
-                          $(`.nav-link[data-section="${sec}"]`).addClass('completed');
+                          $(`.proposal-nav .nav-link[data-section="${sec}"]`).addClass('completed');
                       }
                   });
               }
@@ -386,7 +386,7 @@ document.addEventListener('DOMContentLoaded', function(){
           Object.keys(sectionProgress).forEach(key => {
               sectionProgress[key] = false;
           });
-          document.querySelectorAll('.nav-link').forEach(link => {
+          document.querySelectorAll('.proposal-nav .nav-link[data-section]').forEach(link => {
               link.classList.remove('completed', 'active');
               if (link.dataset.section !== FIRST_SECTION) {
                   link.classList.add('disabled');
@@ -403,7 +403,7 @@ document.addEventListener('DOMContentLoaded', function(){
           if (reviewBtn) reviewBtn.disabled = true;
       } else {
           // Rehydrate progress from server-rendered classes (if editing existing draft)
-          document.querySelectorAll('.nav-link').forEach(link => {
+          document.querySelectorAll('.proposal-nav .nav-link[data-section]').forEach(link => {
               if(link.classList.contains('completed')){
                   const s = link.getAttribute('data-section');
                   if(sectionProgress.hasOwnProperty(s)) sectionProgress[s] = true;
@@ -419,7 +419,7 @@ document.addEventListener('DOMContentLoaded', function(){
               if (fromSection) {
                   enableSection(fromSection);
                   setTimeout(() => {
-                      const link = document.querySelector(`.nav-link[data-section="${fromSection}"]`);
+                      const link = document.querySelector(`.proposal-nav .nav-link[data-section="${fromSection}"]`);
                       if (link) link.classList.remove('disabled');
                       activateSection(fromSection);
                   }, 50);
@@ -723,7 +723,7 @@ $(document).on('click', '#ai-sdg-implementation', function(){
   }
   
   // Navigation handling
-  $('.nav-link').on('click', function(e) {
+  $('.proposal-nav .nav-link').on('click', function(e) {
       e.preventDefault();
       const targetSection = $(this).data('section');
       
@@ -823,8 +823,8 @@ $(document).on('click', '#ai-sdg-implementation', function(){
       currentSection = sectionName;
       
       // Update navigation
-      $('.nav-link').removeClass('active');
-      $(`.nav-link[data-section="${sectionName}"]`).addClass('active');
+      $('.proposal-nav .nav-link').removeClass('active');
+      $(`.proposal-nav .nav-link[data-section="${sectionName}"]`).addClass('active');
       
       // Update content
       loadSectionContent(sectionName);
@@ -1114,7 +1114,7 @@ $(document).on('click', '#ai-sdg-implementation', function(){
 
   function markSectionComplete(sectionName) {
       sectionProgress[sectionName] = true;
-      $(`.nav-link[data-section="${sectionName}"]`).addClass('completed');
+      $(`.proposal-nav .nav-link[data-section="${sectionName}"]`).addClass('completed');
       if (allSectionsCompleted()) {
           enableFinalSubmission();
       }
@@ -1138,7 +1138,7 @@ $(document).on('click', '#ai-sdg-implementation', function(){
   }
   
   function enableSection(sectionName) {
-      $(`.nav-link[data-section="${sectionName}"]`).removeClass('disabled');
+      $(`.proposal-nav .nav-link[data-section="${sectionName}"]`).removeClass('disabled');
   }
   
   function restoreFieldValues(sectionName) {
