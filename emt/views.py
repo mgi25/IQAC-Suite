@@ -3309,6 +3309,7 @@ def submit_event_report(request, proposal_id):
             return value
 
         candidates = []
+        saw_explicit_blank = False
 
         if draft:
             draft_value = _normalise_candidate(draft.get(key))
@@ -3335,12 +3336,19 @@ def submit_event_report(request, proposal_id):
                 if stripped:
                     return stripped
                 if candidate == "":
-                    return ""
+                    # Defer returning an explicit blank until we have checked
+                    # for other fallbacks. Autosave payloads often record
+                    # empty strings for untouched fields, but we still want to
+                    # hydrate the report with proposal data when available.
+                    saw_explicit_blank = True
+                    continue
                 continue
             if isinstance(candidate, (int, float)):
                 return str(candidate)
             return str(candidate)
 
+        if saw_explicit_blank:
+            return ""
         return ""
 
     prefill_venue = _coalesce_prefill("venue", getattr(proposal, "venue", ""))
