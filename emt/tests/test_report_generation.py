@@ -1,3 +1,4 @@
+from datetime import date
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
@@ -13,10 +14,48 @@ from emt.models import EventProposal, EventReport
 
 
 class ReportGenerationViewsTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="prefill", password="testpass")
+        self.proposal = EventProposal.objects.create(
+            submitted_by=self.user,
+            event_title="Data Science Summit",
+            event_start_date=date(2024, 5, 20),
+            venue="Innovation Lab",
+        )
+
     def test_report_form_route_returns_200(self):
         response = self.client.get(reverse("emt:report_form"))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "emt/report_generation.html")
+
+    def test_report_form_prefills_proposal_data(self):
+        response = self.client.get(
+            reverse("emt:report_form"), {"proposal_id": self.proposal.id}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("prefill", response.context)
+        prefill = response.context["prefill"]
+        self.assertEqual(prefill.get("venue"), "Innovation Lab")
+        self.assertEqual(prefill.get("event_title"), "Data Science Summit")
+        self.assertEqual(prefill.get("event_date"), "2024-05-20")
+        self.assertContains(response, 'value="Innovation Lab"', html=False)
+
+    def test_report_form_uses_report_location_when_proposal_missing(self):
+        proposal = EventProposal.objects.create(
+            submitted_by=self.user,
+            event_title="AI Workshop",
+            event_start_date=date(2024, 6, 5),
+            venue="",
+        )
+        EventReport.objects.create(proposal=proposal, location="Main Auditorium")
+
+        response = self.client.get(
+            reverse("emt:report_form"), {"proposal_id": proposal.id}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        prefill = response.context["prefill"]
+        self.assertEqual(prefill.get("venue"), "Main Auditorium")
 
     def test_generate_report_pdf_rejects_non_post(self):
         response = self.client.get(reverse("emt:generate_report_pdf"))

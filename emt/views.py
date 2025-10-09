@@ -528,7 +528,56 @@ def my_requests_view(request):
 
 
 def report_form(request):
-    return render(request, "emt/report_generation.html")
+    """Render the lightweight PDF report form with optional proposal prefill."""
+
+    prefill: dict[str, str] = {}
+    proposal_obj: EventProposal | None = None
+    proposal_id = request.GET.get("proposal_id")
+
+    if proposal_id:
+        try:
+            proposal_obj = (
+                EventProposal.objects.select_related("organization", "event_report")
+                .filter(is_user_deleted=False)
+                .get(pk=int(proposal_id))
+            )
+        except (ValueError, EventProposal.DoesNotExist):
+            proposal_obj = None
+        else:
+            def _format_date(value):
+                if not value:
+                    return ""
+                if hasattr(value, "strftime"):
+                    return value.strftime("%Y-%m-%d")
+                return str(value)
+
+            start_date = proposal_obj.event_start_date
+            if not start_date and proposal_obj.event_datetime:
+                try:
+                    start_date = proposal_obj.event_datetime.date()
+                except Exception:  # pragma: no cover - defensive fallback
+                    start_date = None
+
+            linked_report = getattr(proposal_obj, "event_report", None)
+
+            prefill = {
+                "event_title": proposal_obj.event_title or "",
+                "event_date": _format_date(start_date),
+                "venue": (
+                    proposal_obj.venue
+                    or getattr(linked_report, "location", "")
+                    or ""
+                ),
+                "event_summary": getattr(linked_report, "summary", "") or "",
+                "key_outcomes": getattr(linked_report, "outcomes", "") or "",
+                "department": getattr(proposal_obj.organization, "name", ""),
+            }
+
+    context = {
+        "proposal": proposal_obj,
+        "prefill": prefill,
+    }
+    return render(request, "emt/report_generation.html", context)
 
 
 @csrf_exempt
