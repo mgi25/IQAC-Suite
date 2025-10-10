@@ -224,6 +224,12 @@
             <th>Support to Value Systems (SDGs / Social Commitment)</th>
             <td><p class="cell-para" data-field="relevance.sdg" data-multiline="true">—</p></td>
           </tr>
+          <tr class="sdg-row">
+            <th>Aligned SDG Goals</th>
+            <td>
+              <ul class="cell-ul" data-list="mapping.sdg_goal_numbers"><li>—</li></ul>
+            </td>
+          </tr>
         </tbody>
       </table>
 
@@ -348,6 +354,7 @@
     list('[data-list="activities"]', data?.activities);
     list('[data-list="social_relevance"]', data?.social_relevance);
     list('[data-list="outcomes"]', data?.outcomes);
+    list('[data-list="mapping.sdg_goal_numbers"]', data?.mapping?.sdg_goal_numbers);
 
     txt('[data-field="analysis.attendees"]', data?.analysis?.attendees);
     txt('[data-field="analysis.schools"]', data?.analysis?.schools);

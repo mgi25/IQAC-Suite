@@ -3585,7 +3585,19 @@ def preview_event_report(request, proposal_id):
                     objs = list(getattr(proposal, name).all())
             elif hasattr(proposal, name):
                 objs = list(getattr(proposal, name).all())
-            display = ", ".join(str(obj) for obj in objs) or "—"
+
+            if name == "sdg_goals" and hasattr(proposal, "sdg_goals"):
+                # Ensure we always show the selected SDGs with their numbers,
+                # even if the bound form data is missing due to caching.
+                objs = list(proposal.sdg_goals.all()) or objs
+
+            if name == "sdg_goals" and objs:
+                display = ", ".join(
+                    f"SDG {obj.id}: {obj.name}" if hasattr(obj, "id") else str(obj)
+                    for obj in objs
+                )
+            else:
+                display = ", ".join(str(obj) for obj in objs) or "—"
         elif isinstance(field_def, forms.ModelChoiceField):
             obj = None
             if raw_value:
@@ -3599,6 +3611,22 @@ def preview_event_report(request, proposal_id):
         else:
             display = raw_value or "—"
         proposal_fields.append((bound_field.label, display))
+
+    # Ensure the SDG selection always surfaces with numbered labels,
+    # even if the bound form data is empty (e.g., cached POST missing the
+    # m2m IDs). This keeps the preview aligned with the persisted proposal
+    # selections highlighted in reviewer screens.
+    sdg_label = proposal_form.fields["sdg_goals"].label
+    sdg_display = ", ".join(
+        f"SDG {goal.id}: {goal.name}"
+        for goal in proposal.sdg_goals.all().order_by("id")
+    ) or "—"
+    for idx, (label, _) in enumerate(proposal_fields):
+        if label == sdg_label:
+            proposal_fields[idx] = (sdg_label, sdg_display)
+            break
+    else:
+        proposal_fields.append((sdg_label, sdg_display))
 
     # Add related proposal data not covered by EventProposalForm
     need = getattr(proposal, "need_analysis", None)

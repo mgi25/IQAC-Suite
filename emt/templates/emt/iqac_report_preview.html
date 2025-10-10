@@ -713,6 +713,14 @@
             <th>Support to Value Systems (Cross Cutting Issues such as Gender, Environmental aspects, SDGs, Social Commitment, etc)</th>
             <td data-field="relevance.sdg" data-multiline="true">—</td>
           </tr>
+          <tr class="sdg-row">
+            <th>Aligned SDG Goals</th>
+            <td>
+              <ul class="bullets" data-list="mapping.sdg_goal_numbers" data-empty="true">
+                <li>—</li>
+              </ul>
+            </td>
+          </tr>
         </tbody>
       </table>
     </section>
@@ -975,6 +983,9 @@
           graduate_attributes: relevanceSource.graduate_attributes ?? mappingSource.graduate_attributes_or_needs ?? mappingSource.pos_psos ?? '',
           sdg: relevanceSource.sdg ?? relevanceSource.value_systems ?? mappingSource.value_systems ?? '',
         },
+        mapping: {
+          sdg_goal_numbers: toArray(mappingSource.sdg_goal_numbers ?? mappingSource.sdg_goals),
+        },
         suggestions: toArray(source.suggestions ?? iqacSource.iqac_suggestions ?? suggestionsSource.list),
         suggestions_date: source.suggestions_date ?? iqacSource.iqac_review_date ?? '',
         signatures: {
@@ -1037,6 +1048,7 @@
       fieldMap.forEach(item => setText(item.selector, getValue(data, item.path)));
 
       setList('[data-list="participants.organising_committee"]', getValue(data, 'participants.organising_committee'));
+      setList('[data-list="mapping.sdg_goal_numbers"]', getValue(data, 'mapping.sdg_goal_numbers'));
       setList('[data-list="outcomes"]', getValue(data, 'outcomes'));
       setList('[data-list="suggestions"]', getValue(data, 'suggestions'));
 
