@@ -48,22 +48,24 @@
 
   async function loadPerformance() {
     try{
+      if(window.AppOverlay) AppOverlay.show('Loading performance…');
       const res = await fetch('/api/student/performance-data/', { headers: { 'X-Requested-With':'XMLHttpRequest' }});
       const j = await res.json();
       renderDonut(j.labels, j.percentages);
     }catch{
       renderDonut(['Excellent','Good','Average','Poor'], [35, 40, 20, 5]);
-    }
+    } finally { if(window.AppOverlay) AppOverlay.hide(); }
   }
   async function loadContribution() {
     try{
+      if(window.AppOverlay) AppOverlay.show('Loading contribution…');
       const res = await fetch('/api/event-contribution/', { headers: { 'X-Requested-With':'XMLHttpRequest' }});
       const j = await res.json();
       const pct = Number(j.overall_percentage) || 0;
       renderDonut(['My Contribution','Other'], [pct, Math.max(0, 100 - pct)]);
     }catch{
       renderDonut(['Organized','Participated','Reviewed','Other'], [45, 35, 15, 5]);
-    }
+    } finally { if(window.AppOverlay) AppOverlay.hide(); }
   }
 
   async function loadRecentEvents() {
@@ -101,6 +103,7 @@
     $$('.seg-btn').forEach(x => x.classList.remove('active'));
     e.currentTarget.classList.add('active');
     currentView = e.currentTarget.dataset.view;
+    try{ localStorage.setItem('iqac:student:view', currentView); }catch(_e){}
     const title = $('#perfTitle');
     if (title) title.textContent = currentView === 'performance' ? 'Student Performance' : 'Event Contribution';
     (currentView === 'performance' ? loadPerformance() : loadContribution()).then(syncHeights);
@@ -373,19 +376,21 @@ wrap.innerHTML = events.map(ev => `
 
   // Boot
   document.addEventListener('DOMContentLoaded', () => {
+    try{ const saved = localStorage.getItem('iqac:student:view'); if(saved){ currentView = saved; $$('.seg-btn').forEach(x=>x.classList.toggle('active', x.dataset.view===saved)); } }catch(_e){}
     loadPerformance();
     loadAndShowProposals();
     // loadRecentEvents(); // intentionally not auto-prepending to keep the section focused
     // Initialize shared calendar module (same behavior as admin)
     try{
       if (window.CalendarModule && typeof CalendarModule.init === 'function'){
-        // Match admin behaviour: include multi-day / end-dated events
+        if(window.AppOverlay) AppOverlay.show('Loading calendar…');
         CalendarModule.init({ endpoint: '/api/calendar/?category=all', inlineEventsElementId: 'calendarEventsJson', showOnlyStartDate: false });
       } else {
         // fallback to legacy data load if CalendarModule is not available
-        loadCalendarData();
+        if(window.AppOverlay) AppOverlay.show('Loading calendar…');
+        loadCalendarData().finally(()=>{ if(window.AppOverlay) AppOverlay.hide(); });
       }
-    }catch(ex){ console.error('CalendarModule init failed', ex); loadCalendarData(); }
+    }catch(ex){ console.error('CalendarModule init failed', ex); if(window.AppOverlay) AppOverlay.show('Loading calendar…'); loadCalendarData().finally(()=>{ if(window.AppOverlay) AppOverlay.hide(); }); }
     renderHeatmap();
     requestAnimationFrame(()=>{ syncHeights(); });
   });
