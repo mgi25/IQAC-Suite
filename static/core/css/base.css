@@ -399,3 +399,43 @@ body.command-center-layout .main-viewscreen{ transition:all .25s ease !important
 .action-card::before{
   content:""; position:absolute; top:0; left:0; right:0; height:3
 }
+
+/* ===================== Global overlays and input caret ===================== */
+/* App-wide loading/saving overlay consistent with dashboard theme */
+.app-overlay{position:fixed;inset:0;background:rgba(255,255,255,0.88);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:10000;opacity:1;transition:opacity .2s ease}
+.app-overlay.hidden{opacity:0;pointer-events:none}
+.app-overlay .overlay-card{background:#fff;padding:32px 40px;border-radius:16px;box-shadow:0 12px 40px -10px rgba(11,53,102,.28);display:flex;flex-direction:column;align-items:center;gap:14px;min-width:260px;max-width:80vw}
+.app-overlay .spinner{width:48px;height:48px;border-radius:999px;border:5px solid #e6edf5;border-top-color:#1e60b1;animation:app-spin .9s linear infinite}
+.app-overlay .message{font-weight:800;font-size:16px;color:#1e60b1;letter-spacing:.3px;text-align:center}
+.app-overlay.saving .spinner{border-top-color:#0d7d3e}
+.app-overlay.saving .message{color:#0d7d3e}
+@keyframes app-spin{to{transform:rotate(360deg)}}
+
+/* Visible typing indicator for inputs in sidebar and dashboards */
+.left-control-panel input[type="text"],
+.left-control-panel input[type="search"],
+.left-control-panel select,
+.left-control-panel textarea,
+.ems-dashboard input[type="text"],
+.ems-dashboard input[type="search"],
+.ems-dashboard input[type="email"],
+.ems-dashboard input[type="number"],
+.ems-dashboard select,
+.ems-dashboard textarea{
+  caret-color:#1e60b1;
+  box-shadow: inset 0 -2px 0 #c9d6e8;
+  transition: box-shadow .2s ease, border-color .2s ease;
+}
+.left-control-panel input[type="text"]:focus,
+.left-control-panel input[type="search"]:focus,
+.left-control-panel select:focus,
+.left-control-panel textarea:focus,
+.ems-dashboard input[type="text"]:focus,
+.ems-dashboard input[type="search"]:focus,
+.ems-dashboard input[type="email"]:focus,
+.ems-dashboard input[type="number"]:focus,
+.ems-dashboard select:focus,
+.ems-dashboard textarea:focus{
+  box-shadow: inset 0 -3px 0 #1e60b1, 0 0 0 2px rgba(30,96,177,0.12);
+  border-color:#1e60b1 !important;
+}

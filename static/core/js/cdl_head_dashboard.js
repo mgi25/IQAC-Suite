@@ -13,6 +13,7 @@
 
   async function loadData(scope='all'){
     try{
+      if(window.AppOverlay) AppOverlay.show('Loading dashboard…');
       const res = await fetch(`/api/cdl/head-dashboard/?scope=${encodeURIComponent(scope)}`, {headers:{'Accept':'application/json'}});
       if(!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -22,14 +23,15 @@
       WORKLOAD_DATA = data.workload || {};
       renderAll();
       populateMemberFilter();
-    }catch(err){
+    } catch(err){
       console.warn('Failed to load CDL dashboard data:', err);
-      // Keep UI with zeros as per requirement
       KPIS = { total_active_requests:0, assets_pending:0, unassigned_tasks:0, total_events_supported:0 };
       EVENTS = [];
       EVENT_DETAILS = [];
       WORKLOAD_DATA = {};
       renderAll();
+    } finally {
+      if(window.AppOverlay) AppOverlay.hide();
     }
   }
 
@@ -273,6 +275,7 @@
   $('#calFilter')?.addEventListener('change', e => {
     currentCalFilter = e.target.value;
     currentScope = currentCalFilter;
+      try{ localStorage.setItem('iqac:cdl:scope', currentScope); }catch(_e){}
     loadData(currentScope);
   });
   $('#calPrev')?.addEventListener('click', () => { calRef = new Date(calRef.getFullYear(), calRef.getMonth()-1, 1); buildCalendar(); });
@@ -290,6 +293,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    loadData('all');
+     try{ const saved = localStorage.getItem('iqac:cdl:scope'); if(saved){ currentScope = saved; currentCalFilter = saved; const sel = document.getElementById('calFilter'); if(sel) sel.value = saved; } }catch(_e){}
+     loadData(currentScope);
   });
 })();
