@@ -17,7 +17,9 @@ def role_required(role):
         @login_required
         def _wrapped_view(request, *args, **kwargs):
             # Fetch from Profile, fallback to session if needed
-            profile_role = getattr(getattr(request.user, "profile", None), "role", None)
+            profile_role = getattr(
+                getattr(request.user, "profile", None), "role", None
+            )
             session_role = request.session.get("role")
             if profile_role == role or session_role == role:
                 return view_func(request, *args, **kwargs)
@@ -35,7 +37,9 @@ def admin_required(view_func):
 
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
-        if not (request.user.is_superuser or request.session.get("role") == "admin"):
+        if not (
+            request.user.is_superuser or request.session.get("role") == "admin"
+        ):
             raise PermissionDenied("Admin access required")
         return view_func(request, *args, **kwargs)
 

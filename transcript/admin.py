@@ -1,15 +1,31 @@
 from django.contrib import admin
 from django.utils.html import format_html
 
-from .models import (AcademicYear, AttributeStrengthMap, CharacterStrength,
-                     Course, Event, GraduateAttribute, Participation, Role,
-                     School, Student)
+from .models import (
+    AcademicYear,
+    AttributeStrengthMap,
+    CharacterStrength,
+    Course,
+    Event,
+    GraduateAttribute,
+    Participation,
+    Role,
+    School,
+    Student,
+)
 
 
 # Custom admin for Student to display photo.
 @admin.register(Student)
 class StudentAdmin(admin.ModelAdmin):
-    list_display = ("roll_no", "name", "course", "academic_year", "school", "photo_tag")
+    list_display = (
+        "roll_no",
+        "name",
+        "course",
+        "academic_year",
+        "school",
+        "photo_tag",
+    )
     search_fields = ("roll_no", "name")
     list_filter = ("course", "academic_year", "school")
 

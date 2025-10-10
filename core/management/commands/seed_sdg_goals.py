@@ -12,6 +12,8 @@ class Command(BaseCommand):
         for name in SDG_GOALS:
             _, created = SDGGoal.objects.get_or_create(name=name)
             if created:
-                self.stdout.write(self.style.SUCCESS(f"Added SDG goal '{name}'"))
+                self.stdout.write(
+                    self.style.SUCCESS(f"Added SDG goal '{name}'")
+                )
         SDGGoal.objects.exclude(name__in=SDG_GOALS).delete()
         self.stdout.write(self.style.SUCCESS("SDG goals seeding complete."))

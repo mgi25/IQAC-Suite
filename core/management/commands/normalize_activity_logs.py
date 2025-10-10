@@ -30,4 +30,6 @@ class Command(BaseCommand):
                 log.description = new_desc
                 log.save(update_fields=["description"])
                 count += 1
-        self.stdout.write(self.style.SUCCESS(f"Normalized {count} activity logs."))
+        self.stdout.write(
+            self.style.SUCCESS(f"Normalized {count} activity logs.")
+        )
