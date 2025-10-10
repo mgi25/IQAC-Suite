@@ -224,9 +224,54 @@
     margin: 0 0 .375rem;
   }
   .content-subtitle { color: var(--text-muted); margin: 0; font-size: 1rem; }
-  
+
   .content-actions { margin-top: .5rem; display: flex; gap: .5rem; }
-  
+
+  .proposal-guidance {
+    margin: 0 0 1.5rem;
+    background: linear-gradient(135deg, rgba(51, 102, 255, 0.08) 0%, rgba(39, 174, 96, 0.08) 100%);
+    border: 1px solid rgba(51, 102, 255, 0.15);
+    border-radius: 16px;
+    padding: 1.5rem;
+  }
+
+  .proposal-guidance__content {
+    max-width: 52rem;
+    color: var(--text-color);
+  }
+
+  .proposal-guidance__intro {
+    margin: .5rem 0 1rem;
+    color: var(--text-muted);
+  }
+
+  .proposal-guidance__list {
+    margin: 0 0 1rem 1.25rem;
+    padding: 0;
+    display: grid;
+    gap: .5rem;
+    list-style: disc;
+  }
+
+  .proposal-guidance__list li {
+    font-size: .95rem;
+    line-height: 1.4;
+  }
+
+  .proposal-guidance__tip {
+    margin: 0;
+    font-size: .9rem;
+    color: var(--primary-blue);
+    display: flex;
+    gap: .35rem;
+    align-items: flex-start;
+  }
+
+  .proposal-guidance__tip em {
+    font-style: normal;
+    font-weight: 600;
+  }
+
   /* ---- Buttons (flat, consistent) ---- */
   .btn-draft, .btn-draft-section,
   .proposal-content .btn-save-section,
