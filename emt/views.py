@@ -3585,7 +3585,19 @@ def preview_event_report(request, proposal_id):
                     objs = list(getattr(proposal, name).all())
             elif hasattr(proposal, name):
                 objs = list(getattr(proposal, name).all())
-            display = ", ".join(str(obj) for obj in objs) or "—"
+
+            if name == "sdg_goals" and hasattr(proposal, "sdg_goals"):
+                # Ensure we always show the selected SDGs with their numbers,
+                # even if the bound form data is missing due to caching.
+                objs = list(proposal.sdg_goals.all()) or objs
+
+            if name == "sdg_goals" and objs:
+                display = ", ".join(
+                    f"SDG {obj.id}: {obj.name}" if hasattr(obj, "id") else str(obj)
+                    for obj in objs
+                )
+            else:
+                display = ", ".join(str(obj) for obj in objs) or "—"
         elif isinstance(field_def, forms.ModelChoiceField):
             obj = None
             if raw_value:
