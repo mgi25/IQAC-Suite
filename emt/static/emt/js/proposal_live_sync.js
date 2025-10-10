@@ -182,6 +182,40 @@
                 updateTextSection(name, value);
             });
         }
+        if (Array.isArray(payload.activities)) {
+            window.EXISTING_ACTIVITIES = payload.activities.map(item => ({ ...item }));
+            if (window.ProposalRealtime && typeof window.ProposalRealtime.updateActivities === 'function') {
+                window.ProposalRealtime.updateActivities(payload.activities);
+            }
+        }
+        if (Array.isArray(payload.speakers)) {
+            window.EXISTING_SPEAKERS = payload.speakers.map(item => ({ ...item }));
+            if (window.ProposalRealtime && typeof window.ProposalRealtime.updateSpeakers === 'function') {
+                window.ProposalRealtime.updateSpeakers(payload.speakers);
+            }
+        }
+        if (Array.isArray(payload.expenses)) {
+            window.EXISTING_EXPENSES = payload.expenses.map(item => ({ ...item }));
+            if (window.ProposalRealtime && typeof window.ProposalRealtime.updateExpenses === 'function') {
+                window.ProposalRealtime.updateExpenses(payload.expenses);
+            }
+        }
+        if (Array.isArray(payload.income)) {
+            window.EXISTING_INCOME = payload.income.map(item => ({ ...item }));
+            if (window.ProposalRealtime && typeof window.ProposalRealtime.updateIncome === 'function') {
+                window.ProposalRealtime.updateIncome(payload.income);
+            }
+        }
+        if (Array.isArray(payload.sdg_goals)) {
+            if (window.ProposalRealtime && typeof window.ProposalRealtime.updateSdgGoals === 'function') {
+                window.ProposalRealtime.updateSdgGoals(payload.sdg_goals);
+            }
+        }
+        if (Array.isArray(payload.faculty_incharges)) {
+            if (window.ProposalRealtime && typeof window.ProposalRealtime.updateFacultyIncharges === 'function') {
+                window.ProposalRealtime.updateFacultyIncharges(payload.faculty_incharges);
+            }
+        }
     }
 
     async function poll() {

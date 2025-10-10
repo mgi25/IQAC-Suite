@@ -146,6 +146,30 @@ class SubmitEventReportViewTests(TestCase):
             html=False,
         )
 
+    def test_prefill_venue_uses_proposal_when_autosave_blank(self):
+        self.proposal.venue = "Innovation Hall"
+        self.proposal.save(update_fields=["venue"])
+
+        EventReport.objects.create(
+            proposal=self.proposal,
+            generated_payload={"venue": ""},
+        )
+
+        session = self.client.session
+        session.setdefault("event_report_draft", {})[str(self.proposal.id)] = {
+            "venue": "",
+        }
+        session.save()
+
+        response = self.client.get(
+            reverse("emt:submit_event_report", args=[self.proposal.id])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["prefill_venue"], "Innovation Hall")
+        html = response.content.decode()
+        self.assertIn("Innovation Hall", html)
+
     def test_attendance_link_opens_without_preexisting_report(self):
         url = reverse("emt:submit_event_report", args=[self.proposal.id])
         response = self.client.get(url)

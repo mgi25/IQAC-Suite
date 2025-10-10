@@ -59,6 +59,44 @@ class AutosaveDraftPersistenceTests(TestCase):
         proposal.refresh_from_db()
         self.assertEqual(proposal.event_title, "My Event")
 
+    def test_autosave_updates_existing_draft_in_place(self):
+        first = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(self._payload()),
+            content_type="application/json",
+        )
+        self.assertEqual(first.status_code, 200)
+        initial_id = first.json()["proposal_id"]
+
+        payload = self._payload()
+        payload.update(
+            {
+                "proposal_id": initial_id,
+                "event_title": "Seminar",
+                "committees_collaborations": "Committee A",
+            }
+        )
+        second = self.client.post(
+            reverse("emt:autosave_proposal"),
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(second.status_code, 200)
+        body = second.json()
+        self.assertEqual(body["proposal_id"], initial_id)
+        self.assertEqual(
+            EventProposal.objects.filter(
+                submitted_by=self.user,
+                status=EventProposal.Status.DRAFT,
+                is_user_deleted=False,
+            ).count(),
+            1,
+        )
+
+        proposal = EventProposal.objects.get(id=initial_id)
+        self.assertEqual(proposal.event_title, "Seminar")
+        self.assertEqual(proposal.committees_collaborations, "Committee A")
+
     def test_organization_fields_persist_after_autosave(self):
         ot2 = OrganizationType.objects.create(name="Club")
         org2 = Organization.objects.create(name="Robotics", org_type=ot2)

@@ -528,7 +528,56 @@ def my_requests_view(request):
 
 
 def report_form(request):
-    return render(request, "emt/report_generation.html")
+    """Render the lightweight PDF report form with optional proposal prefill."""
+
+    prefill: dict[str, str] = {}
+    proposal_obj: EventProposal | None = None
+    proposal_id = request.GET.get("proposal_id")
+
+    if proposal_id:
+        try:
+            proposal_obj = (
+                EventProposal.objects.select_related("organization", "event_report")
+                .filter(is_user_deleted=False)
+                .get(pk=int(proposal_id))
+            )
+        except (ValueError, EventProposal.DoesNotExist):
+            proposal_obj = None
+        else:
+            def _format_date(value):
+                if not value:
+                    return ""
+                if hasattr(value, "strftime"):
+                    return value.strftime("%Y-%m-%d")
+                return str(value)
+
+            start_date = proposal_obj.event_start_date
+            if not start_date and proposal_obj.event_datetime:
+                try:
+                    start_date = proposal_obj.event_datetime.date()
+                except Exception:  # pragma: no cover - defensive fallback
+                    start_date = None
+
+            linked_report = getattr(proposal_obj, "event_report", None)
+
+            prefill = {
+                "event_title": proposal_obj.event_title or "",
+                "event_date": _format_date(start_date),
+                "venue": (
+                    proposal_obj.venue
+                    or getattr(linked_report, "location", "")
+                    or ""
+                ),
+                "event_summary": getattr(linked_report, "summary", "") or "",
+                "key_outcomes": getattr(linked_report, "outcomes", "") or "",
+                "department": getattr(proposal_obj.organization, "name", ""),
+            }
+
+    context = {
+        "proposal": proposal_obj,
+        "prefill": prefill,
+    }
+    return render(request, "emt/report_generation.html", context)
 
 
 @csrf_exempt
@@ -840,11 +889,16 @@ def proposal_drafts(request):
 
     active_ids = list(base_qs.values_list("id", flat=True))
 
-    if len(active_ids) > MAX_ACTIVE_DRAFTS:
-        EventProposal.objects.filter(id__in=active_ids[MAX_ACTIVE_DRAFTS:]).update(
-            is_user_deleted=True,
-            updated_at=timezone.now(),
-        )
+    if active_ids:
+        # Retain only the most recently updated draft for the user and hide the rest.
+        ids_to_keep = {active_ids[0]}
+        ids_to_archive = [draft_id for draft_id in active_ids if draft_id not in ids_to_keep]
+
+        if ids_to_archive:
+            EventProposal.objects.filter(id__in=ids_to_archive).update(
+                is_user_deleted=True,
+                updated_at=timezone.now(),
+            )
 
     drafts_qs = EventProposal.objects.filter(
         submitted_by=request.user,
@@ -1255,7 +1309,6 @@ def autosave_proposal(request):
         user=request.user,
         selected_academic_year=selected_academic_year,
     )
-    form = EventProposalForm(data, instance=proposal, user=request.user)
     faculty_ids = data.get("faculty_incharges") or []
     if faculty_ids:
         form.fields["faculty_incharges"].queryset = User.objects.filter(
@@ -3309,6 +3362,7 @@ def submit_event_report(request, proposal_id):
             return value
 
         candidates = []
+        saw_explicit_blank = False
 
         if draft:
             draft_value = _normalise_candidate(draft.get(key))
@@ -3335,12 +3389,19 @@ def submit_event_report(request, proposal_id):
                 if stripped:
                     return stripped
                 if candidate == "":
-                    return ""
+                    # Defer returning an explicit blank until we have checked
+                    # for other fallbacks. Autosave payloads often record
+                    # empty strings for untouched fields, but we still want to
+                    # hydrate the report with proposal data when available.
+                    saw_explicit_blank = True
+                    continue
                 continue
             if isinstance(candidate, (int, float)):
                 return str(candidate)
             return str(candidate)
 
+        if saw_explicit_blank:
+            return ""
         return ""
 
     prefill_venue = _coalesce_prefill("venue", getattr(proposal, "venue", ""))

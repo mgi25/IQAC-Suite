@@ -114,11 +114,8 @@ class ProposalDraftManagementTests(TestCase):
             .order_by("-updated_at")
             .values_list("event_title", flat=True)
         )
-        self.assertEqual(len(active_titles), 5)
-        self.assertSetEqual(
-            set(active_titles),
-            {f"Draft {idx}" for idx in range(2, 7)},
-        )
+        self.assertEqual(len(active_titles), 1)
+        self.assertListEqual(active_titles, ["Draft 6"])
 
         archived_titles = set(
             EventProposal.objects.filter(
@@ -127,4 +124,7 @@ class ProposalDraftManagementTests(TestCase):
                 is_user_deleted=True,
             ).values_list("event_title", flat=True)
         )
-        self.assertSetEqual(archived_titles, {"Draft 0", "Draft 1"})
+        self.assertSetEqual(
+            archived_titles,
+            {f"Draft {idx}" for idx in range(0, 6)},
+        )
