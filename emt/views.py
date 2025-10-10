@@ -1309,7 +1309,6 @@ def autosave_proposal(request):
         user=request.user,
         selected_academic_year=selected_academic_year,
     )
-    form = EventProposalForm(data, instance=proposal, user=request.user)
     faculty_ids = data.get("faculty_incharges") or []
     if faculty_ids:
         form.fields["faculty_incharges"].queryset = User.objects.filter(
