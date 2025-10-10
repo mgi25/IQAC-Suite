@@ -1152,9 +1152,23 @@ $(document).ready(function() {
             if (uniqueIds.length !== ids.length) {
                 tom.setValue(uniqueIds, true);
             }
-            djangoField.val(uniqueNames.join(', ')).trigger('change');
+            const namesValue = uniqueNames.join(', ');
+            if (djangoField.length) {
+                djangoField.val(namesValue);
+                const el = djangoField[0];
+                if (el) {
+                    el.dispatchEvent(new Event('input', { bubbles: true }));
+                    el.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }
             if (idsField.length) {
-                idsField.val(uniqueIds.join(', ')).trigger('change');
+                const idsValue = uniqueIds.join(', ');
+                idsField.val(idsValue);
+                const el = idsField[0];
+                if (el) {
+                    el.dispatchEvent(new Event('input', { bubbles: true }));
+                    el.dispatchEvent(new Event('change', { bubbles: true }));
+                }
             }
             clearFieldError(select);
         });
