@@ -328,7 +328,8 @@
   .grid-table td {
     border: 0.9px solid #111;
     padding: 8px 10px;
-    vertical-align: middle;
+    vertical-align: top;
+    line-height: 1.4;
   }
 
   .grid-table th {
@@ -336,10 +337,14 @@
     text-transform: uppercase;
     letter-spacing: 0.02em;
     background: #f6f6f6;
+    word-break: break-word;
+    hyphens: auto;
   }
 
   .grid-table td {
     text-align: left;
+    word-break: break-word;
+    hyphens: auto;
   }
 
   .grid-table td[data-placeholder="true"] {
