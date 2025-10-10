@@ -4092,15 +4092,23 @@ def preview_event_report(request, proposal_id):
             getattr(report, "contemporary_requirements", None),
         )
     )
-    mapping_value_systems_value = _text(
-        _first_value(
-            post_data.get("sdg_value_systems_mapping"),
-            getattr(report, "sdg_value_systems_mapping", None),
-        )
+    sdg_value_systems_raw = _first_value(
+        post_data.get("sdg_value_systems_mapping"),
+        getattr(report, "sdg_value_systems_mapping", None),
     )
+    mapping_value_systems_value = _text(sdg_value_systems_raw)
+
+    parsed_sdg_goals = []
+    if sdg_value_systems_raw:
+        parsed_sdg_goals = list(_parse_sdg_text(sdg_value_systems_raw))
+        parsed_sdg_goals.sort(key=attrgetter("id"))
+
+    if not parsed_sdg_goals:
+        parsed_sdg_goals = list(proposal.sdg_goals.all().order_by("id"))
+
     sdg_goal_numbers = [
         f"SDG {goal.id}: {goal.name}"
-        for goal in proposal.sdg_goals.all().order_by("id")
+        for goal in parsed_sdg_goals
     ]
 
     naac_tags = [
