@@ -522,6 +522,23 @@ console.log(JSON.stringify({
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, f"SDG {goal.id}: {goal.name}")
 
+    def test_preview_uses_posted_sdg_value_systems_mapping(self):
+        goal = SDGGoal.objects.create(name="Climate Action")
+
+        url = reverse("emt:preview_event_report", args=[self.proposal.id])
+        data = {
+            "actual_event_type": "Workshop",
+            "sdg_value_systems_mapping": f"SDG {goal.id}: {goal.name}",
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"SDG {goal.id}: {goal.name}")
+
     def test_preview_preserves_checked_and_unchecked_fields(self):
         url = reverse("emt:preview_event_report", args=[self.proposal.id])
         data = {
