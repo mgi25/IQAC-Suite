@@ -21,7 +21,8 @@ def notifications(request):
     proposals = (
         EventProposal.objects.filter(submitted_by=request.user)
         .filter(
-            ~Q(status=EventProposal.Status.FINALIZED) | Q(updated_at__gte=two_days_ago)
+            ~Q(status=EventProposal.Status.FINALIZED)
+            | Q(updated_at__gte=two_days_ago)
         )
         .order_by("-updated_at")[:10]
     )
@@ -75,19 +76,33 @@ def sidebar_permissions(request):
 
     # Anonymous users: nothing and restricted
     if not request.user.is_authenticated:
-        return {"allowed_nav_items": [], "unrestricted_nav": False, "is_english_faculty": False, "is_reviewer": False}
+        return {
+            "allowed_nav_items": [],
+            "unrestricted_nav": False,
+            "is_english_faculty": False,
+            "is_reviewer": False,
+        }
 
     # Superusers: unrestricted; keep allowed_nav_items as [] for backward compat
     if request.user.is_superuser:
-        return {"allowed_nav_items": [], "unrestricted_nav": True, "is_english_faculty": False, "is_reviewer": True}
+        return {
+            "allowed_nav_items": [],
+            "unrestricted_nav": True,
+            "is_english_faculty": False,
+            "is_reviewer": True,
+        }
 
     # Pre-compute English Faculty heuristic for conditional UI
     def _is_english_faculty_user(u):
         try:
-            raqs = RoleAssignment.objects.select_related("role").filter(user=u, role__isnull=False)
+            raqs = RoleAssignment.objects.select_related("role").filter(
+                user=u, role__isnull=False
+            )
             for ra in raqs:
                 name = (getattr(ra.role, "name", "") or "").lower()
-                if "english" in name and ("faculty" in name or "review" in name or "proof" in name):
+                if "english" in name and (
+                    "faculty" in name or "review" in name or "proof" in name
+                ):
                     return True
         except Exception:
             return False
@@ -111,17 +126,15 @@ def sidebar_permissions(request):
     def _is_reviewer(u):
         try:
             names = []
-            ras = RoleAssignment.objects.select_related("role").filter(user=u, role__isnull=False)
+            ras = RoleAssignment.objects.select_related("role").filter(
+                user=u, role__isnull=False
+            )
             names.extend([(ra.role.name or "").lower() for ra in ras])
             prof_role = getattr(getattr(u, "profile", None), "role", "") or ""
             if prof_role:
                 names.append(prof_role.lower())
             blob = " ".join(names)
-            return (
-                "hod" in blob
-                or "iqac" in blob
-                or "admin" in blob
-            )
+            return "hod" in blob or "iqac" in blob or "admin" in blob
         except Exception:
             return False
 
@@ -209,4 +222,9 @@ def sidebar_permissions(request):
         )
     except Exception:
         pass
-    return {"allowed_nav_items": [], "unrestricted_nav": False, "is_english_faculty": _english_flag, "is_reviewer": _is_reviewer(request.user)}
+    return {
+        "allowed_nav_items": [],
+        "unrestricted_nav": False,
+        "is_english_faculty": _english_flag,
+        "is_reviewer": _is_reviewer(request.user),
+    }

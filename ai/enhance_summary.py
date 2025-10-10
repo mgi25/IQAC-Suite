@@ -19,7 +19,9 @@ def enhance_summary(request):
     end = request.POST.get("end_date", "").strip()
 
     if not text:
-        return JsonResponse({"ok": False, "error": "No summary provided"}, status=400)
+        return JsonResponse(
+            {"ok": False, "error": "No summary provided"}, status=400
+        )
 
     prompt = (
         f"Title: {title}\n"

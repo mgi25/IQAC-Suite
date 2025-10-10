@@ -40,7 +40,9 @@ class SchoolSocialAccountAdapter(DefaultSocialAccountAdapter):
         user = super().save_user(request, sociallogin, form=form)
         profile, _ = Profile.objects.get_or_create(user=user)
         domain = user.email.split("@")[-1].lower() if user.email else ""
-        role = "student" if domain.endswith("christuniversity.in") else "faculty"
+        role = (
+            "student" if domain.endswith("christuniversity.in") else "faculty"
+        )
         if profile.role != role:
             profile.role = role
             profile.save(update_fields=["role"])
@@ -72,7 +74,9 @@ class RoleBasedAccountAdapter(DefaultAccountAdapter):
         """Allow first-time inactive users to proceed with login."""
         if not user.is_active:
             profile = getattr(user, "profile", None)
-            if not (profile and getattr(profile, "activated_at", None) is None):
+            if not (
+                profile and getattr(profile, "activated_at", None) is None
+            ):
                 return self.respond_user_inactive(request, user)
 
     def get_login_redirect_url(self, request):

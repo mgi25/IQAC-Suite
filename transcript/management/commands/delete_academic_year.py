@@ -9,7 +9,9 @@ class Command(BaseCommand):
     help = "Delete AcademicYear entries matching the given year string."
 
     def add_arguments(self, parser):
-        parser.add_argument("year", help="Year value to delete, e.g., 2025-2026")
+        parser.add_argument(
+            "year", help="Year value to delete, e.g., 2025-2026"
+        )
 
     def handle(self, *args, **options):
         year = options["year"]
@@ -22,5 +24,7 @@ class Command(BaseCommand):
             )
         else:
             self.stdout.write(
-                self.style.WARNING(f"No AcademicYear found with year '{year}'.")
+                self.style.WARNING(
+                    f"No AcademicYear found with year '{year}'."
+                )
             )

@@ -2,12 +2,17 @@ import csv
 
 from django.core.management.base import BaseCommand
 
-from transcript.models import (AttributeStrengthMap, CharacterStrength,
-                               GraduateAttribute)
+from transcript.models import (
+    AttributeStrengthMap,
+    CharacterStrength,
+    GraduateAttribute,
+)
 
 
 class Command(BaseCommand):
-    help = "Load Graduate Attribute → Character Strength mappings from a CSV file"
+    help = (
+        "Load Graduate Attribute → Character Strength mappings from a CSV file"
+    )
 
     def handle(self, *args, **kwargs):
         path = "transcript/mapping.csv"
@@ -36,8 +41,10 @@ class Command(BaseCommand):
                             continue  # skip blanks or invalid numbers
 
                         if weight > 0:
-                            strength, _ = CharacterStrength.objects.get_or_create(
-                                name=strength_name.strip()
+                            strength, _ = (
+                                CharacterStrength.objects.get_or_create(
+                                    name=strength_name.strip()
+                                )
                             )
                             AttributeStrengthMap.objects.update_or_create(
                                 graduate_attribute=attribute,

@@ -3,8 +3,15 @@ import json
 from django import forms
 from django.db.models import Q
 
-from .models import (CDLMessage, CDLRequest, CertificateBatch, Organization,
-                     OrganizationRole, OrganizationType, RoleAssignment)
+from .models import (
+    CDLMessage,
+    CDLRequest,
+    CertificateBatch,
+    Organization,
+    OrganizationRole,
+    OrganizationType,
+    RoleAssignment,
+)
 
 
 class RoleAssignmentForm(forms.ModelForm):
@@ -87,7 +94,9 @@ class OrgSelectForm(forms.Form):
         label="Organization Type",
     )
     organization = forms.ModelChoiceField(
-        queryset=Organization.objects.none(), required=True, label="Organization"
+        queryset=Organization.objects.none(),
+        required=True,
+        label="Organization",
     )
     role = forms.ChoiceField(
         choices=(("student", "Student"), ("faculty", "Faculty")), required=True
@@ -173,7 +182,9 @@ class CDLRequestForm(forms.ModelForm):
             if poster_summary:
                 words = poster_summary.split()
                 if len(words) < 120 or len(words) > 180:
-                    self.add_error("poster_summary", "Summary must be around 150 words")
+                    self.add_error(
+                        "poster_summary", "Summary must be around 150 words"
+                    )
 
             if not poster_mode:
                 self.add_error("poster_mode", "Select a poster option")
@@ -183,10 +194,13 @@ class CDLRequestForm(forms.ModelForm):
                 self.add_error("certificate_mode", "Select certificate option")
             if (
                 need_certificate_cdl
-                and certificate_mode == CDLRequest.CertificateMode.CORRECT_EXISTING
+                and certificate_mode
+                == CDLRequest.CertificateMode.CORRECT_EXISTING
                 and not cleaned.get("certificate_design_link")
             ):
-                self.add_error("certificate_design_link", "Provide design link")
+                self.add_error(
+                    "certificate_design_link", "Provide design link"
+                )
 
         if (
             wants_cdl

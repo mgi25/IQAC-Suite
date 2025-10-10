@@ -43,7 +43,9 @@ class Command(BaseCommand):
 
         if total_deleted:
             self.stdout.write(
-                self.style.SUCCESS(f"Deleted {total_deleted} duplicate user(s).")
+                self.style.SUCCESS(
+                    f"Deleted {total_deleted} duplicate user(s)."
+                )
             )
         else:
             self.stdout.write(self.style.SUCCESS("No duplicate users found."))

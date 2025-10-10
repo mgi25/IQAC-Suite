@@ -7,10 +7,20 @@ from django.urls import reverse_lazy
 
 from core.models import SDG_GOALS, Organization, OrganizationType, SDGGoal
 
-from .models import (CDLCertificateRecipient, CDLMessage, CDLSupport,
-                     EventExpectedOutcomes, EventNeedAnalysis, EventObjectives,
-                     EventProposal, EventReport, EventReportAttachment,
-                     ExpenseDetail, SpeakerProfile, TentativeFlow)
+from .models import (
+    CDLCertificateRecipient,
+    CDLMessage,
+    CDLSupport,
+    EventExpectedOutcomes,
+    EventNeedAnalysis,
+    EventObjectives,
+    EventProposal,
+    EventReport,
+    EventReportAttachment,
+    ExpenseDetail,
+    SpeakerProfile,
+    TentativeFlow,
+)
 
 # Reusable validator to ensure names contain only letters and basic punctuation
 NAME_PATTERN = r"^[A-Za-z0-9 .,'()&/-]+$"
@@ -71,7 +81,9 @@ class EventProposalForm(forms.ModelForm):
     )
 
     def __init__(self, *args, **kwargs):
-        self.selected_academic_year = kwargs.pop("selected_academic_year", None)
+        self.selected_academic_year = kwargs.pop(
+            "selected_academic_year", None
+        )
         user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
 
@@ -80,7 +92,9 @@ class EventProposalForm(forms.ModelForm):
         if self.data.get("organization_type"):
             try:
                 org_type_id = int(self.data.get("organization_type"))
-                org_type = OrganizationType.objects.filter(id=org_type_id).first()
+                org_type = OrganizationType.objects.filter(
+                    id=org_type_id
+                ).first()
             except Exception:
                 org_type = None
         elif self.instance and getattr(self.instance, "organization", None):
@@ -106,7 +120,9 @@ class EventProposalForm(forms.ModelForm):
                 if membership:
                     org_type = membership.organization.org_type
                     self.fields["organization_type"].initial = org_type
-                    self.fields["organization"].initial = membership.organization
+                    self.fields["organization"].initial = (
+                        membership.organization
+                    )
 
         if org_type:
             self.fields["organization"].queryset = Organization.objects.filter(
@@ -198,15 +214,22 @@ class EventProposalForm(forms.ModelForm):
         org_type = data.get("organization_type")
         organization = data.get("organization")
         if not org_type:
-            self.add_error("organization_type", "Please select an organization type.")
+            self.add_error(
+                "organization_type", "Please select an organization type."
+            )
         if not organization:
-            self.add_error("organization", "Please select an organization name.")
+            self.add_error(
+                "organization", "Please select an organization name."
+            )
         elif org_type and organization and organization.org_type != org_type:
             self.add_error(
-                "organization", "Selected organization does not match the chosen type."
+                "organization",
+                "Selected organization does not match the chosen type.",
             )
         else:
-            committees = (data.get("committees_collaborations") or "").split(",")
+            committees = (data.get("committees_collaborations") or "").split(
+                ","
+            )
             committees = [c.strip().lower() for c in committees if c.strip()]
             if organization.name.lower() in committees:
                 self.add_error(
@@ -234,7 +257,10 @@ class NeedAnalysisForm(forms.ModelForm):
         labels = {"content": "Explain the need for organizing this event."}
         widgets = {
             "content": forms.Textarea(
-                attrs={"rows": 8, "placeholder": "Describe why this event is needed…"}
+                attrs={
+                    "rows": 8,
+                    "placeholder": "Describe why this event is needed…",
+                }
             )
         }
 
@@ -246,7 +272,10 @@ class ObjectivesForm(forms.ModelForm):
         labels = {"content": "List the objectives of this event."}
         widgets = {
             "content": forms.Textarea(
-                attrs={"rows": 8, "placeholder": "e.g., 1. Increase awareness…"}
+                attrs={
+                    "rows": 8,
+                    "placeholder": "e.g., 1. Increase awareness…",
+                }
             )
         }
 
@@ -258,7 +287,10 @@ class ExpectedOutcomesForm(forms.ModelForm):
         labels = {"content": "What outcomes do you expect from this event?"}
         widgets = {
             "content": forms.Textarea(
-                attrs={"rows": 7, "placeholder": "List expected outcomes clearly…"}
+                attrs={
+                    "rows": 7,
+                    "placeholder": "List expected outcomes clearly…",
+                }
             )
         }
 
@@ -292,13 +324,19 @@ class TentativeFlowForm(forms.ModelForm):
             time_str = time_str.strip()
             activity = activity.strip()
             if not time_str:
-                raise forms.ValidationError(f"Line {idx}: date & time is required.")
+                raise forms.ValidationError(
+                    f"Line {idx}: date & time is required."
+                )
             if not activity:
-                raise forms.ValidationError(f"Line {idx}: activity is required.")
+                raise forms.ValidationError(
+                    f"Line {idx}: activity is required."
+                )
             try:
                 datetime.fromisoformat(time_str)
             except ValueError:
-                raise forms.ValidationError(f"Line {idx}: invalid date & time.")
+                raise forms.ValidationError(
+                    f"Line {idx}: invalid date & time."
+                )
             cleaned_lines.append(f"{time_str}||{activity}")
         return "\n".join(cleaned_lines)
 
@@ -388,9 +426,15 @@ class EventReportForm(forms.ModelForm):
         widgets = {
             "location": forms.TextInput(attrs={"class": "ultra-input"}),
             "blog_link": forms.TextInput(attrs={"class": "ultra-input"}),
-            "actual_event_type": forms.TextInput(attrs={"class": "ultra-input"}),
-            "num_student_volunteers": forms.NumberInput(attrs={"class": "ultra-input"}),
-            "num_participants": forms.NumberInput(attrs={"class": "ultra-input"}),
+            "actual_event_type": forms.TextInput(
+                attrs={"class": "ultra-input"}
+            ),
+            "num_student_volunteers": forms.NumberInput(
+                attrs={"class": "ultra-input"}
+            ),
+            "num_participants": forms.NumberInput(
+                attrs={"class": "ultra-input"}
+            ),
             "num_student_participants": forms.NumberInput(
                 attrs={"class": "ultra-input"}
             ),
@@ -409,14 +453,18 @@ class EventReportForm(forms.ModelForm):
             "external_contact_details": forms.Textarea(
                 attrs={"class": "ultra-input", "rows": 3}
             ),
-            "summary": forms.Textarea(attrs={"class": "ultra-input", "rows": 3}),
+            "summary": forms.Textarea(
+                attrs={"class": "ultra-input", "rows": 3}
+            ),
             "key_achievements": forms.Textarea(
                 attrs={"class": "ultra-input", "rows": 3}
             ),
             "notable_moments": forms.Textarea(
                 attrs={"class": "ultra-input", "rows": 3}
             ),
-            "outcomes": forms.Textarea(attrs={"class": "ultra-input", "rows": 3}),
+            "outcomes": forms.Textarea(
+                attrs={"class": "ultra-input", "rows": 3}
+            ),
             "learning_outcomes": forms.Textarea(
                 attrs={"class": "ultra-input", "rows": 3}
             ),
@@ -429,7 +477,9 @@ class EventReportForm(forms.ModelForm):
             "impact_assessment": forms.Textarea(
                 attrs={"class": "ultra-input", "rows": 3}
             ),
-            "analysis": forms.Textarea(attrs={"class": "ultra-input", "rows": 3}),
+            "analysis": forms.Textarea(
+                attrs={"class": "ultra-input", "rows": 3}
+            ),
             "objective_achievement": forms.Textarea(
                 attrs={"class": "ultra-input", "rows": 3}
             ),
@@ -467,7 +517,9 @@ class EventReportForm(forms.ModelForm):
             "sdg_value_systems_mapping": forms.Textarea(
                 attrs={"class": "ultra-input", "rows": 2}
             ),
-            "iqac_feedback": forms.Textarea(attrs={"class": "ultra-input", "rows": 2}),
+            "iqac_feedback": forms.Textarea(
+                attrs={"class": "ultra-input", "rows": 2}
+            ),
             "report_signed_date": forms.DateInput(
                 attrs={"class": "ultra-input", "type": "date"}
             ),
@@ -586,7 +638,9 @@ class CDLSupportForm(forms.ModelForm):
     def clean_blog_content(self):
         text = self.cleaned_data.get("blog_content", "").strip()
         if text and len(text.split()) > 150:
-            raise forms.ValidationError("Blog content must be 150 words or fewer.")
+            raise forms.ValidationError(
+                "Blog content must be 150 words or fewer."
+            )
         return text
 
 
