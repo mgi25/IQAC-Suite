@@ -627,6 +627,10 @@
             <th>Event Type (Focus)</th>
             <td data-field="event_info.focus">—</td>
           </tr>
+          <tr class="sdg-row">
+            <th>Aligned SDG Goals</th>
+            <td data-list="mapping.sdg_goal_numbers">—</td>
+          </tr>
         </tbody>
       </table>
     </section>
@@ -975,6 +979,9 @@
           graduate_attributes: relevanceSource.graduate_attributes ?? mappingSource.graduate_attributes_or_needs ?? mappingSource.pos_psos ?? '',
           sdg: relevanceSource.sdg ?? relevanceSource.value_systems ?? mappingSource.value_systems ?? '',
         },
+        mapping: {
+          sdg_goal_numbers: toArray(mappingSource.sdg_goal_numbers),
+        },
         suggestions: toArray(source.suggestions ?? iqacSource.iqac_suggestions ?? suggestionsSource.list),
         suggestions_date: source.suggestions_date ?? iqacSource.iqac_review_date ?? '',
         signatures: {
@@ -1039,6 +1046,7 @@
       setList('[data-list="participants.organising_committee"]', getValue(data, 'participants.organising_committee'));
       setList('[data-list="outcomes"]', getValue(data, 'outcomes'));
       setList('[data-list="suggestions"]', getValue(data, 'suggestions'));
+      setList('[data-list="mapping.sdg_goal_numbers"]', getValue(data, 'mapping.sdg_goal_numbers'));
 
       renderAnalysis(data);
     }
