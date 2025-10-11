@@ -3749,6 +3749,8 @@ def preview_event_report(request, proposal_id):
         ("Academic Year", proposal.academic_year),
     ]
 
+    manual_fields_count = len(manual_report_fields)
+
     for label, raw in manual_report_fields:
         report_fields.append((label, _format_display(raw)))
 
@@ -4110,6 +4112,11 @@ def preview_event_report(request, proposal_id):
         f"SDG {goal.id}: {goal.name}"
         for goal in parsed_sdg_goals
     ]
+
+    report_fields.insert(
+        manual_fields_count,
+        ("Aligned SDG Goals", _format_display(sdg_goal_numbers)),
+    )
 
     naac_tags = [
         formatted
