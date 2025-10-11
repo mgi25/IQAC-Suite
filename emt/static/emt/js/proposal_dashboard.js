@@ -3672,6 +3672,11 @@ function getWhyThisEventForm() {
                     const newVal = $(this).val();
                     djangoField.each(function() {
                         const $field = $(this);
+                        if ($field.is(':checkbox')) {
+                            // Checkbox fields (like sdg_goals) require custom handling elsewhere.
+                            // Skipping here avoids overwriting their value attributes with free text.
+                            return;
+                        }
                         const currentVal = $field.val();
                         if (currentVal !== newVal) {
                             $field.val(newVal);
