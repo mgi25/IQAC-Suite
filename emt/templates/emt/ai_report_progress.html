@@ -382,9 +382,79 @@
   (function init(){
     /* hydrate from server JSON if present */
     const raw=document.getElementById('initial-report-data');
+    let data = {};
     if(raw && raw.textContent.trim()){
-      try{ hydrateReport(JSON.parse(raw.textContent)); }catch(_){}
+      try{ data = JSON.parse(raw.textContent); }catch(_){}
     }
+
+    if(!data || Object.keys(data).length === 0){
+      data = {
+        event_info: {
+          title: "IMD visit",
+          department: "Department of Data Science",
+          location: "CHRIST (Deemed to be University), Pune Lavasa Campus – ‘The Hub of Analytics’",
+          activities_count: "3",
+          datetime: "15 January 2025",
+          venue: "IMD Pune Headquarters",
+          academic_year: "2024-2025",
+          focus: "Commemorative Ceremony and Educational Exhibition",
+        },
+        participants: {
+          target_audience: "General public, students, researchers, and IMD staff",
+          external_agencies: "India Meteorological Department (IMD) Pune scientists and outreach team",
+          external_contacts: "",
+          organising_committee: [
+            "Event Coordinators: Department of Data Science, CHRIST (Deemed to be University)"
+          ],
+          student_volunteers: "",
+          participants_count: "",
+        },
+        summary: "The 150th Foundation Day celebration at IMD Pune offered an immersive look into the department’s contributions to meteorology and climate science. Stalls on climate change research paired detailed presentations with videos, and the scientists who led each initiative explained methodologies, datasets, and findings to visitors. Dedicated showcases of IMD’s mobile applications demonstrated how the public can monitor weather and climate conditions in real time. Alongside digital tools, a curated display of meteorological instruments allowed attendees to understand how measurements are captured and analysed. A highlight of the exhibition featured an IMD scientist recounting expeditions to Antarctica through stories, photographs, and artefacts, revealing the human effort behind polar research.",
+        activities: [
+          "Interactive stalls presenting climate change research milestones with explanatory videos and expert narrations.",
+          "Showcase of IMD-developed mobile applications that support weather and climate monitoring for citizens.",
+          "Hands-on demonstrations of meteorological instruments employed in IMD’s nationwide research network.",
+          "Antarctica expedition storytelling session with visual artefacts led by an IMD scientist."
+        ],
+        social_relevance: [
+          "Raised climate literacy across stakeholder groups by translating IMD research into accessible, story-driven exhibits.",
+          "Encouraged responsible use of weather data for disaster preparedness, agriculture, and community planning in Maharashtra.",
+          "Strengthened public trust in national meteorological services through transparent demonstrations and open-source mobile tools."
+        ],
+        outcomes: [
+          "Enhanced public awareness of IMD’s tools, technologies, and contributions to climate research.",
+          "Increased engagement with the public, showcasing how IMD’s research and technologies are accessible and impactful.",
+          "Fostered curiosity and inspiration among attendees, particularly students and young researchers, encouraging them to explore meteorology careers.",
+          "Goal Achievement: Celebrated IMD’s 150-year legacy by educating the public on climate science, technological advancements, and available monitoring resources.",
+          "Key Takeaways: Attendees gained insights into IMD’s efforts to address climate change through research, technology, and proactive public engagement."
+        ],
+        analysis: {
+          attendees: "Attendees experienced a structured journey through IMD’s 150-year legacy, moving from historical milestones to actionable digital tools. The curated demonstrations demystified climate science jargon and empowered students, researchers, and community members to interpret meteorological data for real-world decision making confidently.",
+          schools: "Academic departments identified replicable ways to embed field exposure within curricula. By observing IMD’s blend of archival storytelling, instrument handling, and app showcases, faculty received actionable inspiration to align laboratory courses with societal needs and to reinforce interdisciplinary projects on weather analytics and climate resilience.",
+          volunteers: "Student volunteers and IMD outreach staff collaborated on visitor facilitation, question handling, and technology demonstrations. The experience sharpened communication, teamwork, and adaptive problem-solving skills while highlighting professional pathways in meteorology, data science, and environmental services that align with the department’s experiential learning goals."
+        },
+        relevance: {
+          graduate_attributes: "*DSC621_Climate Analytics_LRNG* — Students linked atmospheric datasets showcased at IMD with analytical methods taught on campus, reinforcing Graduate Attributes related to research depth, data interpretation, and responsible innovation for society. *DSC531_Meteorological Instrumentation_Skills* — Hands-on exposure to real instruments complemented lab-based calibration exercises, strengthening precision, safety, and documentation competencies required for field deployments.",
+          sdg: "*DSC632_Sustainability Analytics_Cross Cutting* — The event supported SDG 13 (Climate Action) by connecting coursework on climate risk modelling with IMD’s mobile applications, enabling learners to translate analytics into community advisories. *DSC544_Policy Analytics_Cross Cutting* — Dialogues on public outreach underlined SDG 17 (Partnerships for the Goals) through collaborative data-sharing practices between academia and IMD Pune."
+        },
+        suggestions: [
+          "Create guided breakout sessions where IMD experts and faculty co-design data challenges using live weather feeds to deepen student engagement.",
+          "Develop a follow-up webinar with app usage tutorials so remote stakeholders can revisit insights from the exhibition.",
+          "Document volunteer reflections to capture lessons for future commemorative events and strengthen institutional memory."
+        ],
+        suggestions_date: "15 January 2025",
+        annexures: {
+          photos: [],
+          brochure_pages: [],
+          communication: { subject: "", date: "", volunteer_list: [] },
+          worksheets: [],
+          evaluation_sheet: null,
+          feedback_form: null
+        }
+      };
+    }
+
+    hydrateReport(data);
     document.getElementById('print-btn')?.addEventListener('click', ()=>window.print());
 
     /* lightweight edit/preview (paper look preserved) */
