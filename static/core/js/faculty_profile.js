@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeStudentManagement();
     initializeEventManagement();
     initializeFacultyActions();
+    initializeFacultyOrganizations();
 });
 
 // Faculty Profile Initialization
@@ -237,6 +238,41 @@ function initializeFacultyActions() {
 
     window.manageOrganization = function(orgId) {
         window.location.href = `/organizations/${orgId}/manage/`;
+    };
+}
+
+function initializeFacultyOrganizations() {
+    if (window.ProfileOrganizations && typeof window.ProfileOrganizations.initialize === 'function') {
+        window.ProfileOrganizations.initialize({
+            role: 'faculty',
+            joinRequestsScriptId: 'join-requests-data',
+            organizationListSelector: '#organization-list',
+            organizationListContainerSelector: '#organizations .organization-panel .card-body',
+            organizationEmptySelector: '#organizations .empty-state-condensed',
+            joinRequestsListSelector: '#join-requests-list',
+            joinRequestsEmptySelector: '#join-requests-empty',
+            statLabel: null,
+            onMembershipChange: () => {
+                loadFacultyStats();
+            }
+        });
+    }
+
+    window.joinOrganization = function() {
+        if (window.ProfileOrganizations && typeof window.ProfileOrganizations.openJoinModal === 'function') {
+            window.ProfileOrganizations.openJoinModal();
+        }
+    };
+
+    window.leaveOrganization = function(orgId) {
+        if (!orgId) {
+            return;
+        }
+        if (confirm('Are you sure you want to leave this organization?')) {
+            if (window.ProfileOrganizations && typeof window.ProfileOrganizations.requestLeave === 'function') {
+                window.ProfileOrganizations.requestLeave(orgId);
+            }
+        }
     };
 }
 

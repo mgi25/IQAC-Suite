@@ -81,7 +81,7 @@
       <nav class="profile-tabs-nav">
         <button class="tab-btn active" onclick="showTab('academic-info')">
           <i class="fas fa-graduation-cap"></i>
-          <span>Academic Info</span>
+          <span>Student Info</span>
         </button>
         <button class="tab-btn" onclick="showTab('participation')">
           <i class="fas fa-calendar-alt"></i>
@@ -101,7 +101,7 @@
 
   <!-- Content Section -->
   <div class="profile-content-section">
-    <!-- Academic Info Tab -->
+  <!-- Student Info Tab -->
     <div id="academic-info" class="tab-content-panel active">
       <div class="content-row">
         <!-- Personal Information -->
@@ -440,5 +440,6 @@
 {{ user_achievements_payload|json_script:"student-achievements-data" }}
 {{ join_requests_payload|json_script:"join-requests-data" }}
 <script src="{% static 'core/js/profile.js' %}"></script>
+<script src="{% static 'core/js/profile_organizations.js' %}"></script>
 <script src="{% static 'core/js/student_profile.js' %}"></script>
 {% endblock %}

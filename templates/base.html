@@ -372,10 +372,10 @@
   <div class="main-viewscreen main-content">
     <div class="viewscreen-content">
       <!-- Global overlay (hidden by default). Use window.AppOverlay.show('Loading…') / hide() -->
-      <div id="appOverlay" class="app-overlay hidden" aria-hidden="true" role="status">
+      <div id="appOverlay" class="app-overlay hidden" aria-live="polite" aria-hidden="true" role="status">
         <div class="overlay-card">
           <div class="spinner" aria-hidden="true"></div>
-          <div id="appOverlayMsg" class="message">Loading…</div>
+          <div id="appOverlayMsg" class="message" data-default="Loading…">Loading…</div>
         </div>
       </div>
       <script>
@@ -391,11 +391,20 @@
           show(msg, opts){
             const el = document.getElementById('appOverlay');
             const m = document.getElementById('appOverlayMsg');
-            if(!el||!m) return; if(msg) m.textContent = msg;
+            if(!el||!m) return;
+            m.textContent = msg || m.dataset.default || 'Loading…';
             if(opts && opts.mode === 'saving') el.classList.add('saving'); else el.classList.remove('saving');
             el.classList.remove('hidden'); el.setAttribute('aria-hidden','false');
+            document.body.classList.add('overlay-locked');
           },
-          hide(){ const el = document.getElementById('appOverlay'); if(!el) return; el.classList.add('hidden'); el.setAttribute('aria-hidden','true'); },
+          hide(){
+            const el = document.getElementById('appOverlay');
+            const m = document.getElementById('appOverlayMsg');
+            if(!el||!m) return;
+            el.classList.add('hidden'); el.setAttribute('aria-hidden','true');
+            m.textContent = m.dataset.default || 'Loading…';
+            document.body.classList.remove('overlay-locked');
+          },
           saving(msg){ this.show(msg || 'Saving…', {mode:'saving'}); }
         };
       </script>
@@ -504,7 +513,7 @@
             a.classList.add('active');
             try{ window.localStorage.setItem('iqac:lastDashboard', a.getAttribute('href')||''); }catch(_e){}
             // Show loading overlay briefly to indicate navigation
-            try{ if(window.AppOverlay) AppOverlay.show('Loading dashboard…'); setTimeout(()=>AppOverlay.hide(), 1500); }catch(_e){}
+            try{ if(window.AppOverlay) AppOverlay.show(); setTimeout(()=>AppOverlay.hide(), 1500); }catch(_e){}
           });
         });
         // Restore last chosen dashboard highlight on load (if on the dashboard area)
