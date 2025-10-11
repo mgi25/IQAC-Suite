@@ -3,8 +3,16 @@ import json
 from django import forms
 from django.db.models import Q
 
-from .models import (CDLMessage, CDLRequest, CertificateBatch, Organization,
-                     OrganizationRole, OrganizationType, RoleAssignment)
+from .models import (
+    CDLMessage,
+    CDLRequest,
+    CertificateBatch,
+    Organization,
+    OrganizationRole,
+    OrganizationType,
+    RoleAssignment,
+    StudentAchievement,
+)
 
 
 class RoleAssignmentForm(forms.ModelForm):
@@ -214,3 +222,35 @@ class CDLMessageForm(forms.ModelForm):
     class Meta:
         model = CDLMessage
         fields = ["body", "file", "sent_via_email"]
+
+
+class StudentAchievementForm(forms.ModelForm):
+    """Validate student achievement submissions including optional document upload."""
+
+    MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5 MB
+    ALLOWED_CONTENT_TYPES = {
+        "application/pdf",
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+    }
+
+    class Meta:
+        model = StudentAchievement
+        fields = ["title", "description", "date_achieved", "document"]
+
+    def clean_document(self):
+        document = self.cleaned_data.get("document")
+        if not document:
+            return document
+
+        if document.size > self.MAX_UPLOAD_SIZE:
+            raise forms.ValidationError("Document must be 5 MB or smaller.")
+
+        content_type = getattr(document, "content_type", "").lower()
+        if content_type and content_type not in self.ALLOWED_CONTENT_TYPES:
+            raise forms.ValidationError(
+                "Unsupported file type. Upload a PDF or image file."
+            )
+
+        return document

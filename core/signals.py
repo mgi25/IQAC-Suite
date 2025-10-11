@@ -1,5 +1,6 @@
 import logging
 import sys
+from ipaddress import ip_address, AddressValueError
 
 from django.contrib.auth.models import User
 from django.contrib.auth.signals import user_logged_in, user_logged_out
@@ -109,46 +110,79 @@ def sync_profile_role_on_assignment_delete(sender, instance, **kwargs):
         profile.save(update_fields=["role"])
 
 
+def _extract_request_ip(request):
+    """Return a validated client IP string or ``None`` if unavailable/invalid."""
+
+    if request is None:
+        return None
+
+    forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+    candidates = []
+    if forwarded_for:
+        candidates.extend([part.strip() for part in forwarded_for.split(",") if part.strip()])
+
+    remote_addr = request.META.get("REMOTE_ADDR")
+    if remote_addr:
+        candidates.append(remote_addr)
+
+    for candidate in candidates:
+        try:
+            ip_address(candidate)
+            return candidate
+        except AddressValueError:
+            continue
+    return None
+
+
 @receiver(user_logged_in)
 def log_user_login(sender, request, user, **kwargs):
-    """
-    Logs a message when a user logs in.
-    """
-    ip = request.META.get("REMOTE_ADDR", "unknown")
-    ua = request.META.get("HTTP_USER_AGENT", "unknown")
+    """Logs a message when a user logs in."""
+
+    ip = _extract_request_ip(request)
+    ip_for_log = ip or "unknown"
+    ua = request.META.get("HTTP_USER_AGENT") if request else None
+    ua_for_log = ua or "unknown"
+
     logger.info(
-        f"User '{user.username}' (ID: {user.id}) logged in from IP address {ip} with UA {ua}."
+        f"User '{user.username}' (ID: {user.id}) logged in from IP address {ip_for_log} with UA {ua_for_log}."
     )
+    metadata = {"user_agent": ua_for_log} if ua_for_log else None
     ActivityLog.objects.create(
         user=user,
         action="login",
-        description=(f"User '{user.username}' logged in. IP: {ip}. User-Agent: {ua}."),
+        description=(
+            f"User '{user.username}' logged in. IP: {ip_for_log}. User-Agent: {ua_for_log}."
+        ),
         ip_address=ip,
-        metadata={"user_agent": ua},
+        metadata=metadata,
     )
 
 
 @receiver(user_logged_out)
 def log_user_logout(sender, request, user, **kwargs):
-    """
-    Logs a message when a user logs out.
-    """
-    # The user object might be None if the session was destroyed before the signal was sent
-    if user:
-        ip = request.META.get("REMOTE_ADDR", "unknown")
-        ua = request.META.get("HTTP_USER_AGENT", "unknown")
-        logger.info(
-            f"User '{user.username}' (ID: {user.id}) logged out from IP {ip} with UA {ua}."
-        )
-        ActivityLog.objects.create(
-            user=user,
-            action="logout",
-            description=(
-                f"User '{user.username}' logged out. IP: {ip}. User-Agent: {ua}."
-            ),
-            ip_address=ip,
-            metadata={"user_agent": ua},
-        )
+    """Logs a message when a user logs out."""
+
+    if not user:
+        return
+
+    ip = _extract_request_ip(request)
+    ip_for_log = ip or "unknown"
+    ua = request.META.get("HTTP_USER_AGENT") if request else None
+    ua_for_log = ua or "unknown"
+
+    logger.info(
+        f"User '{user.username}' (ID: {user.id}) logged out from IP {ip_for_log} with UA {ua_for_log}."
+    )
+    metadata = {"user_agent": ua_for_log} if ua_for_log else None
+    ActivityLog.objects.create(
+        user=user,
+        action="logout",
+        description=(
+            f"User '{user.username}' logged out. IP: {ip_for_log}. User-Agent: {ua_for_log}."
+        ),
+        ip_address=ip,
+        metadata=metadata,
+    )
 
 
 # ───────────────────────────────

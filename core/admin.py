@@ -7,10 +7,18 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_POST
 
-from .models import (CDLCommunicationThread, CDLMessage, CDLRequest,
-                     CertificateBatch, CertificateEntry, SDGGoal,
-                     SidebarModule,
-                     log_impersonation_start)
+from .models import (
+    CDLCommunicationThread,
+    CDLMessage,
+    CDLRequest,
+    CertificateBatch,
+    CertificateEntry,
+    Organization,
+    SDGGoal,
+    SidebarModule,
+    StudentAchievement,
+    log_impersonation_start,
+)
 
 
 class ImpersonationUserAdmin(BaseUserAdmin):
@@ -62,6 +70,22 @@ admin.site.register(CDLCommunicationThread)
 admin.site.register(CDLMessage)
 admin.site.register(CertificateBatch)
 admin.site.register(CertificateEntry)
+
+
+@admin.register(Organization)
+class OrganizationAdmin(admin.ModelAdmin):
+    list_display = ("name", "org_type", "is_active")
+    list_filter = ("org_type", "is_active")
+    search_fields = ("name",)
+
+
+@admin.register(StudentAchievement)
+class StudentAchievementAdmin(admin.ModelAdmin):
+    list_display = ("title", "user", "date_achieved", "created_at")
+    search_fields = ("title", "description", "user__username", "user__email")
+    list_filter = ("date_achieved", "created_at")
+    autocomplete_fields = ("user",)
+
 @admin.register(SidebarModule)
 class SidebarModuleAdmin(admin.ModelAdmin):
     list_display = ("key", "label", "parent", "order", "is_active", "updated_at")

@@ -114,6 +114,7 @@ INSTALLED_APPS = [
     "core.apps.CoreConfig",
     "emt",
     "transcript",
+    "usermanagement.apps.UserManagementConfig",
 ]
 
 # Allow toggling the debug toolbar without editing settings

@@ -753,10 +753,15 @@ class Student(models.Model):
     )
     # Add any other fields you need, for example:
     registration_number = models.CharField(max_length=50, blank=True)
+    department = models.CharField(max_length=120, blank=True, null=True)
+    academic_year = models.CharField(max_length=12, blank=True, null=True)
+    current_semester = models.CharField(max_length=20, blank=True, null=True)
     gpa = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
     attendance = models.DecimalField(
         max_digits=5, decimal_places=2, null=True, blank=True
     )
+    major = models.CharField(max_length=120, blank=True, null=True)
+    enrollment_year = models.PositiveIntegerField(null=True, blank=True)
 
     def __str__(self):
         return self.user.get_full_name() or self.user.username
