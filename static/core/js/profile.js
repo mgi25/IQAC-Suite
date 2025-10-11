@@ -26,9 +26,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize smooth hover effects for cards
     initializeCardEffects();
     
-    // Initialize profile completion animation
-    initializeProfileCompletion();
-    
     // Initialize interactive elements
     initializeInteractiveElements();
     
@@ -49,20 +46,6 @@ function initializeCardEffects() {
             this.style.transform = 'translateY(0)';
         });
     });
-}
-
-// Profile Completion Animation
-function initializeProfileCompletion() {
-    const completionFill = document.querySelector('.completion-fill');
-    if (completionFill) {
-        // Animate completion bar on load
-        const targetWidth = completionFill.style.width;
-        completionFill.style.width = '0%';
-        
-        setTimeout(() => {
-            completionFill.style.width = targetWidth;
-        }, 500);
-    }
 }
 
 // Interactive Elements

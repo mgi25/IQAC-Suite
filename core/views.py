@@ -23,12 +23,13 @@ import json
 import logging
 logger = logging.getLogger(__name__)
 from .decorators import popso_manager_required, popso_program_access_required
-from .forms import RoleAssignmentForm, RegistrationForm
+from .forms import RoleAssignmentForm, RegistrationForm, StudentAchievementForm
 from .models import (
     Profile,
     RoleAssignment,
     Organization,
     OrganizationType,
+    OrganizationMembership,
     DashboardAssignment,
     SidebarPermission,
     Report,
@@ -38,6 +39,7 @@ from .models import (
     ProgramOutcome,
     ProgramSpecificOutcome,
     ActivityLog,
+    StudentAchievement,
 )
 from emt.models import EventProposal, Student
 from django.views.decorators.http import require_GET, require_POST
@@ -55,6 +57,28 @@ from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from .decorators import admin_required
 from .models import FacultyMeeting
 from .forms import CDLRequestForm, CertificateBatchUploadForm, CDLMessageForm
+from usermanagement.models import JoinRequest
+
+
+def _get_student_record(user):
+    """Return the related ``Student`` instance for the user if available."""
+
+    for attr in ("student", "student_profile"):
+        try:
+            return getattr(user, attr)
+        except Student.DoesNotExist:
+            continue
+        except AttributeError:
+            continue
+    return None
+
+
+def _current_academic_year_string():
+    now = timezone.now()
+    start_year = now.year if now.month >= 6 else now.year - 1
+    end_year = start_year + 1
+    return f"{start_year}-{end_year}"
+
 
 # ─────────────────────────────────────────────────────────────
 #  Helpers
@@ -93,6 +117,69 @@ def safe_next(request, fallback="/"):
     if nxt and url_has_allowed_host_and_scheme(nxt, allowed_hosts={request.get_host()}):
         return nxt
     return resolve_url(fallback)
+
+
+def serialize_student_achievement(achievement, request=None):
+    """Return a JSON-ready representation of a student achievement."""
+
+    document_url = None
+    document_name = None
+    if achievement.document:
+        try:
+            raw_url = achievement.document.url
+            document_name = achievement.document.name.rsplit("/", 1)[-1]
+            if request and raw_url and raw_url.startswith("/"):
+                document_url = request.build_absolute_uri(raw_url)
+            else:
+                document_url = raw_url
+        except Exception:  # pragma: no cover - storage edge cases
+            document_url = None
+
+    return {
+        "id": achievement.id,
+        "title": achievement.title,
+        "description": achievement.description,
+        "date_achieved": achievement.date_achieved.isoformat() if achievement.date_achieved else None,
+        "date_display": achievement.date_achieved.strftime("%b %d, %Y") if achievement.date_achieved else None,
+        "document_url": document_url,
+        "document_name": document_name,
+        "created_at": achievement.created_at.isoformat(),
+    }
+
+
+def serialize_join_request(join_request, *, include_org=True):
+    """Serialize a join request for student dashboard consumption."""
+
+    status_display = join_request.status
+    if (
+        join_request.status == JoinRequest.STATUS_PENDING
+        and getattr(join_request, "is_seen", False)
+    ):
+        status_display = "Seen"
+
+    organization = join_request.organization if include_org else None
+    organization_payload = None
+    if organization:
+        organization_payload = {
+            "id": organization.id,
+            "name": organization.name,
+            "type_name": getattr(getattr(organization, "org_type", None), "name", ""),
+        }
+
+    return {
+        "id": join_request.id,
+        "request_type": getattr(join_request, "request_type", JoinRequest.TYPE_JOIN),
+        "request_type_display": getattr(join_request, "get_request_type_display", lambda: "Join")(),
+        "status": join_request.status,
+        "status_display": status_display,
+        "is_seen": join_request.is_seen,
+        "requested_on": join_request.requested_on.isoformat() if join_request.requested_on else None,
+        "requested_display": join_request.requested_on.strftime("%d %b %Y") if join_request.requested_on else None,
+        "updated_on": join_request.updated_on.isoformat() if join_request.updated_on else None,
+        "updated_display": join_request.updated_on.strftime("%d %b %Y") if join_request.updated_on else None,
+        "response_message": join_request.response_message,
+        "organization": organization_payload,
+    }
 
 
 # ─────────────────────────────────────────────────────────────
@@ -390,6 +477,10 @@ def my_profile(request):
         'is_student': is_student,
         'from_dashboard': from_dashboard,
         'user_role': 'student' if is_student else 'faculty',
+        'user_achievements_payload': [],
+        'user_achievements': [],
+        'join_requests': [],
+        'join_requests_payload': [],
     }
     
     if is_student:
@@ -401,6 +492,10 @@ def my_profile(request):
                 'registration_number': student_profile.registration_number,
                 'department': getattr(student_profile, 'department', None),
                 'academic_year': getattr(student_profile, 'academic_year', None),
+                'current_semester': getattr(student_profile, 'current_semester', None),
+                'gpa': student_profile.gpa,
+                'major': getattr(student_profile, 'major', None),
+                'enrollment_year': getattr(student_profile, 'enrollment_year', None),
             })
         except Student.DoesNotExist:
             context.update({
@@ -408,6 +503,10 @@ def my_profile(request):
                 'registration_number': None,
                 'department': None,
                 'academic_year': None,
+                'current_semester': None,
+                'gpa': None,
+                'major': None,
+                'enrollment_year': None,
             })
         
         # Student-specific achievements and organizations
@@ -415,18 +514,85 @@ def my_profile(request):
         Q(participants__user=user) | Q(submitted_by=user)
         ).select_related('organization').distinct()
         
-        user_org_ids = list(roles.filter(organization__isnull=False).values_list('organization_id', flat=True))
-        user_organizations = Organization.objects.filter(id__in=user_org_ids)
-        
+        membership_qs = (
+            OrganizationMembership.objects.filter(user=user, is_active=True)
+            .select_related('organization', 'organization__org_type')
+        )
+
+        membership_org_ids = set()
+        org_map = {}
+
+        for membership in membership_qs:
+            organization = membership.organization
+            if not organization:
+                continue
+            organization.joined_date = getattr(membership, 'created_at', None)
+            organization.membership_role_label = membership.get_role_display()
+            organization.membership_academic_year = membership.academic_year
+            organization.org_type_display = getattr(
+                getattr(organization, 'org_type', None), 'name', 'Organization'
+            )
+            membership_org_ids.add(organization.id)
+            org_map[organization.id] = organization
+
+        role_assignments = (
+            roles.filter(organization__isnull=False)
+            .select_related('organization', 'organization__org_type')
+        )
+
+        for assignment in role_assignments:
+            organization = assignment.organization
+            if not organization:
+                continue
+            org_map.setdefault(organization.id, organization)
+
+        user_organizations = list(org_map.values())
+        for organization in user_organizations:
+            organization.has_active_membership = organization.id in membership_org_ids
+            organization.can_leave = organization.has_active_membership
+            organization.is_admin_managed = not organization.can_leave
+            if not getattr(organization, 'org_type_display', None):
+                organization.org_type_display = getattr(
+                    getattr(organization, 'org_type', None), 'name', 'Organization'
+                )
+        user_organizations.sort(key=lambda org: (
+            getattr(getattr(org, 'org_type', None), 'name', '').lower(),
+            (org.name or '').lower()
+        ))
+        admin_managed_orgs = [org.name for org in user_organizations if getattr(org, 'is_admin_managed', False) and org.name]
+        user_org_ids = list(org_map.keys())
+        student_achievements = StudentAchievement.objects.filter(user=user).order_by('-date_achieved', '-created_at')
+
         context.update({
-            'user_achievements': [],  # Placeholder for achievements system
+            'user_achievements': student_achievements,
+            'user_achievements_payload': [serialize_student_achievement(a) for a in student_achievements],
             'user_organizations': user_organizations,
+            'admin_managed_org_names': admin_managed_orgs,
             'participated_events': participated_events,
             'total_events': participated_events.count(),
-            'org_count': user_organizations.count(),
+            'org_count': len(user_organizations),
             'years_active': calculate_years_active(user),
             'profile_completion_percentage': calculate_student_profile_completion(user, context),
         })
+
+        join_requests_qs = (
+            JoinRequest.objects.filter(user=user)
+            .select_related("organization", "organization__org_type")
+            .order_by("-requested_on")
+        )
+        join_requests = list(join_requests_qs)
+
+        context.update(
+            {
+                'join_requests': join_requests,
+                'join_requests_payload': [serialize_join_request(req) for req in join_requests],
+                'pending_join_request_count': sum(
+                    1
+                    for req in join_requests
+                    if req.status == JoinRequest.STATUS_PENDING and not req.is_seen
+                ),
+            }
+        )
         
         template = 'core/student_profile.html' if from_dashboard else 'core/my_profile.html'
         
@@ -453,6 +619,66 @@ def my_profile(request):
         template = 'core/faculty_profile.html' if from_dashboard else 'core/my_profile.html'
     
     return render(request, template, context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def api_student_achievements(request):
+    """Create or retrieve achievements for the current (or permitted) user."""
+
+    if request.method == "GET":
+        target_user = request.user
+        requested_user_id = request.GET.get("user_id")
+
+        if requested_user_id and str(requested_user_id) != str(request.user.id):
+            if request.user.is_staff or request.user.is_superuser:
+                target_user = get_object_or_404(User, pk=requested_user_id)
+            else:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": "You are not allowed to view other users' achievements.",
+                    },
+                    status=403,
+                )
+
+        achievements = StudentAchievement.objects.filter(user=target_user).order_by("-date_achieved", "-created_at")
+        payload = [serialize_student_achievement(item, request=request) for item in achievements]
+        return JsonResponse({"success": True, "achievements": payload})
+
+    form = StudentAchievementForm(request.POST, request.FILES)
+    if form.is_valid():
+        achievement = form.save(commit=False)
+        achievement.user = request.user
+        achievement.save()
+        data = serialize_student_achievement(achievement, request=request)
+        return JsonResponse({"success": True, "achievement": data}, status=201)
+
+    return JsonResponse({"success": False, "errors": form.errors}, status=400)
+
+
+@login_required
+@require_http_methods(["POST", "DELETE"])
+def api_student_achievement_detail(request, achievement_id):
+    """Update or delete a specific achievement belonging to the current user."""
+
+    achievement = get_object_or_404(
+        StudentAchievement,
+        pk=achievement_id,
+        user=request.user,
+    )
+
+    if request.method == "DELETE":
+        achievement.delete()
+        return JsonResponse({"success": True, "message": "Achievement deleted."})
+
+    form = StudentAchievementForm(request.POST, request.FILES, instance=achievement)
+    if form.is_valid():
+        updated = form.save()
+        data = serialize_student_achievement(updated, request=request)
+        return JsonResponse({"success": True, "achievement": data})
+
+    return JsonResponse({"success": False, "errors": form.errors}, status=400)
 
 
 def calculate_years_active(user):
@@ -934,6 +1160,8 @@ def dashboard(request):
                     "status": e.status,
                 }
             )
+
+
 
     except Exception as ex:  # keep UI alive even if data fails
         logger.exception("dashboard(): data binding failed: %s", ex)
@@ -4347,22 +4575,6 @@ def api_student_events(request):
         ],
         "upcoming": [
             {"title": "Seminar", "date": "2024-09-20"},
-        ],
-    }
-    return JsonResponse(data)
-
-
-@login_required
-def api_student_achievements(request):
-    data = {
-        "stats": {"total": 5, "this_year": 2},
-        "achievements": [
-            {"title": "Hackathon Winner", "year": 2024},
-            {"title": "Top Speaker", "year": 2023},
-        ],
-        "peers": [
-            {"name": "Jane", "achievement": "Sports Captain"},
-            {"name": "Tom", "achievement": "Debate Winner"},
         ],
     }
     return JsonResponse(data)
@@ -8771,35 +8983,143 @@ def api_manage_achievements(request):
 
 @login_required
 @require_http_methods(["POST"])
+def api_update_student_personal(request):
+    """Update basic personal information for the logged-in student."""
+    try:
+        data = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {"success": False, "message": "Invalid JSON payload."}, status=400
+        )
+
+    first_name = (data.get("first_name") or "").strip()
+    last_name = (data.get("last_name") or "").strip()
+    registration_number = data.get("registration_number", "")
+
+    errors = {}
+    if not first_name:
+        errors["first_name"] = "First name is required."
+    if not last_name:
+        errors["last_name"] = "Last name is required."
+
+    if errors:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Please provide both first and last name.",
+                "errors": errors,
+            },
+            status=400,
+        )
+
+    user = request.user
+    student = _get_student_record(user)
+
+    user_updates = []
+    if user.first_name != first_name:
+        user.first_name = first_name
+        user_updates.append("first_name")
+    if user.last_name != last_name:
+        user.last_name = last_name
+        user_updates.append("last_name")
+
+    student_updates = []
+    registration_clean = (registration_number or "").strip()
+    if "registration_number" in data and student is not None:
+        if student.registration_number != registration_clean:
+            student.registration_number = registration_clean
+            student_updates.append("registration_number")
+
+    if user_updates:
+        user.save(update_fields=user_updates)
+    if student and student_updates:
+        student.save(update_fields=student_updates)
+
+    payload = {
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "full_name": user.get_full_name() or user.username,
+        "email": user.email,
+        "username": user.username,
+        "registration_number": (
+            student.registration_number if student and student.registration_number else ""
+        ),
+    }
+
+    if not user_updates and not student_updates:
+        message = "No changes supplied."
+    else:
+        message = "Personal information updated successfully"
+
+    return JsonResponse({"success": True, "message": message, "data": payload})
+
+
+@login_required
+@require_http_methods(["POST"])
 def api_update_student_academic(request):
     """Update student academic information"""
     try:
-        if not hasattr(request.user, 'student'):
+        student = _get_student_record(request.user)
+        if student is None:
             return JsonResponse({
                 'success': False,
                 'message': 'Access denied. Student account required.'
             }, status=403)
-        
+
         data = json.loads(request.body)
-        student = request.user.student
-        
-        # Update student fields
+
+        def clean(value):
+            if value is None:
+                return None
+            if isinstance(value, str):
+                value = value.strip()
+            return value or None
+
+        updates = {}
+
         if 'registration_number' in data:
-            student.registration_number = data['registration_number']
+            reg_no = clean(data.get('registration_number'))
+            updates['registration_number'] = reg_no or ''
+        if 'department' in data:
+            updates['department'] = clean(data.get('department'))
+        if 'academic_year' in data:
+            updates['academic_year'] = clean(data.get('academic_year'))
         if 'current_semester' in data:
-            student.current_semester = data['current_semester']
+            updates['current_semester'] = clean(data.get('current_semester'))
         if 'gpa' in data:
-            student.gpa = float(data['gpa']) if data['gpa'] else None
+            gpa_raw = clean(data.get('gpa'))
+            updates['gpa'] = float(gpa_raw) if gpa_raw is not None else None
         if 'major' in data:
-            student.major = data['major']
+            updates['major'] = clean(data.get('major'))
         if 'enrollment_year' in data:
-            student.enrollment_year = int(data['enrollment_year']) if data['enrollment_year'] else None
-        
-        student.save()
-        
+            year_raw = clean(data.get('enrollment_year'))
+            updates['enrollment_year'] = int(year_raw) if year_raw is not None else None
+
+        if not updates:
+            return JsonResponse({
+                'success': True,
+                'message': 'No changes supplied.'
+            })
+
+        for attr, value in updates.items():
+            setattr(student, attr, value)
+
+        student.save(update_fields=list(updates.keys()))
+
+        payload = {
+            'registration_number': student.registration_number,
+            'department': student.department,
+            'academic_year': student.academic_year,
+            'current_semester': student.current_semester,
+            'gpa': float(student.gpa) if student.gpa is not None else None,
+            'major': student.major,
+            'enrollment_year': student.enrollment_year,
+        }
+
         return JsonResponse({
             'success': True,
-            'message': 'Academic information updated successfully'
+            'message': 'Academic information updated successfully',
+            'data': payload
         })
         
     except Exception as e:
@@ -8807,6 +9127,236 @@ def api_update_student_academic(request):
             'success': False,
             'message': str(e)
         }, status=400)
+
+
+@login_required
+@require_GET
+def api_student_organization_types(request):
+    """Return active organization types for student selection."""
+    student = _get_student_record(request.user)
+    if student is None:
+        return JsonResponse(
+            {"success": False, "message": "Access denied. Student account required."},
+            status=403,
+        )
+
+    types_qs = OrganizationType.objects.filter(is_active=True).order_by("name")
+    data = [
+        {
+            "id": org_type.id,
+            "name": org_type.name,
+            "parent_id": org_type.parent_type_id,
+            "can_have_parent": org_type.can_have_parent,
+        }
+        for org_type in types_qs
+    ]
+    return JsonResponse({"success": True, "types": data})
+
+
+@login_required
+@require_GET
+def api_student_organizations(request):
+    """Return organizations filtered by type for student join flow."""
+    student = _get_student_record(request.user)
+    if student is None:
+        return JsonResponse(
+            {"success": False, "message": "Access denied. Student account required."},
+            status=403,
+        )
+
+    type_id = request.GET.get("type_id") or request.GET.get("organization_type_id")
+    search_term = (request.GET.get("q") or "").strip()
+
+    queryset = Organization.objects.filter(is_active=True)
+    if type_id:
+        try:
+            queryset = queryset.filter(org_type_id=int(type_id))
+        except (TypeError, ValueError):
+            return JsonResponse(
+                {"success": False, "message": "Invalid organization type."},
+                status=400,
+            )
+
+    if search_term:
+        queryset = queryset.filter(name__icontains=search_term)
+
+    # Exclude organizations the student already has an active membership with
+    joined_org_ids = OrganizationMembership.objects.filter(
+        user=request.user,
+        is_active=True,
+    ).values_list("organization_id", flat=True)
+    queryset = queryset.exclude(id__in=joined_org_ids)
+
+    pending_org_ids = JoinRequest.objects.filter(
+        user=request.user,
+        status=JoinRequest.STATUS_PENDING,
+        request_type=JoinRequest.TYPE_JOIN,
+    ).values_list("organization_id", flat=True)
+    queryset = queryset.exclude(id__in=pending_org_ids)
+
+    organizations = [
+        {
+            "id": org.id,
+            "name": org.name,
+            "type_name": getattr(org.org_type, "name", ""),
+        }
+        for org in queryset.select_related("org_type").order_by("name")
+    ]
+
+    return JsonResponse({"success": True, "organizations": organizations})
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_student_join_organization(request):
+    """Create or re-activate a student membership for an organization."""
+    student = _get_student_record(request.user)
+    if student is None:
+        return JsonResponse(
+            {"success": False, "message": "Access denied. Student account required."},
+            status=403,
+        )
+
+    try:
+        data = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"success": False, "message": "Invalid JSON payload."}, status=400)
+
+    org_id = data.get("organization_id")
+    if not org_id:
+        return JsonResponse({"success": False, "message": "Organization is required."}, status=400)
+
+    try:
+        organization = Organization.objects.select_related("org_type").get(
+            pk=int(org_id), is_active=True
+        )
+    except (Organization.DoesNotExist, ValueError, TypeError):
+        return JsonResponse({"success": False, "message": "Organization not found."}, status=404)
+
+    active_membership = OrganizationMembership.objects.filter(
+        user=request.user,
+        organization=organization,
+        is_active=True,
+    ).first()
+    if active_membership:
+        return JsonResponse(
+            {
+                "success": True,
+                "message": "You are already a member of this organization.",
+                "organization": {
+                    "id": organization.id,
+                    "name": organization.name,
+                    "type_name": getattr(organization.org_type, "name", ""),
+                    "org_type_display": getattr(organization.org_type, "name", "Organization"),
+                    "membership_role_label": active_membership.get_role_display(),
+                    "membership_academic_year": active_membership.academic_year,
+                    "joined_display": active_membership.created_at.strftime("%b %Y")
+                    if active_membership.created_at
+                    else "",
+                    "joined_date_display": active_membership.created_at.strftime("%b %Y")
+                    if active_membership.created_at
+                    else "",
+                    "can_leave": True,
+                    "is_admin_managed": False,
+                },
+            }
+        )
+
+    existing_request = JoinRequest.objects.filter(
+        user=request.user,
+        organization=organization,
+        status=JoinRequest.STATUS_PENDING,
+        request_type=JoinRequest.TYPE_JOIN,
+    ).first()
+
+    if existing_request:
+        payload = serialize_join_request(existing_request)
+        return JsonResponse(
+            {
+                "success": True,
+                "message": "Your request is already awaiting approval.",
+                "join_request": payload,
+            }
+        )
+
+    join_request = JoinRequest.objects.create(
+        user=request.user,
+        organization=organization,
+        request_type=JoinRequest.TYPE_JOIN,
+        status=JoinRequest.STATUS_PENDING,
+    )
+
+    payload = serialize_join_request(join_request)
+
+    return JsonResponse(
+        {
+            "success": True,
+            "message": "Join request submitted for approval.",
+            "join_request": payload,
+        },
+        status=201,
+    )
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_student_leave_organization(request, org_id):
+    """Deactivate an active organization membership for the student."""
+    student = _get_student_record(request.user)
+    if student is None:
+        return JsonResponse(
+            {"success": False, "message": "Access denied. Student account required."},
+            status=403,
+        )
+
+    membership = OrganizationMembership.objects.filter(
+        user=request.user,
+        organization_id=org_id,
+        is_active=True,
+    ).first()
+
+    if not membership:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "No active membership found for this organization. If you were assigned here by an administrator, contact them to make changes.",
+            },
+            status=404,
+        )
+    existing_request = JoinRequest.objects.filter(
+        user=request.user,
+        organization_id=org_id,
+        request_type=JoinRequest.TYPE_LEAVE,
+        status=JoinRequest.STATUS_PENDING,
+    ).first()
+
+    if existing_request:
+        payload = serialize_join_request(existing_request)
+        return JsonResponse(
+            {
+                "success": True,
+                "message": "Your leave request is already awaiting approval.",
+                "join_request": payload,
+            }
+        )
+
+    leave_request = JoinRequest.objects.create(
+        user=request.user,
+        organization=membership.organization,
+        request_type=JoinRequest.TYPE_LEAVE,
+        status=JoinRequest.STATUS_PENDING,
+    )
+
+    payload = serialize_join_request(leave_request)
+
+    return JsonResponse(
+        {
+            "success": True,
+            "message": "Leave request submitted for approval.",
+            "join_request": payload,
+        },
+        status=201,
+    )
 
 
 @login_required

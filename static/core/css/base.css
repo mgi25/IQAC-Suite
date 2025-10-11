@@ -24,8 +24,8 @@ input, button, textarea, select { font: inherit; }
 a { text-decoration: none; color: inherit; }
 
 /* Prevent blinking caret on non-editables and enforce proper cursors */
-/* Only input, textarea, and contenteditable should show text caret */
-*:not(input):not(textarea):not([contenteditable="true"]) {
+/* Only allow caret where users can enter text (including generic contenteditable). */
+*:not(input):not(textarea):not(select):not([contenteditable]) {
   caret-color: transparent;
 }
 /* Clickable controls use pointer; avoid text cursor on spans/divs */
@@ -37,7 +37,7 @@ a { text-decoration: none; color: inherit; }
   -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
 }
 /* Allow caret where explicitly editable */
-[contenteditable] { caret-color: auto; }
+input, textarea, select, [contenteditable] { caret-color: auto; }
 
 /* 1) Design tokens */
 :root{

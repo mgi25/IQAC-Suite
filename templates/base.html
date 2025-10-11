@@ -269,19 +269,22 @@
 
       <!-- User Management - Expandable (Admin Only) -->
   {% if unrestricted_nav or 'user_management' in allowed_nav_items %}
-<div class="nav-section {% if 'users' in request.path or 'user-roles' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' %}expanded{% endif %}">
+  <div class="nav-section {% if 'users' in request.path or 'user-roles' in request.path or 'join-requests' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' or request.resolver_match.namespace == 'usermanagement' and request.resolver_match.url_name == 'join_requests' %}expanded{% endif %}">
   <div class="nav-section-header">
     <i class="fas fa-users nav-icon"></i>
     <span class="nav-text">User Management</span>
-    <i class="fas fa-chevron-right expand-icon {% if 'users' in request.path or 'user-roles' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' %}rotated{% endif %}"></i>
+      <i class="fas fa-chevron-right expand-icon {% if 'users' in request.path or 'user-roles' in request.path or 'join-requests' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' or request.resolver_match.namespace == 'usermanagement' and request.resolver_match.url_name == 'join_requests' %}rotated{% endif %}"></i>
   </div>
-  <div class="nav-submenu {% if 'users' in request.path or 'user-roles' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' %}open{% endif %}">
+    <div class="nav-submenu {% if 'users' in request.path or 'user-roles' in request.path or 'join-requests' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' or request.resolver_match.namespace == 'usermanagement' and request.resolver_match.url_name == 'join_requests' %}open{% endif %}">
     <a href="/core-admin/users/" class="nav-sublink {% if request.resolver_match.url_name == 'admin_user_management' %}active{% endif %}">
       <i class="fas fa-user"></i> Manage Users
     </a>
     <a href="/core-admin/user-roles/" class="nav-sublink {% if request.resolver_match.url_name == 'admin_role_management' %}active{% endif %}">
       <i class="fas fa-tags"></i> Add Roles
     </a>
+      <a href="{% url 'usermanagement:join_requests' %}" class="nav-sublink {% if request.resolver_match.namespace == 'usermanagement' and request.resolver_match.url_name == 'join_requests' %}active{% endif %}">
+        <i class="fas fa-clipboard-list"></i> Join Requests
+      </a>
   </div>
 </div>
 {% endif %}
