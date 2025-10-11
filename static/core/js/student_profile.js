@@ -11,8 +11,22 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeAvatarUpload();
     initializeFormHandlers();
     initializeQuickActions();
-    initializeJoinRequests();
     initializeAchievementsModule();
+
+    if (window.ProfileOrganizations && typeof window.ProfileOrganizations.initialize === 'function') {
+        window.ProfileOrganizations.initialize({
+            role: 'student',
+            joinRequestsScriptId: 'join-requests-data',
+            organizationListSelector: '#organization-list',
+            organizationListContainerSelector: '#organizations .organization-panel .card-body',
+            organizationEmptySelector: '#organizations .empty-state-condensed',
+            joinRequestsListSelector: '#join-requests-list',
+            joinRequestsEmptySelector: '#join-requests-empty',
+            onMembershipChange: () => {
+                loadParticipationStats();
+            }
+        });
+    }
 });
 
 let activeModal = null;
@@ -23,8 +37,6 @@ let achievementsCache = [];
 let achievementsInitialized = false;
 let achievementBeingEdited = null;
 let achievementPendingDeletion = null;
-let joinRequestsCache = [];
-let joinRequestsInitialized = false;
 
 // Student Profile Initialization
 function initializeStudentProfile() {
@@ -152,171 +164,6 @@ function applyPersonalInfoUpdate(payload) {
     }
 }
 
-function initializeJoinRequests() {
-    hydrateJoinRequests();
-}
-
-function hydrateJoinRequests() {
-    if (joinRequestsInitialized) {
-        return;
-    }
-
-    try {
-        const script = document.getElementById('join-requests-data');
-        if (!script) {
-            renderJoinRequests([]);
-            return;
-        }
-        const parsed = JSON.parse(script.textContent || '[]');
-        joinRequestsCache = Array.isArray(parsed) ? parsed : [];
-        renderJoinRequests(joinRequestsCache);
-    } catch (error) {
-        console.error('Failed to hydrate join requests:', error);
-        renderJoinRequests([]);
-    } finally {
-        joinRequestsInitialized = true;
-    }
-}
-
-function renderJoinRequests(items) {
-    const list = document.getElementById('join-requests-list');
-    const emptyState = document.getElementById('join-requests-empty');
-    if (!list || !emptyState) {
-        return;
-    }
-
-    if (!items || items.length === 0) {
-        list.innerHTML = '';
-        list.setAttribute('hidden', 'hidden');
-        emptyState.removeAttribute('hidden');
-        emptyState.style.display = '';
-        applyJoinRequestStates();
-        return;
-    }
-
-    const markup = items.map(joinRequestCardTemplate).join('');
-    list.innerHTML = markup;
-    list.removeAttribute('hidden');
-    emptyState.setAttribute('hidden', 'hidden');
-    emptyState.style.display = 'none';
-    applyJoinRequestStates();
-}
-
-function joinRequestStatusClass(status) {
-    if (!status) {
-        return 'pending';
-    }
-    return String(status).toLowerCase().replace(/[^a-z0-9]+/g, '-');
-}
-
-function applyJoinRequestStates() {
-    const rows = document.querySelectorAll('#organization-list .organization-list-item');
-    rows.forEach(row => {
-        row.classList.remove('leave-pending');
-        const extra = row.querySelector('.org-extra');
-        if (extra) {
-            extra.querySelectorAll('.org-pill-pending').forEach(pill => pill.remove());
-        }
-        const leaveButton = row.querySelector('[data-action="leave"]');
-        if (leaveButton) {
-            leaveButton.disabled = false;
-            leaveButton.title = 'Request to leave';
-        }
-    });
-
-    if (!Array.isArray(joinRequestsCache) || joinRequestsCache.length === 0) {
-        return;
-    }
-
-    joinRequestsCache
-        .filter(item => {
-            if (!item || !item.organization) {
-                return false;
-            }
-            const type = String(item.request_type || '').toLowerCase();
-            const status = String(item.status || '');
-            return type === 'leave' && status === 'Pending';
-        })
-        .forEach(item => {
-            const orgId = item.organization?.id;
-            if (!orgId) {
-                return;
-            }
-            const row = document.querySelector(`#organization-list .organization-list-item[data-org-id="${orgId}"]`);
-            if (!row) {
-                return;
-            }
-
-            row.classList.add('leave-pending');
-
-            const leaveButton = row.querySelector('[data-action="leave"]');
-            if (leaveButton) {
-                leaveButton.disabled = true;
-                leaveButton.title = 'Leave request pending approval';
-            }
-
-            const extra = row.querySelector('.org-extra');
-            if (extra && !extra.querySelector('.org-pill-pending')) {
-                extra.insertAdjacentHTML(
-                    'beforeend',
-                    '<span class="org-pill org-pill-pending"><i class="fas fa-hourglass-half"></i> Leave request pending</span>'
-                );
-            }
-        });
-}
-
-function joinRequestCardTemplate(item) {
-    const organizationName = item?.organization?.name ? escapeHtml(item.organization.name) : 'Organization';
-    const requestType = String(item?.request_type || 'join').toLowerCase();
-    const typeDisplay = item?.request_type_display
-        ? escapeHtml(item.request_type_display)
-        : requestType === 'leave'
-            ? 'Leave'
-            : 'Join';
-
-    const rawStatus = item?.status === 'Pending' && item?.is_seen
-        ? 'Seen'
-        : item?.status_display || item?.status || 'Pending';
-    const statusLabel = escapeHtml(rawStatus);
-    const badgeClass = joinRequestStatusClass(rawStatus);
-
-    const requestedDisplay = item?.requested_display ? escapeHtml(item.requested_display) : 'Unknown';
-    const responseMarkup = item?.response_message
-        ? `<div class="join-request-response">${escapeHtml(item.response_message)}</div>`
-        : '';
-
-    return `
-        <div class="join-request-row" data-request-id="${item.id}" data-organization-id="${item?.organization?.id || ''}" data-request-type="${requestType}">
-            <div class="join-request-main">
-                <span class="join-request-name">${organizationName}</span>
-                <span class="join-request-meta">${typeDisplay} · ${requestedDisplay}</span>
-            </div>
-            <div class="join-request-status">
-                <span class="status-pill status-pill-${badgeClass}">${statusLabel}</span>
-            </div>
-            ${responseMarkup}
-        </div>
-    `;
-}
-
-function addOrUpdateJoinRequestCard(request) {
-    if (!request) {
-        return;
-    }
-
-    if (!Array.isArray(joinRequestsCache)) {
-        joinRequestsCache = [];
-    }
-
-    const index = joinRequestsCache.findIndex(item => String(item.id) === String(request.id));
-    if (index !== -1) {
-        joinRequestsCache[index] = request;
-    } else {
-        joinRequestsCache = [request, ...joinRequestsCache];
-    }
-
-    renderJoinRequests(joinRequestsCache);
-}
 
 // Form Handlers for Student-Specific Actions
 function initializeFormHandlers() {
@@ -391,12 +238,19 @@ function initializeFormHandlers() {
 
     // Organization management
     window.joinOrganization = function() {
-        showOrganizationSelector();
+        if (window.ProfileOrganizations && typeof window.ProfileOrganizations.openJoinModal === 'function') {
+            window.ProfileOrganizations.openJoinModal();
+        }
     };
 
     window.leaveOrganization = function(orgId) {
+        if (!orgId) {
+            return;
+        }
         if (confirm('Are you sure you want to leave this organization?')) {
-            leaveOrganizationRequest(orgId);
+            if (window.ProfileOrganizations && typeof window.ProfileOrganizations.requestLeave === 'function') {
+                window.ProfileOrganizations.requestLeave(orgId);
+            }
         }
     };
 
@@ -726,16 +580,6 @@ window.saveFormData = function(type) {
                 }
                 loadStudentAchievements(true);
                 achievementBeingEdited = null;
-            } else if (type === 'join-organization') {
-                showNotification(response.message || 'Join request submitted successfully!', 'success');
-                closeEditModal();
-                if (response.join_request) {
-                    addOrUpdateJoinRequestCard(response.join_request);
-                }
-                if (response.organization) {
-                    addOrUpdateOrganizationCard(response.organization);
-                }
-                loadParticipationStats();
             } else {
                 showNotification(response.message || 'Changes saved successfully!', 'success');
                 closeEditModal();
@@ -766,8 +610,7 @@ async function submitFormData(type, data, options = {}) {
         'personal-info': '/api/student/update-personal-info/',
         'academic-info': '/api/student/update-academic-info/',
         'add-achievement': '/api/student/achievements/',
-        'edit-achievement': '/api/student/achievements/',
-        'join-organization': '/api/student/join-organization/'
+        'edit-achievement': '/api/student/achievements/'
     };
     
     let endpoint = endpoints[type];
@@ -983,7 +826,6 @@ function achievementCardTemplate(item) {
                 <div class="achievement-actions">
                     <button type="button" class="action-btn achievement-action-btn" data-edit-button tabindex="0" aria-label="Edit achievement">
                         <i class="fas fa-edit"></i>
-                        Edit
                     </button>
                     <button type="button" class="action-btn achievement-delete-btn" data-delete-button tabindex="0" aria-label="Delete achievement">
                         <i class="fas fa-times"></i>
@@ -1132,327 +974,6 @@ function escapeHtml(value) {
         .replace(/'/g, '&#039;');
 }
 
-async function showOrganizationSelector() {
-    showEditModal('join-organization', {
-        title: 'Join Organization',
-        description: 'Select an organization type to see available groups you can join.',
-        fields: [
-            { name: 'organization_type_id', label: 'Organization Type', type: 'select', required: true },
-            { name: 'organization_id', label: 'Organization', type: 'select', required: true }
-        ],
-        submitLabel: 'Join Organization'
-    });
-
-    const modal = activeModal;
-    if (!modal) {
-        return;
-    }
-
-    const typeSelect = modal.querySelector('select[name="organization_type_id"]');
-    const orgSelect = modal.querySelector('select[name="organization_id"]');
-    const saveButton = modal.querySelector('[data-save]');
-
-    if (!typeSelect || !orgSelect || !saveButton) {
-        showNotification('Unable to build join organization dialog.', 'error');
-        closeEditModal();
-        return;
-    }
-
-    const orgFeedback = document.createElement('p');
-    orgFeedback.className = 'form-help';
-    orgFeedback.setAttribute('data-join-org-feedback', '');
-    orgFeedback.textContent = 'Choose an organization type to continue.';
-    orgSelect.parentElement?.appendChild(orgFeedback);
-
-    saveButton.disabled = true;
-    orgSelect.disabled = true;
-
-    const setSelectOptions = (selectEl, options, placeholder) => {
-        const fragment = document.createDocumentFragment();
-        const defaultOption = document.createElement('option');
-        defaultOption.value = '';
-        defaultOption.textContent = placeholder;
-        fragment.appendChild(defaultOption);
-
-        options.forEach(option => {
-            const opt = document.createElement('option');
-            opt.value = option.value;
-            opt.textContent = option.label;
-            fragment.appendChild(opt);
-        });
-
-        selectEl.innerHTML = '';
-        selectEl.appendChild(fragment);
-    };
-
-    const setOrgFeedback = (message, tone = 'info') => {
-        if (!orgFeedback) {
-            return;
-        }
-        orgFeedback.textContent = message;
-        orgFeedback.dataset.tone = tone;
-    };
-
-    const fetchJson = async (url, errorMessage) => {
-        try {
-            const response = await fetch(url, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            });
-            if (!response.ok) {
-                throw new Error(errorMessage || 'Request failed');
-            }
-            return await response.json();
-        } catch (error) {
-            showNotification(error.message || errorMessage || 'Unable to load data.', 'error');
-            throw error;
-        }
-    };
-
-    const loadOrganizationTypes = async () => {
-        setSelectOptions(typeSelect, [], 'Loading types...');
-        typeSelect.disabled = true;
-        try {
-            const payload = await fetchJson('/api/student/organization-types/', 'Failed to load organization types.');
-            const options = (payload.types || []).map(item => ({
-                value: String(item.id),
-                label: item.name
-            }));
-            if (options.length === 0) {
-                setSelectOptions(typeSelect, [], 'No organization types available');
-                setOrgFeedback('No organization types are available right now.', 'warning');
-                saveButton.disabled = true;
-            } else {
-                setSelectOptions(typeSelect, options, 'Select organization type');
-                typeSelect.disabled = false;
-                setOrgFeedback('Select a type to see available organizations.');
-            }
-        } catch (error) {
-            closeEditModal();
-        }
-    };
-
-    const loadOrganizations = async typeId => {
-        if (!typeId) {
-            setSelectOptions(orgSelect, [], 'Select organization');
-            orgSelect.disabled = true;
-            saveButton.disabled = true;
-            setOrgFeedback('Select an organization type to continue.');
-            return;
-        }
-
-        orgSelect.disabled = true;
-        saveButton.disabled = true;
-        setSelectOptions(orgSelect, [], 'Loading organizations...');
-        setOrgFeedback('Loading organizations...', 'info');
-
-        try {
-            const payload = await fetchJson(`/api/student/organizations/?type_id=${encodeURIComponent(typeId)}`, 'Failed to load organizations.');
-            const orgs = payload.organizations || [];
-            if (orgs.length === 0) {
-                setSelectOptions(orgSelect, [], 'No organizations available');
-                setOrgFeedback('No organizations found for this type.', 'warning');
-                return;
-            }
-
-            const options = orgs.map(item => ({
-                value: String(item.id),
-                label: item.name
-            }));
-            setSelectOptions(orgSelect, options, 'Select organization');
-            orgSelect.disabled = false;
-            setOrgFeedback('Select an organization to join.');
-        } catch (error) {
-            setSelectOptions(orgSelect, [], 'Select organization');
-            setOrgFeedback('Failed to load organizations. Please try again.', 'error');
-        }
-    };
-
-    typeSelect.addEventListener('change', event => {
-        const selectedType = event.target.value;
-        loadOrganizations(selectedType);
-    });
-
-    orgSelect.addEventListener('change', () => {
-        saveButton.disabled = !orgSelect.value;
-    });
-
-    await loadOrganizationTypes();
-}
-
-async function leaveOrganizationRequest(orgId) {
-    try {
-        const response = await fetch(`/api/student/leave-organization/${orgId}/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCsrfToken(),
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        });
-
-        let payload = {};
-        try {
-            const payloadText = await response.text();
-            payload = payloadText ? JSON.parse(payloadText) : {};
-        } catch (parseError) {
-            payload = {};
-        }
-
-        if (!response.ok || payload.success === false) {
-            throw new Error(payload.message || 'Failed to submit leave request');
-        }
-
-        if (payload.join_request) {
-            addOrUpdateJoinRequestCard(payload.join_request);
-        }
-
-        showNotification(payload.message || 'Leave request submitted for approval.', 'success');
-
-        const card = document.querySelector(`#organizations .organization-card-large[data-org-id="${orgId}"]`);
-        const leaveButton = card?.querySelector('.org-actions [data-action="leave"]');
-        if (leaveButton) {
-            leaveButton.disabled = true;
-            leaveButton.title = 'Leave request pending approval';
-        }
-    } catch (error) {
-        showNotification(error.message || 'Failed to submit leave request', 'error');
-    }
-}
-
-function getOrganizationList(createIfMissing = false) {
-    let list = document.getElementById('organization-list');
-    if (list || !createIfMissing) {
-        return list;
-    }
-
-    const container = document.querySelector('#organizations .organization-panel .card-body');
-    if (!container) {
-        return null;
-    }
-
-    list = document.createElement('div');
-    list.id = 'organization-list';
-    list.className = 'organization-list';
-    container.insertBefore(list, container.firstChild);
-
-    const emptyState = container.querySelector('.empty-state-condensed');
-    if (emptyState) {
-        emptyState.setAttribute('hidden', 'hidden');
-        emptyState.style.display = 'none';
-    }
-
-    return list;
-}
-
-function getOrganizationCount() {
-    return document.querySelectorAll('#organization-list .organization-list-item').length;
-}
-
-function organizationCardTemplateFromData(org) {
-    const canLeave = Object.prototype.hasOwnProperty.call(org, 'can_leave') ? Boolean(org.can_leave) : true;
-    const typeLabel = org.org_type_display || org.type_name || 'Organization';
-    const roleLabel = org.membership_role_label || '';
-    const academicYear = org.membership_academic_year || '';
-    const joinedDisplay = org.joined_display || org.joined_date_display || '';
-
-    const pills = [];
-    if (joinedDisplay) {
-        pills.push(`<span class="org-pill">Joined ${escapeHtml(joinedDisplay)}</span>`);
-    }
-    if (academicYear) {
-        pills.push(`<span class="org-pill">${escapeHtml(academicYear)}</span>`);
-    }
-    if (!canLeave) {
-        pills.push('<span class="org-pill org-pill-muted">Admin managed</span>');
-    }
-
-    const pillsMarkup = pills.join('');
-    const meta = roleLabel
-        ? `${escapeHtml(typeLabel)} · ${escapeHtml(roleLabel)}`
-        : escapeHtml(typeLabel);
-
-    return `
-        <div class="organization-list-item" data-org-id="${org.id}" data-can-leave="${canLeave}">
-            <div class="org-summary">
-                <div class="org-name">${escapeHtml(org.name)}</div>
-                <div class="org-meta">${meta}</div>
-            </div>
-            <div class="org-extra">${pillsMarkup}</div>
-            <div class="org-actions">
-                <button class="btn btn-icon" type="button" onclick="viewOrganization(${org.id})" title="View organization">
-                    <i class="fas fa-eye"></i>
-                </button>
-                ${canLeave ? `
-                <button class="btn btn-icon" type="button" data-action="leave" title="Request to leave" onclick="leaveOrganization(${org.id})">
-                    <i class="fas fa-sign-out-alt"></i>
-                </button>` : `
-                <button class="btn btn-icon" type="button" disabled title="Managed by administrator">
-                    <i class="fas fa-lock"></i>
-                </button>`}
-            </div>
-        </div>
-    `;
-}
-
-function addOrUpdateOrganizationCard(org) {
-    const list = getOrganizationList(true);
-    if (!list || !org) {
-        return;
-    }
-
-    const emptyState = document.querySelector('#organizations .empty-state-condensed');
-    if (emptyState) {
-        emptyState.setAttribute('hidden', 'hidden');
-        emptyState.style.display = 'none';
-    }
-
-    const existingRow = list.querySelector(`[data-org-id="${org.id}"]`);
-    const markup = organizationCardTemplateFromData(org);
-
-    if (existingRow) {
-        existingRow.outerHTML = markup;
-    } else {
-        list.insertAdjacentHTML('afterbegin', markup);
-    }
-
-    applyJoinRequestStates();
-    updateOrganizationsStat(getOrganizationCount());
-}
-
-function removeOrganizationCard(orgId) {
-    const row = document.querySelector(`#organization-list .organization-list-item[data-org-id="${orgId}"]`);
-    if (!row) {
-        return false;
-    }
-
-    row.remove();
-
-    const remaining = getOrganizationCount();
-    updateOrganizationsStat(remaining);
-
-    if (remaining === 0) {
-        const emptyState = document.querySelector('#organizations .empty-state-condensed');
-        if (emptyState) {
-            emptyState.removeAttribute('hidden');
-            emptyState.style.display = '';
-        }
-    }
-
-    return true;
-}
-
-function updateOrganizationsStat(count) {
-    const statCards = document.querySelectorAll('.stat-card');
-    statCards.forEach(card => {
-        const label = card.querySelector('.stat-label');
-        if (label && label.textContent.trim() === 'ORGANIZATIONS') {
-            const number = card.querySelector('.stat-number');
-            if (number) {
-                number.textContent = count != null ? count : 0;
-            }
-        }
-    });
-}
-
 // Utility Functions
 function getCsrfToken() {
     return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
@@ -1463,7 +984,7 @@ function getCsrfToken() {
 function showNotification(message, type = 'info', duration = 5000) {
     // Use the existing notification system from profile.js
     if (window.ProfilePage && window.ProfilePage.showNotification) {
-        window.ProfilePage.showNotification(message, type);
+        window.ProfilePage.showNotification(message, type, duration);
     } else {
         // Fallback notification
         console.log(`[${type.toUpperCase()}] ${message}`);

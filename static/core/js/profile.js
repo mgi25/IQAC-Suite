@@ -223,108 +223,39 @@ function debounce(func, wait) {
 }
 
 // Notification System
-function showNotification(message, type = 'info') {
-    // Remove existing notification
-    const existingNotification = document.querySelector('.profile-notification');
-    if (existingNotification) {
-        existingNotification.remove();
+function ensureToastContainer() {
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'toast-container';
+        container.setAttribute('aria-live', 'polite');
+        container.setAttribute('aria-atomic', 'true');
+        document.body.appendChild(container);
     }
-    
-    // Create notification element
-    const notification = document.createElement('div');
-    notification.className = `profile-notification notification-${type}`;
-    notification.innerHTML = `
-        <div class="notification-content">
-            <span class="notification-message">${message}</span>
-            <button class="notification-close">&times;</button>
-        </div>
-    `;
-    
-    // Add notification styles
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 1000;
-        padding: 12px 16px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
-        color: white;
-        font-family: 'Inter', sans-serif;
-        animation: slideIn 0.3s ease;
-    `;
-    
-    // Add to page
-    document.body.appendChild(notification);
-    
-    // Handle close button
-    const closeBtn = notification.querySelector('.notification-close');
-    closeBtn.addEventListener('click', () => {
-        notification.remove();
-    });
-    
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-        if (notification.parentNode) {
-            notification.style.animation = 'slideOut 0.3s ease';
-            setTimeout(() => notification.remove(), 300);
-        }
-    }, 5000);
+    return container;
 }
 
-// Add notification animations
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
+function showNotification(message, type = 'info', duration = 5000) {
+    const container = ensureToastContainer();
+    const toast = document.createElement('div');
+    toast.className = `toast-message ${type}`;
+    toast.setAttribute('role', 'alert');
+    toast.textContent = message;
+
+    container.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('show'));
+
+    const dismiss = () => {
+        toast.classList.add('hide');
+        setTimeout(() => toast.remove(), 250);
+    };
+
+    if (duration !== 0) {
+        setTimeout(dismiss, duration);
     }
-    
-    @keyframes slideOut {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-    }
-    
-    .notification-content {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-    
-    .notification-close {
-        background: none;
-        border: none;
-        color: white;
-        font-size: 18px;
-        cursor: pointer;
-        padding: 0;
-        width: 20px;
-        height: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        opacity: 0.7;
-        transition: opacity 0.2s;
-    }
-    
-    .notification-close:hover {
-        opacity: 1;
-    }
-`;
-document.head.appendChild(style);
+
+    toast.addEventListener('click', dismiss);
+}
 
 // Export functions for potential external use
 window.ProfilePage = {

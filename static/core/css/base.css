@@ -36,6 +36,37 @@ a { text-decoration: none; color: inherit; }
 .paginate_button, .chip, .tag, .badge, .day {
   -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
 }
+/* Toast notifications stay fixed and animated */
+.toast-container{
+  position:fixed;
+  top:1.25rem;
+  right:1.25rem;
+  display:flex;
+  flex-direction:column;
+  gap:0.75rem;
+  z-index:12000;
+  pointer-events:none;
+}
+.toast-message{
+  min-width:240px;
+  padding:0.75rem 1rem;
+  border-radius:12px;
+  font-weight:600;
+  font-size:0.95rem;
+  color:#fff;
+  background:rgba(44,90,160,0.94);
+  box-shadow:0 18px 30px -12px rgba(17,24,39,0.35);
+  opacity:0;
+  transform:translateY(-6px);
+  transition:opacity .25s ease, transform .25s ease;
+  pointer-events:auto;
+}
+.toast-message.show{opacity:1;transform:translateY(0);}
+.toast-message.hide{opacity:0;transform:translateY(-6px);}
+.toast-message.success{background:rgba(16,125,74,0.95);}
+.toast-message.error{background:rgba(200,37,48,0.96);}
+.toast-message.warning{background:rgba(247,180,0,0.96);color:#1f2937;}
+.toast-message.info{background:rgba(44,90,160,0.94);}
 /* Allow caret where explicitly editable */
 input, textarea, select, [contenteditable] { caret-color: auto; }
 
@@ -409,6 +440,7 @@ body.command-center-layout .main-viewscreen{ transition:all .25s ease !important
 .app-overlay .message{font-weight:800;font-size:16px;color:#1e60b1;letter-spacing:.3px;text-align:center}
 .app-overlay.saving .spinner{border-top-color:#0d7d3e}
 .app-overlay.saving .message{color:#0d7d3e}
+body.overlay-locked{overflow:hidden}
 @keyframes app-spin{to{transform:rotate(360deg)}}
 
 /* Visible typing indicator for inputs in sidebar and dashboards */

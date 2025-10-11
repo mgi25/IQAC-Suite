@@ -21,6 +21,7 @@ from django.db.utils import InterfaceError, OperationalError
 from django.utils import timezone
 import json
 import logging
+
 logger = logging.getLogger(__name__)
 from .decorators import popso_manager_required, popso_program_access_required
 from .forms import RoleAssignmentForm, RegistrationForm, StudentAchievementForm
@@ -119,6 +120,61 @@ def safe_next(request, fallback="/"):
     return resolve_url(fallback)
 
 
+def is_user_faculty_staff(user):
+    """Return True when account should see the faculty profile experience."""
+    if not getattr(user, "is_authenticated", False):
+        return False
+
+    assignments = RoleAssignment.objects.filter(user=user).select_related("role")
+    role_names = {assignment.role.name.lower() for assignment in assignments if assignment.role}
+
+    email = (getattr(user, "email", "") or "").lower()
+    is_student = ("student" in role_names) or email.endswith("@christuniversity.in")
+    return not is_student
+
+
+def get_faculty_profile_context(user, base_context=None, role_assignments=None):
+    """Compose faculty-specific context data for the profile view."""
+    context = base_context if base_context is not None else {}
+
+    role_assignments = role_assignments or RoleAssignment.objects.filter(user=user).select_related(
+        "role", "organization"
+    )
+
+    my_students = Student.objects.filter(mentor=user)
+    my_classes = Class.objects.filter(teacher=user, is_active=True)
+    organized_events = EventProposal.objects.filter(submitted_by=user).select_related("organization")
+
+    students_count = my_students.count()
+    classes_count = my_classes.count()
+    total_events = organized_events.count()
+
+    org_ids = role_assignments.filter(organization__isnull=False).values_list("organization_id", flat=True)
+    user_organizations, admin_managed_orgs = _collect_user_organizations(user)
+
+    join_requests, join_payload, pending_count = _collect_join_requests(user)
+
+    context.update(
+        {
+            "my_students": my_students,
+            "my_classes": my_classes,
+            "organized_events": organized_events,
+            "students_count": students_count,
+            "classes_count": classes_count,
+            "total_events": total_events,
+            "user_organizations": user_organizations,
+            "admin_managed_org_names": admin_managed_orgs,
+            "join_requests": join_requests,
+            "join_requests_payload": join_payload,
+            "pending_join_request_count": pending_count,
+        }
+    )
+
+    context["profile_completion_percentage"] = calculate_faculty_profile_completion(user, context)
+
+    return context
+
+
 def serialize_student_achievement(achievement, request=None):
     """Return a JSON-ready representation of a student achievement."""
 
@@ -180,6 +236,177 @@ def serialize_join_request(join_request, *, include_org=True):
         "response_message": join_request.response_message,
         "organization": organization_payload,
     }
+
+
+# ─────────────────────────────────────────────────────────────
+#  Profile organization utilities
+# ─────────────────────────────────────────────────────────────
+def _resolve_profile_role(request, *, payload=None, default=None):
+    """Determine whether the current user should act as student or faculty."""
+
+    candidate = None
+    if payload and isinstance(payload, dict):
+        candidate = payload.get("role")
+    if candidate is None:
+        candidate = request.GET.get("role") if request.method == "GET" else None
+    if candidate is None:
+        candidate = request.POST.get("role") if request.method != "GET" else None
+    if candidate is None and default is not None:
+        candidate = default
+
+    candidate = (candidate or "").strip().lower()
+    user = request.user
+
+    if candidate == "student":
+        return "student" if _get_student_record(user) else None
+    if candidate == "faculty":
+        return "faculty" if is_user_faculty_staff(user) else None
+    if candidate:
+        return None
+
+    if _get_student_record(user):
+        return "student"
+    if is_user_faculty_staff(user):
+        return "faculty"
+    return None
+
+
+def _organization_card_payload(
+    organization,
+    *,
+    membership=None,
+    role_label=None,
+    academic_year=None,
+    can_leave=True,
+    has_active_membership=None,
+) -> dict:
+    """Build a consistent organization payload for profile UI."""
+
+    org_type = getattr(organization, "org_type", None)
+    type_name = getattr(org_type, "name", "Organization")
+
+    membership_created = getattr(membership, "created_at", None)
+    joined_display = (
+        membership_created.strftime("%b %Y") if membership_created else ""
+    )
+
+    payload = {
+        "id": organization.id,
+        "name": organization.name,
+        "type_name": type_name,
+        "org_type_display": type_name,
+        "membership_role": getattr(membership, "role", None),
+        "membership_role_label": role_label
+        or (membership.get_role_display() if membership else ""),
+        "membership_academic_year": academic_year
+        or getattr(membership, "academic_year", None),
+        "joined_date": membership_created,
+        "joined_date_display": joined_display,
+        "joined_display": joined_display,
+    }
+
+    active_flag = has_active_membership
+    if active_flag is None:
+        active_flag = bool(membership and getattr(membership, "is_active", False))
+
+    payload.update(
+        {
+            "has_active_membership": bool(active_flag),
+            "can_leave": bool(can_leave),
+            "is_admin_managed": not bool(can_leave),
+        }
+    )
+
+    return payload
+
+
+def _collect_user_organizations(user):
+    """Return (organizations, admin_managed_names) for profile views."""
+
+    membership_qs = (
+        OrganizationMembership.objects.filter(user=user, is_active=True)
+        .select_related("organization", "organization__org_type")
+    )
+    role_assignments = (
+        RoleAssignment.objects.filter(user=user, organization__isnull=False)
+        .select_related("organization", "organization__org_type", "role")
+    )
+
+    org_map = {}
+
+    for membership in membership_qs:
+        organization = membership.organization
+        if not organization:
+            continue
+        org_map[organization.id] = _organization_card_payload(
+            organization,
+            membership=membership,
+            can_leave=True,
+            has_active_membership=True,
+        )
+
+    for assignment in role_assignments:
+        organization = assignment.organization
+        if not organization:
+            continue
+
+        entry = org_map.get(organization.id)
+        role_name = getattr(assignment.role, "name", "") or ""
+        academic_year = assignment.academic_year or None
+
+        if entry:
+            if role_name and not entry.get("membership_role_label"):
+                entry["membership_role_label"] = role_name
+            if role_name and not entry.get("membership_role"):
+                entry["membership_role"] = role_name
+            if academic_year and not entry.get("membership_academic_year"):
+                entry["membership_academic_year"] = academic_year
+            continue
+
+        entry = _organization_card_payload(
+            organization,
+            membership=None,
+            role_label=role_name,
+            academic_year=academic_year,
+            can_leave=False,
+            has_active_membership=False,
+        )
+        entry["membership_role"] = role_name or None
+        org_map[organization.id] = entry
+
+    organizations = sorted(
+        org_map.values(),
+        key=lambda item: (
+            (item.get("org_type_display") or "").lower(),
+            (item.get("name") or "").lower(),
+        ),
+    )
+
+    admin_managed_names = [
+        entry["name"]
+        for entry in organizations
+        if entry.get("is_admin_managed") and entry.get("name")
+    ]
+
+    return organizations, admin_managed_names
+
+
+def _collect_join_requests(user):
+    """Return join requests, payload list, and unseen pending count."""
+
+    join_requests_qs = (
+        JoinRequest.objects.filter(user=user)
+        .select_related("organization", "organization__org_type")
+        .order_by("-requested_on")
+    )
+    join_requests = list(join_requests_qs)
+    payload = [serialize_join_request(req) for req in join_requests]
+    pending_count = sum(
+        1
+        for req in join_requests
+        if req.status == JoinRequest.STATUS_PENDING and not req.is_seen
+    )
+    return join_requests, payload, pending_count
 
 
 # ─────────────────────────────────────────────────────────────
@@ -460,30 +687,39 @@ def my_profile(request):
         return redirect('admin_dashboard')
 
     email = (user.email or "").lower()
-    is_student = ('student' in role_lc) or email.endswith('@christuniversity.in')
-    
+    is_student_account = ('student' in role_lc) or email.endswith('@christuniversity.in')
+
+    requested_role = request.GET.get("role", "").strip().lower()
+    requested_role = requested_role if requested_role in {"student", "faculty"} else None
+    target_role = requested_role or ("student" if is_student_account else "faculty")
+
+    if target_role == "student" and not is_student_account:
+        target_role = "faculty"
+    elif target_role == "faculty" and is_student_account:
+        target_role = "student"
+
     # Set session role for sidebar permissions
-    if is_student:
-        request.session["role"] = "student"
-    else:
-        request.session["role"] = "faculty"
-    
+    request.session["role"] = target_role
+
+    render_student_profile = target_role == "student"
+
     # Determine if this is accessed from dashboard (check for 'from_dashboard' parameter)
     from_dashboard = request.GET.get('from_dashboard', False)
-    
+
     # Base context for all users
     context = {
         'user': user,
-        'is_student': is_student,
+        'is_student': render_student_profile,
+        'account_is_student': is_student_account,
         'from_dashboard': from_dashboard,
-        'user_role': 'student' if is_student else 'faculty',
+        'user_role': target_role,
         'user_achievements_payload': [],
         'user_achievements': [],
         'join_requests': [],
         'join_requests_payload': [],
     }
     
-    if is_student:
+    if render_student_profile:
         # Student-specific data
         try:
             student_profile = Student.objects.get(user=user)
@@ -514,53 +750,7 @@ def my_profile(request):
         Q(participants__user=user) | Q(submitted_by=user)
         ).select_related('organization').distinct()
         
-        membership_qs = (
-            OrganizationMembership.objects.filter(user=user, is_active=True)
-            .select_related('organization', 'organization__org_type')
-        )
-
-        membership_org_ids = set()
-        org_map = {}
-
-        for membership in membership_qs:
-            organization = membership.organization
-            if not organization:
-                continue
-            organization.joined_date = getattr(membership, 'created_at', None)
-            organization.membership_role_label = membership.get_role_display()
-            organization.membership_academic_year = membership.academic_year
-            organization.org_type_display = getattr(
-                getattr(organization, 'org_type', None), 'name', 'Organization'
-            )
-            membership_org_ids.add(organization.id)
-            org_map[organization.id] = organization
-
-        role_assignments = (
-            roles.filter(organization__isnull=False)
-            .select_related('organization', 'organization__org_type')
-        )
-
-        for assignment in role_assignments:
-            organization = assignment.organization
-            if not organization:
-                continue
-            org_map.setdefault(organization.id, organization)
-
-        user_organizations = list(org_map.values())
-        for organization in user_organizations:
-            organization.has_active_membership = organization.id in membership_org_ids
-            organization.can_leave = organization.has_active_membership
-            organization.is_admin_managed = not organization.can_leave
-            if not getattr(organization, 'org_type_display', None):
-                organization.org_type_display = getattr(
-                    getattr(organization, 'org_type', None), 'name', 'Organization'
-                )
-        user_organizations.sort(key=lambda org: (
-            getattr(getattr(org, 'org_type', None), 'name', '').lower(),
-            (org.name or '').lower()
-        ))
-        admin_managed_orgs = [org.name for org in user_organizations if getattr(org, 'is_admin_managed', False) and org.name]
-        user_org_ids = list(org_map.keys())
+        user_organizations, admin_managed_orgs = _collect_user_organizations(user)
         student_achievements = StudentAchievement.objects.filter(user=user).order_by('-date_achieved', '-created_at')
 
         context.update({
@@ -575,48 +765,20 @@ def my_profile(request):
             'profile_completion_percentage': calculate_student_profile_completion(user, context),
         })
 
-        join_requests_qs = (
-            JoinRequest.objects.filter(user=user)
-            .select_related("organization", "organization__org_type")
-            .order_by("-requested_on")
-        )
-        join_requests = list(join_requests_qs)
-
+        join_requests, join_payload, pending_count = _collect_join_requests(user)
         context.update(
             {
                 'join_requests': join_requests,
-                'join_requests_payload': [serialize_join_request(req) for req in join_requests],
-                'pending_join_request_count': sum(
-                    1
-                    for req in join_requests
-                    if req.status == JoinRequest.STATUS_PENDING and not req.is_seen
-                ),
+                'join_requests_payload': join_payload,
+                'pending_join_request_count': pending_count,
             }
         )
         
-        template = 'core/student_profile.html' if from_dashboard else 'core/my_profile.html'
+        template = 'core/student_profile.html'
         
     else:
-        # Faculty-specific data
-        my_students = Student.objects.filter(mentor=user)
-        my_classes = Class.objects.filter(teacher=user, is_active=True)
-        organized_events = EventProposal.objects.filter(submitted_by=user).select_related('organization')
-        
-        context.update({
-            'my_students': my_students,
-            'my_classes': my_classes,
-            'organized_events': organized_events,
-            'students_count': my_students.count(),
-            'classes_count': my_classes.count(),
-            'total_events': organized_events.count(),
-            'user_organizations': Organization.objects.filter(
-                id__in=roles.filter(organization__isnull=False).values_list('organization_id', flat=True)
-            ),
-            'years_active': calculate_years_active(user),
-            'profile_completion_percentage': calculate_faculty_profile_completion(user, context),
-        })
-        
-        template = 'core/faculty_profile.html' if from_dashboard else 'core/my_profile.html'
+        context = get_faculty_profile_context(user, context, roles)
+        template = 'core/faculty_profile.html'
     
     return render(request, template, context)
 
@@ -9133,10 +9295,10 @@ def api_update_student_academic(request):
 @require_GET
 def api_student_organization_types(request):
     """Return active organization types for student selection."""
-    student = _get_student_record(request.user)
-    if student is None:
+    role = _resolve_profile_role(request)
+    if role not in {"student", "faculty"}:
         return JsonResponse(
-            {"success": False, "message": "Access denied. Student account required."},
+            {"success": False, "message": "Access denied. Profile role required."},
             status=403,
         )
 
@@ -9157,10 +9319,10 @@ def api_student_organization_types(request):
 @require_GET
 def api_student_organizations(request):
     """Return organizations filtered by type for student join flow."""
-    student = _get_student_record(request.user)
-    if student is None:
+    role = _resolve_profile_role(request)
+    if role not in {"student", "faculty"}:
         return JsonResponse(
-            {"success": False, "message": "Access denied. Student account required."},
+            {"success": False, "message": "Access denied. Profile role required."},
             status=403,
         )
 
@@ -9210,17 +9372,17 @@ def api_student_organizations(request):
 @require_http_methods(["POST"])
 def api_student_join_organization(request):
     """Create or re-activate a student membership for an organization."""
-    student = _get_student_record(request.user)
-    if student is None:
-        return JsonResponse(
-            {"success": False, "message": "Access denied. Student account required."},
-            status=403,
-        )
-
     try:
         data = json.loads(request.body or "{}")
     except json.JSONDecodeError:
         return JsonResponse({"success": False, "message": "Invalid JSON payload."}, status=400)
+
+    role = _resolve_profile_role(request, payload=data)
+    if role not in {"student", "faculty"}:
+        return JsonResponse(
+            {"success": False, "message": "Access denied. Profile role required."},
+            status=403,
+        )
 
     org_id = data.get("organization_id")
     if not org_id:
@@ -9239,26 +9401,20 @@ def api_student_join_organization(request):
         is_active=True,
     ).first()
     if active_membership:
+        org_payload = _organization_card_payload(
+            organization,
+            membership=active_membership,
+            can_leave=True,
+            has_active_membership=True,
+        )
+        # Ensure JSON serializable values
+        if org_payload.get("joined_date"):
+            org_payload["joined_date"] = org_payload["joined_date"].isoformat()
         return JsonResponse(
             {
                 "success": True,
                 "message": "You are already a member of this organization.",
-                "organization": {
-                    "id": organization.id,
-                    "name": organization.name,
-                    "type_name": getattr(organization.org_type, "name", ""),
-                    "org_type_display": getattr(organization.org_type, "name", "Organization"),
-                    "membership_role_label": active_membership.get_role_display(),
-                    "membership_academic_year": active_membership.academic_year,
-                    "joined_display": active_membership.created_at.strftime("%b %Y")
-                    if active_membership.created_at
-                    else "",
-                    "joined_date_display": active_membership.created_at.strftime("%b %Y")
-                    if active_membership.created_at
-                    else "",
-                    "can_leave": True,
-                    "is_admin_managed": False,
-                },
+                "organization": org_payload,
             }
         )
 
@@ -9302,10 +9458,10 @@ def api_student_join_organization(request):
 @require_http_methods(["POST"])
 def api_student_leave_organization(request, org_id):
     """Deactivate an active organization membership for the student."""
-    student = _get_student_record(request.user)
-    if student is None:
+    role = _resolve_profile_role(request)
+    if role not in {"student", "faculty"}:
         return JsonResponse(
-            {"success": False, "message": "Access denied. Student account required."},
+            {"success": False, "message": "Access denied. Profile role required."},
             status=403,
         )
 
@@ -9364,44 +9520,46 @@ def api_student_leave_organization(request, org_id):
 def api_update_faculty_professional(request):
     """Update faculty professional information"""
     try:
-        # Check if user is faculty/staff using same logic as my_profile
-        user = request.user
-        roles = RoleAssignment.objects.filter(user=user).select_related('role', 'organization')
-        role_lc = [ra.role.name.lower() for ra in roles]
-        email = (user.email or "").lower()
-        is_student = ('student' in role_lc) or email.endswith('@christuniversity.in')
-        
-        if is_student:
-            return JsonResponse({
-                'success': False,
-                'message': 'Access denied. Faculty/Staff account required.'
-            }, status=403)
-        
+        if not is_user_faculty_staff(request.user):
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Access denied. Faculty/Staff account required.",
+                },
+                status=403,
+            )
+
+        profile = getattr(request.user, "profile", None)
+        if profile is None:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Profile not found for this account.",
+                },
+                status=404,
+            )
+
         data = json.loads(request.body)
-        profile = request.user.profile
-        
+
         # Update profile fields for faculty
-        if 'department' in data:
-            profile.department = data['department']
-        if 'position' in data:
-            profile.position = data['position']
-        if 'office_location' in data:
-            profile.office_location = data['office_location']
-        if 'office_hours' in data:
-            profile.office_hours = data['office_hours']
-        if 'research_interests' in data:
-            profile.research_interests = data['research_interests']
-        
+        if "department" in data:
+            profile.department = data["department"]
+        if "position" in data:
+            profile.position = data["position"]
+        if "office_location" in data:
+            profile.office_location = data["office_location"]
+        if "office_hours" in data:
+            profile.office_hours = data["office_hours"]
+        if "research_interests" in data:
+            profile.research_interests = data["research_interests"]
+
         profile.save()
-        
-        return JsonResponse({
-            'success': True,
-            'message': 'Professional information updated successfully'
-        })
-        
+
+        return JsonResponse(
+            {"success": True, "message": "Professional information updated successfully"}
+        )
+
     except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'message': str(e)
-        }, status=400)
+        return JsonResponse({"success": False, "message": str(e)}, status=400)
+
 #test
