@@ -2059,6 +2059,17 @@ $(document).ready(function() {
         const input = $('#sdg-goals-modern');
         const modal = $('#sdgModal');
         const container = $('#sdgOptions');
+        const realtime = window.ProposalRealtime || (window.ProposalRealtime = {});
+        const PENDING_GRACE_MS = 8000;
+        const markPending = () => {
+            realtime.sdgGoalsPendingSince = Date.now();
+        };
+        if (!realtime.__sdgAutosaveHooked) {
+            document.addEventListener('autosave:success', () => {
+                realtime.sdgGoalsPendingSince = 0;
+            });
+            realtime.__sdgAutosaveHooked = true;
+        }
         if (!hidden.length || !input.length || !modal.length) return;
 
         if (container.children().length === 0 && window.SDG_GOALS) {
@@ -2068,6 +2079,11 @@ $(document).ready(function() {
             });
             container.html(html);
         }
+
+        container.off('change', 'input[type=checkbox]').on('change', 'input[type=checkbox]', () => {
+            // Track interaction while the modal is open so live sync does not immediately override it
+            markPending();
+        });
 
         const hiddenMap = {};
         hidden.each(function(){ hiddenMap[$(this).val()] = $(this); });
@@ -2091,6 +2107,7 @@ $(document).ready(function() {
         input.on('input', () => {
             const typed = input.val().split(/[,;]+/)
                 .map(s => s.trim()).filter(Boolean);
+            markPending();
             const selected = window.SDG_GOALS
                 .filter(g => typed.some(t => t.toLowerCase() === g.name.toLowerCase()))
                 .map(g => String(g.id));
@@ -2107,6 +2124,7 @@ $(document).ready(function() {
             Object.entries(hiddenMap).forEach(([id, el]) => {
                 el.prop('checked', selected.includes(id));
             });
+            markPending();
             hidden.first().trigger('change');
             const names = window.SDG_GOALS
                 .filter(g => selected.includes(String(g.id)))
@@ -2118,6 +2136,21 @@ $(document).ready(function() {
         window.ProposalRealtime.updateSdgGoals = function(nextGoals) {
             const goals = Array.isArray(nextGoals) ? nextGoals : [];
             const selectedIds = goals.map(goal => String(goal.id));
+            const currentSelected = hidden
+                .filter((_, el) => $(el).prop('checked'))
+                .map((_, el) => el.value)
+                .get();
+            const hasDifference = selectedIds.length !== currentSelected.length
+                || selectedIds.some(id => !currentSelected.includes(id));
+            if (hasDifference) {
+                const pendingSince = realtime.sdgGoalsPendingSince || 0;
+                if (pendingSince && Date.now() - pendingSince < PENDING_GRACE_MS) {
+                    return;
+                }
+            } else if (!hasDifference) {
+                // Remote state matches local, clear pending flag to allow future updates
+                realtime.sdgGoalsPendingSince = 0;
+            }
             let changed = false;
 
             hidden.each(function() {
@@ -2144,6 +2177,7 @@ $(document).ready(function() {
             if (input.length && document.activeElement !== input.get(0)) {
                 input.val(names.join(', '));
             }
+            realtime.sdgGoalsPendingSince = 0;
         };
     }
 
