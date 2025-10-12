@@ -3777,8 +3777,24 @@ def preview_event_report(request, proposal_id):
                 continue
             cleaned_values.append(raw)
 
+        fallback_value = None
         if not cleaned_values:
-            display = "—"
+            if name == "num_participants":
+                fallback_value = total_count
+            elif name == "num_student_volunteers":
+                fallback_value = volunteers_count
+            elif name == "num_student_participants":
+                fallback_value = student_count
+            elif name == "num_faculty_participants":
+                fallback_value = faculty_count
+            elif name == "num_external_participants":
+                fallback_value = external_count
+
+        if not cleaned_values:
+            if fallback_value in (None, ""):
+                display = "—"
+            else:
+                display = _format_display(fallback_value)
         elif len(cleaned_values) == 1:
             display = _format_display(cleaned_values[0])
         else:
@@ -4048,10 +4064,15 @@ def preview_event_report(request, proposal_id):
         _first_value(
             post_data.get("num_student_volunteers"),
             getattr(report, "num_student_volunteers", None),
+            volunteers_count,
         )
     )
     attendees_count_value = _text(
-        _first_value(post_data.get("num_participants"), getattr(report, "num_participants", None))
+        _first_value(
+            post_data.get("num_participants"),
+            getattr(report, "num_participants", None),
+            total_count,
+        )
     )
 
     summary_value = _text(
