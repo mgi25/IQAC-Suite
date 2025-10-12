@@ -251,10 +251,12 @@
 
                     <div class="detail-grid">
                         {% for label, value in report_fields %}
-                            <div class="detail-row">
-                                <dt>{{ label }}</dt>
-                                <dd>{% if value %}{{ value|linebreaksbr }}{% else %}<span class="muted">Not provided</span>{% endif %}</dd>
-                            </div>
+                            {% with label_lower=label|lower %}
+                                <div class="detail-row{% if label_lower == 'summary of the overall event' or label_lower == 'key achievements' or label_lower == 'notable moments' %} detail-row--wide{% endif %}">
+                                    <dt>{{ label }}</dt>
+                                    <dd>{% if value %}{{ value|linebreaksbr }}{% else %}<span class="muted">Not provided</span>{% endif %}</dd>
+                                </div>
+                            {% endwith %}
                         {% endfor %}
                     </div>
                 </div>
