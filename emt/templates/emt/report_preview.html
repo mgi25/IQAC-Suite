@@ -10,62 +10,11 @@
 
 {% block content %}
 <div class="preview-layout">
-    <aside class="preview-sidebar" aria-label="Report sessions navigation">
-        <div class="sidebar-header">
-            <h2>Report Preview</h2>
-            <p>Walk through each session before generating the final IQAC report.</p>
-        </div>
-        <ol class="sidebar-steps">
-            <li class="sidebar-step">
-                <a href="#session-snapshot" class="sidebar-link active" data-session-target="session-snapshot">
-                    <span class="step-number">1</span>
-                    <div class="step-text">
-                        <strong>Snapshot</strong>
-                        <span>Key event highlights</span>
-                    </div>
-                </a>
-            </li>
-            <li class="sidebar-step">
-                <a href="#session-proposal" class="sidebar-link" data-session-target="session-proposal">
-                    <span class="step-number">2</span>
-                    <div class="step-text">
-                        <strong>Proposal recap</strong>
-                        <span>Planned objectives & flow</span>
-                    </div>
-                </a>
-            </li>
-            <li class="sidebar-step">
-                <a href="#session-report" class="sidebar-link" data-session-target="session-report">
-                    <span class="step-number">3</span>
-                    <div class="step-text">
-                        <strong>Report insights</strong>
-                        <span>Outcomes, analysis & metrics</span>
-                    </div>
-                </a>
-            </li>
-            <li class="sidebar-step">
-                <a href="#session-iqac" class="sidebar-link" data-session-target="session-iqac">
-                    <span class="step-number">4</span>
-                    <div class="step-text">
-                        <strong>IQAC & attachments</strong>
-                        <span>Checklist before submission</span>
-                    </div>
-                </a>
-            </li>
-        </ol>
-        <div class="sidebar-actions">
-            <button type="button" class="btn-outline" id="btn-expand">Expand all</button>
-            <button type="button" class="btn-outline" id="btn-collapse">Collapse all</button>
-        </div>
-    </aside>
-
-    <main class="preview-main proposal-content">
-        <header class="preview-header">
-            <div class="preview-heading">
-                <h1 class="preview-title" id="page-title">{{ proposal.event_title|default:"Event Report" }}</h1>
-                <p class="preview-subtitle">Review and confirm every section before generating the final report.</p>
-            </div>
-            <div class="header-chips">
+    <main class="proposal-content">
+        <div class="content-header" style="margin-bottom:.5rem;">
+            <h1 class="content-title" id="page-title">{{ proposal.event_title|default:"Event Report" }}</h1>
+            <p class="content-subtitle">Please verify the information below.</p>
+            <div class="meta-chips">
                 {% if proposal.organization %}
                     <span class="chip">{{ proposal.organization.name }}</span>
                 {% endif %}
@@ -79,219 +28,96 @@
                     <span class="chip">Venue: {{ proposal.venue }}</span>
                 {% endif %}
             </div>
-        </header>
+            <div class="top-toolbar">
+                <nav class="pill-nav">
+                    <a href="#section-overview">Overview</a>
+                    <a href="#section-proposal">Proposal Details</a>
+                    <a href="#section-report">Report Details</a>
+                </nav>
+                <div class="toolbar">
+                    <button type="button" class="btn-ghost" id="btn-expand">Expand all</button>
+                    <button type="button" class="btn-ghost" id="btn-collapse">Collapse all</button>
+                </div>
+            </div>
+        </div>
 
-        <form method="post" action="{% url 'emt:submit_event_report' proposal.id %}" class="preview-form" id="report-preview-form">
+        <form method="post" action="{% url 'emt:submit_event_report' proposal.id %}">
             {% csrf_token %}
             {% for key, value in post_data.items %}
                 <input type="hidden" name="{{ key }}" value="{{ value|escape }}">
             {% endfor %}
+            {# Ensure attachment formset management fields exist (even if there are no attachments) #}
             <input type="hidden" name="form-TOTAL_FORMS" value="{{ post_data|get_item:'form-TOTAL_FORMS'|default:'0' }}">
             <input type="hidden" name="form-INITIAL_FORMS" value="{{ post_data|get_item:'form-INITIAL_FORMS'|default:'0' }}">
             <input type="hidden" name="form-MIN_NUM_FORMS" value="{{ post_data|get_item:'form-MIN_NUM_FORMS'|default:'0' }}">
             <input type="hidden" name="form-MAX_NUM_FORMS" value="{{ post_data|get_item:'form-MAX_NUM_FORMS'|default:'1000' }}">
 
-            <section id="session-snapshot" class="session-card" data-collapsible>
-                <header class="session-header">
-                    <div>
-                        <span class="session-number">Session 1</span>
-                        <h2 class="session-title">Event Snapshot</h2>
-                        <p class="session-summary">A quick glance at the essentials of your event.</p>
+            <!-- Overview (concise key info) -->
+            <section id="section-overview" class="section-card" aria-labelledby="sec-overview-title">
+                <div class="section-header">
+                    <div class="section-title" id="sec-overview-title">Overview</div>
+                </div>
+                <div class="grid-two">
+                    <div class="field-row">
+                        <div class="field-label">Title</div>
+                        <div class="field-value">{{ proposal.event_title|default:"—" }}</div>
                     </div>
-                    <button type="button" class="session-toggle" data-toggle aria-expanded="true">Collapse</button>
-                </header>
-                <div class="session-body">
-                    <div class="snapshot-grid">
-                        <article class="snapshot-card">
-                            <div class="snapshot-label">Department / Cell</div>
-                            <div class="snapshot-value" data-report-field="event.department">—</div>
-                        </article>
-                        <article class="snapshot-card">
-                            <div class="snapshot-label">Event Dates</div>
-                            <div class="snapshot-value" data-report-field="event.date">—</div>
-                        </article>
-                        <article class="snapshot-card">
-                            <div class="snapshot-label">Venue / Location</div>
-                            <div class="snapshot-value" data-report-field="event.venue">—</div>
-                        </article>
-                        <article class="snapshot-card">
-                            <div class="snapshot-label">Event Focus</div>
-                            <div class="snapshot-value" data-report-field="event.event_type_focus">—</div>
-                        </article>
+                    <div class="field-row">
+                        <div class="field-label">Organization</div>
+                        <div class="field-value">{{ proposal.organization.name|default:"—" }}</div>
                     </div>
-
-                    <div class="metrics-row">
-                        <div class="metric-card">
-                            <div class="metric-label">Target Audience</div>
-                            <div class="metric-value" data-report-field="participants.target_audience">—</div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-label">Total Participants</div>
-                            <div class="metric-value" data-report-field="participants.participants_count">—</div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-label">Student Volunteers</div>
-                            <div class="metric-value" data-report-field="participants.student_volunteers">—</div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-label">Activities Conducted</div>
-                            <div class="metric-value" data-report-field="event.no_of_activities">—</div>
+                    <div class="field-row">
+                        <div class="field-label">Dates</div>
+                        <div class="field-value">
+                            {% if proposal.event_start_date or proposal.event_end_date %}
+                                {{ proposal.event_start_date|default:"?" }} – {{ proposal.event_end_date|default:"?" }}
+                            {% else %}
+                                —
+                            {% endif %}
                         </div>
                     </div>
-
-                    <div class="list-card">
-                        <div class="list-card-header">Organising Committee</div>
-                        <ul class="list-card-body" data-report-list="participants.organising_committee.event_coordinators">
-                            <li class="empty">Data not provided</li>
-                        </ul>
+                    <div class="field-row">
+                        <div class="field-label">Venue</div>
+                        <div class="field-value">{{ proposal.venue|default:"—" }}</div>
                     </div>
                 </div>
             </section>
 
-            <section id="session-proposal" class="session-card" data-collapsible>
-                <header class="session-header">
-                    <div>
-                        <span class="session-number">Session 2</span>
-                        <h2 class="session-title">Proposal Recap</h2>
-                        <p class="session-summary">Verify the intent, objectives, and planned structure of the event.</p>
+            <!-- Proposal Details -->
+            <section id="section-proposal" class="section-card" aria-labelledby="sec-proposal-title" data-collapsible>
+                <div class="section-header">
+                    <div class="section-title" id="sec-proposal-title">Proposal Details</div>
+                    <div class="toolbar">
+                        <button type="button" class="btn-ghost" data-toggle>Toggle</button>
                     </div>
-                    <button type="button" class="session-toggle" data-toggle aria-expanded="true">Collapse</button>
-                </header>
-                <div class="session-body">
-                    <div class="detail-grid">
-                        {% for label, value in proposal_fields %}
-                            <div class="detail-row">
-                                <dt>{{ label }}</dt>
-                                <dd>{% if value %}{{ value|linebreaksbr }}{% else %}<span class="muted">Not provided</span>{% endif %}</dd>
-                            </div>
-                        {% endfor %}
-                    </div>
+                </div>
+                <div class="divider"></div>
+                <div class="preview-fields">
+                    {% for label, value in proposal_fields %}
+                        <div class="field-row">
+                            <div class="field-label">{{ label }}</div>
+                            <div class="field-value{% if not value %} muted{% endif %}">{{ value|default:"Not provided" }}</div>
+                        </div>
+                    {% endfor %}
                 </div>
             </section>
 
-            <section id="session-report" class="session-card" data-collapsible>
-                <header class="session-header">
-                    <div>
-                        <span class="session-number">Session 3</span>
-                        <h2 class="session-title">Report Insights</h2>
-                        <p class="session-summary">Confirm the outcomes, analysis, and mapped graduate attributes.</p>
-                    </div>
-                    <button type="button" class="session-toggle" data-toggle aria-expanded="true">Collapse</button>
-                </header>
-                <div class="session-body">
-                    <div class="narrative-grid">
-                        <article class="narrative-card">
-                            <h3>Overall Summary</h3>
-                            <p data-report-field="narrative.summary_overall_event">—</p>
-                        </article>
-                        <article class="narrative-card">
-                            <h3>Social Relevance</h3>
-                            <ul data-report-list="narrative.social_relevance">
-                                <li class="empty">No details added</li>
-                            </ul>
-                        </article>
-                        <article class="narrative-card">
-                            <h3>Outcomes</h3>
-                            <ul data-report-list="narrative.outcomes">
-                                <li class="empty">No details added</li>
-                            </ul>
-                        </article>
-                    </div>
-
-                    <div class="analysis-grid">
-                        <div class="analysis-card">
-                            <h4>Impact on Attendees</h4>
-                            <p data-report-field="analysis.impact_attendees">—</p>
-                        </div>
-                        <div class="analysis-card">
-                            <h4>Impact on Partner Schools</h4>
-                            <p data-report-field="analysis.impact_schools">—</p>
-                        </div>
-                        <div class="analysis-card">
-                            <h4>Impact on Volunteers</h4>
-                            <p data-report-field="analysis.impact_volunteers">—</p>
-                        </div>
-                    </div>
-
-                    <div class="mapping-board">
-                        <div class="mapping-section">
-                            <h4>POs / PSOs Mapping</h4>
-                            <p data-report-field="mapping.pos_psos">—</p>
-                        </div>
-                        <div class="mapping-section">
-                            <h4>Graduate Attributes & Needs</h4>
-                            <p data-report-field="mapping.graduate_attributes_or_needs">—</p>
-                        </div>
-                        <div class="mapping-section">
-                            <h4>Contemporary Requirements</h4>
-                            <p data-report-field="mapping.contemporary_requirements">—</p>
-                        </div>
-                        <div class="mapping-section">
-                            <h4>Value Systems & SDG Focus</h4>
-                            <p data-report-field="mapping.value_systems">—</p>
-                            <div class="chip-row" data-report-list="mapping.sdg_goal_numbers"></div>
-                        </div>
-                        <div class="mapping-section">
-                            <h4>NAAC Tags</h4>
-                            <div class="chip-row" data-report-list="metrics.naac_tags"></div>
-                        </div>
-                    </div>
-
-                    <div class="detail-grid">
-                        {% for label, value in report_fields %}
-                            <div class="detail-row">
-                                <dt>{{ label }}</dt>
-                                <dd>{% if value %}{{ value|linebreaksbr }}{% else %}<span class="muted">Not provided</span>{% endif %}</dd>
-                            </div>
-                        {% endfor %}
+            <!-- Report Details -->
+            <section id="section-report" class="section-card" aria-labelledby="sec-report-title" data-collapsible>
+                <div class="section-header">
+                    <div class="section-title" id="sec-report-title">Report Details</div>
+                    <div class="toolbar">
+                        <button type="button" class="btn-ghost" data-toggle>Toggle</button>
                     </div>
                 </div>
-            </section>
-
-            <section id="session-iqac" class="session-card" data-collapsible>
-                <header class="session-header">
-                    <div>
-                        <span class="session-number">Session 4</span>
-                        <h2 class="session-title">IQAC & Attachments</h2>
-                        <p class="session-summary">Final checks from IQAC and mandatory supporting documents.</p>
-                    </div>
-                    <button type="button" class="session-toggle" data-toggle aria-expanded="true">Collapse</button>
-                </header>
-                <div class="session-body">
-                    <div class="iqac-grid">
-                        <div class="iqac-card">
-                            <h4>IQAC Suggestions</h4>
-                            <ul data-report-list="iqac.iqac_suggestions">
-                                <li class="empty">No IQAC suggestions recorded</li>
-                            </ul>
+                <div class="divider"></div>
+                <div class="preview-fields">
+                    {% for label, value in report_fields %}
+                        <div class="field-row">
+                            <div class="field-label">{{ label }}</div>
+                            <div class="field-value{% if not value %} muted{% endif %}">{{ value|default:"Not provided" }}</div>
                         </div>
-                        <div class="iqac-card">
-                            <h4>Review Details</h4>
-                            <dl class="iqac-meta">
-                                <div>
-                                    <dt>Review Date</dt>
-                                    <dd data-report-field="iqac.iqac_review_date">—</dd>
-                                </div>
-                                <div>
-                                    <dt>Head / Coordinator</dt>
-                                    <dd data-report-field="iqac.sign_head_coordinator">—</dd>
-                                </div>
-                                <div>
-                                    <dt>Faculty Coordinator(s)</dt>
-                                    <dd data-report-field="iqac.sign_faculty_coordinator">—</dd>
-                                </div>
-                            </dl>
-                        </div>
-                    </div>
-
-                    <div class="checklist-card">
-                        <div class="checklist-header">
-                            <h4>Attachment Checklist</h4>
-                            <p>Ensure every required annexure is ready before submission.</p>
-                        </div>
-                        <ul class="checklist-grid" data-report-checklist></ul>
-                        <div class="empty" data-checklist-empty>No checklist responses provided.</div>
-                    </div>
+                    {% endfor %}
                 </div>
             </section>
 
@@ -309,165 +135,44 @@
                 </div>
             </div>
         </form>
-    </main>
-</div>
+        </main>
+    </div>
 
 <script src="{% static 'emt/js/submit_event_report.js' %}"></script>
-<script id="initial-report-data" type="application/json">{{ initial_report_data|default:"{}"|safe }}</script>
 <script>
-    (function(){
-        const sidebarLinks = Array.from(document.querySelectorAll('.sidebar-link'));
-        const sections = Array.from(document.querySelectorAll('.session-card'));
+        (function(){
+            // Smooth scroll for top pill links
+            document.querySelectorAll('.pill-nav a').forEach(a => {
+            a.addEventListener('click', (e) => {
+                const href = a.getAttribute('href');
+                if (href && href.startsWith('#')) {
+                    e.preventDefault();
+                    const el = document.querySelector(href);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
 
-        function setCollapsed(section, collapsed) {
-            const body = section.querySelector('.session-body');
-            const toggle = section.querySelector('[data-toggle]');
-            if (!body || !toggle) return;
-            body.style.display = collapsed ? 'none' : '';
-            toggle.textContent = collapsed ? 'Expand' : 'Collapse';
-            toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-            section.classList.toggle('collapsed', collapsed);
+        // Collapsible sections
+        function setCollapsed(section, collapsed){
+            const fields = section.querySelector('.preview-fields');
+            if (!fields) return;
+            fields.style.display = collapsed ? 'none' : '';
         }
-
-        sections.forEach(section => {
-            const toggle = section.querySelector('[data-toggle]');
-            if (!toggle) return;
-            toggle.addEventListener('click', () => {
-                const isCollapsed = section.classList.contains('collapsed');
-                setCollapsed(section, !isCollapsed);
+        document.querySelectorAll('[data-collapsible]').forEach(sec => {
+            const btn = sec.querySelector('[data-toggle]');
+            if (btn) btn.addEventListener('click', () => {
+                const fields = sec.querySelector('.preview-fields');
+                const isHidden = fields && fields.style.display === 'none';
+                setCollapsed(sec, !isHidden);
             });
         });
+        const all = Array.from(document.querySelectorAll('[data-collapsible]'));
+        document.getElementById('btn-expand')?.addEventListener('click', () => all.forEach(s => setCollapsed(s, false)));
+        document.getElementById('btn-collapse')?.addEventListener('click', () => all.forEach(s => setCollapsed(s, true)));
 
-        document.getElementById('btn-expand')?.addEventListener('click', () => {
-            sections.forEach(section => setCollapsed(section, false));
-        });
-        document.getElementById('btn-collapse')?.addEventListener('click', () => {
-            sections.forEach(section => setCollapsed(section, true));
-        });
-
-        sidebarLinks.forEach(link => {
-            link.addEventListener('click', (event) => {
-                const targetId = link.getAttribute('data-session-target');
-                if (!targetId) return;
-                const section = document.getElementById(targetId);
-                if (section) {
-                    event.preventDefault();
-                    setCollapsed(section, false);
-                    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            });
-        });
-
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                const id = entry.target.id;
-                const link = sidebarLinks.find(item => item.getAttribute('data-session-target') === id);
-                if (!link) return;
-                if (entry.isIntersecting) {
-                    sidebarLinks.forEach(item => item.classList.remove('active'));
-                    link.classList.add('active');
-                }
-            });
-        }, { rootMargin: '-40% 0px -50% 0px', threshold: 0.1 });
-
-        sections.forEach(section => observer.observe(section));
-
+        // Back button
         document.getElementById('btn-back')?.addEventListener('click', () => { history.back(); });
-
-        function hydrateReportData() {
-            const script = document.getElementById('initial-report-data');
-            if (!script) return;
-            let data = {};
-            try {
-                data = JSON.parse(script.textContent || '{}');
-            } catch (error) {
-                console.warn('Unable to parse report data', error);
-                return;
-            }
-
-            const getValue = (path) => {
-                if (!path) return undefined;
-                return path.split('.').reduce((acc, key) => (acc && acc[key] !== undefined ? acc[key] : undefined), data);
-            };
-
-            const normalise = (value) => {
-                if (value === null || value === undefined) return '—';
-                if (Array.isArray(value)) {
-                    return value.length ? value.join(', ') : '—';
-                }
-                const str = String(value).trim();
-                return str || '—';
-            };
-
-            document.querySelectorAll('[data-report-field]').forEach((el) => {
-                const value = normalise(getValue(el.getAttribute('data-report-field')));
-                el.textContent = value;
-            });
-
-            document.querySelectorAll('[data-report-list]').forEach((el) => {
-                const raw = getValue(el.getAttribute('data-report-list'));
-                const container = el;
-                container.innerHTML = '';
-                const items = Array.isArray(raw) ? raw.filter(Boolean) : (raw ? [raw] : []);
-                if (!items.length) {
-                    const empty = document.createElement('li');
-                    empty.className = 'empty';
-                    empty.textContent = 'No details provided';
-                    container.appendChild(empty);
-                    return;
-                }
-                items.forEach(item => {
-                    if (container.classList.contains('chip-row')) {
-                        const span = document.createElement('span');
-                        span.className = 'chip';
-                        span.textContent = item;
-                        container.appendChild(span);
-                    } else {
-                        const li = document.createElement('li');
-                        li.textContent = item;
-                        container.appendChild(li);
-                    }
-                });
-            });
-
-            const checklistHost = document.querySelector('[data-report-checklist]');
-            const checklistEmpty = document.querySelector('[data-checklist-empty]');
-            if (checklistHost) {
-                const checklist = getValue('attachments.checklist') || {};
-                const entries = Object.entries(checklist).filter(([_, value]) => value !== null && value !== undefined);
-                checklistHost.innerHTML = '';
-                if (!entries.length) {
-                    if (checklistEmpty) checklistEmpty.style.display = '';
-                } else {
-                    if (checklistEmpty) checklistEmpty.style.display = 'none';
-                    const labelMap = {
-                        facing_sheet_present: 'Facing sheet attached',
-                        summary_outcomes_sheet_present: 'Summary & outcomes enclosed',
-                        suggestions_sheet_present: 'Suggestions sheet included',
-                        department_seal_sign_each_page: 'Department seal & sign on each page',
-                        detailed_report_or_blog_printout_present: 'Detailed report / blog printout',
-                        participant_list_present: 'Participant list added',
-                        feedback_forms_present: 'Feedback forms collected',
-                        photos_present: 'Photographs provided'
-                    };
-                    entries.forEach(([key, value]) => {
-                        const li = document.createElement('li');
-                        li.className = value ? 'checklist-item complete' : 'checklist-item pending';
-                        const title = document.createElement('span');
-                        title.className = 'checklist-label';
-                        title.textContent = labelMap[key] || key.replace(/_/g, ' ');
-                        const status = document.createElement('span');
-                        status.className = 'checklist-status';
-                        status.textContent = value ? 'Ready' : 'Missing';
-                        li.appendChild(title);
-                        li.appendChild(status);
-                        checklistHost.appendChild(li);
-                    });
-                }
-            }
-        }
-
-        hydrateReportData();
     })();
 </script>
 {% endblock %}
