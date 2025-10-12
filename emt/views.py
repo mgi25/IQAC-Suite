@@ -3481,6 +3481,47 @@ def preview_event_report(request, proposal_id):
         post_data.pop("show_iqac")
     report = EventReport.objects.filter(proposal=proposal).first()
 
+    def _normalise_numeric(value):
+        if value in (None, ""):
+            return None
+        if isinstance(value, (int, float)):
+            return value
+        if isinstance(value, str):
+            cleaned = value.strip().replace(",", "")
+            if not cleaned:
+                return None
+            try:
+                return int(cleaned)
+            except ValueError:
+                try:
+                    return float(cleaned)
+                except ValueError:
+                    return value
+        return value
+
+    def _extract_numeric(field_name, attr_name):
+        values = post_data.getlist(field_name)
+        for raw in values:
+            normalised = _normalise_numeric(raw)
+            if normalised is not None:
+                return normalised
+        attr_value = getattr(report, attr_name, None) if report else None
+        return _normalise_numeric(attr_value)
+
+    total_count = _extract_numeric("num_participants", "num_participants")
+    volunteers_count = _extract_numeric(
+        "num_student_volunteers", "num_student_volunteers"
+    )
+    student_count = _extract_numeric(
+        "num_student_participants", "num_student_participants"
+    )
+    faculty_count = _extract_numeric(
+        "num_faculty_participants", "num_faculty_participants"
+    )
+    external_count = _extract_numeric(
+        "num_external_participants", "num_external_participants"
+    )
+
     def _coerce_date(value):
         if not value:
             return None
