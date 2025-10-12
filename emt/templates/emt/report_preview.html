@@ -83,13 +83,25 @@
 
         <form method="post" action="{% url 'emt:submit_event_report' proposal.id %}" class="preview-form" id="report-preview-form">
             {% csrf_token %}
-            {% for key, value in post_data.items %}
-                <input type="hidden" name="{{ key }}" value="{{ value|escape }}">
+            {% for key, values in post_data_items %}
+                {% if key != 'csrfmiddlewaretoken' %}
+                    {% for value in values %}
+                        <input type="hidden" name="{{ key }}" value="{{ value|escape }}">
+                    {% endfor %}
+                {% endif %}
             {% endfor %}
-            <input type="hidden" name="form-TOTAL_FORMS" value="{{ post_data|get_item:'form-TOTAL_FORMS'|default:'0' }}">
-            <input type="hidden" name="form-INITIAL_FORMS" value="{{ post_data|get_item:'form-INITIAL_FORMS'|default:'0' }}">
-            <input type="hidden" name="form-MIN_NUM_FORMS" value="{{ post_data|get_item:'form-MIN_NUM_FORMS'|default:'0' }}">
-            <input type="hidden" name="form-MAX_NUM_FORMS" value="{{ post_data|get_item:'form-MAX_NUM_FORMS'|default:'1000' }}">
+            {% if not post_data|get_item:'form-TOTAL_FORMS' %}
+                <input type="hidden" name="form-TOTAL_FORMS" value="0">
+            {% endif %}
+            {% if not post_data|get_item:'form-INITIAL_FORMS' %}
+                <input type="hidden" name="form-INITIAL_FORMS" value="0">
+            {% endif %}
+            {% if not post_data|get_item:'form-MIN_NUM_FORMS' %}
+                <input type="hidden" name="form-MIN_NUM_FORMS" value="0">
+            {% endif %}
+            {% if not post_data|get_item:'form-MAX_NUM_FORMS' %}
+                <input type="hidden" name="form-MAX_NUM_FORMS" value="1000">
+            {% endif %}
 
             <section id="session-snapshot" class="session-card" data-collapsible>
                 <header class="session-header">
@@ -100,7 +112,7 @@
                     </div>
                     <button type="button" class="session-toggle" data-toggle aria-expanded="true">Collapse</button>
                 </header>
-                <div class="session-body">
+                <div class="session-body session-body-grid">
                     <div class="snapshot-grid">
                         <article class="snapshot-card">
                             <div class="snapshot-label">Department / Cell</div>
@@ -157,7 +169,7 @@
                     </div>
                     <button type="button" class="session-toggle" data-toggle aria-expanded="true">Collapse</button>
                 </header>
-                <div class="session-body">
+                <div class="session-body session-body-grid">
                     <div class="detail-grid">
                         {% for label, value in proposal_fields %}
                             <div class="detail-row">
@@ -178,7 +190,7 @@
                     </div>
                     <button type="button" class="session-toggle" data-toggle aria-expanded="true">Collapse</button>
                 </header>
-                <div class="session-body">
+                <div class="session-body session-body-grid">
                     <div class="narrative-grid">
                         <article class="narrative-card">
                             <h3>Overall Summary</h3>
@@ -257,7 +269,7 @@
                     </div>
                     <button type="button" class="session-toggle" data-toggle aria-expanded="true">Collapse</button>
                 </header>
-                <div class="session-body">
+                <div class="session-body session-body-grid">
                     <div class="iqac-grid">
                         <div class="iqac-card">
                             <h4>IQAC Suggestions</h4>
